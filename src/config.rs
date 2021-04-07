@@ -1,4 +1,4 @@
-use crate::error::{Error, FileIOAction, FileKind};
+use crate::error::{Error, FileIoAction, FileKind};
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -97,8 +97,8 @@ pub struct DocsLink {
 pub fn read_project_config(root: impl AsRef<Path>) -> Result<PackageConfig, Error> {
     let config_path = root.as_ref().join("gleam.toml");
     let toml = crate::fs::read(&config_path)?;
-    toml::from_str(&toml).map_err(|e| Error::FileIO {
-        action: FileIOAction::Parse,
+    toml::from_str(&toml).map_err(|e| Error::FileIo {
+        action: FileIoAction::Parse,
         kind: FileKind::File,
         path: config_path.clone(),
         err: Some(e.to_string()),

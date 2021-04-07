@@ -55,7 +55,7 @@ pub enum ParseErrorType {
     OpNakedRight, // Operator with no value to the right
     OpaqueTypeAlias, // Type aliases cannot be opaque
     TooManyArgHoles, // a function call can have at most 1 arg hole
-    UnexpectedEOF,
+    UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken { expected: Vec<String> },
 }

@@ -67,7 +67,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     files
 }
 
-fn module_name_join<'a>(module: &'a [String]) -> Document<'a> {
+fn module_name_join(module: &[String]) -> Document<'_> {
     let mut name = Vec::with_capacity(module.len() * 2);
     for (i, segment) in module.iter().enumerate() {
         if i != 0 {
@@ -249,7 +249,7 @@ pub fn module(
                 // so we check the type declaratinon against its constroctors and generate a phantom
                 // value that uses the unused type variables.
                 let type_var_usages =
-                    collect_type_var_usages(HashMap::new(), typed_parameters.iter().map(|a| a));
+                    collect_type_var_usages(HashMap::new(), typed_parameters.iter());
                 let mut constructor_var_usages = HashMap::new();
                 for c in constructors {
                     constructor_var_usages = collect_type_var_usages(
@@ -257,24 +257,21 @@ pub fn module(
                         c.arguments.iter().map(|a| &a.type_),
                     );
                 }
-                let mut phantom_vars = vec![];
-                for (id, _) in type_var_usages.into_iter() {
-                    if constructor_var_usages.get(&id) == None {
-                        phantom_vars.push(Type::Var {
-                            type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: id })),
-                        })
-                    }
-                }
-                let phantom_vars_constructor = if phantom_vars.is_empty() {
-                    None
-                } else {
+                let phantom_vars: Vec<_> = type_var_usages
+                    .keys()
+                    .filter(|&id| !constructor_var_usages.contains_key(id))
+                    .map(|&id| Type::Var {
+                        type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),
+                    })
+                    .collect();
+                let phantom_vars_constructor = if !phantom_vars.is_empty() {
+                    let type_printer = TypePrinter::new(&module.name);
                     Some(tuple(
-                        std::iter::once("gleam_phantom".to_doc()).chain(
-                            phantom_vars
-                                .iter()
-                                .map(|pv| TypePrinter::new(module.name.as_slice()).print(pv)),
-                        ),
+                        std::iter::once("gleam_phantom".to_doc())
+                            .chain(phantom_vars.iter().map(|pv| type_printer.print(pv))),
                     ))
+                } else {
+                    None
                 };
                 // Type Exports
                 type_exports.push(
@@ -291,13 +288,12 @@ pub fn module(
                             if c.arguments.is_empty() {
                                 name
                             } else {
-                                let args = c.arguments.iter().map(|a| {
-                                    TypePrinter::new(module.name.as_slice()).print(&a.type_)
-                                });
+                                let type_printer = TypePrinter::new(&module.name);
+                                let args = c.arguments.iter().map(|a| type_printer.print(&a.type_));
                                 tuple(std::iter::once(name).chain(args))
                             }
                         })
-                        .chain(phantom_vars_constructor.into_iter()),
+                        .chain(phantom_vars_constructor),
                     break_(" |", " | "),
                 ))
                 .nest(INDENT)
@@ -431,7 +427,7 @@ fn statement<'a>(
             module.as_ref(),
             fun.as_ref(),
             args.as_ref(),
-            &return_type,
+            return_type,
         )),
     }
 }
@@ -516,7 +512,7 @@ fn atom<'a>(value: String) -> Document<'a> {
     }
 }
 
-fn string<'a>(value: &'a str) -> Document<'a> {
+fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
@@ -933,7 +929,7 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_cons<'a, F, E, T>(e: T, elems: &'a mut Vec<E>, f: F) -> Option<T>
+fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
 where
     F: Fn(T) -> ListType<E, T>,
 {
@@ -1353,7 +1349,7 @@ fn record_update<'a>(
 
 /// Wrap a document in begin end
 ///
-fn begin_end<'a>(document: Document<'a>) -> Document<'a> {
+fn begin_end(document: Document<'_>) -> Document<'_> {
     force_break()
         .append("begin")
         .append(line().append(document).nest(INDENT))
@@ -1625,7 +1621,7 @@ fn id_to_type_var(id: usize) -> Document<'static> {
     let mut last_char = id;
     while last_char >= 26 {
         name.push(std::char::from_u32((last_char % 26 + 65) as u32).unwrap());
-        last_char = last_char / 26;
+        last_char /= 26;
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).unwrap());
     name.reverse();
@@ -1760,14 +1756,14 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<usize, usize>) {
         },
         Type::App { args, .. } => {
             for arg in args {
-                type_var_ids(&arg, ids)
+                type_var_ids(arg, ids)
             }
         }
         Type::Fn { args, retrn } => {
             for arg in args {
                 type_var_ids(arg, ids)
             }
-            type_var_ids(&retrn, ids);
+            type_var_ids(retrn, ids);
         }
         Type::Tuple { elems } => {
             for elem in elems {
@@ -1845,17 +1841,17 @@ impl<'a> TypePrinter<'a> {
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&*typ.borrow()),
+            Type::Var { type_: typ } => self.print_var(&typ.borrow()),
 
             Type::App {
                 name, module, args, ..
-            } if module.is_empty() => self.print_prelude_type(name.as_str(), args.as_slice()),
+            } if module.is_empty() => self.print_prelude_type(name, args),
 
             Type::App {
                 name, module, args, ..
-            } => self.print_type_app(module.as_slice(), name.as_str(), args.as_slice()),
+            } => self.print_type_app(module, name, args),
 
-            Type::Fn { args, retrn } => self.print_fn(args.as_slice(), &retrn),
+            Type::Fn { args, retrn } => self.print_fn(args, retrn),
 
             Type::Tuple { elems } => tuple(elems.iter().map(|e| self.print(e))),
         }

@@ -142,9 +142,9 @@ impl ModuleDecoder {
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
         use constant::Which;
         match reader.which()? {
-            Which::Int(reader) => self.constant_int(&reader?),
-            Which::Float(reader) => self.constant_float(&reader?),
-            Which::String(reader) => self.constant_string(&reader?),
+            Which::Int(reader) => self.constant_int(reader?),
+            Which::Float(reader) => self.constant_float(reader?),
+            Which::String(reader) => self.constant_string(reader?),
             Which::Tuple(reader) => self.constant_tuple(&reader?),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),

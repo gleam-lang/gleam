@@ -1,5 +1,5 @@
 use crate::{
-    error::{Error, FileIOAction, FileKind, Result, StandardIOAction},
+    error::{Error, FileIoAction, FileKind, Result, StandardIoAction},
     fs::OutputFile,
 };
 use std::{io::Read, path::PathBuf, str::FromStr};
@@ -76,8 +76,8 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
     let mut problem_files = Vec::with_capacity(files.len());
 
     for file_path in files {
-        let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIO {
-            action: FileIOAction::Open,
+        let path = PathBuf::from_str(&file_path).map_err(|e| Error::FileIo {
+            action: FileIoAction::Open,
             kind: FileKind::File,
             path: PathBuf::from(file_path),
             err: Some(e.to_string()),
@@ -115,8 +115,8 @@ pub fn read_stdin() -> Result<String> {
     let mut src = String::new();
     let _ = std::io::stdin()
         .read_to_string(&mut src)
-        .map_err(|e| Error::StandardIO {
-            action: StandardIOAction::Read,
+        .map_err(|e| Error::StandardIo {
+            action: StandardIoAction::Read,
             err: Some(e.kind()),
         })?;
     Ok(src)

@@ -1,4 +1,4 @@
-use crate::error::{Error, StandardIOAction};
+use crate::error::{Error, StandardIoAction};
 use std::io::Write;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
@@ -8,8 +8,8 @@ pub fn ask(question: &str) -> Result<String, Error> {
     let mut answer = String::new();
     let _ = std::io::stdin()
         .read_line(&mut answer)
-        .map_err(|e| Error::StandardIO {
-            action: StandardIOAction::Read,
+        .map_err(|e| Error::StandardIo {
+            action: StandardIoAction::Read,
             err: Some(e.kind()),
         })?;
     Ok(answer.trim().to_string())
@@ -18,8 +18,8 @@ pub fn ask(question: &str) -> Result<String, Error> {
 pub fn ask_password(question: &str) -> Result<String, Error> {
     let prompt = format!("{} (will not be printed as you type): ", question);
     rpassword::read_password_from_tty(Some(prompt.as_str()))
-        .map_err(|e| Error::StandardIO {
-            action: StandardIOAction::Read,
+        .map_err(|e| Error::StandardIo {
+            action: StandardIoAction::Read,
             err: Some(e.kind()),
         })
         .map(|s| s.trim().to_string())

@@ -542,7 +542,7 @@ fn main() {
     assert_error!(
         "let <<x:utf8>> = <<1>> x",
         Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VaribleUTFSegmentInPatten,
+            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
             location: SrcSpan { start: 6, end: 12 },
         }
     );
@@ -550,7 +550,7 @@ fn main() {
     assert_error!(
         "let <<x:utf16>> = <<1>> x",
         Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VaribleUTFSegmentInPatten,
+            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
             location: SrcSpan { start: 6, end: 13 },
         }
     );
@@ -558,7 +558,7 @@ fn main() {
     assert_error!(
         "let <<x:utf32>> = <<1>> x",
         Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VaribleUTFSegmentInPatten,
+            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
             location: SrcSpan { start: 6, end: 13 },
         }
     );

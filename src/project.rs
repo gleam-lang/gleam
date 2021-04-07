@@ -6,7 +6,7 @@ use crate::{
     ast::{SrcSpan, TypedModule},
     build::Origin,
     config::{self, PackageConfig},
-    error::{Error, FileIOAction, FileKind, GleamExpect},
+    error::{Error, FileIoAction, FileKind, GleamExpect},
     parse::extra::Comment,
     type_,
     warning::Warning,
@@ -270,8 +270,8 @@ pub fn collect_source(
     };
 
     for path in crate::fs::gleam_files(&src_dir) {
-        let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIO {
-            action: FileIOAction::Read,
+        let src = std::fs::read_to_string(&path).map_err(|err| Error::FileIo {
+            action: FileIoAction::Read,
             kind: FileKind::File,
             err: Some(err.to_string()),
             path: path.clone(),

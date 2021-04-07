@@ -85,7 +85,7 @@ fn type_options<T>(
                         option.location(),
                     );
                 } else {
-                    categories.typ = Some(option.clone());
+                    categories.typ = Some(option);
                 }
             }
             BitStringSegmentOption::Signed { .. } | BitStringSegmentOption::Unsigned { .. } => {
@@ -97,7 +97,7 @@ fn type_options<T>(
                         option.location(),
                     );
                 } else {
-                    categories.signed = Some(option.clone());
+                    categories.signed = Some(option);
                 }
             }
             BitStringSegmentOption::Big { .. }
@@ -111,30 +111,30 @@ fn type_options<T>(
                         option.location(),
                     );
                 } else {
-                    categories.endian = Some(option.clone());
+                    categories.endian = Some(option);
                 }
             }
 
             BitStringSegmentOption::Size { .. } => {
-                if let Some(_) = categories.size {
+                if categories.size.is_some() {
                     return err(ErrorType::ConflictingSizeOptions, option.location());
                 } else {
-                    categories.size = Some(option.clone());
+                    categories.size = Some(option);
                 }
             }
 
             BitStringSegmentOption::Unit { .. } => {
-                if let Some(_) = categories.unit {
+                if categories.unit.is_some() {
                     return err(ErrorType::ConflictingUnitOptions, option.location());
                 } else {
-                    categories.unit = Some(option.clone());
+                    categories.unit = Some(option);
                 }
             }
         };
     }
 
     // Some options are not allowed in value mode
-    if value_mode == true {
+    if value_mode {
         match categories {
             SegmentOptionCategories {
                 signed: Some(opt), ..
@@ -198,7 +198,7 @@ fn type_options<T>(
             if is_unicode(typ) {
                 return err(
                     ErrorType::TypeDoesNotAllowUnit { typ: typ.label() },
-                    typ.location().clone(),
+                    typ.location(),
                 );
             }
         }
@@ -210,7 +210,7 @@ fn type_options<T>(
             if is_unicode(typ) {
                 return err(
                     ErrorType::TypeDoesNotAllowSize { typ: typ.label() },
-                    typ.location().clone(),
+                    typ.location(),
                 );
             }
         }
@@ -220,7 +220,7 @@ fn type_options<T>(
     // if unit specified, size must be specified
     if let Some(unit) = categories.unit {
         if categories.size.is_none() {
-            return err(ErrorType::UnitMustHaveSize, unit.location().clone());
+            return err(ErrorType::UnitMustHaveSize, unit.location());
         };
     };
 
@@ -230,11 +230,9 @@ fn type_options<T>(
             typ: Some(BitStringSegmentOption::Float { .. }),
             size: Some(opt),
             ..
-        } => return err(ErrorType::FloatWithSize, opt.location().clone()),
-        _ => {}
+        } => err(ErrorType::FloatWithSize, opt.location()),
+        _ => Ok(categories.segment_type()),
     }
-
-    Ok(categories.segment_type())
 }
 
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
@@ -273,5 +271,5 @@ pub enum ErrorType {
     TypeDoesNotAllowSize { typ: String },
     TypeDoesNotAllowUnit { typ: String },
     UnitMustHaveSize,
-    VaribleUTFSegmentInPatten,
+    VariableUtfSegmentInPattern,
 }

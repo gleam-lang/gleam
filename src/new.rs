@@ -1,5 +1,5 @@
 use crate::{
-    error::{Error, FileIOAction, FileKind, GleamExpect, InvalidProjectNameReason},
+    error::{Error, FileIoAction, FileKind, GleamExpect, InvalidProjectNameReason},
     NewOptions, Result,
 };
 use serde::{Deserialize, Serialize};
@@ -8,10 +8,10 @@ use std::io::Write;
 use std::path::PathBuf;
 use strum_macros::{Display, EnumString, EnumVariantNames};
 
-const GLEAM_STDLIB_VERSION: &'static str = "0.14.0";
-const GLEAM_OTP_VERSION: &'static str = "0.1.0";
-const ERLANG_OTP_VERSION: &'static str = "23.2";
-const PROJECT_VERSION: &'static str = "1.0.0";
+const GLEAM_STDLIB_VERSION: &str = "0.14.0";
+const GLEAM_OTP_VERSION: &str = "0.1.0";
+const ERLANG_OTP_VERSION: &str = "23.2";
+const PROJECT_VERSION: &str = "1.0.0";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
@@ -552,18 +552,18 @@ The project can be compiled and tested by running these commands:
 }
 
 fn write(path: PathBuf, contents: &str) -> Result<()> {
-    let mut f = File::create(&*path).map_err(|err| Error::FileIO {
+    let mut f = File::create(&path).map_err(|err| Error::FileIo {
         kind: FileKind::File,
         path: path.clone(),
-        action: FileIOAction::Create,
+        action: FileIoAction::Create,
         err: Some(err.to_string()),
     })?;
 
     f.write_all(contents.as_bytes())
-        .map_err(|err| Error::FileIO {
+        .map_err(|err| Error::FileIo {
             kind: FileKind::File,
             path,
-            action: FileIOAction::WriteTo,
+            action: FileIoAction::WriteTo,
             err: Some(err.to_string()),
         })?;
     Ok(())

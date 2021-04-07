@@ -165,8 +165,8 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             match &*value {
                 Pattern::Var { .. } if segment_type == string() => {
                     Err(Error::BitStringSegmentError {
-                        error: bit_string::ErrorType::VaribleUTFSegmentInPatten,
-                        location: location,
+                        error: bit_string::ErrorType::VariableUtfSegmentInPattern,
+                        location,
                     })
                 }
                 _ => Ok(segment_type),
@@ -404,9 +404,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
                                         name: "_".to_string(),
-                                        location: spread_location.clone(),
+                                        location: spread_location,
                                     },
-                                    location: spread_location.clone(),
+                                    location: spread_location,
                                     label: None,
                                 };
 

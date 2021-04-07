@@ -111,15 +111,15 @@ pub enum Error {
         packages: Vec<String>,
     },
 
-    FileIO {
+    FileIo {
         kind: FileKind,
-        action: FileIOAction,
+        action: FileIoAction,
         path: PathBuf,
         err: Option<String>,
     },
 
-    StandardIO {
-        action: StandardIOAction,
+    StandardIo {
+        action: StandardIoAction,
         err: Option<std::io::ErrorKind>,
     },
 
@@ -191,20 +191,20 @@ pub enum InvalidProjectNameReason {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum StandardIOAction {
+pub enum StandardIoAction {
     Read,
 }
 
-impl StandardIOAction {
+impl StandardIoAction {
     fn text(&self) -> &'static str {
         match self {
-            StandardIOAction::Read => "read from",
+            StandardIoAction::Read => "read from",
         }
     }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum FileIOAction {
+pub enum FileIoAction {
     Open,
     Copy,
     Read,
@@ -215,17 +215,17 @@ pub enum FileIOAction {
     FindParent,
 }
 
-impl FileIOAction {
+impl FileIoAction {
     fn text(&self) -> &'static str {
         match self {
-            FileIOAction::Open => "open",
-            FileIOAction::Copy => "copy",
-            FileIOAction::Read => "read",
-            FileIOAction::Parse => "parse",
-            FileIOAction::Delete => "delete",
-            FileIOAction::Create => "create",
-            FileIOAction::WriteTo => "write to",
-            FileIOAction::FindParent => "find the parent of",
+            FileIoAction::Open => "open",
+            FileIoAction::Copy => "copy",
+            FileIoAction::Read => "read",
+            FileIoAction::Parse => "parse",
+            FileIoAction::Delete => "delete",
+            FileIoAction::Create => "create",
+            FileIoAction::WriteTo => "write to",
+            FileIoAction::FindParent => "find the parent of",
         }
     }
 }
@@ -470,7 +470,7 @@ Second: {}",
                 write_project(buf, diagnostic);
             }
 
-            Error::FileIO {
+            Error::FileIo {
                 kind,
                 action,
                 path,
@@ -609,7 +609,7 @@ also be labelled.",
                             },
                             DiagnosticLabel {
                                 label: "previously defined here".to_string(),
-                                location: previous_location.clone(),
+                                location: *previous_location,
                                 style: LabelStyle::Secondary,
                             },
                         ],
@@ -635,7 +635,7 @@ also be labelled.",
                             },
                             DiagnosticLabel {
                                 label: "previously defined here".to_string(),
-                                location: previous_location.clone(),
+                                location: *previous_location,
                                 style: LabelStyle::Secondary,
                             },
                         ],
@@ -777,7 +777,7 @@ But this argument has this type:
                         given = printer.pretty_print(given, 4),
                     )
                     .unwrap();
-                    if let Some(t) = hint_alternative_operator(&op, given.as_ref()) {
+                    if let Some(t) = hint_alternative_operator(op, given.as_ref()) {
                         writeln!(buf, "Hint: {}\n", t).unwrap();
                     }
                 }
@@ -1282,19 +1282,17 @@ and try again.
                             "unit cannot be specified here",
                             vec![format!("Hint: {} segments are sized based on their value and cannot have a unit.", typ)],
                         ),
-                        bit_string::ErrorType::VaribleUTFSegmentInPatten => (
+                        bit_string::ErrorType::VariableUtfSegmentInPattern => (
                             "this cannot be a variable",
-                            vec![format!("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
+                            vec!["Hint: in patterns utf8, utf16, and utf32  must be an exact string.".to_string()],
                         ),
                         bit_string::ErrorType::SegmentMustHaveSize => (
                             "This segment has no size",
-                            vec!["Hint: Bit string segments without a size are only allowed at the end of a bin pattern."
-                                .to_string()],
+                            vec!["Hint: Bit string segments without a size are only allowed at the end of a bin pattern.".to_string()],
                         ),
                         bit_string::ErrorType::UnitMustHaveSize => (
                             "This needs an explicit size",
-                            vec!["Hint: If you specify unit() you must also specify size()."
-                                .to_string()],
+                            vec!["Hint: If you specify unit() you must also specify size().".to_string()],
                         ),
                     };
                     let diagnostic = Diagnostic {
@@ -1457,7 +1455,7 @@ and try again.
                              "See: https://gleam.run/book/tour/functions".to_string()
                             ]
                     ),
-                    ParseErrorType::UnexpectedEOF => (
+                    ParseErrorType::UnexpectedEof => (
                         "The module ended unexpectedly.",
                         vec![]
                     ),
@@ -1477,7 +1475,7 @@ and try again.
                     }
                 };
 
-                let adjusted_location = if error == &ParseErrorType::UnexpectedEOF {
+                let adjusted_location = if error == &ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
                         start: src.len() - 1,
                         end: src.len() - 1,
@@ -1554,7 +1552,7 @@ but it cannot be found.",
                 .expect("error pretty buffer write");
             }
 
-            Error::StandardIO { action, err } => {
+            Error::StandardIo { action, err } => {
                 let err = match err {
                     Some(e) => format!(
                         "\nThe error message from the stdio library was:\n\n    {}\n",
