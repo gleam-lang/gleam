@@ -9,3 +9,5 @@
 7. Wait for CI release build to finish.
 8. Publish release on GitHub from draft made by CI.
 9. Update version in `Cargo.toml` to next-dev.
+10. Update clone target version in `getting-started.md` in `website`.
+11. Update downloaded version in `Dockerfile` in `example-echo-server`.
