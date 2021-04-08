@@ -544,59 +544,42 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 
     fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
-        for (name, v) in unused {
-            match v {
-                (EntityKind::ImportedType, location, false) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    })
+        for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
+            let warning = match kind {
+                EntityKind::ImportedType => Warning::UnusedType {
+                    name,
+                    imported: true,
+                    location,
+                },
+                EntityKind::ImportedConstructor => Warning::UnusedConstructor {
+                    name,
+                    imported: true,
+                    location,
+                },
+                EntityKind::ImportedTypeAndConstructor => Warning::UnusedType {
+                    name,
+                    imported: true,
+                    location,
+                },
+                EntityKind::PrivateConstant => {
+                    Warning::UnusedPrivateModuleConstant { name, location }
                 }
-                (EntityKind::ImportedConstructor, location, false) => {
-                    self.warnings.push(Warning::UnusedConstructor {
-                        name,
-                        imported: true,
-                        location,
-                    })
-                }
-                (EntityKind::ImportedTypeAndConstructor, location, false) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: true,
-                        location,
-                    })
-                }
-                (EntityKind::PrivateConstant, location, false) => self
-                    .warnings
-                    .push(Warning::UnusedPrivateModuleConstant { name, location }),
-                (EntityKind::PrivateTypeConstructor(_), location, false) => {
-                    self.warnings.push(Warning::UnusedConstructor {
-                        name,
-                        imported: false,
-                        location,
-                    })
-                }
-                (EntityKind::PrivateFunction, location, false) => self
-                    .warnings
-                    .push(Warning::UnusedPrivateFunction { name, location }),
-                (EntityKind::PrivateType, location, false) => {
-                    self.warnings.push(Warning::UnusedType {
-                        name,
-                        imported: false,
-                        location,
-                    })
-                }
-                (EntityKind::ImportedValue, location, false) => self
-                    .warnings
-                    .push(Warning::UnusedImportedValue { name, location }),
-
-                (EntityKind::Variable, location, false) => self
-                    .warnings
-                    .push(Warning::UnusedVariable { name, location }),
-
-                _ => {}
+                EntityKind::PrivateTypeConstructor(_) => Warning::UnusedConstructor {
+                    name,
+                    imported: false,
+                    location,
+                },
+                EntityKind::PrivateFunction => Warning::UnusedPrivateFunction { name, location },
+                EntityKind::PrivateType => Warning::UnusedType {
+                    name,
+                    imported: false,
+                    location,
+                },
+                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
+                EntityKind::Variable => Warning::UnusedVariable { name, location },
             };
+
+            self.warnings.push(warning);
         }
     }
 }
