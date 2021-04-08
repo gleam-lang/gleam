@@ -4,7 +4,7 @@ use crate::{
     line_numbers::LineNumbers,
     project::Analysed,
 };
-use std::path::{Component, Path, PathBuf};
+use std::path::{Component, Path};
 
 pub struct SourceLinker {
     line_numbers: LineNumbers,
@@ -62,7 +62,7 @@ impl SourceLinker {
     }
 }
 
-fn get_path_in_repo(project_root: impl AsRef<Path>, path: &PathBuf) -> String {
+fn get_path_in_repo(project_root: impl AsRef<Path>, path: &Path) -> String {
     path.strip_prefix(&project_root)
         .ok()
         .and_then(to_url_path)

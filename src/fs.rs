@@ -216,17 +216,14 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     Ok(())
 }
 
-fn is_gleam_path(path: &PathBuf, dir: impl AsRef<Path>) -> bool {
+fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     use regex::Regex;
     lazy_static! {
-        static ref RE: Regex = Regex::new(
-            format!(
-                "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "(/|\\\\)",
-            )
-            .as_str()
-        )
+        static ref RE: Regex = Regex::new(&format!(
+            "^({module}{slash})*{module}\\.gleam$",
+            module = "[a-z][_a-z0-9]*",
+            slash = "(/|\\\\)",
+        ))
         .gleam_expect("is_gleam_path() RE regex");
     }
 

@@ -1,5 +1,6 @@
 use super::*;
 use crate::{config::PackageConfig, fs::OutputFile, project::Input};
+use std::path::PathBuf;
 
 #[test]
 fn module_docs_test() {
@@ -58,7 +59,7 @@ pub fn complicated_fun(
     let output_files = generate_html(
         PathBuf::from("."),
         &config,
-        analysed.as_slice(),
+        &analysed,
         &[],
         &PathBuf::from("/docs"),
     );

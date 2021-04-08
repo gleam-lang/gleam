@@ -319,10 +319,10 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let (_config, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
-    let output_files = erl::generate_erlang(analysed.as_slice());
+    let output_files = erl::generate_erlang(&analysed);
 
     // Print warnings
-    let warning_count = warning::print_all(analysed.as_slice());
+    let warning_count = warning::print_all(&analysed);
 
     //exit if warnings_as_errors and warnings
     if warnings_as_errors && warning_count > 0 {
@@ -335,7 +335,7 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
 
     // Delete the gen directory before generating the newly compiled files
-    fs::write_outputs(output_files.as_slice())?;
+    fs::write_outputs(&output_files)?;
 
     println!("Done!");
 

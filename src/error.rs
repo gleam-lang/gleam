@@ -58,7 +58,7 @@ impl<T> GleamExpect<T> for Option<T> {
 impl<T, E: Debug> GleamExpect<T> for Result<T, E> {
     fn gleam_expect(self, msg: &str) -> T {
         match self {
-            Err(e) => fatal_compiler_bug(format!("{}\n\n{:?}", msg, e).as_str()),
+            Err(e) => fatal_compiler_bug(&format!("{}\n\n{:?}", msg, e)),
             Ok(x) => x,
         }
     }
@@ -716,11 +716,7 @@ also be labelled.",
                     let mut fields = fields.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown field".to_string(),
-                        label: did_you_mean(
-                            label.as_ref(),
-                            &mut fields,
-                            "This field does not exist",
-                        ),
+                        label: did_you_mean(label, &mut fields, "This field does not exist"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -777,7 +773,7 @@ But this argument has this type:
                         given = printer.pretty_print(given, 4),
                     )
                     .unwrap();
-                    if let Some(t) = hint_alternative_operator(op, given.as_ref()) {
+                    if let Some(t) = hint_alternative_operator(op, given) {
                         writeln!(buf, "Hint: {}\n", t).unwrap();
                     }
                 }
@@ -1504,7 +1500,7 @@ and try again.
                     "The import statements for these modules form a cycle:\n"
                 )
                 .unwrap();
-                import_cycle(buf, modules.as_ref());
+                import_cycle(buf, modules);
 
                 writeln!(
                     buf,
@@ -1517,7 +1513,7 @@ cycle to continue."
             Error::PackageCycle { packages } => {
                 crate::diagnostic::write_title(buf, "Dependency cycle");
                 writeln!(buf, "The dependencies for these packages form a cycle:\n").unwrap();
-                import_cycle(buf, packages.as_ref());
+                import_cycle(buf, packages);
                 writeln!(
                     buf,
                     "Gleam doesn't support dependency cycles like these, please break the

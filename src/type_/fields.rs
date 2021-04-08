@@ -120,16 +120,12 @@ impl FieldMap {
     }
 
     pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<String> {
-        let mut given = HashSet::with_capacity(args.len());
-        for arg in args {
-            if let Some(label) = &arg.label {
-                let _ = given.insert(label.as_ref());
-            }
-        }
+        let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
+
         self.fields
             .keys()
             .cloned()
-            .filter(|f| !given.contains(f.as_str()))
+            .filter(|f| !given.contains(f))
             .sorted()
             .collect()
     }

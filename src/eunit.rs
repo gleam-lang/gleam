@@ -76,7 +76,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
 
     let ebin_paths: String = crate::fs::read_dir(root.default_build_lib_path())?
         .filter_map(Result::ok)
-        .map(|entry| entry.path().join("ebin").as_path().display().to_string())
+        .map(|entry| entry.path().join("ebin").display().to_string())
         .join(",");
 
     // we supply two parameters to the escript. First is a comma seperated

@@ -72,9 +72,9 @@ impl<'comments> Formatter<'comments> {
 
     fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
         Self {
-            comments: extra.comments.as_slice(),
-            doc_comments: extra.doc_comments.as_slice(),
-            module_comments: extra.module_comments.as_slice(),
+            comments: &extra.comments,
+            doc_comments: &extra.doc_comments,
+            module_comments: &extra.module_comments,
             empty_lines: extra.empty_lines,
         }
     }
@@ -95,8 +95,8 @@ impl<'comments> Formatter<'comments> {
 
     fn pop_empty_lines(&mut self, limit: usize) -> bool {
         let mut end = 0;
-        for (i, postition) in self.empty_lines.iter().enumerate() {
-            if *postition > limit {
+        for (i, &postition) in self.empty_lines.iter().enumerate() {
+            if postition > limit {
                 break;
             }
             end = i + 1;
@@ -112,7 +112,7 @@ impl<'comments> Formatter<'comments> {
         let mut imports = Vec::new();
         let mut declarations = Vec::with_capacity(module.statements.len());
 
-        for statement in module.statements.iter() {
+        for statement in &module.statements {
             let start = statement.location().start;
             match statement {
                 Statement::Import { .. } => {
@@ -200,14 +200,7 @@ impl<'comments> Formatter<'comments> {
                 location,
                 opaque,
                 ..
-            } => self.custom_type(
-                *public,
-                *opaque,
-                name,
-                parameters.as_slice(),
-                constructors,
-                location,
-            ),
+            } => self.custom_type(*public, *opaque, name, parameters, constructors, location),
 
             Statement::ExternalFn {
                 public,
@@ -218,7 +211,7 @@ impl<'comments> Formatter<'comments> {
                 fun,
                 ..
             } => self
-                .external_fn_signature(*public, name, args.as_slice(), retrn)
+                .external_fn_signature(*public, name, args, retrn)
                 .append(" =")
                 .append(line())
                 .append("  \"")
@@ -361,7 +354,7 @@ impl<'comments> Formatter<'comments> {
             .append("const ")
             .append(name)
             .append(": ")
-            .append(printer.print(value.type_().as_ref()))
+            .append(printer.print(&value.type_()))
             .append(" = ")
             .append(self.const_expr(value))
     }
@@ -631,14 +624,14 @@ impl<'comments> Formatter<'comments> {
                 is_capture: true,
                 body,
                 ..
-            } => self.fn_capture(body.as_ref()),
+            } => self.fn_capture(&body),
 
             UntypedExpr::Fn {
                 return_annotation,
                 arguments: args,
                 body,
                 ..
-            } => self.expr_fn(args.as_slice(), return_annotation.as_ref(), body.as_ref()),
+            } => self.expr_fn(args, return_annotation.as_ref(), body),
 
             UntypedExpr::ListNil { .. } => "[]".to_doc(),
 
@@ -1026,7 +1019,7 @@ impl<'comments> Formatter<'comments> {
             .append(name)
             .append(self.docs_fn_args(args, &mut printer))
             .append(" -> ".to_doc())
-            .append(printer.print(return_type.as_ref()))
+            .append(printer.print(&return_type))
     }
 
     // Will always print the types, even if they were implicit in the original source
@@ -1251,72 +1244,70 @@ impl<'comments> Formatter<'comments> {
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
             ClauseGuard::And { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" && ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::Or { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" || ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::Equals { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" == ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::NotEquals { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" != ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::GtInt { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" > ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::GtEqInt { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" >= ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::LtInt { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" < ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::LtEqInt { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" <= ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::GtFloat { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" >. ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::GtEqFloat { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" >=. ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::LtFloat { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" <. ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::LtEqFloat { left, right, .. } => self
-                .clause_guard(left.as_ref())
+                .clause_guard(left)
                 .append(" <=. ")
-                .append(self.clause_guard(right.as_ref())),
+                .append(self.clause_guard(right)),
 
             ClauseGuard::Var { name, .. } => name.to_doc(),
 
-            ClauseGuard::TupleIndex { tuple, index, .. } => self
-                .clause_guard(tuple.as_ref())
-                .append(".")
-                .append(*index)
-                .to_doc(),
+            ClauseGuard::TupleIndex { tuple, index, .. } => {
+                self.clause_guard(tuple).append(".").append(*index).to_doc()
+            }
 
             ClauseGuard::Constant(constant) => self.const_expr(constant),
         }
@@ -1596,14 +1587,14 @@ where
         } => "size"
             .to_doc()
             .append("(")
-            .append(to_doc(value.as_ref()))
+            .append(to_doc(value))
             .append(")"),
 
         BitStringSegmentOption::Size {
             value,
             short_form: true,
             ..
-        } => to_doc(value.as_ref()),
+        } => to_doc(value),
 
         BitStringSegmentOption::Unit { value, .. } => "unit"
             .to_doc()

@@ -110,7 +110,7 @@ impl Hydrator {
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {
-                    environment.increment_usage(name.as_str());
+                    environment.increment_usage(name);
                 }
 
                 // Ensure that the correct number of arguments have been given to the constructor
@@ -125,22 +125,21 @@ impl Hydrator {
 
                 // Instantiate the constructor type for this specific usage
                 let mut type_vars = hashmap![];
-                let mut parameter_types = Vec::with_capacity(parameters.len());
-                for typ in parameters {
-                    let t = environment.instantiate(typ, 0, &mut type_vars, self);
+                let parameter_types: Vec<_> = parameters
+                    .into_iter()
+                    .map(|typ| environment.instantiate(typ, 0, &mut type_vars, self))
+                    .collect();
 
-                    parameter_types.push(t);
-                }
                 let return_type = environment.instantiate(return_type, 0, &mut type_vars, self);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
                 for (parameter, (location, argument)) in
-                    parameter_types.iter().zip(argument_types.iter())
+                    parameter_types.into_iter().zip(argument_types)
                 {
                     environment
-                        .unify(parameter.clone(), argument.clone())
-                        .map_err(|e| convert_unify_error(e, *location))?;
+                        .unify(parameter, argument)
+                        .map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 Ok(return_type)
@@ -166,32 +165,30 @@ impl Hydrator {
                 Ok(fn_(args, retrn))
             }
 
-            TypeAst::Var { name, location, .. } => {
-                match self.created_type_variables.get(name.as_str()) {
-                    Some(var) => Ok(var.clone()),
+            TypeAst::Var { name, location, .. } => match self.created_type_variables.get(name) {
+                Some(var) => Ok(var.clone()),
 
-                    None if self.permit_new_type_variables => {
-                        let var = environment.new_generic_var();
-                        let _ = self
-                            .created_type_variable_ids
-                            .insert(environment.previous_uid());
-                        let _ = self
-                            .created_type_variables
-                            .insert(name.clone(), var.clone());
-                        Ok(var)
-                    }
-
-                    None => Err(Error::UnknownType {
-                        name: name.to_string(),
-                        location: *location,
-                        types: environment
-                            .module_types
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
-                    }),
+                None if self.permit_new_type_variables => {
+                    let var = environment.new_generic_var();
+                    let _ = self
+                        .created_type_variable_ids
+                        .insert(environment.previous_uid());
+                    let _ = self
+                        .created_type_variables
+                        .insert(name.clone(), var.clone());
+                    Ok(var)
                 }
-            }
+
+                None => Err(Error::UnknownType {
+                    name: name.to_string(),
+                    location: *location,
+                    types: environment
+                        .module_types
+                        .keys()
+                        .map(|t| t.to_string())
+                        .collect(),
+                }),
+            },
 
             TypeAst::Hole { .. } if self.permit_holes => {
                 Ok(environment.new_unbound_var(environment.level))

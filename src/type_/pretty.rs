@@ -48,14 +48,14 @@ impl Printer {
                 } else {
                     Document::String(name.clone())
                         .append("(")
-                        .append(self.args_to_gleam_doc(args.as_slice()))
+                        .append(self.args_to_gleam_doc(args))
                         .append(")")
                 }
             }
 
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
-                .append(self.args_to_gleam_doc(args.as_slice()))
+                .append(self.args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
                     break_("", " ")
@@ -64,11 +64,9 @@ impl Printer {
                         .group(),
                 ),
 
-            Type::Var { type_: typ, .. } => self.type_var_doc(&*typ.borrow()),
+            Type::Var { type_: typ, .. } => self.type_var_doc(&typ.borrow()),
 
-            Type::Tuple { elems, .. } => {
-                self.args_to_gleam_doc(elems.as_slice()).surround("#(", ")")
-            }
+            Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("#(", ")"),
         }
     }
 

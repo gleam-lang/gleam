@@ -82,7 +82,7 @@ pub fn write_title(buffer: &mut Buffer, title: &str) {
 pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
     use std::io::Write;
     use termcolor::{ColorSpec, WriteColor};
-    write_title(buffer, d.title.as_ref());
+    write_title(buffer, &d.title);
     buffer.set_color(&ColorSpec::new()).unwrap();
     writeln!(buffer, "{}", d.label).unwrap();
 }

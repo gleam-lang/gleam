@@ -51,10 +51,10 @@ impl<'a> ProjectCompiler<'a> {
         let sequence = order_packages(&self.configs)?;
 
         // Read and type check deps packages
-        for name in sequence.into_iter() {
+        for name in sequence {
             let config = self
                 .configs
-                .remove(name.as_str())
+                .remove(&name)
                 .gleam_expect("Missing package config");
             self.compile_package(name, config, SourceLocations::Src)?;
         }
@@ -73,7 +73,7 @@ impl<'a> ProjectCompiler<'a> {
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
-        crate::cli::print_compiling(name.as_str());
+        crate::cli::print_compiling(&name);
         let test_path = match locations {
             SourceLocations::SrcAndTest => {
                 Some(self.root.default_build_lib_package_test_path(&name))
@@ -98,11 +98,7 @@ impl<'a> ProjectCompiler<'a> {
             &mut self.type_manifests,
             &mut self.defined_modules,
         )?;
-        ErlangApp::new(out_path.as_path()).render(
-            &FileSystemAccessor::new(),
-            &config,
-            compiled.modules.as_slice(),
-        )?;
+        ErlangApp::new(&out_path).render(&FileSystemAccessor::new(), &config, &compiled.modules)?;
 
         self.packages.insert(name, compiled);
         Ok(())

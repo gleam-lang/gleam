@@ -24,6 +24,7 @@ use pattern::pattern;
 use std::char;
 use std::collections::HashMap;
 use std::default::Default;
+use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -48,7 +49,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
 
-        for (name, text) in records(ast).into_iter() {
+        for (name, text) in records(ast) {
             files.push(OutputFile {
                 path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
                 text,
@@ -142,7 +143,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .filter(|constructor| !constructor.arguments.is_empty())
         .flat_map(|constructor| {
             let mut fields = Vec::with_capacity(constructor.arguments.len());
-            for RecordConstructorArg { label, .. } in constructor.arguments.iter() {
+            for RecordConstructorArg { label, .. } in &constructor.arguments {
                 match label {
                     Some(s) => fields.push(&**s),
                     None => return None,
@@ -180,7 +181,6 @@ pub fn module(
     line_numbers: &LineNumbers,
     writer: &mut impl Utf8Writer,
 ) -> Result<()> {
-    let module_name = module.name.as_slice();
     let mut exports = vec![];
     let mut type_defs = vec![];
     let mut type_exports = vec![];
@@ -299,10 +299,9 @@ pub fn module(
                 .nest(INDENT)
                 .group()
                 .append(".");
+                let type_printer = TypePrinter::new(&module.name);
                 let params = concat(Itertools::intersperse(
-                    typed_parameters
-                        .iter()
-                        .map(|a| TypePrinter::new(module.name.as_slice()).print(a)),
+                    typed_parameters.iter().map(|a| type_printer.print(a)),
                     ", ".to_doc(),
                 ));
                 let doc = if *opaque { "-opaque " } else { "-type " }
@@ -367,13 +366,13 @@ pub fn module(
         module
             .statements
             .iter()
-            .flat_map(|s| statement(module.name.as_slice(), s, module_name, line_numbers)),
+            .flat_map(|s| statement(&module.name, s, &module.name, line_numbers)),
         lines(2),
     ));
 
     "-module("
         .to_doc()
-        .append(module_name_join(module_name))
+        .append(module_name_join(&module.name))
         .append(").")
         .append(line())
         .append("-compile(no_auto_import).")
@@ -404,14 +403,7 @@ fn statement<'a>(
             body,
             return_type,
             ..
-        } => Some(mod_fun(
-            name.as_ref(),
-            args.as_slice(),
-            body,
-            module,
-            return_type,
-            line_numbers,
-        )),
+        } => Some(mod_fun(name, args, body, module, return_type, line_numbers)),
 
         Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
@@ -423,10 +415,10 @@ fn statement<'a>(
             ..
         } => Some(external_fun(
             current_module,
-            name.as_ref(),
-            module.as_ref(),
-            fun.as_ref(),
-            args.as_ref(),
+            name,
+            module,
+            fun,
+            args,
             return_type,
         )),
     }
@@ -642,7 +634,7 @@ where
         None
     };
 
-    for option in options.iter() {
+    for option in options {
         use BitStringSegmentOption as Opt;
         if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
@@ -820,7 +812,7 @@ fn assert<'a>(
     let clauses = docvec![
         pattern::to_doc(pat, &mut vars, env),
         " -> ",
-        assert_return(vars.as_slice(), env),
+        assert_return(&vars, env),
         ";",
         line(),
         env.next_local_var_name(var),
@@ -839,7 +831,7 @@ fn assert<'a>(
         .nest(INDENT)
     ];
     docvec![
-        assert_assign(vars.as_slice(), env),
+        assert_assign(&vars, env),
         " = case ",
         body,
         " of",
@@ -976,7 +968,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
-        } if module.as_slice() == env.module => "fun "
+        } if module == env.module => "fun "
             .to_doc()
             .append(atom(name.to_string()))
             .append("/")
@@ -1025,7 +1017,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         Constant::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| const_segment(&s.value, s.options.as_slice(), env)),
+                .map(|s| const_segment(&s.value, &s.options, env)),
         ),
 
         Constant::Record { tag, args, .. } => {
@@ -1097,57 +1089,57 @@ fn optional_clause_guard<'a>(
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
-        ClauseGuard::Or { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::Or { left, right, .. } => clause_guard(left, env)
             .append(" orelse ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::And { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::And { left, right, .. } => clause_guard(left, env)
             .append(" andalso ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::Equals { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::Equals { left, right, .. } => clause_guard(left, env)
             .append(" =:= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::NotEquals { left, right, .. } => clause_guard(left, env)
             .append(" =/= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::GtInt { left, right, .. } => clause_guard(left, env)
             .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::GtEqInt { left, right, .. } => clause_guard(left, env)
             .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::LtInt { left, right, .. } => clause_guard(left, env)
             .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::LtEqInt { left, right, .. } => clause_guard(left, env)
             .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::GtFloat { left, right, .. } => clause_guard(left, env)
             .append(" > ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::GtEqFloat { left, right, .. } => clause_guard(left, env)
             .append(" >= ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::LtFloat { left, right, .. } => clause_guard(left, env)
             .append(" < ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
-        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left.as_ref(), env)
+        ClauseGuard::LtEqFloat { left, right, .. } => clause_guard(left, env)
             .append(" =< ")
-            .append(clause_guard(right.as_ref(), env)),
+            .append(clause_guard(right, env)),
 
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
-        ClauseGuard::Var { name, .. } => env.local_var_name(name.as_str()),
+        ClauseGuard::Var { name, .. } => env.local_var_name(name),
 
         ClauseGuard::TupleIndex { tuple, index, .. } => tuple_index_inline(tuple, *index, env),
 
@@ -1262,7 +1254,7 @@ fn docs_args_call<'a>(
             ..
         } => {
             let args = wrap_args(args.into_iter());
-            if module.as_slice() == env.module {
+            if module == env.module {
                 atom(name.to_string()).append(args)
             } else {
                 atom(module.join("@"))
@@ -1297,7 +1289,7 @@ fn docs_args_call<'a>(
             } = body.as_ref()
             {
                 let mut merged_args = Vec::with_capacity(inner_args.len());
-                for arg in inner_args.iter() {
+                for arg in inner_args {
                     match &arg.value {
                         TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => {
                             merged_args.push(args.swap_remove(0))
@@ -1389,7 +1381,7 @@ fn erlang_error<'a>(
         "message => ",
         string(message)
     ];
-    for (key, value) in fields.into_iter() {
+    for (key, value) in fields {
         fields_doc = fields_doc
             .append(",")
             .append(line())
@@ -1425,8 +1417,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             label, location, ..
         } => todo(label, *location, env),
 
-        TypedExpr::Int { value, .. } => int(value.as_ref()),
-        TypedExpr::Float { value, .. } => float(value.as_ref()),
+        TypedExpr::Int { value, .. } => int(value),
+        TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(first, then, env),
         TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
@@ -1506,7 +1498,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Case {
             subjects, clauses, ..
-        } => case(subjects, clauses.as_slice(), env),
+        } => case(subjects, clauses, env),
 
         TypedExpr::BinOp {
             name, left, right, ..
@@ -1517,7 +1509,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| expr_segment(&s.value, s.options.as_slice(), env)),
+                .map(|s| expr_segment(&s.value, &s.options, env)),
         ),
     }
 }
@@ -1747,7 +1739,7 @@ fn collect_type_var_usages<'a>(
 
 fn type_var_ids(type_: &Type, ids: &mut HashMap<usize, usize>) {
     match type_ {
-        Type::Var { type_: typ } => match &*typ.borrow() {
+        Type::Var { type_: typ } => match typ.borrow().deref() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
@@ -1892,9 +1884,7 @@ impl<'a> TypePrinter<'a> {
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
             // compiler error
-            name => crate::error::fatal_compiler_bug(
-                format!("{} is not a built-in type.", name).as_str(),
-            ),
+            name => crate::error::fatal_compiler_bug(&format!("{} is not a built-in type.", name)),
         }
     }
 

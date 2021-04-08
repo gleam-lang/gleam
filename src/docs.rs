@@ -15,7 +15,7 @@ use crate::{
 };
 use askama::Template;
 use itertools::Itertools;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -23,7 +23,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn build_project(
     project_root: impl AsRef<Path>,
     version: String,
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
@@ -31,7 +31,7 @@ pub fn build_project(
     check_app_file_version_matches(&project_root, &config)?;
 
     // Attach documentation to Src modules
-    let analysed: Vec<Analysed> = analysed
+    let analysed: Vec<_> = analysed
         .into_iter()
         .filter(|a| a.origin == ModuleOrigin::Src)
         .map(|mut a| {
@@ -48,16 +48,10 @@ pub fn build_project(
     }];
 
     // Add any user-supplied pages
-    pages.extend(config.docs.pages.to_vec());
+    pages.extend(config.docs.pages.iter().cloned());
 
     // Generate HTML
-    let outputs = generate_html(
-        project_root,
-        &config,
-        analysed.as_slice(),
-        &pages,
-        output_dir,
-    );
+    let outputs = generate_html(project_root, &config, &analysed, &pages, output_dir);
     Ok((config, outputs))
 }
 
@@ -66,18 +60,18 @@ pub fn generate_html(
     project_config: &PackageConfig,
     analysed: &[Analysed],
     docspages: &[DocsPage],
-    output_dir: &PathBuf,
+    output_dir: &Path,
 ) -> Vec<OutputFile> {
     let modules = analysed.iter();
 
     // Define user-supplied (or README) pages
-    let pages = docspages
+    let pages: Vec<_> = docspages
         .iter()
         .map(|page| Link {
             name: page.title.to_string(),
             path: page.path.to_string(),
         })
-        .collect::<Vec<_>>();
+        .collect();
 
     let doc_links = project_config.docs.links.iter().map(|doc_link| Link {
         name: doc_link.title.to_string(),
@@ -89,24 +83,22 @@ pub fn generate_html(
         path,
     });
 
-    let links = doc_links
-        .chain(repo_link.into_iter())
-        .collect::<Vec<Link>>();
+    let links: Vec<_> = doc_links.chain(repo_link).collect();
 
     // index.css
     // highlightjs-gleam.js
     let num_asset_files = 2;
     let mut files = Vec::with_capacity(analysed.len() + pages.len() + 1 + num_asset_files);
 
-    let mut modules_links: Vec<_> = modules
+    let modules_links: Vec<_> = modules
         .clone()
         .map(|m| {
             let name = m.name.join("/");
             let path = [&name, "/"].concat();
             Link { path, name }
         })
+        .sorted()
         .collect();
-    modules_links.sort();
 
     // Generate user-supplied (or README) pages
     for page in docspages {
@@ -142,48 +134,37 @@ pub fn generate_html(
             unnest: Itertools::intersperse(module.name.iter().map(|_| ".."), "/").collect(),
             links: &links,
             pages: &pages,
-            documentation: render_markdown(module.ast.documentation.iter().join("\n").as_str()),
-            modules: modules_links.as_slice(),
+            documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
+            modules: &modules_links,
             project_name: &project_config.name,
             page_title: &format!("{} - {}", name, project_config.name),
             module_name: name,
             project_version: &project_config.version,
-            functions: {
-                let mut f: Vec<_> = module
-                    .ast
-                    .statements
-                    .iter()
-                    .flat_map(|statement| function(&source_links, statement))
-                    .collect();
-                f.sort();
-                f
-            },
-            types: {
-                let mut t: Vec<_> = module
-                    .ast
-                    .statements
-                    .iter()
-                    .flat_map(|statement| type_(&source_links, statement))
-                    .collect();
-                t.sort();
-                t
-            },
-            constants: {
-                let mut c: Vec<_> = module
-                    .ast
-                    .statements
-                    .iter()
-                    .flat_map(|statement| constant(&source_links, statement))
-                    .collect();
-                c.sort();
-                c
-            },
+            functions: module
+                .ast
+                .statements
+                .iter()
+                .flat_map(|statement| function(&source_links, statement))
+                .sorted()
+                .collect(),
+            types: module
+                .ast
+                .statements
+                .iter()
+                .flat_map(|statement| type_(&source_links, statement))
+                .sorted()
+                .collect(),
+            constants: module
+                .ast
+                .statements
+                .iter()
+                .flat_map(|statement| constant(&source_links, statement))
+                .sorted()
+                .collect(),
         };
 
-        let mut path = output_dir.clone();
-        for segment in module.name.iter() {
-            path.push(segment)
-        }
+        let mut path = output_dir.to_path_buf();
+        path.extend(&module.name);
         path.push("index.html");
         files.push(OutputFile {
             path,
@@ -229,7 +210,7 @@ fn function<'a>(
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
-            signature: print(formatter.external_fn_signature(true, name, args.as_slice(), retrn)),
+            signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             source_url: source_links.url(location),
         }),
 
@@ -278,7 +259,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             ..
         } => Some(Type {
             name,
-            definition: print(formatter.external_type(true, name.as_str(), args)),
+            definition: print(formatter.external_type(true, name, args)),
             documentation: markdown_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),
@@ -296,14 +277,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         } => Some(Type {
             name,
             // TODO: Don't use the same printer for docs as for the formatter
-            definition: print(formatter.custom_type(
-                true,
-                false,
-                name,
-                parameters,
-                cs.as_slice(),
-                location,
-            )),
+            definition: print(formatter.custom_type(true, false, name, parameters, cs, location)),
             documentation: markdown_documentation(doc),
             constructors: cs
                 .iter()
