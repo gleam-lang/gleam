@@ -13,7 +13,7 @@ pub struct SourceTree {
 impl SourceTree {
     pub fn new(inputs: Vec<Input>) -> Result<Self, Error> {
         let mut graph: Self = Default::default();
-        for input in inputs.into_iter() {
+        for input in inputs {
             graph.insert(input)?;
         }
         graph.calculate_dependencies()?;

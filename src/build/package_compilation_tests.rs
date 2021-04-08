@@ -1744,7 +1744,7 @@ fn config_compilation_test() {
                 .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
                 .expect("Should compile OK");
             codegen::ErlangApp::new(&PathBuf::from("_build/default/lib/the_package/ebin"))
-                .render(&file_writer, &config, compiled.modules.as_slice())
+                .render(&file_writer, &config, &compiled.modules)
                 .unwrap();
             let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
             outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());

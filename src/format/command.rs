@@ -23,7 +23,7 @@ pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
 fn process_stdin(check: bool) -> Result<()> {
     let src = read_stdin()?;
     let mut out = String::new();
-    crate::format::pretty(&mut out, src.as_str())?;
+    crate::format::pretty(&mut out, &src)?;
 
     if !check {
         print!("{}", out);
@@ -63,7 +63,7 @@ fn check_files(files: Vec<String>) -> Result<()> {
 }
 
 fn format_files(files: Vec<String>) -> Result<()> {
-    for file in unformatted_files(files)?.into_iter() {
+    for file in unformatted_files(files)? {
         crate::fs::write_output(&OutputFile {
             path: file.destination,
             text: file.output,
@@ -84,7 +84,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
         })?;
 
         if path.is_dir() {
-            for path in crate::fs::gleam_files_excluding_gitignore(&path).into_iter() {
+            for path in crate::fs::gleam_files_excluding_gitignore(&path) {
                 format_file(&mut problem_files, path)?;
             }
         } else {
@@ -98,7 +98,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
 fn format_file(problem_files: &mut Vec<Unformatted>, path: PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?;
     let mut output = String::new();
-    crate::format::pretty(&mut output, src.as_str())?;
+    crate::format::pretty(&mut output, &src)?;
 
     if src != output {
         problem_files.push(Unformatted {

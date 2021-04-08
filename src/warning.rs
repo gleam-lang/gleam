@@ -207,12 +207,9 @@ your program.",
 }
 
 pub fn print_all(analysed: &[crate::project::Analysed]) -> usize {
-    let mut warning_count = 0;
-    for a in analysed.iter() {
-        for w in a.warnings.iter() {
-            w.pretty_print();
-            warning_count += 1;
-        }
-    }
-    warning_count
+    analysed
+        .iter()
+        .flat_map(|a| &a.warnings)
+        .inspect(|w| w.pretty_print())
+        .count()
 }

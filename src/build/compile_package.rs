@@ -14,7 +14,7 @@ use std::{
 pub type Manifests = HashMap<String, (Origin, Module)>;
 
 pub fn command(options: CompilePackage) -> Result<()> {
-    let mut type_manifests = load_libraries(options.libraries.as_slice())?;
+    let mut type_manifests = load_libraries(&options.libraries)?;
     let mut defined_modules = HashMap::new();
     let mut warnings = Vec::new();
 

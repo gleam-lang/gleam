@@ -254,9 +254,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             location,
             value: left,
         });
-        for arg in args {
-            new_args.push(arg.clone());
-        }
+        new_args.extend(args.iter().cloned());
 
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
         // TODO: Preserve the fact this is a pipe instead of making it a Call
@@ -348,7 +346,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let first = self.infer(first)?;
         let then = self.infer(then)?;
 
-        if first.type_().as_ref().is_result() {
+        if first.type_().is_result() {
             self.environment
                 .warnings
                 .push(Warning::ImplicitlyDiscardedResult {
@@ -476,7 +474,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             Err(err) => match container {
                 UntypedExpr::Var { name, location, .. } => {
                     let module_access =
-                        self.infer_module_access(name.as_ref(), label, &location, access_location);
+                        self.infer_module_access(&name, label, &location, access_location);
 
                     // If the name is in the environment, use the original error from
                     // inferring the record access, so that we can suggest possible
@@ -748,7 +746,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let return_type = self.new_unbound_var(self.environment.level);
 
-        for subject in subjects.into_iter() {
+        for subject in subjects {
             let (subject, subject_type) = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
                 let subject_type = generalise(subject.type_(), subject_typer.environment.level);
@@ -760,7 +758,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             subject_types.push(subject_type);
         }
 
-        for clause in clauses.into_iter() {
+        for clause in clauses {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
             self.unify(return_type.clone(), typed_clause.then.type_())
                 .map_err(|e| e.case_clause_mismatch().to_error(typed_clause.location()))?;
@@ -1240,9 +1238,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Check to see if it's a Type that can have accessible fields
         let accessors = match collapse_links(record.type_()).as_ref() {
             // A type in the current module which may have fields
-            Type::App { module, name, .. }
-                if module.as_slice() == self.environment.current_module =>
-            {
+            Type::App { module, name, .. } if module == self.environment.current_module => {
                 self.environment.accessors.get(name)
             }
 
@@ -1672,7 +1668,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedConstant, Error> {
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
-        for element in untyped_elements.into_iter() {
+        for element in untyped_elements {
             let element = self.infer_const(&None, element)?;
             elements.push(element);
         }
@@ -1688,7 +1684,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let typ = self.new_unbound_var(0);
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
-        for element in untyped_elements.into_iter() {
+        for element in untyped_elements {
             let element = self.infer_const(&None, element)?;
             self.unify(typ.clone(), element.type_())
                 .map_err(|e| convert_unify_error(e, element.location()))?;

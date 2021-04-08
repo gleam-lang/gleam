@@ -22,10 +22,10 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
     // Remove docs from API
     runtime.block_on(async {
         hexpm::UnauthenticatedClient::new()
-            .authenticate(username.as_str(), password.as_str(), TOKEN_NAME)
+            .authenticate(&username, &password, TOKEN_NAME)
             .await
             .map_err(|e| Error::Hex(e.to_string()))?
-            .remove_docs(package.as_str(), version.as_str())
+            .remove_docs(&package, &version)
             .await
             .map_err(|e| Error::Hex(e.to_string()))
     })?;
@@ -56,7 +56,7 @@ pub fn build(project_root: String, version: String, to: Option<String>) -> Resul
 
     // Write
     crate::fs::delete_dir(&output_dir)?;
-    crate::fs::write_outputs(outputs.as_slice())?;
+    crate::fs::write_outputs(&outputs)?;
 
     println!(
         "\nThe docs for {package} have been rendered to {output_dir}",
@@ -93,10 +93,10 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
     // Upload to hex
     runtime.block_on(async {
         hexpm::UnauthenticatedClient::new()
-            .authenticate(username.as_str(), password.as_str(), TOKEN_NAME)
+            .authenticate(&username, &password, TOKEN_NAME)
             .await
             .map_err(|e| Error::Hex(e.to_string()))?
-            .publish_docs(config.name.as_str(), version.as_str(), Bytes::from(archive))
+            .publish_docs(&config.name, &version, Bytes::from(archive))
             .await
             .map_err(|e| Error::Hex(e.to_string()))
     })?;

@@ -65,7 +65,7 @@ fn type_options<T>(
 ) -> Result<Arc<Type>, Error> {
     let mut categories = SegmentOptionCategories::new();
     // Basic category checking
-    for option in input_options.iter() {
+    for option in input_options {
         match option {
             BitStringSegmentOption::Binary { .. }
             | BitStringSegmentOption::Int { .. }

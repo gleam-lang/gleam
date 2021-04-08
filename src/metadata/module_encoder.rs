@@ -9,7 +9,7 @@ use crate::{
         ValueConstructor, ValueConstructorVariant,
     },
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 pub struct ModuleEncoder<'a> {
     data: &'a type_::Module,
@@ -55,7 +55,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: accessors_map::Builder<'_>,
         accessors: &AccessorsMap,
     ) {
-        self.build_type(builder.reborrow().init_type(), accessors.type_.as_ref());
+        self.build_type(builder.reborrow().init_type(), &accessors.type_);
         let mut builder = builder.init_accessors(accessors.accessors.len() as u32);
         for (i, (name, accessor)) in accessors.accessors.iter().enumerate() {
             let mut property = builder.reborrow().get(i as u32);
@@ -69,7 +69,7 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: record_accessor::Builder<'_>,
         accessor: &RecordAccessor,
     ) {
-        self.build_type(builder.reborrow().init_type(), accessor.type_.as_ref());
+        self.build_type(builder.reborrow().init_type(), &accessor.type_);
         builder.reborrow().set_label(&accessor.label);
         builder.set_index(accessor.index as u16);
     }
@@ -116,11 +116,11 @@ impl<'a> ModuleEncoder<'a> {
             builder
                 .reborrow()
                 .init_parameters(constructor.parameters.len() as u32),
-            constructor.parameters.as_slice(),
+            &constructor.parameters,
         );
         self.build_module_name(
             builder.init_module(constructor.module.len() as u32),
-            constructor.module.as_slice(),
+            &constructor.module,
         );
     }
 
@@ -192,10 +192,10 @@ impl<'a> ModuleEncoder<'a> {
     fn build_field_map(&mut self, mut builder: field_map::Builder<'_>, field_map: &FieldMap) {
         builder.set_arity(field_map.arity as u32);
         let mut builder = builder.init_fields(field_map.fields.len() as u32);
-        for (i, (name, position)) in field_map.fields.iter().enumerate() {
+        for (i, (name, &position)) in field_map.fields.iter().enumerate() {
             let mut field = builder.reborrow().get(i as u32);
             field.set_key(name);
-            field.init_value().set_value(*position as u16);
+            field.init_value().set_value(position as u16);
         }
     }
 
@@ -205,16 +205,15 @@ impl<'a> ModuleEncoder<'a> {
             Constant::Float { value, .. } => builder.set_float(value),
             Constant::String { value, .. } => builder.set_string(value),
 
-            Constant::Tuple { elements, .. } => self.build_constants(
-                builder.init_tuple(elements.len() as u32),
-                elements.as_slice(),
-            ),
+            Constant::Tuple { elements, .. } => {
+                self.build_constants(builder.init_tuple(elements.len() as u32), elements)
+            }
 
             Constant::List { elements, typ, .. } => {
                 let mut builder = builder.init_list();
                 self.build_constants(
                     builder.reborrow().init_elements(elements.len() as u32),
-                    elements.as_slice(),
+                    elements,
                 );
                 self.build_type(builder.init_type(), typ);
             }
@@ -309,31 +308,25 @@ impl<'a> ModuleEncoder<'a> {
         match type_ {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
-                self.build_types(
-                    fun.reborrow().init_arguments(args.len() as u32),
-                    args.as_slice(),
-                );
-                self.build_type(fun.init_return(), retrn.as_ref())
+                self.build_types(fun.reborrow().init_arguments(args.len() as u32), args);
+                self.build_type(fun.init_return(), retrn)
             }
 
             Type::App {
                 name, args, module, ..
             } => {
                 let mut app = builder.init_app();
-                app.set_name(name.as_str());
-                self.build_types(
-                    app.reborrow().init_parameters(args.len() as u32),
-                    args.as_slice(),
-                );
-                self.build_module_name(app.init_module(module.len() as u32), module.as_slice());
+                app.set_name(name);
+                self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
+                self.build_module_name(app.init_module(module.len() as u32), module);
             }
 
             Type::Tuple { elems } => self.build_types(
                 builder.init_tuple().init_elements(elems.len() as u32),
-                elems.as_slice(),
+                elems,
             ),
 
-            Type::Var { type_: typ } => match &*typ.borrow() {
+            Type::Var { type_: typ } => match typ.borrow().deref() {
                 TypeVar::Link { type_: typ } => self.build_type(builder, &*typ),
                 TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
                 TypeVar::Unbound { .. } => crate::error::fatal_compiler_bug(
@@ -349,7 +342,7 @@ impl<'a> ModuleEncoder<'a> {
         types: &[Arc<Type>],
     ) {
         for (i, type_) in types.iter().enumerate() {
-            self.build_type(builder.reborrow().get(i as u32), type_.as_ref());
+            self.build_type(builder.reborrow().get(i as u32), type_);
         }
     }
 

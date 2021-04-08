@@ -108,7 +108,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
         // Unify each pattern in the multi-pattern with the corresponding subject
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
-        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects.iter()) {
+        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects) {
             let pattern = self.unify(pattern, subject_type.clone())?;
             typed_multi.push(pattern);
         }
@@ -195,7 +195,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
 
             Pattern::Var { name, location } => {
-                self.insert_variable(name.as_ref(), typ, location)
+                self.insert_variable(&name, typ, location)
                     .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Var { name, location })
             }
@@ -215,7 +215,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                             .map(|t| t.to_string())
                             .collect(),
                     })?;
-                self.environment.increment_usage(name.as_str());
+                self.environment.increment_usage(&name);
                 let typ = self.environment.instantiate(
                     typ,
                     self.environment.level,
@@ -238,7 +238,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 pattern,
                 location,
             } => {
-                self.insert_variable(name.as_ref(), typ.clone(), location)
+                self.insert_variable(&name, typ.clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 let pattern = self.unify(*pattern, typ)?;
                 Ok(Pattern::Let {
@@ -360,7 +360,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name.as_str());
+                self.environment.increment_usage(&name);
 
                 let cons = self
                     .environment

@@ -33,9 +33,9 @@ pub(super) fn to_doc<'a>(
             env.next_local_var_name(name)
         }
 
-        Pattern::Int { value, .. } => int(value.as_ref()),
+        Pattern::Int { value, .. } => int(value),
 
-        Pattern::Float { value, .. } => float(value.as_ref()),
+        Pattern::Float { value, .. } => float(value),
 
         Pattern::String { value, .. } => string(value),
 
@@ -50,7 +50,7 @@ pub(super) fn to_doc<'a>(
         Pattern::BitString { segments, .. } => bit_string(
             segments
                 .iter()
-                .map(|s| pattern_segment(&s.value, s.options.as_slice(), vars, env)),
+                .map(|s| pattern_segment(&s.value, &s.options, vars, env)),
         ),
     }
 }

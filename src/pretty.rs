@@ -221,7 +221,7 @@ fn fmt(
 
             Document::String(s) => {
                 width += s.len() as isize;
-                writer.str_write(s.as_str())?;
+                writer.str_write(&s)?;
             }
 
             Document::Str(s) => {

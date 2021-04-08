@@ -20,8 +20,8 @@ impl<'a> Erlang<'a> {
     pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
-            self.erlang_module(writer, module, erl_name.as_str())?;
-            self.erlang_record_headers(writer, module, erl_name.as_str())?;
+            self.erlang_module(writer, module, &erl_name)?;
+            self.erlang_record_headers(writer, module, &erl_name)?;
         }
         Ok(())
     }
@@ -34,8 +34,8 @@ impl<'a> Erlang<'a> {
     ) -> Result<()> {
         let name = format!("{}.erl", erl_name);
         let path = self.output_directory.join(&name);
-        let mut file = writer.open(path.as_path())?;
-        let line_numbers = LineNumbers::new(module.code.as_str());
+        let mut file = writer.open(&path)?;
+        let line_numbers = LineNumbers::new(&module.code);
         let res = erl::module(&module.ast, &line_numbers, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
         res
@@ -47,11 +47,11 @@ impl<'a> Erlang<'a> {
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
-        for (name, text) in erl::records(&module.ast).into_iter() {
+        for (name, text) in erl::records(&module.ast) {
             let name = format!("{}_{}.hrl", erl_name, name);
             tracing::trace!(name = ?name, "Generated Erlang header");
             writer
-                .open(self.output_directory.join(name).as_path())?
+                .open(&self.output_directory.join(name))?
                 .write(text.as_bytes())?;
         }
         Ok(())
@@ -81,10 +81,11 @@ impl<'a> ErlangApp<'a> {
 
         let path = self.output_directory.join(format!("{}.app", &config.name));
 
-        let start_module = match &config.otp_start_module {
-            None => "".to_string(),
-            Some(module) => tuple("mod", format!("'{}'", module).as_str()),
-        };
+        let start_module = config
+            .otp_start_module
+            .as_ref()
+            .map(|module| tuple("mod", &format!("'{}'", module)))
+            .unwrap_or_default();
 
         let modules = modules
             .iter()
@@ -92,9 +93,11 @@ impl<'a> ErlangApp<'a> {
             .sorted()
             .join(",\n               ");
 
-        let mut applications: Vec<_> = config.dependencies.iter().map(|m| m.0).collect();
-        applications.sort();
-        let applications = applications.into_iter().join(",\n                    ");
+        let applications = config
+            .dependencies
+            .keys()
+            .sorted()
+            .join(",\n                    ");
 
         let text = format!(
             r#"{{application, {package}, [

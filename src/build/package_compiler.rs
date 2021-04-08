@@ -79,7 +79,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
         let modules = type_check(sequence, parsed_modules, existing_modules, warnings)?;
 
         tracing::info!("Performing code generation");
-        self.perform_codegen(modules.as_slice())?;
+        self.perform_codegen(&modules)?;
 
         tracing::info!("Writing package metadata to disc");
         self.encode_and_write_metadata(&modules)?;
@@ -137,7 +137,7 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     }
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
-        Erlang::new(self.options.out_path.as_path()).render(&self.writer, modules)
+        Erlang::new(&self.options.out_path).render(&self.writer, modules)
     }
 
     /// Set whether to write metadata files
@@ -223,22 +223,21 @@ fn parse_sources(
     already_defined_modules: &mut HashMap<String, PathBuf>,
 ) -> Result<HashMap<String, Parsed>, Error> {
     let mut parsed_modules = HashMap::with_capacity(sources.len());
-    for source in sources.into_iter() {
-        let Source {
-            name,
-            code,
-            path,
-            origin,
-        } = source;
-        let (mut ast, _) =
-            crate::parse::parse_module(code.as_str()).map_err(|error| Error::Parse {
-                path: path.clone(),
-                src: code.clone(),
-                error,
-            })?;
+    for Source {
+        name,
+        code,
+        path,
+        origin,
+    } in sources
+    {
+        let (mut ast, _) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+            path: path.clone(),
+            src: code.clone(),
+            error,
+        })?;
 
         // Store the name
-        ast.name = name.as_str().split("/").map(String::from).collect(); // TODO: store the module name as a string
+        ast.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
 
         let module = Parsed {
             origin,

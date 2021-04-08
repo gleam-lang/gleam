@@ -51,11 +51,8 @@ impl Analysed {
         // Doc Comments
         let mut doc_comments = self.module_extra.doc_comments.iter().peekable();
         for statement in &mut self.ast.statements {
-            let docs: Vec<&str> = comments_before(
-                &mut doc_comments,
-                statement.location().start,
-                self.src.as_str(),
-            );
+            let docs: Vec<&str> =
+                comments_before(&mut doc_comments, statement.location().start, &self.src);
             if !docs.is_empty() {
                 let doc = docs.join("\n");
                 statement.put_doc(doc);
@@ -63,11 +60,8 @@ impl Analysed {
 
             if let crate::ast::Statement::CustomType { constructors, .. } = statement {
                 for constructor in constructors {
-                    let docs: Vec<&str> = comments_before(
-                        &mut doc_comments,
-                        constructor.location.start,
-                        self.src.as_str(),
-                    );
+                    let docs: Vec<&str> =
+                        comments_before(&mut doc_comments, constructor.location.start, &self.src);
                     if !docs.is_empty() {
                         let doc = docs.join("\n");
                         constructor.put_doc(doc);
@@ -189,7 +183,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
         let name = module.name.clone();
         let name_string = module.name_string();
 
-        println!("Compiling {}", name_string.as_str());
+        println!("Compiling {}", name_string);
 
         let mut warnings = vec![];
         let result =

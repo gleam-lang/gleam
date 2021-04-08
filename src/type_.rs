@@ -32,6 +32,7 @@ use crate::{
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
 use std::sync::Arc;
 
 use error::*;
@@ -70,10 +71,7 @@ impl Type {
     }
 
     pub fn is_unbound(&self) -> bool {
-        match self {
-            Self::Var { type_: typ } => typ.borrow().is_unbound(),
-            _ => false,
-        }
+        matches!(self, Self::Var { type_: typ } if typ.borrow().is_unbound())
     }
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
@@ -91,24 +89,15 @@ impl Type {
     }
 
     pub fn is_int(&self) -> bool {
-        match self {
-            Self::App { module, name, .. } => module.is_empty() && name == "Int",
-            _ => false,
-        }
+        matches!(self, Self::App { module, name, .. } if "Int" == name && module.is_empty())
     }
 
     pub fn is_float(&self) -> bool {
-        match self {
-            Self::App { module, name, .. } => module.is_empty() && name == "Float",
-            _ => false,
-        }
+        matches!(self, Self::App { module, name, .. } if "Float" == name && module.is_empty())
     }
 
     pub fn is_string(&self) -> bool {
-        match self {
-            Self::App { module, name, .. } => module.is_empty() && name == "String",
-            _ => false,
-        }
+        matches!(self, Self::App { module, name, .. } if "String" == name && module.is_empty())
     }
 
     /// Get the args for the type if the type is a specific `Type::App`.
@@ -137,7 +126,7 @@ impl Type {
             }
 
             Self::Var { type_: typ } => {
-                let args: Vec<_> = match &*typ.borrow() {
+                let args: Vec<_> = match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
                         return typ.get_app_args(public, module, name, arity, environment);
                     }
@@ -177,7 +166,7 @@ impl Type {
                 .find_private_type()
                 .or_else(|| args.iter().find_map(|t| t.find_private_type())),
 
-            Self::Var { type_: typ, .. } => match &*typ.borrow() {
+            Self::Var { type_: typ, .. } => match typ.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
 
                 TypeVar::Generic { .. } => None,
@@ -196,8 +185,8 @@ impl Type {
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
-    if let Type::Var { type_: typ } = &*t {
-        if let TypeVar::Link { type_: typ } = &*typ.borrow() {
+    if let Type::Var { type_: typ } = t.deref() {
+        if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
             return typ.clone();
         }
     }
@@ -334,9 +323,9 @@ pub struct TypeAliasConstructor {
 
 impl ValueConstructor {
     fn field_map(&self) -> Option<&FieldMap> {
-        match self.variant {
-            ValueConstructorVariant::ModuleFn { ref field_map, .. }
-            | ValueConstructorVariant::Record { ref field_map, .. } => field_map.as_ref(),
+        match &self.variant {
+            ValueConstructorVariant::ModuleFn { field_map, .. }
+            | ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
             _ => None,
         }
     }
@@ -351,7 +340,7 @@ pub fn infer_module(
     modules: &HashMap<String, (Origin, Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
-    let mut environment = Environment::new(uid, module.name.as_slice(), modules, warnings);
+    let mut environment = Environment::new(uid, &module.name, modules, warnings);
     let module_name = &module.name;
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
@@ -360,13 +349,13 @@ pub fn infer_module(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    for s in module.statements.iter() {
+    for s in &module.statements {
         register_import(s, &mut environment)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in module.statements.iter() {
+    for s in &module.statements {
         register_types(
             s,
             module_name,
@@ -377,7 +366,7 @@ pub fn infer_module(
     }
 
     // Register values so they can be used in functions earlier in the module.
-    for s in module.statements.iter() {
+    for s in &module.statements {
         register_values(
             s,
             module_name,
@@ -426,7 +415,7 @@ pub fn infer_module(
         .retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
-    for (_, value) in environment.module_values.iter() {
+    for value in environment.module_values.values() {
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
                 location: value.origin,
@@ -627,7 +616,7 @@ fn register_values<'a>(
             ..
         } => {
             let mut hydrator = hydrators
-                .remove(name.as_str())
+                .remove(name)
                 .gleam_expect("Could not find hydrator for register_values custom type");
             hydrator.disallow_new_type_variables();
 
@@ -641,7 +630,7 @@ fn register_values<'a>(
             // If the custom type only has a single constructor then we can access the
             // fields using the record.field syntax, so store any fields accessors.
             if let Some(accessors) =
-                custom_type_accessors(constructors.as_slice(), &mut hydrator, environment)?
+                custom_type_accessors(constructors, &mut hydrator, environment)?
             {
                 let map = AccessorsMap {
                     public: (*public && !*opaque),
@@ -650,11 +639,11 @@ fn register_values<'a>(
                     // `return_type_constructor` below rather than looking it up twice.
                     type_: typ.clone(),
                 };
-                environment.insert_accessors(name.as_ref(), map)
+                environment.insert_accessors(name, map)
             }
 
             // Check and register constructors
-            for constructor in constructors.iter() {
+            for constructor in constructors {
                 assert_unique_value_name(names, &constructor.name, &constructor.location)?;
 
                 let mut field_map = FieldMap::new(constructor.arguments.len());
@@ -741,13 +730,13 @@ fn generalise_statement(
         } => {
             // Lookup the inferred function information
             let function = environment
-                .get_variable(name.as_str())
+                .get_variable(&name)
                 .gleam_expect("Could not find preregistered type for function");
             let field_map = function.field_map().cloned();
             let typ = function.type_.clone();
 
             // Generalise the function if not already done so
-            let typ = if environment.ungeneralised_functions.remove(name.as_str()) {
+            let typ = if environment.ungeneralised_functions.remove(&name) {
                 let level = 1;
                 generalise(typ, level)
             } else {
@@ -806,7 +795,7 @@ fn infer_statement(
             ..
         } => {
             let preregistered_fn = environment
-                .get_variable(name.as_str())
+                .get_variable(&name)
                 .gleam_expect("Could not find preregistered type for function");
             let field_map = preregistered_fn.field_map().cloned();
             let preregistered_type = preregistered_fn.type_.clone();
@@ -824,7 +813,7 @@ fn infer_statement(
                         .collect();
                     let mut expr_typer = ExprTyper::new(environment);
                     expr_typer.hydrator = hydrators
-                        .remove(name.as_str())
+                        .remove(&name)
                         .gleam_expect("Could not find hydrator for fn");
                     let (args, body) =
                         expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
@@ -841,7 +830,7 @@ fn infer_statement(
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
-                let _ = environment.ungeneralised_functions.remove(name.as_str());
+                let _ = environment.ungeneralised_functions.remove(&name);
                 let typ = generalise(typ, 0);
                 environment.insert_variable(
                     name.clone(),
@@ -886,7 +875,7 @@ fn infer_statement(
             ..
         } => {
             let preregistered_fn = environment
-                .get_variable(name.as_str())
+                .get_variable(&name)
                 .gleam_expect("Could not find preregistered type for function");
             let preregistered_type = preregistered_fn.type_.clone();
             let (args_types, return_type) = preregistered_type
@@ -920,7 +909,7 @@ fn infer_statement(
             ..
         } => {
             let typ = environment
-                .get_type_constructor(&None, alias.as_str())
+                .get_type_constructor(&None, &alias)
                 .gleam_expect("Could not find existing type for type alias")
                 .typ
                 .clone();
@@ -955,7 +944,7 @@ fn infer_statement(
                          documentation,
                      }| {
                         let preregistered_fn = environment
-                            .get_variable(name.as_str())
+                            .get_variable(&name)
                             .gleam_expect("Could not find preregistered type for function");
                         let preregistered_type = preregistered_fn.type_.clone();
 
@@ -1023,7 +1012,7 @@ fn infer_statement(
         } => {
             // Check contained types are valid
             let mut hydrator = Hydrator::new();
-            for arg in args.iter() {
+            for arg in &args {
                 let var = TypeAst::Var {
                     location,
                     name: arg.to_string(),
@@ -1184,7 +1173,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 ///
 fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
     if let Type::Var { type_: typ } = &*typ {
-        let new_value = match &*typ.borrow() {
+        let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
                 return update_levels(typ.clone(), own_level, own_id)
             }
@@ -1213,21 +1202,21 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
 
     match &*typ {
         Type::App { args, .. } => {
-            for arg in args.iter() {
+            for arg in args {
                 update_levels(arg.clone(), own_level, own_id)?
             }
             Ok(())
         }
 
         Type::Fn { args, retrn } => {
-            for arg in args.iter() {
+            for arg in args {
                 update_levels(arg.clone(), own_level, own_id)?;
             }
             update_levels(retrn.clone(), own_level, own_id)
         }
 
         Type::Tuple { elems, .. } => {
-            for elem in elems.iter() {
+            for elem in elems {
                 update_levels(elem.clone(), own_level, own_id)?
             }
             Ok(())
@@ -1243,7 +1232,7 @@ fn match_fun_type(
     environment: &mut Environment<'_, '_>,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
     if let Type::Var { type_: typ } = &*typ {
-        let new_value = match &*typ.borrow() {
+        let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
                 return match_fun_type(typ.clone(), arity, environment)
             }
@@ -1287,7 +1276,7 @@ fn match_fun_type(
 fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
     match &*t {
         Type::Var { type_: typ } => {
-            let new_var = match &*typ.borrow() {
+            let new_var = match typ.borrow().deref() {
                 TypeVar::Unbound { id, level } => {
                     let id = *id;
                     if *level > ctx_level {

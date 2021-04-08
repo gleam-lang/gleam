@@ -315,7 +315,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }
 
             Type::Var { type_: typ } => {
-                match &*typ.borrow() {
+                match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
                         return self.instantiate(typ.clone(), ctx_level, ids, hydrator)
                     }
@@ -365,7 +365,7 @@ impl<'a, 'b> Environment<'a, 'b> {
 
         // Collapse right hand side type links. Left hand side will be collapsed in the next block.
         if let Type::Var { type_: typ } = &*t2 {
-            if let TypeVar::Link { type_: typ } = &*typ.borrow() {
+            if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
                 return self.unify(t1, typ.clone());
             }
         }
@@ -377,7 +377,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 Link,
             }
 
-            let action = match &*typ.borrow() {
+            let action = match typ.borrow().deref() {
                 TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
 
                 TypeVar::Unbound { id, level } => {
@@ -544,54 +544,54 @@ impl<'a, 'b> Environment<'a, 'b> {
     }
 
     fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
-        for val in unused {
-            match val {
-                (name, (EntityKind::ImportedType, location, false)) => {
+        for (name, v) in unused {
+            match v {
+                (EntityKind::ImportedType, location, false) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedConstructor, location, false)) => {
+                (EntityKind::ImportedConstructor, location, false) => {
                     self.warnings.push(Warning::UnusedConstructor {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedTypeAndConstructor, location, false)) => {
+                (EntityKind::ImportedTypeAndConstructor, location, false) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: true,
                         location,
                     })
                 }
-                (name, (EntityKind::PrivateConstant, location, false)) => self
+                (EntityKind::PrivateConstant, location, false) => self
                     .warnings
                     .push(Warning::UnusedPrivateModuleConstant { name, location }),
-                (name, (EntityKind::PrivateTypeConstructor(_), location, false)) => {
+                (EntityKind::PrivateTypeConstructor(_), location, false) => {
                     self.warnings.push(Warning::UnusedConstructor {
                         name,
                         imported: false,
                         location,
                     })
                 }
-                (name, (EntityKind::PrivateFunction, location, false)) => self
+                (EntityKind::PrivateFunction, location, false) => self
                     .warnings
                     .push(Warning::UnusedPrivateFunction { name, location }),
-                (name, (EntityKind::PrivateType, location, false)) => {
+                (EntityKind::PrivateType, location, false) => {
                     self.warnings.push(Warning::UnusedType {
                         name,
                         imported: false,
                         location,
                     })
                 }
-                (name, (EntityKind::ImportedValue, location, false)) => self
+                (EntityKind::ImportedValue, location, false) => self
                     .warnings
                     .push(Warning::UnusedImportedValue { name, location }),
 
-                (name, (EntityKind::Variable, location, false)) => self
+                (EntityKind::Variable, location, false) => self
                     .warnings
                     .push(Warning::UnusedVariable { name, location }),
 

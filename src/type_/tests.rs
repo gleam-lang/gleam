@@ -58,11 +58,12 @@ macro_rules! assert_error {
 }
 
 macro_rules! assert_module_infer {
-    ($src:expr, $module:expr $(,)?) => {
+    ($src:expr, $module:expr $(,)?) => {{
+        use itertools::Itertools;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
             .expect("should successfully infer");
-        let mut constructors: Vec<(_, _)> = ast
+        let constructors: Vec<(_, _)> = ast
             .type_info
             .values
             .iter()
@@ -70,14 +71,14 @@ macro_rules! assert_module_infer {
                 let mut printer = pretty::Printer::new();
                 (k.clone(), printer.pretty_print(&v.type_, 0))
             })
+            .sorted()
             .collect();
-        constructors.sort();
         let expected: Vec<_> = $module
             .into_iter()
             .map(|(k, v)| (k.to_string(), v.to_string()))
             .collect();
         assert_eq!(($src, constructors), ($src, expected));
-    };
+    }};
 }
 
 macro_rules! assert_warning {

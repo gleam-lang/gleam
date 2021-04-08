@@ -23,18 +23,16 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
 
-    for (value, _deps) in inputs.iter() {
+    for (value, _deps) in &inputs {
         let index = graph.add_node(());
         indexes.insert(value.clone(), index);
         values.insert(index, value.clone());
     }
 
     for (value, deps) in inputs {
-        let from_index = indexes
-            .get(value.as_str())
-            .gleam_expect("Finding index for value");
-        for dep in deps.into_iter() {
-            if let Some(to_index) = indexes.get(dep.as_str()) {
+        let from_index = indexes.get(&value).gleam_expect("Finding index for value");
+        for dep in deps {
+            if let Some(to_index) = indexes.get(&dep) {
                 graph.add_edge(*from_index, *to_index, ());
             }
         }
