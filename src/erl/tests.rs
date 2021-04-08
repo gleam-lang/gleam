@@ -2461,7 +2461,7 @@ fn build_in_erlang_type_escaping() {
 #[test]
 fn allowed_string_escapes() {
     assert_erl!(
-        r#"fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }"#,
+        r#"fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
 
@@ -2472,6 +2472,7 @@ a() ->
     <<"\t"/utf8>>,
     <<"\\"/utf8>>,
     <<"\""/utf8>>,
+    <<"\e"/utf8>>,
     <<"\\^"/utf8>>.
 "#
     );

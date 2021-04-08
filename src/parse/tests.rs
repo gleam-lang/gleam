@@ -73,10 +73,10 @@ fn string_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
-                    location: SrcSpan { start: 1, end: 1 },
+                    location: SrcSpan { start: 1, end: 2 },
                 }
             },
-            location: SrcSpan { start: 1, end: 1 },
+            location: SrcSpan { start: 1, end: 2 },
         }
     );
 
@@ -87,10 +87,10 @@ fn string_tests() {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::BadStringEscape,
-                    location: SrcSpan { start: 3, end: 3 },
+                    location: SrcSpan { start: 3, end: 4 },
                 }
             },
-            location: SrcSpan { start: 3, end: 3 },
+            location: SrcSpan { start: 3, end: 4 },
         }
     );
 }
