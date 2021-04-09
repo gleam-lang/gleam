@@ -728,7 +728,7 @@ where
                     location: SrcSpan { start, end },
                 }
             }
-            Some((start, Tok::Tuple, _)) => {
+            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Tok::Lpar)?;
                 let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Tok::Comma))?;
@@ -1575,7 +1575,7 @@ where
             }
 
             // Tuple
-            Some((start, Tok::Tuple, end)) => {
+            Some((start, Tok::Tuple, end)) | Some((start, Tok::Hash, end)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Tok::Lpar)?;
                 let elems = self.parse_types(for_const)?;
@@ -1853,7 +1853,7 @@ where
                 }))
             }
 
-            Some((start, Tok::Tuple, _)) => {
+            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Tok::Lpar)?;
                 let elements =

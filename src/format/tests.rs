@@ -133,7 +133,7 @@ fn external_fn() {
 
     assert_format!(
         r#"///
-external fn x(a, b, c) -> tuple(a, b, c) =
+external fn x(a, b, c) -> #(a, b, c) =
   "" ""
 "#
     );
@@ -155,13 +155,13 @@ fn type_alias() {
 
     assert_format!(
         "pub type Pair(a, b) =
-  tuple(a, b)
+  #(a, b)
 "
     );
 
     assert_format!(
         "pub type Sixteen(element) =
-  tuple(
+  #(
     element,
     element,
     element,
@@ -202,7 +202,7 @@ fn type_alias() {
     element,
     element,
   ) ->
-    tuple(
+    #(
       element,
       element,
       element,
@@ -233,7 +233,7 @@ fn type_alias() {
     //    assert_format!(
     //        "pub type Sixteen(element) =
     //  fn(element) ->
-    //  tuple(
+    //  #(
     //    element,
     //    element,
     //    element,
@@ -358,7 +358,7 @@ fn custom_types() {
   Ok(
     first_value_with_really_long_name: a,
     second_value_with_really_long_name: List(
-      tuple(Int, fn(a, a, a, a, a, a, a) -> List(a)),
+      #(Int, fn(a, a, a, a, a, a, a) -> List(a)),
     ),
   )
   Error(error: e)
@@ -646,7 +646,7 @@ fn compact_single_argument_call() {
 
     assert_format!(
         r#"fn main() {
-  thingy(tuple(
+  thingy(#(
     // ok!
     one(),
     two(),
@@ -702,7 +702,7 @@ fn compact_single_argument_call() {
 fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {
-  tuple(
+  #(
     1,
     {
       1
@@ -715,7 +715,7 @@ fn expr_tuple() {
 
     assert_format!(
         r#"fn main() {
-  tuple(
+  #(
     atom.create_from_string("module"),
     atom.create_from_string("gleam@otp@actor"),
   )
@@ -725,35 +725,35 @@ fn expr_tuple() {
 
     assert_format!(
         r#"fn main() {
-  tuple()
+  #()
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(1)
+  #(1)
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2)
+  #(1, 2)
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2, 3)
+  #(1, 2, 3)
 }
 "#
     );
 
     assert_format!(
         r#"fn main() {
-  tuple(
+  #(
     really_long_variable_name,
     really_long_variable_name,
     really_long_variable_name,
@@ -863,10 +863,7 @@ fn statement_fn() {
     );
 
     assert_format!(
-        "fn order(
-  first: Set(member),
-  second: Set(member),
-) -> tuple(Set(member), Set(member)) {
+        "fn order(first: Set(member), second: Set(member)) -> #(Set(member), Set(member)) {
   Nil
 }
 "
@@ -1271,7 +1268,7 @@ fn expr_pipe() {
 
     assert_format!(
         r#"fn main() {
-  tuple(
+  #(
     1
     |> succ
     |> succ,
@@ -1321,7 +1318,7 @@ fn expr_pipe() {
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2)
+  #(1, 2)
   |> pair.first
   |> should.equal(1)
 }
@@ -1330,7 +1327,7 @@ fn expr_pipe() {
 
     assert_format!(
         r#"fn main() {
-  tuple(1, 2)
+  #(1, 2)
   |> pair.first(1, 2, 4)
   |> should.equal(1)
 }
@@ -1504,8 +1501,7 @@ fn expr_let() {
 
     assert_format!(
         r#"fn main() {
-  let dict =
-    map.from_list([tuple("a", 0), tuple("b", 1), tuple("c", 2), tuple("d", 3)])
+  let dict = map.from_list([#("a", 0), #("b", 1), #("c", 2), #("d", 3)])
   1
 }
 "#
@@ -1573,7 +1569,7 @@ fn pattern_let() {
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y, 123 as z) = 1
+  let #(x, y, 123 as z) = 1
   Nil
 }
 "#
@@ -1712,7 +1708,7 @@ fn pattern_constructor() {
 fn pattern_tuple() {
     assert_format!(
         r#"fn main() {
-  let tuple() = 1
+  let #() = 1
   Nil
 }
 "#
@@ -1720,7 +1716,7 @@ fn pattern_tuple() {
 
     assert_format!(
         r#"fn main() {
-  let tuple(x) = 1
+  let #(x) = 1
   Nil
 }
 "#
@@ -1728,7 +1724,7 @@ fn pattern_tuple() {
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y) = 1
+  let #(x, y) = 1
   Nil
 }
 "#
@@ -1736,7 +1732,7 @@ fn pattern_tuple() {
 
     assert_format!(
         r#"fn main() {
-  let tuple(x, y, z) = 1
+  let #(x, y, z) = 1
   Nil
 }
 "#
@@ -1937,8 +1933,8 @@ fn expr_case_clause_guards() {
 
     assert_format!(
         r#"fn main() {
-  case tuple(1, 2, 3) {
-    _ if x == tuple(1, 2, 3) -> Nil
+  case #(1, 2, 3) {
+    _ if x == #(1, 2, 3) -> Nil
   }
 }
 "#
@@ -2674,11 +2670,11 @@ fn empty_lines() {
         "pub fn main() {
   let inc = fn(a) { a + 1 }
 
-  pair.map_first(tuple(1, 2), inc)
-  |> should.equal(tuple(2, 2))
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
 
-  pair.map_first(tuple(1, 2), inc)
-  |> should.equal(tuple(2, 2))
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
 }
 "
     );
@@ -3131,7 +3127,15 @@ fn function_type_type() {
     assert_format!(
         "type F =
   fn(some, really, long, set, of, arguments) ->
-    tuple(some, really, long, set, of, arguments)
+    #(some, really, long, set, of, arguments)
+"
+    );
+}
+
+#[test]
+fn tuple_constant() {
+    assert_format!(
+        "const x: #(Int, Int) = #(1, 2)
 "
     );
 }

@@ -292,7 +292,7 @@ impl<'comments> Formatter<'comments> {
                 list(concat(elements), None)
             }
 
-            Constant::Tuple { elements, .. } => "tuple"
+            Constant::Tuple { elements, .. } => "#"
                 .to_doc()
                 .append(wrap_args(elements.iter().map(|e| self.const_expr(e))))
                 .group(),
@@ -419,7 +419,7 @@ impl<'comments> Formatter<'comments> {
 
             TypeAst::Var { name, .. } => name.to_doc(),
 
-            TypeAst::Tuple { elems, .. } => "tuple".to_doc().append(self.type_arguments(elems)),
+            TypeAst::Tuple { elems, .. } => "#".to_doc().append(self.type_arguments(elems)),
         }
         .group()
     }
@@ -664,7 +664,7 @@ impl<'comments> Formatter<'comments> {
                 label, container, ..
             } => self.expr(container).append(".").append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, .. } => "tuple"
+            UntypedExpr::Tuple { elems, .. } => "#"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e))))
                 .group(),
@@ -1218,7 +1218,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.pattern_constructor(name, args, module, *with_spread),
 
-            Pattern::Tuple { elems, .. } => "tuple"
+            Pattern::Tuple { elems, .. } => "#"
                 .to_doc()
                 .append(wrap_args(elems.iter().map(|e| self.pattern(e))))
                 .group(),
