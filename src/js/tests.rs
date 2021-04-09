@@ -400,3 +400,33 @@ r#"function go() {
 }"#
     );
 }
+
+// I don't think result needs a special section as it's generated as any other record.
+
+#[test]
+#[ignore]
+fn try_syntax_sugar(){
+    assert_js!(
+        r#"
+fn parse() {
+    Ok(5)
+}
+        
+fn go() {
+    try x = parse()
+    Ok(Nil)
+}
+"#,r#"function parse() {
+    Ok(5)
+}
+
+function go() {
+}"#
+    );
+}
+
+// TODO why is piping handled in the AST before but try falls through??
+
+// TODO assert similar question to try.
+
+
