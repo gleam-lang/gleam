@@ -121,6 +121,16 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(first, then),
+        TypedExpr::Var {
+            name, constructor, ..
+        } => var(name, constructor),
+        TypedExpr::Let {
+            value,
+            pattern,
+            then,
+            kind: BindingKind::Let,
+            ..
+        } => let_(value, pattern, then),
         TypedExpr::BinOp {
             name, left, right, ..
         } => bin_op(name, left, right),
@@ -148,6 +158,90 @@ fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
         .append(expr(first))
         .append(line())
         .append(expr(then))
+}
+
+fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
+    match &constructor.variant {
+        // ValueConstructorVariant::Record {
+        //     name: record_name, ..
+        // } => match &*constructor.type_ {
+        //     Type::Fn { args, .. } => {
+        //         let chars = incrementing_args_list(args.len());
+        //         "fun("
+        //             .to_doc()
+        //             .append(Document::String(chars.clone()))
+        //             .append(") -> {")
+        //             .append(Document::String(record_name.to_snake_case()))
+        //             .append(", ")
+        //             .append(Document::String(chars))
+        //             .append("} end")
+        //     }
+        //     _ => atom(record_name.to_snake_case()),
+        // },
+
+        ValueConstructorVariant::LocalVariable => name.to_doc(),
+        _ => {
+            println!("name: {:?}", name);
+            unimplemented!("var")
+        }
+        // ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
+
+        // ValueConstructorVariant::ModuleFn {
+        //     arity, ref module, ..
+        // } if module == env.module => "fun "
+        //     .to_doc()
+        //     .append(atom(name.to_string()))
+        //     .append("/")
+        //     .append(*arity),
+
+        // ValueConstructorVariant::ModuleFn {
+        //     arity,
+        //     module,
+        //     name,
+        //     ..
+        // } => "fun "
+        //     .to_doc()
+        //     .append(module_name_join(module))
+        //     .append(":")
+        //     .append(atom(name.to_string()))
+        //     .append("/")
+        //     .append(*arity),
+    }
+}
+
+fn let_<'a>(
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
+) -> Document<'a> {
+    let body = maybe_block_expr(value);
+    pattern(pat)
+        .append(" = ")
+        .append(body)
+        .append(line())
+        .append(expr(then))
+}
+
+fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
+    Document::String("let ".to_string()).append(match p {
+        // Pattern::Nil { .. } => "[]".to_doc(),
+        Pattern::Var { name, .. } => name.to_doc(),
+        _ => {
+            println!("p: {:?}", p);
+            unimplemented!("pattern")
+        }
+    })
+}
+
+fn maybe_block_expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
+    match &expression {
+        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => force_break()
+            .append("{")
+            .append(line().append(expr(expression)).nest(INDENT).group())
+            .append(line())
+            .append("}"),
+        _ => expr(expression),
+    }
 }
 
 fn bin_op<'a>(

@@ -151,3 +151,40 @@ r#"function go() {
     );
     
 }
+
+#[test]
+fn let_bindings() {
+    assert_js!(
+        r#"
+fn go() {
+    let x = 1
+    let y = x
+    // let x = 2
+    x
+}"#,
+r#"function go() {
+    let x = 1
+    let y = x
+    x
+}"#
+    );
+
+//     assert_js!(
+//         r#"
+// fn go() {
+//     let x = { 
+//         1 + 2
+//         3 + 1
+//     }
+//     x
+// }"#,
+// r#"function go() {
+//     let x = 1
+//     let y = x
+//     x
+// }"#
+//     );
+// TODO handle let x = { 1 + 2}
+
+
+}
