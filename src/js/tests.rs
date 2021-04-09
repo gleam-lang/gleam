@@ -236,3 +236,19 @@ r#"function go() {
 }"#
     );
 }
+
+// TODO case expressions, need an answer for how to do blocks.
+
+#[test]
+fn exported_functions(){
+    assert_js!(
+        r#"
+pub fn add(x, y) {
+    x + y
+
+}"#,
+r#"export function add(x, y) {
+    x + y
+}"#
+    );
+}

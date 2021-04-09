@@ -53,10 +53,12 @@ fn statement<'a>(
             name,
             body,
             return_type,
+            public,
             ..
-        } => Some(mod_fun(name, args, body, module, return_type, line_numbers)),
+        } => Some(mod_fun(public, name, args, body, module, return_type, line_numbers)),
         _ => unimplemented!()
 
+        // TODO What's the difference between Fn and external Fn when public is a key
         // Statement::ExternalFn { public: false, .. } => None,
         // Statement::ExternalFn {
         //     fun,
@@ -77,6 +79,7 @@ fn statement<'a>(
 }
 
 fn mod_fun<'a>(
+    public: &bool,
     name: &'a str,
     args: &'a [TypedArg],
     body: &'a TypedExpr,
@@ -84,7 +87,13 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
-    "function ".to_doc()
+
+    if &true == public {
+        "export "
+    } else {
+        ""
+    }.to_doc()
+    .append("function ")
     .append(Document::String(name.to_string()))
     .append(fun_args(args))
     .append(" {")
