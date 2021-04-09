@@ -224,7 +224,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }
 
             Some(m) => {
-                let module = &self.imported_modules.get(m).ok_or_else(|| {
+                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
                     GetTypeConstructorError::UnknownModule {
                         name: name.to_string(),
                         imported_modules: self
@@ -235,13 +235,12 @@ impl<'a, 'b> Environment<'a, 'b> {
                     }
                 })?;
                 module
-                    .1
                     .types
                     .get(name)
                     .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
                         name: name.to_string(),
-                        module_name: module.1.name.clone(),
-                        type_constructors: module.1.types.keys().map(|t| t.to_string()).collect(),
+                        module_name: module.name.clone(),
+                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
                     })
             }
         }
@@ -263,7 +262,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }),
 
             Some(module) => {
-                let module = self.imported_modules.get(&*module).ok_or_else(|| {
+                let (_, module) = self.imported_modules.get(module).ok_or_else(|| {
                     GetValueConstructorError::UnknownModule {
                         name: name.to_string(),
                         imported_modules: self
@@ -273,11 +272,11 @@ impl<'a, 'b> Environment<'a, 'b> {
                             .collect(),
                     }
                 })?;
-                module.1.values.get(&*name).ok_or_else(|| {
+                module.values.get(name).ok_or_else(|| {
                     GetValueConstructorError::UnknownModuleValue {
                         name: name.to_string(),
-                        module_name: module.1.name.clone(),
-                        value_constructors: module.1.values.keys().map(|t| t.to_string()).collect(),
+                        module_name: module.name.clone(),
+                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     }
                 })
             }
@@ -297,7 +296,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         ids: &mut im::HashMap<usize, Arc<Type>>,
         hydrator: &Hydrator,
     ) -> Arc<Type> {
-        match &*t {
+        match t.deref() {
             Type::App {
                 public,
                 name,
@@ -366,13 +365,13 @@ impl<'a, 'b> Environment<'a, 'b> {
         }
 
         // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-        if let Type::Var { type_: typ } = &*t2 {
+        if let Type::Var { type_: typ } = t2.deref() {
             if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
                 return self.unify(t1, typ.clone());
             }
         }
 
-        if let Type::Var { type_: typ } = &*t1 {
+        if let Type::Var { type_: typ } = t1.deref() {
             enum Action {
                 Unify(Arc<Type>),
                 CouldNotUnify,
@@ -388,7 +387,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 }
 
                 TypeVar::Generic { id } => {
-                    if let Type::Var { type_: typ } = &*t2 {
+                    if let Type::Var { type_: typ } = t2.deref() {
                         if typ.borrow().is_unbound() {
                             *typ.borrow_mut() = TypeVar::Generic { id: *id };
                             return Ok(());
@@ -418,7 +417,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             return self.unify(t2, t1).map_err(flip_unify_error);
         }
 
-        match (&*t1, &*t2) {
+        match (t1.deref(), t2.deref()) {
             (
                 Type::App {
                     module: m1,
@@ -476,7 +475,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                     })
             }
 
-            (_, _) => Err(UnifyError::CouldNotUnify {
+            _ => Err(UnifyError::CouldNotUnify {
                 expected: t1.clone(),
                 given: t2.clone(),
                 situation: None,
@@ -512,28 +511,24 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     /// Increments an entity's usage in the current or nearest enclosing scope
     pub fn increment_usage(&mut self, name: &str) {
-        let mut cascade = None;
-        for scope in self.entity_usages.iter_mut().rev() {
-            match scope.get_mut(name) {
-                Some((EntityKind::PrivateTypeConstructor(type_name), _, usages)) => {
-                    // If a type constructor is used, we consider
-                    // its type also used
-                    if type_name != name {
-                        cascade = Some(type_name.clone());
-                    }
-                    *usages = true;
-                    break;
+        let mut name = name.to_string();
+
+        while let Some((kind, _, used)) = self
+            .entity_usages
+            .iter_mut()
+            .rev()
+            .find_map(|scope| scope.get_mut(&name))
+        {
+            *used = true;
+
+            match kind {
+                // If a type constructor is used, we consider its type also used
+                EntityKind::PrivateTypeConstructor(type_name) if type_name != &name => {
+                    name.clone_from(type_name);
                 }
-                Some(val) => {
-                    val.2 = true;
-                    break;
-                }
-                None => {}
+                _ => return,
             }
         }
-        if let Some(cascade) = cascade {
-            self.increment_usage(&cascade)
-        };
     }
 
     /// Converts entities with a usage count of 0 to warnings
@@ -548,17 +543,14 @@ impl<'a, 'b> Environment<'a, 'b> {
     fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType => Warning::UnusedType {
-                    name,
-                    imported: true,
-                    location,
-                },
+                EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor => {
+                    Warning::UnusedType {
+                        name,
+                        imported: true,
+                        location,
+                    }
+                }
                 EntityKind::ImportedConstructor => Warning::UnusedConstructor {
-                    name,
-                    imported: true,
-                    location,
-                },
-                EntityKind::ImportedTypeAndConstructor => Warning::UnusedType {
                     name,
                     imported: true,
                     location,

@@ -242,7 +242,7 @@ fn markdown_documentation(doc: &Option<String>) -> String {
 
 fn render_markdown(text: &str) -> String {
     let mut s = String::with_capacity(text.len() * 3 / 2);
-    let p = pulldown_cmark::Parser::new_ext(&*text, pulldown_cmark::Options::all());
+    let p = pulldown_cmark::Parser::new_ext(text, pulldown_cmark::Options::all());
     pulldown_cmark::html::push_html(&mut s, p);
     s
 }

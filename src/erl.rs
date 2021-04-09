@@ -132,26 +132,25 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
     module
         .statements
         .iter()
-        .flat_map(|s| match s {
+        .filter_map(|s| match s {
             Statement::CustomType {
                 public: true,
                 constructors,
                 ..
-            } => &constructors[..],
-            _ => &[],
+            } => Some(constructors),
+            _ => None,
         })
+        .flatten()
         .filter(|constructor| !constructor.arguments.is_empty())
-        .flat_map(|constructor| {
-            let mut fields = Vec::with_capacity(constructor.arguments.len());
-            for RecordConstructorArg { label, .. } in &constructor.arguments {
-                match label {
-                    Some(s) => fields.push(&**s),
-                    None => return None,
-                }
-            }
-            Some((&constructor.name, fields))
+        .filter_map(|constructor| {
+            constructor
+                .arguments
+                .iter()
+                .map(|RecordConstructorArg { label, .. }| label.as_deref())
+                .collect::<Option<Vec<_>>>()
+                .map(|fields| (constructor.name.as_str(), fields))
         })
-        .map(|(name, fields)| (name.as_ref(), record_definition(name, &fields[..])))
+        .map(|(name, fields)| (name, record_definition(name, &fields)))
         .collect()
 }
 
@@ -164,11 +163,11 @@ pub fn record_definition(name: &str, fields: &[&str]) -> String {
     };
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
-    for field in Itertools::intersperse(fields.iter(), &", ") {
+    for &field in Itertools::intersperse(fields.iter(), &", ") {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
-            (*field).to_string()
+            field.to_string()
         };
         write!(buffer, "{}", escaped_field).unwrap();
     }
@@ -492,15 +491,15 @@ fn atom<'a>(value: String) -> Document<'a> {
         static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").unwrap();
     }
 
-    match &*value {
+    if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
-        value if is_erlang_reserved_word(value) => Document::String(format!("'{}'", value)),
-
+        Document::String(format!("'{}'", value))
+    } else if RE.is_match(&value) {
         // No need to escape
-        _ if RE.is_match(&value) => Document::String(value),
-
+        Document::String(value)
+    } else {
         // Escape because of characters contained
-        _ => Document::String(value).surround("'", "'"),
+        Document::String(value).surround("'", "'")
     }
 }
 
@@ -663,7 +662,7 @@ where
     document = document.append(size);
     let others_is_empty = others.is_empty();
 
-    if !others.is_empty() {
+    if !others_is_empty {
         document = document.append("/").append(others);
     }
 
@@ -906,7 +905,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
     match &constructor.variant {
         ValueConstructorVariant::Record {
             name: record_name, ..
-        } => match &*constructor.type_ {
+        } => match constructor.type_.deref() {
             Type::Fn { args, .. } => {
                 let chars = incrementing_args_list(args.len());
                 "fun("
@@ -1809,7 +1808,7 @@ impl<'a> TypePrinter<'a> {
     fn print_var(&self, type_: &TypeVar) -> Document<'static> {
         match type_ {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match &self.var_usages {
-                Some(usages) => match usages.get(&*id) {
+                Some(usages) => match usages.get(id) {
                     Some(&0) => nil(),
                     Some(&1) => "any()".to_doc(),
                     _ => id_to_type_var(*id),

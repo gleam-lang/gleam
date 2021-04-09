@@ -452,11 +452,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         elems: Vec<UntypedExpr>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let elems = elems
-            .into_iter()
-            .map(|e| self.infer(e))
-            .collect::<Result<Vec<_>, _>>()?;
-        let typ = tuple(elems.iter().map(|e| e.type_()).collect());
+        let elems: Vec<_> = elems.into_iter().map(|e| self.infer(e)).try_collect()?;
+        let typ = tuple(elems.iter().map(HasType::type_).collect());
         Ok(TypedExpr::Tuple {
             location,
             elems,
@@ -552,7 +549,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             .map(|s| {
                 self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .try_collect()?;
 
         Ok(TypedExpr::BitString {
             location,
@@ -573,7 +570,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     env.infer_const(&None, expr)
                 })
             })
-            .collect::<Result<Vec<_>, _>>()?;
+            .try_collect()?;
 
         Ok(Constant::BitString { location, segments })
     }
@@ -600,10 +597,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             })
         };
 
-        let options = options
-            .into_iter()
-            .map(infer_option)
-            .collect::<Result<Vec<_>, _>>()?;
+        let options: Vec<_> = options.into_iter().map(infer_option).try_collect()?;
 
         let typ = crate::bit_string::type_options_for_value(&options).map_err(|error| {
             Error::BitStringSegmentError {
@@ -1164,7 +1158,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             let module_info = self
                 .environment
                 .imported_modules
-                .get(&*module_alias)
+                .get(module_alias)
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.to_string(),
                     location: *module_location,
@@ -1379,7 +1373,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             }
                         },
                     )
-                    .collect::<Result<_, _>>()?;
+                    .try_collect()?;
 
                 if args.is_empty() {
                     self.environment
@@ -1650,7 +1644,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             location,
                         })
                     })
-                    .collect::<Result<_, _>>()?;
+                    .try_collect()?;
 
                 Ok(Constant::Record {
                     module,
@@ -1785,7 +1779,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     location,
                 })
             })
-            .collect::<Result<_, _>>()?;
+            .try_collect()?;
         Ok((fun, args, return_type))
     }
 
@@ -1800,7 +1794,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let args: Vec<_> = args
             .into_iter()
             .map(|arg| self.infer_arg(arg))
-            .collect::<Result<_, _>>()?;
+            .try_collect()?;
 
         let return_type = match return_annotation {
             Some(ann) => Some(self.type_from_ast(ann)?),

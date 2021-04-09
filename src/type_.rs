@@ -37,6 +37,7 @@ use std::sync::Arc;
 
 use error::*;
 use hydrator::Hydrator;
+use itertools::Itertools;
 
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;
@@ -400,7 +401,7 @@ pub fn infer_module(
     let statements = statements
         .into_iter()
         .map(|s| generalise_statement(s, module_name, &mut environment))
-        .collect::<Result<_, _>>()?;
+        .try_collect()?;
 
     // Generate warnings for unused items
     environment.convert_unused_to_warnings();
@@ -512,7 +513,7 @@ fn register_values<'a>(
             let arg_types = args
                 .iter()
                 .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
-                .collect::<Result<_, _>>()?;
+                .try_collect()?;
             let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
             let typ = fn_(arg_types, return_type);
 
@@ -1172,7 +1173,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 /// the type, thus ensuring the type will be correctly generalized.
 ///
 fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
-    if let Type::Var { type_: typ } = &*typ {
+    if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
                 return update_levels(typ.clone(), own_level, own_id)
@@ -1200,7 +1201,7 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
         return Ok(());
     }
 
-    match &*typ {
+    match typ.deref() {
         Type::App { args, .. } => {
             for arg in args {
                 update_levels(arg.clone(), own_level, own_id)?
@@ -1231,7 +1232,7 @@ fn match_fun_type(
     arity: usize,
     environment: &mut Environment<'_, '_>,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
-    if let Type::Var { type_: typ } = &*typ {
+    if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
                 return match_fun_type(typ.clone(), arity, environment)
@@ -1256,7 +1257,7 @@ fn match_fun_type(
         }
     }
 
-    if let Type::Fn { args, retrn } = &*typ {
+    if let Type::Fn { args, retrn } = typ.deref() {
         return if args.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
@@ -1274,7 +1275,7 @@ fn match_fun_type(
 /// level higher than the input level into generalized (polymorphic) type variables.
 ///
 fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
-    match &*t {
+    match t.deref() {
         Type::Var { type_: typ } => {
             let new_var = match typ.borrow().deref() {
                 TypeVar::Unbound { id, level } => {
@@ -1345,7 +1346,7 @@ fn make_type_vars(
             name: arg.to_string(),
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
-        .collect::<Result<_, _>>()
+        .try_collect()
 }
 
 fn custom_type_accessors<A>(

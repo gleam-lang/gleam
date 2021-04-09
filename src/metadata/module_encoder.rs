@@ -327,7 +327,7 @@ impl<'a> ModuleEncoder<'a> {
             ),
 
             Type::Var { type_: typ } => match typ.borrow().deref() {
-                TypeVar::Link { type_: typ } => self.build_type(builder, &*typ),
+                TypeVar::Link { type_: typ } => self.build_type(builder, typ),
                 TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
                 TypeVar::Unbound { .. } => crate::error::fatal_compiler_bug(
                     "Unexpected unbound var when serialising module metadata",

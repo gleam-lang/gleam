@@ -149,7 +149,7 @@ impl Hydrator {
                 elems
                     .iter()
                     .map(|t| self.type_from_ast(t, environment))
-                    .collect::<Result<_, _>>()?,
+                    .try_collect()?,
             )),
 
             TypeAst::Fn {
@@ -160,7 +160,7 @@ impl Hydrator {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, environment))
-                    .collect::<Result<_, _>>()?;
+                    .try_collect()?;
                 let retrn = self.type_from_ast(retrn, environment)?;
                 Ok(fn_(args, retrn))
             }

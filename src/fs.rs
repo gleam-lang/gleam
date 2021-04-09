@@ -1,5 +1,6 @@
 use crate::error::{Error, FileIoAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
+use ignore::DirEntry;
 use std::{
     ffi::OsStr,
     fmt::Debug,
@@ -276,7 +277,7 @@ pub fn gleam_files_excluding_gitignore(dir: &PathBuf) -> impl Iterator<Item = Pa
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
-        .map(|d| d.into_path())
+        .map(DirEntry::into_path)
         .filter(move |d| is_gleam_path(d, dir))
 }
 
@@ -445,7 +446,7 @@ pub mod test {
         pub fn into_contents(self) -> Result<Vec<u8>, ()> {
             Rc::try_unwrap(self.contents)
                 .map_err(|_| ())
-                .map(|cell| cell.into_inner())
+                .map(RefCell::into_inner)
         }
     }
 

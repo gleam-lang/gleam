@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use itertools::Itertools;
+
 use crate::{
     ast::{
         BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
@@ -382,8 +384,6 @@ impl ModuleDecoder {
 }
 
 fn name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
-    Ok(module
-        .iter()
-        .map(|s| s.map(String::from))
-        .collect::<Result<_, _>>()?)
+    let name = module.iter().map_ok(String::from).try_collect()?;
+    Ok(name)
 }
