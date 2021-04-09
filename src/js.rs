@@ -239,6 +239,8 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
         } => {
             // TODO self module or not
             Document::String(name.to_string())
+            .append(args.surround("(", ")"))
+
         }
         TypedExpr::Var {
             constructor:
@@ -251,19 +253,28 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
         } => {
             // TODO self module or not
             Document::String(name.to_string())
+            .append(args.surround("(", ")"))
         }
+        TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::Record { name, .. },
+                    ..
+                },
+            ..
+        } => {
+            println!("args: {:?}", args);
+            "{gleam_record: ".to_doc()
+            .append(Document::String(name.clone()))
+            .append(args)
+            .append("}".to_doc())
+        },
 
         _ => {
             println!("fun: {:?}", fun);
 
             unimplemented!("todo in the call handling")}
     }
-    .append(args.surround("(", ")"))
-    // wrap_args(
-    //     args.iter()
-    //         .map(|arg| maybe_block_expr(&arg.value))
-    //         .collect(),
-    // )
     
 }
 

@@ -379,3 +379,24 @@ r#"import * as rocket_ship from rocket_ship
 import * as foo from rocket_ship"#
     );
 }
+
+
+#[test]
+#[ignore]
+// How to we track to object keys, would we rather generate a function and call in order.
+fn custom_types() {
+    assert_js!(
+        r#"
+type Cat{
+    Cat(name: String, cuteness: Int)
+}
+
+fn go() {
+    Cat(name: "Nubi", cuteness: 2001)
+}
+"#,
+r#"function go() {
+    {gleam_record: "Cat", }
+}"#
+    );
+}
