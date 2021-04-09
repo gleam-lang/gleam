@@ -138,6 +138,9 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
         TypedExpr::Call { fun, args, .. } => call(fun, args),
+
+        // TODO is this always an anonymous fn
+        TypedExpr::Fn { args, body, .. } => fun(args, body),
         
         TypedExpr::Seq { first, then, .. } => seq(first, then),
         TypedExpr::Var {
@@ -251,6 +254,18 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
     // )
     
 }
+
+fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr) -> Document<'a> {
+    let doc = "function"
+        .to_doc()
+        .append(fun_args(args))
+        .append(" {")
+        .append(line().append(expr(body)).nest(INDENT).group())
+        .append(line())
+        .append("}");
+    doc
+}
+
 
 fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
     force_break()

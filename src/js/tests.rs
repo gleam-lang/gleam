@@ -280,3 +280,48 @@ export function add_two(x) {
 }"#
     );
 }
+
+
+// Note pipes are syntactic sugar and nothing special is needed to render them.
+
+#[test]
+fn using_pipes(){
+    assert_js!(
+        r#"
+fn add_one(x: Int) -> Int {
+    x + 1
+}
+        
+fn add_two() {
+    1
+    |> add_one()
+    |> add_one()
+}"#,
+r#"function add_one(x) {
+    x + 1
+}
+
+function add_two() {
+    add_one(add_one(1))
+}"#
+    );
+}
+
+
+#[test]
+fn anonymous_functions() {
+    assert_js!(
+        r#"
+fn go() {
+    let add = fn(x, y) { x + y }
+
+    add(1, 2)
+}"#,
+r#"function go() {
+    let add = function(x, y) {
+        x + y
+    }
+    add(1, 2)
+}"#
+    );
+}
