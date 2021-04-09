@@ -219,3 +219,20 @@ r#"function go(x) {
     );
 }
 
+#[test]
+fn tuple_literals() {
+    assert_js!(
+        r#"
+fn go() {
+    let my_tuple = tuple("one", "two")
+    my_tuple.0   // "one"
+    my_tuple.1 // "two"
+
+}"#,
+r#"function go() {
+    let my_tuple = ["one", "two"]
+    my_tuple[0]
+    my_tuple[1]
+}"#
+    );
+}

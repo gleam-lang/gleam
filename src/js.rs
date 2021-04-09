@@ -124,6 +124,11 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::ListNil { .. } => "[]".to_doc(),
         TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail),
 
+        // What's the difference between iter and into_iter
+        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(maybe_block_expr)),
+        TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
+
+
         TypedExpr::Seq { first, then, .. } => seq(first, then),
         TypedExpr::Var {
             name, constructor, ..
@@ -181,6 +186,18 @@ fn collect_cons<'a>(tail: &'a TypedExpr, elements: &mut Vec<&'a TypedExpr>) -> O
         // TODO is it possible to write improper lists in Gleam
         other => Some(other)
     }
+}
+
+fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
+    concat(Itertools::intersperse(elems, break_(",", ", ")))
+        .nest_current()
+        .surround("[", "]")
+        .group()
+}
+
+fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64) -> Document<'a> {
+    expr(tuple).
+    append(index.to_doc().surround("[", "]"))
 }
 
 // collect_cons
