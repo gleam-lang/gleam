@@ -137,7 +137,8 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(maybe_block_expr)),
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
-
+        TypedExpr::Call { fun, args, .. } => call(fun, args),
+        
         TypedExpr::Seq { first, then, .. } => seq(first, then),
         TypedExpr::Var {
             name, constructor, ..
@@ -209,9 +210,47 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64) -> Document<'a> {
     append(index.to_doc().surround("[", "]"))
 }
 
-// collect_cons
-// I don't have a test for improper lists
+fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> {
+    let args = args.into_iter().map(|arg| maybe_block_expr(&arg.value));
+    let args = concat(Itertools::intersperse(args, break_(",", ", ")));
+    match fun {
+        TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                    ..
+                },
+            ..
+        } => {
+            // TODO self module or not
+            Document::String(name.to_string())
+        }
+        TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::LocalVariable,
+                    ..
+                },
+            name,
+            ..
+        } => {
+            // TODO self module or not
+            Document::String(name.to_string())
+        }
 
+        _ => {
+            println!("fun: {:?}", fun);
+
+            unimplemented!("todo in the call handling")}
+    }
+    .append(args.surround("(", ")"))
+    // wrap_args(
+    //     args.iter()
+    //         .map(|arg| maybe_block_expr(&arg.value))
+    //         .collect(),
+    // )
+    
+}
 
 fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
     force_break()
@@ -240,19 +279,12 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         // },
 
         ValueConstructorVariant::LocalVariable => name.to_doc(),
-        _ => {
-            println!("name: {:?}", name);
-            unimplemented!("var")
-        }
         // ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
 
-        // ValueConstructorVariant::ModuleFn {
-        //     arity, ref module, ..
-        // } if module == env.module => "fun "
-        //     .to_doc()
-        //     .append(atom(name.to_string()))
-        //     .append("/")
-        //     .append(*arity),
+        ValueConstructorVariant::ModuleFn {
+            arity, ref module, ..
+        }  => Document::String(name.to_string()),
+        // TODO if module == env.module
 
         // ValueConstructorVariant::ModuleFn {
         //     arity,
@@ -266,6 +298,13 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         //     .append(atom(name.to_string()))
         //     .append("/")
         //     .append(*arity),
+        _ => {
+            println!("name: {:?}", name);
+            println!("constructor: {:?}", constructor);
+
+            unimplemented!("var")
+        }
+
     }
 }
 

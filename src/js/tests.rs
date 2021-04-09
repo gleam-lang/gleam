@@ -245,10 +245,38 @@ fn exported_functions(){
         r#"
 pub fn add(x, y) {
     x + y
-
 }"#,
 r#"export function add(x, y) {
     x + y
+}"#
+    );
+}
+
+#[test]
+fn calling_functions(){
+    assert_js!(
+        r#"
+pub fn twice(f: fn(t) -> t, x: t) -> t {
+    f(f(x))
+}
+
+pub fn add_one(x: Int) -> Int {
+    x + 1
+}
+
+pub fn add_two(x: Int) -> Int {
+    twice(add_one, x)
+}"#,
+r#"export function twice(f, x) {
+    f(f(x))
+}
+
+export function add_one(x) {
+    x + 1
+}
+
+export function add_two(x) {
+    twice(add_one, x)
 }"#
     );
 }
