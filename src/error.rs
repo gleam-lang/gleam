@@ -15,6 +15,7 @@ use termcolor::Buffer;
 pub type Src = String;
 pub type Name = String;
 
+#[cfg(not(test))]
 pub fn fatal_compiler_bug(msg: &str) -> ! {
     let buffer_writer = cli::stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
@@ -40,6 +41,11 @@ with this information and the code that produces the crash:
     .unwrap();
     buffer_writer.print(&buffer).unwrap();
     std::process::exit(1);
+}
+
+#[cfg(test)]
+pub fn fatal_compiler_bug(msg: &str) -> ! {
+    panic!("{}", msg)
 }
 
 pub trait GleamExpect<T> {
