@@ -430,3 +430,24 @@ function go() {
 // TODO assert similar question to try.
 
 
+#[test]
+fn todo_throws_error(){
+    assert_js!(
+        r#"
+fn go() {
+    todo
+}
+"#,r#"function go() {
+    throw Object.assign(new Error("This has not yet been implemented"), {})
+}"#
+    );
+    assert_js!(
+        r#"
+fn go() {
+    todo("I should do this")
+}
+"#,r#"function go() {
+    throw Object.assign(new Error("I should do this"), {})
+}"#
+    );
+}

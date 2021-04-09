@@ -168,6 +168,13 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::BinOp {
             name, left, right, ..
         } => bin_op(name, left, right),
+        TypedExpr::Todo {
+            label, location, ..
+        } => {
+            println!("expression: {:?}", expression);
+
+            todo(label, *location)
+        },
         _ => {
             println!("expression: {:?}", expression);
             unimplemented!("expr")
@@ -435,4 +442,19 @@ fn print_bin_op<'a>(
         .append(Document::String(op.to_string()))
         .append(" ")
         .append(right_expr)
+}
+
+fn todo<'a>(message: &'a Option<String>, location: SrcSpan) -> Document<'a> {
+    let message = match message {
+        Some(message) => message,
+        None => "This has not yet been implemented",
+    };
+
+    println!("location: {:?}", location);
+    "throw Object.assign(new Error("
+        .to_doc()
+        .append(Document::String(message.to_string()).surround("\"", "\""))
+        .append("), {line: ")
+        .append(Document::String(format!("{}", location.start)))
+        .append("})")
 }
