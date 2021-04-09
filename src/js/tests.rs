@@ -188,3 +188,34 @@ r#"function go() {
 
 
 }
+
+#[test]
+fn list_literals() {
+    assert_js!(
+        r#"
+fn go(x) {
+    []
+    [1]
+    [1, 2, 3]
+    [1, ..[2, 3]]
+    // TODO are improper lists possible
+    // [[], ..2]
+    [1, ..x]
+    // Do lists with multiple Tails make sense? JS supports them.
+    // [1, ..[2], ..[2]]
+    // TODO handle blocks, single element blocks removed by the formatter
+    // [1, ..{ 
+    //     "hello"
+    //     [2, 3] 
+    // }]
+}"#,
+r#"function go(x) {
+    []
+    [1]
+    [1, 2, 3]
+    [1, 2, 3]
+    [1, ...x]
+}"#
+    );
+}
+

@@ -120,6 +120,10 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
+
+        TypedExpr::ListNil { .. } => "[]".to_doc(),
+        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail),
+
         TypedExpr::Seq { first, then, .. } => seq(first, then),
         TypedExpr::Var {
             name, constructor, ..
@@ -152,6 +156,36 @@ fn float<'a>(value: &str) -> Document<'a> {
 fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("\"", "\"")
 }
+
+fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr) -> Document<'a> {
+    let mut elements = vec![head];
+
+    let final_tail = collect_cons(tail, &mut elements);
+    let elements = elements.into_iter().map(maybe_block_expr);
+    let content = concat(Itertools::intersperse(elements, break_(",", ", ")));
+    let content = if let Some(final_tail) = final_tail {
+        content.append(Document::String(", ...".to_string()).append(maybe_block_expr(final_tail)))
+    } else {
+        content
+    };
+    content.surround("[", "]")
+}
+
+fn collect_cons<'a>(tail: &'a TypedExpr, elements: &mut Vec<&'a TypedExpr>) -> Option<&'a TypedExpr> {
+    match tail {
+        TypedExpr::ListNil { .. } => None,
+        TypedExpr::ListCons { head, tail, .. } => {
+            elements.push(head);
+            collect_cons(tail, elements)
+        }
+        // TODO is it possible to write improper lists in Gleam
+        other => Some(other)
+    }
+}
+
+// collect_cons
+// I don't have a test for improper lists
+
 
 fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
     force_break()
