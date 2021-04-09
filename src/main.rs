@@ -1,4 +1,4 @@
-#![deny(warnings)]
+// #![deny(warnings)]
 #![warn(
     clippy::all,
     clippy::doc_markdown,
@@ -65,6 +65,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
+mod js;
 mod line_numbers;
 mod metadata;
 mod new;
