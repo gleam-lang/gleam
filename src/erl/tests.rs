@@ -1,4 +1,6 @@
 use super::*;
+use crate::{build::Origin, type_::build_prelude};
+use std::collections::HashMap;
 
 #[test]
 fn record_definition_test() {
@@ -19,9 +21,15 @@ macro_rules! assert_erl {
         // println!("\n\n\n{}\n", $src);
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
-        let ast =
-            crate::type_::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
-                .expect("should successfully infer");
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
+            .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();
@@ -70,7 +78,7 @@ go(A) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec main(H) -> H.
+-spec main(A) -> A.
 main(Board) ->
     fun(Board@1) -> Board@1 end,
     Board.
@@ -87,7 +95,7 @@ fn main(x) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec main(H) -> H.
+-spec main(A) -> A.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
 "#,
@@ -103,7 +111,7 @@ fn main(x) {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec main(K) -> K.
+-spec main(D) -> D.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
 "#,
@@ -344,7 +352,7 @@ second(List) ->
             1
     end.
 
--spec tail(list(P)) -> list(P).
+-spec tail(list(I)) -> list(I).
 tail(List) ->
     case List of
         [X | Xs] ->
@@ -361,7 +369,7 @@ tail(List) ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec tail(list(K)) -> K.
+-spec tail(list(D)) -> D.
 tail(List) ->
     case List of
         [X | _] ->
@@ -421,7 +429,7 @@ x() ->
 
 -export_type([pair/2]).
 
--type pair(H, I) :: {pair, H, I}.
+-type pair(A, B) :: {pair, A, B}.
 
 -spec x() -> pair(float(), float()).
 x() ->
@@ -548,7 +556,7 @@ x() ->
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec go(H, any()) -> H.
+-spec go(A, any()) -> A.
 go(Xx, Yy) ->
     Xx.
 
@@ -668,7 +676,7 @@ pub fn main() {
 
 -type box() :: {box, integer()}.
 
--spec factory(fun((I) -> M), I) -> M.
+-spec factory(fun((B) -> F), B) -> F.
 factory(F, I) ->
     F(I).
 
@@ -1615,7 +1623,7 @@ pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 
 -export([apply/2]).
 
--spec apply(fun((H) -> I), H) -> I.
+-spec apply(fun((A) -> B), A) -> B.
 apply(F, A) ->
     F(A).
 "#,
@@ -1631,7 +1639,7 @@ pub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }
 
 -export([apply/2]).
 
--spec apply(fun((H, integer()) -> I), H) -> I.
+-spec apply(fun((A, integer()) -> B), A) -> B.
 apply(F, A) ->
     F(A, 1).
 "#,
@@ -2326,11 +2334,11 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec id(H) -> H.
+-spec id(A) -> A.
 id(X) ->
     X.
 
--spec main() -> fun((L) -> L).
+-spec main() -> fun((E) -> E).
 main() ->
     id(fun id/1).
 "#,
@@ -2493,7 +2501,7 @@ fn main() {
         r#"-module(the_app).
 -compile(no_auto_import).
 
--spec id(H) -> H.
+-spec id(A) -> A.
 id(A) ->
     A.
 
@@ -2651,6 +2659,39 @@ fn keyword_constructors() {
 -type x() :: {'fun', integer()}.
 
 
+"
+    );
+}
+
+#[test]
+fn qualified_prelude() {
+    assert_erl!(
+        "import gleam
+pub type X { X(gleam.Int) }
+",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export_type([x/0]).
+
+-type x() :: {x, integer()}.
+
+
+"
+    );
+
+    assert_erl!(
+        "import gleam
+pub fn x() { gleam.Ok(1) }
+",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+
+-spec x() -> {ok, integer()} | {error, any()}.
+x() ->
+    {ok, 1}.
 "
     );
 }

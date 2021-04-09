@@ -11,14 +11,16 @@ macro_rules! assert_infer {
         let mut printer = pretty::Printer::new();
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
 
-        let result = ExprTyper::new(&mut Environment::new(
-            &mut 0,
-            &[],
-            &HashMap::new(),
-            &mut vec![],
-        ))
-        .infer(ast)
-        .expect("should successfully infer");
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let result = ExprTyper::new(&mut Environment::new(&mut uid, &[], &modules, &mut vec![]))
+            .infer(ast)
+            .expect("should successfully infer");
         assert_eq!(
             ($src, printer.pretty_print(result.type_().as_ref(), 0),),
             ($src, $typ.to_string()),
@@ -30,25 +32,47 @@ macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
-        let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-            .expect_err("should infer an error");
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let ast =
+            infer_module(&mut uid, ast, &modules, &mut vec![]).expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
     };
 
     ($src:expr) => {
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-            .expect_err("should infer an error");
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let _ =
+            infer_module(&mut uid, ast, &modules, &mut vec![]).expect_err("should infer an error");
     };
 }
 
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let mut uid = 0;
+        let mut modules = HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        println!("new assert_error test: {}", modules.len());
         let result = ExprTyper::new(&mut Environment::new(
-            &mut 0,
-            &[],
-            &HashMap::new(),
+            &mut uid,
+            &["somemod".to_string()],
+            &modules,
             &mut vec![],
         ))
         .infer(ast)
@@ -61,8 +85,15 @@ macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
         use itertools::Itertools;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        let ast = infer_module(&mut 0, ast, &HashMap::new(), &mut vec![])
-            .expect("should successfully infer");
+        let mut uid = 0;
+        let mut modules = HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let ast =
+            infer_module(&mut uid, ast, &modules, &mut vec![]).expect("should successfully infer");
         let constructors: Vec<(_, _)> = ast
             .type_info
             .values
@@ -86,7 +117,15 @@ macro_rules! assert_warning {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+        let mut uid = 0;
+        let mut modules = HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let _ = infer_module(&mut uid, ast, &modules, &mut warnings)
+            .expect("should successfully infer");
 
         assert!(!warnings.is_empty());
         assert_eq!($warning, warnings[0]);
@@ -99,7 +138,15 @@ macro_rules! assert_no_warnings {
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
-        let _ = infer_module(&mut 0, ast, &HashMap::new(), &mut warnings);
+        let mut uid = 0;
+        let mut modules = HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+        let _ = infer_module(&mut uid, ast, &modules, &mut warnings)
+            .expect("should successfully infer");
 
         assert_eq!(expected, warnings);
     };
@@ -234,8 +281,13 @@ fn infer_module_type_retention_test() {
         type_info: (),
     };
     let mut uid = 0;
-    let module =
-        infer_module(&mut uid, module, &HashMap::new(), &mut vec![]).expect("Should infer OK");
+    let mut modules = HashMap::new();
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+    let module = infer_module(&mut uid, module, &modules, &mut vec![]).expect("Should infer OK");
 
     assert_eq!(
         module.type_info,
@@ -2204,7 +2256,7 @@ pub fn main() {
 }
 
 #[test]
-fn infer_module_error_test() {
+fn module_could_not_unify() {
     assert_module_error!(
         "fn go() { 1 + 2.0 }",
         Error::CouldNotUnify {
@@ -2413,7 +2465,10 @@ fn demo() {
             given: float(),
         },
     );
+}
 
+#[test]
+fn module_arity_error() {
     assert_module_error!(
         "external fn go(List(a, b)) -> a = \"\" \"\"",
         Error::IncorrectTypeArity {
@@ -2423,7 +2478,10 @@ fn demo() {
             given: 2,
         }
     );
+}
 
+#[test]
+fn module_private_type_leak() {
     assert_module_error!(
         r#"external type PrivateType
            pub external fn leak_type() -> PrivateType = "" """#,
@@ -2501,7 +2559,10 @@ fn demo() {
             },
         }
     );
+}
 
+#[test]
+fn module_label_errors() {
     assert_module_error!(
         r#"fn id(x) { x } fn y() { id(x: 4) }"#,
         Error::UnexpectedLabelledArg {
@@ -2517,22 +2578,16 @@ fn demo() {
             location: SrcSpan { start: 80, end: 81 },
         }
     );
+}
 
+#[test]
+fn unknown_type() {
     assert_module_error!(
         r#"type Thing { Thing(unknown: x) }"#,
         Error::UnknownType {
             location: SrcSpan { start: 28, end: 29 },
             name: "x".to_string(),
             types: env_types_with(&["Thing"]),
-        }
-    );
-
-    assert_module_error!(
-        r#"fn one() { 1 }
-           fn main() { case 1 { _ if one -> 1 } }"#,
-        Error::NonLocalClauseGuardVariable {
-            location: SrcSpan { start: 52, end: 55 },
-            name: "one".to_string(),
         }
     );
 
@@ -2563,6 +2618,18 @@ fn demo() {
             location: SrcSpan { start: 14, end: 15 },
             name: "a".to_string(),
             types: env_types(),
+        }
+    );
+}
+
+#[test]
+fn module_non_local_gaurd_var() {
+    assert_module_error!(
+        r#"fn one() { 1 }
+           fn main() { case 1 { _ if one -> 1 } }"#,
+        Error::NonLocalClauseGuardVariable {
+            location: SrcSpan { start: 52, end: 55 },
+            name: "one".to_string(),
         }
     );
 
@@ -3370,7 +3437,6 @@ fn unused_private_type_warnings_test() {
         }
     );
     assert_no_warnings!("pub external type Y");
-    assert_no_warnings!("external type Y pub fn run(x: Y) { x }");
 
     // Type alias
     assert_warning!(
@@ -3682,5 +3748,17 @@ pub fn main(s) {
     _ -> 0 
   }
 }"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/983
+#[test]
+fn qualified_prelude() {
+    assert_module_infer!(
+        "import gleam
+pub fn a() {
+  gleam.Ok(1)
+}",
+        vec![("a", "fn() -> Result(Int, a)")],
     );
 }

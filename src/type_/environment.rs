@@ -57,21 +57,23 @@ impl<'a, 'b> Environment<'a, 'b> {
         importable_modules: &'a HashMap<String, (Origin, Module)>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
-        let typer = Self {
+        let (_, prelude) = importable_modules
+            .get("gleam")
+            .gleam_expect("Unable to find prelude in importable modules");
+        Self {
             uid,
             level: 1,
             ungeneralised_functions: HashSet::new(),
-            module_types: HashMap::new(),
+            module_types: prelude.types.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
-            accessors: HashMap::new(),
-            local_values: hashmap![],
+            accessors: prelude.accessors.clone(),
+            local_values: prelude.values.clone().into(),
             importable_modules,
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
-        };
-        register_prelude(typer)
+        }
     }
 }
 

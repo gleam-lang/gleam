@@ -153,8 +153,18 @@ fn type_check(
     module_types: &mut HashMap<String, (Origin, type_::Module)>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
-    let mut modules = Vec::with_capacity(parsed_modules.len());
+    let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
     let mut uid = 0;
+
+    // Insert the prelude
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = module_types.insert(
+        "gleam".to_string(),
+        (Origin::Src, type_::build_prelude(&mut uid)),
+    );
 
     for name in sequence {
         let Parsed {

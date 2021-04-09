@@ -1518,7 +1518,10 @@ pub fn register_import(
             let module_info = environment
                 .importable_modules
                 .get(&module.join("/"))
-                .gleam_expect("Typer could not find a module being imported.");
+                .gleam_expect(
+                    "Typer could not find a module being imported. 
+Missing modules should be detected prior to type checking",
+                );
 
             // Determine local alias of imported module
             let module_name = as_name

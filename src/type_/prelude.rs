@@ -1,6 +1,5 @@
-use super::{Environment, Type, TypeConstructor, TypeVar, ValueConstructorVariant};
-use crate::error::GleamExpect;
-use std::{cell::RefCell, sync::Arc};
+use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
+use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
@@ -110,182 +109,189 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
     })
 }
 
-pub fn register_prelude<'a, 'b>(mut typer: Environment<'a, 'b>) -> Environment<'a, 'b> {
-    typer
-        .insert_type_constructor(
-            "Int".to_string(),
-            TypeConstructor {
-                parameters: vec![],
-                typ: int(),
-                origin: Default::default(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Int type");
+pub fn build_prelude(uid: &mut usize) -> Module {
+    let mut new_generic_var = || {
+        let t = generic_var(*uid);
+        *uid = *uid + 1;
+        t
+    };
 
-    typer.insert_variable(
+    let value = |variant, type_| ValueConstructor {
+        public: true,
+        origin: Default::default(),
+        variant,
+        type_,
+    };
+
+    let mut prelude = Module {
+        name: vec!["gleam".to_string()],
+        types: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+    };
+
+    let _ = prelude.types.insert(
+        "Int".to_string(),
+        TypeConstructor {
+            parameters: vec![],
+            typ: int(),
+            origin: Default::default(),
+            module: vec![],
+            public: true,
+        },
+    );
+
+    let _ = prelude.values.insert(
         "True".to_string(),
-        ValueConstructorVariant::Record {
-            name: "True".to_string(),
-            field_map: None,
-            arity: 0,
-        },
-        bool(),
-        Default::default(),
+        value(
+            ValueConstructorVariant::Record {
+                name: "True".to_string(),
+                field_map: None,
+                arity: 0,
+            },
+            bool(),
+        ),
     );
-    typer.insert_variable(
+    let _ = prelude.values.insert(
         "False".to_string(),
-        ValueConstructorVariant::Record {
-            name: "False".to_string(),
-            field_map: None,
-            arity: 0,
-        },
-        bool(),
-        Default::default(),
+        value(
+            ValueConstructorVariant::Record {
+                name: "False".to_string(),
+                field_map: None,
+                arity: 0,
+            },
+            bool(),
+        ),
     );
-    typer
-        .insert_type_constructor(
-            "Bool".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: bool(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Bool type");
+    let _ = prelude.types.insert(
+        "Bool".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: bool(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    let list_parameter = typer.new_generic_var();
-    typer
-        .insert_type_constructor(
-            "List".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![list_parameter.clone()],
-                typ: list(list_parameter),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting List type");
+    let list_parameter = new_generic_var();
+    let _ = prelude.types.insert(
+        "List".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![list_parameter.clone()],
+            typ: list(list_parameter),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    typer
-        .insert_type_constructor(
-            "Float".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: float(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Float type");
+    let _ = prelude.types.insert(
+        "Float".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: float(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    typer
-        .insert_type_constructor(
-            "String".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: string(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting String type");
+    let _ = prelude.types.insert(
+        "String".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: string(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    let result_value = typer.new_generic_var();
-    let result_error = typer.new_generic_var();
-    typer
-        .insert_type_constructor(
-            "Result".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![result_value.clone(), result_error.clone()],
-                typ: result(result_value, result_error),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Result type");
+    let result_value = new_generic_var();
+    let result_error = new_generic_var();
+    let _ = prelude.types.insert(
+        "Result".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![result_value.clone(), result_error.clone()],
+            typ: result(result_value, result_error),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    typer.insert_variable(
+    let _ = prelude.values.insert(
         "Nil".to_string(),
-        ValueConstructorVariant::Record {
-            name: "Nil".to_string(),
-            arity: 0,
-            field_map: None,
-        },
-        nil(),
-        Default::default(),
+        value(
+            ValueConstructorVariant::Record {
+                name: "Nil".to_string(),
+                arity: 0,
+                field_map: None,
+            },
+            nil(),
+        ),
     );
-    typer
-        .insert_type_constructor(
-            "Nil".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: nil(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting Nil type");
+    let _ = prelude.types.insert(
+        "Nil".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: nil(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    typer
-        .insert_type_constructor(
-            "BitString".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: bit_string(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting BitString type");
+    let _ = prelude.types.insert(
+        "BitString".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: bit_string(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    typer
-        .insert_type_constructor(
-            "UtfCodepoint".to_string(),
-            TypeConstructor {
-                origin: Default::default(),
-                parameters: vec![],
-                typ: utf_codepoint(),
-                module: vec![],
-                public: true,
-            },
-        )
-        .gleam_expect("prelude inserting UTF Codepoint type");
+    let _ = prelude.types.insert(
+        "UtfCodepoint".to_string(),
+        TypeConstructor {
+            origin: Default::default(),
+            parameters: vec![],
+            typ: utf_codepoint(),
+            module: vec![],
+            public: true,
+        },
+    );
 
-    let ok = typer.new_generic_var();
-    let error = typer.new_generic_var();
-    typer.insert_variable(
+    let ok = new_generic_var();
+    let error = new_generic_var();
+    let _ = prelude.values.insert(
         "Ok".to_string(),
-        ValueConstructorVariant::Record {
-            name: "Ok".to_string(),
-            field_map: None,
-            arity: 1,
-        },
-        fn_(vec![ok.clone()], result(ok, error)),
-        Default::default(),
+        value(
+            ValueConstructorVariant::Record {
+                name: "Ok".to_string(),
+                field_map: None,
+                arity: 1,
+            },
+            fn_(vec![ok.clone()], result(ok, error)),
+        ),
     );
 
-    let ok = typer.new_generic_var();
-    let error = typer.new_generic_var();
-    typer.insert_variable(
+    let ok = new_generic_var();
+    let error = new_generic_var();
+    let _ = prelude.values.insert(
         "Error".to_string(),
-        ValueConstructorVariant::Record {
-            name: "Error".to_string(),
-            field_map: None,
-            arity: 1,
-        },
-        fn_(vec![error.clone()], result(ok, error)),
-        Default::default(),
+        value(
+            ValueConstructorVariant::Record {
+                name: "Error".to_string(),
+                field_map: None,
+                arity: 1,
+            },
+            fn_(vec![error.clone()], result(ok, error)),
+        ),
     );
 
-    typer
+    prelude
 }
