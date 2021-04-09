@@ -16,29 +16,128 @@ macro_rules! assert_js {
 }
 
 #[test]
-fn variable_rewrite() {
+#[ignore]
+fn string_literals() {
     assert_js!(
         r#"
-fn go(a) {
-  case a {
-    99 -> {
-      let a = a
-      1
-    }
-    _ -> a
-  }
+fn go() {
+    "Hello, Gleam!"
+}
+"#,
+r#"function go() {
+    return "Hello, Gleam!"
+}"#
+    );
 }
 
-                    "#,
-        r#"function go(a) {
-    case A of
-        99 ->
-            A@1 = A,
-            1;
+// \" escape sequence works in js.
 
-        _ ->
-            A
-    end.
+#[test]
+#[ignore]
+fn boolean_literals() {
+    assert_js!(
+        r#"
+fn go() {
+    True
+}
 "#,
+r#"function go() {
+    return true
+}"#
+    );
+}
+
+
+#[test]
+fn number_literals() {
+    assert_js!(
+        r#"
+fn go() {
+    1
+    2
+    -3
+    4001
+    0b00001111
+    0o17
+    0xF
+    1_000
+}
+"#,
+r#"function go() {
+    1
+    2
+    -3
+    4001
+    0b00001111
+    0o17
+    0xF
+    1_000
+}"#
+    );
+    // NOTE js also supports _ in numbers
+
+    assert_js!(
+        r#"
+fn go() {
+    1.5
+    2.0
+    -0.1
+    1.
+}
+"#,
+r#"function go() {
+    1.5
+    2.0
+    -0.1
+    1.
+}"#
+    );
+}
+
+#[test]
+fn number_operators() {
+    assert_js!(
+        r#"
+fn go() {
+    1 + 1 // => 2
+    5 - 1 // => 4
+    5 / 2 // => 2
+    3 * 3 // => 9
+    5 % 2 // => 1
+
+    2 > 1  // => True
+    2 < 1  // => False
+    2 >= 1 // => True
+    2 <= 1 // => False
+}
+"#,
+r#"function go() {
+    1
+    2
+    -3
+    4001
+    0b00001111
+    0o17
+    0xF
+    1_000
+}"#
+    );
+    // NOTE js also supports _ in numbers
+
+    assert_js!(
+        r#"
+fn go() {
+    1.5
+    2.0
+    -0.1
+    1.
+}
+"#,
+r#"function go() {
+    1.5
+    2.0
+    -0.1
+    1.
+}"#
     );
 }

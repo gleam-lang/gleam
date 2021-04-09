@@ -88,8 +88,9 @@ fn mod_fun<'a>(
     .append(Document::String(name.to_string()))
     .append(fun_args(args))
     .append(" {")
+    .append(line().append(expr(body)).nest(INDENT).group())
     .append(line())
-
+    .append("}")
 }
 
 fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
@@ -112,4 +113,36 @@ where
         .append(break_("", ""))
         .surround("(", ")")
         .group()
+}
+
+fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
+    match expression {
+        TypedExpr::Int { value, .. } => int(value),
+        TypedExpr::Float { value, .. } => float(value),
+        TypedExpr::String { value, .. } => string(value),
+        TypedExpr::Seq { first, then, .. } => seq(first, then),
+        _ => {
+            println!("expression: {:?}", expression);
+            unimplemented!("expr")
+        }
+    }
+}
+
+fn int<'a>(value: &str) -> Document<'a> {
+    Document::String(value.to_string())
+}
+
+fn float<'a>(value: &str) -> Document<'a> {
+    Document::String(value.to_string())
+}
+
+fn string(value: &str) -> Document<'_> {
+    value.to_doc().surround("\"", "\"")
+}
+
+fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
+    force_break()
+        .append(expr(first))
+        .append(line())
+        .append(expr(then))
 }
