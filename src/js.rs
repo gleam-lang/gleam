@@ -44,7 +44,19 @@ fn statement<'a>(
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
-        Statement::Import { .. } => None,
+        Statement::Import { module, as_name, .. } => {
+            println!("import: {:?}", statement);
+            
+
+            let as_name = as_name.clone().unwrap_or(module.join("_"));
+
+            let line = "import * as "
+                .to_doc()
+                .append(Document::String(as_name))
+                .append(" from ".to_doc())
+                .append(Document::String(module.join("/")));
+            Some(line)
+        },
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { .. } => None,
 

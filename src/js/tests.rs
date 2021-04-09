@@ -1,12 +1,20 @@
 use super::*;
+use crate::build::{Origin, Module};
+use crate::type_;
 
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {
         // println!("\n\n\n{}\n", $src);
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
+        let mut modules = std::collections::HashMap::new();
+        // Probably a nicer way to do types values accessors
+        modules.insert(
+            "rocket_ship".to_string(), 
+            (Origin::Src, type_::Module { name: vec!["rocket_ship".to_string()], types: std::collections::HashMap::new(), values: std::collections::HashMap::new(), accessors: std::collections::HashMap::new()})
+        );
         let ast =
-            crate::type_::infer_module(&mut 0, ast, &std::collections::HashMap::new(), &mut vec![])
+            crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
                 .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
@@ -355,3 +363,19 @@ function go() {
 
 // TODO @ is not an acceptable variable charachter in JS, need a better name, 
 // potentially variable is a type rather than string with name.
+
+#[test]
+fn importing_a_module() {
+    assert_js!(
+        r#"
+// uncommenting the unknown import crashes the tests
+// Note import does nothing in erlang land.
+import rocket_ship
+import rocket_ship as foo
+// import rocket_ship.{launch}
+"#,
+r#"import * as rocket_ship from rocket_ship
+
+import * as foo from rocket_ship"#
+    );
+}
