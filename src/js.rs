@@ -121,6 +121,9 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Seq { first, then, .. } => seq(first, then),
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => bin_op(name, left, right),
         _ => {
             println!("expression: {:?}", expression);
             unimplemented!("expr")
@@ -145,4 +148,60 @@ fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
         .append(expr(first))
         .append(line())
         .append(expr(then))
+}
+
+fn bin_op<'a>(
+    name: &'a BinOp,
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+) -> Document<'a> {
+    // let div_zero = match name {
+    //     BinOp::DivInt | BinOp::ModuloInt => Some("0"),
+    //     BinOp::DivFloat => Some("0.0"),
+    //     _ => None,
+    // };
+    match name {
+        // BinOp::And => "andalso",
+        // BinOp::Or => "orelse",
+        BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
+        BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
+        // BinOp::Eq => "=:=",
+        // BinOp::NotEq => "/=",
+        BinOp::GtInt | BinOp::GtFloat => print_bin_op(left, right, ">"),
+        BinOp::GtEqInt | BinOp::GtEqFloat => print_bin_op(left, right, ">="),
+        BinOp::AddInt | BinOp::AddFloat => print_bin_op(left, right, "+"),
+        BinOp::SubInt | BinOp::SubFloat => print_bin_op(left, right, "-"),
+        BinOp::MultInt | BinOp::MultFloat => print_bin_op(left, right, "*"),
+        BinOp::DivInt => Document::String("Math.floor".to_string())
+            .append(print_bin_op(left, right, "/").surround("(", ")")),
+        BinOp::DivFloat => print_bin_op(left, right, "/"),
+        BinOp::ModuloInt => print_bin_op(left, right, "%"),
+        _ => {
+            println!("name: {:?}", name);
+            unimplemented!("binop")
+        }
+    }
+}
+
+fn print_bin_op<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    op: &str
+) -> Document<'a> {
+        let left_expr = match left {
+        TypedExpr::BinOp { .. } => expr(left).surround("(", ")"),
+        _ => expr(left),
+    };
+
+    let right_expr = match right {
+        TypedExpr::BinOp { .. } => expr(right).surround("(", ")"),
+        _ => expr(right),
+    };
+
+    left_expr
+        // TODO what is break_
+        .append(" ")
+        .append(Document::String(op.to_string()))
+        .append(" ")
+        .append(right_expr)
 }
