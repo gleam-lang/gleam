@@ -325,3 +325,33 @@ r#"function go() {
 }"#
     );
 }
+
+// Note function capturing is just syntax sugar, and all printing done with functions code.
+#[test]
+fn function_capturing() {
+    assert_js!(
+        r#"
+fn add(x, y) {
+    x + y
+}
+
+fn go() {
+    let add_one = add(1, _)
+
+    add_one(2)
+}"#,
+r#"function add(x, y) {
+    x + y
+}
+
+function go() {
+    let add_one = function(gleam@capture_variable) {
+        add(1, gleam@capture_variable)
+    }
+    add_one(2)
+}"#
+    );
+}
+
+// TODO @ is not an acceptable variable charachter in JS, need a better name, 
+// potentially variable is a type rather than string with name.
