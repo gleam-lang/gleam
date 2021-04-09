@@ -1353,7 +1353,7 @@ main(Arg1, Arg2, Arg3) ->
 
 -export_type([two/1]).
 
--type two(P) :: {two, one:one(integer())} | {gleam_phantom, P}.
+-type two(I) :: {two, one:one(integer())} | {gleam_phantom, I}.
 
 
 ".to_string(),

@@ -9,7 +9,14 @@ pub fn env_types_with(things: &[&str]) -> Vec<String> {
 }
 
 pub fn env_types() -> Vec<String> {
-    Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
+    let mut modules = HashMap::new();
+    let mut uid = 0;
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+    Environment::new(&mut 0, &[], &modules, &mut vec![])
         .module_types
         .keys()
         .map(|s| s.to_string())
@@ -25,7 +32,14 @@ pub fn env_vars_with(things: &[&str]) -> Vec<String> {
 }
 
 pub fn env_vars() -> Vec<String> {
-    Environment::new(&mut 0, &[], &HashMap::new(), &mut vec![])
+    let mut modules = HashMap::new();
+    let mut uid = 0;
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+    Environment::new(&mut 0, &[], &modules, &mut vec![])
         .local_values
         .keys()
         .map(|s| s.to_string())

@@ -159,6 +159,16 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>, Error> {
     let mut compiled_modules = Vec::with_capacity(module_count);
     let mut uid = 0;
 
+    // Insert the prelude
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules_type_infos.insert(
+        "gleam".to_string(),
+        (Origin::Src, type_::build_prelude(&mut uid)),
+    );
+
     struct Out {
         source_base_path: PathBuf,
         name_string: String,
