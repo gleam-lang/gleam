@@ -1353,7 +1353,7 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
 ///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match &expression {
-        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => begin_end(expr(expression, env)),
+        TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => begin_end(expr(expression, env)),
         _ => expr(expression, env),
     }
 }
@@ -1472,27 +1472,27 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
 
-        TypedExpr::Let {
+        TypedExpr::Assignment {
             value,
             pattern,
             then,
-            kind: BindingKind::Try,
+            kind: AssignmentKind::Try,
             ..
         } => try_(value, pattern, then, env),
 
-        TypedExpr::Let {
+        TypedExpr::Assignment {
             value,
             pattern,
             then,
-            kind: BindingKind::Assert,
+            kind: AssignmentKind::Assert,
             ..
         } => assert(value, pattern, then, env),
 
-        TypedExpr::Let {
+        TypedExpr::Assignment {
             value,
             pattern,
             then,
-            kind: BindingKind::Let,
+            kind: AssignmentKind::Let,
             ..
         } => let_(value, pattern, then, env),
 

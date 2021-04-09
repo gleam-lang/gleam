@@ -561,15 +561,15 @@ impl<'comments> Formatter<'comments> {
         pattern: &'a UntypedPattern,
         value: &'a UntypedExpr,
         then: &'a UntypedExpr,
-        kind: BindingKind,
+        kind: AssignmentKind,
         annotation: &'a Option<TypeAst>,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
-            BindingKind::Let => "let ",
-            BindingKind::Try => "try ",
-            BindingKind::Assert => "assert ",
+            AssignmentKind::Let => "let ",
+            AssignmentKind::Try => "try ",
+            AssignmentKind::Assert => "assert ",
         };
 
         let pattern = self.pattern(pattern);
@@ -647,7 +647,7 @@ impl<'comments> Formatter<'comments> {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
-            UntypedExpr::Let {
+            UntypedExpr::Assignment {
                 value,
                 pattern,
                 annotation,
@@ -736,7 +736,7 @@ impl<'comments> Formatter<'comments> {
                 expr,
                 UntypedExpr::Fn { .. }
                     | UntypedExpr::Seq { .. }
-                    | UntypedExpr::Let { .. }
+                    | UntypedExpr::Assignment { .. }
                     | UntypedExpr::Call { .. }
                     | UntypedExpr::Case { .. }
                     | UntypedExpr::Tuple { .. }
@@ -1048,7 +1048,7 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => "{"
+            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => "{"
                 .to_doc()
                 .append(force_break())
                 .append(line().append(self.expr(expr)).nest(INDENT))
@@ -1088,7 +1088,7 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Let { .. } => " {"
+            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => " {"
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
@@ -1191,7 +1191,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::VarUsage { name, .. } => name.to_doc(),
 
-            Pattern::Let { name, pattern, .. } => {
+            Pattern::Assign { name, pattern, .. } => {
                 self.pattern(pattern).append(" as ").append(name.as_str())
             }
 

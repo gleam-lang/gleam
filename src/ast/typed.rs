@@ -76,13 +76,13 @@ pub enum TypedExpr {
         right: Box<Self>,
     },
 
-    Let {
+    Assignment {
         location: SrcSpan,
         typ: Arc<Type>,
         value: Box<Self>,
         pattern: Pattern<PatternConstructor, Arc<Type>>,
         then: Box<Self>,
-        kind: BindingKind,
+        kind: AssignmentKind,
     },
 
     Case {
@@ -156,7 +156,7 @@ impl TypedExpr {
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Let { then, .. } | Self::Seq { then, .. } => then.location(),
+            Self::Assignment { then, .. } | Self::Seq { then, .. } => then.location(),
             Self::Fn { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
@@ -180,8 +180,8 @@ impl TypedExpr {
 
     pub fn try_binding_location(&self) -> SrcSpan {
         match self {
-            Self::Let {
-                kind: BindingKind::Try,
+            Self::Assignment {
+                kind: AssignmentKind::Try,
                 location,
                 ..
             }
@@ -204,7 +204,7 @@ impl TypedExpr {
             | Self::BitString { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
 
-            Self::Let { then, .. } | Self::Seq { then, .. } => then.try_binding_location(),
+            Self::Assignment { then, .. } | Self::Seq { then, .. } => then.try_binding_location(),
         }
     }
 }
@@ -220,7 +220,7 @@ impl TypedExpr {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
             Self::ListNil { typ, .. } => typ.clone(),
-            Self::Let { typ, .. } => typ.clone(),
+            Self::Assignment { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.type_(),
             Self::Todo { typ, .. } => typ.clone(),

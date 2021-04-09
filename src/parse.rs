@@ -54,8 +54,8 @@ pub mod extra;
 pub mod lexer;
 mod token;
 use crate::ast::{
-    Arg, ArgNames, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
-    ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
+    Arg, ArgNames, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
+    Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
     RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport,
     UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
@@ -612,7 +612,7 @@ where
             let then = self.parse_expression_seq()?;
             match (value, then) {
                 (Some(value), Some((then, seq_end))) => Ok(Some((
-                    UntypedExpr::Let {
+                    UntypedExpr::Assignment {
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -656,19 +656,19 @@ where
     }
 
     // let, assert, or try
-    fn maybe_binding_start(&mut self) -> Option<(usize, BindingKind)> {
+    fn maybe_binding_start(&mut self) -> Option<(usize, AssignmentKind)> {
         match self.tok0 {
             Some((start, Tok::Let, _)) => {
                 let _ = self.next_tok();
-                Some((start, BindingKind::Let))
+                Some((start, AssignmentKind::Let))
             }
             Some((start, Tok::Assert, _)) => {
                 let _ = self.next_tok();
-                Some((start, BindingKind::Assert))
+                Some((start, AssignmentKind::Assert))
             }
             Some((start, Tok::Try, _)) => {
                 let _ = self.next_tok();
-                Some((start, BindingKind::Try))
+                Some((start, AssignmentKind::Try))
             }
             _ => None,
         }
@@ -822,7 +822,7 @@ where
         if let Some((_, Tok::As, _)) = self.tok0 {
             let _ = self.next_tok();
             let (start, name, end) = self.expect_name()?;
-            Ok(Some(Pattern::Let {
+            Ok(Some(Pattern::Assign {
                 name,
                 location: SrcSpan { start, end },
                 pattern: Box::new(pattern),

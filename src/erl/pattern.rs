@@ -13,7 +13,7 @@ pub(super) fn to_doc<'a>(
     match p {
         Pattern::Nil { .. } => "[]".to_doc(),
 
-        Pattern::Let {
+        Pattern::Assign {
             name, pattern: p, ..
         } => {
             vars.push(name);

@@ -607,7 +607,7 @@ pub enum Pattern<Constructor, Type> {
         type_: Type,
     },
 
-    Let {
+    Assign {
         name: String,
         location: SrcSpan,
         pattern: Box<Self>,
@@ -651,7 +651,7 @@ pub enum Pattern<Constructor, Type> {
 impl<A, B> Pattern<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Pattern::Let { pattern, .. } => pattern.location(),
+            Pattern::Assign { pattern, .. } => pattern.location(),
             Pattern::Int { location, .. }
             | Pattern::Var { location, .. }
             | Pattern::VarUsage { location, .. }
@@ -689,7 +689,7 @@ impl<A, B> HasLocation for Pattern<A, B> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub enum BindingKind {
+pub enum AssignmentKind {
     Let,
     Assert,
     Try,

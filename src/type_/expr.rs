@@ -1,6 +1,6 @@
 use super::*;
 use crate::ast::{
-    Arg, BinOp, BindingKind, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
+    Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
     ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TypeAst, TypedArg,
     TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
@@ -110,7 +110,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 ..
             } => self.infer_fn(args, *body, is_capture, return_annotation, location),
 
-            UntypedExpr::Let {
+            UntypedExpr::Assignment {
                 location,
                 pattern,
                 value,
@@ -675,7 +675,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         pattern: UntypedPattern,
         value: UntypedExpr,
         then: UntypedExpr,
-        kind: BindingKind,
+        kind: AssignmentKind,
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
@@ -686,7 +686,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let value_typ = match kind {
             // Ensure that the value is a result if this is a `try` binding
-            BindingKind::Try => {
+            AssignmentKind::Try => {
                 let v = try_value_type.clone();
                 let e = try_error_type.clone();
                 self.unify(result(v, e), value.type_())
@@ -708,7 +708,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let typ = then.type_();
 
         // Ensure that a Result with the right error type is returned for `try`
-        if kind == BindingKind::Try {
+        if kind == AssignmentKind::Try {
             let value = self.new_unbound_var(self.environment.level);
             self.unify(result(value, try_error_type), typ.clone())
                 .map_err(|e| convert_unify_error(e, then.try_binding_location()))?;
@@ -723,7 +723,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .map_err(|e| convert_unify_error(e, value.location()))?;
         }
 
-        Ok(TypedExpr::Let {
+        Ok(TypedExpr::Assignment {
             location,
             typ,
             kind,

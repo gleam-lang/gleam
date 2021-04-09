@@ -233,7 +233,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 })
             }
 
-            Pattern::Let {
+            Pattern::Assign {
                 name,
                 pattern,
                 location,
@@ -241,7 +241,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 self.insert_variable(&name, typ.clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 let pattern = self.unify(*pattern, typ)?;
-                Ok(Pattern::Let {
+                Ok(Pattern::Assign {
                     name,
                     pattern: Box::new(pattern),
                     location,
