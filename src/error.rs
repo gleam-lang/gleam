@@ -194,6 +194,7 @@ pub enum InvalidProjectNameReason {
     ErlangReservedWord,
     ErlangStandardLibraryModule,
     GleamReservedWord,
+    GleamReservedModule,
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -313,6 +314,8 @@ Please try again with a different project name.",
                                 "is a standard library module in Erlang.",
                             InvalidProjectNameReason::GleamReservedWord =>
                                 "is a reserved word in Gleam.",
+                            InvalidProjectNameReason::GleamReservedModule =>
+                                "is a reserved module name in Gleam.",
                             InvalidProjectNameReason::Format =>
                                 "does not have the correct format. Project names must start
 with a lowercase letter and may only contain lowercase letters,
