@@ -124,10 +124,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
     ) -> Result<TypedPattern, Error> {
         let last_segment = segments.pop();
 
-        let mut typed_segments = segments
+        let mut typed_segments: Vec<_> = segments
             .into_iter()
             .map(|s| self.infer_pattern_segment(s, false))
-            .collect::<Result<Vec<_>, _>>()?;
+            .try_collect()?;
 
         if let Some(s) = last_segment {
             let typed_last_segment = self.infer_pattern_segment(s, true)?;
@@ -152,10 +152,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             ..
         } = segment;
 
-        let options = options
+        let options: Vec<_> = options
             .into_iter()
             .map(|o| infer_bit_string_segment_option(o, |value, typ| self.unify(value, typ)))
-            .collect::<Result<Vec<_>, _>>()?;
+            .try_collect()?;
 
         let segment_type = bit_string::type_options_for_pattern(&options, !is_last_segment)
             .map_err(|error| Error::BitStringSegmentError {
@@ -164,7 +164,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             })?;
 
         let typ = {
-            match &*value {
+            match value.deref() {
                 Pattern::Var { .. } if segment_type == string() => {
                     Err(Error::BitStringSegmentError {
                         error: bit_string::ErrorType::VariableUtfSegmentInPattern,
@@ -303,7 +303,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 }),
             },
 
-            Pattern::Tuple { elems, location } => match &*collapse_links(typ.clone()) {
+            Pattern::Tuple { elems, location } => match collapse_links(typ.clone()).deref() {
                 Type::Tuple { elems: type_elems } => {
                     if elems.len() != type_elems.len() {
                         return Err(Error::IncorrectArity {
@@ -318,7 +318,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         .into_iter()
                         .zip(type_elems)
                         .map(|(pattern, typ)| self.unify(pattern, typ.clone()))
-                        .collect::<Result<Vec<_>, _>>()?;
+                        .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
 
@@ -441,7 +441,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     &mut hashmap![],
                     self.hydrator,
                 );
-                match &*instantiated_constructor_type {
+                match instantiated_constructor_type.deref() {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {
                             let pattern_args = pattern_args
@@ -460,7 +460,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                         label,
                                     })
                                 })
-                                .collect::<Result<Vec<_>, _>>()?;
+                                .try_collect()?;
                             self.environment
                                 .unify(typ, retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;

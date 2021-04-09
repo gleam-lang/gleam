@@ -714,7 +714,7 @@ impl<'comments> Formatter<'comments> {
                 args.iter().map(|a| self.pattern_call_arg(a)),
             ))
         } else {
-            match &*args {
+            match args {
                 [arg] if is_breakable(&arg.value) => name
                     .append("(")
                     .append(self.pattern_call_arg(arg))

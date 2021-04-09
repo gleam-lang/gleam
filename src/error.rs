@@ -1466,9 +1466,9 @@ and try again.
                     ),
                     ParseErrorType::UnexpectedToken { expected } => {
                         let mut messages = expected.clone();
-                        let _ = messages
-                            .first_mut()
-                            .map(|s| *s = format!("Expected one of: {}", *s));
+                        if let Some(s) = messages.first_mut() {
+                            *s = format!("Expected one of: {}", s);
+                        }
 
                         ( "I was not expecting this.",
                           messages
