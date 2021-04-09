@@ -292,7 +292,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_nil(&mut self, location: SrcSpan) -> Result<TypedExpr, Error> {
-        Ok(TypedExpr::ListNil {
+        Ok(TypedExpr::EmptyList {
             location,
             typ: list(self.new_unbound_var(self.environment.level)),
         })

@@ -596,38 +596,48 @@ pub enum Pattern<Constructor, Type> {
         value: String,
     },
 
+    /// The creation of a variable.
+    /// e.g. `assert [this_is_a_var, .._] = x`
     Var {
         location: SrcSpan,
         name: String,
     },
 
+    /// A reference to a variable in a bit string. This is always a variable
+    /// being used rather than a new variable being assigned.
     VarUsage {
         location: SrcSpan,
         name: String,
         type_: Type,
     },
 
+    /// A name given to a sub-pattern using the `as` keyword.
+    /// e.g. `assert #(1, [_, _] as the_list) = x`
     Assign {
         name: String,
         location: SrcSpan,
         pattern: Box<Self>,
     },
 
+    /// A pattern that binds to any value but does not assign a variable.
+    /// Always starts with an underscore.
     Discard {
         name: String,
         location: SrcSpan,
     },
 
-    Nil {
+    EmptyList {
         location: SrcSpan,
     },
 
-    Cons {
+    // TODO: use a vector rather than a linked list here
+    ListCons {
         location: SrcSpan,
         head: Box<Self>,
         tail: Box<Self>,
     },
 
+    /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
         name: String,
@@ -655,8 +665,8 @@ impl<A, B> Pattern<A, B> {
             Pattern::Int { location, .. }
             | Pattern::Var { location, .. }
             | Pattern::VarUsage { location, .. }
-            | Pattern::Nil { location, .. }
-            | Pattern::Cons { location, .. }
+            | Pattern::EmptyList { location, .. }
+            | Pattern::ListCons { location, .. }
             | Pattern::Float { location, .. }
             | Pattern::Discard { location, .. }
             | Pattern::String { location, .. }
@@ -668,11 +678,11 @@ impl<A, B> Pattern<A, B> {
 
     pub fn put_list_cons_location_start(self, start: usize) -> Self {
         match self {
-            Pattern::Cons {
+            Pattern::ListCons {
                 location: SrcSpan { end, .. },
                 head,
                 tail,
-            } => Pattern::Cons {
+            } => Pattern::ListCons {
                 location: SrcSpan { start, end },
                 head,
                 tail,

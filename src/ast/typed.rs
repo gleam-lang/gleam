@@ -42,11 +42,12 @@ pub enum TypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    ListNil {
+    EmptyList {
         location: SrcSpan,
         typ: Arc<Type>,
     },
 
+    // TODO: use a vector rather than a linked list here
     ListCons {
         location: SrcSpan,
         typ: Arc<Type>,
@@ -168,7 +169,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
-            | Self::ListNil { location, .. }
+            | Self::EmptyList { location, .. }
             | Self::ListCons { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
@@ -196,7 +197,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
-            | Self::ListNil { location, .. }
+            | Self::EmptyList { location, .. }
             | Self::ListCons { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
@@ -219,7 +220,7 @@ impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
             Self::Fn { typ, .. } => typ.clone(),
-            Self::ListNil { typ, .. } => typ.clone(),
+            Self::EmptyList { typ, .. } => typ.clone(),
             Self::Assignment { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.type_(),

@@ -882,7 +882,7 @@ fn float<'a>(value: &str) -> Document<'a> {
 
 fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
-        TypedExpr::ListNil { .. } => ListType::Nil,
+        TypedExpr::EmptyList { .. } => ListType::Nil,
 
         TypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
@@ -1411,7 +1411,7 @@ fn erlang_error<'a>(
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match expression {
-        TypedExpr::ListNil { .. } => "[]".to_doc(),
+        TypedExpr::EmptyList { .. } => "[]".to_doc(),
 
         TypedExpr::Todo {
             label, location, ..

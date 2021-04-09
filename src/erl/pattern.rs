@@ -11,7 +11,7 @@ pub(super) fn to_doc<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     match p {
-        Pattern::Nil { .. } => "[]".to_doc(),
+        Pattern::EmptyList { .. } => "[]".to_doc(),
 
         Pattern::Assign {
             name, pattern: p, ..
@@ -22,7 +22,7 @@ pub(super) fn to_doc<'a>(
                 .append(env.next_local_var_name(name))
         }
 
-        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, vars, env),
+        Pattern::ListCons { head, tail, .. } => pattern_list_cons(head, tail, vars, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
@@ -117,11 +117,11 @@ fn pattern_list_cons<'a>(
 
 fn categorise_element(expr: &TypedPattern) -> ListType<&TypedPattern, &TypedPattern> {
     match expr {
-        Pattern::Cons { head, tail, .. } => ListType::Cons {
+        Pattern::ListCons { head, tail, .. } => ListType::Cons {
             head: head.as_ref(),
             tail: tail.as_ref(),
         },
-        Pattern::Nil { .. } => ListType::Nil,
+        Pattern::EmptyList { .. } => ListType::Nil,
         other => ListType::NotList(other),
     }
 }

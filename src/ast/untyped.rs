@@ -39,6 +39,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
     },
 
+    // TODO: use a vector rather than a linked list here
     ListCons {
         location: SrcSpan,
         head: Box<Self>,

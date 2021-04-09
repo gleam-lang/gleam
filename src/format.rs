@@ -694,7 +694,9 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {
             match expr {
-                Pattern::Tuple { .. } | Pattern::Cons { .. } | Pattern::BitString { .. } => true,
+                Pattern::Tuple { .. } | Pattern::ListCons { .. } | Pattern::BitString { .. } => {
+                    true
+                }
                 Pattern::Constructor {
                     arguments: args, ..
                 } => !args.is_empty(),
@@ -1197,9 +1199,9 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Discard { name, .. } => name.to_doc(),
 
-            Pattern::Nil { .. } => "[]".to_doc(),
+            Pattern::EmptyList { .. } => "[]".to_doc(),
 
-            Pattern::Cons { head, tail, .. } => {
+            Pattern::ListCons { head, tail, .. } => {
                 let (elems, tail) =
                     list_cons(head.as_ref(), tail.as_ref(), categorise_list_pattern);
                 let elems = concat(Itertools::intersperse(
@@ -1397,9 +1399,9 @@ fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedEx
 
 fn categorise_list_pattern(expr: &UntypedPattern) -> ListType<&UntypedPattern, &UntypedPattern> {
     match expr {
-        UntypedPattern::Nil { .. } => ListType::Nil,
+        UntypedPattern::EmptyList { .. } => ListType::Nil,
 
-        UntypedPattern::Cons { head, tail, .. } => ListType::Cons { head, tail },
+        UntypedPattern::ListCons { head, tail, .. } => ListType::Cons { head, tail },
 
         other => ListType::NotList(other),
     }

@@ -724,7 +724,7 @@ where
             }
             Some((start, Tok::ListNil, end)) => {
                 let _ = self.next_tok();
-                Pattern::Nil {
+                Pattern::EmptyList {
                     location: SrcSpan { start, end },
                 }
             }
@@ -793,7 +793,7 @@ where
                         name: "_".to_string(),
                     },
                     // No tail specified
-                    None => Pattern::Nil {
+                    None => Pattern::EmptyList {
                         location: SrcSpan {
                             start: rsqb_e - 1,
                             end: rsqb_e,
@@ -804,7 +804,7 @@ where
                 elems
                     .into_iter()
                     .rev()
-                    .fold(tail_pattern, |a, e| Pattern::Cons {
+                    .fold(tail_pattern, |a, e| Pattern::ListCons {
                         location: e.location(),
                         head: Box::new(e),
                         tail: Box::new(a),
