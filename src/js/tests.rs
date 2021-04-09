@@ -30,11 +30,7 @@ fn go(a) {
 }
 
                     "#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--spec go(integer()) -> integer().
-go(A) ->
+        r#"function go(a) {
     case A of
         99 ->
             A@1 = A,

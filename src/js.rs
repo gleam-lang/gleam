@@ -15,7 +15,9 @@ use crate::{
     Result,
 };
 use itertools::Itertools;
+use std::sync::Arc;
 
+const INDENT: isize = 4;
 
 pub fn module(
     module: &TypedModule,
@@ -46,14 +48,14 @@ fn statement<'a>(
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { .. } => None,
 
+        Statement::Fn {
+            arguments: args,
+            name,
+            body,
+            return_type,
+            ..
+        } => Some(mod_fun(name, args, body, module, return_type, line_numbers)),
         _ => unimplemented!()
-        // Statement::Fn {
-        //     arguments: args,
-        //     name,
-        //     body,
-        //     return_type,
-        //     ..
-        // } => Some(mod_fun(name, args, body, module, return_type, line_numbers)),
 
         // Statement::ExternalFn { public: false, .. } => None,
         // Statement::ExternalFn {
@@ -72,4 +74,42 @@ fn statement<'a>(
         //     return_type,
         // )),
     }
+}
+
+fn mod_fun<'a>(
+    name: &'a str,
+    args: &'a [TypedArg],
+    body: &'a TypedExpr,
+    module: &'a [String],
+    return_type: &'a Arc<Type>,
+    line_numbers: &'a LineNumbers,
+) -> Document<'a> {
+    "function ".to_doc()
+    .append(Document::String(name.to_string()))
+    .append(fun_args(args))
+    .append(" {")
+    .append(line())
+
+}
+
+fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
+    wrap_args(args.iter().map(|a| match &a.names {
+        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
+        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+            // TODO add these named variables to an env somewhere
+            Document::String(name.to_string())
+        }
+    }))
+}
+
+fn wrap_args<'a, I>(args: I) -> Document<'a>
+where
+    I: Iterator<Item = Document<'a>>,
+{
+    break_("", "")
+        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .nest(INDENT)
+        .append(break_("", ""))
+        .surround("(", ")")
+        .group()
 }
