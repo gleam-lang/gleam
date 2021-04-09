@@ -15,6 +15,8 @@
 - Fixed a bug where customt type constructors with Erlang keywords as names
   would generate invalid Erlang code.
 - Gleam now supports `\e` string escapes.
+- Values and types from the prelude can now be used in a qualified fashion by
+  importing the `gleam` module.
 
 ## v0.14.4 - 2021-03-27
 
