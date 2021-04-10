@@ -58,7 +58,25 @@ fn statement<'a>(
             Some(line)
         },
         Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => None,
+        Statement::ModuleConstant { public, name, value, .. } => {
+            // I don't know what I'm doing here. 
+            let value = match &**value {
+                Constant::Int {value, ..} => int(value),
+                _ => unimplemented!("consts")
+            };
+            
+            let rendered = if *public {
+                "export "
+            } else {
+                ""
+            }.to_doc()
+            .append("const ")
+            .append(Document::String(name.to_string()))
+            .append(" = ")
+            .append(value);
+            Some(rendered)
+        },
+        
 
         Statement::Fn {
             arguments: args,
@@ -324,7 +342,8 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         // },
 
         ValueConstructorVariant::LocalVariable => name.to_doc(),
-        // ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
+        ValueConstructorVariant::ModuleConstant { .. } =>  {           
+        name.to_doc()},
 
         ValueConstructorVariant::ModuleFn {
             arity, ref module, ..

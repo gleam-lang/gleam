@@ -431,6 +431,7 @@ function go() {
 
 
 #[test]
+#[ignore]
 fn todo_throws_error(){
     assert_js!(
         r#"
@@ -448,6 +449,31 @@ fn go() {
 }
 "#,r#"function go() {
     throw Object.assign(new Error("I should do this"), {})
+}"#
+    );
+}
+
+
+#[test]
+fn constant_statements(){
+    assert_js!(
+        r#"
+const start_year = 2101
+pub const end_year = 2111
+
+pub fn is_before(year: Int) -> Bool {
+    year < start_year
+}
+
+// pub fn is_during(year: Int) -> Bool {
+//     start_year <= year && year <= end_year
+// }
+"#,r#"const start_year = 2101
+
+export const end_year = 2111
+
+export function is_before(year) {
+    year < start_year
 }"#
     );
 }
