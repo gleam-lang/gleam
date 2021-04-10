@@ -477,3 +477,24 @@ export function is_before(year) {
 }"#
     );
 }
+
+#[test]
+fn external_functions(){
+    assert_js!(
+        r#"
+external type Element
+external fn query_selector(String) -> Element = "document" "querySelector"
+// TODO test named external
+
+fn go (selector: String) {
+    query_selector(selector)
+}
+"#,r#"function query_selector(arg0) {
+    document.querySelector(arg0)
+}
+
+function go(selector) {
+    query_selector(selector)
+}"#
+    );
+}

@@ -86,25 +86,47 @@ fn statement<'a>(
             public,
             ..
         } => Some(mod_fun(public, name, args, body, module, return_type, line_numbers)),
-        _ => unimplemented!()
 
-        // TODO What's the difference between Fn and external Fn when public is a key
         // Statement::ExternalFn { public: false, .. } => None,
-        // Statement::ExternalFn {
-        //     fun,
-        //     module,
-        //     arguments: args,
-        //     name,
-        //     return_type,
-        //     ..
-        // } => Some(external_fun(
-        //     current_module,
-        //     name,
-        //     module,
-        //     fun,
-        //     args,
-        //     return_type,
-        // )),
+        Statement::ExternalFn {
+            public,
+            fun,
+            module,
+            arguments: args,
+            name,
+            return_type,
+            ..
+        } => {
+            let arg_string = wrap_args(args.iter().enumerate().map(|a| match a {
+                (index, ExternalFnArg{label, ..}) => {
+                    let arg_name = label.clone().unwrap_or(format!("arg{}", index));
+                    println!("a: {:?}", a);
+                    // "f".to_doc()
+                    Document::String(arg_name)
+                }
+            }));
+            let rendered = if &true == public {
+                "export "
+            } else {
+                ""
+            }.to_doc()
+            .append("function ")
+            .append(Document::String(name.to_string()))
+            // take label or index
+            .append(arg_string.clone())
+            .append(" {")
+            .append(line()
+                .append(Document::String(module.clone()))
+                .append(".")
+                .append(Document::String(fun.clone()))
+                .append(arg_string)
+                .nest(INDENT).group())
+            .append(line())
+            .append("}");
+            Some(rendered)
+        },
+        _ => unimplemented!("statements needed")
+
     }
 }
 
