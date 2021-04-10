@@ -19,27 +19,23 @@ pub fn command(root_string: String) -> Result<(), Error> {
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
 
+    // Print character lists as lists
+    let _ = command.arg("-stdlib").arg("shell_strings").arg("false");
+
     // Specify locations of .beam files
     for entry in crate::fs::read_dir(root.default_build_lib_path())?.filter_map(Result::ok) {
-        let _ = command.arg("-pa");
-        let _ = command.arg(entry.path().join("ebin"));
+        let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }
 
-    crate::cli::print_running("erl");
+    crate::cli::print_running("Erlang shell");
+
+    // TODO: pass ctrl-c etc through to the shell process
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
-    let status = command.status().map_err(|e| Error::ShellCommand {
+    let _ = command.status().map_err(|e| Error::ShellCommand {
         command: "erl".to_string(),
         err: Some(e.kind()),
     })?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(Error::ShellCommand {
-            command: "erl".to_string(),
-            err: None,
-        })
-    }
+    Ok(())
 }
