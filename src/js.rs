@@ -453,6 +453,7 @@ fn bin_op<'a>(
         BinOp::Or => print_bin_op(left, right, "||"),
         BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
         BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
+        // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
         // BinOp::Eq => "=:=",
         // BinOp::NotEq => "/=",
         BinOp::GtInt | BinOp::GtFloat => print_bin_op(left, right, ">"),

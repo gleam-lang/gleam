@@ -69,8 +69,22 @@ r#"function go() {
     false || false
 }"#
     );
+
+//     assert_js!(
+//         r#"
+// fn go() {
+//     True && True
+//     False || False
+// }
+// "#,
+// r#"function go() {
+//     true && true
+//     false || false
+// }"#
+//     );
 }
 
+// TODO add section to booke with equality operators
 
 #[test]
 fn number_literals() {
