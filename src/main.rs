@@ -195,9 +195,21 @@ pub struct NewOptions {
     pub template: new::Template,
 }
 
+// arg_enum! {
+//     #[derive(Debug)]
+//     pub enum Target {
+//         Erlang,
+//         JavaScript
+//     }
+// }
+// https://stackoverflow.com/questions/54687403/how-can-i-use-enums-in-structopt
+
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 pub struct CompilePackage {
+    #[structopt(help = "The compilation target for the generated project", long = "target", default_value = "erlang")]
+    target: String,
+
     #[structopt(help = "The name of the package being compiled", long = "name")]
     package_name: String,
 
@@ -217,6 +229,7 @@ pub struct CompilePackage {
 impl CompilePackage {
     pub fn into_package_compiler_options(self) -> package_compiler::Options {
         package_compiler::Options {
+            target: self.target,
             name: self.package_name,
             src_path: self.src_directory,
             test_path: self.test_directory,

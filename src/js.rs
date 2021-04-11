@@ -55,9 +55,6 @@ fn statement<'a>(
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
         Statement::Import { module, as_name, .. } => {
-            println!("import: {:?}", statement);
-            
-
             let as_name = as_name.clone().unwrap_or(module.join("_"));
 
             let line = "import * as "
@@ -149,8 +146,6 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
-    println!("body: {:?}", body);
-
     let env = Env{return_last: &true};
     if &true == public {
         "export "
@@ -191,6 +186,7 @@ where
 fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
     // println!("expr: {:?}", expression);
     // println!("env: {:?}", env);
+    // ALL inner except sequence and let should have return as false
 
     let rendered = match expression {
         TypedExpr::Int { value, .. } => int(value),
@@ -202,7 +198,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
 
         // What's the difference between iter and into_iter
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e|
-            maybe_block_expr(e, env)
+            maybe_block_expr(e, &Env{return_last: &false})
         )),
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 

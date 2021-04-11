@@ -1,9 +1,43 @@
 use crate::{
-    build::Module, config::PackageConfig, erl, fs::FileSystemWriter, line_numbers::LineNumbers,
+    build::Module, config::PackageConfig, erl, fs::FileSystemWriter, js, line_numbers::LineNumbers,
     Result,
 };
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
+
+#[derive(Debug)]
+pub struct JavaScript<'a> {
+    output_directory: &'a Path,
+}
+
+impl<'a> JavaScript<'a> {
+    pub fn new(output_directory: &'a Path) -> Self {
+        Self { output_directory }
+    }
+
+    pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
+        for module in modules {
+            let js_name = module.name.clone();
+            self.js_module(writer, module, &js_name)?
+        }
+        Ok(())
+    }
+
+    fn js_module(
+        &self,
+        writer: &impl FileSystemWriter,
+        module: &Module,
+        js_name: &str,
+    ) -> Result<()> {
+        let name = format!("{}.js", js_name);
+        let path = self.output_directory.join(&name);
+        let mut file = writer.open(&path)?;
+        let line_numbers = LineNumbers::new(&module.code);
+        let res = js::module(&module.ast, &line_numbers, &mut file);
+        tracing::trace!(name = ?name, "Generated js module");
+        res
+    }
+}
 
 /// A code generator that creates a .erl Erlang module and record header files
 /// for each Gleam module in the package.

@@ -2,6 +2,7 @@ use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
     codegen::Erlang,
+    codegen::JavaScript,
     config::PackageConfig,
     error,
     fs::FileSystemWriter,
@@ -13,6 +14,7 @@ use std::{collections::HashMap, fmt::write};
 
 #[derive(Debug)]
 pub struct Options {
+    pub target: String,
     pub name: String,
     pub src_path: PathBuf,
     pub test_path: Option<PathBuf>,
@@ -137,7 +139,12 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     }
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
-        Erlang::new(&self.options.out_path).render(&self.writer, modules)
+        match &self.options.target.as_str() {
+            &"js" => JavaScript::new(&self.options.out_path).render(&self.writer, modules),
+            _ => Erlang::new(&self.options.out_path).render(&self.writer, modules)
+        }
+        // I wonder if erlang supercedes ErlangApp
+
     }
 
     /// Set whether to write metadata files
