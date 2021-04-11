@@ -420,6 +420,8 @@ fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
     Document::String("let ".to_string()).append(match p {
         // Pattern::Nil { .. } => "[]".to_doc(),
         Pattern::Var { name, .. } => name.to_doc(),
+        // In erl/pattern.rs
+        // Uses collect_cons, but for a pattern type
         _ => {
             println!("p: {:?}", p);
             unimplemented!("pattern")
@@ -428,7 +430,6 @@ fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
 }
 
 fn maybe_block_expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
-    println!("maybe: {:?}", expression);
     match &expression {
         // TODO this handled a let in the erlang version
         TypedExpr::Seq { first, then, .. } => force_break()

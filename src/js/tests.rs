@@ -209,6 +209,23 @@ r#"function go() {
 }
 
 #[test]
+#[ignore]
+fn let_destructuring() {
+    assert_js!(
+        r#"
+fn go(a) {
+    let [x, y] = a
+    let [first, ..rest] = a
+    Nil
+}"#,
+r#"function go() {
+}"#
+    );
+}
+// TODO look at purescript an buckle script but solve later.
+// https://github.com/purescript/documentation/blob/master/language/Pattern-Matching.md
+
+#[test]
 fn expression_blocks() {
     assert_js!(
         r#"
