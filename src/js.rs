@@ -346,22 +346,31 @@ fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
     match &constructor.variant {
-        // ValueConstructorVariant::Record {
-        //     name: record_name, ..
-        // } => match &*constructor.type_ {
-        //     Type::Fn { args, .. } => {
-        //         let chars = incrementing_args_list(args.len());
-        //         "fun("
-        //             .to_doc()
-        //             .append(Document::String(chars.clone()))
-        //             .append(") -> {")
-        //             .append(Document::String(record_name.to_snake_case()))
-        //             .append(", ")
-        //             .append(Document::String(chars))
-        //             .append("} end")
-        //     }
-        //     _ => atom(record_name.to_snake_case()),
-        // },
+        ValueConstructorVariant::Record {
+            name: record_name, ..
+        } => match &*constructor.type_ {
+            // Type::Fn { args, .. } => {
+            //     let chars = incrementing_args_list(args.len());
+            //     "fun("
+            //         .to_doc()
+            //         .append(Document::String(chars.clone()))
+            //         .append(") -> {")
+            //         .append(Document::String(record_name.to_snake_case()))
+            //         .append(", ")
+            //         .append(Document::String(chars))
+            //         .append("} end")
+            // }
+            _ => {
+                // atom(record_name.to_snake_case())
+                // TODO handle non boolean literals
+                // Document::String(record_name.clone())
+                match record_name.as_ref() {
+                    "True" => "true".to_doc(),
+                    "False" => "false".to_doc(),
+                    _ => unimplemented!("single Record variant")
+                }
+            },
+        },
 
         ValueConstructorVariant::LocalVariable => name.to_doc(),
         ValueConstructorVariant::ModuleConstant { .. } =>  {           
@@ -440,8 +449,8 @@ fn bin_op<'a>(
     //     _ => None,
     // };
     match name {
-        // BinOp::And => "andalso",
-        // BinOp::Or => "orelse",
+        BinOp::And => print_bin_op(left, right, "&&"),
+        BinOp::Or => print_bin_op(left, right, "||"),
         BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
         BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
         // BinOp::Eq => "=:=",

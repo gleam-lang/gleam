@@ -24,7 +24,6 @@ macro_rules! assert_js {
 }
 
 #[test]
-#[ignore]
 fn string_literals() {
     assert_js!(
         r#"
@@ -33,7 +32,7 @@ fn go() {
 }
 "#,
 r#"function go() {
-    return "Hello, Gleam!"
+    "Hello, Gleam!"
 }"#
     );
 }
@@ -41,16 +40,33 @@ r#"function go() {
 // \" escape sequence works in js.
 
 #[test]
-#[ignore]
 fn boolean_literals() {
     assert_js!(
         r#"
 fn go() {
     True
+    False
 }
 "#,
 r#"function go() {
-    return true
+    true
+    false
+}"#
+    );
+}
+
+#[test]
+fn boolean_operators() {
+    assert_js!(
+        r#"
+fn go() {
+    True && True
+    False || False
+}
+"#,
+r#"function go() {
+    true && true
+    false || false
 }"#
     );
 }
@@ -479,6 +495,7 @@ export function is_before(year) {
 }
 
 #[test]
+#[ignore]
 fn external_functions(){
     assert_js!(
         r#"
