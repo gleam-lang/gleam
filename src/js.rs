@@ -428,14 +428,26 @@ fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
 }
 
 fn maybe_block_expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
+    println!("maybe: {:?}", expression);
     match &expression {
-        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => force_break()
-            .append("{")
-            .append(line().append(expr(expression)).nest(INDENT).group())
+        // TODO this handled a let in the erlang version
+        TypedExpr::Seq { first, then, .. } => force_break()
+            .append("(")
+            .append(line().append(sequence_expr(first, then)).nest(INDENT).group())
             .append(line())
-            .append("}"),
+            .append(")"),
         _ => expr(expression),
     }
+}
+
+fn sequence_expr<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
+    expr(first)
+        .append(",")
+        .append(line())
+        .append(match then {
+            TypedExpr::Seq { first, then, .. } => sequence_expr(first, then),
+            _ => expr(then)
+        })
 }
 
 fn bin_op<'a>(

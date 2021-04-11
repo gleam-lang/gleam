@@ -206,25 +206,29 @@ r#"function go() {
     x
 }"#
     );
+}
 
-//     assert_js!(
-//         r#"
-// fn go() {
-//     let x = { 
-//         1 + 2
-//         3 + 1
-//     }
-//     x
-// }"#,
-// r#"function go() {
-//     let x = 1
-//     let y = x
-//     x
-// }"#
-//     );
-// TODO handle let x = { 1 + 2}
-
-
+#[test]
+fn expression_blocks() {
+    assert_js!(
+        r#"
+fn go() {
+    let value: Bool = {
+        "Hello"
+        42 + 12
+        False
+    } // => False
+    value
+}"#,
+r#"function go() {
+    let value = (
+        "Hello",
+        42 + 12,
+        false
+    )
+    value
+}"#
+    );
 }
 
 #[test]
