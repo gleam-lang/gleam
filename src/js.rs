@@ -19,6 +19,16 @@ use std::sync::Arc;
 
 const INDENT: isize = 4;
 
+#[derive(Debug, Clone)]
+struct Env<'a> {
+    return_last: &'a bool
+    // module: &'a [String],
+    // function: &'a str,
+    // line_numbers: &'a LineNumbers,
+    // current_scope_vars: im::HashMap<String, usize>,
+    // erl_function_scope_vars: im::HashMap<String, usize>,
+}
+
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
@@ -139,7 +149,9 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
+    println!("body: {:?}", body);
 
+    let env = Env{return_last: &true};
     if &true == public {
         "export "
     } else {
@@ -149,7 +161,7 @@ fn mod_fun<'a>(
     .append(Document::String(name.to_string()))
     .append(fun_args(args))
     .append(" {")
-    .append(line().append(expr(body)).nest(INDENT).group())
+    .append(line().append(expr(body, &env)).nest(INDENT).group())
     .append(line())
     .append("}")
 }
@@ -176,8 +188,11 @@ where
         .group()
 }
 
-fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
-    match expression {
+fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
+    // println!("expr: {:?}", expression);
+    // println!("env: {:?}", env);
+
+    let rendered = match expression {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
@@ -186,7 +201,9 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail),
 
         // What's the difference between iter and into_iter
-        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(maybe_block_expr)),
+        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e|
+            maybe_block_expr(e, env)
+        )),
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
         TypedExpr::Call { fun, args, .. } => call(fun, args),
@@ -194,7 +211,7 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
         // TODO is this always an anonymous fn
         TypedExpr::Fn { args, body, .. } => fun(args, body),
         
-        TypedExpr::Seq { first, then, .. } => seq(first, then),
+        TypedExpr::Seq { first, then, .. } => seq(first, then, env),
         TypedExpr::Var {
             name, constructor, ..
         } => var(name, constructor),
@@ -204,10 +221,10 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
             then,
             kind: BindingKind::Let,
             ..
-        } => let_(value, pattern, then),
+        } => let_(value, pattern, then, env),
         TypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(name, left, right),
+        } => bin_op(name, left, right, &Env{return_last: &false}),
         TypedExpr::Todo {
             label, location, ..
         } => {
@@ -219,7 +236,15 @@ fn expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
             println!("expression: {:?}", expression);
             unimplemented!("expr")
         }
-    }
+    };
+    match expression {
+        // I would have thought let would be inside a sequence?
+        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => "",
+        _ => match env.return_last {
+            true => "return ",
+            _ => ""
+        }
+    }.to_doc().append(rendered)
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
@@ -235,13 +260,16 @@ fn string(value: &str) -> Document<'_> {
 }
 
 fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr) -> Document<'a> {
+    let env = Env{ return_last: &false};
     let mut elements = vec![head];
 
     let final_tail = collect_cons(tail, &mut elements);
-    let elements = elements.into_iter().map(maybe_block_expr);
+    let elements = elements.into_iter().map(|e| 
+        maybe_block_expr(e, &env)
+    );
     let content = concat(Itertools::intersperse(elements, break_(",", ", ")));
     let content = if let Some(final_tail) = final_tail {
-        content.append(Document::String(", ...".to_string()).append(maybe_block_expr(final_tail)))
+        content.append(Document::String(", ...".to_string()).append(maybe_block_expr(final_tail, &env)))
     } else {
         content
     };
@@ -268,12 +296,15 @@ fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64) -> Document<'a> {
-    expr(tuple).
-    append(index.to_doc().surround("[", "]"))
+    let env = Env{ return_last: &false};
+    expr(tuple, &env)
+        .append(index.to_doc().surround("[", "]"))
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> {
-    let args = args.into_iter().map(|arg| maybe_block_expr(&arg.value));
+    let args = args.into_iter().map(|arg| 
+        maybe_block_expr(&arg.value, &Env{ return_last: &false})
+    );
     let args = concat(Itertools::intersperse(args, break_(",", ", ")));
     match fun {
         TypedExpr::Var {
@@ -326,22 +357,27 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
 }
 
 fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr) -> Document<'a> {
+    let env = Env{ return_last: &true};
     let doc = "function"
         .to_doc()
         .append(fun_args(args))
         .append(" {")
-        .append(line().append(expr(body)).nest(INDENT).group())
+        .append(line().append(expr(body, &env)).nest(INDENT).group())
         .append(line())
         .append("}");
     doc
 }
 
 
-fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
+fn seq<'a>(
+    first: &'a TypedExpr, 
+    then: &'a TypedExpr, 
+    env: &Env<'a>
+) -> Document<'a> {
     force_break()
-        .append(expr(first))
+        .append(expr(first, &Env{ return_last: &false}))
         .append(line())
-        .append(expr(then))
+        .append(expr(then, env))
 }
 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
@@ -407,13 +443,14 @@ fn let_<'a>(
     value: &'a TypedExpr,
     pat: &'a TypedPattern,
     then: &'a TypedExpr,
+    env: &Env<'a>
 ) -> Document<'a> {
-    let body = maybe_block_expr(value);
+    let body = maybe_block_expr(value, &Env{return_last: &false});
     pattern(pat)
         .append(" = ")
         .append(body)
         .append(line())
-        .append(expr(then))
+        .append(expr(then, env))
 }
 
 fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
@@ -429,25 +466,34 @@ fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
     })
 }
 
-fn maybe_block_expr<'a>(expression: &'a TypedExpr) -> Document<'a> {
+fn maybe_block_expr<'a>(
+    expression: &'a TypedExpr, 
+    env: &Env<'a>
+) -> Document<'a> {
     match &expression {
         // TODO this handled a let in the erlang version
+        //  | TypedExpr::Let { value: first, then, .. }
         TypedExpr::Seq { first, then, .. } => force_break()
             .append("(")
-            .append(line().append(sequence_expr(first, then)).nest(INDENT).group())
+            .append(line().append(sequence_expr(first, then, env)).nest(INDENT).group())
             .append(line())
             .append(")"),
-        _ => expr(expression),
+        _ => expr(expression, env),
     }
 }
 
-fn sequence_expr<'a>(first: &'a TypedExpr, then: &'a TypedExpr) -> Document<'a> {
-    expr(first)
+fn sequence_expr<'a>(
+    first: &'a TypedExpr, 
+    then: &'a TypedExpr, 
+    env: &Env<'a>
+) -> Document<'a> {
+    // TODO merge value into env
+    expr(first, &Env{return_last: &false})
         .append(",")
         .append(line())
         .append(match then {
-            TypedExpr::Seq { first, then, .. } => sequence_expr(first, then),
-            _ => expr(then)
+            TypedExpr::Seq { first, then, .. } => sequence_expr(first, then, env),
+            _ => expr(then, env)
         })
 }
 
@@ -455,6 +501,7 @@ fn bin_op<'a>(
     name: &'a BinOp,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
+    env: &Env<'a>
 ) -> Document<'a> {
     // let div_zero = match name {
     //     BinOp::DivInt | BinOp::ModuloInt => Some("0"),
@@ -462,22 +509,22 @@ fn bin_op<'a>(
     //     _ => None,
     // };
     match name {
-        BinOp::And => print_bin_op(left, right, "&&"),
-        BinOp::Or => print_bin_op(left, right, "||"),
-        BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
-        BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
+        BinOp::And => print_bin_op(left, right, "&&", env),
+        BinOp::Or => print_bin_op(left, right, "||", env),
+        BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<", env),
+        BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<=", env),
         // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
         // BinOp::Eq => "=:=",
         // BinOp::NotEq => "/=",
-        BinOp::GtInt | BinOp::GtFloat => print_bin_op(left, right, ">"),
-        BinOp::GtEqInt | BinOp::GtEqFloat => print_bin_op(left, right, ">="),
-        BinOp::AddInt | BinOp::AddFloat => print_bin_op(left, right, "+"),
-        BinOp::SubInt | BinOp::SubFloat => print_bin_op(left, right, "-"),
-        BinOp::MultInt | BinOp::MultFloat => print_bin_op(left, right, "*"),
+        BinOp::GtInt | BinOp::GtFloat => print_bin_op(left, right, ">", env),
+        BinOp::GtEqInt | BinOp::GtEqFloat => print_bin_op(left, right, ">=", env),
+        BinOp::AddInt | BinOp::AddFloat => print_bin_op(left, right, "+", env),
+        BinOp::SubInt | BinOp::SubFloat => print_bin_op(left, right, "-", env),
+        BinOp::MultInt | BinOp::MultFloat => print_bin_op(left, right, "*", env),
         BinOp::DivInt => Document::String("Math.floor".to_string())
-            .append(print_bin_op(left, right, "/").surround("(", ")")),
-        BinOp::DivFloat => print_bin_op(left, right, "/"),
-        BinOp::ModuloInt => print_bin_op(left, right, "%"),
+            .append(print_bin_op(left, right, "/", env).surround("(", ")")),
+        BinOp::DivFloat => print_bin_op(left, right, "/", env),
+        BinOp::ModuloInt => print_bin_op(left, right, "%", env),
         _ => {
             println!("name: {:?}", name);
             unimplemented!("binop")
@@ -488,16 +535,17 @@ fn bin_op<'a>(
 fn print_bin_op<'a>(
     left: &'a TypedExpr,
     right: &'a TypedExpr,
-    op: &str
+    op: &str,
+    env: &Env<'a>
 ) -> Document<'a> {
         let left_expr = match left {
-        TypedExpr::BinOp { .. } => expr(left).surround("(", ")"),
-        _ => expr(left),
+        TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
+        _ => expr(left, env),
     };
 
     let right_expr = match right {
-        TypedExpr::BinOp { .. } => expr(right).surround("(", ")"),
-        _ => expr(right),
+        TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
+        _ => expr(right, env),
     };
 
     left_expr

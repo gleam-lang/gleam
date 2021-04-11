@@ -32,7 +32,7 @@ fn go() {
 }
 "#,
 r#"function go() {
-    "Hello, Gleam!"
+    return "Hello, Gleam!"
 }"#
     );
 }
@@ -50,7 +50,7 @@ fn go() {
 "#,
 r#"function go() {
     true
-    false
+    return false
 }"#
     );
 }
@@ -66,22 +66,10 @@ fn go() {
 "#,
 r#"function go() {
     true && true
-    false || false
+    return false || false
 }"#
     );
 
-//     assert_js!(
-//         r#"
-// fn go() {
-//     True && True
-//     False || False
-// }
-// "#,
-// r#"function go() {
-//     true && true
-//     false || false
-// }"#
-//     );
 }
 
 // TODO add section to booke with equality operators
@@ -109,7 +97,7 @@ r#"function go() {
     0b00001111
     0o17
     0xF
-    1_000
+    return 1_000
 }"#
     );
     // NOTE js also supports _ in numbers
@@ -127,7 +115,7 @@ r#"function go() {
     1.5
     2.0
     -0.1
-    1.
+    return 1.
 }"#
     );
 }
@@ -158,7 +146,7 @@ r#"function go() {
     2 > 1
     2 < 1
     2 >= 1
-    2 <= 1
+    return 2 <= 1
 }"#
     );
 
@@ -184,7 +172,7 @@ r#"function go() {
     2.0 > 1.0
     2.0 < 1.0
     2.0 >= 1.0
-    2.0 <= 1.0
+    return 2.0 <= 1.0
 }"#
     );
     
@@ -203,7 +191,7 @@ fn go() {
 r#"function go() {
     let x = 1
     let y = x
-    x
+    return x
 }"#
     );
 }
@@ -243,7 +231,7 @@ r#"function go() {
         42 + 12,
         false
     )
-    value
+    return value
 }"#
     );
 }
@@ -273,7 +261,7 @@ r#"function go(x) {
     [1]
     [1, 2, 3]
     [1, 2, 3]
-    [1, ...x]
+    return [1, ...x]
 }"#
     );
 }
@@ -284,14 +272,14 @@ fn tuple_literals() {
         r#"
 fn go() {
     let my_tuple = tuple("one", "two")
-    my_tuple.0   // "one"
+    my_tuple.0 // "one"
     my_tuple.1 // "two"
 
 }"#,
 r#"function go() {
     let my_tuple = ["one", "two"]
     my_tuple[0]
-    my_tuple[1]
+    return my_tuple[1]
 }"#
     );
 }
@@ -306,7 +294,7 @@ pub fn add(x, y) {
     x + y
 }"#,
 r#"export function add(x, y) {
-    x + y
+    return x + y
 }"#
     );
 }
@@ -327,15 +315,15 @@ pub fn add_two(x: Int) -> Int {
     twice(add_one, x)
 }"#,
 r#"export function twice(f, x) {
-    f(f(x))
+    return f(f(x))
 }
 
 export function add_one(x) {
-    x + 1
+    return x + 1
 }
 
 export function add_two(x) {
-    twice(add_one, x)
+    return twice(add_one, x)
 }"#
     );
 }
@@ -357,11 +345,11 @@ fn add_two() {
     |> add_one()
 }"#,
 r#"function add_one(x) {
-    x + 1
+    return x + 1
 }
 
 function add_two() {
-    add_one(add_one(1))
+    return add_one(add_one(1))
 }"#
     );
 }
@@ -378,9 +366,9 @@ fn go() {
 }"#,
 r#"function go() {
     let add = function(x, y) {
-        x + y
+        return x + y
     }
-    add(1, 2)
+    return add(1, 2)
 }"#
     );
 }
@@ -400,14 +388,14 @@ fn go() {
     add_one(2)
 }"#,
 r#"function add(x, y) {
-    x + y
+    return x + y
 }
 
 function go() {
     let add_one = function(gleam@capture_variable) {
-        add(1, gleam@capture_variable)
+        return add(1, gleam@capture_variable)
     }
-    add_one(2)
+    return add_one(2)
 }"#
     );
 }
@@ -524,7 +512,7 @@ pub fn is_before(year: Int) -> Bool {
 export const end_year = 2111
 
 export function is_before(year) {
-    year < start_year
+    return year < start_year
 }"#
     );
 }
