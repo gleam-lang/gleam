@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
-use strum_macros::{Display, EnumString, EnumVariantNames};
+use strum::{Display, EnumString, EnumVariantNames};
 
 const GLEAM_STDLIB_VERSION: &str = "0.14.0";
 const GLEAM_OTP_VERSION: &str = "0.1.0";
