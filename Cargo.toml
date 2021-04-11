@@ -29,7 +29,6 @@ termcolor = "1.1.2"
 lazy_static = "1.4.0"
 # Data (de)serialisation
 serde = { version = "1.0.119", features = ["derive"] }
-serde_derive = "1.0.119"
 # toml config file parsing
 toml = "0.5.8"
 # Levenshtein string distance for typo suggestions
@@ -38,8 +37,7 @@ strsim = "0.10.0"
 ignore = "0.4.17"
 walkdir = "2.3.1"
 # Enum trait impl macros
-strum = "0.20.0"
-strum_macros = "0.20.1"
+strum = { version = "0.20.0", features = ["derive"] }
 # Doc rendering
 askama = "0.10.5"
 # Markdown in docs

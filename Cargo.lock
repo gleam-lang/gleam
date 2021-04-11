@@ -517,7 +517,6 @@ dependencies = [
  "strsim 0.10.0",
  "structopt",
  "strum",
- "strum_macros",
  "tar",
  "termcolor",
  "tokio",
@@ -1525,6 +1524,9 @@ name = "strum"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7318c509b5ba57f18533982607f24070a55d353e90d4cae30c467cdb2ad5ac5c"
+dependencies = [
+ "strum_macros",
+]
 
 [[package]]
 name = "strum_macros"
