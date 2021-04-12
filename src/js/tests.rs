@@ -202,7 +202,7 @@ fn list_destructuring() {
         r#"
 fn go(a) {
     let [] = a
-    // let [x, y] = a
+    let [x, y] = a
     // let [first, ..rest] = a
     a
 }"#,
@@ -210,10 +210,31 @@ r#"function go(a) {
     var gleam$tmp = a;
     if (!(gleam$tmp.length === 0)) throw new Error("Bad match")
     let [] = gleam$tmp;
+    
+    var gleam$tmp = a;
+    if (!(gleam$tmp.length === 2)) throw new Error("Bad match")
+    let [x, y] = gleam$tmp;
+    
+    return a;
+}"#
+    );
+
+    assert_js!(
+        r#"
+fn go(a) {
+    let [first, ..rest] = a
+    a
+}"#,
+r#"function go(a) {
+    var gleam$tmp = a;
+    if (!(gleam$tmp.length >= 1)) throw new Error("Bad match")
+    let [first, ...rest] = gleam$tmp;
+    
     return a;
 }"#
     );
 }
+// TODO write up about expression to tmp variable
 
 // TODO look at purescript an buckle script but solve later.
 // https://github.com/purescript/documentation/blob/master/language/Pattern-Matching.md

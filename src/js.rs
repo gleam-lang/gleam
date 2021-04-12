@@ -466,7 +466,8 @@ fn let_<'a>(
     let matcher = pattern(pat, &mut checks);
     // start with no checks
     match checks.is_empty() {
-        true => matcher
+        true => Document::String("let ".to_string())
+            .append(matcher)
             .append(" = ")
             .append(body)
             .append(match env.semicolon {
@@ -484,8 +485,11 @@ fn let_<'a>(
                 Document::String(c.to_string())
             ), " && ".to_doc())).surround("if (!(", ")) throw new Error(\"Bad match\")"))
             .append(line())
+            .append("let ")
             .append(matcher)
             .append(" = gleam$tmp;")
+            // Do two lines for anything where one source is expanded
+            .append(line())
 
         }
     }
@@ -499,14 +503,17 @@ fn let_<'a>(
 
 pub fn pattern<'a>(
     p: &'a TypedPattern, 
-    checks: &mut Vec<&'a str>
+    checks: &mut Vec<String>
 ) -> Document<'a> {
-    Document::String("let ".to_string()).append(match p {
+    match p {
         // TODO could this be called Nil list or simthing similar
         Pattern::Nil { .. } => {
-            checks.push("gleam$tmp.length === 0");
+            checks.push("gleam$tmp.length === 0".to_string());
             "[]".to_doc()
         },
+        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, checks),
+
+
         Pattern::Var { name, .. } => name.to_doc(),
         // In erl/pattern.rs
         // Uses collect_cons, but for a pattern type
@@ -514,9 +521,50 @@ pub fn pattern<'a>(
             println!("p: {:?}", p);
             unimplemented!("pattern")
         }
-    })
+    }
 }
 
+
+fn pattern_list_cons<'a>(
+    head: &'a TypedPattern,
+    tail: &'a TypedPattern,
+    checks: &mut Vec<String>,
+) -> Document<'a> {
+    let mut elems = vec![head];
+    let final_tail = collect_pattern_cons(tail, &mut elems);
+
+    match final_tail {
+        Some(_) => 
+            checks.push(format!("gleam$tmp.length >= {}", elems.len())),
+        None =>
+            checks.push(format!("gleam$tmp.length === {}", elems.len()))
+    }
+    println!("{:?}", elems);
+     let elements = elems.into_iter().map(|e| pattern(e, checks));
+    // unimplemented!("ffofo")
+    // list(elems, final_tail.map(|e| to_doc(e, vars, env)))
+    let content = concat(Itertools::intersperse(elements, break_(",", ", ")));
+    let content = if let Some(final_tail) = final_tail {
+        content
+            .append(Document::String(", ...".to_string())
+            .append(pattern(final_tail, checks)))
+    } else {
+        content
+    };
+    content.surround("[", "]")
+}
+
+fn collect_pattern_cons<'a>(tail: &'a TypedPattern, elements: &mut Vec<&'a TypedPattern>) -> Option<&'a TypedPattern> {
+    match tail {
+        TypedPattern::Nil { .. } => None,
+        TypedPattern::Cons { head, tail, .. } => {
+            elements.push(head);
+            collect_pattern_cons(tail, elements)
+        }
+        // TODO is it possible to write improper lists in Gleam
+        other => Some(other)
+    }
+}
 
 fn maybe_block_expr<'a>(
     expression: &'a TypedExpr, 
