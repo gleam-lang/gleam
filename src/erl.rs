@@ -1024,7 +1024,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
 
     // These are required to get the alternative patterns working properly.
     // Simply rendering the duplicate erlang clauses breaks the variable rewriting
-    let mut then_doc = Document::Nil;
+    let mut then_doc = None;
     let erlang_vars = env.erl_function_scope_vars.clone();
 
     let docs = Itertools::intersperse(
@@ -1042,8 +1042,8 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
                 };
 
-                if then_doc == Document::Nil {
-                    then_doc = expr(then, env);
+                if then_doc == None {
+                    then_doc = Some(expr(then, env));
                 }
 
                 patterns_doc.append(
@@ -1832,7 +1832,7 @@ impl<'a> TypePrinter<'a> {
         match type_ {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match &self.var_usages {
                 Some(usages) => match usages.get(&*id) {
-                    Some(&0) => Document::Nil,
+                    Some(&0) => nil(),
                     Some(&1) => "any()".to_doc(),
                     _ => id_to_type_var(*id),
                 },
