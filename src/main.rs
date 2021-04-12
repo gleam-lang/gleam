@@ -204,7 +204,6 @@ pub enum Target {
     Erlang,
     JavaScript
 }
-// https://stackoverflow.com/questions/54687403/how-can-i-use-enums-in-structopt
 
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
