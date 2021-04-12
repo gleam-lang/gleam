@@ -1,6 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType};
-use crate::parse::token::Tok;
+use crate::parse::token::Token;
 use std::char;
 
 pub struct Lexer<T: Iterator<Item = (usize, char)>> {
@@ -12,27 +12,27 @@ pub struct Lexer<T: Iterator<Item = (usize, char)>> {
     loc1: usize,
     location: usize,
 }
-pub type Spanned = (usize, Tok, usize);
+pub type Spanned = (usize, Token, usize);
 pub type LexResult = Result<Spanned, LexicalError>;
 
-pub fn str_to_keyword(word: &str) -> Option<Tok> {
+pub fn str_to_keyword(word: &str) -> Option<Token> {
     // Alphabetical keywords:
     match word {
-        "as" => Some(Tok::As),
-        "assert" => Some(Tok::Assert),
-        "case" => Some(Tok::Case),
-        "const" => Some(Tok::Const),
-        "external" => Some(Tok::External),
-        "fn" => Some(Tok::Fn),
-        "if" => Some(Tok::If),
-        "import" => Some(Tok::Import),
-        "let" => Some(Tok::Let),
-        "opaque" => Some(Tok::Opaque),
-        "pub" => Some(Tok::Pub),
-        "todo" => Some(Tok::Todo),
-        "try" => Some(Tok::Try),
-        "tuple" => Some(Tok::Tuple),
-        "type" => Some(Tok::Type),
+        "as" => Some(Token::As),
+        "assert" => Some(Token::Assert),
+        "case" => Some(Token::Case),
+        "const" => Some(Token::Const),
+        "external" => Some(Token::External),
+        "fn" => Some(Token::Fn),
+        "if" => Some(Token::If),
+        "import" => Some(Token::Import),
+        "let" => Some(Token::Let),
+        "opaque" => Some(Token::Opaque),
+        "pub" => Some(Token::Pub),
+        "todo" => Some(Token::Todo),
+        "try" => Some(Token::Try),
+        "tuple" => Some(Token::Tuple),
+        "type" => Some(Token::Type),
         _ => None,
     }
 }
@@ -148,13 +148,13 @@ where
             if check_for_minus {
                 // We want to lex `1-1` and `x-1` as `1 - 1` and `x - 1`
                 if Some('-') == self.chr0 && self.is_number_start('-', self.chr1) {
-                    self.eat_single_char(Tok::Minus);
+                    self.eat_single_char(Token::Minus);
                 }
             }
         } else {
             // We reached end of file.
             let tok_pos = self.get_pos();
-            self.emit((tok_pos, Tok::EndOfFile, tok_pos));
+            self.emit((tok_pos, Token::EndOfFile, tok_pos));
         }
 
         Ok(())
@@ -173,11 +173,11 @@ where
                     Some('=') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::EqualEqual, tok_end));
+                        self.emit((tok_start, Token::EqualEqual, tok_end));
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Equal, tok_end));
+                        self.emit((tok_start, Token::Equal, tok_end));
                     }
                 }
             }
@@ -187,10 +187,10 @@ where
                 if let Some('.') = self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::PlusDot, tok_end));
+                    self.emit((tok_start, Token::PlusDot, tok_end));
                 } else {
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::Plus, tok_end));
+                    self.emit((tok_start, Token::Plus, tok_end));
                 }
             }
             '*' => {
@@ -200,11 +200,11 @@ where
                     Some('.') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::StarDot, tok_end));
+                        self.emit((tok_start, Token::StarDot, tok_end));
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Star, tok_end));
+                        self.emit((tok_start, Token::Star, tok_end));
                     }
                 }
             }
@@ -215,7 +215,7 @@ where
                     Some('.') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::SlashDot, tok_end));
+                        self.emit((tok_start, Token::SlashDot, tok_end));
                     }
                     Some('/') => {
                         let _ = self.next_char();
@@ -224,7 +224,7 @@ where
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Slash, tok_end));
+                        self.emit((tok_start, Token::Slash, tok_end));
                     }
                 }
             }
@@ -232,7 +232,7 @@ where
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
                 let tok_end = self.get_pos();
-                self.emit((tok_start, Tok::Percent, tok_end));
+                self.emit((tok_start, Token::Percent, tok_end));
             }
             '|' => {
                 let tok_start = self.get_pos();
@@ -240,14 +240,14 @@ where
                 if let Some('|') = self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::VbarVbar, tok_end));
+                    self.emit((tok_start, Token::VbarVbar, tok_end));
                 } else if let Some('>') = self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::Pipe, tok_end));
+                    self.emit((tok_start, Token::Pipe, tok_end));
                 } else {
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::Vbar, tok_end));
+                    self.emit((tok_start, Token::Vbar, tok_end));
                 }
             }
             '&' => {
@@ -256,7 +256,7 @@ where
                 if let Some('&') = self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::AmperAmper, tok_end));
+                    self.emit((tok_start, Token::AmperAmper, tok_end));
                 } else {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnrecognizedToken { tok: '&' },
@@ -274,16 +274,16 @@ where
                     Some('.') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::MinusDot, tok_end));
+                        self.emit((tok_start, Token::MinusDot, tok_end));
                     }
                     Some('>') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::RArrow, tok_end));
+                        self.emit((tok_start, Token::RArrow, tok_end));
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Minus, tok_end));
+                        self.emit((tok_start, Token::Minus, tok_end));
                     }
                 }
             }
@@ -293,7 +293,7 @@ where
                 if let Some('=') = self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::NotEqual, tok_end));
+                    self.emit((tok_start, Token::NotEqual, tok_end));
                 } else {
                     return Err(LexicalError {
                         error: LexicalErrorType::UnrecognizedToken { tok: '!' },
@@ -305,10 +305,10 @@ where
                 }
             }
             '(' => {
-                self.eat_single_char(Tok::Lpar);
+                self.eat_single_char(Token::LeftParen);
             }
             ')' => {
-                self.eat_single_char(Tok::Rpar);
+                self.eat_single_char(Token::RightParen);
             }
             '[' => {
                 let tok_start = self.get_pos();
@@ -316,22 +316,22 @@ where
                     let _ = self.next_char();
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::ListNil, tok_end));
+                    self.emit((tok_start, Token::ListNil, tok_end));
                 } else {
-                    self.eat_single_char(Tok::Lsqb);
+                    self.eat_single_char(Token::LeftSquare);
                 }
             }
             ']' => {
-                self.eat_single_char(Tok::Rsqb);
+                self.eat_single_char(Token::RightSquare);
             }
             '{' => {
-                self.eat_single_char(Tok::Lbrace);
+                self.eat_single_char(Token::LeftBrace);
             }
             '}' => {
-                self.eat_single_char(Tok::Rbrace);
+                self.eat_single_char(Token::RightBrace);
             }
             ':' => {
-                self.eat_single_char(Tok::Colon);
+                self.eat_single_char(Token::Colon);
             }
             '<' => {
                 let tok_start = self.get_pos();
@@ -340,12 +340,12 @@ where
                     Some('<') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::LtLt, tok_end));
+                        self.emit((tok_start, Token::LtLt, tok_end));
                     }
                     Some('.') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::LessDot, tok_end));
+                        self.emit((tok_start, Token::LessDot, tok_end));
                     }
                     Some('=') => {
                         let _ = self.next_char();
@@ -353,17 +353,17 @@ where
                             Some('.') => {
                                 let _ = self.next_char();
                                 let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::LessEqualDot, tok_end));
+                                self.emit((tok_start, Token::LessEqualDot, tok_end));
                             }
                             _ => {
                                 let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::LessEqual, tok_end));
+                                self.emit((tok_start, Token::LessEqual, tok_end));
                             }
                         }
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Less, tok_end));
+                        self.emit((tok_start, Token::Less, tok_end));
                     }
                 }
             }
@@ -374,12 +374,12 @@ where
                     Some('>') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::GtGt, tok_end));
+                        self.emit((tok_start, Token::GtGt, tok_end));
                     }
                     Some('.') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::GreaterDot, tok_end));
+                        self.emit((tok_start, Token::GreaterDot, tok_end));
                     }
                     Some('=') => {
                         let _ = self.next_char();
@@ -387,22 +387,22 @@ where
                             Some('.') => {
                                 let _ = self.next_char();
                                 let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::GreaterEqualDot, tok_end));
+                                self.emit((tok_start, Token::GreaterEqualDot, tok_end));
                             }
                             _ => {
                                 let tok_end = self.get_pos();
-                                self.emit((tok_start, Tok::GreaterEqual, tok_end));
+                                self.emit((tok_start, Token::GreaterEqual, tok_end));
                             }
                         }
                     }
                     _ => {
                         let tok_end = self.get_pos();
-                        self.emit((tok_start, Tok::Greater, tok_end));
+                        self.emit((tok_start, Token::Greater, tok_end));
                     }
                 }
             }
             ',' => {
-                self.eat_single_char(Tok::Comma);
+                self.eat_single_char(Token::Comma);
             }
             '.' => {
                 let tok_start = self.get_pos();
@@ -410,14 +410,14 @@ where
                 if let Some('.') = &self.chr0 {
                     let _ = self.next_char();
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::DotDot, tok_end));
+                    self.emit((tok_start, Token::DotDot, tok_end));
                 } else {
                     let tok_end = self.get_pos();
-                    self.emit((tok_start, Tok::Dot, tok_end));
+                    self.emit((tok_start, Token::Dot, tok_end));
                 }
             }
             '#' => {
-                self.eat_single_char(Tok::Hash);
+                self.eat_single_char(Token::Hash);
             }
             '\n' => {
                 let _ = self.next_char();
@@ -429,7 +429,7 @@ where
                         }
                         '\n' => {
                             let tok_end = self.get_pos();
-                            self.emit((tok_start, Tok::EmptyLine, tok_end));
+                            self.emit((tok_start, Token::EmptyLine, tok_end));
                             break;
                         }
                         _ => break,
@@ -496,9 +496,9 @@ where
         if let Some(tok) = str_to_keyword(&name) {
             Ok((start_pos, tok, end_pos))
         } else if name.starts_with('_') {
-            Ok((start_pos, Tok::DiscardName { name }, end_pos))
+            Ok((start_pos, Token::DiscardName { name }, end_pos))
         } else {
-            Ok((start_pos, Tok::Name { name }, end_pos))
+            Ok((start_pos, Token::Name { name }, end_pos))
         }
     }
     // A type name or constructor
@@ -530,7 +530,7 @@ where
         if let Some(tok) = str_to_keyword(&name) {
             Ok((start_pos, tok, end_pos))
         } else {
-            Ok((start_pos, Tok::UpName { name }, end_pos))
+            Ok((start_pos, Token::UpName { name }, end_pos))
         }
     }
 
@@ -597,7 +597,7 @@ where
         } else {
             let value = format!("{}{}", prefix, num);
             let end_pos = self.get_pos();
-            Ok((start_pos, Tok::Int { value }, end_pos))
+            Ok((start_pos, Token::Int { value }, end_pos))
         }
     }
 
@@ -618,10 +618,10 @@ where
             value.push(self.next_char().unwrap());
             value.push_str(&self.radix_run(10));
             let end_pos = self.get_pos();
-            Ok((start_pos, Tok::Float { value }, end_pos))
+            Ok((start_pos, Token::Float { value }, end_pos))
         } else {
             let end_pos = self.get_pos();
-            Ok((start_pos, Tok::Int { value }, end_pos))
+            Ok((start_pos, Token::Int { value }, end_pos))
         }
     }
 
@@ -676,13 +676,13 @@ where
             (Some('/'), Some('/')) => {
                 let _ = self.next_char();
                 let _ = self.next_char();
-                Tok::CommentModule
+                Token::CommentModule
             }
             (Some('/'), _) => {
                 let _ = self.next_char();
-                Tok::CommentDoc
+                Token::CommentDoc
             }
-            _ => Tok::CommentNormal,
+            _ => Token::CommentNormal,
         };
         let start_pos = self.get_pos();
         while Some('\n') != self.chr0 && None != self.chr0 {
@@ -744,7 +744,7 @@ where
         }
         let end_pos = self.get_pos();
 
-        let tok = Tok::String {
+        let tok = Token::String {
             value: string_content,
         };
 
@@ -784,7 +784,7 @@ where
     }
 
     // advance the stream and emit a token
-    fn eat_single_char(&mut self, ty: Tok) {
+    fn eat_single_char(&mut self, ty: Token) {
         let tok_start = self.get_pos();
         let _ = self.next_char().unwrap();
         let tok_end = self.get_pos();
@@ -834,7 +834,7 @@ where
         tracing::trace!("Lex token {:?}", token,);
 
         match token {
-            Ok((_, Tok::EndOfFile, _)) => None,
+            Ok((_, Token::EndOfFile, _)) => None,
             r => Some(r),
         }
     }

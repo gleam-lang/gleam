@@ -67,7 +67,7 @@ use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::str::FromStr;
-use token::Tok;
+use token::Token;
 #[cfg(test)]
 mod tests;
 
@@ -168,40 +168,40 @@ where
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
         let statement = match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
-            (Some((_, Tok::Import, _)), _) => {
+            (Some((_, Token::Import, _)), _) => {
                 let _ = self.next_tok();
                 self.parse_import()
             }
             // Module Constants
-            (Some((_, Tok::Const, _)), _) => {
+            (Some((_, Token::Const, _)), _) => {
                 let _ = self.next_tok();
                 self.parse_module_const(false)
             }
-            (Some((_, Tok::Pub, _)), Some((_, Tok::Const, _))) => {
+            (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 self.parse_module_const(true)
             }
 
             // External Type
-            (Some((start, Tok::External, _)), Some((_, Tok::Type, _))) => {
+            (Some((start, Token::External, _)), Some((_, Token::Type, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 self.parse_external_type(start, false)
             }
             // External Function
-            (Some((start, Tok::External, _)), Some((_, Tok::Fn, _))) => {
+            (Some((start, Token::External, _)), Some((_, Token::Fn, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 self.parse_external_fn(start, false)
             }
             // Pub External type or fn
-            (Some((start, Tok::Pub, _)), Some((_, Tok::External, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::External, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 match self.next_tok() {
-                    Some((_, Tok::Type, _)) => self.parse_external_type(start, true),
-                    Some((_, Tok::Fn, _)) => self.parse_external_fn(start, true),
+                    Some((_, Token::Type, _)) => self.parse_external_type(start, true),
+                    Some((_, Token::Fn, _)) => self.parse_external_fn(start, true),
                     _ => {
                         self.next_tok_unexpected(vec!["A type or function definition".to_string()])?
                     }
@@ -209,28 +209,28 @@ where
             }
 
             // function
-            (Some((start, Tok::Fn, _)), _) => {
+            (Some((start, Token::Fn, _)), _) => {
                 let _ = self.next_tok();
                 self.parse_function(start, false, false)
             }
-            (Some((start, Tok::Pub, _)), Some((_, Tok::Fn, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::Fn, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 self.parse_function(start, true, false)
             }
 
             // Custom Types, and Type Aliases
-            (Some((start, Tok::Type, _)), _) => {
+            (Some((start, Token::Type, _)), _) => {
                 let _ = self.next_tok();
                 self.parse_custom_type(start, false, false)
             }
-            (Some((start, Tok::Pub, _)), Some((_, Tok::Opaque, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::Opaque, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
-                let _ = self.expect_one(&Tok::Type)?;
+                let _ = self.expect_one(&Token::Type)?;
                 self.parse_custom_type(start, true, true)
             }
-            (Some((start, Tok::Pub, _)), Some((_, Tok::Type, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::Type, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 self.parse_custom_type(start, true, false)
@@ -310,14 +310,14 @@ where
     //   { expression_sequence }
     fn parse_expression_unit(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
         let mut expr = match self.tok0.take() {
-            Some((start, Tok::String { value }, end)) => {
+            Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
                 UntypedExpr::String {
                     location: SrcSpan { start, end },
                     value,
                 }
             }
-            Some((start, Tok::Int { value }, end)) => {
+            Some((start, Token::Int { value }, end)) => {
                 let _ = self.next_tok();
                 UntypedExpr::Int {
                     location: SrcSpan { start, end },
@@ -325,14 +325,14 @@ where
                 }
             }
 
-            Some((start, Tok::Float { value }, end)) => {
+            Some((start, Token::Float { value }, end)) => {
                 let _ = self.next_tok();
                 UntypedExpr::Float {
                     location: SrcSpan { start, end },
                     value,
                 }
             }
-            Some((start, Tok::ListNil, end)) => {
+            Some((start, Token::ListNil, end)) => {
                 let _ = self.next_tok();
 
                 UntypedExpr::ListNil {
@@ -340,20 +340,21 @@ where
                 }
             }
             // var lower_name and UpName
-            Some((start, Tok::Name { name }, end)) | Some((start, Tok::UpName { name }, end)) => {
+            Some((start, Token::Name { name }, end))
+            | Some((start, Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
                 UntypedExpr::Var {
                     location: SrcSpan { start, end },
                     name,
                 }
             }
-            Some((start, Tok::Todo, mut end)) => {
+            Some((start, Token::Todo, mut end)) => {
                 let _ = self.next_tok();
                 let mut label = None;
-                if self.maybe_one(&Tok::Lpar).is_some() {
+                if self.maybe_one(&Token::LeftParen).is_some() {
                     let (_, l, _) = self.expect_string()?;
                     label = Some(l);
-                    let (_, e) = self.expect_one(&Tok::Rpar)?;
+                    let (_, e) = self.expect_one(&Token::RightParen)?;
                     end = e;
                 }
                 UntypedExpr::Todo {
@@ -361,26 +362,28 @@ where
                     label,
                 }
             }
-            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
+            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
-                let _ = self.expect_one(&Tok::Lpar)?;
-                let elems = Parser::series_of(self, &Parser::parse_expression, Some(&Tok::Comma))?;
-                let (_, end) = self.expect_one(&Tok::Rpar)?;
+                let _ = self.expect_one(&Token::LeftParen)?;
+                let elems =
+                    Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
+                let (_, end) = self.expect_one(&Token::RightParen)?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
                     elems,
                 }
             }
             // list
-            Some((start, Tok::Lsqb, _)) => {
+            Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
-                let elems = Parser::series_of(self, &Parser::parse_expression, Some(&Tok::Comma))?;
+                let elems =
+                    Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
                 let mut tail0 = None;
-                if self.maybe_one(&Tok::DotDot).is_some() {
+                if self.maybe_one(&Token::DotDot).is_some() {
                     tail0 = self.parse_expression()?;
-                    let _ = self.maybe_one(&Tok::Comma);
+                    let _ = self.maybe_one(&Token::Comma);
                 }
-                let (_, end) = self.expect_one(&Tok::Rsqb)?;
+                let (_, end) = self.expect_one(&Token::RightSquare)?;
                 let tail = tail0.unwrap_or(UntypedExpr::ListNil {
                     location: SrcSpan { start, end },
                 });
@@ -395,7 +398,7 @@ where
                     })
             }
             // Bitstring
-            Some((start, Tok::LtLt, _)) => {
+            Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
@@ -407,15 +410,15 @@ where
                             &bit_string_expr_int,
                         )
                     },
-                    Some(&Tok::Comma),
+                    Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Tok::GtGt)?;
+                let (_, end) = self.expect_one(&Token::GtGt)?;
                 UntypedExpr::BitString {
                     location: SrcSpan { start, end },
                     segments,
                 }
             }
-            Some((start, Tok::Fn, _)) => {
+            Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 match self.parse_function(start, false, true)? {
                     Some(Statement::Fn {
@@ -441,10 +444,10 @@ where
             }
 
             // expression group  "{" "}"
-            Some((start, Tok::Lbrace, _)) => {
+            Some((start, Token::LeftBrace, _)) => {
                 let _ = self.next_tok();
                 let expr = self.parse_expression_seq()?;
-                let (_, end) = self.expect_one(&Tok::Rbrace)?;
+                let (_, end) = self.expect_one(&Token::RightBrace)?;
                 if let Some((expr, _)) = expr {
                     expr
                 } else {
@@ -453,13 +456,13 @@ where
             }
 
             // case
-            Some((start, Tok::Case, case_e)) => {
+            Some((start, Token::Case, case_e)) => {
                 let _ = self.next_tok();
                 let subjects =
-                    Parser::series_of(self, &Parser::parse_expression, Some(&Tok::Comma))?;
-                let _ = self.expect_one(&Tok::Lbrace)?;
+                    Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
+                let _ = self.expect_one(&Token::LeftBrace)?;
                 let clauses = Parser::series_of(self, &Parser::parse_case_clause, None)?;
-                let (_, end) = self.expect_one(&Tok::Rbrace)?;
+                let (_, end) = self.expect_one(&Token::RightBrace)?;
                 if subjects.is_empty() {
                     return parse_error(
                         ParseErrorType::ExpectedExpr,
@@ -477,7 +480,7 @@ where
             }
 
             // helpful error on possibly trying to group with "("
-            Some((start, Tok::Lpar, _)) => {
+            Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
             }
             t0 => {
@@ -488,12 +491,12 @@ where
 
         // field access and call can stack up
         loop {
-            if let Some((_, _)) = self.maybe_one(&Tok::Dot) {
+            if let Some((_, _)) = self.maybe_one(&Token::Dot) {
                 let start = expr.location().start;
                 // field access
                 match self.tok0.take() {
                     // tuple access
-                    Some((_, Tok::Int { value }, end)) => {
+                    Some((_, Token::Int { value }, end)) => {
                         let _ = self.next_tok();
                         let v = value.replace("_", "");
                         if let Ok(index) = u64::from_str(&v) {
@@ -510,7 +513,7 @@ where
                         }
                     }
 
-                    Some((_, Tok::Name { name: label }, end)) => {
+                    Some((_, Token::Name { name: label }, end)) => {
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
@@ -519,7 +522,7 @@ where
                         }
                     }
 
-                    Some((_, Tok::UpName { name: label }, end)) => {
+                    Some((_, Token::UpName { name: label }, end)) => {
                         let _ = self.next_tok();
                         expr = UntypedExpr::FieldAccess {
                             location: SrcSpan { start, end },
@@ -535,9 +538,9 @@ where
                         ]);
                     }
                 }
-            } else if self.maybe_one(&Tok::Lpar).is_some() {
+            } else if self.maybe_one(&Token::LeftParen).is_some() {
                 let start = expr.location().start;
-                if let Some((dot_s, _)) = self.maybe_one(&Tok::DotDot) {
+                if let Some((dot_s, _)) = self.maybe_one(&Token::DotDot) {
                     // Record update
                     let (_, name, name_e) = self.expect_name()?;
                     let spread = RecordUpdateSpread {
@@ -548,14 +551,14 @@ where
                         },
                     };
                     let mut args = vec![];
-                    if self.maybe_one(&Tok::Comma).is_some() {
+                    if self.maybe_one(&Token::Comma).is_some() {
                         args = Parser::series_of(
                             self,
                             &Parser::parse_record_update_arg,
-                            Some(&Tok::Comma),
+                            Some(&Token::Comma),
                         )?;
                     }
-                    let (_, end) = self.expect_one(&Tok::Rpar)?;
+                    let (_, end) = self.expect_one(&Token::RightParen)?;
 
                     expr = UntypedExpr::RecordUpdate {
                         location: SrcSpan { start, end },
@@ -566,7 +569,7 @@ where
                 } else {
                     // Call
                     let args = self.parse_fn_args()?;
-                    let (_, end) = self.expect_one(&Tok::Rpar)?;
+                    let (_, end) = self.expect_one(&Token::RightParen)?;
                     match make_call(expr, args, start, end) {
                         Ok(e) => expr = e,
                         Err(_) => {
@@ -606,8 +609,8 @@ where
                     "See: https://gleam.run/book/tour/patterns".to_string(),
                 ])?;
             };
-            let annotation = self.parse_type_annotation(&Tok::Colon, false)?;
-            let (eq_s, eq_e) = self.expect_one(&Tok::Equal)?;
+            let annotation = self.parse_type_annotation(&Token::Colon, false)?;
+            let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
             let value = self.parse_expression()?;
             let then = self.parse_expression_seq()?;
             match (value, then) {
@@ -658,15 +661,15 @@ where
     // let, assert, or try
     fn maybe_binding_start(&mut self) -> Option<(usize, AssignmentKind)> {
         match self.tok0 {
-            Some((start, Tok::Let, _)) => {
+            Some((start, Token::Let, _)) => {
                 let _ = self.next_tok();
                 Some((start, AssignmentKind::Let))
             }
-            Some((start, Tok::Assert, _)) => {
+            Some((start, Token::Assert, _)) => {
                 let _ = self.next_tok();
                 Some((start, AssignmentKind::Assert))
             }
-            Some((start, Tok::Try, _)) => {
+            Some((start, Token::Try, _)) => {
                 let _ = self.next_tok();
                 Some((start, AssignmentKind::Try))
             }
@@ -678,9 +681,9 @@ where
     fn parse_pattern(&mut self) -> Result<Option<UntypedPattern>, ParseError> {
         let pattern = match self.tok0.take() {
             // Pattern::Var or Pattern::Constructor start
-            Some((start, Tok::Name { name }, end)) => {
+            Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
-                if self.maybe_one(&Tok::Dot).is_some() {
+                if self.maybe_one(&Token::Dot).is_some() {
                     self.expect_constructor_pattern(Some((start, name, end)))?
                 } else {
                     Pattern::Var {
@@ -690,56 +693,56 @@ where
                 }
             }
             // Constructor
-            Some((start, tok @ Tok::UpName { .. }, end)) => {
+            Some((start, tok @ Token::UpName { .. }, end)) => {
                 self.tok0 = Some((start, tok, end));
                 self.expect_constructor_pattern(None)?
             }
-            Some((start, Tok::DiscardName { name }, end)) => {
+            Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
                 Pattern::Discard {
                     location: SrcSpan { start, end },
                     name,
                 }
             }
-            Some((start, Tok::String { value }, end)) => {
+            Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
                 Pattern::String {
                     location: SrcSpan { start, end },
                     value,
                 }
             }
-            Some((start, Tok::Int { value }, end)) => {
+            Some((start, Token::Int { value }, end)) => {
                 let _ = self.next_tok();
                 Pattern::Int {
                     location: SrcSpan { start, end },
                     value,
                 }
             }
-            Some((start, Tok::Float { value }, end)) => {
+            Some((start, Token::Float { value }, end)) => {
                 let _ = self.next_tok();
                 Pattern::Float {
                     location: SrcSpan { start, end },
                     value,
                 }
             }
-            Some((start, Tok::ListNil, end)) => {
+            Some((start, Token::ListNil, end)) => {
                 let _ = self.next_tok();
                 Pattern::EmptyList {
                     location: SrcSpan { start, end },
                 }
             }
-            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
+            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
-                let _ = self.expect_one(&Tok::Lpar)?;
-                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Tok::Comma))?;
-                let (_, end) = self.expect_one(&Tok::Rpar)?;
+                let _ = self.expect_one(&Token::LeftParen)?;
+                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let (_, end) = self.expect_one(&Token::RightParen)?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
                     elems,
                 }
             }
             // Bitstring
-            Some((start, Tok::LtLt, _)) => {
+            Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
@@ -756,27 +759,27 @@ where
                             &bit_string_pattern_int,
                         )
                     },
-                    Some(&Tok::Comma),
+                    Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Tok::GtGt)?;
+                let (_, end) = self.expect_one(&Token::GtGt)?;
                 Pattern::BitString {
                     location: SrcSpan { start, end },
                     segments,
                 }
             }
             // List
-            Some((start, Tok::Lsqb, _)) => {
+            Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
-                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Tok::Comma))?;
-                let tail = if let Some((_, Tok::DotDot, _)) = self.tok0 {
+                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let tail = if let Some((_, Token::DotDot, _)) = self.tok0 {
                     let _ = self.next_tok();
                     let pat = self.parse_pattern()?;
-                    let _ = self.maybe_one(&Tok::Comma);
+                    let _ = self.maybe_one(&Token::Comma);
                     Some(pat)
                 } else {
                     None
                 };
-                let (_, rsqb_e) = self.expect_one(&Tok::Rsqb)?;
+                let (_, rsqb_e) = self.expect_one(&Token::RightSquare)?;
                 let tail_pattern = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ Pattern::Var { .. }))
@@ -819,7 +822,7 @@ where
             }
         };
 
-        if let Some((_, Tok::As, _)) = self.tok0 {
+        if let Some((_, Token::As, _)) = self.tok0 {
             let _ = self.next_tok();
             let (start, name, end) = self.expect_name()?;
             Ok(Some(Pattern::Assign {
@@ -841,13 +844,13 @@ where
         if let Some(lead) = &patterns.first() {
             let mut alternative_patterns = vec![];
             loop {
-                if None == self.maybe_one(&Tok::Vbar) {
+                if None == self.maybe_one(&Token::Vbar) {
                     break;
                 }
                 alternative_patterns.push(self.parse_patterns()?);
             }
             let guard = self.parse_case_clause_guard(false)?;
-            let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
+            let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
             let then = self.parse_expression()?;
             if let Some(then) = then {
                 Ok(Some(Clause {
@@ -874,7 +877,7 @@ where
         }
     }
     fn parse_patterns(&mut self) -> Result<Vec<UntypedPattern>, ParseError> {
-        Parser::series_of(self, &Parser::parse_pattern, Some(&Tok::Comma))
+        Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))
     }
 
     // examples:
@@ -885,7 +888,7 @@ where
         &mut self,
         nested: bool,
     ) -> Result<Option<UntypedClauseGuard>, ParseError> {
-        if self.maybe_one(&Tok::If).is_some() || nested {
+        if self.maybe_one(&Token::If).is_some() || nested {
             let mut opstack = vec![];
             let mut estack = vec![];
             let mut last_op_start = 0;
@@ -940,11 +943,11 @@ where
     // a < b || b < c
     fn parse_case_clause_guard_unit(&mut self) -> Result<Option<UntypedClauseGuard>, ParseError> {
         match self.tok0.take() {
-            Some((start, Tok::Name { name }, end)) => {
+            Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
-                if let Some((dot_s, _)) = self.maybe_one(&Tok::Dot) {
+                if let Some((dot_s, _)) = self.maybe_one(&Token::Dot) {
                     match self.next_tok() {
-                        Some((_, Tok::Int { value }, int_e)) => {
+                        Some((_, Token::Int { value }, int_e)) => {
                             let v = value.replace("_", "");
                             if let Ok(index) = u64::from_str(&v) {
                                 Ok(Some(ClauseGuard::TupleIndex {
@@ -981,11 +984,11 @@ where
                     }))
                 }
             }
-            Some((_, Tok::Lbrace, _)) => {
+            Some((_, Token::LeftBrace, _)) => {
                 // Nested guard expression
                 let _ = self.next_tok();
                 let guard = self.parse_case_clause_guard(true);
-                let _ = self.expect_one(&Tok::Rbrace)?;
+                let _ = self.expect_one(&Token::RightBrace)?;
                 guard
             }
             t0 => {
@@ -1027,17 +1030,17 @@ where
         &mut self,
         upname_end: usize,
     ) -> Result<(Vec<CallArg<UntypedPattern>>, bool, usize), ParseError> {
-        if self.maybe_one(&Tok::Lpar).is_some() {
+        if self.maybe_one(&Token::LeftParen).is_some() {
             let args = Parser::series_of(
                 self,
                 &Parser::parse_constructor_pattern_arg,
-                Some(&Tok::Comma),
+                Some(&Token::Comma),
             )?;
-            let with_spread = self.maybe_one(&Tok::DotDot).is_some();
+            let with_spread = self.maybe_one(&Token::DotDot).is_some();
             if with_spread {
-                let _ = self.maybe_one(&Tok::Comma);
+                let _ = self.maybe_one(&Token::Comma);
             }
-            let (_, end) = self.expect_one(&Tok::Rpar)?;
+            let (_, end) = self.expect_one(&Token::RightParen)?;
             Ok((args, with_spread, end))
         } else {
             Ok((vec![], false, upname_end))
@@ -1052,7 +1055,7 @@ where
     ) -> Result<Option<CallArg<UntypedPattern>>, ParseError> {
         match (self.tok0.take(), self.tok1.take()) {
             // named arg
-            (Some((start, Tok::Name { name }, _)), Some((col_s, Tok::Colon, col_e))) => {
+            (Some((start, Token::Name { name }, _)), Some((col_s, Token::Colon, col_e))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 if let Some(value) = self.parse_pattern()? {
@@ -1095,7 +1098,7 @@ where
     //   a: expr
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
         if let Some((start, label, _)) = self.maybe_name() {
-            let _ = self.expect_one(&Tok::Colon)?;
+            let _ = self.expect_one(&Token::Colon)?;
             let value = self.parse_expression()?;
             if let Some(value) = value {
                 Ok(Some(UntypedRecordUpdateArg {
@@ -1134,13 +1137,13 @@ where
             let (_, n, _) = self.expect_name()?;
             name = n;
         }
-        let _ = self.expect_one(&Tok::Lpar)?;
-        let args = Parser::series_of(self, &Parser::parse_fn_param, Some(&Tok::Comma))?;
-        let (_, rpar_e) = self.expect_one(&Tok::Rpar)?;
-        let return_annotation = self.parse_type_annotation(&Tok::RArrow, false)?;
-        let _ = self.expect_one(&Tok::Lbrace)?;
+        let _ = self.expect_one(&Token::LeftParen)?;
+        let args = Parser::series_of(self, &Parser::parse_fn_param, Some(&Token::Comma))?;
+        let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
+        let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
+        let _ = self.expect_one(&Token::LeftBrace)?;
         if let Some((body, _)) = self.parse_expression_seq()? {
-            let (_, rbr_e) = self.expect_one(&Tok::Rbrace)?;
+            let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
             let end = return_annotation
                 .as_ref()
                 .map(|l| l.location().end)
@@ -1172,12 +1175,12 @@ where
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, _) = self.expect_name()?;
-        let _ = self.expect_one(&Tok::Lpar)?;
-        let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Tok::Comma))?;
-        let _ = self.expect_one(&Tok::Rpar)?;
-        let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
+        let _ = self.expect_one(&Token::LeftParen)?;
+        let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Token::Comma))?;
+        let _ = self.expect_one(&Token::RightParen)?;
+        let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
         let return_annotation = self.parse_type(false)?;
-        let _ = self.expect_one(&Tok::Equal)?;
+        let _ = self.expect_one(&Token::Equal)?;
         let (_, module, _) = self.expect_string()?;
         let (_, fun, end) = self.expect_string()?;
 
@@ -1214,7 +1217,7 @@ where
         let mut label = None;
         let mut end = 0;
         match (self.tok0.take(), self.tok1.take()) {
-            (Some((s, Tok::Name { name }, _)), Some((_, Tok::Colon, e))) => {
+            (Some((s, Token::Name { name }, _)), Some((_, Token::Colon, e))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 start = s;
@@ -1264,27 +1267,30 @@ where
         let (start, names, mut end) = match (self.tok0.take(), self.tok1.take()) {
             // labeled discard
             (
-                Some((start, Tok::Name { name: label }, _)),
-                Some((_, Tok::DiscardName { name }, end)),
+                Some((start, Token::Name { name: label }, _)),
+                Some((_, Token::DiscardName { name }, end)),
             ) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 (start, ArgNames::LabelledDiscard { name, label }, end)
             }
             // discard
-            (Some((start, Tok::DiscardName { name }, end)), t1) => {
+            (Some((start, Token::DiscardName { name }, end)), t1) => {
                 self.tok1 = t1;
                 let _ = self.next_tok();
                 (start, ArgNames::Discard { name }, end)
             }
             // labeled name
-            (Some((start, Tok::Name { name: label }, _)), Some((_, Tok::Name { name }, end))) => {
+            (
+                Some((start, Token::Name { name: label }, _)),
+                Some((_, Token::Name { name }, end)),
+            ) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 (start, ArgNames::NamedLabelled { name, label }, end)
             }
             // name
-            (Some((start, Tok::Name { name }, end)), t1) => {
+            (Some((start, Token::Name { name }, end)), t1) => {
                 self.tok1 = t1;
                 let _ = self.next_tok();
                 (start, ArgNames::Named { name }, end)
@@ -1295,7 +1301,7 @@ where
                 return Ok(None);
             }
         };
-        let annotation = if let Some(a) = self.parse_type_annotation(&Tok::Colon, false)? {
+        let annotation = if let Some(a) = self.parse_type_annotation(&Token::Colon, false)? {
             end = a.location().end;
             Some(a)
         } else {
@@ -1317,7 +1323,7 @@ where
     //   a: _, expr
     //   a: expr, _, b: _
     fn parse_fn_args(&mut self) -> Result<Vec<ParserArg>, ParseError> {
-        let args = Parser::series_of(self, &Parser::parse_fn_arg, Some(&Tok::Comma))?;
+        let args = Parser::series_of(self, &Parser::parse_fn_arg, Some(&Token::Comma))?;
         Ok(args)
     }
 
@@ -1331,7 +1337,7 @@ where
     fn parse_fn_arg(&mut self) -> Result<Option<ParserArg>, ParseError> {
         let mut start = 0;
         let label = match (self.tok0.take(), self.tok1.as_ref()) {
-            (Some((s, Tok::Name { name }, _)), Some((_, Tok::Colon, _))) => {
+            (Some((s, Token::Name { name }, _)), Some((_, Token::Colon, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 start = s;
@@ -1400,7 +1406,7 @@ where
         opaque: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, parameters, end) = self.expect_type_name()?;
-        if self.maybe_one(&Tok::Lbrace).is_some() {
+        if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
                 self,
@@ -1421,7 +1427,7 @@ where
                 // No separator
                 None,
             )?;
-            let _ = self.expect_one(&Tok::Rbrace)?;
+            let _ = self.expect_one(&Token::RightBrace)?;
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
@@ -1436,7 +1442,7 @@ where
                     typed_parameters: vec![],
                 }))
             }
-        } else if let Some((eq_s, eq_e)) = self.maybe_one(&Tok::Equal) {
+        } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
             if !opaque {
                 if let Some(t) = self.parse_type(false)? {
@@ -1476,9 +1482,10 @@ where
     //   A(one, two)
     fn expect_type_name(&mut self) -> Result<(usize, String, Vec<String>, usize), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
-        if self.maybe_one(&Tok::Lpar).is_some() {
-            let args = Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Tok::Comma))?;
-            let (_, par_e) = self.expect_one(&Tok::Rpar)?;
+        if self.maybe_one(&Token::LeftParen).is_some() {
+            let args =
+                Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
+            let (_, par_e) = self.expect_one(&Token::RightParen)?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
             Ok((start, upname, args2, par_e))
         } else {
@@ -1493,11 +1500,11 @@ where
     fn parse_type_constructor_args(
         &mut self,
     ) -> Result<(Vec<RecordConstructorArg<()>>, usize), ParseError> {
-        if self.maybe_one(&Tok::Lpar).is_some() {
+        if self.maybe_one(&Token::LeftParen).is_some() {
             let args = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (Some((start, Tok::Name { name }, _)), Some((_, Tok::Colon, end))) => {
+                    (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         match Parser::parse_type(p, false)? {
@@ -1529,9 +1536,9 @@ where
                         }
                     }
                 },
-                Some(&Tok::Comma),
+                Some(&Token::Comma),
             )?;
-            let (_, end) = self.expect_one(&Tok::Rpar)?;
+            let (_, end) = self.expect_one(&Token::RightParen)?;
             Ok((args, end))
         } else {
             Ok((vec![], 0))
@@ -1549,7 +1556,7 @@ where
     //   :Result(Result(a, e), tuple(_, String))
     fn parse_type_annotation(
         &mut self,
-        start_tok: &Tok,
+        start_tok: &Token,
         for_const: bool,
     ) -> Result<Option<TypeAst>, ParseError> {
         if let Some((start, end)) = self.maybe_one(start_tok) {
@@ -1566,7 +1573,7 @@ where
     fn parse_type(&mut self, for_const: bool) -> Result<Option<TypeAst>, ParseError> {
         match self.tok0.take() {
             // Type hole
-            Some((start, Tok::DiscardName { name }, end)) => {
+            Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
                 Ok(Some(TypeAst::Hole {
                     location: SrcSpan { start, end },
@@ -1575,11 +1582,11 @@ where
             }
 
             // Tuple
-            Some((start, Tok::Tuple, end)) | Some((start, Tok::Hash, end)) => {
+            Some((start, Token::Tuple, end)) | Some((start, Token::Hash, end)) => {
                 let _ = self.next_tok();
-                let _ = self.expect_one(&Tok::Lpar)?;
+                let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = self.parse_types(for_const)?;
-                let _ = self.expect_one(&Tok::Rpar)?;
+                let _ = self.expect_one(&Token::RightParen)?;
                 Ok(Some(TypeAst::Tuple {
                     location: SrcSpan { start, end },
                     elems,
@@ -1587,19 +1594,19 @@ where
             }
 
             // Function
-            Some((start, Tok::Fn, end)) => {
+            Some((start, Token::Fn, end)) => {
                 let _ = self.next_tok();
                 if for_const {
                     parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
                 } else {
-                    let _ = self.expect_one(&Tok::Lpar)?;
+                    let _ = self.expect_one(&Token::LeftParen)?;
                     let args = Parser::series_of(
                         self,
                         &|x| Parser::parse_type(x, for_const),
-                        Some(&Tok::Comma),
+                        Some(&Token::Comma),
                     )?;
-                    let _ = self.expect_one(&Tok::Rpar)?;
-                    let (arr_s, arr_e) = self.expect_one(&Tok::RArrow)?;
+                    let _ = self.expect_one(&Token::RightParen)?;
+                    let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                     let retrn = self.parse_type(for_const)?;
                     if let Some(retrn) = retrn {
                         Ok(Some(TypeAst::Fn {
@@ -1623,15 +1630,15 @@ where
             }
 
             // Constructor function
-            Some((start, Tok::UpName { name }, end)) => {
+            Some((start, Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
                 self.parse_type_name_finish(for_const, start, None, name, end)
             }
 
             // Constructor Module or type Variable
-            Some((start, Tok::Name { name: mod_name }, end)) => {
+            Some((start, Token::Name { name: mod_name }, end)) => {
                 let _ = self.next_tok();
-                if self.maybe_one(&Tok::Dot).is_some() {
+                if self.maybe_one(&Token::Dot).is_some() {
                     let (_, upname, upname_e) = self.expect_upname()?;
                     self.parse_type_name_finish(for_const, start, Some(mod_name), upname, upname_e)
                 } else if for_const {
@@ -1660,9 +1667,9 @@ where
         name: String,
         end: usize,
     ) -> Result<Option<TypeAst>, ParseError> {
-        if self.maybe_one(&Tok::Lpar).is_some() {
+        if self.maybe_one(&Token::LeftParen).is_some() {
             let args = self.parse_types(for_const)?;
-            let (_, par_e) = self.expect_one(&Tok::Rpar)?;
+            let (_, par_e) = self.expect_one(&Token::RightParen)?;
             Ok(Some(TypeAst::Constructor {
                 location: SrcSpan { start, end: par_e },
                 module,
@@ -1684,7 +1691,7 @@ where
         let elems = Parser::series_of(
             self,
             &|p| Parser::parse_type(p, for_const),
-            Some(&Tok::Comma),
+            Some(&Token::Comma),
         )?;
         Ok(elems)
     }
@@ -1712,7 +1719,7 @@ where
             end = e;
 
             // Ueful error for : import a/.{b}
-            if let Some((s, _)) = self.maybe_one(&Tok::SlashDot) {
+            if let Some((s, _)) = self.maybe_one(&Token::SlashDot) {
                 return parse_error(
                     ParseErrorType::ExpectedName,
                     SrcSpan {
@@ -1723,22 +1730,22 @@ where
             }
 
             // break if there's no trailing slash
-            if self.maybe_one(&Tok::Slash).is_none() {
+            if self.maybe_one(&Token::Slash).is_none() {
                 break;
             }
         }
 
         // Gather imports
         let mut unqualified = vec![];
-        if self.maybe_one(&Tok::Dot).is_some() {
-            let _ = self.expect_one(&Tok::Lbrace)?;
+        if self.maybe_one(&Token::Dot).is_some() {
+            let _ = self.expect_one(&Token::LeftBrace)?;
             unqualified = self.parse_unqualified_imports()?;
-            let _ = self.expect_one(&Tok::Rbrace)?;
+            let _ = self.expect_one(&Token::RightBrace)?;
         }
 
         // Parse as_name
         let mut as_name = None;
-        if self.maybe_one(&Tok::As).is_some() {
+        if self.maybe_one(&Token::As).is_some() {
             as_name = Some(self.expect_name()?.1)
         }
 
@@ -1756,8 +1763,8 @@ where
         loop {
             // parse imports
             match self.tok0.take() {
-                Some((start, Tok::Name { name }, end))
-                | Some((start, Tok::UpName { name }, end)) => {
+                Some((start, Token::Name { name }, end))
+                | Some((start, Token::UpName { name }, end)) => {
                     let _ = self.next_tok();
                     let location = SrcSpan { start, end };
                     let mut import = UnqualifiedImport {
@@ -1765,7 +1772,7 @@ where
                         location,
                         as_name: None,
                     };
-                    if self.maybe_one(&Tok::As).is_some() {
+                    if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, _) = self.expect_name()?;
                         import.as_name = Some(as_name)
                     }
@@ -1778,7 +1785,7 @@ where
             }
             // parse comma
             match self.tok0 {
-                Some((_, Tok::Comma, _)) => {
+                Some((_, Token::Comma, _)) => {
                     let _ = self.next_tok();
                 }
                 _ => break,
@@ -1798,9 +1805,9 @@ where
     fn parse_module_const(&mut self, public: bool) -> Result<Option<UntypedStatement>, ParseError> {
         let (start, name, end) = self.expect_name()?;
 
-        let annotation = self.parse_type_annotation(&Tok::Colon, true)?;
+        let annotation = self.parse_type_annotation(&Token::Colon, true)?;
 
-        let (eq_s, eq_e) = self.expect_one(&Tok::Equal)?;
+        let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Statement::ModuleConstant {
                 doc: None,
@@ -1829,7 +1836,7 @@ where
     //   [1,2,3]
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
-            Some((start, Tok::String { value }, end)) => {
+            Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
                 Ok(Some(Constant::String {
                     value,
@@ -1837,7 +1844,7 @@ where
                 }))
             }
 
-            Some((start, Tok::Float { value }, end)) => {
+            Some((start, Token::Float { value }, end)) => {
                 let _ = self.next_tok();
                 Ok(Some(Constant::Float {
                     value,
@@ -1845,7 +1852,7 @@ where
                 }))
             }
 
-            Some((start, Tok::Int { value }, end)) => {
+            Some((start, Token::Int { value }, end)) => {
                 let _ = self.next_tok();
                 Ok(Some(Constant::Int {
                     value,
@@ -1853,23 +1860,23 @@ where
                 }))
             }
 
-            Some((start, Tok::Tuple, _)) | Some((start, Tok::Hash, _)) => {
+            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
-                let _ = self.expect_one(&Tok::Lpar)?;
+                let _ = self.expect_one(&Token::LeftParen)?;
                 let elements =
-                    Parser::series_of(self, &Parser::parse_const_value, Some(&Tok::Comma))?;
-                let (_, end) = self.expect_one(&Tok::Rpar)?;
+                    Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
+                let (_, end) = self.expect_one(&Token::RightParen)?;
                 Ok(Some(Constant::Tuple {
                     elements,
                     location: SrcSpan { start, end },
                 }))
             }
 
-            Some((start, Tok::Lsqb, _)) => {
+            Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
                 let elements =
-                    Parser::series_of(self, &Parser::parse_const_value, Some(&Tok::Comma))?;
-                let (_, end) = self.expect_one(&Tok::Rsqb)?;
+                    Parser::series_of(self, &Parser::parse_const_value, Some(&Token::Comma))?;
+                let (_, end) = self.expect_one(&Token::RightSquare)?;
                 Ok(Some(Constant::List {
                     elements,
                     location: SrcSpan { start, end },
@@ -1877,7 +1884,7 @@ where
                 }))
             }
             // Bitstring
-            Some((start, Tok::LtLt, _)) => {
+            Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
                     self,
@@ -1889,23 +1896,23 @@ where
                             &bit_string_const_int,
                         )
                     },
-                    Some(&Tok::Comma),
+                    Some(&Token::Comma),
                 )?;
-                let (_, end) = self.expect_one(&Tok::GtGt)?;
+                let (_, end) = self.expect_one(&Token::GtGt)?;
                 Ok(Some(Constant::BitString {
                     location: SrcSpan { start, end },
                     segments,
                 }))
             }
 
-            Some((start, Tok::UpName { name }, end)) => {
+            Some((start, Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
                 self.parse_const_record_finish(start, None, name, end)
             }
 
-            Some((start, Tok::Name { name }, end)) => {
+            Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
-                if self.expect_one(&Tok::Dot).is_ok() {
+                if self.expect_one(&Token::Dot).is_ok() {
                     let (_, upname, end) = self.expect_upname()?;
                     self.parse_const_record_finish(start, Some(name), upname, end)
                 } else {
@@ -1913,7 +1920,7 @@ where
                 }
             }
 
-            Some((start, Tok::ListNil, end)) => {
+            Some((start, Token::ListNil, end)) => {
                 let _ = self.next_tok();
                 Ok(Some(Constant::List {
                     elements: vec![],
@@ -1923,7 +1930,7 @@ where
             }
 
             // Helpful error for fn
-            Some((start, Tok::Fn, end)) => {
+            Some((start, Token::Fn, end)) => {
                 parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
             }
 
@@ -1942,9 +1949,10 @@ where
         name: String,
         end: usize,
     ) -> Result<Option<UntypedConstant>, ParseError> {
-        if self.maybe_one(&Tok::Lpar).is_some() {
-            let args = Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Tok::Comma))?;
-            let (_, par_e) = self.expect_one(&Tok::Rpar)?;
+        if self.maybe_one(&Token::LeftParen).is_some() {
+            let args =
+                Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
+            let (_, par_e) = self.expect_one(&Token::RightParen)?;
             Ok(Some(Constant::Record {
                 location: SrcSpan { start, end: par_e },
                 module,
@@ -1971,7 +1979,7 @@ where
     fn parse_const_record_arg(&mut self) -> Result<Option<CallArg<UntypedConstant>>, ParseError> {
         let name = match (self.tok0.take(), self.tok1.as_ref()) {
             // Named arg
-            (Some((start, Tok::Name { name }, end)), Some((_, Tok::Colon, _))) => {
+            (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 Some((start, name, end))
@@ -2026,11 +2034,11 @@ where
         A: HasLocation,
     {
         if let Some(value) = value_parser(self)? {
-            let options = if self.maybe_one(&Tok::Colon).is_some() {
+            let options = if self.maybe_one(&Token::Colon).is_some() {
                 Parser::series_of(
                     self,
                     &|s| Parser::parse_bit_string_segment_option(s, &arg_parser, &to_int_segment),
-                    Some(&Tok::Minus),
+                    Some(&Token::Minus),
                 )?
             } else {
                 vec![]
@@ -2065,13 +2073,14 @@ where
     ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
-            Some((start, Tok::Name { name }, end)) => {
-                if self.maybe_one(&Tok::Lpar).is_some() {
+            Some((start, Token::Name { name }, end)) => {
+                if self.maybe_one(&Token::LeftParen).is_some() {
                     // named function segment
                     match name.as_str() {
                         "unit" => {
-                            if let Some((int_s, Tok::Int { value, .. }, int_e)) = self.next_tok() {
-                                let (_, end) = self.expect_one(&Tok::Rpar)?;
+                            if let Some((int_s, Token::Int { value, .. }, int_e)) = self.next_tok()
+                            {
+                                let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace("_", "");
                                 match u8::from_str(&v) {
                                     Ok(units) if units > 0 => {
@@ -2096,7 +2105,7 @@ where
 
                         "size" => {
                             let value = arg_parser(self)?;
-                            let (_, end) = self.expect_one(&Tok::Rpar)?;
+                            let (_, end) = self.expect_one(&Token::RightParen)?;
                             Ok(Some(BitStringSegmentOption::Size {
                                 location: SrcSpan { start, end },
                                 value: Box::new(value),
@@ -2118,7 +2127,7 @@ where
                 }
             }
             // int segment
-            Some((start, Tok::Int { value }, end)) => Ok(Some(BitStringSegmentOption::Size {
+            Some((start, Token::Int { value }, end)) => Ok(Some(BitStringSegmentOption::Size {
                 location: SrcSpan { start, end },
                 value: Box::new(to_int_segment(value, start, end)),
                 short_form: true,
@@ -2133,12 +2142,12 @@ where
 
     fn expect_bit_string_pattern_segment_arg(&mut self) -> Result<UntypedPattern, ParseError> {
         match self.next_tok() {
-            Some((start, Tok::Name { name }, end)) => Ok(Pattern::VarUsage {
+            Some((start, Token::Name { name }, end)) => Ok(Pattern::VarUsage {
                 location: SrcSpan { start, end },
                 name,
                 type_: (),
             }),
-            Some((start, Tok::Int { value }, end)) => Ok(Pattern::Int {
+            Some((start, Token::Int { value }, end)) => Ok(Pattern::Int {
                 location: SrcSpan { start, end },
                 value,
             }),
@@ -2148,7 +2157,7 @@ where
 
     fn expect_const_int(&mut self) -> Result<UntypedConstant, ParseError> {
         match self.next_tok() {
-            Some((start, Tok::Int { value }, end)) => Ok(Constant::Int {
+            Some((start, Token::Int { value }, end)) => Ok(Constant::Int {
                 location: SrcSpan { start, end },
                 value,
             }),
@@ -2169,7 +2178,7 @@ where
     //
 
     // Expect a particular token, advances the token stream
-    fn expect_one(&mut self, wanted: &Tok) -> Result<(usize, usize), ParseError> {
+    fn expect_one(&mut self, wanted: &Token) -> Result<(usize, usize), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string()]),
@@ -2181,11 +2190,11 @@ where
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
-                if let Tok::Name { name } = tok {
+                if let Token::Name { name } = tok {
                     Ok((start, name, end))
-                } else if let Tok::UpName { .. } = tok {
+                } else if let Token::UpName { .. } = tok {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                } else if let Tok::DiscardName { .. } = tok {
+                } else if let Token::DiscardName { .. } = tok {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
                 } else if is_reserved_word(tok) {
                     parse_error(
@@ -2205,11 +2214,11 @@ where
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
-                if let Tok::Name { .. } = tok {
+                if let Token::Name { .. } = tok {
                     parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
-                } else if let Tok::UpName { name } = tok {
+                } else if let Token::UpName { name } = tok {
                     Ok((start, name, end))
-                } else if let Tok::DiscardName { .. } = tok {
+                } else if let Token::DiscardName { .. } = tok {
                     parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
                 } else {
                     parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end })
@@ -2222,13 +2231,13 @@ where
     // Expect a String else error
     fn expect_string(&mut self) -> Result<(usize, String, usize), ParseError> {
         match self.next_tok() {
-            Some((start, Tok::String { value }, end)) => Ok((start, value, end)),
+            Some((start, Token::String { value }, end)) => Ok((start, value, end)),
             _ => self.next_tok_unexpected(vec!["a string".to_string()]),
         }
     }
 
     // If the next token matches the requested, consume it and return (start, end)
-    fn maybe_one(&mut self, tok: &Tok) -> Option<(usize, usize)> {
+    fn maybe_one(&mut self, tok: &Token) -> Option<(usize, usize)> {
         match self.tok0.take() {
             Some((s, t, e)) if t == *tok => {
                 let _ = self.next_tok();
@@ -2246,7 +2255,7 @@ where
     fn series_of<A>(
         &mut self,
         parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
-        sep: Option<&Tok>,
+        sep: Option<&Token>,
     ) -> Result<Vec<A>, ParseError> {
         let mut results = vec![];
         while let Some(result) = parser(self)? {
@@ -2268,7 +2277,7 @@ where
     // If next token is a Name, consume it and return relevant info, otherwise, return none
     fn maybe_name(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
-            Some((s, Tok::Name { name }, e)) => {
+            Some((s, Token::Name { name }, e)) => {
                 let _ = self.next_tok();
                 Some((s, name, e))
             }
@@ -2282,7 +2291,7 @@ where
     // if next token is an UpName, consume it and return relevant info, otherwise, return none
     fn maybe_upname(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
-            Some((s, Tok::UpName { name }, e)) => {
+            Some((s, Token::UpName { name }, e)) => {
                 let _ = self.next_tok();
                 Some((s, name, e))
             }
@@ -2296,7 +2305,7 @@ where
     // if next token is a DiscardName, consume it and return relevant info, otherwise, return none
     fn maybe_discard_name(&mut self) -> Option<(usize, String, usize)> {
         match self.tok0.take() {
-            Some((s, Tok::DiscardName { name }, e)) => {
+            Some((s, Token::DiscardName { name }, e)) => {
                 let _ = self.next_tok();
                 Some((s, name, e))
             }
@@ -2327,16 +2336,16 @@ where
         loop {
             match self.tokens.next() {
                 // gather and skip extra
-                Some(Ok((s, Tok::EmptyLine, _))) => {
+                Some(Ok((s, Token::EmptyLine, _))) => {
                     self.extra.empty_lines.push(s);
                 }
-                Some(Ok((start, Tok::CommentNormal, end))) => {
+                Some(Ok((start, Token::CommentNormal, end))) => {
                     self.extra.comments.push(SrcSpan { start, end });
                 }
-                Some(Ok((start, Tok::CommentDoc, end))) => {
+                Some(Ok((start, Token::CommentDoc, end))) => {
                     self.extra.doc_comments.push(SrcSpan { start, end });
                 }
-                Some(Ok((start, Tok::CommentModule, end))) => {
+                Some(Ok((start, Token::CommentModule, end))) => {
                     self.extra.module_comments.push(SrcSpan { start, end });
                 }
 
@@ -2416,8 +2425,8 @@ fn handle_op<A>(
     Ok(None)
 }
 
-fn precedence(t: &Tok) -> Option<u8> {
-    if t == &Tok::Pipe {
+fn precedence(t: &Token) -> Option<u8> {
+    if t == &Token::Pipe {
         return Some(5);
     };
     match tok_to_binop(t) {
@@ -2426,29 +2435,29 @@ fn precedence(t: &Tok) -> Option<u8> {
     }
 }
 
-fn tok_to_binop(t: &Tok) -> Option<BinOp> {
+fn tok_to_binop(t: &Token) -> Option<BinOp> {
     match *t {
-        Tok::VbarVbar => Some(BinOp::Or),
-        Tok::AmperAmper => Some(BinOp::And),
-        Tok::EqualEqual => Some(BinOp::Eq),
-        Tok::NotEqual => Some(BinOp::NotEq),
-        Tok::Less => Some(BinOp::LtInt),
-        Tok::LessEqual => Some(BinOp::LtEqInt),
-        Tok::Greater => Some(BinOp::GtInt),
-        Tok::GreaterEqual => Some(BinOp::GtEqInt),
-        Tok::LessDot => Some(BinOp::LtFloat),
-        Tok::LessEqualDot => Some(BinOp::LtEqFloat),
-        Tok::GreaterDot => Some(BinOp::GtFloat),
-        Tok::GreaterEqualDot => Some(BinOp::GtEqFloat),
-        Tok::Plus => Some(BinOp::AddInt),
-        Tok::Minus => Some(BinOp::SubInt),
-        Tok::PlusDot => Some(BinOp::AddFloat),
-        Tok::MinusDot => Some(BinOp::SubFloat),
-        Tok::Percent => Some(BinOp::ModuloInt),
-        Tok::Star => Some(BinOp::MultInt),
-        Tok::StarDot => Some(BinOp::MultFloat),
-        Tok::Slash => Some(BinOp::DivInt),
-        Tok::SlashDot => Some(BinOp::DivFloat),
+        Token::VbarVbar => Some(BinOp::Or),
+        Token::AmperAmper => Some(BinOp::And),
+        Token::EqualEqual => Some(BinOp::Eq),
+        Token::NotEqual => Some(BinOp::NotEq),
+        Token::Less => Some(BinOp::LtInt),
+        Token::LessEqual => Some(BinOp::LtEqInt),
+        Token::Greater => Some(BinOp::GtInt),
+        Token::GreaterEqual => Some(BinOp::GtEqInt),
+        Token::LessDot => Some(BinOp::LtFloat),
+        Token::LessEqualDot => Some(BinOp::LtEqFloat),
+        Token::GreaterDot => Some(BinOp::GtFloat),
+        Token::GreaterEqualDot => Some(BinOp::GtEqFloat),
+        Token::Plus => Some(BinOp::AddInt),
+        Token::Minus => Some(BinOp::SubInt),
+        Token::PlusDot => Some(BinOp::AddFloat),
+        Token::MinusDot => Some(BinOp::SubFloat),
+        Token::Percent => Some(BinOp::ModuloInt),
+        Token::Star => Some(BinOp::MultInt),
+        Token::StarDot => Some(BinOp::MultFloat),
+        Token::Slash => Some(BinOp::DivInt),
+        Token::SlashDot => Some(BinOp::DivFloat),
         _ => None,
     }
 }
@@ -2475,7 +2484,7 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
 }
 
 fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
-    if op.1 == Tok::Pipe {
+    if op.1 == Token::Pipe {
         UntypedExpr::Pipe {
             location: SrcSpan {
                 start: op.0,
@@ -2511,73 +2520,73 @@ fn clause_guard_reduction(
     let left = Box::new(l);
     let right = Box::new(r);
     match op.1 {
-        Tok::VbarVbar => ClauseGuard::Or {
+        Token::VbarVbar => ClauseGuard::Or {
             location,
             left,
             right,
         },
 
-        Tok::AmperAmper => ClauseGuard::And {
+        Token::AmperAmper => ClauseGuard::And {
             location,
             left,
             right,
         },
 
-        Tok::EqualEqual => ClauseGuard::Equals {
+        Token::EqualEqual => ClauseGuard::Equals {
             location,
             left,
             right,
         },
 
-        Tok::NotEqual => ClauseGuard::NotEquals {
+        Token::NotEqual => ClauseGuard::NotEquals {
             location,
             left,
             right,
         },
 
-        Tok::Greater => ClauseGuard::GtInt {
+        Token::Greater => ClauseGuard::GtInt {
             location,
             left,
             right,
         },
 
-        Tok::GreaterEqual => ClauseGuard::GtEqInt {
+        Token::GreaterEqual => ClauseGuard::GtEqInt {
             location,
             left,
             right,
         },
 
-        Tok::Less => ClauseGuard::LtInt {
+        Token::Less => ClauseGuard::LtInt {
             location,
             left,
             right,
         },
 
-        Tok::LessEqual => ClauseGuard::LtEqInt {
+        Token::LessEqual => ClauseGuard::LtEqInt {
             location,
             left,
             right,
         },
 
-        Tok::GreaterDot => ClauseGuard::GtFloat {
+        Token::GreaterDot => ClauseGuard::GtFloat {
             location,
             left,
             right,
         },
 
-        Tok::GreaterEqualDot => ClauseGuard::GtEqFloat {
+        Token::GreaterEqualDot => ClauseGuard::GtEqFloat {
             location,
             left,
             right,
         },
 
-        Tok::LessDot => ClauseGuard::LtFloat {
+        Token::LessDot => ClauseGuard::LtFloat {
             location,
             left,
             right,
         },
 
-        Tok::LessEqualDot => ClauseGuard::LtEqFloat {
+        Token::LessEqualDot => ClauseGuard::LtEqFloat {
             location,
             left,
             right,
@@ -2651,24 +2660,24 @@ fn parse_error<T>(error: ParseErrorType, location: SrcSpan) -> Result<T, ParseEr
 //
 
 // useful for checking if a user tried to enter a reserved word as a name
-fn is_reserved_word(tok: Tok) -> bool {
+fn is_reserved_word(tok: Token) -> bool {
     matches![
         tok,
-        Tok::As
-            | Tok::Assert
-            | Tok::Case
-            | Tok::Const
-            | Tok::External
-            | Tok::Fn
-            | Tok::If
-            | Tok::Import
-            | Tok::Let
-            | Tok::Opaque
-            | Tok::Pub
-            | Tok::Todo
-            | Tok::Try
-            | Tok::Tuple
-            | Tok::Type
+        Token::As
+            | Token::Assert
+            | Token::Case
+            | Token::Const
+            | Token::External
+            | Token::Fn
+            | Token::If
+            | Token::Import
+            | Token::Let
+            | Token::Opaque
+            | Token::Pub
+            | Token::Todo
+            | Token::Try
+            | Token::Tuple
+            | Token::Type
     ]
 }
 
