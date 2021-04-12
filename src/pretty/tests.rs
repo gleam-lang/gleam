@@ -147,9 +147,6 @@ fn format_test() {
     let doc = String("Hi".to_string()).append(String(", world!".to_string()));
     assert_eq!("Hi, world!".to_string(), doc.to_pretty_string(10));
 
-    let doc = Nil;
-    assert_eq!("".to_string(), doc.to_pretty_string(10));
-
     let doc = Break {
         broken: "broken",
         unbroken: "unbroken",
