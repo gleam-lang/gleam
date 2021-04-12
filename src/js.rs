@@ -462,8 +462,9 @@ fn let_<'a>(
 ) -> Document<'a> {
     let body = maybe_block_expr(value, &Env{return_last: &false, semicolon: &false});
 
+    let mut path = vec![];
     let mut checks = vec![];
-    let matcher = pattern(pat, &mut checks);
+    let matcher = pattern(pat, &mut path, &mut checks);
     // start with no checks
     match checks.is_empty() {
         true => Document::String("let ".to_string())
@@ -480,10 +481,10 @@ fn let_<'a>(
                 .append(body)
                 .append(";")
                 .append(line())
-            .append(concat(Itertools::intersperse(checks.iter().map(|c|
-                // c.surround("(", ")")
-                Document::String(c.to_string())
-            ), " && ".to_doc())).surround("if (!(", ")) throw new Error(\"Bad match\")"))
+            .append(concat(Itertools::intersperse(
+                checks.into_iter(), 
+                " && ".to_doc()
+            )).surround("if (!(", ")) throw new Error(\"Bad match\")"))
             .append(line())
             .append("let ")
             .append(matcher)
@@ -501,34 +502,73 @@ fn let_<'a>(
 }
 
 
+
+#[derive(Debug, Clone)]
+pub enum PathIndex{
+    Int(usize),
+    String(String)
+}
+
 pub fn pattern<'a>(
     p: &'a TypedPattern, 
-    checks: &mut Vec<String>
+    path: &mut Vec<PathIndex>,
+    checks: &mut Vec<Document<'a>>
 ) -> Document<'a> {
+    // Would it be easier to just pass around the path string
+    let path_string = "gleam$tmp"
+        .to_doc()
+        .append(concat(path.iter().map(|i| 
+            match i {
+                PathIndex::Int(x) => x.to_doc().surround("[", "]"),
+                PathIndex::String(x) => ".".to_doc().append(Document::String(x.clone()))
+            }
+        )));
     match p {
-        // TODO could this be called Nil list or simthing similar
-        Pattern::Nil { .. } => {
-            checks.push("gleam$tmp.length === 0".to_string());
-            "[]".to_doc()
-        },
-        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, checks),
+        Pattern::Var { name, .. } => name.to_doc(),
+        Pattern::Discard { .. } => "_".to_doc(),
 
         Pattern::Int { value, .. } => {
-            checks.push(format!("gleam$tmp === {}", value));
+            checks.push(
+                path_string
+                    .append(" === ")
+                    .append(int(value))
+            );
             "_".to_doc()
         },
         Pattern::Float { value, .. } => {
-            checks.push(format!("gleam$tmp === {}", value));
+            checks.push(path_string
+                .append(" === ")
+                .append(float(value)));
             "_".to_doc()
         },
         Pattern::String { value, .. } => {
             // TODO might be best to use the string printing functionality
-            checks.push(format!("gleam$tmp === \"{}\"", value));
+            checks.push(path_string
+                .append(" === ")
+                .append(string(value)));
             "_".to_doc()
-
+            
         },
 
-        Pattern::Var { name, .. } => name.to_doc(),
+        // TODO could this be called Nil list or simthing similar
+        Pattern::Nil { .. } => {
+            checks.push("gleam$tmp.length === 0".to_doc());
+            "[]".to_doc()
+        },
+        Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, path, checks),
+
+        Pattern::Tuple {elems, ..} => {
+            // We don't check the length, because type system means it's a tuple
+            // checks.push(format!("gleam$tmp.length === {}", elems.len()));
+            let elements = elems.into_iter().enumerate().map(|x| {
+                let (i, e) = x;
+                let mut inner = path.clone();
+                inner.push(PathIndex::Int(i));
+                pattern(e, &mut inner, checks)
+            });
+            let content = concat(Itertools::intersperse(elements, break_(",", ", ")));
+            content.surround("[", "]")
+        }
         // In erl/pattern.rs
         // Uses collect_cons, but for a pattern type
         _ => {
@@ -542,26 +582,28 @@ pub fn pattern<'a>(
 fn pattern_list_cons<'a>(
     head: &'a TypedPattern,
     tail: &'a TypedPattern,
-    checks: &mut Vec<String>,
+    path: &mut Vec<PathIndex>,
+    checks: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
     let mut elems = vec![head];
     let final_tail = collect_pattern_cons(tail, &mut elems);
 
     match final_tail {
         Some(_) => 
-            checks.push(format!("gleam$tmp.length >= {}", elems.len())),
+            checks.push("gleam$tmp.length >= ".to_doc().append(elems.len())),
         None =>
-            checks.push(format!("gleam$tmp.length === {}", elems.len()))
+            checks.push("gleam$tmp.length === ".to_doc().append(elems.len())),
+
     }
     println!("{:?}", elems);
-     let elements = elems.into_iter().map(|e| pattern(e, checks));
-    // unimplemented!("ffofo")
-    // list(elems, final_tail.map(|e| to_doc(e, vars, env)))
+    
+    // TODO append values
+    let elements = elems.into_iter().map(|e| pattern(e, path, checks));
     let content = concat(Itertools::intersperse(elements, break_(",", ", ")));
     let content = if let Some(final_tail) = final_tail {
         content
             .append(Document::String(", ...".to_string())
-            .append(pattern(final_tail, checks)))
+            .append(pattern(final_tail, path, checks)))
     } else {
         content
     };

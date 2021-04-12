@@ -203,7 +203,6 @@ fn list_destructuring() {
 fn go(a) {
     let [] = a
     let [x, y] = a
-    // let [first, ..rest] = a
     a
 }"#,
 r#"function go(a) {
@@ -261,6 +260,27 @@ r#"function go(a, b, c) {
     return a;
 }"#
     );
+}
+
+#[test]
+fn tuple_destructuring() {
+    assert_js!(
+        r#"
+fn go(a, b) {
+    let tuple(_, _ignore, x) = a
+    let tuple(1, 2) = b
+    a
+}"#,
+r#"function go(a, b) {
+    let [_, _, x] = a;
+    var gleam$tmp = b;
+    if (!(gleam$tmp[0] === 1 && gleam$tmp[1] === 2)) throw new Error("Bad match")
+    let [_, _] = gleam$tmp;
+    
+    return a;
+}"#
+    );
+
 }
 
 // TODO write up about expression to tmp variable
