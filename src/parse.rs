@@ -1913,9 +1913,13 @@ where
                 }
             }
 
-            // Helpful error for []
             Some((start, Tok::ListNil, end)) => {
-                parse_error(ParseErrorType::ListNilNotAllowed, SrcSpan { start, end })
+                let _ = self.next_tok();
+                Ok(Some(Constant::List {
+                    elements: vec![],
+                    location: SrcSpan { start, end },
+                    typ: (),
+                }))
             }
 
             // Helpful error for fn

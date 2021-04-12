@@ -45,7 +45,6 @@ pub enum ParseErrorType {
     InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
     InvalidTupleAccess,      // only positive int literals for tuple access
     LexError { error: LexicalError },
-    ListNilNotAllowed,      // [] is not allowed here
     NestedBitStringPattern, // <<<<1>>, 2>>, <<1>> is not allowed in there
     NoConstructors,         // A type "A {}" must have at least one constructor
     NoCaseClause,           // a case with no claueses

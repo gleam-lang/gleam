@@ -3762,3 +3762,15 @@ pub fn a() {
         vec![("a", "fn() -> Result(Int, a)")],
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1029
+#[test]
+fn empty_list_const() {
+    assert_module_infer!(
+        "pub const empty = []
+pub fn a() {
+    empty
+}",
+        vec![("a", "fn() -> List(a)"), ("empty", "List(a)")],
+    );
+}

@@ -1418,10 +1418,6 @@ and try again.
                         vec!["Hint: Only non negative integer literals like 0, or 1_000 can be used.".to_string()]
                     ),
                     ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
-                    ParseErrorType::ListNilNotAllowed => (
-                        "Empty list is not allowed here.",
-                        vec![]
-                    ),
                     ParseErrorType::NestedBitStringPattern => (
                         "BitString patterns cannot be nested.",
                         vec!["See: https://gleam.run/book/tour/patterns".to_string()]
