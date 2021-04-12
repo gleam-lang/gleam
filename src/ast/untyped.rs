@@ -35,15 +35,10 @@ pub enum UntypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    ListNil {
+    List {
         location: SrcSpan,
-    },
-
-    // TODO: use a vector rather than a linked list here
-    ListCons {
-        location: SrcSpan,
-        head: Box<Self>,
-        tail: Box<Self>,
+        elements: Vec<Self>,
+        tail: Option<Box<Self>>,
     },
 
     Call {
@@ -127,12 +122,11 @@ impl UntypedExpr {
             | Self::Todo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
+            | Self::List { location, .. }
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
-            | Self::ListNil { location, .. }
-            | Self::ListCons { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
             | Self::BitString { location, .. }
@@ -168,9 +162,8 @@ impl UntypedExpr {
         matches!(
             self,
             Self::Int { .. }
+                | Self::List { .. }
                 | Self::Float { .. }
-                | Self::ListNil { .. }
-                | Self::ListCons { .. }
                 | Self::Tuple { .. }
                 | Self::String { .. }
                 | Self::BitString { .. }

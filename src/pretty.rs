@@ -110,7 +110,6 @@ pub enum Document<'a> {
     FlexBreak(Box<Self>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    // TODO: str not string
     Break { broken: &'a str, unbroken: &'a str },
 
     /// Join multiple documents together

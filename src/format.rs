@@ -633,9 +633,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.expr_fn(args, return_annotation.as_ref(), body),
 
-            UntypedExpr::ListNil { .. } => "[]".to_doc(),
-
-            UntypedExpr::ListCons { head, tail, .. } => self.list_cons(head, tail),
+            UntypedExpr::List { elements, tail, .. } => self.list(elements, tail.as_ref()),
 
             UntypedExpr::Call {
                 fun,
@@ -741,8 +739,8 @@ impl<'comments> Formatter<'comments> {
                     | UntypedExpr::Assignment { .. }
                     | UntypedExpr::Call { .. }
                     | UntypedExpr::Case { .. }
+                    | UntypedExpr::List { .. }
                     | UntypedExpr::Tuple { .. }
-                    | UntypedExpr::ListCons { .. }
                     | UntypedExpr::BitString { .. }
             )
         }
@@ -1098,8 +1096,8 @@ impl<'comments> Formatter<'comments> {
                 .append("}"),
 
             UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::ListCons { .. }
             | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT).group(),
@@ -1164,20 +1162,23 @@ impl<'comments> Formatter<'comments> {
             })
     }
 
-    fn list_cons<'a>(&mut self, head: &'a UntypedExpr, tail: &'a UntypedExpr) -> Document<'a> {
-        let (elems, tail) = list_cons(head, tail, categorise_list_expr);
+    fn list<'a>(
+        &mut self,
+        elements: &'a [UntypedExpr],
+        tail: Option<&'a Box<UntypedExpr>>,
+    ) -> Document<'a> {
         let comma: fn() -> Document<'a> =
-            if tail.is_none() && elems.iter().all(|e| e.is_simple_constant()) {
+            if tail.is_none() && elements.iter().all(|e| e.is_simple_constant()) {
                 || break_(",", ", ").flex_break()
             } else {
                 || break_(",", ", ")
             };
-        let elems = concat(Itertools::intersperse(
-            elems.iter().map(|e| self.wrap_expr(e)),
+        let elements = concat(Itertools::intersperse(
+            elements.iter().map(|e| self.wrap_expr(e)),
             comma(),
         ));
         let tail = tail.map(|e| self.expr(e));
-        list(elems, tail)
+        list(elements, tail)
     }
 
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1384,16 +1385,6 @@ impl<'a> Documentable<'a> for &'a BinOp {
             BinOp::ModuloInt => " % ",
         }
         .to_doc()
-    }
-}
-
-fn categorise_list_expr(expr: &UntypedExpr) -> ListType<&UntypedExpr, &UntypedExpr> {
-    match expr {
-        UntypedExpr::ListNil { .. } => ListType::Nil,
-
-        UntypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
-
-        other => ListType::NotList(other),
     }
 }
 

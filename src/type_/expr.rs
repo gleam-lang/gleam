@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::*;
 use crate::ast::{
     Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
@@ -69,8 +71,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ///
     pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
-            UntypedExpr::ListNil { location, .. } => self.infer_nil(location),
-
             UntypedExpr::Todo {
                 location, label, ..
             } => self.infer_todo(location, label),
@@ -127,12 +127,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 ..
             } => self.infer_case(subjects, clauses, location),
 
-            UntypedExpr::ListCons {
+            UntypedExpr::List {
                 location,
-                head,
+                elements,
                 tail,
                 ..
-            } => self.infer_cons(*head, *tail, location),
+            } => self.infer_list(elements, tail, location),
 
             UntypedExpr::Call {
                 location,
@@ -291,13 +291,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
 
-    fn infer_nil(&mut self, location: SrcSpan) -> Result<TypedExpr, Error> {
-        Ok(TypedExpr::EmptyList {
-            location,
-            typ: list(self.new_unbound_var(self.environment.level)),
-        })
-    }
-
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> Result<TypedExpr, Error> {
         let typ = self.new_unbound_var(self.environment.level);
         self.environment.warnings.push(Warning::Todo {
@@ -416,22 +409,41 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
 
-    fn infer_cons(
+    fn infer_list(
         &mut self,
-        head: UntypedExpr,
-        tail: UntypedExpr,
+        elements: Vec<UntypedExpr>,
+        tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let head = self.infer(head)?;
-        let tail = self.infer(tail)?;
-        self.unify(tail.type_(), list(head.type_()))
-            .map_err(|e| convert_unify_error(e, location))?;
-
-        Ok(TypedExpr::ListCons {
+        let typ = self.new_unbound_var(self.environment.level);
+        // Type check each elements
+        let elements = elements
+            .into_iter()
+            .map(|element| {
+                let element = self.infer(element)?;
+                // Ensure they all have the same type
+                self.unify(typ.clone(), element.type_())
+                    .map_err(|e| convert_unify_error(e, location))?;
+                Ok(element)
+            })
+            .try_collect()?;
+        // Type check the ..tail, if there is one
+        let typ = list(typ);
+        let tail = match tail {
+            Some(tail) => {
+                let tail = self.infer(*tail)?;
+                // Ensure the tail has the same type as the preceeding elements
+                self.unify(typ.clone(), tail.type_())
+                    .map_err(|e| convert_unify_error(e, location))?;
+                Some(Box::new(tail))
+            }
+            None => None,
+        };
+        Ok(TypedExpr::List {
             location,
-            typ: tail.type_(),
-            head: Box::new(head),
-            tail: Box::new(tail),
+            typ,
+            elements,
+            tail,
         })
     }
 

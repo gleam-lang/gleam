@@ -880,35 +880,16 @@ fn float<'a>(value: &str) -> Document<'a> {
     Document::String(value)
 }
 
-fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    list_cons(head, tail, env, maybe_block_expr, |expr| match expr {
-        TypedExpr::EmptyList { .. } => ListType::Nil,
-
-        TypedExpr::ListCons { head, tail, .. } => ListType::Cons { head, tail },
-
-        other => ListType::NotList(other),
-    })
-}
-
-fn list_cons<'a, ToDoc, Categorise, Elem: 'a>(
-    head: Elem,
-    tail: Elem,
+fn expr_list<'a>(
+    elements: &'a [TypedExpr],
+    tail: &'a Option<Box<TypedExpr>>,
     env: &mut Env<'a>,
-    to_doc: ToDoc,
-    categorise_element: Categorise,
-) -> Document<'a>
-where
-    ToDoc: Fn(Elem, &mut Env<'a>) -> Document<'a>,
-    Categorise: Fn(Elem) -> ListType<Elem, Elem>,
-{
-    let mut elems = vec![head];
-    let final_tail = collect_cons(tail, &mut elems, categorise_element);
-
-    let elems = concat(Itertools::intersperse(
-        elems.into_iter().map(|e| to_doc(e, env)),
+) -> Document<'a> {
+    let elements = concat(Itertools::intersperse(
+        elements.into_iter().map(|e| expr(e, env)),
         break_(",", ", "),
     ));
-    list(elems, final_tail.map(|e| to_doc(e, env)))
+    list(elements, tail.as_ref().map(|e| expr(e, env)))
 }
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
@@ -1411,8 +1392,6 @@ fn erlang_error<'a>(
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match expression {
-        TypedExpr::EmptyList { .. } => "[]".to_doc(),
-
         TypedExpr::Todo {
             label, location, ..
         } => todo(label, *location, env),
@@ -1431,7 +1410,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Fn { args, body, .. } => fun(args, body, env),
 
-        TypedExpr::ListCons { head, tail, .. } => expr_list_cons(head, tail, env),
+        TypedExpr::List { elements, tail, .. } => expr_list(elements, tail, env),
 
         TypedExpr::Call { fun, args, .. } => call(fun, args, env),
 

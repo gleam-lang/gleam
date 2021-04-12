@@ -335,8 +335,10 @@ where
             Some((start, Token::ListNil, end)) => {
                 let _ = self.next_tok();
 
-                UntypedExpr::ListNil {
+                UntypedExpr::List {
                     location: SrcSpan { start, end },
+                    elements: vec![],
+                    tail: None,
                 }
             }
             // var lower_name and UpName
@@ -376,26 +378,20 @@ where
             // list
             Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
-                let elems =
+                let elements =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
-                let mut tail0 = None;
+                let mut tail = None;
                 if self.maybe_one(&Token::DotDot).is_some() {
-                    tail0 = self.parse_expression()?;
+                    tail = self.parse_expression()?.map(Box::new);
                     let _ = self.maybe_one(&Token::Comma);
                 }
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
-                let tail = tail0.unwrap_or(UntypedExpr::ListNil {
-                    location: SrcSpan { start, end },
-                });
 
-                elems
-                    .into_iter()
-                    .rev()
-                    .fold(tail, |t, h| UntypedExpr::ListCons {
-                        location: t.location(),
-                        head: Box::new(h),
-                        tail: Box::new(t),
-                    })
+                UntypedExpr::List {
+                    location: SrcSpan { start, end },
+                    elements,
+                    tail,
+                }
             }
             // Bitstring
             Some((start, Token::LtLt, _)) => {
