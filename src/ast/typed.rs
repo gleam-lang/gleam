@@ -42,17 +42,11 @@ pub enum TypedExpr {
         return_annotation: Option<TypeAst>,
     },
 
-    EmptyList {
+    List {
         location: SrcSpan,
         typ: Arc<Type>,
-    },
-
-    // TODO: use a vector rather than a linked list here
-    ListCons {
-        location: SrcSpan,
-        typ: Arc<Type>,
-        head: Box<Self>,
-        tail: Box<Self>,
+        elements: Vec<Self>,
+        tail: Option<Box<Self>>,
     },
 
     Call {
@@ -165,12 +159,11 @@ impl TypedExpr {
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::Pipe { location, .. }
+            | Self::List { location, .. }
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
-            | Self::EmptyList { location, .. }
-            | Self::ListCons { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -193,12 +186,11 @@ impl TypedExpr {
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::Pipe { location, .. }
+            | Self::List { location, .. }
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
-            | Self::EmptyList { location, .. }
-            | Self::ListCons { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
@@ -219,14 +211,13 @@ impl HasLocation for TypedExpr {
 impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
+            Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Fn { typ, .. } => typ.clone(),
-            Self::EmptyList { typ, .. } => typ.clone(),
-            Self::Assignment { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
             Self::Seq { then, .. } => then.type_(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
-            Self::ListCons { typ, .. } => typ.clone(),
+            Self::List { typ, .. } => typ.clone(),
             Self::Call { typ, .. } => typ.clone(),
             Self::Pipe { typ, .. } => typ.clone(),
             Self::Float { typ, .. } => typ.clone(),
@@ -234,7 +225,7 @@ impl TypedExpr {
             Self::Tuple { typ, .. } => typ.clone(),
             Self::String { typ, .. } => typ.clone(),
             Self::TupleIndex { typ, .. } => typ.clone(),
-            Self::Var { constructor, .. } => constructor.type_.clone(),
+            Self::Assignment { typ, .. } => typ.clone(),
             Self::ModuleSelect { typ, .. } => typ.clone(),
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),

@@ -665,8 +665,8 @@ impl<A, B> Pattern<A, B> {
             Pattern::Int { location, .. }
             | Pattern::Var { location, .. }
             | Pattern::VarUsage { location, .. }
-            | Pattern::EmptyList { location, .. }
             | Pattern::ListCons { location, .. }
+            | Pattern::EmptyList { location, .. }
             | Pattern::Float { location, .. }
             | Pattern::Discard { location, .. }
             | Pattern::String { location, .. }
