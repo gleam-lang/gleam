@@ -197,19 +197,24 @@ r#"function go() {
 }
 
 #[test]
-#[ignore]
-fn let_destructuring() {
+fn list_destructuring() {
     assert_js!(
         r#"
 fn go(a) {
-    let [x, y] = a
-    let [first, ..rest] = a
-    Nil
+    let [] = a
+    // let [x, y] = a
+    // let [first, ..rest] = a
+    a
 }"#,
-r#"function go() {
+r#"function go(a) {
+    var gleam$tmp = a;
+    if (!(gleam$tmp.length === 0)) throw new Error("Bad match")
+    let [] = gleam$tmp;
+    return a;
 }"#
     );
 }
+
 // TODO look at purescript an buckle script but solve later.
 // https://github.com/purescript/documentation/blob/master/language/Pattern-Matching.md
 

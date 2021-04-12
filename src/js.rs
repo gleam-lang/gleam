@@ -1,3 +1,4 @@
+mod pattern;
 #[cfg(test)]
 mod tests;
 
@@ -460,20 +461,52 @@ fn let_<'a>(
     env: &Env<'a>
 ) -> Document<'a> {
     let body = maybe_block_expr(value, &Env{return_last: &false, semicolon: &false});
-    pattern(pat)
-        .append(" = ")
-        .append(body)
-        .append(match env.semicolon {
-            true => ";",
-            false => ""
-        })
-        .append(line())
-        .append(expr(then, env))
+
+    let mut checks = vec![];
+    let matcher = pattern(pat, &mut checks);
+    // start with no checks
+    match checks.is_empty() {
+        true => matcher
+            .append(" = ")
+            .append(body)
+            .append(match env.semicolon {
+                true => ";",
+                false => ""
+            }),
+        false => {
+            "var gleam$tmp = "
+                .to_doc()
+                .append(body)
+                .append(";")
+                .append(line())
+            .append(concat(Itertools::intersperse(checks.iter().map(|c|
+                // c.surround("(", ")")
+                Document::String(c.to_string())
+            ), " && ".to_doc())).surround("if (!(", ")) throw new Error(\"Bad match\")"))
+            .append(line())
+            .append(matcher)
+            .append(" = gleam$tmp;")
+
+        }
+    }
+    .append(line())
+    .append(expr(then, env))
+
+    // pattern::pattern(pat)
+    //     .append(" = ")
 }
 
-fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
+
+pub fn pattern<'a>(
+    p: &'a TypedPattern, 
+    checks: &mut Vec<&'a str>
+) -> Document<'a> {
     Document::String("let ".to_string()).append(match p {
-        // Pattern::Nil { .. } => "[]".to_doc(),
+        // TODO could this be called Nil list or simthing similar
+        Pattern::Nil { .. } => {
+            checks.push("gleam$tmp.length === 0");
+            "[]".to_doc()
+        },
         Pattern::Var { name, .. } => name.to_doc(),
         // In erl/pattern.rs
         // Uses collect_cons, but for a pattern type
@@ -483,6 +516,7 @@ fn pattern<'a>(p: &'a TypedPattern) -> Document<'a> {
         }
     })
 }
+
 
 fn maybe_block_expr<'a>(
     expression: &'a TypedExpr, 
