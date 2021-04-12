@@ -11,6 +11,7 @@ use crate::{
     erl,
     fs::test::FilesChannel,
     type_,
+    Target,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -18,6 +19,7 @@ macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let mut modules = HashMap::new();
         let options = Options {
+            target: Target::Erlang,
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
             out_path: PathBuf::from("_build/default/lib/the_package/src"),
@@ -42,6 +44,7 @@ macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
         let mut modules = HashMap::new();
         let options = Options {
+            target: Target::Erlang,
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
             out_path: PathBuf::from("_build/default/lib/the_package/src"),
@@ -1733,6 +1736,7 @@ fn config_compilation_test() {
             let root = ProjectRoot::new(PathBuf::new());
             let (file_writer, file_receiver) = FilesChannel::new();
             let options = package_compiler::Options {
+                target: Target::Erlang,
                 name: config.name.clone(),
                 src_path: PathBuf::from("src"),
                 out_path: PathBuf::from("out"),

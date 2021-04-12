@@ -195,20 +195,27 @@ pub struct NewOptions {
     pub template: new::Template,
 }
 
-// arg_enum! {
-//     #[derive(Debug)]
-//     pub enum Target {
-//         Erlang,
-//         JavaScript
-//     }
-// }
+use serde::{Deserialize, Serialize};
+use strum_macros::{Display, EnumString, EnumVariantNames};
+
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
+#[strum(serialize_all = "lowercase")]
+pub enum Target {
+    Erlang,
+    JavaScript
+}
 // https://stackoverflow.com/questions/54687403/how-can-i-use-enums-in-structopt
 
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 pub struct CompilePackage {
-    #[structopt(help = "The compilation target for the generated project", long = "target", default_value = "erlang")]
-    target: String,
+    #[structopt(
+        help = "The compilation target for the generated project", 
+        long = "target", 
+        possible_values = &Target::VARIANTS,
+        case_insensitive = true,
+        default_value = "erlang")]
+    target: Target,
 
     #[structopt(help = "The name of the package being compiled", long = "name")]
     package_name: String,
