@@ -515,6 +515,23 @@ export function is_before(year) {
     return year < start_year;
 }"#
     );
+
+    assert_js!(
+        r#"
+const a = "Hello"
+const b = 1.2
+// const c = []
+const d = [1, 2]
+const e = tuple("bob", "dug")
+        "#,
+        r#"const a = "Hello";
+
+const b = 1.2;
+
+const d = [1, 2];
+
+const e = ["bob", "dug"];"#
+    );
 }
 
 // TODO have Constant statements not be separated

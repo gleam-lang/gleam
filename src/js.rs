@@ -68,11 +68,7 @@ fn statement<'a>(
         },
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { public, name, value, .. } => {
-            // I don't know what I'm doing here. 
-            let value = match &**value {
-                Constant::Int {value, ..} => int(value),
-                _ => unimplemented!("consts")
-            };
+            let value = const_expression(value);
             
             let rendered = if *public {
                 "export "
@@ -137,6 +133,27 @@ fn statement<'a>(
         },
         _ => unimplemented!("statements needed")
 
+    }
+}
+
+fn const_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Document<'a>  {
+    match expression {
+        Constant::Int {value, ..} => int(&value.as_str()),
+        Constant::Float {value, ..} => float(&value.as_str()),
+        Constant::String{value, ..} => string(&value.as_str()),
+        Constant::Tuple{elements, ..} =>tuple(elements.iter().map(|e|
+            // maybe_block_expr(e, &Env{return_last: &false, semicolon: &false})
+            // There is no blocks in constants
+            const_expression(&e)
+        )),
+        Constant::List { elements, .. } => {
+            let elements = Itertools::intersperse(
+                elements.iter().map(|e| const_expression(&e)),
+                break_(",", ", "),
+            );
+            concat(elements).nest_current().surround("[", "]").group()
+        }
+        _ => unimplemented!("consts")
     }
 }
 
