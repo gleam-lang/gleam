@@ -352,7 +352,7 @@ second(List) ->
             1
     end.
 
--spec tail(list(I)) -> list(I).
+-spec tail(list(H)) -> list(H).
 tail(List) ->
     case List of
         [X | Xs] ->

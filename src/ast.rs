@@ -626,15 +626,10 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
     },
 
-    EmptyList {
+    List {
         location: SrcSpan,
-    },
-
-    // TODO: use a vector rather than a linked list here
-    ListCons {
-        location: SrcSpan,
-        head: Box<Self>,
-        tail: Box<Self>,
+        elements: Vec<Self>,
+        tail: Option<Box<Self>>,
     },
 
     /// The constructor for a custom type. Starts with an uppercase letter.
@@ -665,30 +660,13 @@ impl<A, B> Pattern<A, B> {
             Pattern::Int { location, .. }
             | Pattern::Var { location, .. }
             | Pattern::VarUsage { location, .. }
-            | Pattern::ListCons { location, .. }
-            | Pattern::EmptyList { location, .. }
+            | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
             | Pattern::Discard { location, .. }
             | Pattern::String { location, .. }
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
             | Pattern::BitString { location, .. } => *location,
-        }
-    }
-
-    pub fn put_list_cons_location_start(self, start: usize) -> Self {
-        match self {
-            Pattern::ListCons {
-                location: SrcSpan { end, .. },
-                head,
-                tail,
-            } => Pattern::ListCons {
-                location: SrcSpan { start, end },
-                head,
-                tail,
-            },
-
-            _ => self,
         }
     }
 }

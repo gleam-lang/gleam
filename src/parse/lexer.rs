@@ -311,15 +311,7 @@ where
                 self.eat_single_char(Token::RightParen);
             }
             '[' => {
-                let tok_start = self.get_pos();
-                if let Some(']') = self.chr1 {
-                    let _ = self.next_char();
-                    let _ = self.next_char();
-                    let tok_end = self.get_pos();
-                    self.emit((tok_start, Token::ListNil, tok_end));
-                } else {
-                    self.eat_single_char(Token::LeftSquare);
-                }
+                self.eat_single_char(Token::LeftSquare);
             }
             ']' => {
                 self.eat_single_char(Token::RightSquare);

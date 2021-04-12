@@ -11,8 +11,6 @@ pub(super) fn to_doc<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     match p {
-        Pattern::EmptyList { .. } => "[]".to_doc(),
-
         Pattern::Assign {
             name, pattern: p, ..
         } => {
@@ -22,7 +20,7 @@ pub(super) fn to_doc<'a>(
                 .append(env.next_local_var_name(name))
         }
 
-        Pattern::ListCons { head, tail, .. } => pattern_list_cons(head, tail, vars, env),
+        Pattern::List { elements, tail, .. } => pattern_list(elements, tail.as_ref(), vars, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
@@ -100,28 +98,19 @@ fn pattern_segment<'a>(
     bit_string_segment(document, options, size, unit, true, env)
 }
 
-fn pattern_list_cons<'a>(
-    head: &'a TypedPattern,
-    tail: &'a TypedPattern,
+fn pattern_list<'a>(
+    elements: &'a [TypedPattern],
+    tail: Option<&'a Box<TypedPattern>>,
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut elems = vec![head];
-    let final_tail = collect_cons(tail, &mut elems, categorise_element);
-    let elems = concat(Itertools::intersperse(
-        elems.into_iter().map(|e| to_doc(e, vars, env)),
+    let elements = concat(Itertools::intersperse(
+        elements.into_iter().map(|e| to_doc(e, vars, env)),
         break_(",", ", "),
     ));
-    list(elems, final_tail.map(|e| to_doc(e, vars, env)))
-}
-
-fn categorise_element(expr: &TypedPattern) -> ListType<&TypedPattern, &TypedPattern> {
-    match expr {
-        Pattern::ListCons { head, tail, .. } => ListType::Cons {
-            head: head.as_ref(),
-            tail: tail.as_ref(),
-        },
-        Pattern::EmptyList { .. } => ListType::Nil,
-        other => ListType::NotList(other),
-    }
+    let tail = match tail {
+        Some(tail) => Some(pattern(tail, env)),
+        None => None,
+    };
+    list(elements, tail)
 }

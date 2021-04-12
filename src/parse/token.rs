@@ -50,7 +50,6 @@ pub enum Token {
     Dot,        // '.'
     RArrow,     // '->'
     DotDot,     // '..'
-    ListNil,    // '[]'
     EndOfFile,
     // Extra
     CommentNormal,
@@ -145,7 +144,6 @@ impl fmt::Display for Token {
             Token::Dot => ".",
             Token::RArrow => "->",
             Token::DotDot => "..",
-            Token::ListNil => "[]",
             Token::EndOfFile => "EOF",
             Token::CommentNormal => "//",
             Token::CommentDoc => "///",

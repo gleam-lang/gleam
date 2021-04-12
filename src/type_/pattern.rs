@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 ///! Type inference and checking of patterns used in case expressions
 ///! and variables bindings.
 ///!
@@ -269,26 +271,26 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Ok(Pattern::String { location, value })
             }
 
-            Pattern::EmptyList { location } => {
-                let typ2 = list(self.environment.new_unbound_var(self.level));
-                self.environment
-                    .unify(typ, typ2)
-                    .map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::EmptyList { location })
-            }
-
-            Pattern::ListCons {
+            Pattern::List {
                 location,
-                head,
+                elements,
                 tail,
             } => match typ.get_app_args(true, &[], "List", 1, self.environment) {
                 Some(args) => {
-                    let head = Box::new(self.unify(*head, args[0].clone())?);
-                    let tail = Box::new(self.unify(*tail, typ)?);
+                    let typ = args[0].clone();
+                    let elements = elements
+                        .into_iter()
+                        .map(|element| self.unify(element, typ.clone()))
+                        .try_collect()?;
 
-                    Ok(Pattern::ListCons {
+                    let tail = match tail {
+                        Some(tail) => Some(Box::new(self.unify(*tail, list(typ))?)),
+                        None => None,
+                    };
+
+                    Ok(Pattern::List {
                         location,
-                        head,
+                        elements,
                         tail,
                     })
                 }

@@ -902,28 +902,6 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
     elems.to_doc().nest_current().surround("[", "]").group()
 }
 
-fn collect_cons<F, E, T>(e: T, elems: &mut Vec<E>, f: F) -> Option<T>
-where
-    F: Fn(T) -> ListType<E, T>,
-{
-    match f(e) {
-        ListType::Nil => None,
-
-        ListType::Cons { head, tail } => {
-            elems.push(head);
-            collect_cons(tail, elems, f)
-        }
-
-        ListType::NotList(other) => Some(other),
-    }
-}
-
-enum ListType<E, T> {
-    Nil,
-    Cons { head: E, tail: T },
-    NotList(T),
-}
-
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
     match &constructor.variant {
         ValueConstructorVariant::Record {
