@@ -21,7 +21,8 @@ const INDENT: isize = 4;
 
 #[derive(Debug, Clone)]
 struct Env<'a> {
-    return_last: &'a bool
+    return_last: &'a bool,
+    semicolon: &'a bool,
     // module: &'a [String],
     // function: &'a str,
     // line_numbers: &'a LineNumbers,
@@ -61,7 +62,8 @@ fn statement<'a>(
                 .to_doc()
                 .append(Document::String(as_name))
                 .append(" from ".to_doc())
-                .append(Document::String(module.join("/")));
+                .append(Document::String(module.join("/")))
+                .append(";");
             Some(line)
         },
         Statement::ExternalType { .. } => None,
@@ -80,7 +82,8 @@ fn statement<'a>(
             .append("const ")
             .append(Document::String(name.to_string()))
             .append(" = ")
-            .append(value);
+            .append(value)
+            .append(";");
             Some(rendered)
         },
         
@@ -146,7 +149,7 @@ fn mod_fun<'a>(
     return_type: &'a Arc<Type>,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
-    let env = Env{return_last: &true};
+    let env = Env{return_last: &true, semicolon: &true};
     if &true == public {
         "export "
     } else {
@@ -198,7 +201,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
 
         // What's the difference between iter and into_iter
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e|
-            maybe_block_expr(e, &Env{return_last: &false})
+            maybe_block_expr(e, &Env{return_last: &false, semicolon: &false})
         )),
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
@@ -220,7 +223,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         } => let_(value, pattern, then, env),
         TypedExpr::BinOp {
             name, left, right, ..
-        } => bin_op(name, left, right, &Env{return_last: &false}),
+        } => bin_op(name, left, right, &Env{return_last: &false, semicolon: &false}),
         TypedExpr::Todo {
             label, location, ..
         } => {
@@ -235,12 +238,16 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
     };
     match expression {
         // I would have thought let would be inside a sequence?
-        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => "",
+        TypedExpr::Seq { .. } | TypedExpr::Let { .. } => "".to_doc().append(rendered),
         _ => match env.return_last {
             true => "return ",
             _ => ""
-        }
-    }.to_doc().append(rendered)
+        }.to_doc().append(rendered)
+        .append(match env.semicolon {
+            true => ";",
+            false => ""
+        })
+    }
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
@@ -256,7 +263,7 @@ fn string(value: &str) -> Document<'_> {
 }
 
 fn expr_list_cons<'a>(head: &'a TypedExpr, tail: &'a TypedExpr) -> Document<'a> {
-    let env = Env{ return_last: &false};
+    let env = Env{ return_last: &false, semicolon:  &false};
     let mut elements = vec![head];
 
     let final_tail = collect_cons(tail, &mut elements);
@@ -292,14 +299,14 @@ fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64) -> Document<'a> {
-    let env = Env{ return_last: &false};
+    let env = Env{ return_last: &false, semicolon: &false};
     expr(tuple, &env)
         .append(index.to_doc().surround("[", "]"))
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> {
     let args = args.into_iter().map(|arg| 
-        maybe_block_expr(&arg.value, &Env{ return_last: &false})
+        maybe_block_expr(&arg.value, &Env{ return_last: &false, semicolon: &false})
     );
     let args = concat(Itertools::intersperse(args, break_(",", ", ")));
     match fun {
@@ -353,7 +360,7 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
 }
 
 fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr) -> Document<'a> {
-    let env = Env{ return_last: &true};
+    let env = Env{ return_last: &true, semicolon: &true};
     let doc = "function"
         .to_doc()
         .append(fun_args(args))
@@ -371,7 +378,7 @@ fn seq<'a>(
     env: &Env<'a>
 ) -> Document<'a> {
     force_break()
-        .append(expr(first, &Env{ return_last: &false}))
+        .append(expr(first, &Env{ return_last: &false, ..*env}))
         .append(line())
         .append(expr(then, env))
 }
@@ -441,10 +448,14 @@ fn let_<'a>(
     then: &'a TypedExpr,
     env: &Env<'a>
 ) -> Document<'a> {
-    let body = maybe_block_expr(value, &Env{return_last: &false});
+    let body = maybe_block_expr(value, &Env{return_last: &false, semicolon: &false});
     pattern(pat)
         .append(" = ")
         .append(body)
+        .append(match env.semicolon {
+            true => ";",
+            false => ""
+        })
         .append(line())
         .append(expr(then, env))
 }
@@ -484,7 +495,7 @@ fn sequence_expr<'a>(
     env: &Env<'a>
 ) -> Document<'a> {
     // TODO merge value into env
-    expr(first, &Env{return_last: &false})
+    expr(first, &Env{return_last: &false, ..*env})
         .append(",")
         .append(line())
         .append(match then {

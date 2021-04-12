@@ -32,7 +32,7 @@ fn go() {
 }
 "#,
 r#"function go() {
-    return "Hello, Gleam!"
+    return "Hello, Gleam!";
 }"#
     );
 }
@@ -49,8 +49,8 @@ fn go() {
 }
 "#,
 r#"function go() {
-    true
-    return false
+    true;
+    return false;
 }"#
     );
 }
@@ -65,8 +65,8 @@ fn go() {
 }
 "#,
 r#"function go() {
-    true && true
-    return false || false
+    true && true;
+    return false || false;
 }"#
     );
 
@@ -90,14 +90,14 @@ fn go() {
 }
 "#,
 r#"function go() {
-    1
-    2
-    -3
-    4001
-    0b00001111
-    0o17
-    0xF
-    return 1_000
+    1;
+    2;
+    -3;
+    4001;
+    0b00001111;
+    0o17;
+    0xF;
+    return 1_000;
 }"#
     );
     // NOTE js also supports _ in numbers
@@ -112,10 +112,10 @@ fn go() {
 }
 "#,
 r#"function go() {
-    1.5
-    2.0
-    -0.1
-    return 1.
+    1.5;
+    2.0;
+    -0.1;
+    return 1.;
 }"#
     );
 }
@@ -138,15 +138,15 @@ fn go() {
 }
 "#,
 r#"function go() {
-    1 + 1
-    5 - 1
-    Math.floor(5 / 2)
-    3 * 3
-    5 % 2
-    2 > 1
-    2 < 1
-    2 >= 1
-    return 2 <= 1
+    1 + 1;
+    5 - 1;
+    Math.floor(5 / 2);
+    3 * 3;
+    5 % 2;
+    2 > 1;
+    2 < 1;
+    2 >= 1;
+    return 2 <= 1;
 }"#
     );
 
@@ -165,14 +165,14 @@ fn go() {
 }
 "#,
 r#"function go() {
-    1.0 + 1.4
-    5.0 - 1.5
-    5.0 / 2.0
-    3.0 * 3.1
-    2.0 > 1.0
-    2.0 < 1.0
-    2.0 >= 1.0
-    return 2.0 <= 1.0
+    1.0 + 1.4;
+    5.0 - 1.5;
+    5.0 / 2.0;
+    3.0 * 3.1;
+    2.0 > 1.0;
+    2.0 < 1.0;
+    2.0 >= 1.0;
+    return 2.0 <= 1.0;
 }"#
     );
     
@@ -189,9 +189,9 @@ fn go() {
     x
 }"#,
 r#"function go() {
-    let x = 1
-    let y = x
-    return x
+    let x = 1;
+    let y = x;
+    return x;
 }"#
     );
 }
@@ -230,8 +230,8 @@ r#"function go() {
         "Hello",
         42 + 12,
         false
-    )
-    return value
+    );
+    return value;
 }"#
     );
 }
@@ -257,11 +257,11 @@ fn go(x) {
     // }]
 }"#,
 r#"function go(x) {
-    []
-    [1]
-    [1, 2, 3]
-    [1, 2, 3]
-    return [1, ...x]
+    [];
+    [1];
+    [1, 2, 3];
+    [1, 2, 3];
+    return [1, ...x];
 }"#
     );
 }
@@ -277,9 +277,9 @@ fn go() {
 
 }"#,
 r#"function go() {
-    let my_tuple = ["one", "two"]
-    my_tuple[0]
-    return my_tuple[1]
+    let my_tuple = ["one", "two"];
+    my_tuple[0];
+    return my_tuple[1];
 }"#
     );
 }
@@ -294,7 +294,7 @@ pub fn add(x, y) {
     x + y
 }"#,
 r#"export function add(x, y) {
-    return x + y
+    return x + y;
 }"#
     );
 }
@@ -315,15 +315,15 @@ pub fn add_two(x: Int) -> Int {
     twice(add_one, x)
 }"#,
 r#"export function twice(f, x) {
-    return f(f(x))
+    return f(f(x));
 }
 
 export function add_one(x) {
-    return x + 1
+    return x + 1;
 }
 
 export function add_two(x) {
-    return twice(add_one, x)
+    return twice(add_one, x);
 }"#
     );
 }
@@ -345,11 +345,11 @@ fn add_two() {
     |> add_one()
 }"#,
 r#"function add_one(x) {
-    return x + 1
+    return x + 1;
 }
 
 function add_two() {
-    return add_one(add_one(1))
+    return add_one(add_one(1));
 }"#
     );
 }
@@ -366,9 +366,9 @@ fn go() {
 }"#,
 r#"function go() {
     let add = function(x, y) {
-        return x + y
-    }
-    return add(1, 2)
+        return x + y;
+    };
+    return add(1, 2);
 }"#
     );
 }
@@ -388,14 +388,14 @@ fn go() {
     add_one(2)
 }"#,
 r#"function add(x, y) {
-    return x + y
+    return x + y;
 }
 
 function go() {
     let add_one = function(gleam@capture_variable) {
-        return add(1, gleam@capture_variable)
-    }
-    return add_one(2)
+        return add(1, gleam@capture_variable);
+    };
+    return add_one(2);
 }"#
     );
 }
@@ -413,9 +413,9 @@ import rocket_ship
 import rocket_ship as foo
 // import rocket_ship.{launch}
 "#,
-r#"import * as rocket_ship from rocket_ship
+r#"import * as rocket_ship from rocket_ship;
 
-import * as foo from rocket_ship"#
+import * as foo from rocket_ship;"#
     );
 }
 
@@ -484,10 +484,10 @@ fn go() {
     assert_js!(
         r#"
 fn go() {
-    todo("I should do this")
+    todo("I should do this");
 }
 "#,r#"function go() {
-    throw Object.assign(new Error("I should do this"), {})
+    throw Object.assign(new Error("I should do this"), {});
 }"#
     );
 }
@@ -507,15 +507,17 @@ pub fn is_before(year: Int) -> Bool {
 // pub fn is_during(year: Int) -> Bool {
 //     start_year <= year && year <= end_year
 // }
-"#,r#"const start_year = 2101
+"#,r#"const start_year = 2101;
 
-export const end_year = 2111
+export const end_year = 2111;
 
 export function is_before(year) {
-    return year < start_year
+    return year < start_year;
 }"#
     );
 }
+
+// TODO have Constant statements not be separated
 
 #[test]
 #[ignore]
