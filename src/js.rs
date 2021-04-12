@@ -93,7 +93,6 @@ fn statement<'a>(
             ..
         } => Some(mod_fun(public, name, args, body, module, return_type, line_numbers)),
 
-        // Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
             public,
             fun,
@@ -106,8 +105,6 @@ fn statement<'a>(
             let arg_string = wrap_args(args.iter().enumerate().map(|a| match a {
                 (index, ExternalFnArg{label, ..}) => {
                     let arg_name = label.clone().unwrap_or(format!("arg{}", index));
-                    println!("a: {:?}", a);
-                    // "f".to_doc()
                     Document::String(arg_name)
                 }
             }));
@@ -131,7 +128,6 @@ fn statement<'a>(
             .append("}");
             Some(rendered)
         },
-        _ => unimplemented!("statements needed")
 
     }
 }
@@ -244,8 +240,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         TypedExpr::Todo {
             label, location, ..
         } => {
-            println!("expression: {:?}", expression);
-
             todo(label, *location)
         },
         _ => {
