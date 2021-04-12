@@ -513,6 +513,20 @@ pub fn pattern<'a>(
         },
         Pattern::Cons { head, tail, .. } => pattern_list_cons(head, tail, checks),
 
+        Pattern::Int { value, .. } => {
+            checks.push(format!("gleam$tmp === {}", value));
+            "_".to_doc()
+        },
+        Pattern::Float { value, .. } => {
+            checks.push(format!("gleam$tmp === {}", value));
+            "_".to_doc()
+        },
+        Pattern::String { value, .. } => {
+            // TODO might be best to use the string printing functionality
+            checks.push(format!("gleam$tmp === \"{}\"", value));
+            "_".to_doc()
+
+        },
 
         Pattern::Var { name, .. } => name.to_doc(),
         // In erl/pattern.rs

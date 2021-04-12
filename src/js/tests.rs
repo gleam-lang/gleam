@@ -234,6 +234,35 @@ r#"function go(a) {
 }"#
     );
 }
+
+#[test]
+fn literal_matching() {
+    assert_js!(
+        r#"
+fn go(a, b, c) {
+    let 1 = a
+    let 2.0 = b
+    let "hello" = c
+    a
+}"#,
+r#"function go(a, b, c) {
+    var gleam$tmp = a;
+    if (!(gleam$tmp === 1)) throw new Error("Bad match")
+    let _ = gleam$tmp;
+    
+    var gleam$tmp = b;
+    if (!(gleam$tmp === 2.0)) throw new Error("Bad match")
+    let _ = gleam$tmp;
+    
+    var gleam$tmp = c;
+    if (!(gleam$tmp === "hello")) throw new Error("Bad match")
+    let _ = gleam$tmp;
+    
+    return a;
+}"#
+    );
+}
+
 // TODO write up about expression to tmp variable
 
 // TODO look at purescript an buckle script but solve later.
