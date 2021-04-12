@@ -332,15 +332,6 @@ where
                     value,
                 }
             }
-            Some((start, Token::ListNil, end)) => {
-                let _ = self.next_tok();
-
-                UntypedExpr::List {
-                    location: SrcSpan { start, end },
-                    elements: vec![],
-                    tail: None,
-                }
-            }
             // var lower_name and UpName
             Some((start, Token::Name { name }, end))
             | Some((start, Token::UpName { name }, end)) => {
@@ -721,12 +712,6 @@ where
                     value,
                 }
             }
-            Some((start, Token::ListNil, end)) => {
-                let _ = self.next_tok();
-                Pattern::EmptyList {
-                    location: SrcSpan { start, end },
-                }
-            }
             Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
@@ -766,7 +751,8 @@ where
             // List
             Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
-                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let elements =
+                    Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
                 let tail = if let Some((_, Token::DotDot, _)) = self.tok0 {
                     let _ = self.next_tok();
                     let pat = self.parse_pattern()?;
@@ -775,40 +761,31 @@ where
                 } else {
                     None
                 };
-                let (_, rsqb_e) = self.expect_one(&Token::RightSquare)?;
-                let tail_pattern = match tail {
+                let (end, rsqb_e) = self.expect_one(&Token::RightSquare)?;
+                let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
                     Some(Some(pat @ Pattern::Var { .. }))
-                    | Some(Some(pat @ Pattern::Discard { .. })) => pat,
+                    | Some(Some(pat @ Pattern::Discard { .. })) => Some(pat),
                     // There is a tail and but it has no content, implicit discard
                     Some(Some(pat)) => {
                         return parse_error(ParseErrorType::InvalidTailPattern, pat.location())
                     }
-                    Some(None) => Pattern::Discard {
+                    Some(None) => Some(Pattern::Discard {
                         location: SrcSpan {
                             start: rsqb_e - 1,
                             end: rsqb_e,
                         },
                         name: "_".to_string(),
-                    },
+                    }),
                     // No tail specified
-                    None => Pattern::EmptyList {
-                        location: SrcSpan {
-                            start: rsqb_e - 1,
-                            end: rsqb_e,
-                        },
-                    },
+                    None => None,
                 };
 
-                elems
-                    .into_iter()
-                    .rev()
-                    .fold(tail_pattern, |a, e| Pattern::ListCons {
-                        location: e.location(),
-                        head: Box::new(e),
-                        tail: Box::new(a),
-                    })
-                    .put_list_cons_location_start(start)
+                Pattern::List {
+                    location: SrcSpan { start, end },
+                    elements,
+                    tail: tail.map(Box::new),
+                }
             }
 
             // No pattern
@@ -1914,15 +1891,6 @@ where
                 } else {
                     parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
                 }
-            }
-
-            Some((start, Token::ListNil, end)) => {
-                let _ = self.next_tok();
-                Ok(Some(Constant::List {
-                    elements: vec![],
-                    location: SrcSpan { start, end },
-                    typ: (),
-                }))
             }
 
             // Helpful error for fn

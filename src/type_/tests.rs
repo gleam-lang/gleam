@@ -1512,7 +1512,7 @@ fn the_rest() {
         "case [1] { [x] | [] as x -> 1 }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 17, end: 19 },
+            location: SrcSpan { start: 17, end: 18 },
             expected: int(),
             given: list(int()),
         },
