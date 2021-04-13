@@ -230,6 +230,28 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
 
         // TODO is this always an anonymous fn
         TypedExpr::Fn { args, body, .. } => fun(args, body),
+
+        TypedExpr::RecordUpdate { spread, args, .. } => {
+            println!("args: {:?}", args);
+            let args = concat(Itertools::intersperse(args.iter().map(|arg|
+                Document::String(arg.label.to_string())
+                .append(": ")
+                .append(expr(&arg.value, &Env{return_last: &false, semicolon: &false}))
+            ), ", ".to_doc())).surround("{", "}");
+            
+            "Object.assign".to_doc()
+            .append(concat(
+                Itertools::intersperse(
+                    vec![
+                        "{}".to_doc(),
+                        expr(spread, &Env{return_last: &false, semicolon: &false}),
+                        args
+                    ].into_iter(),
+                    ", ".to_doc()
+                ),
+            ).surround("(", ")"))
+        },
+
         
         TypedExpr::Seq { first, then, .. } => seq(first, then, env),
         TypedExpr::Var {
@@ -452,7 +474,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
                 match record_name.as_ref() {
                     "True" => "true".to_doc(),
                     "False" => "false".to_doc(),
-                    _ => unimplemented!("single Record variant")
+                    name =>"{type: \"".to_doc()
+                        .append(Document::String(name.to_string()))
+                        .append("\"}")
                 }
             },
         },

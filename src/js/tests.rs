@@ -553,15 +553,46 @@ fn go() {
     Cat(2, name: "Nubi")
     Cat(cuteness: 3, name: "Nubi")
 }
+
+fn update(cat) {
+    Cat(..cat, name: "Sid")
+}
 "#,
 r#"function go() {
     {type: "Cat", name: "Nubi", cuteness: 1};
     {type: "Cat", name: "Nubi", cuteness: 2};
     return {type: "Cat", name: "Nubi", cuteness: 3};
+}
+
+function update(cat) {
+    return Object.assign({}, cat, {name: "Sid"});
 }"#
     );
 }
 
+#[test]
+fn custom_type_with_unnamed_fields() {
+    assert_js!(
+        r#"
+type Address{
+    Local()
+    Ip(String)
+}
+
+// Does JS do clever ness with named args?
+fn go() {
+    Ip("1.2.3.4")
+    Local
+}
+"#,
+r#"function go() {
+    {type: "Ip", 0: "1.2.3.4"};
+    return {type: "Local"};
+}"#
+    );
+}
+
+// TODO need cases on true/false/null
 // I don't think result needs a special section as it's generated as any other record.
 
 #[test]
