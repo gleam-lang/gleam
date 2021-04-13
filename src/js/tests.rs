@@ -360,7 +360,49 @@ r#"function go() {
     );
 }
 
-// TODO case expressions, need an answer for how to do blocks.
+#[test]
+#[ignore]
+fn case_expressions() {
+    assert_js!(
+        r#"
+fn go(a) {
+case a, 1 + 2 {
+    0, 1 -> "Zero"
+    x, y if y > 4 -> "Four"
+    _, _ -> "Other"
+}
+}"#,
+r#"function go(a, b) {
+    // Still needs a gleam name because maybe relying on outside value
+return (function(gleam$sources) {
+    if (gleam$sources[0] === 0 && gleam$sources[1] == 1) {
+        var [_, _] = gleam$sources;
+        return "Zero";
+    };
+    if (gleam$sources[1] >= 4) {
+        var [x, y] = gleam$sources;
+        return "Four";
+    };
+
+    if (true) {
+        var [_, _] = gleam$sources;
+        return "Other";
+    }
+}([a, 1 + 2]))
+    
+    // This approach require a comma section or it needs to reach up to work out what needs to happen with the last line
+    var gleam$sources = [a, b], gleam$return
+
+    if (gleam$sources[0] === 0) {
+        var [_] = gleam$sources
+        gleam$return = "Zero"
+    } 
+
+
+    return 
+}"#
+    );
+}
 
 #[test]
 fn exported_functions(){

@@ -220,6 +220,12 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         )),
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index),
 
+        TypedExpr::Case {
+            subjects, clauses, ..
+        } => {
+          "TODO".to_doc()  
+        },
+        
         TypedExpr::Call { fun, args, .. } => call(fun, args),
 
         // TODO is this always an anonymous fn
@@ -362,10 +368,10 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
                     // fields.into_iter()
                     // TODO Can I guarantee the order here?
                     
-                    let t = fields
-                    .iter();
-                    println!("t: {:?}", t);
-                        t.map(|x| Document::String(x.0.to_string()))
+                    fields
+                        .iter()
+                        .sorted_by_key(|(_, &v)| v)
+                        .map(|x| Document::String(x.0.to_string()))
                         .collect::<Vec<Document>>()
                 },
                 None => (0..args.len())
