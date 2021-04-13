@@ -269,6 +269,7 @@ fn tuple_destructuring() {
 fn go(a, b) {
     let tuple(_, _ignore, x) = a
     let tuple(1, 2) = b
+    // let tuple(tuple(1, 2) as x, 3) = c
     a
 }"#,
 r#"function go(a, b) {
@@ -496,21 +497,25 @@ import * as foo from rocket_ship;"#
 
 
 #[test]
-#[ignore]
 // How to we track to object keys, would we rather generate a function and call in order.
-fn custom_types() {
+fn custom_type_with_named_fields() {
     assert_js!(
         r#"
 type Cat{
     Cat(name: String, cuteness: Int)
 }
 
+// Does JS do clever ness with named args?
 fn go() {
-    Cat(name: "Nubi", cuteness: 2001)
+    Cat("Nubi", 1)
+    Cat(2, name: "Nubi")
+    Cat(cuteness: 3, name: "Nubi")
 }
 "#,
 r#"function go() {
-    {gleam_record: "Cat", }
+    {type: "Cat", name: "Nubi", cuteness: 1};
+    {type: "Cat", name: "Nubi", cuteness: 2};
+    return {type: "Cat", name: "Nubi", cuteness: 3};;
 }"#
     );
 }

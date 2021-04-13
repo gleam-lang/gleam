@@ -12,6 +12,7 @@ use crate::{
     type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
         ValueConstructorVariant,
+        FieldMap
     },
     Result,
 };
@@ -320,7 +321,6 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
     let args = args.into_iter().map(|arg| 
         maybe_block_expr(&arg.value, &Env{ return_last: &false, semicolon: &false})
     );
-    let args = concat(Itertools::intersperse(args, break_(",", ", ")));
     match fun {
         TypedExpr::Var {
             constructor:
@@ -332,7 +332,7 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
         } => {
             // TODO self module or not
             Document::String(name.to_string())
-            .append(args.surround("(", ")"))
+            .append(concat(Itertools::intersperse(args, break_(",", ", "))).surround("(", ")"))
 
         }
         TypedExpr::Var {
@@ -346,20 +346,46 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
         } => {
             // TODO self module or not
             Document::String(name.to_string())
-            .append(args.surround("(", ")"))
+            .append(concat(Itertools::intersperse(args, break_(",", ", "))).surround("(", ")"))
         }
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::Record { name, .. },
+                    variant: ValueConstructorVariant::Record { name, field_map, .. },
                     ..
                 },
             ..
         } => {
+            // println!("args: {:?}", args);
+            let fields = match field_map {
+                Some(FieldMap{fields, ..}) => {
+                    // fields.into_iter()
+                    // TODO Can I guarantee the order here?
+                    
+                    let t = fields
+                    .iter();
+                    println!("t: {:?}", t);
+                        t.map(|x| Document::String(x.0.to_string()))
+                        .collect::<Vec<Document>>()
+                },
+                None => (0..args.len())
+                    .into_iter()
+                    .map(|i| Document::String(format!("{}", i)))
+                    .collect()
+            };
             println!("args: {:?}", args);
-            "{gleam_record: ".to_doc()
+            "{type: \"".to_doc()
             .append(Document::String(name.clone()))
-            .append(args)
+            .append("\", ")
+            .append(concat(Itertools::intersperse(fields
+                .iter()
+                .zip(args)
+                .map(|(name, value)|
+                    name.clone().append(": ").append(value)
+                ),
+                break_(",", ", ")
+
+            )))
             .append("}".to_doc())
         },
 
@@ -571,6 +597,13 @@ pub fn pattern<'a>(
         }
         // In erl/pattern.rs
         // Uses collect_cons, but for a pattern type
+        // Let pattern here is usage in as e.g. `let tuple(Foo() as foo)`
+        // JS doesn't support this
+        // TODO would it make sense to rename
+        
+        Pattern::VarUsage { .. } | Pattern::BitString { ..} => {
+            unimplemented!("BitString not supported")
+        },
         _ => {
             println!("p: {:?}", p);
             unimplemented!("pattern")
