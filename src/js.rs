@@ -373,6 +373,8 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
                     .map(|i| Document::String(format!("{}", i)))
                     .collect()
             };
+            // At this point the args have been ordered. 
+            // It would be helpful but only for printing if the args where always given there label.
             println!("args: {:?}", args);
             "{type: \"".to_doc()
             .append(Document::String(name.clone()))

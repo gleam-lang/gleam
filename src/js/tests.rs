@@ -515,7 +515,7 @@ fn go() {
 r#"function go() {
     {type: "Cat", name: "Nubi", cuteness: 1};
     {type: "Cat", name: "Nubi", cuteness: 2};
-    return {type: "Cat", name: "Nubi", cuteness: 3};;
+    return {type: "Cat", name: "Nubi", cuteness: 3};
 }"#
     );
 }
