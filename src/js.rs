@@ -272,6 +272,24 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
             kind: BindingKind::Let,
             ..
         } => let_(value, pattern, then, env),
+        TypedExpr::Let {
+            value,
+            pattern,
+            then,
+            // We through a nice error in both cases so looks the same
+            // Once we have exhaustiveness let could be separate never render guards
+            kind: BindingKind::Assert,
+            ..
+        } => let_(value, pattern, then, env),
+
+        TypedExpr::Let {
+            value,
+            pattern,
+            then,
+            kind: BindingKind::Try,
+            ..
+        } => try_(value, pattern, then, env),
+
         TypedExpr::BinOp {
             name, left, right, ..
         } => bin_op(name, left, right, &Env{return_last: &false, semicolon: &false}),
@@ -562,12 +580,65 @@ fn let_<'a>(
     }
     .append(line())
     .append(expr(then, env))
-
-    // pattern::pattern(pat)
-    //     .append(" = ")
 }
 
+fn try_<'a>(
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    then: &'a TypedExpr,
+    env: &Env<'a>
+) -> Document<'a> {
+    println!("result {:?}", value);
+    // "ok".to_doc()
+    let body = maybe_block_expr(value, &Env{return_last: &false, semicolon: &false});
+    let pre = "var gleam$tmp = "
+    .to_doc()
+    .append(body)
+    .append(";")
+    .append(line())
+    .append("if (gleam$tmp.type === \"Error\") return gleam$tmp;")
+    .append(line());
 
+    // Pull parts out of let
+    // .append(let_(&TypedExpr::Var{
+    //     name: "gleam$tmp[0]".to_string(),
+    //     location: SrcSpan{start: 0, end: 0}
+    // }, pat, then, env))
+    let mut path = vec![];
+    let mut checks = vec![];
+    let matcher = pattern(pat, &mut path, &mut checks);
+    // start with no checks
+    pre.append(match checks.is_empty() {
+        true => Document::String("let ".to_string())
+            .append(matcher)
+            .append(" = ")
+            .append("gleam$tmp[0]")
+            .append(match env.semicolon {
+                true => ";",
+                false => ""
+            }),
+        false => {
+            "var gleam$tmp = "
+                .to_doc()
+                .append("gleam$tmp[0]")
+                .append(";")
+                .append(line())
+            .append(concat(Itertools::intersperse(
+                checks.into_iter(), 
+                " && ".to_doc()
+            )).surround("if (!(", ")) throw new Error(\"Bad match\")"))
+            .append(line())
+            .append("let ")
+            .append(matcher)
+            .append(" = gleam$tmp;")
+            
+        }
+    })
+    // Always two lines for anything where one source is expanded unlike try
+    .append(line())
+    .append(line())
+    .append(expr(then, env))
+}
 
 #[derive(Debug, Clone)]
 pub enum PathIndex{

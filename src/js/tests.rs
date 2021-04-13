@@ -630,26 +630,31 @@ r#"function go() {
 // I don't think result needs a special section as it's generated as any other record.
 
 #[test]
-#[ignore]
 fn try_syntax_sugar(){
     assert_js!(
         r#"
-fn parse() {
-    Ok(5)
-}
-        
-fn go() {
-    try x = parse()
-    Ok(Nil)
-}
-"#,r#"function parse() {
-    Ok(5)
-}
+fn go(result) {
+    try x = result
 
-function go() {
+    try tuple(1, y) = result
+    Ok(3)
+}
+"#,r#"function go(result) {
+    var gleam$tmp = result;
+    if (gleam$tmp.type === "Error") return gleam$tmp;
+    let x = gleam$tmp[0];
+    
+    var gleam$tmp = result;
+    if (gleam$tmp.type === "Error") return gleam$tmp;
+    var gleam$tmp = gleam$tmp[0];
+    if (!(gleam$tmp[0] === 1)) throw new Error("Bad match")
+    let [_, y] = gleam$tmp;
+    
+    return {type: "Ok", 0: 3};
 }"#
     );
 }
+// trys under cases
 
 // TODO why is piping handled in the AST before but try falls through??
 
