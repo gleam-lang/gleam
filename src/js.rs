@@ -232,7 +232,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         TypedExpr::Fn { args, body, .. } => fun(args, body),
 
         TypedExpr::RecordAccess { record, label, .. } => {
-            println!("args: {:?}", expression);
             let env = Env{ return_last: &false, semicolon: &false};
             expr(record, &env)
                 .append(
@@ -242,7 +241,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         }
 
         TypedExpr::RecordUpdate { spread, args, .. } => {
-            println!("args: {:?}", args);
             let args = concat(Itertools::intersperse(args.iter().map(|arg|
                 Document::String(arg.label.to_string())
                 .append(": ")
@@ -639,17 +637,33 @@ pub fn pattern<'a>(
         }
         // In erl/pattern.rs
         // Uses collect_cons, but for a pattern type
-        // Let pattern here is usage in as e.g. `let tuple(Foo() as foo)`
-        // JS doesn't support this
-        // TODO would it make sense to rename
         
         Pattern::VarUsage { .. } | Pattern::BitString { ..} => {
             unimplemented!("BitString not supported")
         },
-        _ => {
-            println!("p: {:?}", p);
-            unimplemented!("pattern")
-        }
+        Pattern::Constructor {
+            arguments,
+            constructor: PatternConstructor::Record { name },
+            ..
+        } => {
+            checks.push(
+                "gleam$tmp.type === "
+                .to_doc()
+                .append(Document::String(name.to_string()).surround("\"", "\""))
+            );  
+            // Real problem here because there is no way to know the field order in a fully un labeled destructure.
+            println!("{:?}", p);
+            println!("xxxxxxxxxx{:?}", arguments);
+            "{Foo}".to_doc()
+        },
+        // Let pattern here is usage in as e.g. `let tuple(Foo() as foo)`
+        // JS doesn't support this
+        // TODO would it make sense to rename
+        Pattern::Let { .. } => unimplemented!("as syntax not supported in JS backend")
+        // _ => {
+        //     println!("p: {:?}", p);
+        //     unimplemented!("pattern")
+        // }
     }
 }
 
