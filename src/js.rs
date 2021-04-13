@@ -231,6 +231,16 @@ fn expr<'a>(expression: &'a TypedExpr, env: &Env<'a>) -> Document<'a> {
         // TODO is this always an anonymous fn
         TypedExpr::Fn { args, body, .. } => fun(args, body),
 
+        TypedExpr::RecordAccess { record, label, .. } => {
+            println!("args: {:?}", expression);
+            let env = Env{ return_last: &false, semicolon: &false};
+            expr(record, &env)
+                .append(
+                    ".".to_doc()
+                    .append(Document::String(label.to_string()))
+                )
+        }
+
         TypedExpr::RecordUpdate { spread, args, .. } => {
             println!("args: {:?}", args);
             let args = concat(Itertools::intersperse(args.iter().map(|arg|

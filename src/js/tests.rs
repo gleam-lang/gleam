@@ -557,6 +557,10 @@ fn go() {
 fn update(cat) {
     Cat(..cat, name: "Sid")
 }
+
+fn access(cat: Cat) {
+    cat.cuteness
+}
 "#,
 r#"function go() {
     {type: "Cat", name: "Nubi", cuteness: 1};
@@ -566,6 +570,10 @@ r#"function go() {
 
 function update(cat) {
     return Object.assign({}, cat, {name: "Sid"});
+}
+
+function access(cat) {
+    return cat.cuteness;
 }"#
     );
 }
@@ -574,20 +582,22 @@ function update(cat) {
 fn custom_type_with_unnamed_fields() {
     assert_js!(
         r#"
-type Address{
-    Local()
+type Ip{
     Ip(String)
 }
 
 // Does JS do clever ness with named args?
 fn go() {
     Ip("1.2.3.4")
-    Local
 }
+
+// I don't think this accessor syntax is valid
+// fn access(ip: Ip) {
+//     ip.0
+// }
 "#,
 r#"function go() {
-    {type: "Ip", 0: "1.2.3.4"};
-    return {type: "Local"};
+    return {type: "Ip", 0: "1.2.3.4"};
 }"#
     );
 }
