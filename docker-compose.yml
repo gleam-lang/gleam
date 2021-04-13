@@ -1,0 +1,10 @@
+version: "2"
+
+services:
+  local:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./tmp:/opt/app
+    network_mode: host
