@@ -555,16 +555,22 @@ import rocket_ship
 import rocket_ship as foo
 import rocket_ship.{launch as boom_time, fuel}
 
-// pub fn go() {
-//     rocket_ship.launch()
-// }
+pub fn go() {
+    rocket_ship.fuel(100)
+    boom_time()
+}
 "#,
 r#"import * as rocket_ship from "rocket_ship";
 
 import * as foo from "rocket_ship";
 
 import * as rocket_ship from "rocket_ship";
-const {launch: boom_time, fuel} = rocket_ship;"#
+const {launch: boom_time, fuel} = rocket_ship;
+
+export function go() {
+    rocket_ship.fuel(100);
+    return boom_time();
+}"#
     );
 }
 

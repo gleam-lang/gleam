@@ -403,22 +403,35 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>]) -> Document<'a> 
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                    variant: ValueConstructorVariant::ModuleFn { module, .. },
                     ..
                 },
+            name,
             ..
         } => {
+            println!("Wat {:?}", fun);
             // TODO self module or not
             Document::String(name.to_string())
             .append(concat(Itertools::intersperse(args, break_(",", ", "))).surround("(", ")"))
 
         }
+        TypedExpr::ModuleSelect {
+            module_name,
+            label,
+            constructor: ModuleValueConstructor::Fn,
+            ..
+        } => {
+            Document::String(module_name.join("_"))
+            .append(".")
+            .append(Document::String(label.to_string()))
+            .append(concat(Itertools::intersperse(args, break_(",", ", "))).surround("(", ")"))
+        },
         TypedExpr::Var {
             constructor:
-                ValueConstructor {
-                    variant: ValueConstructorVariant::LocalVariable,
-                    ..
-                },
+            ValueConstructor {
+                variant: ValueConstructorVariant::LocalVariable,
+                ..
+            },
             name,
             ..
         } => {
