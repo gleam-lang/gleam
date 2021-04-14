@@ -57,16 +57,40 @@ fn statement<'a>(
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
-        Statement::Import { module, as_name, .. } => {
+        Statement::Import { module, as_name, unqualified, .. } => {
+            
             let as_name = as_name.clone().unwrap_or(module.join("_"));
-
-            let line = "import * as "
-                .to_doc()
-                .append(Document::String(as_name))
-                .append(" from ".to_doc())
-                .append(Document::String(module.join("/")).surround("\"", "\""))
-                .append(";");
-            Some(line)
+            
+            let rendered = "import * as "
+            .to_doc()
+            .append(Document::String(as_name.clone()))
+            .append(" from ".to_doc())
+            .append(Document::String(module.join("/")).surround("\"", "\""))
+            .append(";");
+            
+            match unqualified.len() {
+                0 => Some(rendered),
+                _ => {
+                    let matches = unqualified.into_iter().map(|i| {
+                        match &i.as_name {
+                            Some(inner_name) => Document::String(i.name.clone())
+                                .append(": ")
+                                .append(Document::String(inner_name.to_string())),
+                            None => Document::String(i.name.clone())
+                        }
+                    });
+                    Some(rendered
+                        .append(line())
+                        .append("const ")
+                        .append(concat(Itertools::intersperse(matches, break_(",", ", "))).surround("{", "}"))
+                        .append(" = ")
+                        .append(Document::String(as_name))
+                        .append(";".to_doc()))
+                    // println!("ssssss --- {:?}", unqualified);
+                    // unimplemented!("Do the dango");
+                }
+            }
+                
         },
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { public, name, value, .. } => {

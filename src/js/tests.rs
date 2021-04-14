@@ -2,6 +2,26 @@ use super::*;
 use crate::build::{Origin, Module};
 use crate::type_;
 
+fn rocket_ship_module() -> type_::Module {
+    let src = r#"
+pub fn launch() {
+    Ok("launched")
+}
+
+pub fn fuel(amount: Int) {
+    Ok("fueled")
+}
+    "#;
+    let (mut ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    ast.name = vec!["rocket_ship".to_string()];
+    let mut modules = std::collections::HashMap::new();
+
+    let ast =
+            crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
+                .expect("should successfully infer");
+    ast.type_info
+}
+
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {
         // println!("\n\n\n{}\n", $src);
@@ -11,7 +31,10 @@ macro_rules! assert_js {
         // Probably a nicer way to do types values accessors
         modules.insert(
             "rocket_ship".to_string(), 
-            (Origin::Src, type_::Module { name: vec!["rocket_ship".to_string()], types: std::collections::HashMap::new(), values: std::collections::HashMap::new(), accessors: std::collections::HashMap::new()})
+            (Origin::Src, 
+                // type_::Module { name: vec!["rocket_ship".to_string()], types: std::collections::HashMap::new(), values: std::collections::HashMap::new(), accessors: std::collections::HashMap::new()}
+                rocket_ship_module()
+            )
         );
         let ast =
             crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
@@ -523,17 +546,25 @@ function go() {
 
 #[test]
 fn importing_a_module() {
+    rocket_ship_module();
     assert_js!(
         r#"
 // uncommenting the unknown import crashes the tests
 // Note import does nothing in erlang land.
 import rocket_ship
 import rocket_ship as foo
-// import rocket_ship.{launch}
+import rocket_ship.{launch as boom_time, fuel}
+
+// pub fn go() {
+//     rocket_ship.launch()
+// }
 "#,
 r#"import * as rocket_ship from "rocket_ship";
 
-import * as foo from "rocket_ship";"#
+import * as foo from "rocket_ship";
+
+import * as rocket_ship from "rocket_ship";
+const {launch: boom_time, fuel} = rocket_ship;"#
     );
 }
 
