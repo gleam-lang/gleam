@@ -560,11 +560,11 @@ pub fn go() {
     boom_time()
 }
 "#,
-r#"import * as rocket_ship from "rocket_ship";
+r#"import * as rocket_ship from "./rocket_ship";
 
-import * as foo from "rocket_ship";
+import * as foo from "./rocket_ship";
 
-import * as rocket_ship from "rocket_ship";
+import * as rocket_ship from "./rocket_ship";
 const {launch: boom_time, fuel} = rocket_ship;
 
 export function go() {

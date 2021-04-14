@@ -65,7 +65,7 @@ fn statement<'a>(
             .to_doc()
             .append(Document::String(as_name.clone()))
             .append(" from ".to_doc())
-            .append(Document::String(module.join("/")).surround("\"", "\""))
+            .append(Document::String(module.join("/")).surround("\"./", "\""))
             .append(";");
             
             match unqualified.len() {
