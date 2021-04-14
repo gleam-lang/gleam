@@ -65,7 +65,8 @@ fn statement<'a>(
             .to_doc()
             .append(Document::String(as_name.clone()))
             .append(" from ".to_doc())
-            .append(Document::String(module.join("/")).surround("\"./", "\""))
+            // TODO think about relative up for inner module or call everything `dir_dir_dir_file.js`
+            .append(Document::String(module.join("/")).surround("\"./", ".js\""))
             .append(";");
             
             match unqualified.len() {
