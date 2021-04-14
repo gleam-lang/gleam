@@ -532,7 +532,7 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     creator.run()?;
 
     let test_command = match &creator.options.template {
-        Template::Lib | Template::App | Template::Escript => "rebar eunit",
+        Template::Lib | Template::App | Template::Escript => "rebar3 eunit",
         Template::GleamLib => "gleam eunit",
     };
 
