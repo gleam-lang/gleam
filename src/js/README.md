@@ -51,3 +51,17 @@ As far as I can see the constructor function can't be used for updates, and cert
 Done in anonymous function because otherwise need to pass in what to do with last value but this might cause issues with try.
 
 ### Web Assembly
+
+```
+curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+```
+
+https://rustwasm.github.io/wasm-pack/installer/
+
+### Build a project
+
+Docker-compose started twice,
+Or docker compose with the CORS file turned off
+docker-compose twice with a sirv-cli
+
+Rollup will do, because valid JS

@@ -6,5 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile
     volumes:
+      - .:/opt/app
+    network_mode: host
+  server:
+    image: node:15.14.0
+    working_dir: "/opt/app"
+    volumes:
       - ./tmp:/opt/app
     network_mode: host
+    command: "npm i -g sirv-cli && sirv . --dev --host 0.0.0.0"
