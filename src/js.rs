@@ -64,7 +64,7 @@ fn statement<'a>(
                 .to_doc()
                 .append(Document::String(as_name))
                 .append(" from ".to_doc())
-                .append(Document::String(module.join("/")))
+                .append(Document::String(module.join("/")).surround("\"", "\""))
                 .append(";");
             Some(line)
         },

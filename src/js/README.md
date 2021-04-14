@@ -65,3 +65,4 @@ Or docker compose with the CORS file turned off
 docker-compose twice with a sirv-cli
 
 Rollup will do, because valid JS
+Build from my github because

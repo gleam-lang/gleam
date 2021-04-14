@@ -531,9 +531,9 @@ import rocket_ship
 import rocket_ship as foo
 // import rocket_ship.{launch}
 "#,
-r#"import * as rocket_ship from rocket_ship;
+r#"import * as rocket_ship from "rocket_ship";
 
-import * as foo from rocket_ship;"#
+import * as foo from "rocket_ship";"#
     );
 }
 
