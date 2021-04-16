@@ -21,8 +21,8 @@ impl Generator {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
 
-            TypedExpr::Int { .. } => unsupported("Integer values"),
-            TypedExpr::Float { .. } => unsupported("Float values"),
+            TypedExpr::Int { value, .. } => Ok(int(value)),
+            TypedExpr::Float { value, .. } => Ok(float(value)),
 
             TypedExpr::List { .. } => unsupported("List"),
 
@@ -111,6 +111,14 @@ impl Generator {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
         })
     }
+}
+
+fn int(value: &str) -> Document<'_> {
+    value.to_doc()
+}
+
+fn float(value: &str) -> Document<'_> {
+    value.to_doc()
 }
 
 fn string(value: &str) -> Document<'_> {
