@@ -125,8 +125,7 @@ fn go() {
 }
 
 #[test]
-fn constant_statements(){
-
+fn constant_statements() {
     assert_js!(
         r#"
 const a = "Hello"
