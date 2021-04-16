@@ -97,8 +97,8 @@ pub use self::{
 
 use self::build::package_compiler;
 
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 use strum::{Display, EnumString, EnumVariantNames};
@@ -197,12 +197,11 @@ pub struct NewOptions {
     pub template: new::Template,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
     Erlang,
-    JavaScript
+    JavaScript,
 }
 
 #[derive(StructOpt, Debug)]
@@ -215,7 +214,7 @@ pub struct CompilePackage {
         case_insensitive = true,
         default_value = "erlang")]
     target: Target,
-    
+
     #[structopt(help = "The name of the package being compiled", long = "name")]
     package_name: String,
 

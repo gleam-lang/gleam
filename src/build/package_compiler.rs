@@ -140,7 +140,9 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
         match self.options.target {
             crate::Target::JavaScript => unimplemented!("JS backend in progress"),
-            crate::Target::Erlang => Erlang::new(&self.options.out_path).render(&self.writer, modules)
+            crate::Target::Erlang => {
+                Erlang::new(&self.options.out_path).render(&self.writer, modules)
+            }
         }
     }
 

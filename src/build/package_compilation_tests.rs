@@ -10,8 +10,7 @@ use crate::{
     config::{BuildTool, Docs, PackageConfig, Repository},
     erl,
     fs::test::FilesChannel,
-    type_,
-    Target,
+    type_, Target,
 };
 use std::{path::PathBuf, sync::Arc};
 
