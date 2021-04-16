@@ -5,7 +5,7 @@ mod tests;
 use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, Result};
 use itertools::Itertools;
 
-const INDENT: isize = 4;
+const INDENT: isize = 2;
 
 pub fn module(
     module: &TypedModule,
