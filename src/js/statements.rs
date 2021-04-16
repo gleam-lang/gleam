@@ -22,9 +22,9 @@ pub fn statement<'a>(
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
-        Statement::Import { .. } => Some(unsupported("Importing modules")),
+        Statement::Import { .. } => Some(unsupported("Importing modules ")),
         Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => Some(unsupported("Adding a module constant")),
+        Statement::ModuleConstant { .. } => Some(unsupported("Adding a module constant ")),
         Statement::Fn {
             arguments,
             name,
@@ -41,7 +41,7 @@ pub fn statement<'a>(
             return_type,
             line_numbers,
         )),
-        Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
+        Statement::ExternalFn { .. } => Some(unsupported("Using an external function ")),
     }
 }
 
