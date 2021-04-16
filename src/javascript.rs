@@ -47,7 +47,12 @@ pub fn statement<'a>(
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => Some(unsupported("Importing modules")),
         Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => Some(unsupported("Adding a module constant")),
+        Statement::ModuleConstant {
+            public,
+            name,
+            value,
+            ..
+        } => Some(module_constant(*public, name, value)),
         Statement::Fn {
             arguments,
             name,
@@ -66,6 +71,17 @@ pub fn statement<'a>(
         )),
         Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
     }
+}
+
+fn module_constant<'a, T, Y>(public: bool, name: &'a str, value: &'a Constant<T, Y>) -> Output<'a> {
+    let head = if public { "export const " } else { "const " };
+    Ok(docvec![
+        head,
+        name,
+        " = ",
+        expression::constant_expression(value)?,
+        ";",
+    ])
 }
 
 fn module_function<'a>(
