@@ -197,7 +197,9 @@ pub struct NewOptions {
     pub template: new::Template,
 }
 
-#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
+#[derive(
+    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
     Erlang,
