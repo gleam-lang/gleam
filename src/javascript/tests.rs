@@ -129,7 +129,7 @@ fn constant_statements() {
     assert_js!(
         r#"
 const a = "Hello"
-const e = tuple("bob", "dug")
+const e = #("bob", "dug")
         "#,
         r#"const a = "Hello";
 
