@@ -1,7 +1,7 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package},
-    codegen::Erlang,
+    codegen::{Erlang, JavaScript},
     config::PackageConfig,
     error,
     fs::FileSystemWriter,
@@ -139,7 +139,9 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
         match self.options.target {
-            crate::Target::JavaScript => unimplemented!("JS backend in progress"),
+            crate::Target::JavaScript => {
+                JavaScript::new(&self.options.out_path).render(&self.writer, modules)
+            }
             crate::Target::Erlang => {
                 Erlang::new(&self.options.out_path).render(&self.writer, modules)
             }
