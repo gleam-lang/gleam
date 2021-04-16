@@ -13,6 +13,7 @@ use std::{collections::HashMap, fmt::write};
 
 #[derive(Debug)]
 pub struct Options {
+    pub target: crate::Target,
     pub name: String,
     pub src_path: PathBuf,
     pub test_path: Option<PathBuf>,
@@ -137,7 +138,10 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     }
 
     fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
-        Erlang::new(&self.options.out_path).render(&self.writer, modules)
+        match self.options.target {
+            crate::Target::JavaScript => unimplemented!("JS backend in progress"),
+            crate::Target::Erlang => Erlang::new(&self.options.out_path).render(&self.writer, modules)
+        }
     }
 
     /// Set whether to write metadata files

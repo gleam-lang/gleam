@@ -65,6 +65,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
+mod js;
 mod line_numbers;
 mod metadata;
 mod new;
@@ -97,8 +98,10 @@ pub use self::{
 use self::build::package_compiler;
 
 use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
+use strum_macros::{Display, EnumString, EnumVariantNames};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -194,9 +197,25 @@ pub struct NewOptions {
     pub template: new::Template,
 }
 
+
+#[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
+#[strum(serialize_all = "lowercase")]
+pub enum Target {
+    Erlang,
+    JavaScript
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 pub struct CompilePackage {
+    #[structopt(
+        help = "The compilation target for the generated project", 
+        long = "target", 
+        possible_values = &Target::VARIANTS,
+        case_insensitive = true,
+        default_value = "erlang")]
+    target: Target,
+    
     #[structopt(help = "The name of the package being compiled", long = "name")]
     package_name: String,
 
@@ -216,6 +235,7 @@ pub struct CompilePackage {
 impl CompilePackage {
     pub fn into_package_compiler_options(self) -> package_compiler::Options {
         package_compiler::Options {
+            target: self.target,
             name: self.package_name,
             src_path: self.src_directory,
             test_path: self.test_directory,

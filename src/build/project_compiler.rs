@@ -84,6 +84,7 @@ impl<'a> ProjectCompiler<'a> {
         // TODO: this isn't the right location. We may want multiple output locations.
         let out_path = self.root.default_build_lib_package_src_path(&name);
         let options = package_compiler::Options {
+            target: crate::Target::Erlang,
             src_path: self.root.default_build_lib_package_src_path(&name),
             out_path: out_path.clone(),
             test_path,
