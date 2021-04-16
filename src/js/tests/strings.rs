@@ -10,7 +10,7 @@ fn go() {
 }
 "#,
         r#"function go() {
-    return "Hello, Gleam!";
+  return "Hello, Gleam!";
 }"#
     );
 }
