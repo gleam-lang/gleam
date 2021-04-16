@@ -22,7 +22,7 @@ pub fn module(
     let statements = Itertools::intersperse(statements, Ok(lines(2)))
         .collect::<Result<Vec<_>, _>>()
         .map_err(crate::Error::JavaScript)?;
-    statements.to_doc().pretty_print(80, writer)
+    docvec!(r#""use strict";"#, lines(2), statements).pretty_print(80, writer)
 }
 
 #[derive(Debug, Clone, PartialEq)]
