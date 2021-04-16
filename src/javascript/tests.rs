@@ -123,3 +123,17 @@ fn go() {
 }"#
     );
 }
+
+#[test]
+fn constant_statements(){
+
+    assert_js!(
+        r#"
+const a = "Hello"
+const e = tuple("bob", "dug")
+        "#,
+        r#"const a = "Hello";
+
+const e = ["bob", "dug"];"#
+    );
+}
