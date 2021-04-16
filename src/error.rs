@@ -170,6 +170,11 @@ pub enum Error {
     ForbiddenWarnings {
         count: usize,
     },
+
+    UnsupportedFeature {
+        feature: String,
+        target: crate::Target,
+    },
 }
 
 impl From<capnp::Error> for Error {
@@ -1602,6 +1607,14 @@ Fix the warnings and try again!"
                         .to_string(),
                 };
                 write_project(buf, diagnostic);
+            }
+
+            Error::UnsupportedFeature { feature, target } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Unsupported feature for compilation target".to_string(),
+                    label: format!("{} is not supported for {} compilation", feature, target),
+                };
+                write_project(buf, diagnostic)
             }
         }
     }
