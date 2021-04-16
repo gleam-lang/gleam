@@ -59,9 +59,8 @@ fn mod_fun<'a>(
         semicolon: &true,
     };
     let body = expr(body, &env)?;
-    Ok(if &true == public { "export " } else { "" }
+    Ok(if *public { "export function " } else { "function " }
         .to_doc()
-        .append("function ")
         .append(Document::String(name.to_string()))
         .append(fun_args(args))
         .append(" {")
