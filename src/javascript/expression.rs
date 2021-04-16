@@ -71,15 +71,44 @@ impl Generator {
         result
     }
 
+    /// Wrap an expression in an immediately involked function expression if
+    /// required due to being a JS statement
+    fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        match expression {
+            TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => {
+                self.immediately_involked_function_expression(expression)
+            }
+            _ => self.expression(expression),
+        }
+    }
+
+    /// Wrap an expression in an immediately involked function expression
+    fn immediately_involked_function_expression<'a>(
+        &mut self,
+        expression: &'a TypedExpr,
+    ) -> Output<'a> {
+        let tail = self.tail_position;
+        self.tail_position = true;
+        let result = self.expression(expression);
+        self.tail_position = tail;
+        Ok(docvec!(
+            docvec!("(() => {", break_("", " "), result?)
+                .nest(INDENT)
+                .group(),
+            break_("", " "),
+            "})()",
+        ))
+    }
+
     fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
         let first = self.not_in_tail_position(|gen| gen.expression(first))?;
         let then = self.expression(then)?;
-        Ok(docvec![first, ";", line(), then])
+        Ok(docvec![force_break(), first, ";", line(), then])
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
         self.not_in_tail_position(|gen| {
-            array(elements.iter().map(|element| gen.expression(element)))
+            array(elements.iter().map(|element| gen.wrap_expression(element)))
         })
     }
 }
@@ -95,7 +124,7 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
     Ok(docvec![
         "[",
         docvec![break_("", ""), elements].nest(INDENT),
-        break_("", ""),
+        break_(",", ""),
         "]"
     ]
     .group())
