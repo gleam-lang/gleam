@@ -41,7 +41,9 @@ impl Generator {
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
-            TypedExpr::BinOp { .. } => unsupported("Binary operation"),
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => bin_op(name, left, right),
 
             TypedExpr::Todo { .. } => unsupported("todo keyword"),
 
@@ -123,6 +125,54 @@ fn float(value: &str) -> Document<'_> {
 
 fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("\"", "\"")
+}
+
+fn bin_op<'a>(name: &'a BinOp, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+    // let div_zero = match name {
+    //     BinOp::DivInt | BinOp::ModuloInt => Some("0"),
+    //     BinOp::DivFloat => Some("0.0"),
+    //     _ => None,
+    // };
+    match name {
+        BinOp::And => print_bin_op(left, right, "&&"),
+        BinOp::Or => print_bin_op(left, right, "||"),
+        BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
+        BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
+        // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
+        // BinOp::Eq => "=:=",
+        // BinOp::NotEq => "/=",
+        BinOp::GtInt | BinOp::GtFloat => print_bin_op(left, right, ">"),
+        BinOp::GtEqInt | BinOp::GtEqFloat => print_bin_op(left, right, ">="),
+        BinOp::AddInt | BinOp::AddFloat => print_bin_op(left, right, "+"),
+        BinOp::SubInt | BinOp::SubFloat => print_bin_op(left, right, "-"),
+        BinOp::MultInt | BinOp::MultFloat => print_bin_op(left, right, "*"),
+        BinOp::DivInt => Ok(Document::String("Math.floor".to_string())
+            .append(print_bin_op(left, right, "/")?.surround("(", ")"))),
+        BinOp::DivFloat => print_bin_op(left, right, "/"),
+        BinOp::ModuloInt => print_bin_op(left, right, "%"),
+        _ => {
+            println!("name: {:?}", name);
+            unimplemented!("binop")
+        }
+    }
+}
+
+fn print_bin_op<'a>(left: &'a TypedExpr, right: &'a TypedExpr, op: &str) -> Output<'a> {
+    let left_expr = match left {
+        TypedExpr::BinOp { .. } => Ok(Generator::compile(left)?.surround("(", ")")),
+        _ => Generator::compile(left),
+    }?;
+
+    let right_expr = match right {
+        TypedExpr::BinOp { .. } => Ok(Generator::compile(right)?.surround("(", ")")),
+        _ => Generator::compile(right),
+    }?;
+
+    Ok(left_expr
+        .append(" ")
+        .append(Document::String(op.to_string()))
+        .append(" ")
+        .append(right_expr))
 }
 
 fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
