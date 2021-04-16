@@ -13,17 +13,17 @@ pub fn statement<'a>(
         Statement::CustomType { .. } => None,
         Statement::Import { .. } => Some(Err(UnsupportedFeature {
             target: Target::JavaScript,
-            feature: "Importing modules ".to_string(),
+            feature: "Importing modules".to_string(),
         })),
         Statement::ExternalType { .. } => None,
         Statement::ModuleConstant { .. } => Some(Err(UnsupportedFeature {
             target: Target::JavaScript,
-            feature: "Adding a module constant ".to_string(),
+            feature: "Adding a module constant".to_string(),
         })),
         Statement::Fn { .. } => unimplemented!("TODO this PR"),
         Statement::ExternalFn { .. } => Some(Err(UnsupportedFeature {
             target: Target::JavaScript,
-            feature: "Using an external function ".to_string(),
+            feature: "Using an external function".to_string(),
         })),
     }
 }
