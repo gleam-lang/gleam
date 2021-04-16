@@ -44,7 +44,8 @@ function go() {
   "one";
   "two";
   return "three";
-}"#
+}
+"#
     );
 }
 
@@ -60,7 +61,8 @@ fn go() {
 
 function go() {
   return ["1", "2", "3"];
-}"#
+}
+"#
     );
 
     assert_js!(
@@ -81,7 +83,8 @@ function go() {
     ["1111111111111111111111111111111", "2", "3"],
     "3",
   ];
-}"#
+}
+"#
     );
 }
 
@@ -109,7 +112,8 @@ function go() {
       return "3";
     })(),
   ];
-}"#
+}
+"#
     );
 
     assert_js!(
@@ -130,7 +134,8 @@ function go() {
     ["1111111111111111111111111111111", "2", "3"],
     "3",
   ];
-}"#
+}
+"#
     );
 }
 
@@ -145,7 +150,8 @@ const e = #("bob", "dug")
 
 const a = "Hello";
 
-const e = ["bob", "dug"];"#
+const e = ["bob", "dug"];
+"#
     );
 
     assert_js!(
@@ -164,6 +170,7 @@ const e = [
   "loooooooooooooong",
   "loooooooooooong",
   "loooooooooooooong",
-];"#
+];
+"#
     );
 }

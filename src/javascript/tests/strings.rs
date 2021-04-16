@@ -12,6 +12,7 @@ fn go() {
 
 function go() {
   return "Hello, Gleam!";
-}"#
+}
+"#
     );
 }
