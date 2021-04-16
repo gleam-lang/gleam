@@ -210,10 +210,11 @@ pub enum Target {
 #[structopt(flatten)]
 pub struct CompilePackage {
     #[structopt(
-        help = "The compilation target for the generated project", 
-        long = "target", 
+        help = "The compilation target for the generated project",
+        long = "target",
         case_insensitive = true,
-        default_value = "erlang")]
+        default_value = "erlang"
+    )]
     target: Target,
 
     #[structopt(help = "The name of the package being compiled", long = "name")]
