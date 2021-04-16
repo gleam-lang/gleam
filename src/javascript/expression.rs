@@ -1,5 +1,5 @@
 use super::*;
-use crate::{ast::*, pretty::*, Result};
+use crate::{ast::*, pretty::*};
 
 #[derive(Debug)]
 pub struct Generator {
@@ -13,11 +13,11 @@ impl Generator {
         }
     }
 
-    pub fn compile<'a>(expression: &'a TypedExpr) -> Result<Document<'a>> {
+    pub fn compile<'a>(expression: &'a TypedExpr) -> Output<'a> {
         Self::new().expression(expression)
     }
 
-    fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Result<Document<'a>> {
+    fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
 
@@ -26,7 +26,7 @@ impl Generator {
 
             TypedExpr::List { .. } => unsupported("List"),
 
-            TypedExpr::Tuple { .. } => unsupported("Tuple"),
+            TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { .. } => unsupported("Tuple"),
 
             TypedExpr::Case { .. } => unsupported("Case"),
@@ -60,9 +60,9 @@ impl Generator {
         })
     }
 
-    fn not_in_tail_position<'a, CompileFn>(&mut self, compile: CompileFn) -> Result<Document<'a>>
+    fn not_in_tail_position<'a, CompileFn>(&mut self, compile: CompileFn) -> Output<'a>
     where
-        CompileFn: Fn(&mut Self) -> Result<Document<'a>>,
+        CompileFn: Fn(&mut Self) -> Output<'a>,
     {
         let tail = self.tail_position;
         self.tail_position = false;
@@ -71,13 +71,32 @@ impl Generator {
         result
     }
 
-    fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Result<Document<'a>> {
+    fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
         let first = self.not_in_tail_position(|gen| gen.expression(first))?;
         let then = self.expression(then)?;
         Ok(docvec![first, ";", line(), then])
+    }
+
+    fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            array(elements.iter().map(|element| gen.expression(element)))
+        })
     }
 }
 
 fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("\"", "\"")
+}
+
+fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+    let elements = Itertools::intersperse(elements, Ok(break_(",", ", ")))
+        .collect::<Result<Vec<_>, _>>()?
+        .to_doc();
+    Ok(docvec![
+        "[",
+        docvec![break_("", ""), elements].nest(INDENT),
+        break_("", ""),
+        "]"
+    ]
+    .group())
 }

@@ -65,7 +65,7 @@ mod error;
 mod eunit;
 mod format;
 mod fs;
-mod js;
+mod javascript;
 mod line_numbers;
 mod metadata;
 mod new;

@@ -5,6 +5,7 @@ use crate::{
         write, write_diagnostic, write_project, Diagnostic, DiagnosticLabel, LabelStyle,
         MultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
     },
+    javascript,
     type_::{pretty::Printer, UnifyErrorSituation},
 };
 use itertools::Itertools;
@@ -171,10 +172,7 @@ pub enum Error {
         count: usize,
     },
 
-    UnsupportedFeature {
-        feature: String,
-        target: crate::Target,
-    },
+    JavaScript(crate::javascript::Error),
 }
 
 impl From<capnp::Error> for Error {
@@ -1609,13 +1607,15 @@ Fix the warnings and try again!"
                 write_project(buf, diagnostic);
             }
 
-            Error::UnsupportedFeature { feature, target } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Unsupported feature for compilation target".to_string(),
-                    label: format!("{} is not supported for {} compilation", feature, target),
-                };
-                write_project(buf, diagnostic)
-            }
+            Error::JavaScript(error) => match error {
+                javascript::Error::Unsupported { feature } => {
+                    let diagnostic = ProjectErrorDiagnostic {
+                        title: "Unsupported feature for compilation target".to_string(),
+                        label: format!("{} is not supported for JavaScript compilation", feature),
+                    };
+                    write_project(buf, diagnostic)
+                }
+            },
         }
     }
 

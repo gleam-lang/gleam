@@ -2,34 +2,36 @@ mod expression;
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, type_::Type, Error, Result,
-    Target,
-};
+use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, type_::Type};
 use itertools::Itertools;
 use std::sync::Arc;
 
 const INDENT: isize = 2;
 
+pub type Output<'a> = Result<Document<'a>, Error>;
+
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     writer: &mut impl Utf8Writer,
-) -> Result<()> {
-    let rendered = module
+) -> Result<(), crate::Error> {
+    let statements = module
         .statements
         .iter()
         .flat_map(|s| statement(&module.name, s, &module.name, line_numbers));
-    let rendered: Result<Vec<Document<'_>>> = rendered.collect();
-    let rendered = rendered?;
-    let statements = concat(Itertools::intersperse(rendered.into_iter(), lines(2)));
-
-    statements.pretty_print(80, writer)
+    let statements = Itertools::intersperse(statements, Ok(lines(2)))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(crate::Error::JavaScript)?;
+    statements.to_doc().pretty_print(80, writer)
 }
 
-fn unsupported<M: ToString, T>(label: M) -> Result<T> {
-    Err(Error::UnsupportedFeature {
-        target: Target::JavaScript,
+#[derive(Debug, Clone, PartialEq)]
+pub enum Error {
+    Unsupported { feature: String },
+}
+
+fn unsupported<M: ToString, T>(label: M) -> Result<T, Error> {
+    Err(Error::Unsupported {
         feature: label.to_string(),
     })
 }
@@ -39,7 +41,7 @@ pub fn statement<'a>(
     statement: &'a TypedStatement,
     module: &'a [String],
     line_numbers: &'a LineNumbers,
-) -> Option<Result<Document<'a>>> {
+) -> Option<Output<'a>> {
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
@@ -74,7 +76,7 @@ fn module_function<'a>(
     _module: &'a [String],
     _return_type: &'a Arc<Type>,
     _line_numbers: &'a LineNumbers,
-) -> Result<Document<'a>> {
+) -> Output<'a> {
     let head = if public {
         "export function "
     } else {

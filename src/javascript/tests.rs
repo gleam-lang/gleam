@@ -2,8 +2,8 @@ mod strings;
 
 #[macro_export]
 macro_rules! assert_js {
-    ($src:expr, $erl:expr $(,)?) => {
-        use crate::js::*;
+    ($src:expr, $erl:expr $(,)?) => {{
+        use crate::javascript::*;
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let mut modules = std::collections::HashMap::new();
@@ -25,11 +25,11 @@ macro_rules! assert_js {
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
-    };
+    }};
 }
 
 #[test]
-fn string_literals() {
+fn sequences() {
     assert_js!(
         r#"
 fn go() {
@@ -42,6 +42,39 @@ fn go() {
   "one";
   "two";
   return "three";
+}"#
+    );
+}
+
+#[test]
+fn tuple() {
+    assert_js!(
+        r#"
+fn go() {
+  #("1", "2", "3")
+}
+"#,
+        r#"function go() {
+  return ["1", "2", "3"];
+}"#
+    );
+
+    assert_js!(
+        r#"
+fn go() {
+  #(
+    "1111111111111111111111111111111",
+    #("1111111111111111111111111111111", "2", "3"),
+    "3"
+  )
+}
+"#,
+        r#"function go() {
+  return [
+    "1111111111111111111111111111111",
+    ["1111111111111111111111111111111", "2", "3"],
+    "3"
+  ];
 }"#
     );
 }

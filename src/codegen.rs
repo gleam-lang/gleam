@@ -1,6 +1,6 @@
 use crate::{
-    build::Module, config::PackageConfig, erl, fs::FileSystemWriter, js, line_numbers::LineNumbers,
-    Result,
+    build::Module, config::PackageConfig, erl, fs::FileSystemWriter, javascript,
+    line_numbers::LineNumbers, Result,
 };
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
@@ -148,7 +148,7 @@ impl<'a> JavaScript<'a> {
         let path = self.output_directory.join(&name);
         let mut file = writer.open(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
-        let res = js::module(&module.ast, &line_numbers, &mut file);
+        let res = javascript::module(&module.ast, &line_numbers, &mut file);
         tracing::trace!(name = ?name, "Generated js module");
         res
     }
