@@ -43,9 +43,9 @@ pub fn statement<'a>(
     match statement {
         Statement::TypeAlias { .. } => None,
         Statement::CustomType { .. } => None,
-        Statement::Import { .. } => Some(unsupported("Importing modules ")),
+        Statement::Import { .. } => Some(unsupported("Importing modules")),
         Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => Some(unsupported("Adding a module constant ")),
+        Statement::ModuleConstant { .. } => Some(unsupported("Adding a module constant")),
         Statement::Fn {
             arguments,
             name,
@@ -53,8 +53,8 @@ pub fn statement<'a>(
             return_type,
             public,
             ..
-        } => Some(mod_fun(
-            public,
+        } => Some(module_function(
+            *public,
             name,
             arguments,
             body,
@@ -62,12 +62,12 @@ pub fn statement<'a>(
             return_type,
             line_numbers,
         )),
-        Statement::ExternalFn { .. } => Some(unsupported("Using an external function ")),
+        Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
     }
 }
 
-fn mod_fun<'a>(
-    public: &bool,
+fn module_function<'a>(
+    public: bool,
     name: &'a str,
     args: &'a [TypedArg],
     body: &'a TypedExpr,
@@ -75,27 +75,28 @@ fn mod_fun<'a>(
     _return_type: &'a Arc<Type>,
     _line_numbers: &'a LineNumbers,
 ) -> Result<Document<'a>> {
-    let body = expression::Generator::compile(body)?;
-    Ok(if *public {
+    let head = if public {
         "export function "
     } else {
         "function "
-    }
-    .to_doc()
-    .append(Document::String(name.to_string()))
-    .append(fun_args(args))
-    .append(" {")
-    .append(line().append(body).nest(INDENT).group())
-    .append(line())
-    .append("}"))
+    };
+    Ok(docvec![
+        head,
+        name,
+        fun_args(args),
+        " {",
+        docvec![line(), expression::Generator::compile(body)?]
+            .nest(INDENT)
+            .group(),
+        line(),
+        "}",
+    ])
 }
 
 fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
-        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            Document::String(name.to_string())
-        }
+        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => name.to_doc(),
     }))
 }
 
