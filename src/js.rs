@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crate::{
     ast::*, error::Error::UnsupportedFeature, fs::Utf8Writer, line_numbers::LineNumbers, Result,
 };
