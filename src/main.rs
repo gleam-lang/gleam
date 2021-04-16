@@ -101,7 +101,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
-use strum_macros::{Display, EnumString, EnumVariantNames};
+use strum::{Display, EnumString, EnumVariantNames};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -211,7 +211,7 @@ pub struct CompilePackage {
     #[structopt(
         help = "The compilation target for the generated project", 
         long = "target", 
-        possible_values = &Target::VARIANTS,
+        // possible_values = &Target::VARIANTS,
         case_insensitive = true,
         default_value = "erlang")]
     target: Target,
