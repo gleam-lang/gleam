@@ -66,7 +66,7 @@ fn go() {
         r#"function go() {
   1 + 1;
   5 - 1;
-  Math.floor(5 / 2);
+  2 === 0 ? 0 : Math.floor(5 / 2);
   3 * 3;
   5 % 2;
   2 > 1;
