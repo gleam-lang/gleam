@@ -212,7 +212,6 @@ pub struct CompilePackage {
     #[structopt(
         help = "The compilation target for the generated project", 
         long = "target", 
-        // possible_values = &Target::VARIANTS,
         case_insensitive = true,
         default_value = "erlang")]
     target: Target,
