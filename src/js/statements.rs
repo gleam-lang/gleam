@@ -74,7 +74,6 @@ fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            // TODO add these named variables to an env somewhere
             Document::String(name.to_string())
         }
     }))
