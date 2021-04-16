@@ -5,6 +5,8 @@ mod tests;
 use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, Result};
 use itertools::Itertools;
 
+const INDENT: isize = 4;
+
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
@@ -19,4 +21,10 @@ pub fn module(
     let statements = concat(Itertools::intersperse(rendered.into_iter(), lines(2)));
 
     statements.pretty_print(80, writer)
+}
+
+#[derive(Debug, Clone)]
+struct Env<'a> {
+    return_last: &'a bool,
+    semicolon: &'a bool,
 }
