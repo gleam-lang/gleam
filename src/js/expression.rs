@@ -17,7 +17,7 @@ impl Generator {
         Self::new().expression(expression)
     }
 
-    fn expression<'a>(&self, expression: &'a TypedExpr) -> Result<Document<'a>> {
+    fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Result<Document<'a>> {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
 
@@ -37,9 +37,9 @@ impl Generator {
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
 
-            TypedExpr::Var { .. } => unsupported("Bindings"),
-            TypedExpr::Seq { .. } => unsupported("Bindings"),
-            TypedExpr::Assignment { .. } => unsupported("Bindings"),
+            TypedExpr::Var { .. } => unsupported("Referencing variables"),
+            TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
+            TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
             TypedExpr::BinOp { .. } => unsupported("Binary operation"),
 
@@ -58,6 +58,23 @@ impl Generator {
                 _ => document,
             },
         })
+    }
+
+    fn not_in_tail_position<'a, CompileFn>(&mut self, compile: CompileFn) -> Result<Document<'a>>
+    where
+        CompileFn: Fn(&mut Self) -> Result<Document<'a>>,
+    {
+        let tail = self.tail_position;
+        self.tail_position = false;
+        let result = compile(self);
+        self.tail_position = tail;
+        result
+    }
+
+    fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Result<Document<'a>> {
+        let first = self.not_in_tail_position(|gen| gen.expression(first))?;
+        let then = self.expression(then)?;
+        Ok(docvec![first, ";", line(), then])
     }
 }
 

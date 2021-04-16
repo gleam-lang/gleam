@@ -3,6 +3,7 @@ mod strings;
 #[macro_export]
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {
+        use crate::js::*;
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let mut modules = std::collections::HashMap::new();
@@ -25,4 +26,22 @@ macro_rules! assert_js {
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     };
+}
+
+#[test]
+fn string_literals() {
+    assert_js!(
+        r#"
+fn go() {
+  "one"
+  "two"
+  "three"
+}
+"#,
+        r#"function go() {
+  "one";
+  "two";
+  return "three";
+}"#
+    );
 }
