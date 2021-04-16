@@ -59,14 +59,18 @@ fn mod_fun<'a>(
         semicolon: &true,
     };
     let body = expr(body, &env)?;
-    Ok(if *public { "export function " } else { "function " }
-        .to_doc()
-        .append(Document::String(name.to_string()))
-        .append(fun_args(args))
-        .append(" {")
-        .append(line().append(body).nest(INDENT).group())
-        .append(line())
-        .append("}"))
+    Ok(if *public {
+        "export function "
+    } else {
+        "function "
+    }
+    .to_doc()
+    .append(Document::String(name.to_string()))
+    .append(fun_args(args))
+    .append(" {")
+    .append(line().append(body).nest(INDENT).group())
+    .append(line())
+    .append("}"))
 }
 
 fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
