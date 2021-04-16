@@ -1,14 +1,30 @@
-use crate::{
-    ast::*, error::Error::UnsupportedFeature, fs::Utf8Writer, line_numbers::LineNumbers, Result,
-};
+mod statements;
+#[cfg(test)]
+mod tests;
+
+use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, Result};
+use itertools::Itertools;
+
+const INDENT: isize = 2;
 
 pub fn module(
-    _module: &TypedModule,
-    _line_numbers: &LineNumbers,
-    _writer: &mut impl Utf8Writer,
+    module: &TypedModule,
+    line_numbers: &LineNumbers,
+    writer: &mut impl Utf8Writer,
 ) -> Result<()> {
-    Err(UnsupportedFeature {
-        target: crate::Target::JavaScript,
-        feature: "Any feature! ".to_string(),
-    })
+    let rendered = module
+        .statements
+        .iter()
+        .flat_map(|s| statements::statement(&module.name, s, &module.name, line_numbers));
+    let rendered: Result<Vec<Document<'_>>> = rendered.collect();
+    let rendered = rendered?;
+    let statements = concat(Itertools::intersperse(rendered.into_iter(), lines(2)));
+
+    statements.pretty_print(80, writer)
+}
+
+#[derive(Debug, Clone)]
+struct Env<'a> {
+    return_last: &'a bool,
+    semicolon: &'a bool,
 }
