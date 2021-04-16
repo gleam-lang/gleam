@@ -10,11 +10,14 @@ pub fn module(
     line_numbers: &LineNumbers,
     writer: &mut impl Utf8Writer,
 ) -> Result<()> {
+    let rendered = module
+    .statements
+    .iter()
+    .flat_map(|s| statements::statement(&module.name, s, &module.name, line_numbers));
+    let rendered: Result<Vec<Document<'_>>> = rendered.collect();
+    let rendered = rendered?;
     let statements = concat(Itertools::intersperse(
-        module
-            .statements
-            .iter()
-            .flat_map(|s| statements::statement(&module.name, s, &module.name, line_numbers)),
+        rendered.into_iter(),
         lines(2),
     ));
 
