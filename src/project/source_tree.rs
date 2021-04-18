@@ -80,15 +80,15 @@ impl SourceTree {
             let src = module.src.clone();
             let path = module.path.clone();
             let deps = module.module.dependencies();
-            let module_index = self.indexes.get(&module_name).gleam_expect(
+            let &module_index = self.indexes.get(&module_name).gleam_expect(
                 "SourceTree.calculate_dependencies(): Unable to find module index for name",
             );
-            let module = self.modules.get(module_index).gleam_expect(
+            let module = self.modules.get(&module_index).gleam_expect(
                 "SourceTree.calculate_dependencies(): Unable to find module for index",
             );
 
             for (dep, location) in deps {
-                let dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
+                let &dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
                     module: module_name.clone(),
                     import: dep.clone(),
                     src: src.clone(),
@@ -104,7 +104,7 @@ impl SourceTree {
                 if module.origin == ModuleOrigin::Src
                     && self
                         .modules
-                        .get(dep_index)
+                        .get(&dep_index)
                         .gleam_expect("SourceTree.calculate_dependencies(): Unable to find module for dep index")
                         .origin
                         == ModuleOrigin::Test
@@ -118,7 +118,7 @@ impl SourceTree {
                     });
                 }
 
-                let _ = self.graph.add_edge(*dep_index, *module_index, ());
+                let _ = self.graph.add_edge(dep_index, module_index, ());
             }
         }
         Ok(())

@@ -111,20 +111,19 @@ impl Printer {
     }
 
     fn args_to_gleam_doc<'a>(&mut self, args: &[Arc<Type>]) -> Document<'a> {
-        match args.len() {
-            0 => nil(),
-            _ => {
-                let args = concat(Itertools::intersperse(
-                    args.iter().map(|t| self.print(t).group()),
-                    break_(",", ", "),
-                ));
-                break_("", "")
-                    .append(args)
-                    .nest(INDENT)
-                    .append(break_(",", ""))
-                    .group()
-            }
+        if args.is_empty() {
+            return nil();
         }
+
+        let args = concat(Itertools::intersperse(
+            args.iter().map(|t| self.print(t).group()),
+            break_(",", ", "),
+        ));
+        break_("", "")
+            .append(args)
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .group()
     }
 }
 

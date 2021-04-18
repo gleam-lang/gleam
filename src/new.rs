@@ -35,8 +35,8 @@ pub struct Creator {
 
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Self {
-        let root = match options.project_root {
-            Some(ref root) => PathBuf::from(root),
+        let root = match &options.project_root {
+            Some(root) => PathBuf::from(root),
             None => PathBuf::from(&options.name),
         };
         let src = root.join("src");

@@ -84,10 +84,7 @@ impl<'a> Documentable<'a> for Vec<Document<'a>> {
 
 impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
     fn to_doc(self) -> Document<'a> {
-        match self {
-            Some(d) => d.to_doc(),
-            None => nil(),
-        }
+        self.map(Documentable::to_doc).unwrap_or_else(nil)
     }
 }
 

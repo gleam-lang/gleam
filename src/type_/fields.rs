@@ -70,7 +70,7 @@ impl FieldMap {
 
         let mut i = 0;
         while i < args.len() {
-            let (label, location) = match &args[i].label {
+            let (label, &location) = match &args[i].label {
                 // A labelled argument, we may need to reposition it in the array vector
                 Some(l) => (l, &args[i].location),
 
@@ -83,12 +83,12 @@ impl FieldMap {
 
             let position = match self.fields.get(label) {
                 None => {
-                    unknown_labels.push((label.clone(), *location));
+                    unknown_labels.push((label.clone(), location));
                     i += 1;
                     continue;
                 }
 
-                Some(p) => *p,
+                Some(&p) => p,
             };
 
             // If the argument is already in the right place
@@ -98,7 +98,7 @@ impl FieldMap {
             } else {
                 if seen_labels.contains(label) {
                     return Err(Error::DuplicateArgument {
-                        location: *location,
+                        location,
                         label: label.to_string(),
                     });
                 }

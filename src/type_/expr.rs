@@ -1155,7 +1155,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (module_name, constructor) = {
-            let module_info = self
+            let (_, module) = self
                 .environment
                 .imported_modules
                 .get(module_alias)
@@ -1171,8 +1171,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 })?;
 
             let constructor =
-                module_info
-                    .1
+                module
                     .values
                     .get(&label)
                     .ok_or_else(|| Error::UnknownModuleValue {
@@ -1181,16 +1180,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             start: module_location.end,
                             end: select_location.end,
                         },
-                        module_name: module_info.1.name.clone(),
-                        value_constructors: module_info
-                            .1
-                            .values
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        module_name: module.name.clone(),
+                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     })?;
 
-            (module_info.1.name.clone(), constructor.clone())
+            (module.name.clone(), constructor.clone())
         };
 
         Ok(TypedExpr::ModuleSelect {
@@ -1253,7 +1247,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .environment
                 .importable_modules
                 .get(&module.join("/"))
-                .and_then(|module| module.1.accessors.get(name)),
+                .and_then(|(_, module)| module.accessors.get(name)),
 
             _something_without_fields => return Err(unknown_field(vec![])),
         }
