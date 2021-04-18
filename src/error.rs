@@ -255,21 +255,14 @@ impl FileKind {
     }
 }
 
-fn did_you_mean(name: &str, options: &mut Vec<String>, alt: &'static str) -> String {
-    // Remove magic variables
-    options.retain(|option| option != crate::ast::CAPTURE_VARIABLE);
-
+fn did_you_mean(name: &str, options: &[String], alt: &'static str) -> String {
     // Find best match
-    options.sort_by(|a, b| {
-        strsim::levenshtein(a, name)
-            .partial_cmp(&strsim::levenshtein(b, name))
-            .unwrap()
-    });
-
-    match options.get(0) {
-        Some(option) => format!("did you mean `{}`?", option),
-        None => alt.to_string(),
-    }
+    options
+        .iter()
+        .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
+        .min_by_key(|option| strsim::levenshtein(option, name))
+        .map(|option| format!("did you mean `{}`?", option))
+        .unwrap_or_else(|| alt.to_string())
 }
 
 impl Error {
@@ -517,7 +510,7 @@ Second: {}",
                     valid,
                     supplied,
                 } => {
-                    let mut other_labels = valid
+                    let other_labels: Vec<String> = valid
                         .iter()
                         .cloned()
                         .filter(|label| !supplied.contains(label))
@@ -536,7 +529,7 @@ Second: {}",
                         labels: unknown
                             .iter()
                             .map(|(label, location)| DiagnosticLabel {
-                                label: did_you_mean(label, &mut other_labels, "Unexpected label"),
+                                label: did_you_mean(label, &other_labels, "Unexpected label"),
                                 location: *location,
                                 style: LabelStyle::Primary,
                             })
@@ -725,10 +718,9 @@ also be labelled.",
                     label,
                     fields,
                 } => {
-                    let mut fields = fields.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown field".to_string(),
-                        label: did_you_mean(label, &mut fields, "This field does not exist"),
+                        label: did_you_mean(label, fields, "This field does not exist"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -891,10 +883,9 @@ Found type:
                     name,
                     types,
                 } => {
-                    let mut types = types.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown type".to_string(),
-                        label: did_you_mean(name, &mut types, ""),
+                        label: did_you_mean(name, types, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -913,10 +904,9 @@ Found type:
                     variables,
                     name,
                 } => {
-                    let mut variables = variables.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown variable".to_string(),
-                        label: did_you_mean(name, &mut variables, ""),
+                        label: did_you_mean(name, variables, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -958,10 +948,9 @@ Private types can only be used within the module that defines them.",
                     name,
                     imported_modules,
                 } => {
-                    let mut imported_modules = imported_modules.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown module".to_string(),
-                        label: did_you_mean(name, &mut imported_modules, ""),
+                        label: did_you_mean(name, imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -976,10 +965,9 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     type_constructors,
                 } => {
-                    let mut type_constructors = type_constructors.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown module type".to_string(),
-                        label: did_you_mean(name, &mut type_constructors, ""),
+                        label: did_you_mean(name, type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -1000,10 +988,9 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     value_constructors,
                 } => {
-                    let mut value_constructors = value_constructors.clone();
                     let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
-                        label: did_you_mean(name, &mut value_constructors, ""),
+                        label: did_you_mean(name, value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -1025,14 +1012,14 @@ Private types can only be used within the module that defines them.",
                     type_constructors,
                     value_constructors,
                 } => {
-                    let mut options: Vec<String> = type_constructors
+                    let options: Vec<String> = type_constructors
                         .iter()
                         .chain(value_constructors.iter())
                         .map(|s| s.to_string())
                         .collect();
                     let diagnostic = Diagnostic {
                         title: "Unknown module field".to_string(),
-                        label: did_you_mean(name, &mut options, ""),
+                        label: did_you_mean(name, &options, ""),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -1538,10 +1525,9 @@ cycle to continue."
                 src,
                 modules,
             } => {
-                let mut modules = modules.clone();
                 let diagnostic = Diagnostic {
                     title: "Unknown import".to_string(),
-                    label: did_you_mean(import, &mut modules, ""),
+                    label: did_you_mean(import, modules, ""),
                     file: path.to_str().unwrap().to_string(),
                     src: src.to_string(),
                     location: *location,

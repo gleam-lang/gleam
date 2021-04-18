@@ -119,7 +119,7 @@ impl Type {
                 args,
                 ..
             } => {
-                if *module == m[..] && name == n && args.len() == arity {
+                if module == m && name == n && args.len() == arity {
                     Some(args.clone())
                 } else {
                     None
@@ -1524,6 +1524,8 @@ pub fn register_import(
 Missing modules should be detected prior to type checking",
                 );
 
+            let (_, imported_module) = module_info;
+
             // Determine local alias of imported module
             let module_name = as_name
                 .as_ref()
@@ -1542,13 +1544,10 @@ Missing modules should be detected prior to type checking",
                 let mut value_imported = false;
                 let mut variant = None;
 
-                let imported_name = match &as_name {
-                    None => name,
-                    Some(alias) => alias,
-                };
+                let imported_name = as_name.as_ref().unwrap_or(name);
 
                 // Register the unqualified import if it is a value
-                if let Some(value) = module_info.1.values.get(name) {
+                if let Some(value) = imported_module.values.get(name) {
                     environment.insert_variable(
                         imported_name.clone(),
                         value.variant.clone(),
@@ -1560,7 +1559,7 @@ Missing modules should be detected prior to type checking",
                 }
 
                 // Register the unqualified import if it is a type constructor
-                if let Some(typ) = module_info.1.types.get(name) {
+                if let Some(typ) = imported_module.types.get(name) {
                     let typ_info = TypeConstructor {
                         origin: *location,
                         ..typ.clone()
@@ -1604,14 +1603,12 @@ Missing modules should be detected prior to type checking",
                         location: *location,
                         name: name.clone(),
                         module_name: module.clone(),
-                        value_constructors: module_info
-                            .1
+                        value_constructors: imported_module
                             .values
                             .keys()
                             .map(|t| t.to_string())
                             .collect(),
-                        type_constructors: module_info
-                            .1
+                        type_constructors: imported_module
                             .types
                             .keys()
                             .map(|t| t.to_string())

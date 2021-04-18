@@ -108,9 +108,6 @@ fn pattern_list<'a>(
         elements.into_iter().map(|e| to_doc(e, vars, env)),
         break_(",", ", "),
     ));
-    let tail = match tail {
-        Some(tail) => Some(pattern(tail, env)),
-        None => None,
-    };
+    let tail = tail.map(|tail| pattern(tail, env));
     list(elements, tail)
 }

@@ -383,10 +383,10 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [TypeAst],
     ) -> Document<'a> {
-        let head = match module {
-            None => name.to_doc(),
-            Some(qualifier) => qualifier.to_doc().append(".").append(name),
-        };
+        let head = module
+            .as_ref()
+            .map(|qualifier| qualifier.to_doc().append(".").append(name))
+            .unwrap_or_else(|| name.to_doc());
 
         if args.is_empty() {
             head
@@ -872,13 +872,13 @@ impl<'comments> Formatter<'comments> {
             ),
         };
 
-        let hole_in_first_position = match args.get(0) {
+        let hole_in_first_position = matches!(
+            args.first(),
             Some(CallArg {
                 value: UntypedExpr::Var { name, .. },
                 ..
-            }) => name == CAPTURE_VARIABLE,
-            _ => false,
-        };
+            }) if name == CAPTURE_VARIABLE
+        );
 
         if hole_in_first_position && args.len() == 1 {
             // x |> fun(_)
@@ -1231,11 +1231,11 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
-        match &arg.label {
-            Some(s) => s.to_doc().append(": "),
-            None => nil(),
-        }
-        .append(self.pattern(&arg.value))
+        arg.label
+            .as_ref()
+            .map(|s| s.to_doc().append(": "))
+            .unwrap_or_else(nil)
+            .append(self.pattern(&arg.value))
     }
 
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {

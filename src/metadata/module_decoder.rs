@@ -116,7 +116,7 @@ impl ModuleDecoder {
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id() as usize;
         let id = match self.type_var_id_map.get(&serialized_id) {
-            Some(id) => *id,
+            Some(&id) => id,
             None => {
                 let new_id = self.next_type_var_id;
                 self.next_type_var_id += 1;

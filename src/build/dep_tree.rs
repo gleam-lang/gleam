@@ -30,11 +30,9 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
     }
 
     for (value, deps) in inputs {
-        let from_index = indexes.get(&value).gleam_expect("Finding index for value");
-        for dep in deps {
-            if let Some(to_index) = indexes.get(&dep) {
-                graph.add_edge(*from_index, *to_index, ());
-            }
+        let &from_index = indexes.get(&value).gleam_expect("Finding index for value");
+        for &to_index in deps.into_iter().filter_map(|dep| indexes.get(&dep)) {
+            graph.add_edge(from_index, to_index, ());
         }
     }
 

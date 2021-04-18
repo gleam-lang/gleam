@@ -234,10 +234,7 @@ fn function<'a>(
 }
 
 fn markdown_documentation(doc: &Option<String>) -> String {
-    match doc {
-        None => "".to_string(),
-        Some(d) => render_markdown(d),
-    }
+    doc.as_deref().map(render_markdown).unwrap_or_default()
 }
 
 fn render_markdown(text: &str) -> String {

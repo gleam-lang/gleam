@@ -882,13 +882,13 @@ where
                 }
 
                 if let Some((op_s, t, op_e)) = self.tok0.take() {
-                    if let Some(p) = &t.guard_precedence() {
+                    if let Some(p) = t.guard_precedence() {
                         // Is Op
                         let _ = self.next_tok();
                         last_op_start = op_s;
                         last_op_end = op_e;
                         let _ = handle_op(
-                            Some(((op_s, t, op_e), *p)),
+                            Some(((op_s, t, op_e), p)),
                             &mut opstack,
                             &mut estack,
                             &do_reduce_clause_guard,
@@ -2400,7 +2400,7 @@ fn precedence(t: &Token) -> Option<u8> {
 }
 
 fn tok_to_binop(t: &Token) -> Option<BinOp> {
-    match *t {
+    match t {
         Token::VbarVbar => Some(BinOp::Or),
         Token::AmperAmper => Some(BinOp::And),
         Token::EqualEqual => Some(BinOp::Eq),
@@ -2447,17 +2447,17 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
     }
 }
 
-fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
-    if op.1 == Token::Pipe {
+fn expr_op_reduction((start, token, _): Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
+    if token == Token::Pipe {
         UntypedExpr::Pipe {
             location: SrcSpan {
-                start: op.0,
+                start,
                 end: r.location().end,
             },
             left: Box::new(l),
             right: Box::new(r),
         }
-    } else if let Some(bin_op) = tok_to_binop(&op.1) {
+    } else if let Some(bin_op) = tok_to_binop(&token) {
         UntypedExpr::BinOp {
             location: SrcSpan {
                 start: l.location().start,
@@ -2473,7 +2473,7 @@ fn expr_op_reduction(op: Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr
 }
 
 fn clause_guard_reduction(
-    op: Spanned,
+    (_, token, _): Spanned,
     l: UntypedClauseGuard,
     r: UntypedClauseGuard,
 ) -> UntypedClauseGuard {
@@ -2483,7 +2483,7 @@ fn clause_guard_reduction(
     };
     let left = Box::new(l);
     let right = Box::new(r);
-    match op.1 {
+    match token {
         Token::VbarVbar => ClauseGuard::Or {
             location,
             left,

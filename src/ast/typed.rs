@@ -143,10 +143,11 @@ impl TypedExpr {
         lazy_static! {
             static ref NON_ZERO: Regex = Regex::new(r"[1-9]").unwrap();
         }
-        match self {
-            Self::Int { value, .. } | Self::Float { value, .. } => NON_ZERO.is_match(value),
-            _ => false,
-        }
+
+        matches!(
+            self,
+            Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.is_match(value)
+        )
     }
 
     pub fn location(&self) -> SrcSpan {
