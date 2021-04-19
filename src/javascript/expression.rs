@@ -167,8 +167,8 @@ fn float(value: &str) -> Document<'_> {
 }
 pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
     match expression {
-        Constant::Int { .. } => unsupported("Integer as constant"),
-        Constant::Float { .. } => unsupported("Float as constant"),
+        Constant::Int { value, .. } => Ok(int(value)),
+        Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),
