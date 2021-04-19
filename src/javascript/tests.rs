@@ -39,11 +39,14 @@ fn go() {
   "three"
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   "one";
   "two";
   return "three";
-}"#
+}
+"#
     );
 }
 
@@ -55,9 +58,12 @@ fn go() {
   #("1", "2", "3")
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   return ["1", "2", "3"];
-}"#
+}
+"#
     );
 
     assert_js!(
@@ -70,13 +76,16 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   return [
     "1111111111111111111111111111111",
     ["1111111111111111111111111111111", "2", "3"],
     "3",
   ];
-}"#
+}
+"#
     );
 }
 
@@ -94,7 +103,9 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   return [
     "1",
     (() => {
@@ -102,7 +113,8 @@ fn go() {
       return "3";
     })(),
   ];
-}"#
+}
+"#
     );
 
     assert_js!(
@@ -115,12 +127,51 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   return [
     "1111111111111111111111111111111",
     ["1111111111111111111111111111111", "2", "3"],
     "3",
   ];
-}"#
+}
+"#
+    );
+}
+
+#[test]
+fn constant_tuples() {
+    assert_js!(
+        r#"
+const a = "Hello"
+const e = #("bob", "dug")
+        "#,
+        r#""use strict";
+
+const a = "Hello";
+
+const e = ["bob", "dug"];
+"#
+    );
+
+    assert_js!(
+        r#"
+const e = #(
+  "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
+  "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
+)
+        "#,
+        r#""use strict";
+
+const e = [
+  "loooooooooooooong",
+  "loooooooooooong",
+  "loooooooooooooong",
+  "loooooooooooooong",
+  "loooooooooooong",
+  "loooooooooooooong",
+];
+"#
     );
 }

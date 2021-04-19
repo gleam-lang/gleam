@@ -1039,10 +1039,9 @@ fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    match guard {
-        Some(guard) => " when ".to_doc().append(bare_clause_guard(guard, env)),
-        None => nil(),
-    }
+    guard
+        .map(|guard| " when ".to_doc().append(bare_clause_guard(guard, env)))
+        .unwrap_or_else(nil)
 }
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
@@ -1317,10 +1316,9 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 }
 
 fn todo<'a>(message: &'a Option<String>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
-    let message = match message {
-        Some(message) => message,
-        None => "This has not yet been implemented",
-    };
+    let message = message
+        .as_deref()
+        .unwrap_or("This has not yet been implemented");
     erlang_error("todo", message, location, vec![], env)
 }
 
@@ -1549,11 +1547,11 @@ fn external_fun<'a>(
 }
 
 fn variable_name(name: &str) -> String {
-    let mut c = name.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().chain(c).collect(),
-    }
+    let mut chars = name.chars();
+    let first_char = chars.next();
+    let first_uppercased = first_char.into_iter().flat_map(char::to_uppercase);
+
+    first_uppercased.chain(chars).collect()
 }
 
 // When rendering a type variable to an erlang type spec we need all type variables with the

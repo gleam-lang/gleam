@@ -413,7 +413,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             };
         }
 
-        if let Type::Var { .. } = *t2 {
+        if let Type::Var { .. } = t2.deref() {
             return self.unify(t2, t1).map_err(flip_unify_error);
         }
 

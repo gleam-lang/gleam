@@ -5,11 +5,14 @@ fn string_literals() {
     assert_js!(
         r#"
 fn go() {
-    "Hello, Gleam!"
+  "Hello, Gleam!"
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   return "Hello, Gleam!";
-}"#
+}
+"#
     );
 }

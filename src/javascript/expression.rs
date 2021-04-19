@@ -122,6 +122,17 @@ fn int(value: &str) -> Document<'_> {
 fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
+pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
+    match expression {
+        Constant::Int { .. } => unsupported("Integer as constant"),
+        Constant::Float { .. } => unsupported("Float as constant"),
+        Constant::String { value, .. } => Ok(string(&value.as_str())),
+        Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
+        Constant::List { .. } => unsupported("List as constant"),
+        Constant::Record { .. } => unsupported("Record as constant"),
+        Constant::BitString { .. } => unsupported("BitString as constant"),
+    }
+}
 
 fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("\"", "\"")

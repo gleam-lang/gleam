@@ -348,7 +348,7 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: usize) {
         let serialised_id = match self.type_var_id_map.get(&id) {
-            Some(id) => *id,
+            Some(&id) => id,
             None => {
                 let new_id = self.next_type_var_id;
                 self.next_type_var_id += 1;
