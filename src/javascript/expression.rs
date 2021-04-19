@@ -139,7 +139,12 @@ impl Generator {
         }
     }
 
-    fn print_bin_op<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr, op: &'a str) -> Output<'a> {
+    fn print_bin_op<'a>(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        op: &'a str,
+    ) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
 
