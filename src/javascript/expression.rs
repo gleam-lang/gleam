@@ -134,7 +134,9 @@ impl Generator {
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
-            BinOp::DivFloat => self.print_bin_op(left, right, "/"),
+            BinOp::DivFloat => Ok(self
+                .print_bin_op(left, right, "/")?
+                .surround("(function(x) { return isFinite(x) ? x: 0})(", ")")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
         }
     }
