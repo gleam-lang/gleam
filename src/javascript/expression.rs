@@ -121,13 +121,13 @@ impl Generator {
         right: &'a TypedExpr,
     ) -> Output<'a> {
         match name {
-            // BinOp::And => print_bin_op(left, right, "&&"),
-            // BinOp::Or => print_bin_op(left, right, "||"),
+            BinOp::And => unsupported("Boolean operator"),
+            BinOp::Or => unsupported("Boolean operator"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
             // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
-            // BinOp::Eq => "=:=",
-            // BinOp::NotEq => "/=",
+            BinOp::Eq => unsupported("Equality operator"),
+            BinOp::NotEq => unsupported("Equality operator"),
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
@@ -136,10 +136,6 @@ impl Generator {
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
             BinOp::DivFloat => self.print_bin_op(left, right, "/"),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
-            _ => {
-                println!("name: {:?}", name);
-                unimplemented!("binop")
-            }
         }
     }
 
