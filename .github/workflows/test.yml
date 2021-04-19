@@ -1,0 +1,59 @@
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+jobs:
+  test:
+    name: test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        toolchain: [stable]
+        build: [linux-amd64, macos, windows]
+        include:
+        - build: linux-amd64
+          os: ubuntu-latest
+          target: x86_64-unknown-linux-gnu
+        - build: macos
+          os: macos-latest
+          target: x86_64-apple-darwin
+        - build: windows
+          os: windows-latest
+          target: x86_64-pc-windows-msvc
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: ${{ matrix.toolchain }}
+        target: ${{ matrix.target }}
+        profile: minimal
+        override: true
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --workspace --target ${{ matrix.target }}
+
+  rustfmt:
+    name: rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+        profile: minimal
+        components: rustfmt
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
