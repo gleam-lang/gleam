@@ -15,7 +15,9 @@ fn go() {
     1_000
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   1;
   2;
   -3;
@@ -24,7 +26,8 @@ fn go() {
   0o17;
   0xF;
   return 1_000;
-}"#
+}
+"#
     );
 }
 #[test]
@@ -38,12 +41,15 @@ fn go() {
     1.
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   1.5;
   2.0;
   -0.1;
   return 1.;
-}"#
+}
+"#
     );
 }
 

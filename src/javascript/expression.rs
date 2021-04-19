@@ -145,8 +145,8 @@ fn bin_op<'a>(name: &'a BinOp, left: &'a TypedExpr, right: &'a TypedExpr) -> Out
     //     _ => None,
     // };
     match name {
-        BinOp::And => print_bin_op(left, right, "&&"),
-        BinOp::Or => print_bin_op(left, right, "||"),
+        // BinOp::And => print_bin_op(left, right, "&&"),
+        // BinOp::Or => print_bin_op(left, right, "||"),
         BinOp::LtInt | BinOp::LtFloat => print_bin_op(left, right, "<"),
         BinOp::LtEqInt | BinOp::LtEqFloat => print_bin_op(left, right, "<="),
         // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
