@@ -69,17 +69,20 @@ fn go() {
     2 <= 1 // => False
 }
 "#,
-        r#"function go() {
+        r#""use strict";
+
+function go() {
   1 + 1;
   5 - 1;
-  2 === 0 ? 0 : Math.floor(5 / 2);
+  5 / 2 | 0;
   3 * 3;
   5 % 2;
   2 > 1;
   2 < 1;
   2 >= 1;
   return 2 <= 1;
-}"#
+}
+"#
     );
 }
 #[test]
