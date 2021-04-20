@@ -1,5 +1,9 @@
 use super::*;
-use crate::{ast::*, pretty::*};
+use crate::{
+    ast::*,
+    pretty::*,
+    type_::{ValueConstructor, ValueConstructorVariant},
+};
 
 #[derive(Debug)]
 pub struct Generator {
@@ -37,7 +41,9 @@ impl Generator {
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
 
-            TypedExpr::Var { .. } => unsupported("Referencing variables"),
+            TypedExpr::Var {
+                name, constructor, ..
+            } => self.variable(name, constructor),
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
@@ -100,6 +106,15 @@ impl Generator {
             break_("", " "),
             "})()",
         ))
+    }
+
+    fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+        match &constructor.variant {
+            ValueConstructorVariant::Record { name, .. } if name == "True" => Ok("true".to_doc()),
+            ValueConstructorVariant::Record { name, .. } if name == "False" => Ok("false".to_doc()),
+            ValueConstructorVariant::Record { name, .. } if name == "Nil" => Ok("null".to_doc()),
+            _ => unsupported("Referencing variables"),
+        }
     }
 
     fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
