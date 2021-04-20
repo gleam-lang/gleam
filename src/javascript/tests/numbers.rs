@@ -106,12 +106,43 @@ fn go() {
 function go() {
   1.0 + 1.4;
   5.0 - 1.5;
-  (function(x) { return isFinite(x) ? x: 0})(5.0 / 2.0);
+  $divide(5.0, 2.0);
   3.0 * 3.1;
   2.0 > 1.0;
   2.0 < 1.0;
   2.0 >= 1.0;
   return 2.0 <= 1.0;
+}
+
+function $divide(a, b) {
+  if (b === 0) {
+    return 0;
+  }
+  return a / b;
+}
+"#
+    );
+
+    assert_js!(
+        r#"
+fn go() {
+  111111111111111111111111111111. /. 22222222222222222222222222222222222.
+}
+"#,
+        r#""use strict";
+
+function go() {
+  return $divide(
+    111111111111111111111111111111.,
+    22222222222222222222222222222222222.
+  );
+}
+
+function $divide(a, b) {
+  if (b === 0) {
+    return 0;
+  }
+  return a / b;
 }
 "#
     );

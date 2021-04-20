@@ -2,22 +2,22 @@ use super::*;
 use crate::{ast::*, pretty::*};
 
 #[derive(Debug)]
-pub struct Generator {
+pub struct Generator<'module> {
     tail_position: bool,
+    // We register whether float division is used within an expression so that
+    // the module generator can output a suitable function if it is needed.
+    float_division_used: &'module mut bool,
 }
 
-impl Generator {
-    pub fn new() -> Self {
+impl<'module> Generator<'module> {
+    pub fn new(float_division_used: &'module mut bool) -> Self {
         Self {
             tail_position: true,
+            float_division_used,
         }
     }
 
-    pub fn compile<'a>(expression: &'a TypedExpr) -> Output<'a> {
-        Self::new().expression(expression)
-    }
-
-    fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
 
@@ -114,18 +114,21 @@ impl Generator {
         })
     }
 
+    // TODO: handle precedence rules
     fn bin_op<'a>(
         &mut self,
         name: &'a BinOp,
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
         match name {
             BinOp::And => unsupported("Boolean operator"),
             BinOp::Or => unsupported("Boolean operator"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
-            // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
+            // TODO: https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
             BinOp::Eq => unsupported("Equality operator"),
             BinOp::NotEq => unsupported("Equality operator"),
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
@@ -134,22 +137,21 @@ impl Generator {
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
-            BinOp::DivFloat => Ok(self
-                .print_bin_op(left, right, "/")?
-                .surround("(function(x) { return isFinite(x) ? x: 0})(", ")")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
+            BinOp::DivFloat => {
+                use std::iter::once;
+                *self.float_division_used = true;
+                Ok(docvec!("$divide", wrap_args(once(left).chain(once(right)))))
+            }
         }
     }
 
     fn print_bin_op<'a>(
         &mut self,
-        left: &'a TypedExpr,
-        right: &'a TypedExpr,
+        left: Document<'a>,
+        right: Document<'a>,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-
         Ok(left
             .append(" ")
             .append(op.to_doc())

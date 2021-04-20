@@ -7,12 +7,22 @@ use itertools::Itertools;
 
 const INDENT: isize = 2;
 
+const FUNCTION_DIVIDE: &str = "
+
+function $divide(a, b) {
+  if (b === 0) {
+    return 0;
+  }
+  return a / b;
+}";
+
 pub type Output<'a> = Result<Document<'a>, Error>;
 
 #[derive(Debug)]
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
+    float_division_used: bool,
 }
 
 impl<'a> Generator<'a> {
@@ -20,18 +30,29 @@ impl<'a> Generator<'a> {
         Self {
             line_numbers,
             module,
+            float_division_used: false,
         }
     }
 
     pub fn compile(&mut self) -> Output<'a> {
-        let statements = self
-            .module
-            .statements
-            .iter()
-            .flat_map(|s| self.statement(s));
-        let statements =
-            Itertools::intersperse(statements, Ok(lines(2))).collect::<Result<Vec<_>, _>>()?;
-        Ok(docvec!(r#""use strict";"#, lines(2), statements, line()))
+        let statements = std::iter::once(Ok(r#""use strict";"#.to_doc())).chain(
+            self.module
+                .statements
+                .iter()
+                .flat_map(|s| self.statement(s)),
+        );
+
+        // Two lines between each statement
+        let statements = Itertools::intersperse(statements, Ok(lines(2)));
+        let mut statements = statements.collect::<Result<Vec<_>, _>>()?;
+
+        // If float division has been used render an appropriate function
+        if self.float_division_used {
+            statements.push(FUNCTION_DIVIDE.to_doc());
+        };
+
+        statements.push(line());
+        Ok(statements.to_doc())
     }
 
     pub fn statement(&mut self, statement: &'a TypedStatement) -> Option<Output<'a>> {
@@ -80,6 +101,7 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
+        let mut generator = expression::Generator::new(&mut self.float_division_used);
         let head = if public {
             "export function "
         } else {
@@ -90,7 +112,7 @@ impl<'a> Generator<'a> {
             name,
             fun_args(args),
             " {",
-            docvec![line(), expression::Generator::compile(body)?]
+            docvec![line(), generator.expression(body)?]
                 .nest(INDENT)
                 .group(),
             line(),
