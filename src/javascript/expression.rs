@@ -187,6 +187,9 @@ pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),
+        Constant::Record { name, .. } if name == "True" => Ok("true".to_doc()),
+        Constant::Record { name, .. } if name == "False" => Ok("false".to_doc()),
+        Constant::Record { name, .. } if name == "Nil" => Ok("null".to_doc()),
         Constant::Record { .. } => unsupported("Record as constant"),
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
