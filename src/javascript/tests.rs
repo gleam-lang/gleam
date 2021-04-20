@@ -174,3 +174,30 @@ const e = [
 "#
     );
 }
+
+#[test]
+fn external_functions() {
+    assert_js!(
+        r#"
+pub external type Thing
+external fn foo() -> Thing = "document" "foo"
+pub external fn bar(Int, String) -> Thing = "document" "bar"
+external fn baz(x: Int, y: String) -> Thing = "document" "baz"
+ 
+"#,
+        r#""use strict";
+
+function foo() {
+  document.foo()
+}
+
+export function bar(arg0, arg1) {
+  document.bar(arg0, arg1)
+}
+
+function baz(x, y) {
+  document.baz(x, y)
+}
+"#
+    );
+}

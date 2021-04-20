@@ -69,7 +69,14 @@ pub fn statement<'a>(
             return_type,
             line_numbers,
         )),
-        Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
+        Statement::ExternalFn {
+            public,
+            name,
+            arguments,
+            module,
+            fun,
+            ..
+        } => Some(external_function(*public, name, arguments, module, fun)),
     }
 }
 
@@ -106,6 +113,40 @@ fn module_function<'a>(
         docvec![line(), expression::Generator::compile(body)?]
             .nest(INDENT)
             .group(),
+        line(),
+        "}",
+    ])
+}
+
+fn external_function<'a, T>(
+    public: bool,
+    name: &'a str,
+    arguments: &'a [ExternalFnArg<T>],
+    module: &'a str,
+    fun: &'a str,
+) -> Output<'a> {
+    let head = if public {
+        "export function "
+    } else {
+        "function "
+    };
+    let arguments = wrap_args(arguments.iter().enumerate().map(|a| match a {
+        (index, ExternalFnArg { label, .. }) => {
+            let arg_name = label.clone().unwrap_or(format!("arg{}", index));
+            Document::String(arg_name)
+        }
+    }));
+    let body = module
+        .to_doc()
+        .append(".")
+        .append(fun)
+        .append(arguments.clone());
+    Ok(docvec![
+        head,
+        name,
+        arguments,
+        " {",
+        docvec![line(), body].nest(INDENT).group(),
         line(),
         "}",
     ])
