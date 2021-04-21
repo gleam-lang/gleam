@@ -73,7 +73,7 @@ pub fn statement<'a>(
     }
 }
 
-fn module_constant<'a, T, Y>(public: bool, name: &'a str, value: &'a Constant<T, Y>) -> Output<'a> {
+fn module_constant<'a>(public: bool, name: &'a str, value: &'a TypedConstant) -> Output<'a> {
     let head = if public { "export const " } else { "const " };
     Ok(docvec![
         head,

@@ -180,16 +180,20 @@ fn int(value: &str) -> Document<'_> {
 fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
-pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
+pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),
-        Constant::Record { name, .. } if name == "True" => Ok("true".to_doc()),
-        Constant::Record { name, .. } if name == "False" => Ok("false".to_doc()),
-        Constant::Record { name, .. } if name == "Nil" => Ok("null".to_doc()),
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+            Ok("true".to_doc())
+        }
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+            Ok("false".to_doc())
+        }
+        Constant::Record { typ, .. } if typ.is_nil() => Ok("null".to_doc()),
         Constant::Record { .. } => unsupported("Record as constant"),
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
