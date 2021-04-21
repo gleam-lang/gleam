@@ -15,7 +15,7 @@ fn go() {
 function go() {
   true;
   false;
-  return null;
+  return undefined;
 }
 "#
     );
@@ -35,7 +35,7 @@ const a = true;
 
 const b = false;
 
-const c = null;
+const c = undefined;
 "#
     );
 }

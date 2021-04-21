@@ -121,7 +121,7 @@ impl<'module> Generator<'module> {
                 Ok("false".to_doc())
             }
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
-                Ok("null".to_doc())
+                Ok("undefined".to_doc())
             }
             _ => unsupported("Referencing variables"),
         }
@@ -205,7 +205,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
             Ok("false".to_doc())
         }
-        Constant::Record { typ, .. } if typ.is_nil() => Ok("null".to_doc()),
+        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { .. } => unsupported("Record as constant"),
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
