@@ -2,27 +2,27 @@ use super::*;
 use crate::{ast::*, pretty::*};
 
 #[derive(Debug)]
-pub struct Generator {
+pub struct Generator<'module> {
     tail_position: bool,
+    // We register whether float division is used within an expression so that
+    // the module generator can output a suitable function if it is needed.
+    float_division_used: &'module mut bool,
 }
 
-impl Generator {
-    pub fn new() -> Self {
+impl<'module> Generator<'module> {
+    pub fn new(float_division_used: &'module mut bool) -> Self {
         Self {
             tail_position: true,
+            float_division_used,
         }
     }
 
-    pub fn compile<'a>(expression: &'a TypedExpr) -> Output<'a> {
-        Self::new().expression(expression)
-    }
-
-    fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         let document = match expression {
             TypedExpr::String { value, .. } => Ok(string(value)),
 
-            TypedExpr::Int { .. } => unsupported("Integer values"),
-            TypedExpr::Float { .. } => unsupported("Float values"),
+            TypedExpr::Int { value, .. } => Ok(int(value)),
+            TypedExpr::Float { value, .. } => Ok(float(value)),
 
             TypedExpr::List { .. } => unsupported("List"),
 
@@ -41,7 +41,9 @@ impl Generator {
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
-            TypedExpr::BinOp { .. } => unsupported("Binary operation"),
+            TypedExpr::BinOp {
+                name, left, right, ..
+            } => self.bin_op(name, left, right),
 
             TypedExpr::Todo { .. } => unsupported("todo keyword"),
 
@@ -111,12 +113,64 @@ impl Generator {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
         })
     }
+
+    // TODO: handle precedence rules
+    fn bin_op<'a>(
+        &mut self,
+        name: &'a BinOp,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+    ) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        match name {
+            BinOp::And => unsupported("Boolean operator"),
+            BinOp::Or => unsupported("Boolean operator"),
+            BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
+            BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
+            // TODO: https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
+            BinOp::Eq => unsupported("Equality operator"),
+            BinOp::NotEq => unsupported("Equality operator"),
+            BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
+            BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
+            BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
+            BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
+            BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
+            BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
+            BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
+            BinOp::DivFloat => {
+                use std::iter::once;
+                *self.float_division_used = true;
+                Ok(docvec!("$divide", wrap_args(once(left).chain(once(right)))))
+            }
+        }
+    }
+
+    fn print_bin_op<'a>(
+        &mut self,
+        left: Document<'a>,
+        right: Document<'a>,
+        op: &'a str,
+    ) -> Output<'a> {
+        Ok(left
+            .append(" ")
+            .append(op.to_doc())
+            .append(" ")
+            .append(right))
+    }
 }
 
+fn int(value: &str) -> Document<'_> {
+    value.to_doc()
+}
+
+fn float(value: &str) -> Document<'_> {
+    value.to_doc()
+}
 pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
     match expression {
-        Constant::Int { .. } => unsupported("Integer as constant"),
-        Constant::Float { .. } => unsupported("Float as constant"),
+        Constant::Int { value, .. } => Ok(int(value)),
+        Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),

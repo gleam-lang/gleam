@@ -2,27 +2,176 @@ mod expression;
 #[cfg(test)]
 mod tests;
 
-use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*, type_::Type};
+use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
-use std::sync::Arc;
 
 const INDENT: isize = 2;
 
+const FUNCTION_DIVIDE: &str = "
+
+function $divide(a, b) {
+  if (b === 0) {
+    return 0;
+  }
+  return a / b;
+}";
+
 pub type Output<'a> = Result<Document<'a>, Error>;
+
+#[derive(Debug)]
+pub struct Generator<'a> {
+    line_numbers: &'a LineNumbers,
+    module: &'a TypedModule,
+    float_division_used: bool,
+}
+
+impl<'a> Generator<'a> {
+    pub fn new(line_numbers: &'a LineNumbers, module: &'a TypedModule) -> Self {
+        Self {
+            line_numbers,
+            module,
+            float_division_used: false,
+        }
+    }
+
+    pub fn compile(&mut self) -> Output<'a> {
+        let statements = std::iter::once(Ok(r#""use strict";"#.to_doc())).chain(
+            self.module
+                .statements
+                .iter()
+                .flat_map(|s| self.statement(s)),
+        );
+
+        // Two lines between each statement
+        let statements = Itertools::intersperse(statements, Ok(lines(2)));
+        let mut statements = statements.collect::<Result<Vec<_>, _>>()?;
+
+        // If float division has been used render an appropriate function
+        if self.float_division_used {
+            statements.push(FUNCTION_DIVIDE.to_doc());
+        };
+
+        statements.push(line());
+        Ok(statements.to_doc())
+    }
+
+    pub fn statement(&mut self, statement: &'a TypedStatement) -> Option<Output<'a>> {
+        match statement {
+            Statement::TypeAlias { .. } => None,
+            Statement::CustomType { .. } => None,
+            Statement::Import { .. } => Some(unsupported("Importing modules")),
+            Statement::ExternalType { .. } => None,
+            Statement::ModuleConstant {
+                public,
+                name,
+                value,
+                ..
+            } => Some(self.module_constant(*public, name, value)),
+            Statement::Fn {
+                arguments,
+                name,
+                body,
+                public,
+                ..
+            } => Some(self.module_function(*public, name, arguments, body)),
+            Statement::ExternalFn {
+                public,
+                name,
+                arguments,
+                module,
+                fun,
+                ..
+            } => Some(self.external_function(*public, name, arguments, module, fun)),
+        }
+    }
+
+    fn module_constant(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        value: &'a TypedConstant,
+    ) -> Output<'a> {
+        let head = if public { "export const " } else { "const " };
+        Ok(docvec![
+            head,
+            name,
+            " = ",
+            expression::constant_expression(value)?,
+            ";",
+        ])
+    }
+
+    fn module_function(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        args: &'a [TypedArg],
+        body: &'a TypedExpr,
+    ) -> Output<'a> {
+        let mut generator = expression::Generator::new(&mut self.float_division_used);
+        let head = if public {
+            "export function "
+        } else {
+            "function "
+        };
+        Ok(docvec![
+            head,
+            name,
+            fun_args(args),
+            " {",
+            docvec![line(), generator.expression(body)?]
+                .nest(INDENT)
+                .group(),
+            line(),
+            "}",
+        ])
+    }
+
+    fn external_function<T>(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        arguments: &'a [ExternalFnArg<T>],
+        module: &'a str,
+        fun: &'a str,
+    ) -> Output<'a> {
+        let head = if public {
+            "export function "
+        } else {
+            "function "
+        };
+        let arguments = wrap_args(arguments.iter().enumerate().map(|a| match a {
+            (index, ExternalFnArg { label, .. }) => {
+                let arg_name = label.clone().unwrap_or(format!("arg{}", index));
+                Document::String(arg_name)
+                // label
+                //     .as_ref()
+                //     .map(Documentable::to_doc)
+                //     .unwrap_or_else(|| Document::String(format!("arg{}", index)))
+            }
+        }));
+        let body = docvec!["return ", module, ".", fun, arguments.clone()];
+        Ok(docvec![
+            head,
+            name,
+            arguments,
+            " {",
+            docvec![line(), body].nest(INDENT).group(),
+            line(),
+            "}",
+        ])
+    }
+}
 
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     writer: &mut impl Utf8Writer,
 ) -> Result<(), crate::Error> {
-    let statements = module
-        .statements
-        .iter()
-        .flat_map(|s| statement(&module.name, s, &module.name, line_numbers));
-    let statements = Itertools::intersperse(statements, Ok(lines(2)))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(crate::Error::JavaScript)?;
-    docvec!(r#""use strict";"#, lines(2), statements, line()).pretty_print(80, writer)
+    Generator::new(line_numbers, module)
+        .compile()
+        .map_err(crate::Error::JavaScript)?
+        .pretty_print(80, writer)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -34,122 +183,6 @@ fn unsupported<M: ToString, T>(label: M) -> Result<T, Error> {
     Err(Error::Unsupported {
         feature: label.to_string(),
     })
-}
-
-pub fn statement<'a>(
-    _current_module: &'a [String],
-    statement: &'a TypedStatement,
-    module: &'a [String],
-    line_numbers: &'a LineNumbers,
-) -> Option<Output<'a>> {
-    match statement {
-        Statement::TypeAlias { .. } => None,
-        Statement::CustomType { .. } => None,
-        Statement::Import { .. } => Some(unsupported("Importing modules")),
-        Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant {
-            public,
-            name,
-            value,
-            ..
-        } => Some(module_constant(*public, name, value)),
-        Statement::Fn {
-            arguments,
-            name,
-            body,
-            return_type,
-            public,
-            ..
-        } => Some(module_function(
-            *public,
-            name,
-            arguments,
-            body,
-            module,
-            return_type,
-            line_numbers,
-        )),
-        Statement::ExternalFn {
-            public,
-            name,
-            arguments,
-            module,
-            fun,
-            ..
-        } => Some(external_function(*public, name, arguments, module, fun)),
-    }
-}
-
-fn module_constant<'a, T, Y>(public: bool, name: &'a str, value: &'a Constant<T, Y>) -> Output<'a> {
-    let head = if public { "export const " } else { "const " };
-    Ok(docvec![
-        head,
-        name,
-        " = ",
-        expression::constant_expression(value)?,
-        ";",
-    ])
-}
-
-fn module_function<'a>(
-    public: bool,
-    name: &'a str,
-    args: &'a [TypedArg],
-    body: &'a TypedExpr,
-    _module: &'a [String],
-    _return_type: &'a Arc<Type>,
-    _line_numbers: &'a LineNumbers,
-) -> Output<'a> {
-    let head = if public {
-        "export function "
-    } else {
-        "function "
-    };
-    Ok(docvec![
-        head,
-        name,
-        fun_args(args),
-        " {",
-        docvec![line(), expression::Generator::compile(body)?]
-            .nest(INDENT)
-            .group(),
-        line(),
-        "}",
-    ])
-}
-
-fn external_function<'a, T>(
-    public: bool,
-    name: &'a str,
-    arguments: &'a [ExternalFnArg<T>],
-    module: &'a str,
-    fun: &'a str,
-) -> Output<'a> {
-    let head = if public {
-        "export function "
-    } else {
-        "function "
-    };
-    let arguments = wrap_args(arguments.iter().enumerate().map(|a| match a {
-        (index, ExternalFnArg { label, .. }) => {
-            let arg_name = label.clone().unwrap_or(format!("arg{}", index));
-            Document::String(arg_name)
-            // label
-            //     .as_ref()
-            //     .map(Documentable::to_doc)
-            //     .unwrap_or_else(|| Document::String(format!("arg{}", index)))
-        }
-    }));
-    let body = docvec!["return ", module, ".", fun, arguments.clone()];
-    Ok(docvec![
-        head,
-        name,
-        arguments,
-        " {",
-        docvec![line(), body].nest(INDENT).group(),
-        line(),
-        "}",
-    ])
 }
 
 fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
