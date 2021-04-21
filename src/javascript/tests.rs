@@ -188,15 +188,15 @@ external fn baz(x: Int, y: String) -> Thing = "document" "baz"
         r#""use strict";
 
 function foo() {
-  document.foo()
+  return document.foo()
 }
 
 export function bar(arg0, arg1) {
-  document.bar(arg0, arg1)
+  return document.bar(arg0, arg1)
 }
 
 function baz(x, y) {
-  document.baz(x, y)
+  return document.baz(x, y)
 }
 "#
     );
