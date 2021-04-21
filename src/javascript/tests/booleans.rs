@@ -39,3 +39,22 @@ const c = null;
 "#
     );
 }
+
+#[test]
+fn boolean_operators() {
+    assert_js!(
+        r#"
+fn go() {
+    True && True
+    False || False
+}
+"#,
+        r#""use strict";
+
+function go() {
+  true && true;
+  return false || false;
+}
+"#
+    );
+}

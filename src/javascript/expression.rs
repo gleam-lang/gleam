@@ -146,8 +146,8 @@ impl Generator {
         right: &'a TypedExpr,
     ) -> Output<'a> {
         match name {
-            BinOp::And => unsupported("Boolean operator"),
-            BinOp::Or => unsupported("Boolean operator"),
+            BinOp::And => self.print_bin_op(left, right, "&&"),
+            BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
             // https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
