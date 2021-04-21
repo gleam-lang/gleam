@@ -1,5 +1,9 @@
 use super::*;
-use crate::{ast::*, pretty::*};
+use crate::{
+    ast::*,
+    pretty::*,
+    type_::{ValueConstructor, ValueConstructorVariant},
+};
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -37,7 +41,9 @@ impl<'module> Generator<'module> {
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
 
-            TypedExpr::Var { .. } => unsupported("Referencing variables"),
+            TypedExpr::Var {
+                name, constructor, ..
+            } => self.variable(name, constructor),
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
@@ -102,6 +108,25 @@ impl<'module> Generator<'module> {
         ))
     }
 
+    fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+        match &constructor.variant {
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "True" =>
+            {
+                Ok("true".to_doc())
+            }
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "False" =>
+            {
+                Ok("false".to_doc())
+            }
+            ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
+                Ok("undefined".to_doc())
+            }
+            _ => unsupported("Referencing variables"),
+        }
+    }
+
     fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
         let first = self.not_in_tail_position(|gen| gen.expression(first))?;
         let then = self.expression(then)?;
@@ -124,8 +149,8 @@ impl<'module> Generator<'module> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
         match name {
-            BinOp::And => unsupported("Boolean operator"),
-            BinOp::Or => unsupported("Boolean operator"),
+            BinOp::And => self.print_bin_op(left, right, "&&"),
+            BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
             // TODO: https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
@@ -167,13 +192,20 @@ fn int(value: &str) -> Document<'_> {
 fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
-pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
+pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+            Ok("true".to_doc())
+        }
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+            Ok("false".to_doc())
+        }
+        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { .. } => unsupported("Record as constant"),
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
