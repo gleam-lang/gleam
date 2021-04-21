@@ -110,9 +110,19 @@ impl Generator {
 
     fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::Record { name, .. } if name == "True" => Ok("true".to_doc()),
-            ValueConstructorVariant::Record { name, .. } if name == "False" => Ok("false".to_doc()),
-            ValueConstructorVariant::Record { name, .. } if name == "Nil" => Ok("null".to_doc()),
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "True" =>
+            {
+                Ok("true".to_doc())
+            }
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "False" =>
+            {
+                Ok("false".to_doc())
+            }
+            ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
+                Ok("null".to_doc())
+            }
             _ => unsupported("Referencing variables"),
         }
     }

@@ -94,7 +94,6 @@ impl Type {
     }
 
     pub fn is_bool(&self) -> bool {
-        println!("{:?}", self);
         matches!(self, Self::App { module, name, .. } if "Bool" == name && module.is_empty())
     }
 
