@@ -35,7 +35,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Case { .. } => unsupported("Case"),
 
-            TypedExpr::Call { .. } => unsupported("Function"),
+            TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { .. } => unsupported("Function"),
 
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
@@ -124,6 +124,8 @@ impl<'module> Generator<'module> {
                 Ok("undefined".to_doc())
             }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
+            // Whats the difference between name and modfn name
+            ValueConstructorVariant::ModuleFn {..} => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
     }
@@ -138,6 +140,14 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
         })
+    }
+
+    fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
+        let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
+        let arguments = self.not_in_tail_position(|gen| {
+            call_arguments(arguments.iter().map(|element| gen.wrap_expression(&element.value)))
+        })?;
+        Ok(docvec![fun, arguments])
     }
 
     // TODO: handle precedence rules
@@ -225,6 +235,19 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
         docvec![break_("", ""), elements].nest(INDENT),
         break_(",", ""),
         "]"
+    ]
+    .group())
+}
+
+fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+    let elements = Itertools::intersperse(elements, Ok(break_(",", ", ")))
+        .collect::<Result<Vec<_>, _>>()?
+        .to_doc();
+    Ok(docvec![
+        "(",
+        docvec![break_("", ""), elements].nest(INDENT),
+        break_(",", ""),
+        ")"
     ]
     .group())
 }
