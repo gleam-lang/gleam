@@ -137,7 +137,10 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
-        let mut generator = expression::Generator::new(&mut self.float_division_used, &mut self.object_equality_used);
+        let mut generator = expression::Generator::new(
+            &mut self.float_division_used,
+            &mut self.object_equality_used,
+        );
         let head = if public {
             "export function "
         } else {
