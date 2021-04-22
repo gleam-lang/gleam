@@ -108,7 +108,7 @@ impl<'module> Generator<'module> {
         ))
     }
 
-    fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+    fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::Record { name, .. }
                 if constructor.type_.is_bool() && name == "True" =>
@@ -123,6 +123,7 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
             }
+            ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
     }
