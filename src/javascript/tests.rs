@@ -182,3 +182,50 @@ const e = [
 "#
     );
 }
+
+#[test]
+fn equality(){
+  assert_js!(
+    r#"
+fn go() {
+  1 == 2
+  1 != 2
+}
+"#,
+    r#""use strict";
+
+function go() {
+  $deepEqual(1, 2);
+  return !$deepEqual(1, 2);
+}
+
+function $deepEqual(x, y) {
+  if ($isObject(x) && $isObject(y)) {
+    const kx = Object.keys(x);
+    const ky = Object.keys(x);
+
+    if (kx.length != ky.length) {
+      return false;
+    }
+
+    for (const k of kx) {
+      const a = x[k];
+      const b = y[k];
+      if !$deepEqual(a, b) {
+        return false
+      }
+    }
+
+    return true;
+
+  } else {
+    return x === y;
+  }
+}
+
+function $isObject(object) {
+  return object != null && typeof object === 'object';
+}
+"#
+);
+}

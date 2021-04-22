@@ -7,6 +7,36 @@ use itertools::Itertools;
 
 const INDENT: isize = 2;
 
+const DEEP_EQUAL: &str = "
+
+function $deepEqual(x, y) {
+  if ($isObject(x) && $isObject(y)) {
+    const kx = Object.keys(x);
+    const ky = Object.keys(x);
+
+    if (kx.length != ky.length) {
+      return false;
+    }
+
+    for (const k of kx) {
+      const a = x[k];
+      const b = y[k];
+      if !$deepEqual(a, b) {
+        return false
+      }
+    }
+
+    return true;
+
+  } else {
+    return x === y;
+  }
+}
+
+function $isObject(object) {
+  return object != null && typeof object === 'object';
+}";
+
 const FUNCTION_DIVIDE: &str = "
 
 function $divide(a, b) {
@@ -23,6 +53,7 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     float_division_used: bool,
+    object_equality_used: bool,
 }
 
 impl<'a> Generator<'a> {
@@ -31,6 +62,7 @@ impl<'a> Generator<'a> {
             line_numbers,
             module,
             float_division_used: false,
+            object_equality_used: false,
         }
     }
 
@@ -49,6 +81,10 @@ impl<'a> Generator<'a> {
         // If float division has been used render an appropriate function
         if self.float_division_used {
             statements.push(FUNCTION_DIVIDE.to_doc());
+        };
+
+        if self.object_equality_used {
+            statements.push(DEEP_EQUAL.to_doc());
         };
 
         statements.push(line());
@@ -101,7 +137,7 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
-        let mut generator = expression::Generator::new(&mut self.float_division_used);
+        let mut generator = expression::Generator::new(&mut self.float_division_used, &mut self.object_equality_used);
         let head = if public {
             "export function "
         } else {

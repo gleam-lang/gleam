@@ -11,13 +11,15 @@ pub struct Generator<'module> {
     // We register whether float division is used within an expression so that
     // the module generator can output a suitable function if it is needed.
     float_division_used: &'module mut bool,
+    object_equality_used: &'module mut bool,
 }
 
 impl<'module> Generator<'module> {
-    pub fn new(float_division_used: &'module mut bool) -> Self {
+    pub fn new(float_division_used: &'module mut bool, object_equality_used: &'module mut bool) -> Self {
         Self {
             tail_position: true,
             float_division_used,
+            object_equality_used
         }
     }
 
@@ -153,9 +155,16 @@ impl<'module> Generator<'module> {
             BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
-            // TODO: https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
-            BinOp::Eq => unsupported("Equality operator"),
-            BinOp::NotEq => unsupported("Equality operator"),
+            BinOp::Eq => {
+                use std::iter::once;
+                *self.object_equality_used = true;
+                Ok(docvec!("$deepEqual", wrap_args(once(left).chain(once(right)))))
+            },
+            BinOp::NotEq => {
+                use std::iter::once;
+                *self.object_equality_used = true;
+                Ok(docvec!("!$deepEqual", wrap_args(once(left).chain(once(right)))))
+            },
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
