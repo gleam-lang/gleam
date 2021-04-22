@@ -15,11 +15,14 @@ pub struct Generator<'module> {
 }
 
 impl<'module> Generator<'module> {
-    pub fn new(float_division_used: &'module mut bool, object_equality_used: &'module mut bool) -> Self {
+    pub fn new(
+        float_division_used: &'module mut bool,
+        object_equality_used: &'module mut bool,
+    ) -> Self {
         Self {
             tail_position: true,
             float_division_used,
-            object_equality_used
+            object_equality_used,
         }
     }
 
@@ -165,13 +168,19 @@ impl<'module> Generator<'module> {
             BinOp::Eq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                Ok(docvec!("$deepEqual", wrap_args(once(left).chain(once(right)))))
-            },
+                Ok(docvec!(
+                    "$deepEqual",
+                    wrap_args(once(left).chain(once(right)))
+                ))
+            }
             BinOp::NotEq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                Ok(docvec!("!$deepEqual", wrap_args(once(left).chain(once(right)))))
-            },
+                Ok(docvec!(
+                    "!$deepEqual",
+                    wrap_args(once(left).chain(once(right)))
+                ))
+            }
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),

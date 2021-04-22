@@ -201,15 +201,15 @@ const e = [
 }
 
 #[test]
-fn equality(){
-  assert_js!(
-    r#"
+fn equality() {
+    assert_js!(
+        r#"
 fn go() {
   1 == 2
   1 != 2
 }
 "#,
-    r#""use strict";
+        r#""use strict";
 
 function go() {
   $deepEqual(1, 2);
@@ -244,5 +244,5 @@ function $isObject(object) {
   return object != null && typeof object === 'object';
 }
 "#
-);
+    );
 }
