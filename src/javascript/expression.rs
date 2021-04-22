@@ -124,7 +124,6 @@ impl<'module> Generator<'module> {
                 Ok("undefined".to_doc())
             }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
-            // Whats the difference between name and modfn name
             ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
