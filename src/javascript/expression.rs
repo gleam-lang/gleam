@@ -141,9 +141,9 @@ impl<'module> Generator<'module> {
 
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: &'a u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
-            Ok(gen
-                .wrap_expression(tuple)?
-                .append(index.to_doc().surround("[", "]")))
+            let tuple = gen.wrap_expression(tuple)?;
+            let accessor = index.to_doc().surround("[", "]");
+            Ok(docvec![tuple, accessor])
         })
     }
 
