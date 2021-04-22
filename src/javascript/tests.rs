@@ -91,6 +91,23 @@ function go() {
 }
 
 #[test]
+fn tuple_access() {
+    assert_js!(
+        r#"
+fn go() {
+  #(1, 2).0
+}
+"#,
+        r#""use strict";
+
+function go() {
+  return [1, 2][0];
+}
+"#
+    )
+}
+
+#[test]
 fn tuple_with_block_element() {
     assert_js!(
         r#"
