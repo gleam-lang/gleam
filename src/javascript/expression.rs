@@ -125,7 +125,7 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
             // Whats the difference between name and modfn name
-            ValueConstructorVariant::ModuleFn {..} => Ok(name.to_doc()),
+            ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
     }
@@ -145,7 +145,11 @@ impl<'module> Generator<'module> {
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
         let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
         let arguments = self.not_in_tail_position(|gen| {
-            call_arguments(arguments.iter().map(|element| gen.wrap_expression(&element.value)))
+            call_arguments(
+                arguments
+                    .iter()
+                    .map(|element| gen.wrap_expression(&element.value)),
+            )
         })?;
         Ok(docvec![fun, arguments])
     }
@@ -156,7 +160,7 @@ impl<'module> Generator<'module> {
         let result = self.expression(body);
         self.tail_position = tail;
         Ok(docvec!(
-            docvec!(fun_args(arguments)," => {", break_("", " "), result?)
+            docvec!(fun_args(arguments), " => {", break_("", " "), result?)
                 .nest(INDENT)
                 .group(),
             break_("", " "),

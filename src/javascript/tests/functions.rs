@@ -1,14 +1,13 @@
 use crate::assert_js;
 
-
 #[test]
-fn exported_functions(){
+fn exported_functions() {
     assert_js!(
         r#"
 pub fn add(x, y) {
     x + y
 }"#,
-r#""use strict";
+        r#""use strict";
 
 export function add(x, y) {
   return x + y;
@@ -17,9 +16,8 @@ export function add(x, y) {
     );
 }
 
-
 #[test]
-fn calling_functions(){
+fn calling_functions() {
     assert_js!(
         r#"
 pub fn twice(f: fn(t) -> t, x: t) -> t {
@@ -36,7 +34,7 @@ pub fn take_two(x: Int) -> Int {
     twice(fn(y) {y - 1}, x)
 }
 "#,
-r#""use strict";
+        r#""use strict";
 
 export function twice(f, x) {
   return f(f(x));
