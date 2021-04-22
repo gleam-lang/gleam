@@ -30,7 +30,12 @@ pub fn add_one(x: Int) -> Int {
 }
 pub fn add_two(x: Int) -> Int {
     twice(add_one, x)
-}"#,
+}
+
+pub fn take_two(x: Int) -> Int {
+    twice(fn(y) {y - 1}, x)
+}
+"#,
 r#""use strict";
 
 export function twice(f, x) {
@@ -43,6 +48,10 @@ export function add_one(x) {
 
 export function add_two(x) {
   return twice(add_one, x);
+}
+
+export function take_two(x) {
+  return twice((y) => { return y - 1; }, x);
 }
 "#
     );

@@ -36,7 +36,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Case { .. } => unsupported("Case"),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
-            TypedExpr::Fn { .. } => unsupported("Function"),
+            TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
@@ -148,6 +148,20 @@ impl<'module> Generator<'module> {
             call_arguments(arguments.iter().map(|element| gen.wrap_expression(&element.value)))
         })?;
         Ok(docvec![fun, arguments])
+    }
+
+    fn fun<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
+        let tail = self.tail_position;
+        self.tail_position = true;
+        let result = self.expression(body);
+        self.tail_position = tail;
+        Ok(docvec!(
+            docvec!(fun_args(arguments)," => {", break_("", " "), result?)
+                .nest(INDENT)
+                .group(),
+            break_("", " "),
+            "}",
+        ))
     }
 
     // TODO: handle precedence rules
