@@ -31,7 +31,7 @@ impl<'module> Generator<'module> {
             TypedExpr::List { .. } => unsupported("List"),
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
-            TypedExpr::TupleIndex { .. } => unsupported("Tuple"),
+            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, index),
 
             TypedExpr::Case { .. } => unsupported("Case"),
 
@@ -136,6 +136,14 @@ impl<'module> Generator<'module> {
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
+        })
+    }
+
+    fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: &'a u64) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            Ok(gen
+                .wrap_expression(tuple)?
+                .append(index.to_doc().surround("[", "]")))
         })
     }
 
