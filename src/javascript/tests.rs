@@ -1,4 +1,5 @@
 mod booleans;
+mod functions;
 mod numbers;
 mod strings;
 

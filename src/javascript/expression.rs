@@ -40,8 +40,8 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Case { .. } => unsupported("Case"),
 
-            TypedExpr::Call { .. } => unsupported("Function"),
-            TypedExpr::Fn { .. } => unsupported("Function"),
+            TypedExpr::Call { fun, args, .. } => self.call(fun, args),
+            TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
@@ -113,7 +113,7 @@ impl<'module> Generator<'module> {
         ))
     }
 
-    fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+    fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::Record { name, .. }
                 if constructor.type_.is_bool() && name == "True" =>
@@ -128,6 +128,8 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
             }
+            ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
+            ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
     }
@@ -144,6 +146,31 @@ impl<'module> Generator<'module> {
         })
     }
 
+    fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
+        let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
+        let arguments = self.not_in_tail_position(|gen| {
+            call_arguments(
+                arguments
+                    .iter()
+                    .map(|element| gen.wrap_expression(&element.value)),
+            )
+        })?;
+        Ok(docvec![fun, arguments])
+    }
+
+    fn fun<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
+        let tail = self.tail_position;
+        self.tail_position = true;
+        let result = self.expression(body);
+        self.tail_position = tail;
+        Ok(docvec!(
+            docvec!(fun_args(arguments), " => {", break_("", " "), result?,)
+                .nest(INDENT)
+                .append(break_("", " "))
+                .group(),
+            "}",
+        ))
+    }
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
@@ -249,6 +276,19 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
         docvec![break_("", ""), elements].nest(INDENT),
         break_(",", ""),
         "]"
+    ]
+    .group())
+}
+
+fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+    let elements = Itertools::intersperse(elements, Ok(break_(",", ", ")))
+        .collect::<Result<Vec<_>, _>>()?
+        .to_doc();
+    Ok(docvec![
+        "(",
+        docvec![break_("", ""), elements].nest(INDENT),
+        break_(",", ""),
+        ")"
     ]
     .group())
 }
