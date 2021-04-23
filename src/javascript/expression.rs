@@ -31,7 +31,7 @@ impl<'module> Generator<'module> {
             TypedExpr::List { .. } => unsupported("List"),
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
-            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, index),
+            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case { .. } => unsupported("Case"),
 
@@ -139,11 +139,10 @@ impl<'module> Generator<'module> {
         })
     }
 
-    fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: &'a u64) -> Output<'a> {
+    fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            let accessor = index.to_doc().surround("[", "]");
-            Ok(docvec![tuple, accessor])
+            Ok(docvec![tuple, Document::String(format!("[{}]", index))])
         })
     }
 
