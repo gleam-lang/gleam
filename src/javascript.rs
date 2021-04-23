@@ -7,6 +7,36 @@ use itertools::Itertools;
 
 const INDENT: isize = 2;
 
+const DEEP_EQUAL: &str = "
+
+function $deepEqual(x, y) {
+  if ($isObject(x) && $isObject(y)) {
+    const kx = Object.keys(x);
+    const ky = Object.keys(x);
+
+    if (kx.length != ky.length) {
+      return false;
+    }
+
+    for (const k of kx) {
+      const a = x[k];
+      const b = y[k];
+      if !$deepEqual(a, b) {
+        return false
+      }
+    }
+
+    return true;
+
+  } else {
+    return x === y;
+  }
+}
+
+function $isObject(object) {
+  return object != null && typeof object === 'object';
+}";
+
 const FUNCTION_DIVIDE: &str = "
 
 function $divide(a, b) {
@@ -23,6 +53,7 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     float_division_used: bool,
+    object_equality_used: bool,
 }
 
 impl<'a> Generator<'a> {
@@ -31,6 +62,7 @@ impl<'a> Generator<'a> {
             line_numbers,
             module,
             float_division_used: false,
+            object_equality_used: false,
         }
     }
 
@@ -49,6 +81,10 @@ impl<'a> Generator<'a> {
         // If float division has been used render an appropriate function
         if self.float_division_used {
             statements.push(FUNCTION_DIVIDE.to_doc());
+        };
+
+        if self.object_equality_used {
+            statements.push(DEEP_EQUAL.to_doc());
         };
 
         statements.push(line());
@@ -74,7 +110,14 @@ impl<'a> Generator<'a> {
                 public,
                 ..
             } => Some(self.module_function(*public, name, arguments, body)),
-            Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
+            Statement::ExternalFn {
+                public,
+                name,
+                arguments,
+                module,
+                fun,
+                ..
+            } => Some(self.external_function(*public, name, arguments, module, fun)),
         }
     }
 
@@ -101,7 +144,10 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
-        let mut generator = expression::Generator::new(&mut self.float_division_used);
+        let mut generator = expression::Generator::new(
+            &mut self.float_division_used,
+            &mut self.object_equality_used,
+        );
         let head = if public {
             "export function "
         } else {
@@ -115,6 +161,39 @@ impl<'a> Generator<'a> {
             docvec![line(), generator.expression(body)?]
                 .nest(INDENT)
                 .group(),
+            line(),
+            "}",
+        ])
+    }
+
+    fn external_function<T>(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        arguments: &'a [ExternalFnArg<T>],
+        module: &'a str,
+        fun: &'a str,
+    ) -> Output<'a> {
+        let head = if public {
+            "export function "
+        } else {
+            "function "
+        };
+        let arguments = wrap_args(arguments.iter().enumerate().map(|a| {
+            match a {
+                (index, ExternalFnArg { label, .. }) => label
+                    .as_ref()
+                    .map(|l| l.as_str().to_doc())
+                    .unwrap_or_else(|| Document::String(format!("arg{}", index))),
+            }
+        }));
+        let body = docvec!["return ", module, ".", fun, arguments.clone()];
+        Ok(docvec![
+            head,
+            name,
+            arguments,
+            " {",
+            docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
         ])
