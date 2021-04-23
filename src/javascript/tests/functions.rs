@@ -137,9 +137,11 @@ export function long() {
     assert_js!(
         r#"
 pub fn math(x, y) {
-x + y
-x - y
-2 * x
+  fn() {
+    x + y
+    x - y
+    2 * x
+  }
 }"#,
         r#""use strict";
 
