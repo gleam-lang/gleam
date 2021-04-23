@@ -179,14 +179,12 @@ impl<'a> Generator<'a> {
         } else {
             "function "
         };
-        let arguments = wrap_args(arguments.iter().enumerate().map(|a| match a {
-            (index, ExternalFnArg { label, .. }) => {
-                let arg_name = label.clone().unwrap_or(format!("arg{}", index));
-                Document::String(arg_name)
-                // label
-                //     .as_ref()
-                //     .map(Documentable::to_doc)
-                //     .unwrap_or_else(|| Document::String(format!("arg{}", index)))
+        let arguments = wrap_args(arguments.iter().enumerate().map(|a| {
+            match a {
+                (index, ExternalFnArg { label, .. }) => label
+                    .as_ref()
+                    .map(|l| l.as_str().to_doc())
+                    .unwrap_or_else(|| Document::String(format!("arg{}", index))),
             }
         }));
         let body = docvec!["return ", module, ".", fun, arguments.clone()];
