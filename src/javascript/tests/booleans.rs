@@ -1,3 +1,4 @@
+use super::*;
 use crate::assert_js;
 
 #[test]
