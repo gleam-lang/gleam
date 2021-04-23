@@ -150,7 +150,7 @@ export function math(x, y) {
     x + y;
     x - y;
     return 2 * x;
-    };
+  };
 }
 "#
     );
