@@ -54,3 +54,103 @@ export function take_two(x) {
 "#
     );
 }
+
+
+#[test]
+fn function_formatting() {
+  assert_js!(
+    r#"
+pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {
+  the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
+}"#,
+    r#""use strict";
+
+export function add(
+  the_first_variable_that_should_be_added,
+  the_second_variable_that_should_be_added
+) {
+  return the_first_variable_that_should_be_added + the_second_variable_that_should_be_added;
+}
+"#
+);
+
+
+
+assert_js!(
+  r#"
+pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
+x + y
+}"#,
+  r#""use strict";
+
+export function this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(
+  x,
+  y
+) {
+  return x + y;
+}
+"#
+);
+
+assert_js!(
+  r#"
+pub fn add(x, y) {
+x + y
+}
+
+pub fn long() {
+  add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1)))))))))))))))
+}"#,
+  r#""use strict";
+
+export function add(x, y) {
+  return x + y;
+}
+
+export function long() {
+  return add(
+    1,
+    add(
+      1,
+      add(
+        1,
+        add(
+          1,
+          add(
+            1,
+            add(
+              1,
+              add(
+                1,
+                add(
+                  1,
+                  add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1))))))),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+"#
+);
+
+assert_js!(
+  r#"
+pub fn math(x, y) {
+x + y
+x - y
+2 * x
+}"#,
+  r#""use strict";
+
+export function math(x, y) {
+  x + y;
+  x - y;
+  return 2 * x;
+}
+"#
+);
+}
