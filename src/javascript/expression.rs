@@ -1,5 +1,9 @@
 use super::*;
-use crate::{ast::*, pretty::*};
+use crate::{
+    ast::*,
+    pretty::*,
+    type_::{ValueConstructor, ValueConstructorVariant},
+};
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -7,13 +11,18 @@ pub struct Generator<'module> {
     // We register whether float division is used within an expression so that
     // the module generator can output a suitable function if it is needed.
     float_division_used: &'module mut bool,
+    object_equality_used: &'module mut bool,
 }
 
 impl<'module> Generator<'module> {
-    pub fn new(float_division_used: &'module mut bool) -> Self {
+    pub fn new(
+        float_division_used: &'module mut bool,
+        object_equality_used: &'module mut bool,
+    ) -> Self {
         Self {
             tail_position: true,
             float_division_used,
+            object_equality_used,
         }
     }
 
@@ -27,7 +36,7 @@ impl<'module> Generator<'module> {
             TypedExpr::List { .. } => unsupported("List"),
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
-            TypedExpr::TupleIndex { .. } => unsupported("Tuple"),
+            TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case { .. } => unsupported("Case"),
 
@@ -37,7 +46,9 @@ impl<'module> Generator<'module> {
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
             TypedExpr::RecordUpdate { .. } => unsupported("Function"),
 
-            TypedExpr::Var { .. } => unsupported("Referencing variables"),
+            TypedExpr::Var {
+                name, constructor, ..
+            } => self.variable(name, constructor),
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
@@ -102,6 +113,25 @@ impl<'module> Generator<'module> {
         ))
     }
 
+    fn variable<'a>(&mut self, _name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+        match &constructor.variant {
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "True" =>
+            {
+                Ok("true".to_doc())
+            }
+            ValueConstructorVariant::Record { name, .. }
+                if constructor.type_.is_bool() && name == "False" =>
+            {
+                Ok("false".to_doc())
+            }
+            ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
+                Ok("undefined".to_doc())
+            }
+            _ => unsupported("Referencing variables"),
+        }
+    }
+
     fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
         let first = self.not_in_tail_position(|gen| gen.expression(first))?;
         let then = self.expression(then)?;
@@ -111,6 +141,13 @@ impl<'module> Generator<'module> {
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
+        })
+    }
+
+    fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            let tuple = gen.wrap_expression(tuple)?;
+            Ok(docvec![tuple, Document::String(format!("[{}]", index))])
         })
     }
 
@@ -124,13 +161,26 @@ impl<'module> Generator<'module> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
         match name {
-            BinOp::And => unsupported("Boolean operator"),
-            BinOp::Or => unsupported("Boolean operator"),
+            BinOp::And => self.print_bin_op(left, right, "&&"),
+            BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
-            // TODO: https://dmitripavlutin.com/how-to-compare-objects-in-javascript/
-            BinOp::Eq => unsupported("Equality operator"),
-            BinOp::NotEq => unsupported("Equality operator"),
+            BinOp::Eq => {
+                use std::iter::once;
+                *self.object_equality_used = true;
+                Ok(docvec!(
+                    "$deepEqual",
+                    wrap_args(once(left).chain(once(right)))
+                ))
+            }
+            BinOp::NotEq => {
+                use std::iter::once;
+                *self.object_equality_used = true;
+                Ok(docvec!(
+                    "!$deepEqual",
+                    wrap_args(once(left).chain(once(right)))
+                ))
+            }
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
@@ -167,13 +217,20 @@ fn int(value: &str) -> Document<'_> {
 fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
-pub fn constant_expression<'a, T, Y>(expression: &'a Constant<T, Y>) -> Output<'a> {
+pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
         Constant::List { .. } => unsupported("List as constant"),
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+            Ok("true".to_doc())
+        }
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+            Ok("false".to_doc())
+        }
+        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { .. } => unsupported("Record as constant"),
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }

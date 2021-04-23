@@ -89,6 +89,14 @@ impl Type {
         }
     }
 
+    pub fn is_nil(&self) -> bool {
+        matches!(self, Self::App { module, name, .. } if "Nil" == name && module.is_empty())
+    }
+
+    pub fn is_bool(&self) -> bool {
+        matches!(self, Self::App { module, name, .. } if "Bool" == name && module.is_empty())
+    }
+
     pub fn is_int(&self) -> bool {
         matches!(self, Self::App { module, name, .. } if "Int" == name && module.is_empty())
     }
