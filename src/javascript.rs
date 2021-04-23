@@ -110,7 +110,14 @@ impl<'a> Generator<'a> {
                 public,
                 ..
             } => Some(self.module_function(*public, name, arguments, body)),
-            Statement::ExternalFn { .. } => Some(unsupported("Using an external function")),
+            Statement::ExternalFn {
+                public,
+                name,
+                arguments,
+                module,
+                fun,
+                ..
+            } => Some(self.external_function(*public, name, arguments, module, fun)),
         }
     }
 
@@ -154,6 +161,39 @@ impl<'a> Generator<'a> {
             docvec![line(), generator.expression(body)?]
                 .nest(INDENT)
                 .group(),
+            line(),
+            "}",
+        ])
+    }
+
+    fn external_function<T>(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        arguments: &'a [ExternalFnArg<T>],
+        module: &'a str,
+        fun: &'a str,
+    ) -> Output<'a> {
+        let head = if public {
+            "export function "
+        } else {
+            "function "
+        };
+        let arguments = wrap_args(arguments.iter().enumerate().map(|a| {
+            match a {
+                (index, ExternalFnArg { label, .. }) => label
+                    .as_ref()
+                    .map(|l| l.as_str().to_doc())
+                    .unwrap_or_else(|| Document::String(format!("arg{}", index))),
+            }
+        }));
+        let body = docvec!["return ", module, ".", fun, arguments.clone()];
+        Ok(docvec![
+            head,
+            name,
+            arguments,
+            " {",
+            docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
         ])
