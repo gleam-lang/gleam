@@ -3,6 +3,8 @@ mod proto;
 #[cfg(test)]
 mod tests;
 
+pub mod version;
+
 use crate::proto::{signed::Signed, versions::Versions};
 use async_trait::async_trait;
 use bytes::buf::Buf;
@@ -155,7 +157,6 @@ pub trait Client {
         Ok(package)
     }
 
-    // TODO: test
     /// Download a version of a package as a tarball
     ///
     async fn get_package_tarball(
