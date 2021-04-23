@@ -149,7 +149,8 @@ export function math(x, y) {
   return () => {
     x + y;
     x - y;
-    return 2 * x; };
+    return 2 * x;
+    };
 }
 "#
     );

@@ -164,10 +164,9 @@ impl<'module> Generator<'module> {
         let result = self.expression(body);
         self.tail_position = tail;
         Ok(docvec!(
-            docvec!(fun_args(arguments), " => {", break_("", " "), result?)
+            docvec!(fun_args(arguments), " => {", break_("", " "), result?, break_("", " "))
                 .nest(INDENT)
                 .group(),
-            break_("", " "),
             "}",
         ))
     }
