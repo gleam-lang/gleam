@@ -128,12 +128,53 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
             }
-            ValueConstructorVariant::Record { name, .. } => {
-                Ok(docvec![
-                    "{type: \"",
-                    name,
-                    "\"}",
-                ])
+            ValueConstructorVariant::Record {
+                name,
+                arity,
+                field_map,
+                ..
+            } => {
+                // If 0 arity just return
+                let field_names: Vec<Document<'_>> = match field_map {
+                    Some(_) => {
+                        println!("{:?}", field_map);
+                        unimplemented!("fields")
+                    }
+                    None => (0..*arity)
+                        .into_iter()
+                        .map(|i| Document::String(format!("{}", i)))
+                        .collect(),
+                };
+
+                let vars = (0..*arity)
+                    .into_iter()
+                    .map(|i| Document::String(format!("var{}", i)));
+
+                let record_head = docvec!["type: ", name.to_doc().surround("\"", "\"")];
+
+                let record_values = field_names
+                    .iter()
+                    .zip(vars.clone())
+                    .map(|(name, value)| name.clone().append(": ").append(value));
+
+                let record = std::iter::once(record_head).chain(record_values);
+                let record = Itertools::intersperse(record, break_(",", ", "));
+                // let body = concat(record).surround("return {", "};");
+                let body = docvec![
+                    docvec!["return {", break_("", ""), concat(record)]
+                        .nest(INDENT)
+                        .append(break_("", ""))
+                        .group(),
+                    "};"
+                ];
+
+                Ok(docvec!(
+                    docvec!(wrap_args(vars), " => {", break_("", " "), body,)
+                        .nest(INDENT)
+                        .append(break_("", " "))
+                        .group(),
+                    "}",
+                ))
             }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
             ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
@@ -154,6 +195,7 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
+        // println!("ioooo {:?}", fun);
         let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
         let arguments = self.not_in_tail_position(|gen| {
             call_arguments(
