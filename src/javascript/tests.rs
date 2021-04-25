@@ -1,4 +1,5 @@
 mod booleans;
+mod custom_types;
 mod functions;
 mod numbers;
 mod strings;

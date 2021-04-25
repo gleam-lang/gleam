@@ -128,6 +128,13 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
             }
+            ValueConstructorVariant::Record { name, .. } => {
+                Ok(docvec![
+                    "{type: \"",
+                    name,
+                    "\"}",
+                ])
+            }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
             ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
