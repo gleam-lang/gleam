@@ -248,7 +248,7 @@ impl<'module> Generator<'module> {
         constructor: &'a ModuleValueConstructor,
     ) -> Output<'a> {
         match constructor {
-            ModuleValueConstructor::Fn => {
+            ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
                 Ok(docvec![Document::String(module_name.join("_")), ".", label,])
             }
             _ => unsupported("Module function call"),

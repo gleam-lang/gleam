@@ -5,6 +5,8 @@ mod strings;
 
 fn rocket_ship_module() -> crate::type_::Module {
     let src = r#"
+pub const c = 299_792_458
+
 pub fn launch() {
   Ok("launched")
 }
@@ -268,6 +270,7 @@ import rocket_ship.{launch as boom_time, fuel}
 pub fn go() {
     rocket_ship.fuel(100)
     boom_time()
+    rocket_ship.c
 }
 "#,
         r#""use strict";
@@ -281,7 +284,8 @@ const {launch: boom_time, fuel} = rocket_ship;
 
 export function go() {
   rocket_ship.fuel(100);
-  return boom_time();
+  boom_time();
+  return rocket_ship.c;
 }
 "#
     );
