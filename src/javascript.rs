@@ -95,7 +95,12 @@ impl<'a> Generator<'a> {
         match statement {
             Statement::TypeAlias { .. } => None,
             Statement::CustomType { .. } => None,
-            Statement::Import { .. } => Some(unsupported("Importing modules")),
+            Statement::Import {
+                module,
+                as_name,
+                unqualified,
+                ..
+            } => Some(Ok(self.import(module, as_name, unqualified))),
             Statement::ExternalType { .. } => None,
             Statement::ModuleConstant {
                 public,
@@ -118,6 +123,39 @@ impl<'a> Generator<'a> {
                 fun,
                 ..
             } => Some(self.external_function(*public, name, arguments, module, fun)),
+        }
+    }
+
+    fn import(
+        &mut self,
+        module: &'a Vec<String>,
+        as_name: &'a Option<String>,
+        unqualified: &'a Vec<UnqualifiedImport>,
+    ) -> Document<'a> {
+        let module_name = as_name
+            .as_ref()
+            .map(|n| n.as_str().to_doc())
+            .unwrap_or_else(|| Document::String(module.join("_")));
+        let path = Document::String(module.join("/")).surround("\"./", ".js\"");
+
+        let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
+        match unqualified.len() {
+            0 => import_line,
+            _ => {
+                let matches = unqualified.into_iter().map(|i| match &i.as_name {
+                    Some(aliased_name) => docvec![i.name, ": ", aliased_name,],
+                    None => i.name.to_doc(),
+                });
+                docvec![
+                    import_line,
+                    line(),
+                    "const ",
+                    concat(Itertools::intersperse(matches, break_(",", ", "))).surround("{", "}"),
+                    " = ",
+                    module_name,
+                    ";"
+                ]
+            }
         }
     }
 
