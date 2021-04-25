@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     ast::*,
     pretty::*,
-    type_::{ValueConstructor, ValueConstructorVariant},
+    type_::{ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
 
 #[derive(Debug)]
@@ -62,7 +62,12 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Pipe { .. } => unsupported("Pipe"),
 
-            TypedExpr::ModuleSelect { .. } => unsupported("Module function call"),
+            TypedExpr::ModuleSelect {
+                module_name,
+                label,
+                constructor,
+                ..
+            } => self.module_select(module_name, label, constructor),
         }?;
         Ok(match expression {
             TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => document,
@@ -234,6 +239,20 @@ impl<'module> Generator<'module> {
             .append(op.to_doc())
             .append(" ")
             .append(right))
+    }
+
+    fn module_select<'a>(
+        &mut self,
+        module_name: &'a Vec<String>,
+        label: &'a String,
+        constructor: &'a ModuleValueConstructor,
+    ) -> Output<'a> {
+        match constructor {
+            ModuleValueConstructor::Fn => {
+                Ok(docvec![Document::String(module_name.join("_")), ".", label,])
+            }
+            _ => unsupported("Module function call"),
+        }
     }
 }
 
