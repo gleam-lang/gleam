@@ -118,20 +118,15 @@ fn go() {
     Cat(2, name: "Nubi")
     Cat(cuteness: 3, name: "Nubi")
 }
-// fn update(cat) {
-//     Cat(..cat, name: "Sid")
-// }
+
+fn update(cat) {
+    Cat(..cat, name: "Sid")
+    Cat(..cat, name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!")
+}
 
 fn access(cat: Cat) {
     cat.cuteness
 }
-
-// fn destructure(cat) {
-//     let Cat(x, y) = cat
-//     let Cat(name: x, ..) = cat
-//     let Cat(cuteness: 4, name: x) = cat
-//     x
-// }
 "#,
         r#""use strict";
 
@@ -141,23 +136,18 @@ function go() {
   return { type: "Cat", name: "Nubi", cuteness: 3 };
 }
 
+function update(cat) {
+  Object.assign({}, cat, { name: "Sid" });
+  return Object.assign(
+    {},
+    cat,
+    { name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!" }
+  );
+}
+
 function access(cat) {
   return cat.cuteness;
 }
 "#
     );
-    // function update(cat) {
-    //     return Object.assign({}, cat, {name: "Sid"});
-    // }
-    // function destructure(cat) {
-    //     var gleam$tmp = cat;
-    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
-    //     let
-    //     var gleam$tmp = cat;
-    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
-    //     let
-    //     var gleam$tmp = cat;
-    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
-    //     let
-    //     return x;
 }

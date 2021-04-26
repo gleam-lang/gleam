@@ -46,7 +46,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
-            TypedExpr::RecordUpdate { .. } => unsupported("Record Update"),
+            TypedExpr::RecordUpdate { spread, args, .. } => self.record_update(spread, args),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -241,6 +241,27 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| {
             let record = gen.wrap_expression(record)?;
             Ok(docvec![record, ".", label])
+        })
+    }
+
+    fn record_update<'a>(
+        &mut self,
+        spread: &'a TypedExpr,
+        updates: &'a Vec<TypedRecordUpdateArg>,
+    ) -> Output<'a> {
+        // println!("{:?}", args);
+        self.not_in_tail_position(|gen| {
+            let spread = gen.wrap_expression(spread)?;
+            let updates: Vec<(Document<'a>, Option<Document<'a>>)> = updates
+                .iter()
+                .map(|TypedRecordUpdateArg {label, value, ..}| Ok((label.to_doc(), Some(gen.wrap_expression(value)?))))
+                .collect::<Result<Vec<_>, _>>()?;
+            let assign_args = vec![
+                "{}".to_doc(),
+                spread,
+                wrap_object(&mut updates.into_iter())
+            ];
+            Ok(docvec!["Object.assign", wrap_args(assign_args.into_iter())])
         })
     }
 
