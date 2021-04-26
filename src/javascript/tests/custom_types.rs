@@ -6,17 +6,21 @@ fn zero_arity_custom_type() {
         r#"
 type Mine{
     This
-    That
+    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 
 fn go() {
     This
+    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 "#,
         r#""use strict";
 
 function go() {
-  return {type: "This"};
+  { type: "This" };
+  return {
+    type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
+  };
 }
 "#
     );

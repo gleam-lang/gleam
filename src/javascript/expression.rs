@@ -5,6 +5,8 @@ use crate::{
     type_::{ValueConstructor, ValueConstructorVariant},
 };
 
+static RECORD_KEY: &str = "type";
+
 #[derive(Debug)]
 pub struct Generator<'module> {
     tail_position: bool,
@@ -127,6 +129,11 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
+            }
+            ValueConstructorVariant::Record { name, arity: 0, .. } => {
+                let record_type = name.to_doc().surround("\"", "\"");
+                let record_head = (RECORD_KEY.to_doc(), Some(record_type));
+                Ok(wrap_object(&mut std::iter::once(record_head)))
             }
             ValueConstructorVariant::Record {
                 name,
@@ -340,4 +347,25 @@ fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements)
         ")"
     ]
     .group())
+}
+
+fn wrap_object<'a>(
+    items: &mut dyn Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+) -> Document<'a> {
+    let fields = items.map(|(key, value)| match value {
+        Some(value) => docvec![key, ": ", value,],
+        None => key.to_doc(),
+    });
+
+    docvec![
+        docvec![
+            "{",
+            break_("", " "),
+            concat(Itertools::intersperse(fields, break_(",", ", ")))
+        ]
+        .nest(INDENT)
+        .append(break_("", " "))
+        .group(),
+        "}"
+    ]
 }
