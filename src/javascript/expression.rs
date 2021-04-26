@@ -141,7 +141,6 @@ impl<'module> Generator<'module> {
                 field_map,
                 ..
             } => {
-                // If 0 arity just return
                 let field_names: Vec<Document<'_>> = match field_map {
                     Some(_) => {
                         println!("{:?}", field_map);
@@ -313,12 +312,27 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { tag, args, .. } => {
+            let record_type = tag.to_doc().surround("\"", "\"");
+            let record_head = (RECORD_KEY.to_doc(), Some(record_type));
             if args.is_empty() {
-                let record_type = tag.to_doc().surround("\"", "\"");
-                let record_head = (RECORD_KEY.to_doc(), Some(record_type));
                 Ok(wrap_object(&mut std::iter::once(record_head)))
             } else {
-                unsupported("Record as constant")
+                let field_names: Vec<Document<'_>> = (0..args.len())
+                        .into_iter()
+                        .map(|i| Document::String(format!("{}", i)))
+                        .collect();
+
+                let field_values: Result<Vec<_>, _> = args
+                .iter()
+                .map(|arg| constant_expression(&arg.value))
+                .collect();
+
+                let record_values = field_names
+                    .iter()
+                    .zip(field_values?)
+                    .map(|(name, value)| (name.clone(), Some(value)));
+
+                Ok(wrap_object(&mut std::iter::once(record_head).chain(record_values)))
             }
         }
         Constant::BitString { .. } => unsupported("BitString as constant"),

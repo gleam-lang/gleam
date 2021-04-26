@@ -43,6 +43,8 @@ type Ip{
     Ip(String)
 }
 
+const local = Ip("0.0.0.0")
+
 fn build(x) {
     x("1.2.3.4")
 }
@@ -58,6 +60,8 @@ fn go() {
 // }
 "#,
         r#""use strict";
+
+const local = { type: "Ip", 0: "0.0.0.0" };
 
 function build(x) {
   return x("1.2.3.4");
