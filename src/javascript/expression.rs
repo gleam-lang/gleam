@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     ast::*,
     pretty::*,
-    type_::{ValueConstructor, ValueConstructorVariant},
+    type_::{FieldMap, ValueConstructor, ValueConstructorVariant},
 };
 
 static RECORD_KEY: &str = "type";
@@ -46,7 +46,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
             TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
-            TypedExpr::RecordUpdate { .. } => unsupported("Function"),
+            TypedExpr::RecordUpdate { .. } => unsupported("Record Update"),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -141,34 +141,13 @@ impl<'module> Generator<'module> {
                 field_map,
                 ..
             } => {
-                let field_names: Vec<Document<'_>> = match field_map {
-                    Some(_) => {
-                        println!("{:?}", field_map);
-                        unimplemented!("fields")
-                    }
-                    None => (0..*arity)
-                        .into_iter()
-                        .map(|i| Document::String(format!("{}", i)))
-                        .collect(),
-                };
-
                 let vars = (0..*arity)
                     .into_iter()
                     .map(|i| Document::String(format!("var{}", i)));
 
-                let record_head = (
-                    RECORD_KEY.to_doc(),
-                    Some(name.to_doc().surround("\"", "\"")),
-                );
-
-                let record_values = field_names
-                    .iter()
-                    .zip(vars.clone())
-                    .map(|(name, value)| (name.clone(), Some(value)));
-
                 let body = docvec![
                     "return ",
-                    wrap_object(&mut std::iter::once(record_head).chain(record_values)),
+                    construct_record(name, arity, field_map, vars.clone().into_iter()),
                     ";"
                 ];
 
@@ -199,16 +178,49 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
-        // println!("ioooo {:?}", fun);
-        let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
-        let arguments = self.not_in_tail_position(|gen| {
-            call_arguments(
-                arguments
+        match fun {
+            // Short circuit creation of a record so the rendered JS creates the record inline.
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant:
+                            ValueConstructorVariant::Record {
+                                name,
+                                arity,
+                                field_map,
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                let tail = self.tail_position;
+                self.tail_position = false;
+                let arguments = arguments
                     .iter()
-                    .map(|element| gen.wrap_expression(&element.value)),
-            )
-        })?;
-        Ok(docvec![fun, arguments])
+                    .map(|element| self.wrap_expression(&element.value))
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.tail_position = tail;
+
+                Ok(construct_record(
+                    name,
+                    arity,
+                    field_map,
+                    arguments.clone().into_iter(),
+                ))
+            }
+            _ => {
+                let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
+                let arguments = self.not_in_tail_position(|gen| {
+                    call_arguments(
+                        arguments
+                            .iter()
+                            .map(|element| gen.wrap_expression(&element.value)),
+                    )
+                })?;
+                Ok(docvec![fun, arguments])
+            }
+        }
     }
 
     fn fun<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
@@ -318,21 +330,23 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
                 Ok(wrap_object(&mut std::iter::once(record_head)))
             } else {
                 let field_names: Vec<Document<'_>> = (0..args.len())
-                        .into_iter()
-                        .map(|i| Document::String(format!("{}", i)))
-                        .collect();
+                    .into_iter()
+                    .map(|i| Document::String(format!("{}", i)))
+                    .collect();
 
                 let field_values: Result<Vec<_>, _> = args
-                .iter()
-                .map(|arg| constant_expression(&arg.value))
-                .collect();
+                    .iter()
+                    .map(|arg| constant_expression(&arg.value))
+                    .collect();
 
                 let record_values = field_names
                     .iter()
                     .zip(field_values?)
                     .map(|(name, value)| (name.clone(), Some(value)));
 
-                Ok(wrap_object(&mut std::iter::once(record_head).chain(record_values)))
+                Ok(wrap_object(
+                    &mut std::iter::once(record_head).chain(record_values),
+                ))
             }
         }
         Constant::BitString { .. } => unsupported("BitString as constant"),
@@ -367,6 +381,37 @@ fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements)
         ")"
     ]
     .group())
+}
+
+fn construct_record<'a>(
+    name: &'a str,
+    arity: &'a usize,
+    field_map: &'a Option<FieldMap>,
+    values: impl Iterator<Item = Document<'a>>,
+) -> Document<'a> {
+    let field_names: Vec<Document<'_>> = match field_map {
+        Some(FieldMap { fields, .. }) => fields
+            .iter()
+            .sorted_by_key(|(_, &v)| v)
+            .map(|x| Document::String(x.0.to_string()))
+            .collect(),
+        None => (0..*arity)
+            .into_iter()
+            .map(|i| Document::String(format!("{}", i)))
+            .collect(),
+    };
+
+    let record_head = (
+        RECORD_KEY.to_doc(),
+        Some(name.to_doc().surround("\"", "\"")),
+    );
+
+    let record_values = field_names
+        .iter()
+        .zip(values)
+        .map(|(name, value)| (name.clone(), Some(value)));
+
+    wrap_object(&mut std::iter::once(record_head).chain(record_values))
 }
 
 fn wrap_object<'a>(

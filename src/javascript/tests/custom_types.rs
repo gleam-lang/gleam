@@ -69,7 +69,7 @@ function build(x) {
 
 function go() {
   build((var0) => { return { type: "Ip", 0: var0 }; });
-  return (var0) => { return { type: "Ip", 0: var0 }; }("5.6.7.8");
+  return { type: "Ip", 0: "5.6.7.8" };
 }
 "#
     );
@@ -102,4 +102,59 @@ function go() {
 }
 "#
     );
+}
+
+#[test]
+// How to we track to object keys, would we rather generate a function and call in order.
+fn custom_type_with_named_fields() {
+    assert_js!(
+        r#"
+type Cat{
+    Cat(name: String, cuteness: Int)
+}
+// Does JS do clever ness with named args?
+fn go() {
+    Cat("Nubi", 1)
+    Cat(2, name: "Nubi")
+    Cat(cuteness: 3, name: "Nubi")
+}
+// fn update(cat) {
+//     Cat(..cat, name: "Sid")
+// }
+// fn access(cat: Cat) {
+//     cat.cuteness
+// }
+// fn destructure(cat) {
+//     let Cat(x, y) = cat
+//     let Cat(name: x, ..) = cat
+//     let Cat(cuteness: 4, name: x) = cat
+//     x
+// }
+"#,
+        r#""use strict";
+
+function go() {
+  { type: "Cat", name: "Nubi", cuteness: 1 };
+  { type: "Cat", name: "Nubi", cuteness: 2 };
+  return { type: "Cat", name: "Nubi", cuteness: 3 };
+}
+"#
+    );
+    // function update(cat) {
+    //     return Object.assign({}, cat, {name: "Sid"});
+    // }
+    // function access(cat) {
+    //     return cat.cuteness;
+    // }
+    // function destructure(cat) {
+    //     var gleam$tmp = cat;
+    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
+    //     let
+    //     var gleam$tmp = cat;
+    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
+    //     let
+    //     var gleam$tmp = cat;
+    //     if (!(gleam$tmp.type === "Cat")) throw new Error("Bad match")
+    //     let
+    //     return x;
 }
