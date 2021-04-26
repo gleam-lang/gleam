@@ -157,22 +157,17 @@ impl<'module> Generator<'module> {
                     .into_iter()
                     .map(|i| Document::String(format!("var{}", i)));
 
-                let record_head = docvec!["type: ", name.to_doc().surround("\"", "\"")];
+                let record_head = (RECORD_KEY.to_doc(), Some(name.to_doc().surround("\"", "\"")));
 
                 let record_values = field_names
                     .iter()
                     .zip(vars.clone())
-                    .map(|(name, value)| name.clone().append(": ").append(value));
+                    .map(|(name, value)| (name.clone(), Some(value)));
 
-                let record = std::iter::once(record_head).chain(record_values);
-                let record = Itertools::intersperse(record, break_(",", ", "));
-                // let body = concat(record).surround("return {", "};");
                 let body = docvec![
-                    docvec!["return {", break_("", ""), concat(record)]
-                        .nest(INDENT)
-                        .append(break_("", ""))
-                        .group(),
-                    "};"
+                    "return ",
+                    wrap_object(&mut std::iter::once(record_head).chain(record_values)),
+                    ";"
                 ];
 
                 Ok(docvec!(

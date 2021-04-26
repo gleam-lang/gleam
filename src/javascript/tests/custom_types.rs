@@ -55,8 +55,8 @@ function build(x) {
 }
 
 function go() {
-  build((var0) => { return {type: "Ip", 0: var0}; });
-  return (var0) => { return {type: "Ip", 0: var0}; }("5.6.7.8");
+  build((var0) => { return { type: "Ip", 0: var0 }; });
+  return (var0) => { return { type: "Ip", 0: var0 }; }("5.6.7.8");
 }
 "#
     );
