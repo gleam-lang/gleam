@@ -249,7 +249,6 @@ impl<'module> Generator<'module> {
         spread: &'a TypedExpr,
         updates: &'a Vec<TypedRecordUpdateArg>,
     ) -> Output<'a> {
-        // println!("{:?}", args);
         self.not_in_tail_position(|gen| {
             let spread = gen.wrap_expression(spread)?;
             let updates: Vec<(Document<'a>, Option<Document<'a>>)> = updates
