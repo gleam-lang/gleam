@@ -147,7 +147,7 @@ impl<'module> Generator<'module> {
 
                 let body = docvec![
                     "return ",
-                    construct_record(name, arity, field_map, vars.clone().into_iter()),
+                    construct_record(name, *arity, field_map, vars.clone().into_iter()),
                     ";"
                 ];
 
@@ -204,7 +204,7 @@ impl<'module> Generator<'module> {
 
                 Ok(construct_record(
                     name,
-                    arity,
+                    *arity,
                     field_map,
                     arguments.clone().into_iter(),
                 ))
@@ -350,30 +350,11 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { tag, args, .. } => {
-            let record_type = tag.to_doc().surround("\"", "\"");
-            let record_head = (RECORD_KEY.to_doc(), Some(record_type));
-            if args.is_empty() {
-                Ok(wrap_object(&mut std::iter::once(record_head)))
-            } else {
-                let field_names: Vec<Document<'_>> = (0..args.len())
-                    .into_iter()
-                    .map(|i| Document::String(format!("{}", i)))
-                    .collect();
-
-                let field_values: Result<Vec<_>, _> = args
-                    .iter()
-                    .map(|arg| constant_expression(&arg.value))
-                    .collect();
-
-                let record_values = field_names
-                    .iter()
-                    .zip(field_values?)
-                    .map(|(name, value)| (name.clone(), Some(value)));
-
-                Ok(wrap_object(
-                    &mut std::iter::once(record_head).chain(record_values),
-                ))
-            }
+            let field_values: Result<Vec<_>, _> = args
+                .iter()
+                .map(|arg| constant_expression(&arg.value))
+                .collect();
+            Ok(construct_record(tag, args.len(), &None, field_values?.into_iter()))
         }
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
@@ -411,7 +392,7 @@ fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements)
 
 fn construct_record<'a>(
     name: &'a str,
-    arity: &'a usize,
+    arity: usize,
     field_map: &'a Option<FieldMap>,
     values: impl Iterator<Item = Document<'a>>,
 ) -> Document<'a> {
@@ -421,7 +402,7 @@ fn construct_record<'a>(
             .sorted_by_key(|(_, &v)| v)
             .map(|x| Document::String(x.0.to_string()))
             .collect(),
-        None => (0..*arity)
+        None => (0..arity)
             .into_iter()
             .map(|i| Document::String(format!("{}", i)))
             .collect(),
