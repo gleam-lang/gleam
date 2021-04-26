@@ -157,7 +157,10 @@ impl<'module> Generator<'module> {
                     .into_iter()
                     .map(|i| Document::String(format!("var{}", i)));
 
-                let record_head = (RECORD_KEY.to_doc(), Some(name.to_doc().surround("\"", "\"")));
+                let record_head = (
+                    RECORD_KEY.to_doc(),
+                    Some(name.to_doc().surround("\"", "\"")),
+                );
 
                 let record_values = field_names
                     .iter()
@@ -309,7 +312,15 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
             Ok("false".to_doc())
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
-        Constant::Record { .. } => unsupported("Record as constant"),
+        Constant::Record { tag, args, .. } => {
+            if args.is_empty() {
+                let record_type = tag.to_doc().surround("\"", "\"");
+                let record_head = (RECORD_KEY.to_doc(), Some(record_type));
+                Ok(wrap_object(&mut std::iter::once(record_head)))
+            } else {
+                unsupported("Record as constant")
+            }
+        }
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
 }

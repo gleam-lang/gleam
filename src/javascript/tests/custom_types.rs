@@ -9,12 +9,21 @@ type Mine{
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 
+const this = This;
+const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
+
 fn go() {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 "#,
         r#""use strict";
+
+const this = { type: "This" };
+
+const that = {
+  type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
+};
 
 function go() {
   { type: "This" };
