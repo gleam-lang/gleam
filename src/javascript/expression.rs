@@ -45,7 +45,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
-            TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
+            TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
             TypedExpr::RecordUpdate { .. } => unsupported("Record Update"),
 
             TypedExpr::Var {
@@ -236,6 +236,14 @@ impl<'module> Generator<'module> {
             "}",
         ))
     }
+
+    fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a String) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            let record = gen.wrap_expression(record)?;
+            Ok(docvec![record, ".", label])
+        })
+    }
+
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;

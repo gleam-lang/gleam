@@ -112,7 +112,7 @@ fn custom_type_with_named_fields() {
 type Cat{
     Cat(name: String, cuteness: Int)
 }
-// Does JS do clever ness with named args?
+
 fn go() {
     Cat("Nubi", 1)
     Cat(2, name: "Nubi")
@@ -121,9 +121,11 @@ fn go() {
 // fn update(cat) {
 //     Cat(..cat, name: "Sid")
 // }
-// fn access(cat: Cat) {
-//     cat.cuteness
-// }
+
+fn access(cat: Cat) {
+    cat.cuteness
+}
+
 // fn destructure(cat) {
 //     let Cat(x, y) = cat
 //     let Cat(name: x, ..) = cat
@@ -138,13 +140,14 @@ function go() {
   { type: "Cat", name: "Nubi", cuteness: 2 };
   return { type: "Cat", name: "Nubi", cuteness: 3 };
 }
+
+function access(cat) {
+  return cat.cuteness;
+}
 "#
     );
     // function update(cat) {
     //     return Object.assign({}, cat, {name: "Sid"});
-    // }
-    // function access(cat) {
-    //     return cat.cuteness;
     // }
     // function destructure(cat) {
     //     var gleam$tmp = cat;
