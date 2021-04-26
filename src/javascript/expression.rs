@@ -354,7 +354,12 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
                 .iter()
                 .map(|arg| constant_expression(&arg.value))
                 .collect();
-            Ok(construct_record(tag, args.len(), &None, field_values?.into_iter()))
+            Ok(construct_record(
+                tag,
+                args.len(),
+                &None,
+                field_values?.into_iter(),
+            ))
         }
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
