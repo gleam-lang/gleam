@@ -253,13 +253,11 @@ impl<'module> Generator<'module> {
             let spread = gen.wrap_expression(spread)?;
             let updates: Vec<(Document<'a>, Option<Document<'a>>)> = updates
                 .iter()
-                .map(|TypedRecordUpdateArg {label, value, ..}| Ok((label.to_doc(), Some(gen.wrap_expression(value)?))))
+                .map(|TypedRecordUpdateArg { label, value, .. }| {
+                    Ok((label.to_doc(), Some(gen.wrap_expression(value)?)))
+                })
                 .collect::<Result<Vec<_>, _>>()?;
-            let assign_args = vec![
-                "{}".to_doc(),
-                spread,
-                wrap_object(&mut updates.into_iter())
-            ];
+            let assign_args = vec!["{}".to_doc(), spread, wrap_object(&mut updates.into_iter())];
             Ok(docvec!["Object.assign", wrap_args(assign_args.into_iter())])
         })
     }
