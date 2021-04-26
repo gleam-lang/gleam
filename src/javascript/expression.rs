@@ -7,6 +7,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Generator<'module> {
+    module_name: &'module [String],
+    function_name: &'module str,
     tail_position: bool,
     // We register whether float division is used within an expression so that
     // the module generator can output a suitable function if it is needed.
@@ -16,10 +18,14 @@ pub struct Generator<'module> {
 
 impl<'module> Generator<'module> {
     pub fn new(
+        module_name: &'module [String],
+        function_name: &'module str,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
     ) -> Self {
         Self {
+            module_name,
+            function_name,
             tail_position: true,
             float_division_used,
             object_equality_used,
@@ -56,7 +62,9 @@ impl<'module> Generator<'module> {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
-            TypedExpr::Todo { .. } => unsupported("todo keyword"),
+            TypedExpr::Todo {
+                label, location, ..
+            } => Ok(self.todo(label, location)),
 
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
@@ -234,6 +242,34 @@ impl<'module> Generator<'module> {
             .append(op.to_doc())
             .append(" ")
             .append(right))
+    }
+
+    fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
+        self.tail_position = false;
+        let gleam_error = "todo";
+        let message = message
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| "This has not yet been implemented");
+        let module_name = Document::String(self.module_name.join("_"));
+        let line = location.start;
+
+        println!("{:?}", self);
+        docvec![
+            "throw Object.assign",
+            wrap_args(
+                vec![
+                    docvec!["new Error", wrap_args(std::iter::once(string(message)))],
+                    // TODO use the object wrapper in other PR
+                    "{}".to_doc(),
+                    string(gleam_error),
+                    module_name.surround("\"", "\""),
+                    Document::String(self.function_name.to_string()).surround("\"", "\""),
+                    Document::String(format!("{}", line)),
+                ]
+                .into_iter()
+            )
+        ]
     }
 }
 

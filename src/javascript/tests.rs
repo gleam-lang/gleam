@@ -274,3 +274,34 @@ function $isObject(object) {
 "#
     );
 }
+
+#[test]
+// https://xjamundx.medium.com/custom-javascript-errors-in-es6-aa891b173f87
+fn todo_throws_error() {
+    assert_js!(
+        r#"
+fn go() {
+    todo
+}
+"#,
+        r#""use strict";
+
+function go() {
+  throw Object.assign(new Error("This has not yet been implemented"), {})
+}
+"#
+    );
+    assert_js!(
+        r#"
+fn go() {
+    todo("I should do this");
+}
+"#,
+        r#""use strict";
+
+function go() {
+  throw Object.assign(new Error("I should do this"), {})
+}
+"#
+    );
+}

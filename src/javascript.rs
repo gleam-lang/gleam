@@ -145,6 +145,8 @@ impl<'a> Generator<'a> {
         body: &'a TypedExpr,
     ) -> Output<'a> {
         let mut generator = expression::Generator::new(
+            &self.module.name,
+            name,
             &mut self.float_division_used,
             &mut self.object_equality_used,
         );
