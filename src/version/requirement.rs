@@ -95,9 +95,24 @@ mod tests {
         vec![vec![comp(NotEq, 1, 2, 3)], vec![comp(Eq, 1, 0, 1)]]
     );
 
+    parse_fail_test!(quad, "1.1.1.1");
+    parse_fail_test!(just_major, "1");
+    parse_fail_test!(just_major_minor, "1.1");
+    parse_fail_test!(alpha_component, "1.1.a");
+
     parse_fail_test!(or_whitespace_before, "!= 1.2.3or == 1.0.1");
     parse_fail_test!(or_whitespace_after, "!= 1.2.3 or== 1.0.1");
     parse_fail_test!(and_whitespace_before, "!= 1.2.3and == 1.0.1");
     parse_fail_test!(and_whitespace_after, "!= 1.2.3 and== 1.0.1");
+
+    parse_fail_test!(trailing_and, "1.1.1 and");
+    parse_fail_test!(trailing_or, "1.1.1 or");
+    parse_fail_test!(leading_and, "and 1.1.1");
+    parse_fail_test!(leading_or, "and 1.1.1");
+    parse_fail_test!(just_and, "and");
+    parse_fail_test!(just_or, "and");
+
     parse_fail_test!(duplicate_eq, "== ==");
+    parse_fail_test!(just_eq, "==");
+    parse_fail_test!(empty, "");
 }
