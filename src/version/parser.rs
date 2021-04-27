@@ -4,8 +4,12 @@ use std::fmt;
 use std::mem;
 
 use self::Error::*;
-use super::lexer::{self, Lexer, Token};
-use crate::version::{Identifier, Version};
+use super::{
+    lexer::{self, Lexer, Token},
+    requirement::Requirement,
+    Comparator,
+};
+use crate::version::{Identifier, Operator, Version};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Error<'input> {
@@ -96,6 +100,14 @@ impl<'input> Parser<'input> {
         match self.peek() {
             Some(&Token::Whitespace(_, _)) => self.pop().map(|_| ()),
             _ => Ok(()),
+        }
+    }
+
+    /// Check that some whitespace is next and then discard it
+    fn expect_whitespace(&mut self) -> Result<(), Error<'input>> {
+        match self.pop()? {
+            Token::Whitespace(_, _) => Ok(()),
+            token => Err(UnexpectedToken(token)),
         }
     }
 
@@ -238,6 +250,88 @@ impl<'input> Parser<'input> {
             pre,
             build,
         })
+    }
+
+    /// Parse a requirement.
+    ///
+    /// Like, `~> 1.0.0` or `3.0.0-beta.1 or < 1.0 and > 0.2.3`.
+    pub fn requirement(&mut self) -> Result<Requirement, Error<'input>> {
+        let alternatives = self.requirement_alternatives()?;
+        self.skip_whitespace()?;
+        Ok(Requirement(alternatives))
+    }
+
+    fn requirement_alternatives(&mut self) -> Result<Vec<Vec<Comparator>>, Error<'input>> {
+        let mut alternatives = Vec::new();
+
+        loop {
+            alternatives.push(self.requirement_comparators()?);
+            if self.peek() == Some(&Token::Or) {
+                self.pop()?;
+                self.expect_whitespace()?;
+            } else {
+                break;
+            }
+        }
+
+        if alternatives.is_empty() {
+            Err(UnexpectedEnd)
+        } else {
+            Ok(alternatives)
+        }
+    }
+
+    fn requirement_comparators(&mut self) -> Result<Vec<Comparator>, Error<'input>> {
+        use Token::*;
+        let mut comparators = Vec::new();
+        loop {
+            self.skip_whitespace()?;
+            let (operator, version) = match self.peek() {
+                None => break,
+
+                Some(Numeric(_)) => (Operator::Eq, self.version()?),
+
+                Some(Eq) => {
+                    self.pop()?;
+                    (Operator::Eq, self.version()?)
+                }
+
+                Some(NotEq) => {
+                    self.pop()?;
+                    (Operator::NotEq, self.version()?)
+                }
+
+                Some(Gt) => {
+                    todo!();
+                }
+                Some(Lt) => {
+                    todo!();
+                }
+                Some(LtEq) => {
+                    todo!();
+                }
+                Some(GtEq) => {
+                    todo!();
+                }
+                Some(Tilde) => {
+                    todo!();
+                }
+
+                Some(_) => return Err(UnexpectedToken(self.pop()?)),
+            };
+            comparators.push(Comparator { operator, version });
+            if self.peek() == Some(&Token::And) {
+                self.pop()?;
+                self.expect_whitespace()?;
+            } else {
+                break;
+            }
+        }
+        if comparators.is_empty() {
+            Err(UnexpectedEnd)
+        } else {
+            Ok(comparators)
+        }
     }
 
     /// Check if we have reached the end of input.

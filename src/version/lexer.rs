@@ -36,7 +36,7 @@ macro_rules! scan_while {
 /// Semver tokens.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Token<'input> {
-    /// `=`
+    /// `==`
     Eq,
     /// `!=`
     NotEq,
@@ -191,6 +191,7 @@ impl<'input> Iterator for Lexer<'input> {
                     ('!', '=') => Some(NotEq),
                     ('<', '=') => Some(LtEq),
                     ('>', '=') => Some(GtEq),
+                    ('=', '=') => Some(Eq),
                     ('o', 'r') => Some(Or),
                     ('a', 'n') => {
                         self.step_n(2);
@@ -212,7 +213,6 @@ impl<'input> Iterator for Lexer<'input> {
                         self.step();
                         return Some(self.whitespace(start));
                     }
-                    '=' => Eq,
                     '>' => Gt,
                     '<' => Lt,
                     '~' => Tilde,
@@ -246,7 +246,7 @@ mod tests {
     #[test]
     pub fn simple_tokens() {
         assert_eq!(
-            lex("!==><<=>=~.-+orand"),
+            lex("!===><<=>=~.-+orand"),
             vec![NotEq, Eq, Gt, Lt, LtEq, GtEq, Tilde, Dot, Hyphen, Plus, Or, And]
         );
     }

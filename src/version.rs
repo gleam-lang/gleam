@@ -8,8 +8,11 @@ use self::parser::Parser;
 
 mod lexer;
 mod parser;
+mod requirement;
 #[cfg(test)]
 mod tests;
+
+pub use requirement::*;
 
 /// In a nutshell, a version is represented by three numbers:
 ///
@@ -40,11 +43,9 @@ impl Version {
     pub fn parse(input: &str) -> Result<Self, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.version()?;
-
         if !parser.is_eof() {
             return Err(parser::Error::MoreInput(parser.tail()?));
         }
-
         Ok(version)
     }
 }
