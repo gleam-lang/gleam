@@ -99,7 +99,6 @@ function go() {
 }
 
 #[test]
-// How to we track to object keys, would we rather generate a function and call in order.
 fn custom_type_with_named_fields() {
     assert_js!(
         r#"

@@ -405,7 +405,7 @@ fn construct_record<'a>(
         Some(FieldMap { fields, .. }) => fields
             .iter()
             .sorted_by_key(|(_, &v)| v)
-            .map(|x| x.0.as_str().to_doc()))
+            .map(|x| x.0.as_str().to_doc())
             .collect(),
         None => (0..arity)
             .into_iter()
@@ -419,7 +419,7 @@ fn construct_record<'a>(
     );
 
     let record_values = field_names
-        .iter()
+        .into_iter()
         .zip(values)
         .map(|(name, value)| (name, Some(value)));
 
