@@ -147,7 +147,7 @@ impl<'module> Generator<'module> {
 
                 let body = docvec![
                     "return ",
-                    construct_record(name, *arity, field_map, vars.into_iter()),
+                    construct_record(name, *arity, field_map, vars.clone().into_iter()),
                     ";"
                 ];
 
