@@ -133,7 +133,7 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { name, arity: 0, .. } => {
                 let record_type = name.to_doc().surround("\"", "\"");
                 let record_head = (RECORD_KEY.to_doc(), Some(record_type));
-                Ok(wrap_object(&mut std::iter::once(record_head)))
+                Ok(wrap_object(std::iter::once(record_head)))
             }
             ValueConstructorVariant::Record {
                 name,
@@ -147,7 +147,7 @@ impl<'module> Generator<'module> {
 
                 let body = docvec![
                     "return ",
-                    construct_record(name, *arity, field_map, vars.clone().into_iter()),
+                    construct_record(name, *arity, field_map, vars.into_iter()),
                     ";"
                 ];
 
@@ -206,7 +206,7 @@ impl<'module> Generator<'module> {
                     name,
                     *arity,
                     field_map,
-                    arguments.clone().into_iter(),
+                    arguments.into_iter(),
                 ))
             }
             _ => {
@@ -237,7 +237,7 @@ impl<'module> Generator<'module> {
         ))
     }
 
-    fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a String) -> Output<'a> {
+    fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let record = gen.wrap_expression(record)?;
             Ok(docvec![record, ".", label])
@@ -247,7 +247,7 @@ impl<'module> Generator<'module> {
     fn record_update<'a>(
         &mut self,
         spread: &'a TypedExpr,
-        updates: &'a Vec<TypedRecordUpdateArg>,
+        updates: &'a [TypedRecordUpdateArg],
     ) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let spread = gen.wrap_expression(spread)?;
@@ -257,7 +257,7 @@ impl<'module> Generator<'module> {
                     Ok((label.to_doc(), Some(gen.wrap_expression(value)?)))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let assign_args = vec!["{}".to_doc(), spread, wrap_object(&mut updates.into_iter())];
+            let assign_args = vec!["{}".to_doc(), spread, wrap_object(updates.into_iter())];
             Ok(docvec!["Object.assign", wrap_args(assign_args.into_iter())])
         })
     }
@@ -423,11 +423,11 @@ fn construct_record<'a>(
         .zip(values)
         .map(|(name, value)| (name.clone(), Some(value)));
 
-    wrap_object(&mut std::iter::once(record_head).chain(record_values))
+    wrap_object(std::iter::once(record_head).chain(record_values))
 }
 
 fn wrap_object<'a>(
-    items: &mut dyn Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
 ) -> Document<'a> {
     let fields = items.map(|(key, value)| match value {
         Some(value) => docvec![key, ": ", value,],

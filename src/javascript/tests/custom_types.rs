@@ -53,11 +53,6 @@ fn go() {
     build(Ip)
     Ip("5.6.7.8")
 }
-
-// I don't think this accessor syntax is valid
-// fn access(ip: Ip) {
-//     ip.0
-// }
 "#,
         r#""use strict";
 
@@ -83,7 +78,6 @@ type TypeWithALongNameAndSeveralArguments{
 
 fn go() {
     TypeWithALongNameAndSeveralArguments
-    // TypeWithALongNameAndSeveralArguments("foo", "bar", "XXXXXXXXXXXXXXXXXXX", "baz", "last")
 }
 "#,
         r#""use strict";
