@@ -405,7 +405,7 @@ fn construct_record<'a>(
         Some(FieldMap { fields, .. }) => fields
             .iter()
             .sorted_by_key(|(_, &v)| v)
-            .map(|x| Document::String(x.0.to_string()))
+            .map(|x| x.0.as_str().to_doc()))
             .collect(),
         None => (0..arity)
             .into_iter()
@@ -421,7 +421,7 @@ fn construct_record<'a>(
     let record_values = field_names
         .iter()
         .zip(values)
-        .map(|(name, value)| (name.clone(), Some(value)));
+        .map(|(name, value)| (name, Some(value)));
 
     wrap_object(std::iter::once(record_head).chain(record_values))
 }
