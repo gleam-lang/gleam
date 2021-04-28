@@ -155,6 +155,10 @@ pub enum Error {
         reason: InvalidProjectNameReason,
     },
 
+    ProjectRootAlreadyExist {
+        path: String,
+    },
+    
     UnableToFindProjectRoot {
         path: String,
     },
