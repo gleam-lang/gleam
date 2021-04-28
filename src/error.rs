@@ -158,7 +158,7 @@ pub enum Error {
     ProjectRootAlreadyExist {
         path: String,
     },
-    
+
     UnableToFindProjectRoot {
         path: String,
     },
@@ -325,7 +325,13 @@ numbers and underscores.",
                 };
                 write_project(buf, diagnostic);
             }
-
+            Error::ProjectRootAlreadyExist { path } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Project folder already exists".to_string(),
+                    label: format!("Project folder root:\n\n  {}", path),
+                };
+                write_project(buf, diagnostic);
+            }
             Error::UnableToFindProjectRoot { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project root".to_string(),
