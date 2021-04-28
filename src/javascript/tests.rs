@@ -4,6 +4,8 @@ mod functions;
 mod numbers;
 mod strings;
 
+// TODO have a macro that allows us to compile multiple modules in certain tests.
+// https://github.com/gleam-lang/gleam/pull/1070#discussion_r619806755
 fn rocket_ship_module() -> crate::type_::Module {
     let src = r#"
 pub const c = 299_792_458
