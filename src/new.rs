@@ -5,7 +5,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use strum::{Display, EnumString, EnumVariantNames};
 
 const GLEAM_STDLIB_VERSION: &str = "0.14.0";
@@ -528,6 +528,7 @@ pub fn hello_world_test() {{
 
 pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     validate_name(&options.name)?;
+    validate_root_folder(&options.name)?;
     let creator = Creator::new(options, version);
     creator.run()?;
 
@@ -567,6 +568,16 @@ fn write(path: PathBuf, contents: &str) -> Result<()> {
             err: Some(err.to_string()),
         })?;
     Ok(())
+}
+
+fn validate_root_folder(name: &str) -> Result<(), Error> {
+    if Path::new(name).exists() {
+        Err(Error::ProjectRootAlreadyExist {
+            path: name.to_string(),
+        })
+    } else {
+        Ok(())
+    }
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
