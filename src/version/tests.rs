@@ -65,6 +65,15 @@ macro_rules! version_parse_fail_test {
     };
 }
 
+macro_rules! version_parse_print {
+    ($name:ident, $input:expr) => {
+        #[test]
+        fn $name() {
+            assert_eq!($input, Version::parse($input).unwrap().to_string().as_str());
+        }
+    };
+}
+
 version_parse_test!(triplet, "1.2.3", 1, 2, 3);
 
 version_parse_test!(
@@ -150,3 +159,13 @@ version_parse_fail_test!(leading_zero_major, "02.3.0");
 version_parse_fail_test!(extra_whitespace, "0. 0.0");
 
 version_parse_fail_test!(and_in_version, "0.1.0-andpre");
+
+version_parse_print!(print_triplet, "1.100.1000");
+
+version_parse_print!(print_pre, "1.100.4-dev");
+
+version_parse_print!(print_pre_dot, "1.100.4-dev.1.r.t");
+
+version_parse_print!(print_build, "1.100.4+dev.1.r.t");
+
+version_parse_print!(print_pre_build, "1.100.4-ewfjhwefj.wefw.w.1.ff+dev.1.r.t");

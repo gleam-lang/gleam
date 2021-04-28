@@ -2,7 +2,7 @@
 //! and compatible with the Elixir Version module, which is used by Hex
 //! internally as well as be the Elixir build tool Hex client.
 
-use std::fmt;
+use std::{convert::TryFrom, fmt};
 
 use self::parser::Parser;
 
@@ -59,9 +59,7 @@ impl Version {
             build: None,
         }
     }
-}
 
-impl Version {
     pub fn parse(input: &str) -> Result<Self, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.version()?;
@@ -69,6 +67,44 @@ impl Version {
             return Err(parser::Error::MoreInput(parser.tail()?));
         }
         Ok(version)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Version {
+    type Error = parser::Error<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(value)
+    }
+}
+
+impl fmt::Display for Version {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let format_pre = |pre: &[Identifier]| {
+            pre.iter()
+                .map(Identifier::to_string)
+                .collect::<Vec<_>>()
+                .join(".")
+        };
+        match (self.pre.as_slice(), self.build.as_ref()) {
+            (&[], None) => write!(f, "{}.{}.{}", self.major, self.minor, self.patch),
+
+            (&[], Some(build)) => {
+                write!(f, "{}.{}.{}+{}", self.major, self.minor, self.patch, build)
+            }
+            (pre, None) => {
+                let pre = format_pre(pre);
+                write!(f, "{}.{}.{}-{}", self.major, self.minor, self.patch, pre,)
+            }
+            (pre, Some(build)) => {
+                let pre = format_pre(pre);
+                write!(
+                    f,
+                    "{}.{}.{}-{}+{}",
+                    self.major, self.minor, self.patch, pre, build
+                )
+            }
+        }
     }
 }
 

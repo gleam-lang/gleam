@@ -1,3 +1,5 @@
+use std::convert::TryFrom;
+
 use super::{
     parser::{self, Parser},
     Version,
@@ -14,6 +16,14 @@ impl Requirement {
             return Err(parser::Error::MoreInput(parser.tail()?));
         }
         Ok(requirement)
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Requirement {
+    type Error = parser::Error<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Self::parse(value)
     }
 }
 
