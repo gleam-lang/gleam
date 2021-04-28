@@ -2,7 +2,7 @@ mod expression;
 #[cfg(test)]
 mod tests;
 
-use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*};
+use crate::{ast::*, error::GleamExpect, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
 
 const INDENT: isize = 2;
@@ -135,7 +135,12 @@ impl<'a> Generator<'a> {
         let module_name = as_name
             .as_ref()
             .map(|n| n.as_str().to_doc())
-            .unwrap_or_else(|| Document::String(module.join("_")));
+            .unwrap_or_else(|| {
+                module
+                    .last()
+                    .gleam_expect("JavaScript code generator could not identify module name.")
+                    .to_doc()
+            });
         let path = Document::String(module.join("/")).surround("\"./", ".js\"");
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
