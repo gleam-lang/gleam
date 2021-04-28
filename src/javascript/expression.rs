@@ -444,24 +444,3 @@ fn construct_record<'a>(
 
     wrap_object(std::iter::once(record_head).chain(record_values))
 }
-
-fn wrap_object<'a>(
-    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
-) -> Document<'a> {
-    let fields = items.map(|(key, value)| match value {
-        Some(value) => docvec![key, ": ", value,],
-        None => key.to_doc(),
-    });
-
-    docvec![
-        docvec![
-            "{",
-            break_("", " "),
-            concat(Itertools::intersperse(fields, break_(",", ", ")))
-        ]
-        .nest(INDENT)
-        .append(break_("", " "))
-        .group(),
-        "}"
-    ]
-}

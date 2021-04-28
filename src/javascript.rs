@@ -148,14 +148,14 @@ impl<'a> Generator<'a> {
             0 => import_line,
             _ => {
                 let matches = unqualified.into_iter().map(|i| match &i.as_name {
-                    Some(aliased_name) => docvec![i.name, ": ", aliased_name,],
-                    None => i.name.to_doc(),
+                    Some(aliased_name) => (i.name.to_doc(), Some(aliased_name.to_doc())),
+                    None => (i.name.to_doc(), None),
                 });
                 docvec![
                     import_line,
                     line(),
                     "const ",
-                    concat(Itertools::intersperse(matches, break_(",", ", "))).surround("{", "}"),
+                    wrap_object(matches),
                     " = ",
                     module_name,
                     ";"
@@ -282,4 +282,25 @@ where
         .append(break_("", ""))
         .surround("(", ")")
         .group()
+}
+
+fn wrap_object<'a>(
+    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+) -> Document<'a> {
+    let fields = items.map(|(key, value)| match value {
+        Some(value) => docvec![key, ": ", value,],
+        None => key.to_doc(),
+    });
+
+    docvec![
+        docvec![
+            "{",
+            break_("", " "),
+            concat(Itertools::intersperse(fields, break_(",", ", ")))
+        ]
+        .nest(INDENT)
+        .append(break_("", " "))
+        .group(),
+        "}"
+    ]
 }

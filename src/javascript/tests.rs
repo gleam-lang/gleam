@@ -281,7 +281,7 @@ import * as rocket_ship from "./rocket_ship.js";
 import * as foo from "./rocket_ship.js";
 
 import * as rocket_ship from "./rocket_ship.js";
-const {launch: boom_time, fuel} = rocket_ship;
+const { launch: boom_time, fuel } = rocket_ship;
 
 export function go() {
   rocket_ship.fuel(100);
