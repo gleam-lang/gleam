@@ -277,7 +277,6 @@ function $isObject(object) {
 }
 
 #[test]
-// https://xjamundx.medium.com/custom-javascript-errors-in-es6-aa891b173f87
 fn todo_throws_error() {
     assert_js!(
         r#"
