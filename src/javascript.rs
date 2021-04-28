@@ -141,7 +141,15 @@ impl<'a> Generator<'a> {
                     .gleam_expect("JavaScript code generator could not identify module name.")
                     .to_doc()
             });
-        let path = Document::String(module.join("/")).surround("\"./", ".js\"");
+        let path: Document<'a> = docvec![
+            "\"",
+            match module.len() {
+                1 => "./".to_doc(),
+                _ => Document::String("../".repeat(module.len() - 1)),
+            },
+            Document::String(module.join("/")),
+            ".js\""
+        ];
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
         match unqualified.len() {
