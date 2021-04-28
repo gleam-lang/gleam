@@ -29,15 +29,17 @@ pub struct Comparator {
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Operator {
     Lt,
-    Lte,
+    LtEq,
     Gt,
-    Gte,
+    GtEq,
     Eq,
     NotEq,
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::version::Identifier;
+
     use super::{Operator::*, *};
 
     fn comp(operator: Operator, major: u64, minor: u64, patch: u64) -> Comparator {
@@ -49,6 +51,26 @@ mod tests {
                 patch,
                 pre: vec![],
                 build: None,
+            },
+        }
+    }
+
+    fn comp_(
+        operator: Operator,
+        major: u64,
+        minor: u64,
+        patch: u64,
+        pre: Vec<Identifier>,
+        build: Option<String>,
+    ) -> Comparator {
+        Comparator {
+            operator,
+            version: Version {
+                major,
+                minor,
+                patch,
+                pre,
+                build,
             },
         }
     }
@@ -95,10 +117,84 @@ mod tests {
         vec![vec![comp(NotEq, 1, 2, 3)], vec![comp(Eq, 1, 0, 1)]]
     );
 
+    parse_test!(gt, "> 1.0.0", vec![vec![comp(Gt, 1, 0, 0)]]);
+    parse_test!(gt_eq, ">= 1.0.0", vec![vec![comp(GtEq, 1, 0, 0)]]);
+    parse_test!(lt, "< 1.0.0", vec![vec![comp(Lt, 1, 0, 0)]]);
+    parse_test!(lt_eq, "<= 1.0.0", vec![vec![comp(LtEq, 1, 0, 0)]]);
+
+    parse_test!(
+        pessimistic_pair,
+        "~> 2.2",
+        vec![vec![comp(GtEq, 2, 2, 0), comp(Lt, 3, 0, 0)]]
+    );
+
+    parse_test!(
+        pessimistic_triplet,
+        "~> 4.6.5",
+        vec![vec![comp(GtEq, 4, 6, 5), comp(Lt, 4, 7, 0)]]
+    );
+
+    parse_test!(
+        pessimistic_triplet_pre,
+        "~> 4.6.5-eee",
+        vec![vec![
+            comp_(
+                GtEq,
+                4,
+                6,
+                5,
+                vec![Identifier::AlphaNumeric("eee".to_string())],
+                None,
+            ),
+            comp(Lt, 4, 7, 0)
+        ]]
+    );
+
+    parse_test!(
+        pessimistic_triplet_build,
+        "~> 4.6.5+eee22",
+        vec![vec![
+            comp_(GtEq, 4, 6, 5, vec![], Some("eee22".to_string()),),
+            comp(Lt, 4, 7, 0)
+        ]]
+    );
+
+    parse_test!(
+        pessimistic_triplet_pre_build,
+        "~> 4.6.5-whatever+eee22",
+        vec![vec![
+            comp_(
+                GtEq,
+                4,
+                6,
+                5,
+                vec![Identifier::AlphaNumeric("whatever".to_string())],
+                Some("eee22".to_string()),
+            ),
+            comp(Lt, 4, 7, 0)
+        ]]
+    );
+
     parse_fail_test!(quad, "1.1.1.1");
     parse_fail_test!(just_major, "1");
     parse_fail_test!(just_major_minor, "1.1");
     parse_fail_test!(alpha_component, "1.1.a");
+
+    parse_fail_test!(word, "foobar");
+    parse_fail_test!(major_dot, "2.");
+    parse_fail_test!(major_minor_dot, "2.3.");
+    parse_fail_test!(triplet_dash, "2.3.0-");
+    parse_fail_test!(triplet_plus, "2.3.0+");
+    parse_fail_test!(triplet_dot, "2.3.0.");
+    parse_fail_test!(dot_dash, "2.3.-rc.1");
+    parse_fail_test!(dot_plus, "2.3.+rc.1");
+    parse_fail_test!(zero_pre, "2.3.0-01");
+    parse_fail_test!(patch_zerozero_dash, "2.3.00-1");
+    parse_fail_test!(patch_zerozero, "2.3.00");
+    parse_fail_test!(minor_leading_zero, "2.03.0");
+    parse_fail_test!(major_leading_zero, "02.3.0");
+    parse_fail_test!(triplet_containing_whitespace, "0. 0.0");
+    parse_fail_test!(dash_amp, "0.1.0-&&pre");
 
     parse_fail_test!(or_whitespace_before, "!= 1.2.3or == 1.0.1");
     parse_fail_test!(or_whitespace_after, "!= 1.2.3 or== 1.0.1");
@@ -115,4 +211,6 @@ mod tests {
     parse_fail_test!(duplicate_eq, "== ==");
     parse_fail_test!(just_eq, "==");
     parse_fail_test!(empty, "");
+
+    parse_fail_test!(pessimistic_major, "~> 1");
 }

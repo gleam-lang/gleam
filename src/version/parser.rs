@@ -136,12 +136,16 @@ impl<'input> Parser<'input> {
     //     self.component()
     // }
 
-    /// Parse a dot, then a numeric.
-    pub fn dot_numeric(&mut self) -> Result<u64, Error<'input>> {
+    fn dot(&mut self) -> Result<(), Error<'input>> {
         match self.pop()? {
-            Token::Dot => {}
-            tok => return Err(UnexpectedToken(tok)),
+            Token::Dot => Ok(()),
+            tok => Err(UnexpectedToken(tok)),
         }
+    }
+
+    /// Parse a dot, then a numeric.
+    fn dot_numeric(&mut self) -> Result<u64, Error<'input>> {
+        self.dot()?;
         self.numeric()
     }
 
@@ -281,45 +285,84 @@ impl<'input> Parser<'input> {
         }
     }
 
+    fn basic_comparison_operator(&mut self) -> Result<Operator, Error<'input>> {
+        match self.pop()? {
+            Token::Eq => Ok(Operator::Eq),
+            Token::NotEq => Ok(Operator::NotEq),
+            Token::Gt => Ok(Operator::Gt),
+            Token::Lt => Ok(Operator::Lt),
+            Token::LtEq => Ok(Operator::LtEq),
+            Token::GtEq => Ok(Operator::GtEq),
+
+            token => Err(UnexpectedToken(token)),
+        }
+    }
+
+    fn pessimistic_version_constraint(
+        &mut self,
+    ) -> Result<(Comparator, Comparator), Error<'input>> {
+        let mut included_patch = false;
+        let major = self.numeric()?;
+        let minor = self.dot_numeric()?;
+        let patch = match self.peek() {
+            Some(Token::Dot) => {
+                included_patch = true;
+                self.pop()?;
+                self.numeric()?
+            }
+            _ => 0,
+        };
+        let pre = self.pre()?;
+        let build = self.plus_build_metadata()?;
+
+        let lower = Version {
+            major,
+            minor,
+            patch,
+            pre,
+            build,
+        };
+        let upper = if included_patch {
+            lower.bump_minor()
+        } else {
+            lower.bump_major()
+        };
+        let lower = Comparator {
+            operator: Operator::GtEq,
+            version: lower,
+        };
+        let upper = Comparator {
+            operator: Operator::Lt,
+            version: upper,
+        };
+        Ok((lower, upper))
+    }
+
     fn requirement_comparators(&mut self) -> Result<Vec<Comparator>, Error<'input>> {
         use Token::*;
         let mut comparators = Vec::new();
+        let comp = |operator, version| Comparator { operator, version };
         loop {
             self.skip_whitespace()?;
-            let (operator, version) = match self.peek() {
+            match self.peek() {
                 None => break,
 
-                Some(Numeric(_)) => (Operator::Eq, self.version()?),
+                Some(Numeric(_)) => comparators.push(comp(Operator::Eq, self.version()?)),
 
-                Some(Eq) => {
+                Some(Lt) | Some(LtEq) | Some(GtEq) | Some(Eq) | Some(Gt) | Some(NotEq) => {
+                    comparators.push(comp(self.basic_comparison_operator()?, self.version()?))
+                }
+
+                Some(Pessimistic) => {
                     self.pop()?;
-                    (Operator::Eq, self.version()?)
-                }
-
-                Some(NotEq) => {
-                    self.pop()?;
-                    (Operator::NotEq, self.version()?)
-                }
-
-                Some(Gt) => {
-                    todo!();
-                }
-                Some(Lt) => {
-                    todo!();
-                }
-                Some(LtEq) => {
-                    todo!();
-                }
-                Some(GtEq) => {
-                    todo!();
-                }
-                Some(Tilde) => {
-                    todo!();
+                    self.skip_whitespace()?;
+                    let (lower, upper) = self.pessimistic_version_constraint()?;
+                    comparators.push(lower);
+                    comparators.push(upper);
                 }
 
                 Some(_) => return Err(UnexpectedToken(self.pop()?)),
             };
-            comparators.push(Comparator { operator, version });
             if self.peek() == Some(&Token::And) {
                 self.pop()?;
                 self.expect_whitespace()?;

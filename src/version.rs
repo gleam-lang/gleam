@@ -40,6 +40,28 @@ pub struct Version {
 }
 
 impl Version {
+    fn bump_minor(&self) -> Self {
+        Self {
+            major: self.major,
+            minor: self.minor + 1,
+            patch: 0,
+            pre: vec![],
+            build: None,
+        }
+    }
+
+    fn bump_major(&self) -> Self {
+        Self {
+            major: self.major + 1,
+            minor: 0,
+            patch: 0,
+            pre: vec![],
+            build: None,
+        }
+    }
+}
+
+impl Version {
     pub fn parse(input: &str) -> Result<Self, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.version()?;

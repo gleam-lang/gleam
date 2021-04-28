@@ -48,8 +48,8 @@ pub enum Token<'input> {
     LtEq,
     /// `>=`
     GtEq,
-    /// '~`
-    Tilde,
+    /// '~>`
+    Pessimistic,
     /// `.`
     Dot,
     /// `-`
@@ -188,6 +188,7 @@ impl<'input> Iterator for Lexer<'input> {
             // two subsequent char tokens.
             if let Some((start, a, b)) = self.two() {
                 let two = match (a, b) {
+                    ('~', '>') => Some(Pessimistic),
                     ('!', '=') => Some(NotEq),
                     ('<', '=') => Some(LtEq),
                     ('>', '=') => Some(GtEq),
@@ -215,7 +216,6 @@ impl<'input> Iterator for Lexer<'input> {
                     }
                     '>' => Gt,
                     '<' => Lt,
-                    '~' => Tilde,
                     '.' => Dot,
                     '-' => Hyphen,
                     '+' => Plus,
@@ -246,8 +246,21 @@ mod tests {
     #[test]
     pub fn simple_tokens() {
         assert_eq!(
-            lex("!===><<=>=~.-+orand"),
-            vec![NotEq, Eq, Gt, Lt, LtEq, GtEq, Tilde, Dot, Hyphen, Plus, Or, And]
+            lex("!===><<=>=~>.-+orand"),
+            vec![
+                NotEq,
+                Eq,
+                Gt,
+                Lt,
+                LtEq,
+                GtEq,
+                Pessimistic,
+                Dot,
+                Hyphen,
+                Plus,
+                Or,
+                And
+            ]
         );
     }
 
