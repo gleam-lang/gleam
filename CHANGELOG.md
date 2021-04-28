@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- `Version` and `Requirement` structs have been added for representing
+  information about requests versions of packages.
+
 ## v1.3.0 - 2020-03-30
 
 - The `get_package_tarball` method has been added.
