@@ -2,8 +2,10 @@ use super::*;
 use crate::{
     ast::*,
     pretty::*,
-    type_::{ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
+    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
+
+static RECORD_KEY: &str = "type";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -43,8 +45,8 @@ impl<'module> Generator<'module> {
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fun(args, body),
 
-            TypedExpr::RecordAccess { .. } => unsupported("Custom Record"),
-            TypedExpr::RecordUpdate { .. } => unsupported("Function"),
+            TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
+            TypedExpr::RecordUpdate { spread, args, .. } => self.record_update(spread, args),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -133,6 +135,35 @@ impl<'module> Generator<'module> {
             ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
                 Ok("undefined".to_doc())
             }
+            ValueConstructorVariant::Record { name, arity: 0, .. } => {
+                let record_type = name.to_doc().surround("\"", "\"");
+                let record_head = (RECORD_KEY.to_doc(), Some(record_type));
+                Ok(wrap_object(std::iter::once(record_head)))
+            }
+            ValueConstructorVariant::Record {
+                name,
+                arity,
+                field_map,
+                ..
+            } => {
+                let vars = (0..*arity)
+                    .into_iter()
+                    .map(|i| Document::String(format!("var{}", i)));
+
+                let body = docvec![
+                    "return ",
+                    construct_record(name, *arity, field_map, vars.clone().into_iter()),
+                    ";"
+                ];
+
+                Ok(docvec!(
+                    docvec!(wrap_args(vars), " => {", break_("", " "), body,)
+                        .nest(INDENT)
+                        .append(break_("", " "))
+                        .group(),
+                    "}",
+                ))
+            }
             ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
             ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
@@ -152,15 +183,49 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
-        let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
-        let arguments = self.not_in_tail_position(|gen| {
-            call_arguments(
-                arguments
+        match fun {
+            // Short circuit creation of a record so the rendered JS creates the record inline.
+            TypedExpr::Var {
+                constructor:
+                    ValueConstructor {
+                        variant:
+                            ValueConstructorVariant::Record {
+                                name,
+                                arity,
+                                field_map,
+                                ..
+                            },
+                        ..
+                    },
+                ..
+            } => {
+                let tail = self.tail_position;
+                self.tail_position = false;
+                let arguments = arguments
                     .iter()
-                    .map(|element| gen.wrap_expression(&element.value)),
-            )
-        })?;
-        Ok(docvec![fun, arguments])
+                    .map(|element| self.wrap_expression(&element.value))
+                    .collect::<Result<Vec<_>, _>>()?;
+                self.tail_position = tail;
+
+                Ok(construct_record(
+                    name,
+                    *arity,
+                    field_map,
+                    arguments.into_iter(),
+                ))
+            }
+            _ => {
+                let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
+                let arguments = self.not_in_tail_position(|gen| {
+                    call_arguments(
+                        arguments
+                            .iter()
+                            .map(|element| gen.wrap_expression(&element.value)),
+                    )
+                })?;
+                Ok(docvec![fun, arguments])
+            }
+        }
     }
 
     fn fun<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
@@ -176,6 +241,32 @@ impl<'module> Generator<'module> {
             "}",
         ))
     }
+
+    fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            let record = gen.wrap_expression(record)?;
+            Ok(docvec![record, ".", label])
+        })
+    }
+
+    fn record_update<'a>(
+        &mut self,
+        spread: &'a TypedExpr,
+        updates: &'a [TypedRecordUpdateArg],
+    ) -> Output<'a> {
+        self.not_in_tail_position(|gen| {
+            let spread = gen.wrap_expression(spread)?;
+            let updates: Vec<(Document<'a>, Option<Document<'a>>)> = updates
+                .iter()
+                .map(|TypedRecordUpdateArg { label, value, .. }| {
+                    Ok((label.to_doc(), Some(gen.wrap_expression(value)?)))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let assign_args = vec!["{}".to_doc(), spread, wrap_object(updates.into_iter())];
+            Ok(docvec!["Object.assign", wrap_args(assign_args.into_iter())])
+        })
+    }
+
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
@@ -277,7 +368,18 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
             Ok("false".to_doc())
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
-        Constant::Record { .. } => unsupported("Record as constant"),
+        Constant::Record { tag, args, .. } => {
+            let field_values: Result<Vec<_>, _> = args
+                .iter()
+                .map(|arg| constant_expression(&arg.value))
+                .collect();
+            Ok(construct_record(
+                tag,
+                args.len(),
+                &None,
+                field_values?.into_iter(),
+            ))
+        }
         Constant::BitString { .. } => unsupported("BitString as constant"),
     }
 }
@@ -310,4 +412,56 @@ fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements)
         ")"
     ]
     .group())
+}
+
+fn construct_record<'a>(
+    name: &'a str,
+    arity: usize,
+    field_map: &'a Option<FieldMap>,
+    values: impl Iterator<Item = Document<'a>>,
+) -> Document<'a> {
+    let field_names: Vec<Document<'_>> = match field_map {
+        Some(FieldMap { fields, .. }) => fields
+            .iter()
+            .sorted_by_key(|(_, &v)| v)
+            .map(|x| x.0.as_str().to_doc())
+            .collect(),
+        None => (0..arity)
+            .into_iter()
+            .map(|i| Document::String(format!("{}", i)))
+            .collect(),
+    };
+
+    let record_head = (
+        RECORD_KEY.to_doc(),
+        Some(name.to_doc().surround("\"", "\"")),
+    );
+
+    let record_values = field_names
+        .into_iter()
+        .zip(values)
+        .map(|(name, value)| (name, Some(value)));
+
+    wrap_object(std::iter::once(record_head).chain(record_values))
+}
+
+fn wrap_object<'a>(
+    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+) -> Document<'a> {
+    let fields = items.map(|(key, value)| match value {
+        Some(value) => docvec![key, ": ", value,],
+        None => key.to_doc(),
+    });
+
+    docvec![
+        docvec![
+            "{",
+            break_("", " "),
+            concat(Itertools::intersperse(fields, break_(",", ", ")))
+        ]
+        .nest(INDENT)
+        .append(break_("", " "))
+        .group(),
+        "}"
+    ]
 }
