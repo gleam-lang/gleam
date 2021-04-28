@@ -351,12 +351,21 @@ impl<'module> Generator<'module> {
             wrap_args(
                 vec![
                     docvec!["new Error", wrap_args(std::iter::once(string(message)))],
-                    // TODO use the object wrapper in other PR
-                    "{}".to_doc(),
-                    string(gleam_error),
-                    module_name.surround("\"", "\""),
-                    Document::String(self.function_name.to_string()).surround("\"", "\""),
-                    Document::String(format!("{}", line)),
+                    wrap_object(
+                        vec![
+                            ("gleam_error".to_doc(), Some(string(gleam_error))),
+                            ("module".to_doc(), Some(module_name.surround("\"", "\""))),
+                            (
+                                "function".to_doc(),
+                                Some(
+                                    Document::String(self.function_name.to_string())
+                                        .surround("\"", "\"")
+                                )
+                            ),
+                            ("line".to_doc(), Some(Document::String(format!("{}", line)))),
+                        ]
+                        .into_iter()
+                    )
                 ]
                 .into_iter()
             )

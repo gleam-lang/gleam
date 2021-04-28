@@ -288,7 +288,10 @@ fn go() {
         r#""use strict";
 
 function go() {
-  throw Object.assign(new Error("This has not yet been implemented"), {})
+  throw Object.assign(
+    new Error("This has not yet been implemented"),
+    { gleam_error: "todo", module: "the_app", function: "go", line: 15 }
+  )
 }
 "#
     );
@@ -301,7 +304,10 @@ fn go() {
         r#""use strict";
 
 function go() {
-  throw Object.assign(new Error("I should do this"), {})
+  throw Object.assign(
+    new Error("I should do this"),
+    { gleam_error: "todo", module: "the_app", function: "go", line: 15 }
+  )
 }
 "#
     );
