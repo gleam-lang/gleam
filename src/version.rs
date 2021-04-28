@@ -80,31 +80,20 @@ impl<'a> TryFrom<&'a str> for Version {
 
 impl fmt::Display for Version {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let format_pre = |pre: &[Identifier]| {
-            pre.iter()
-                .map(Identifier::to_string)
-                .collect::<Vec<_>>()
-                .join(".")
-        };
-        match (self.pre.as_slice(), self.build.as_ref()) {
-            (&[], None) => write!(f, "{}.{}.{}", self.major, self.minor, self.patch),
-
-            (&[], Some(build)) => {
-                write!(f, "{}.{}.{}+{}", self.major, self.minor, self.patch, build)
-            }
-            (pre, None) => {
-                let pre = format_pre(pre);
-                write!(f, "{}.{}.{}-{}", self.major, self.minor, self.patch, pre,)
-            }
-            (pre, Some(build)) => {
-                let pre = format_pre(pre);
-                write!(
-                    f,
-                    "{}.{}.{}-{}+{}",
-                    self.major, self.minor, self.patch, pre, build
-                )
+        write!(f, "{}.{}.{}", self.major, self.minor, self.patch)?;
+        if !self.pre.is_empty() {
+            write!(f, "-")?;
+            for (i, identifier) in self.pre.iter().enumerate() {
+                if i != 0 {
+                    write!(f, ".")?;
+                }
+                identifier.fmt(f)?;
             }
         }
+        if let Some(build) = self.build.as_ref() {
+            write!(f, "+{}", build)?;
+        }
+        Ok(())
     }
 }
 

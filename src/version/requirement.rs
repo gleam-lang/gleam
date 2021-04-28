@@ -1,4 +1,4 @@
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt};
 
 use super::{
     parser::{self, Parser},
@@ -27,6 +27,23 @@ impl<'a> TryFrom<&'a str> for Requirement {
     }
 }
 
+impl fmt::Display for Requirement {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, alternative) in self.0.iter().enumerate() {
+            if i != 0 {
+                write!(f, " or ")?;
+            }
+            for (i, comparator) in alternative.iter().enumerate() {
+                if i != 0 {
+                    write!(f, " and ")?;
+                }
+                comparator.fmt(f)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 pub type OneOf<T> = Vec<T>;
 pub type AllOf<T> = Vec<T>;
 
@@ -34,6 +51,12 @@ pub type AllOf<T> = Vec<T>;
 pub struct Comparator {
     pub operator: Operator,
     pub version: Version,
+}
+
+impl fmt::Display for Comparator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {}", self.operator, self.version)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -44,6 +67,19 @@ pub enum Operator {
     GtEq,
     Eq,
     NotEq,
+}
+
+impl fmt::Display for Operator {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Operator::Lt => write!(f, "<"),
+            Operator::LtEq => write!(f, "<="),
+            Operator::Gt => write!(f, ">"),
+            Operator::GtEq => write!(f, ">="),
+            Operator::Eq => write!(f, "=="),
+            Operator::NotEq => write!(f, "!="),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -99,6 +135,18 @@ mod tests {
             #[test]
             fn $name() {
                 Requirement::parse($input).unwrap_err();
+            }
+        };
+    }
+
+    macro_rules! parse_print_test {
+        ($name:ident, $input:expr) => {
+            #[test]
+            fn $name() {
+                assert_eq!(
+                    $input,
+                    Requirement::parse($input).unwrap().to_string().as_str()
+                );
             }
         };
     }
@@ -223,4 +271,6 @@ mod tests {
     parse_fail_test!(empty, "");
 
     parse_fail_test!(pessimistic_major, "~> 1");
+
+    parse_print_test!(print_and_or, "== 1.0.3 or > 1.0.3 and < 1.4.2");
 }
