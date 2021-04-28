@@ -418,6 +418,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
         Constant::Record { tag, args, .. } => {
+            println!("{:?}", expression);
             let field_values: Result<Vec<_>, _> = args
                 .iter()
                 .map(|arg| constant_expression(&arg.value))
