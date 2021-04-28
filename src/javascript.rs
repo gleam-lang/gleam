@@ -2,7 +2,7 @@ mod expression;
 #[cfg(test)]
 mod tests;
 
-use crate::{ast::*, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*};
+use crate::{ast::*, error::GleamExpect, fs::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
 
 const INDENT: isize = 2;
@@ -95,7 +95,12 @@ impl<'a> Generator<'a> {
         match statement {
             Statement::TypeAlias { .. } => None,
             Statement::CustomType { .. } => None,
-            Statement::Import { .. } => Some(unsupported("Importing modules")),
+            Statement::Import {
+                module,
+                as_name,
+                unqualified,
+                ..
+            } => Some(Ok(self.import(module, as_name, unqualified))),
             Statement::ExternalType { .. } => None,
             Statement::ModuleConstant {
                 public,
@@ -118,6 +123,52 @@ impl<'a> Generator<'a> {
                 fun,
                 ..
             } => Some(self.external_function(*public, name, arguments, module, fun)),
+        }
+    }
+
+    fn import(
+        &mut self,
+        module: &'a Vec<String>,
+        as_name: &'a Option<String>,
+        unqualified: &'a Vec<UnqualifiedImport>,
+    ) -> Document<'a> {
+        let module_name = as_name
+            .as_ref()
+            .map(|n| n.as_str().to_doc())
+            .unwrap_or_else(|| {
+                module
+                    .last()
+                    .gleam_expect("JavaScript code generator could not identify module name.")
+                    .to_doc()
+            });
+        let path: Document<'a> = docvec![
+            "\"",
+            match module.len() {
+                1 => "./".to_doc(),
+                _ => Document::String("../".repeat(module.len() - 1)),
+            },
+            Document::String(module.join("/")),
+            ".js\""
+        ];
+
+        let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
+        match unqualified.len() {
+            0 => import_line,
+            _ => {
+                let matches = unqualified.into_iter().map(|i| match &i.as_name {
+                    Some(aliased_name) => (i.name.to_doc(), Some(aliased_name.to_doc())),
+                    None => (i.name.to_doc(), None),
+                });
+                docvec![
+                    import_line,
+                    line(),
+                    "const ",
+                    wrap_object(matches),
+                    " = ",
+                    module_name,
+                    ";"
+                ]
+            }
         }
     }
 
@@ -239,4 +290,25 @@ where
         .append(break_("", ""))
         .surround("(", ")")
         .group()
+}
+
+fn wrap_object<'a>(
+    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+) -> Document<'a> {
+    let fields = items.map(|(key, value)| match value {
+        Some(value) => docvec![key, ": ", value,],
+        None => key.to_doc(),
+    });
+
+    docvec![
+        docvec![
+            "{",
+            break_("", " "),
+            concat(Itertools::intersperse(fields, break_(",", ", ")))
+        ]
+        .nest(INDENT)
+        .append(break_("", " "))
+        .group(),
+        "}"
+    ]
 }

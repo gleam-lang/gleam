@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     ast::*,
     pretty::*,
-    type_::{FieldMap, ValueConstructor, ValueConstructorVariant},
+    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
 
 static RECORD_KEY: &str = "type";
@@ -64,7 +64,12 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Pipe { .. } => unsupported("Pipe"),
 
-            TypedExpr::ModuleSelect { .. } => unsupported("Module function call"),
+            TypedExpr::ModuleSelect {
+                module_name,
+                label,
+                constructor,
+                ..
+            } => self.module_select(module_name, label, constructor),
         }?;
         Ok(match expression {
             TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => document,
@@ -326,6 +331,20 @@ impl<'module> Generator<'module> {
             .append(" ")
             .append(right))
     }
+
+    fn module_select<'a>(
+        &mut self,
+        module_name: &'a Vec<String>,
+        label: &'a String,
+        constructor: &'a ModuleValueConstructor,
+    ) -> Output<'a> {
+        match constructor {
+            ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
+                Ok(docvec![Document::String(module_name.join("_")), ".", label,])
+            }
+            _ => unsupported("Module function call"),
+        }
+    }
 }
 
 fn int(value: &str) -> Document<'_> {
@@ -424,25 +443,4 @@ fn construct_record<'a>(
         .map(|(name, value)| (name, Some(value)));
 
     wrap_object(std::iter::once(record_head).chain(record_values))
-}
-
-fn wrap_object<'a>(
-    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
-) -> Document<'a> {
-    let fields = items.map(|(key, value)| match value {
-        Some(value) => docvec![key, ": ", value,],
-        None => key.to_doc(),
-    });
-
-    docvec![
-        docvec![
-            "{",
-            break_("", " "),
-            concat(Itertools::intersperse(fields, break_(",", ", ")))
-        ]
-        .nest(INDENT)
-        .append(break_("", " "))
-        .group(),
-        "}"
-    ]
 }
