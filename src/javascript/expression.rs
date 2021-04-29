@@ -366,6 +366,8 @@ impl<'module> Generator<'module> {
                             (
                                 "function".to_doc(),
                                 Some(
+                                    // TODO switch to use `string(self.function_name)`
+                                    // This will require resolving the difference in lifetimes 'module and 'a.
                                     Document::String(self.function_name.to_string())
                                         .surround("\"", "\"")
                                 )
