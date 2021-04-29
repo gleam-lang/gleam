@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     ast::*,
+    line_numbers::LineNumbers,
     pretty::*,
     type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
@@ -10,6 +11,7 @@ static RECORD_KEY: &str = "type";
 #[derive(Debug)]
 pub struct Generator<'module> {
     module_name: &'module [String],
+    line_numbers: &'module LineNumbers,
     function_name: &'module str,
     tail_position: bool,
     // We register whether float division is used within an expression so that
@@ -21,12 +23,14 @@ pub struct Generator<'module> {
 impl<'module> Generator<'module> {
     pub fn new(
         module_name: &'module [String],
+        line_numbers: &'module LineNumbers,
         function_name: &'module str,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
     ) -> Self {
         Self {
             module_name,
+            line_numbers,
             function_name,
             tail_position: true,
             float_division_used,
@@ -348,7 +352,7 @@ impl<'module> Generator<'module> {
             .map(|s| s.as_str())
             .unwrap_or_else(|| "This has not yet been implemented");
         let module_name = Document::String(self.module_name.join("_"));
-        let line = location.start;
+        let line = self.line_numbers.line_number(location.start);
 
         docvec![
             "throw Object.assign",

@@ -354,7 +354,7 @@ fn go() {
 function go() {
   throw Object.assign(
     new Error("This has not yet been implemented"),
-    { gleam_error: "todo", module: "the_app", function: "go", line: 15 }
+    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
   )
 }
 "#
@@ -370,7 +370,7 @@ fn go() {
 function go() {
   throw Object.assign(
     new Error("I should do this"),
-    { gleam_error: "todo", module: "the_app", function: "go", line: 15 }
+    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
   )
 }
 "#

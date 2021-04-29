@@ -197,6 +197,7 @@ impl<'a> Generator<'a> {
     ) -> Output<'a> {
         let mut generator = expression::Generator::new(
             &self.module.name,
+            &self.line_numbers,
             name,
             &mut self.float_division_used,
             &mut self.object_equality_used,
