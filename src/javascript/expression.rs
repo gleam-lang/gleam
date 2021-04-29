@@ -1,6 +1,7 @@
 use super::*;
 use crate::{
     ast::*,
+    line_numbers::LineNumbers,
     pretty::*,
     type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
@@ -9,6 +10,9 @@ static RECORD_KEY: &str = "type";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
+    module_name: &'module [String],
+    line_numbers: &'module LineNumbers,
+    function_name: &'module str,
     tail_position: bool,
     // We register whether float division is used within an expression so that
     // the module generator can output a suitable function if it is needed.
@@ -18,10 +22,16 @@ pub struct Generator<'module> {
 
 impl<'module> Generator<'module> {
     pub fn new(
+        module_name: &'module [String],
+        line_numbers: &'module LineNumbers,
+        function_name: &'module str,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
     ) -> Self {
         Self {
+            module_name,
+            line_numbers,
+            function_name,
             tail_position: true,
             float_division_used,
             object_equality_used,
@@ -58,7 +68,9 @@ impl<'module> Generator<'module> {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
-            TypedExpr::Todo { .. } => unsupported("todo keyword"),
+            TypedExpr::Todo {
+                label, location, ..
+            } => Ok(self.todo(label, location)),
 
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
@@ -332,6 +344,43 @@ impl<'module> Generator<'module> {
             .append(right))
     }
 
+    fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
+        self.tail_position = false;
+        let gleam_error = "todo";
+        let message = message
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or_else(|| "This has not yet been implemented");
+        let module_name = Document::String(self.module_name.join("_"));
+        let line = self.line_numbers.line_number(location.start);
+
+        docvec![
+            "throw Object.assign",
+            wrap_args(
+                vec![
+                    docvec!["new Error", wrap_args(std::iter::once(string(message)))],
+                    wrap_object(
+                        vec![
+                            ("gleam_error".to_doc(), Some(string(gleam_error))),
+                            ("module".to_doc(), Some(module_name.surround("\"", "\""))),
+                            (
+                                "function".to_doc(),
+                                Some(
+                                    // TODO switch to use `string(self.function_name)`
+                                    // This will require resolving the difference in lifetimes 'module and 'a.
+                                    Document::String(self.function_name.to_string())
+                                        .surround("\"", "\"")
+                                )
+                            ),
+                            ("line".to_doc(), Some(line.to_doc())),
+                        ]
+                        .into_iter()
+                    )
+                ]
+                .into_iter()
+            )
+        ]
+    }
     fn module_select<'a>(
         &mut self,
         module_name: &'a Vec<String>,

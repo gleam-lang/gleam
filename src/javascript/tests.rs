@@ -340,3 +340,39 @@ function $isObject(object) {
 "#
     );
 }
+
+#[test]
+fn todo_throws_error() {
+    assert_js!(
+        r#"
+fn go() {
+    todo
+}
+"#,
+        r#""use strict";
+
+function go() {
+  throw Object.assign(
+    new Error("This has not yet been implemented"),
+    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
+  )
+}
+"#
+    );
+    assert_js!(
+        r#"
+fn go() {
+    todo("I should do this");
+}
+"#,
+        r#""use strict";
+
+function go() {
+  throw Object.assign(
+    new Error("I should do this"),
+    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
+  )
+}
+"#
+    );
+}
