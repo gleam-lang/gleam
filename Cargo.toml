@@ -38,6 +38,8 @@ flate2 = "1.0"
 ring = "0.16"
 # PEM -> DER conversion
 x509-parser = "0.9"
+# Pubgrub dependency resolution algorithm
+pubgrub = "0.2"
 
 [dev-dependencies]
 # HTTP mock server

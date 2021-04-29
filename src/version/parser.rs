@@ -3,13 +3,11 @@
 use std::fmt;
 use std::mem;
 
+use pubgrub::range::Range;
+
 use self::Error::*;
-use super::{
-    lexer::{self, Lexer, Token},
-    requirement::Requirement,
-    Comparator,
-};
-use crate::version::{Identifier, Operator, Version};
+use super::lexer::{self, Lexer, Token};
+use crate::version::{Identifier, Version};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Error<'input> {
@@ -111,30 +109,13 @@ impl<'input> Parser<'input> {
         }
     }
 
-    // /// Parse a single component.
-    // pub fn component(&mut self) -> Result<u64, Error<'input>> {
-    //     match self.pop()? {
-    //         Token::Numeric(number) => Ok(number),
-    //         tok => Err(UnexpectedToken(tok)),
-    //     }
-    // }
-
     /// Parse a single numeric.
-    pub fn numeric(&mut self) -> Result<u64, Error<'input>> {
+    pub fn numeric(&mut self) -> Result<u32, Error<'input>> {
         match self.pop()? {
             Token::Numeric(number) => Ok(number),
             tok => Err(UnexpectedToken(tok)),
         }
     }
-
-    // /// Parse a dot, then a component.
-    // pub fn dot_component(&mut self) -> Result<u64, Error<'input>> {
-    //     match self.pop()? {
-    //         Token::Dot => {}
-    //         tok => return Err(UnexpectedToken(tok)),
-    //     }
-    //     self.component()
-    // }
 
     fn dot(&mut self) -> Result<(), Error<'input>> {
         match self.pop()? {
@@ -144,7 +125,7 @@ impl<'input> Parser<'input> {
     }
 
     /// Parse a dot, then a numeric.
-    fn dot_numeric(&mut self) -> Result<u64, Error<'input>> {
+    fn dot_numeric(&mut self) -> Result<u32, Error<'input>> {
         self.dot()?;
         self.numeric()
     }
@@ -256,20 +237,18 @@ impl<'input> Parser<'input> {
         })
     }
 
-    /// Parse a requirement.
+    /// Parse a version range requirement.
     ///
     /// Like, `~> 1.0.0` or `3.0.0-beta.1 or < 1.0 and > 0.2.3`.
-    pub fn requirement(&mut self) -> Result<Requirement, Error<'input>> {
-        let alternatives = self.requirement_alternatives()?;
-        self.skip_whitespace()?;
-        Ok(Requirement(alternatives))
-    }
-
-    fn requirement_alternatives(&mut self) -> Result<Vec<Vec<Comparator>>, Error<'input>> {
-        let mut alternatives = Vec::new();
+    pub fn range(&mut self) -> Result<Range<Version>, Error<'input>> {
+        let mut range: Option<Range<Version>> = None;
 
         loop {
-            alternatives.push(self.requirement_comparators()?);
+            let constraint = self.range_ands_section()?;
+            range = Some(match range {
+                None => constraint,
+                Some(range) => range.union(&constraint),
+            });
             if self.peek() == Some(&Token::Or) {
                 self.pop()?;
                 self.expect_whitespace()?;
@@ -278,29 +257,11 @@ impl<'input> Parser<'input> {
             }
         }
 
-        if alternatives.is_empty() {
-            Err(UnexpectedEnd)
-        } else {
-            Ok(alternatives)
-        }
+        self.skip_whitespace()?;
+        range.ok_or(UnexpectedEnd)
     }
 
-    fn basic_comparison_operator(&mut self) -> Result<Operator, Error<'input>> {
-        match self.pop()? {
-            Token::Eq => Ok(Operator::Eq),
-            Token::NotEq => Ok(Operator::NotEq),
-            Token::Gt => Ok(Operator::Gt),
-            Token::Lt => Ok(Operator::Lt),
-            Token::LtEq => Ok(Operator::LtEq),
-            Token::GtEq => Ok(Operator::GtEq),
-
-            token => Err(UnexpectedToken(token)),
-        }
-    }
-
-    fn pessimistic_version_constraint(
-        &mut self,
-    ) -> Result<(Comparator, Comparator), Error<'input>> {
+    fn pessimistic_version_constraint(&mut self) -> Result<Range<Version>, Error<'input>> {
         let mut included_patch = false;
         let major = self.numeric()?;
         let minor = self.dot_numeric()?;
@@ -327,38 +288,65 @@ impl<'input> Parser<'input> {
         } else {
             lower.bump_major()
         };
-        let lower = Comparator {
-            operator: Operator::GtEq,
-            version: lower,
-        };
-        let upper = Comparator {
-            operator: Operator::Lt,
-            version: upper,
-        };
-        Ok((lower, upper))
+        Ok(Range::higher_than(lower).intersection(&Range::strictly_lower_than(upper)))
     }
 
-    fn requirement_comparators(&mut self) -> Result<Vec<Comparator>, Error<'input>> {
+    fn range_ands_section(&mut self) -> Result<Range<Version>, Error<'input>> {
         use Token::*;
-        let mut comparators = Vec::new();
-        let comp = |operator, version| Comparator { operator, version };
+        let mut range = None;
+        let and = |range: Option<Range<Version>>, constraint: Range<Version>| {
+            Some(match range {
+                None => constraint,
+                Some(range) => range.intersection(&constraint),
+            })
+        };
         loop {
             self.skip_whitespace()?;
             match self.peek() {
                 None => break,
+                Some(Numeric(_)) => range = and(range, Range::exact(self.version()?)),
 
-                Some(Numeric(_)) => comparators.push(comp(Operator::Eq, self.version()?)),
+                Some(Eq) => {
+                    self.pop()?;
+                    range = and(range, Range::exact(self.version()?));
+                }
 
-                Some(Lt) | Some(LtEq) | Some(GtEq) | Some(Eq) | Some(Gt) | Some(NotEq) => {
-                    comparators.push(comp(self.basic_comparison_operator()?, self.version()?))
+                Some(NotEq) => {
+                    self.pop()?;
+                    let version = self.version()?;
+                    let bumped = version.bump_patch();
+                    let below = Range::strictly_lower_than(version);
+                    let above = Range::higher_than(bumped);
+                    range = and(range, below.union(&above));
+                }
+
+                Some(Gt) => {
+                    self.pop()?;
+                    range = and(range, Range::higher_than(self.version()?.bump_patch()));
+                }
+
+                Some(GtEq) => {
+                    self.pop()?;
+                    range = and(range, Range::higher_than(self.version()?));
+                }
+
+                Some(Lt) => {
+                    self.pop()?;
+                    range = and(range, Range::strictly_lower_than(self.version()?));
+                }
+
+                Some(LtEq) => {
+                    self.pop()?;
+                    range = and(
+                        range,
+                        Range::strictly_lower_than(self.version()?.bump_patch()),
+                    );
                 }
 
                 Some(Pessimistic) => {
                     self.pop()?;
                     self.skip_whitespace()?;
-                    let (lower, upper) = self.pessimistic_version_constraint()?;
-                    comparators.push(lower);
-                    comparators.push(upper);
+                    range = and(range, self.pessimistic_version_constraint()?);
                 }
 
                 Some(_) => return Err(UnexpectedToken(self.pop()?)),
@@ -370,11 +358,7 @@ impl<'input> Parser<'input> {
                 break;
             }
         }
-        if comparators.is_empty() {
-            Err(UnexpectedEnd)
-        } else {
-            Ok(comparators)
-        }
+        range.ok_or(UnexpectedEnd)
     }
 
     /// Check if we have reached the end of input.

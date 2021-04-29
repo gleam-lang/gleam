@@ -63,7 +63,7 @@ pub enum Token<'input> {
     /// any number of whitespace (`\t\r\n `) and its span.
     Whitespace(usize, usize),
     /// Numeric component, like `0` or `42`.
-    Numeric(u64),
+    Numeric(u32),
     /// Alphanumeric component, like `alpha1` or `79deadbe`.
     AlphaNumeric(&'input str),
     /// An alphanumeric component with a leading zero, like `0alpha1` or `079deadbe`.
@@ -150,7 +150,7 @@ impl<'input> Lexer<'input> {
             return Ok(Numeric(0));
         }
 
-        if let Ok(numeric) = input.parse::<u64>() {
+        if let Ok(numeric) = input.parse::<u32>() {
             // Only parse as a number if there is no leading zero
             if a != Some('0') {
                 return Ok(Numeric(numeric));
