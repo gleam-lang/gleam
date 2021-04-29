@@ -345,7 +345,6 @@ impl<'module> Generator<'module> {
         let module_name = Document::String(self.module_name.join("_"));
         let line = location.start;
 
-        println!("{:?}", self);
         docvec![
             "throw Object.assign",
             wrap_args(
