@@ -370,7 +370,7 @@ impl<'module> Generator<'module> {
                                         .surround("\"", "\"")
                                 )
                             ),
-                            ("line".to_doc(), Some(line.to_doc()),
+                            ("line".to_doc(), Some(line.to_doc())),
                         ]
                         .into_iter()
                     )
