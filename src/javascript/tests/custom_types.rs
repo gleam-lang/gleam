@@ -127,6 +127,10 @@ fn access(cat: Cat) {
 "#,
         r#""use strict";
 
+const felix = { type: "Cat", name: "Felix", cuteness: 12 };
+
+const tom = { type: "Cat", name: "Tom", cuteness: 1 };
+
 function go() {
   { type: "Cat", name: "Nubi", cuteness: 1 };
   { type: "Cat", name: "Nubi", cuteness: 2 };
