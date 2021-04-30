@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Glean `new` command now checks if target folder exists, if so it returns
+  an error.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
