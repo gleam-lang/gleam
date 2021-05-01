@@ -4,3 +4,4 @@
 /tmp
 .idea/
 .idea/*
+erl_crash.dump
