@@ -3774,3 +3774,18 @@ pub fn a() {
         vec![("a", "fn() -> List(a)"), ("empty", "List(a)")],
     );
 }
+
+#[test]
+fn let_as_expression() {
+    assert_infer!("let x = 1", "Int");
+    assert_infer!("let x = let x = 1", "Int");
+    assert_infer!("let x = { let x = 1. }", "Float");
+}
+
+#[test]
+fn assert_as_expression() {
+    assert_infer!("assert x = 1", "Int");
+    assert_infer!("assert x = assert x = 1", "Int");
+    assert_infer!("assert x = { assert x = 1. }", "Float");
+    assert_infer!("assert 1 = 1", "Int");
+}
