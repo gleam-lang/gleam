@@ -1375,8 +1375,8 @@ and try again.
                         "This paren cannot be understood here.",
                         vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()]
                     ),
-                    ParseErrorType::ExprTailBinding=> (
-                        "A variable binding cannot be the last expression.",
+                    ParseErrorType::ExprThenlessTry=> (
+                        "A `try` cannot be the last expression.",
                         vec!["Hint: Try using the value?".to_string()]
                     ),
                     ParseErrorType::IncorrectName => (
