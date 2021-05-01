@@ -130,9 +130,10 @@ jobs:
       run: make clean erlang
       working-directory: ./test/language
 
-    - name: test/language JavaScript
-      run: make clean javascript
-      working-directory: ./test/language
+    # Disabling until JavaScript has enough support to run the tests
+    # - name: test/language JavaScript
+    #   run: make clean javascript
+    #   working-directory: ./test/language
 
     - name: test/build_with_gleam
       run: gleam eunit

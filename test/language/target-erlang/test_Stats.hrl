@@ -1,0 +1,1 @@
+-record(stats, {passes, failures}).
