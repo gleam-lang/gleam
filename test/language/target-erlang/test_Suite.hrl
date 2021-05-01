@@ -1,0 +1,1 @@
+-record(suite, {name, tests}).

@@ -1,0 +1,1 @@
+-record(fail, {detail}).
