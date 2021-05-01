@@ -799,12 +799,7 @@ fn try_<'a>(
         .group()
 }
 
-fn assert<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
-    env: &mut Env<'a>,
-) -> Document<'a> {
+fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let var = "Gleam@Assert";
     let body = maybe_block_expr(value, env);
@@ -836,9 +831,7 @@ fn assert<'a>(
         " of",
         docvec![line(), clauses].nest(INDENT),
         line(),
-        "end,",
-        line(),
-        expr(then, env),
+        "end",
     ]
 }
 
@@ -856,19 +849,9 @@ fn assert_assign<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
     }
 }
 
-fn let_<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
-    env: &mut Env<'a>,
-) -> Document<'a> {
+fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env);
-    pattern(pat, env)
-        .append(" = ")
-        .append(body)
-        .append(",")
-        .append(line())
-        .append(expr(then, env))
+    pattern(pat, env).append(" = ").append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1426,29 +1409,26 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
 
-        TypedExpr::Assignment {
+        TypedExpr::Try {
             value,
             pattern,
             then,
-            kind: AssignmentKind::Try,
             ..
         } => try_(value, pattern, then, env),
 
         TypedExpr::Assignment {
             value,
             pattern,
-            then,
             kind: AssignmentKind::Assert,
             ..
-        } => assert(value, pattern, then, env),
+        } => assert(value, pattern, env),
 
         TypedExpr::Assignment {
             value,
             pattern,
-            then,
             kind: AssignmentKind::Let,
             ..
-        } => let_(value, pattern, then, env),
+        } => let_(value, pattern, env),
 
         TypedExpr::Case {
             subjects, clauses, ..

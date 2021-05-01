@@ -680,7 +680,6 @@ impl<A, B> HasLocation for Pattern<A, B> {
 pub enum AssignmentKind {
     Let,
     Assert,
-    Try,
 }
 
 // BitStrings

@@ -61,8 +61,12 @@ impl<'module> Generator<'module> {
             TypedExpr::Var {
                 name, constructor, ..
             } => self.variable(name, constructor),
+
             TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
+
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
+
+            TypedExpr::Try { .. } => unsupported("Try"),
 
             TypedExpr::BinOp {
                 name, left, right, ..

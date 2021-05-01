@@ -556,20 +556,20 @@ impl<'comments> Formatter<'comments> {
             .append(self.expr(then))
     }
 
-    fn let_<'a>(
+    fn assignment<'a>(
         &mut self,
         pattern: &'a UntypedPattern,
         value: &'a UntypedExpr,
-        then: &'a UntypedExpr,
-        kind: AssignmentKind,
+        then: Option<&'a UntypedExpr>,
+        kind: Option<AssignmentKind>,
         annotation: &'a Option<TypeAst>,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
-            AssignmentKind::Let => "let ",
-            AssignmentKind::Try => "try ",
-            AssignmentKind::Assert => "assert ",
+            Some(AssignmentKind::Let) => "let ",
+            Some(AssignmentKind::Assert) => "assert ",
+            None => "try ",
         };
 
         let pattern = self.pattern(pattern);
@@ -578,17 +578,25 @@ impl<'comments> Formatter<'comments> {
             .as_ref()
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
-        force_break()
-            .append(keyword)
-            .append(pattern.append(annotation).group())
-            .append(" =")
-            .append(self.assigned_value(value))
-            .append(if self.pop_empty_lines(then.start_byte_index()) {
+        let doc = if then.is_some() {
+            force_break().append(keyword)
+        } else {
+            keyword.to_doc()
+        }
+        .append(pattern.append(annotation).group())
+        .append(" =")
+        .append(self.assigned_value(value));
+
+        if let Some(then) = then {
+            doc.append(if self.pop_empty_lines(then.start_byte_index()) {
                 lines(2)
             } else {
                 line()
             })
             .append(self.expr(then))
+        } else {
+            doc
+        }
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -649,10 +657,17 @@ impl<'comments> Formatter<'comments> {
                 value,
                 pattern,
                 annotation,
-                then,
                 kind,
                 ..
-            } => self.let_(pattern, value, then, *kind, annotation),
+            } => self.assignment(pattern, value, None, Some(*kind), annotation),
+
+            UntypedExpr::Try {
+                value,
+                pattern,
+                annotation,
+                then,
+                ..
+            } => self.assignment(pattern, value, Some(then), None, annotation),
 
             UntypedExpr::Case {
                 subjects, clauses, ..

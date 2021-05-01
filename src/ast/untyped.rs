@@ -64,8 +64,15 @@ pub enum UntypedExpr {
         location: SrcSpan,
         value: Box<Self>,
         pattern: Pattern<(), ()>,
-        then: Box<Self>,
         kind: AssignmentKind,
+        annotation: Option<TypeAst>,
+    },
+
+    Try {
+        location: SrcSpan,
+        value: Box<Self>,
+        pattern: Pattern<(), ()>,
+        then: Box<Self>,
         annotation: Option<TypeAst>,
     },
 
@@ -114,7 +121,7 @@ impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Seq { then, .. } => then.location(),
-            Self::Assignment { then, .. } => then.location(),
+            Self::Try { then, .. } => then.location(),
             Self::Pipe { right, .. } => right.location(),
             Self::Fn { location, .. }
             | Self::Var { location, .. }
@@ -127,9 +134,10 @@ impl UntypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::BitString { location, .. }
+            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
-            | Self::BitString { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
         }
     }

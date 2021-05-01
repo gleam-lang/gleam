@@ -1265,10 +1265,10 @@ fn the_rest() {
             expected: int(),
             given: tuple(vec![
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 9, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 1 })),
                 }),
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 10, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 })),
                 })
             ]),
         },
@@ -1638,7 +1638,7 @@ fn the_rest() {
         "try x = Error(1) try y = Error(1.) Ok(x)",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 17, end: 34 },
+            location: SrcSpan { start: 35, end: 40 },
             expected: result(
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link {
@@ -1715,7 +1715,7 @@ fn the_rest() {
         "try y = Error(1) try z = Error(1.) Ok(1)",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 17, end: 34 },
+            location: SrcSpan { start: 35, end: 40 },
             expected: result(
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
@@ -2374,10 +2374,10 @@ fn demo() {
             location: SrcSpan { start: 33, end: 46 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 }))
                 }),
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 }))
                 })
             ]),
             given: tuple(vec![int(), float()]),
@@ -2404,10 +2404,10 @@ fn demo() {
             location: SrcSpan { start: 65, end: 86 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 9 }))
                 }),
                 list(Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 11 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 9 }))
                 }))
             ]),
             given: tuple(vec![string(), list(int())]),
@@ -2763,15 +2763,15 @@ fn main() {
         Error::CouldNotUnify {
             situation: None,
             location: SrcSpan {
-                start: 172,
-                end: 176
+                start: 139,
+                end: 143
             },
             expected: Arc::new(Type::App {
                 public: true,
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
                 })]
             }),
             given: Arc::new(Type::App {
@@ -2779,7 +2779,7 @@ fn main() {
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
                 args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
                 })]
             }),
         },

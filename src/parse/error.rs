@@ -36,7 +36,7 @@ pub enum ParseErrorType {
     ExpectedUpName,          // any token used when a UpName was expected
     ExpectedValue,           // no value after "="
     ExprLparStart,           // it seems "(" was used to start an expression
-    ExprTailBinding,         // a binding in the tail position of an expression sequence
+    ExprThenlessTry,         // a try in the tail position of an expression sequence
     ExtraSeparator,          // tuple(1,,) <- the 2nd comma is an extra separator
     IncorrectName,           // UpName or DiscardName used when Name was expected
     IncorrectUpName,         // Name or DiscardName used when UpName was expected
