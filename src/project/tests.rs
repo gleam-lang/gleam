@@ -1292,7 +1292,7 @@ pub fn main(arg1, arg2, arg3) {
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
-                    text: "-module(two).
+                    text: r#"-module(two).
 -compile(no_auto_import).
 
 -export([main/3]).
@@ -1300,13 +1300,21 @@ pub fn main(arg1, arg2, arg3) {
 -spec main(binary(), float(), integer()) -> integer().
 main(Arg1, Arg2, Arg3) ->
     case {Arg1, Arg2, Arg3} of
-        {X, Y, Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+        {X, Y, Z} when ((X =:= <<"constant value"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
         _ ->
-            0
+            0;
+        Gleam@Case ->
+            erlang:error(#{gleam_error => 'case',
+                           message => <<"Case pattern match failed"/utf8>>,
+                           value => Gleam@Case,
+                           module => <<"two"/utf8>>,
+                           function => <<"main"/utf8>>,
+                           line => 3})
     end.
-".to_string(),
+"#
+                    .to_string(),
                 },
             ]),
         },
