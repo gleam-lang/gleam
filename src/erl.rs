@@ -1144,7 +1144,12 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     ))
 }
 
-fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
+fn case<'a>(
+    subjects: &'a [TypedExpr],
+    cs: &'a [TypedClause],
+    env: &mut Env<'a>,
+    location: SrcSpan,
+) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
@@ -1153,14 +1158,35 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
     } else {
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
-    "case "
-        .to_doc()
-        .append(subjects_doc)
-        .append(" of")
-        .append(line().append(clauses(cs, env)).nest(INDENT))
-        .append(line())
-        .append("end")
-        .group()
+    let case_error_name = "Gleam@Case";
+    docvec![
+        "case ",
+        subjects_doc,
+        " of",
+        docvec![
+            line(),
+            clauses(cs, env),
+            ";",
+            line(),
+            env.next_local_var_name(case_error_name),
+            " ->",
+            docvec![
+                line(),
+                erlang_error(
+                    "'case'",
+                    "Case pattern match failed",
+                    location,
+                    vec![("value", env.local_var_name(case_error_name))],
+                    env,
+                )
+                .nest(INDENT)
+            ]
+            .nest(INDENT),
+        ]
+        .nest(INDENT),
+        line(),
+        "end",
+    ]
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {
@@ -1440,8 +1466,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => let_(value, pattern, env),
 
         TypedExpr::Case {
-            subjects, clauses, ..
-        } => case(subjects, clauses, env),
+            subjects,
+            clauses,
+            location,
+            ..
+        } => case(subjects, clauses, env, *location),
 
         TypedExpr::BinOp {
             name, left, right, ..
