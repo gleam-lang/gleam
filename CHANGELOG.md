@@ -21,6 +21,8 @@
   importing the `gleam` module.
 - Empty lists can now be used in constants.
 - Compiler performance has been improved when working with lists.
+- Assignments using `let` and `assert` are now expressions and no longer require
+  a following expression in their containing block.
 
 ## v0.14.4 - 2021-03-27
 
