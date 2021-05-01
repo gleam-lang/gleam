@@ -130,9 +130,9 @@ jobs:
       run: gleam eunit
       working-directory: ./test/build_with_gleam
 
-    - name: test/core_language
+    - name: test/rebar_project
       run: rebar3 eunit
-      working-directory: ./test/core_language
+      working-directory: ./test/rebar_project
 
     - name: test/compile_package0
       run: make
