@@ -3139,3 +3139,41 @@ fn tuple_constant() {
 "
     );
 }
+
+#[test]
+fn let_as_expression() {
+    assert_format!(
+        "pub fn main() {
+  let x = 1
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  let x = {
+    let y = 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn assert_as_expression() {
+    assert_format!(
+        "pub fn main() {
+  assert x = 1
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  assert x = {
+    assert y = 1
+  }
+}
+"
+    );
+}
