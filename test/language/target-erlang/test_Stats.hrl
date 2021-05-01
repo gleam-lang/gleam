@@ -1,1 +1,0 @@
--record(stats, {passes, failures}).

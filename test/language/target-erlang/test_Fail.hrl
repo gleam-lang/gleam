@@ -1,1 +1,0 @@
--record(fail, {detail}).

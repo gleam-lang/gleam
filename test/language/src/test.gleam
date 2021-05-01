@@ -87,16 +87,17 @@ fn run_list_of_tests(tests, print, stats, indentation) {
 
 fn run_single_test(name, proc, print, stats, indentation) {
   print_indentation(print, indentation)
-  print(name)
-  print(": ")
   case proc() {
     Ok(Pass) -> {
-      print("✨")
+      print("✨ ")
+      print(name)
       print("\n")
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail(detail)) -> {
       print("❌ ")
+      print(name)
+      print(": ")
       print(detail)
       print("\n")
       Stats(..stats, failures: stats.failures + 1)

@@ -1,1 +1,0 @@
--record(test, {name, proc}).
