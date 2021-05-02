@@ -5,5 +5,5 @@ function print(string) {
   return string;
 }
 
-let status = main(print);
+let status = main(print, String);
 process.exit(status);

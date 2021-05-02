@@ -1,10 +1,13 @@
 import test.{Test, suite, test_equal}
 
-pub fn main(print: fn(String) -> String) -> Int {
+pub fn main(
+  print: fn(String) -> String,
+  to_string: fn(anything) -> String,
+) -> Int {
   print("\nHere we go!\n\n")
   let stats =
     [suite("int", int_tests()), suite("float", float_tests())]
-    |> test.run(print)
+    |> test.run(print, to_string)
 
   case stats.failures {
     0 -> 0

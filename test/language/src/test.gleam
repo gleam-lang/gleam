@@ -3,6 +3,10 @@ pub opaque type Test {
   Suite(name: String, tests: List(Test))
 }
 
+type Functions(anything) {
+  Functions(print: fn(String) -> String, to_string: ToString(anything))
+}
+
 pub fn test(name: String, proc: fn() -> Outcome) {
   Test(name, proc)
 }
@@ -15,8 +19,17 @@ pub opaque type Pass {
   Pass
 }
 
+external type Dynamic
+
+external fn erase(a) -> Dynamic =
+  "test" "identity"
+
+pub fn identity(a) {
+  a
+}
+
 pub opaque type Fail {
-  Fail(detail: String)
+  Fail(expected: Dynamic, got: Dynamic)
 }
 
 pub type Outcome =
@@ -26,27 +39,19 @@ pub fn pass() -> Outcome {
   Ok(Pass)
 }
 
-pub fn fail(detail: String) -> Outcome {
-  Error(Fail(detail))
+pub fn test_equal(name: String, expected: a, got: a) -> Test {
+  Test(name, fn() { assert_equal(expected, got) })
 }
 
-pub fn test_equal(name: String, left: a, right: a) -> Test {
-  Test(name, fn() { equal(left, right) })
-}
-
-pub fn equal(left: a, right: a) -> Outcome {
-  case left == right {
+pub fn assert_equal(expected: a, got: a) -> Outcome {
+  case expected == got {
     True -> pass()
-    False -> fail("Values were not equal")
+    False -> Error(Fail(expected: erase(expected), got: erase(got)))
   }
 }
 
-pub fn detail(outcome: Outcome, detail: String) -> Outcome {
-  case outcome {
-    Ok(Pass) -> pass()
-    Error(_fail) -> fail(detail)
-  }
-}
+pub type ToString(anything) =
+  fn(anything) -> String
 
 pub type Printer =
   fn(String) -> String
@@ -55,61 +60,76 @@ pub type Stats {
   Stats(passes: Int, failures: Int)
 }
 
-pub fn run(tests: List(Test), print: Printer) -> Stats {
-  run_list_of_tests(tests, print, Stats(0, 0), 0)
+pub fn run(
+  tests: List(Test),
+  print: Printer,
+  to_string: fn(anything) -> String,
+) -> Stats {
+  run_list_of_tests(tests, Functions(print, to_string), Stats(0, 0), 0)
 }
 
-fn run_test(test: Test, print: Printer, stats: Stats, indentation: Int) -> Stats {
+fn run_test(
+  test: Test,
+  fns: Functions(a),
+  stats: Stats,
+  indentation: Int,
+) -> Stats {
   case test {
     Test(name: name, proc: proc) ->
-      run_single_test(name, proc, print, stats, indentation)
+      run_single_test(name, proc, fns, stats, indentation)
     Suite(name: name, tests: tests) ->
-      run_suite(name, tests, print, stats, indentation)
+      run_suite(name, tests, fns, stats, indentation)
   }
 }
 
-fn run_suite(name, tests, print, stats, indentation) {
-  print_indentation(print, indentation)
-  print(name)
-  print("\n")
-  run_list_of_tests(tests, print, stats, indentation + 1)
+fn run_suite(name, tests, fns, stats, indentation) {
+  print_indentation(fns, indentation)
+  fns.print(name)
+  fns.print("\n")
+  run_list_of_tests(tests, fns, stats, indentation + 1)
 }
 
-fn run_list_of_tests(tests, print, stats, indentation) {
+fn run_list_of_tests(tests, fns, stats, indentation) {
   case tests {
     [] -> stats
     [test, ..tests] -> {
-      let stats = run_test(test, print, stats, indentation)
-      run_list_of_tests(tests, print, stats, indentation)
+      let stats = run_test(test, fns, stats, indentation)
+      run_list_of_tests(tests, fns, stats, indentation)
     }
   }
 }
 
-fn run_single_test(name, proc, print, stats, indentation) {
-  print_indentation(print, indentation)
+fn run_single_test(name, proc, fns, stats, indentation) {
+  print_indentation(fns, indentation)
   case proc() {
     Ok(Pass) -> {
-      print("✨ ")
-      print(name)
-      print("\n")
+      fns.print("✨ ")
+      fns.print(name)
+      fns.print("\n")
       Stats(..stats, passes: stats.passes + 1)
     }
-    Error(Fail(detail)) -> {
-      print("❌ ")
-      print(name)
-      print(": ")
-      print(detail)
-      print("\n")
+    Error(Fail(expected: expected, got: got)) -> {
+      fns.print("❌ ")
+      fns.print(name)
+      fns.print("\n")
+      print_indentation(fns, indentation)
+      fns.print("expected: ")
+      fns.print(fns.to_string(expected))
+      fns.print("\n")
+      print_indentation(fns, indentation)
+      fns.print("     got: ")
+      fns.print(fns.to_string(got))
+      fns.print("\n")
       Stats(..stats, failures: stats.failures + 1)
     }
   }
 }
 
-fn print_indentation(print, indentation) {
+fn print_indentation(fns: Functions(a), indentation) {
   case indentation > 0 {
     True -> {
-      print("  ")
-      print_indentation(print, indentation - 1)
+      fns.print("  ")
+      print_indentation(fns, indentation - 1)
     }
     False -> Nil
   }
