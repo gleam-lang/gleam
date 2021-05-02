@@ -1305,6 +1305,7 @@ main(Arg1, Arg2, Arg3) ->
 
         _ ->
             0;
+
         Gleam@Case ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
