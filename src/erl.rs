@@ -1155,7 +1155,7 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>, location: &SrcSpan) -> 
             .map(|c| {
                 let vars = env.current_scope_vars.clone();
                 let erl = clause(c, env);
-                env.current_scope_vars = vars; // Reset the known variables now the cla uses' scope has ended
+                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
                 erl
             })
             .chain(std::iter::once(error_clause)),
