@@ -1132,14 +1132,33 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
     }
 }
 
-fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
+fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>, location: &SrcSpan) -> Document<'a> {
+    let case_error_name = "Gleam@Case";
+    let error_clause = docvec![
+        env.next_local_var_name(case_error_name),
+        " ->",
+        docvec![
+            line(),
+            erlang_error(
+                "'case'",
+                "Case pattern match failed",
+                *location,
+                vec![("value", env.local_var_name(case_error_name))],
+                env,
+            )
+            .nest(INDENT)
+        ]
+        .nest(INDENT)
+    ];
     concat(Itertools::intersperse(
-        cs.iter().map(|c| {
-            let vars = env.current_scope_vars.clone();
-            let erl = clause(c, env);
-            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-            erl
-        }),
+        cs.iter()
+            .map(|c| {
+                let vars = env.current_scope_vars.clone();
+                let erl = clause(c, env);
+                env.current_scope_vars = vars; // Reset the known variables now the cla uses' scope has ended
+                erl
+            })
+            .chain(std::iter::once(error_clause)),
         ";".to_doc().append(lines(2)),
     ))
 }
@@ -1148,7 +1167,7 @@ fn case<'a>(
     subjects: &'a [TypedExpr],
     cs: &'a [TypedClause],
     env: &mut Env<'a>,
-    location: SrcSpan,
+    location: &SrcSpan,
 ) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
@@ -1158,32 +1177,11 @@ fn case<'a>(
     } else {
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
-    let case_error_name = "Gleam@Case";
     docvec![
         "case ",
         subjects_doc,
         " of",
-        docvec![
-            line(),
-            clauses(cs, env),
-            ";",
-            line(),
-            env.next_local_var_name(case_error_name),
-            " ->",
-            docvec![
-                line(),
-                erlang_error(
-                    "'case'",
-                    "Case pattern match failed",
-                    location,
-                    vec![("value", env.local_var_name(case_error_name))],
-                    env,
-                )
-                .nest(INDENT)
-            ]
-            .nest(INDENT),
-        ]
-        .nest(INDENT),
+        docvec![line(), clauses(cs, env, location)].nest(INDENT),
         line(),
         "end",
     ]
@@ -1470,7 +1468,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             clauses,
             location,
             ..
-        } => case(subjects, clauses, env, *location),
+        } => case(subjects, clauses, env, location),
 
         TypedExpr::BinOp {
             name, left, right, ..
