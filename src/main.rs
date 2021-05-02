@@ -129,6 +129,9 @@ enum Command {
     #[structopt(name = "new", about = "Create a new project")]
     New(NewOptions),
 
+    #[structopt(name = "init", about = "Creates a project in an existing folder")]
+    Init(NewOptions),
+
     #[structopt(name = "format", about = "Format source code")]
     Format {
         #[structopt(help = "files to format", default_value = ".")]
@@ -306,7 +309,9 @@ fn main() {
             check,
         } => format::command::run(stdin, check, files),
 
-        Command::New(options) => new::create(options, VERSION),
+        Command::New(mut options) => new::create(&mut options, VERSION, false),
+
+        Command::Init(mut options) => new::create(&mut options, VERSION, true),
 
         Command::Shell { project_root } => shell::command(project_root),
 
