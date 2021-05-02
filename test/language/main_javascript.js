@@ -5,5 +5,9 @@ function print(string) {
   return string;
 }
 
-let status = main(print, String);
+function append(a, b) {
+  return a + b;
+}
+
+let status = main(print, String, append);
 process.exit(status);

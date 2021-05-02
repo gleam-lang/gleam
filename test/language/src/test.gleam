@@ -3,8 +3,12 @@ pub opaque type Test {
   Suite(name: String, tests: List(Test))
 }
 
-type Functions(anything) {
-  Functions(print: fn(String) -> String, to_string: ToString(anything))
+pub type Functions(anything) {
+  Functions(
+    print: fn(String) -> String,
+    to_string: ToString(anything),
+    append: fn(String, String) -> String,
+  )
 }
 
 pub fn test(name: String, proc: fn() -> Outcome) {
@@ -39,14 +43,25 @@ pub fn pass() -> Outcome {
   Ok(Pass)
 }
 
-pub fn test_equal(name: String, expected: a, got: a) -> Test {
-  Test(name, fn() { assert_equal(expected, got) })
-}
-
 pub fn assert_equal(expected: a, got: a) -> Outcome {
   case expected == got {
     True -> pass()
     False -> Error(Fail(expected: erase(expected), got: erase(got)))
+  }
+}
+
+pub fn operator_test(operator_name, operator, fns) {
+  let Functions(append: append, to_string: to_string, ..) = fns
+  fn(a, b, expected) {
+    let name =
+      to_string(a)
+      |> append(" ")
+      |> append(operator_name)
+      |> append(" ")
+      |> append(to_string(b))
+      |> append(" == ")
+      |> append(to_string(expected))
+    test(name, fn() { assert_equal(operator(a, b), expected) })
   }
 }
 
@@ -60,12 +75,8 @@ pub type Stats {
   Stats(passes: Int, failures: Int)
 }
 
-pub fn run(
-  tests: List(Test),
-  print: Printer,
-  to_string: fn(anything) -> String,
-) -> Stats {
-  run_list_of_tests(tests, Functions(print, to_string), Stats(0, 0), 0)
+pub fn run(tests: List(Test), fns: Functions(a)) -> Stats {
+  run_list_of_tests(tests, fns, Stats(0, 0), 0)
 }
 
 fn run_test(

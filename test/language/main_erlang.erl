@@ -13,5 +13,8 @@ main(_) ->
         List = io_lib:format("~p", [Term]),
         iolist_to_binary(List)
     end,
-    Status = main:main(Print, ToString),
+    Append = fun(A, B) ->
+        <<A/binary, B/binary>>
+    end,
+    Status = main:main(Print, ToString, Append),
     halt(Status).
