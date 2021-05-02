@@ -568,7 +568,7 @@ The project can be compiled and tested by running these commands:
     {}
     {}
 ",
-        creator.root.to_str().expect("Unable to display path"),
+        options.name.to_string(),
         cd_folder,
         test_command,
     );
