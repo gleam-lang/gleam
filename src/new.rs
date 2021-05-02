@@ -526,15 +526,38 @@ pub fn hello_world_test() {{
     }
 }
 
-pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
+pub fn create(options: &mut NewOptions, version: &'static str, init_mode: bool) -> Result<()> {
+    if init_mode {
+        print!("Enter a name for your project: ");
+        std::io::stdout().flush().expect("Error while flushing stdin");
+        options.project_root = Some(options.name.to_string());
+        options.name = String::new();
+        let _ = std::io::stdin()
+            .read_line(&mut options.name)
+            .expect("Unable to read project name");
+        options.name = options.name.trim().to_string();
+    } else {
+        validate_root_folder(&options.name)?;
+    }
     validate_name(&options.name)?;
-    validate_root_folder(&options.name)?;
-    let creator = Creator::new(options, version);
+    let creator = Creator::new(
+        NewOptions {
+            name: options.name.clone(),
+            description: options.description.clone(),
+            project_root: options.project_root.clone(),
+            template: options.template,
+        },
+        version,
+    );
     creator.run()?;
 
     let test_command = match &creator.options.template {
         Template::Lib | Template::App | Template::Escript => "rebar3 eunit",
         Template::GleamLib => "gleam eunit",
+    };
+    let cd_folder = match init_mode {
+        true => "".to_string(),
+        _ => format!("cd {}", creator.options.name).to_string(),
     };
 
     println!(
@@ -542,15 +565,16 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
 Your Gleam project {} has been successfully created.
 The project can be compiled and tested by running these commands:
 
-    cd {}
+    {}
     {}
 ",
-        creator.options.name,
         creator.root.to_str().expect("Unable to display path"),
+        cd_folder,
         test_command,
     );
     Ok(())
 }
+
 
 fn write(path: PathBuf, contents: &str) -> Result<()> {
     let mut f = File::create(&path).map_err(|err| Error::FileIo {
