@@ -529,7 +529,9 @@ pub fn hello_world_test() {{
 pub fn create(options: &mut NewOptions, version: &'static str, init_mode: bool) -> Result<()> {
     if init_mode {
         print!("Enter a name for your project: ");
-        std::io::stdout().flush().expect("Error while flushing stdin");
+        std::io::stdout()
+            .flush()
+            .expect("Error while flushing stdin");
         options.project_root = Some(options.name.to_string());
         options.name = String::new();
         let _ = std::io::stdin()
@@ -574,7 +576,6 @@ The project can be compiled and tested by running these commands:
     );
     Ok(())
 }
-
 
 fn write(path: PathBuf, contents: &str) -> Result<()> {
     let mut f = File::create(&path).map_err(|err| Error::FileIo {
