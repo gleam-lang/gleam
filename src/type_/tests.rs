@@ -3789,3 +3789,15 @@ fn assert_as_expression() {
     assert_infer!("assert x = { assert x = 1. }", "Float");
     assert_infer!("assert 1 = 1", "Int");
 }
+
+// https://github.com/gleam-lang/gleam/issues/1087
+#[test]
+fn generic_inner_access() {
+    assert_module_infer!(
+        "pub type B(b) { B(value: b) }
+pub fn b_get_first(b: B(#(a))) {
+  b.value.0
+}",
+        vec![("B", "fn(a) -> B(a)"), ("b_get_first", "fn(B(#(a))) -> a")],
+    );
+}
