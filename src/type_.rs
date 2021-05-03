@@ -449,6 +449,14 @@ fn validate_module_name(name: &[String]) -> Result<(), Error> {
             name: name.join("/"),
         });
     };
+    for segment in name {
+        if crate::parse::lexer::str_to_keyword(segment).is_some() {
+            return Err(Error::KeywordInModuleName {
+                name: name.join("/"),
+                keyword: segment.to_string(),
+            });
+        }
+    }
     Ok(())
 }
 

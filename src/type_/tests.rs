@@ -3807,4 +3807,20 @@ fn module_name_validation() {
     assert!(validate_module_name(&["dream".to_string()]).is_ok());
 
     assert!(validate_module_name(&["gleam".to_string()]).is_err());
+
+    assert!(validate_module_name(&["gleam".to_string(), "ok".to_string()]).is_ok());
+
+    assert!(validate_module_name(&["ok".to_string(), "gleam".to_string()]).is_ok());
+
+    assert!(validate_module_name(&["external".to_string()]).is_err());
+
+    assert!(validate_module_name(&["type".to_string()]).is_err());
+
+    assert!(validate_module_name(&["pub".to_string()]).is_err());
+
+    assert!(validate_module_name(&["ok".to_string(), "external".to_string()]).is_err());
+
+    assert!(validate_module_name(&["ok".to_string(), "type".to_string()]).is_err());
+
+    assert!(validate_module_name(&["ok".to_string(), "pub".to_string()]).is_err());
 }

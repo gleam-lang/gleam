@@ -186,6 +186,11 @@ pub enum Error {
     ReservedModuleName {
         name: String,
     },
+
+    KeywordInModuleName {
+        name: String,
+        keyword: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
