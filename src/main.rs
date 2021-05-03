@@ -189,11 +189,11 @@ pub struct NewOptions {
     pub project_root: Option<String>,
 
     #[structopt(
-            long = "template",
-            possible_values = &new::Template::VARIANTS,
-            case_insensitive = true,
-            default_value = "lib"
-        )]
+        long = "template",
+        possible_values = &new::Template::VARIANTS,
+        case_insensitive = true,
+        default_value = "lib"
+    )]
     pub template: new::Template,
 }
 
