@@ -26,6 +26,8 @@
 - Glean `new` command now checks if target folder exists, if so it returns
   an error.
 - A compile time error is now raised if a module is defined with the name `gleam`.
+- A compile time error is now raised if a module is defined with the a keyword
+  in the name.
 
 ## v0.14.4 - 2021-03-27
 
