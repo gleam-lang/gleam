@@ -280,18 +280,6 @@ pub enum PatternConstructor {
     Record { name: String },
 }
 
-pub trait Typer {
-    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment<'_, '_>) -> T) -> T;
-
-    fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        self.with_environment(|e| e.new_unbound_var(level))
-    }
-
-    fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-        self.with_environment(|e| e.unify(t1, t2))
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
     Unbound { id: usize, level: usize },

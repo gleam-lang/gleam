@@ -21,12 +21,6 @@ pub struct ExprTyper<'a, 'b, 'c> {
     pub ungeneralised_function_used: bool,
 }
 
-impl<'a, 'b, 'c> Typer for ExprTyper<'a, 'b, 'c> {
-    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment<'_, '_>) -> T) -> T {
-        f(self.environment)
-    }
-}
-
 impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     pub fn new(environment: &'a mut Environment<'b, 'c>) -> Self {
         let mut hydrator = Hydrator::new();
@@ -64,6 +58,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Arc<Type> {
         self.environment
             .instantiate(t, ctx_level, ids, &self.hydrator)
+    }
+
+    fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
+        self.environment.new_unbound_var(level)
+    }
+
+    fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
+        self.environment.unify(t1, t2)
     }
 
     /// Crawl the AST, annotating each node with the inferred type or
