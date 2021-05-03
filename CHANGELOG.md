@@ -2,8 +2,6 @@
 
 ## Unreleased
 
-- Glean `new` command now checks if target folder exists, if so it returns
-  an error.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
@@ -25,6 +23,9 @@
   a following expression in their containing block.
 - Fixed a bug where tuple indexing could incorrectly claim a tuple is not of
   type tuple in some circumstances.
+- Glean `new` command now checks if target folder exists, if so it returns
+  an error.
+- A compile time error is now raised if a module is defined with the name `gleam`.
 
 ## v0.14.4 - 2021-03-27
 
