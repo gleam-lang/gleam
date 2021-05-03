@@ -553,13 +553,15 @@ pub fn create(options: &mut NewOptions, version: &'static str, init_mode: bool) 
     );
     creator.run()?;
 
-    let test_command = match &creator.options.template {
-        Template::Lib | Template::App | Template::Escript => "rebar3 eunit",
-        Template::GleamLib => "gleam eunit",
+    let cd_folder = if options.project_root.as_ref() == Some(&".".to_string()) {
+        "".to_string()
+    } else {
+        format!("\tcd {}\n", creator.options.name).to_string()
     };
-    let cd_folder = match init_mode {
-        true => "".to_string(),
-        _ => format!("cd {}", creator.options.name).to_string(),
+
+    let test_command = match &creator.options.template {
+        Template::Lib | Template::App | Template::Escript => "\trebar3 eunit",
+        Template::GleamLib => "gleam eunit",
     };
 
     println!(
@@ -567,8 +569,7 @@ pub fn create(options: &mut NewOptions, version: &'static str, init_mode: bool) 
 Your Gleam project {} has been successfully created.
 The project can be compiled and tested by running these commands:
 
-    {}
-    {}
+{}{}
 ",
         options.name.to_string(),
         cd_folder,
