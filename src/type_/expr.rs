@@ -514,8 +514,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let tuple = self.infer(tuple)?;
-
-        match tuple.type_().as_ref() {
+        match collapse_links(tuple.type_()).as_ref() {
             Type::Tuple { elems } => {
                 let typ = elems
                     .get(index as usize)
