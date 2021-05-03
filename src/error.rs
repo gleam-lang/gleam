@@ -1352,9 +1352,22 @@ and try again.
                     let diagnostic = ProjectErrorDiagnostic {
                         title: "Reserved module name".to_string(),
                         label: format!(
-                            "The module name name `{}` is reserved.
+                            "The module name `{}` is reserved.
 Try a different name for this module.",
                             name
+                        ),
+                    };
+                    write_project(buf, diagnostic);
+                }
+
+                TypeError::KeywordInModuleName { name, keyword } => {
+                    let diagnostic = ProjectErrorDiagnostic {
+                        title: "Invalid module name".to_string(),
+                        label: format!(
+                            "The module name `{}` contains the
+keyword `{}`, so importing it would be a syntax error.
+Try a different name for this module.",
+                            name, keyword
                         ),
                     };
                     write_project(buf, diagnostic);
