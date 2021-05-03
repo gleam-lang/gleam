@@ -1347,6 +1347,18 @@ and try again.
                     )
                     .unwrap();
                 }
+
+                TypeError::ReservedModuleName { name } => {
+                    let diagnostic = ProjectErrorDiagnostic {
+                        title: "Reserved module name".to_string(),
+                        label: format!(
+                            "The module name name `{}` is reserved.
+Try a different name for this module.",
+                            name
+                        ),
+                    };
+                    write_project(buf, diagnostic);
+                }
             },
 
             Error::Parse { path, src, error } => {

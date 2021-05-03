@@ -339,6 +339,8 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let mut environment = Environment::new(uid, &module.name, modules, warnings);
     let module_name = &module.name;
+    validate_module_name(module_name)?;
+
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
     let mut hydrators = HashMap::with_capacity(module.statements.len());
@@ -439,6 +441,15 @@ pub fn infer_module(
             accessors,
         },
     })
+}
+
+fn validate_module_name(name: &[String]) -> Result<(), Error> {
+    if name == &["gleam"] {
+        return Err(Error::ReservedModuleName {
+            name: name.join("/"),
+        });
+    };
+    Ok(())
 }
 
 fn assert_unique_value_name<'a>(

@@ -3801,3 +3801,10 @@ pub fn b_get_first(b: B(#(a))) {
         vec![("B", "fn(a) -> B(a)"), ("b_get_first", "fn(B(#(a))) -> a")],
     );
 }
+
+#[test]
+fn module_name_validation() {
+    assert!(validate_module_name(&["dream".to_string()]).is_ok());
+
+    assert!(validate_module_name(&["gleam".to_string()]).is_err());
+}

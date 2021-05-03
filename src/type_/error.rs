@@ -182,6 +182,10 @@ pub enum Error {
     UnexpectedTypeHole {
         location: SrcSpan,
     },
+
+    ReservedModuleName {
+        name: String,
+    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
