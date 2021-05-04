@@ -14,7 +14,6 @@ fn compile_test() {
             input: vec![],
             expected: Ok(vec![]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -41,7 +40,6 @@ fn compile_test() {
                 },
             ]),
         },
-
         Case {
             input: vec![Input {
                 origin: ModuleOrigin::Test,
@@ -54,7 +52,6 @@ fn compile_test() {
                 text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
             }]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -78,7 +75,6 @@ fn compile_test() {
                 test_module: "two".to_string(),
             }),
         },
-
         Case {
             input: vec![
                 Input {
@@ -105,7 +101,6 @@ fn compile_test() {
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -132,7 +127,6 @@ fn compile_test() {
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -159,7 +153,8 @@ fn compile_test() {
 -type box() :: {box, integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -172,11 +167,11 @@ fn compile_test() {
 unbox(X) ->
     {box, I} = X,
     I.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -203,7 +198,8 @@ unbox(X) ->
 -type box() :: {box, integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -214,11 +210,11 @@ unbox(X) ->
 
 -spec box(integer()) -> one:box().
 box(X) ->\n    {box, X}.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![Input {
                 origin: ModuleOrigin::Src,
@@ -236,10 +232,10 @@ box(X) ->\n    {box, X}.
 -type box() :: box.
 
 
-".to_string(),
+"
+                .to_string(),
             }]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -264,7 +260,8 @@ box(X) ->\n    {box, X}.
 -export_type([box/0]).\n\n-type box() :: box.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -275,11 +272,11 @@ box(X) ->\n    {box, X}.
 
 -spec box() -> one:box().
 box() ->\n    box.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -306,7 +303,8 @@ box() ->\n    box.
 -spec go() -> integer().
 go() ->
     1.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -318,11 +316,11 @@ go() ->
 -spec call() -> integer().
 call() ->
     one:go().
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -349,7 +347,8 @@ call() ->
 -type box() :: {box, integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -362,11 +361,11 @@ call() ->
 go(X) ->
     {box, Y} = X,
     Y.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -394,7 +393,8 @@ go(X) ->
 -type box() :: {box, integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -408,11 +408,10 @@ go(X) ->
     {box, Y} = X,
     Y.
 "
-                        .to_string(),
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -430,7 +429,7 @@ go(X) ->
                         pub external fn thing() -> one.Thing = \"thing\" \"new\"
                         pub fn call_thing() { thing() }
                         "
-                        .to_string(),
+                    .to_string(),
                 },
             ],
             expected: Ok(vec![
@@ -447,7 +446,8 @@ go(X) ->
 -spec go() -> integer().
 go() ->
     1.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -467,11 +467,11 @@ thing() ->
 -spec call_thing() -> nested@one:thing().
 call_thing() ->
     thing:new().
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -493,7 +493,6 @@ call_thing() ->
                 second: PathBuf::from("/other/src/one.gleam"),
             }),
         },
-
         Case {
             input: vec![
                 Input {
@@ -527,7 +526,8 @@ call_thing() ->
 -type point() :: {point, integer(), integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -542,11 +542,11 @@ make() ->
 x(P) ->
     {point, X, _} = P,
     X.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -578,7 +578,8 @@ x(P) ->
         0 -> 0;
         Gleam@denominator -> X div Gleam@denominator
     end.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -588,11 +589,11 @@ x(P) ->
 -spec run() -> integer().
 run() ->
     one:\'div\'(2, one:\'div\'(2, 4)).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -621,7 +622,8 @@ run() ->
 -type empty() :: empty.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -631,11 +633,11 @@ run() ->
 -spec make() -> one:empty().
 make() ->
     empty.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -665,7 +667,8 @@ make() ->
 -spec id(H) -> H.
 id(X) ->
     X.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -675,11 +678,11 @@ id(X) ->
 -spec make() -> one:empty().
 make() ->
     one:id(empty).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // https://github.com/gleam-lang/gleam/issues/303
         Case {
             input: vec![
@@ -710,7 +713,8 @@ make() ->
 -spec id(H) -> H.
 id(X) ->
     X.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -720,11 +724,11 @@ id(X) ->
 -spec make() -> one:empty().
 make() ->
     one:id(empty).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -751,7 +755,8 @@ make() ->
 -spec \'receive\'() -> integer().
 \'receive\'() ->
     1.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -761,11 +766,11 @@ make() ->
 -spec funky() -> fun(() -> integer()).
 funky() ->
     fun one:\'receive\'/0.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         Case {
             input: vec![
                 Input {
@@ -792,7 +797,8 @@ funky() ->
 -spec \'receive\'() -> integer().
 \'receive\'() ->
     1.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -802,11 +808,11 @@ funky() ->
 -spec funky() -> fun(() -> integer()).
 funky() ->
     fun one:\'receive\'/0.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // https://github.com/gleam-lang/gleam/issues/340
         Case {
             input: vec![
@@ -834,7 +840,8 @@ funky() ->
 -spec \'receive\'(H) -> H.
 'receive\'(X) ->
     X.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -844,11 +851,11 @@ funky() ->
 -spec funky() -> integer().
 funky() ->
     one:\'receive\'(1).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // We can use record accessors for types with only one constructor, defined in another
         // module
         Case {
@@ -884,7 +891,8 @@ pub fn get_name(person: Person) { person.name }"
 -type person() :: {person, binary(), integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -900,11 +908,11 @@ get_age(Person) ->
 -spec get_name(one:person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // Can use imported types in Type Constructors
         Case {
             input: vec![
@@ -938,7 +946,8 @@ type Two = one.Person"
 -type person() :: {person, binary(), integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -979,7 +988,8 @@ type Two = Person"
 -type person() :: {person, binary(), integer()}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -987,7 +997,6 @@ type Two = Person"
                 },
             ]),
         },
-
         // Imported type constructors have the correct arity
         Case {
             input: vec![
@@ -1021,7 +1030,8 @@ fn main() { C }"
 -type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -1031,11 +1041,11 @@ fn main() { C }"
 -spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
     fun(A, B) -> {c, A, B} end.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // Unqualified and aliased type constructor imports use the correct name
         Case {
             input: vec![
@@ -1056,7 +1066,6 @@ main() ->
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_X.hrl"),
                     text: "-record(x, {x}).\n".to_string(),
-
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -1071,7 +1080,8 @@ main() ->
 -spec id(H) -> H.
 id(X) ->
     X.
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -1081,11 +1091,11 @@ id(X) ->
 -spec make() -> fun((integer()) -> one:t()).
 make() ->
     one:id(fun(A) -> {x, A} end).
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // Imported type constructors have the correct arity
         Case {
             input: vec![
@@ -1119,7 +1129,8 @@ fn main() { one.C }"
 -type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -1129,11 +1140,11 @@ fn main() { one.C }"
 -spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
     fun(A, B) -> {c, A, B} end.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // A custom type marked as opaque cannot have its constructors accessed
         // from other modules
         Case {
@@ -1157,17 +1168,13 @@ fn main() { one.C }"
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn main() { one.C }".to_string(),
                 error: crate::type_::Error::UnknownModuleValue {
-                    location: SrcSpan {
-                        start: 26,
-                        end: 28,
-                    },
+                    location: SrcSpan { start: 26, end: 28 },
                     name: "C".to_string(),
-                    module_name: vec!["one".to_string(),],
+                    module_name: vec!["one".to_string()],
                     value_constructors: vec![],
-                }
+                },
             }),
         },
-
         // A custom type marked as opaque cannot have its fields accessed
         // from a different module
         Case {
@@ -1191,22 +1198,18 @@ fn test(t: one.T) { t.a }"
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
                 error: crate::type_::Error::UnknownField {
-                    location: SrcSpan {
-                        start: 32,
-                        end: 34,
-                    },
+                    location: SrcSpan { start: 32, end: 34 },
                     typ: Arc::new(crate::type_::Type::App {
                         public: true,
-                        module: vec!["one".to_string(),],
+                        module: vec!["one".to_string()],
                         name: "T".to_string(),
                         args: vec![],
                     }),
                     label: "a".to_string(),
                     fields: vec![],
-                }
+                },
             }),
         },
-
         // Can import qualified and unqualified module constants
         Case {
             input: vec![
@@ -1221,7 +1224,8 @@ fn test(t: one.T) { t.a }"
                     path: PathBuf::from("/src/two.gleam"),
                     source_base_path: PathBuf::from("/src"),
                     src: "pub const cool_number = 4
-pub const cool_number2 = 3.14".to_string(),
+pub const cool_number2 = 3.14"
+                        .to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1236,13 +1240,11 @@ fn test() { one.const_string pi cool_number }"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
-                    text: "-module(two).\n-compile(no_auto_import).\n\n\n"
-                        .to_string(),
+                    text: "-module(two).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
-                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
-                        .to_string(),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/three.erl"),
@@ -1253,11 +1255,11 @@ fn test() { one.const_string pi cool_number }"
     <<\"hello!\"/utf8>>,
     3.14,
     4.
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
-
         // Can use module constants in case guards
         Case {
             input: vec![
@@ -1268,7 +1270,8 @@ fn test() { one.const_string pi cool_number }"
                     src: "pub const string_value = \"constant value\"
 pub const float_value = 3.14
 pub const int_value = 42
-                    ".to_string(),
+                    "
+                    .to_string(),
                 },
                 Input {
                     origin: ModuleOrigin::Src,
@@ -1281,14 +1284,13 @@ pub fn main(arg1, arg2, arg3) {
     _ -> 0
   }
 }"
-                        .to_string(),
+                    .to_string(),
                 },
             ],
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
-                    text: "-module(one).\n-compile(no_auto_import).\n\n\n"
-                        .to_string(),
+                    text: "-module(one).\n-compile(no_auto_import).\n\n\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -1319,7 +1321,6 @@ main(Arg1, Arg2, Arg3) ->
                 },
             ]),
         },
-
         // Bug: https://github.com/gleam-lang/gleam/issues/752
         Case {
             input: vec![
@@ -1333,8 +1334,7 @@ main(Arg1, Arg2, Arg3) ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "import one.{One} pub type Two(b) { Two(thing: One(Int)) }"
-                        .to_string(),
+                    src: "import one.{One} pub type Two(b) { Two(thing: One(Int)) }".to_string(),
                 },
             ],
             expected: Ok(vec![
@@ -1348,12 +1348,12 @@ main(Arg1, Arg2, Arg3) ->
 -type one(H) :: {one, H}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two_Two.hrl"),
-                    text: "-record(two, {thing}).\n"
-                        .to_string(),
+                    text: "-record(two, {thing}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two.erl"),
@@ -1365,7 +1365,8 @@ main(Arg1, Arg2, Arg3) ->
 -type two(I) :: {two, one:one(integer())} | {gleam_phantom, I}.
 
 
-".to_string(),
+"
+                    .to_string(),
                 },
             ]),
         },
