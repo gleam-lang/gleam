@@ -19,6 +19,8 @@
   importing the `gleam` module.
 - Empty lists can now be used in constants.
 - Compiler performance has been improved when working with lists.
+- Compiler performance has been improved when working with sequences of
+  expressions.
 - Assignments using `let` and `assert` are now expressions and no longer require
   a following expression in their containing block.
 - Fixed a bug where tuple indexing could incorrectly claim a tuple is not of
