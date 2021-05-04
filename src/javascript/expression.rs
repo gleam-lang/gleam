@@ -62,7 +62,7 @@ impl<'module> Generator<'module> {
                 name, constructor, ..
             } => self.variable(name, constructor),
 
-            TypedExpr::Sequence { first, then, .. } => self.sequence(first, then),
+            TypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
@@ -186,10 +186,20 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
-        let first = self.not_in_tail_position(|gen| gen.expression(first))?;
-        let then = self.expression(then)?;
-        Ok(docvec![force_break(), first, ";", line(), then])
+    fn sequence<'a>(&mut self, expressions: &'a [TypedExpr]) -> Output<'a> {
+        let count = expressions.len();
+        let mut documents = Vec::with_capacity(count * 3);
+        documents.push(force_break());
+        for (i, expression) in expressions.iter().enumerate() {
+            if i + 1 < count {
+                documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
+                documents.push(";".to_doc());
+                documents.push(line());
+            } else {
+                documents.push(self.expression(expression)?);
+            }
+        }
+        Ok(documents.to_doc())
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

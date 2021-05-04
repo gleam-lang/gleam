@@ -677,12 +677,19 @@ where
     document
 }
 
-fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    force_break()
-        .append(expr(first, env))
-        .append(",")
-        .append(line())
-        .append(expr(then, env))
+fn seq<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
+    let count = expressions.len();
+    let mut documents = Vec::with_capacity(count * 3);
+    documents.push(force_break());
+    for (i, expression) in expressions.into_iter().enumerate() {
+        documents.push(expr(expression, env));
+        if i + 1 < count {
+            // This isn't the final expression so add the delimeters
+            documents.push(",".to_doc());
+            documents.push(line());
+        }
+    }
+    documents.to_doc()
 }
 
 fn bin_op<'a>(
@@ -1359,7 +1366,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Sequence { first, then, .. } => seq(first, then, env),
+        TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
         TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),

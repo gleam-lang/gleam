@@ -541,19 +541,20 @@ impl<'comments> Formatter<'comments> {
             .group()
     }
 
-    fn seq<'a>(&mut self, first: &'a UntypedExpr, then: &'a UntypedExpr) -> Document<'a> {
-        force_break()
-            .append({
-                let doc = self.expr(first).group();
-                let _ = self.pop_empty_lines(first.location().end);
-                doc
-            })
-            .append(if self.pop_empty_lines(then.start_byte_index()) {
-                lines(2)
-            } else {
-                line()
-            })
-            .append(self.expr(then))
+    fn sequence<'a>(&mut self, expressions: &'a [UntypedExpr]) -> Document<'a> {
+        let count = expressions.len();
+        let mut documents = Vec::with_capacity(count * 2);
+        documents.push(force_break());
+        for (i, expression) in expressions.into_iter().enumerate() {
+            let preceeding_newline = self.pop_empty_lines(expression.start_byte_index());
+            if i != 0 && preceeding_newline {
+                documents.push(lines(2));
+            } else if i != 0 {
+                documents.push(lines(1));
+            }
+            documents.push(self.expr(expression).group());
+        }
+        documents.to_doc()
     }
 
     fn assignment<'a>(
@@ -620,7 +621,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            UntypedExpr::Sequence { first, then, .. } => self.seq(first, then),
+            UntypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -1091,6 +1092,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
+        dbg!(tuple);
         match tuple {
             UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
             _ => self.expr(tuple),
