@@ -17,7 +17,7 @@ pub enum UntypedExpr {
         value: String,
     },
 
-    Seq {
+    Sequence {
         first: Box<Self>,
         then: Box<Self>,
     },
@@ -120,7 +120,7 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Seq { then, .. } => then.location(),
+            Self::Sequence { then, .. } => then.location(),
             Self::Try { then, .. } => then.location(),
             Self::Pipe { right, .. } => right.location(),
             Self::Fn { location, .. }
@@ -144,7 +144,7 @@ impl UntypedExpr {
 
     pub fn start_byte_index(&self) -> usize {
         match self {
-            Self::Seq { first, .. } => first.start_byte_index(),
+            Self::Sequence { first, .. } => first.start_byte_index(),
             Self::Pipe { left, .. } => left.start_byte_index(),
             Self::Assignment { location, .. } => location.start,
             _ => self.location().start,

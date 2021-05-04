@@ -83,7 +83,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location, value, ..
             } => self.infer_int(value, location),
 
-            UntypedExpr::Seq { first, then, .. } => self.infer_seq(*first, *then),
+            UntypedExpr::Sequence { first, then, .. } => self.infer_seq(*first, *then),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -357,7 +357,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 });
         }
 
-        Ok(TypedExpr::Seq {
+        Ok(TypedExpr::Sequence {
             typ: then.type_(),
             first: Box::new(first),
             then: Box::new(then),

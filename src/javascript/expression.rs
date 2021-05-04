@@ -62,7 +62,7 @@ impl<'module> Generator<'module> {
                 name, constructor, ..
             } => self.variable(name, constructor),
 
-            TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
+            TypedExpr::Sequence { first, then, .. } => self.sequence(first, then),
 
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
 
@@ -88,7 +88,7 @@ impl<'module> Generator<'module> {
             } => self.module_select(module_name, label, constructor),
         }?;
         Ok(match expression {
-            TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => document,
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => document,
             _ => match self.tail_position {
                 true => docvec!["return ", document, ";"],
                 _ => document,
@@ -111,7 +111,7 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => {
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),

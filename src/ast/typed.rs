@@ -21,7 +21,7 @@ pub enum TypedExpr {
         value: String,
     },
 
-    Seq {
+    Sequence {
         typ: Arc<Type>,
         first: Box<Self>,
         then: Box<Self>,
@@ -159,7 +159,7 @@ impl TypedExpr {
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Seq { then, .. } | Self::Try { then, .. } => then.location(),
+            Self::Sequence { then, .. } | Self::Try { then, .. } => then.location(),
             Self::Assignment { location, .. }
             | Self::Fn { location, .. }
             | Self::Int { location, .. }
@@ -200,7 +200,7 @@ impl TypedExpr {
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
-            Self::Seq { then, .. } => then.type_(),
+            Self::Sequence { then, .. } => then.type_(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
             Self::List { typ, .. } => typ.clone(),
