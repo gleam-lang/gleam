@@ -679,7 +679,7 @@ where
             }
         } else if let Some(mut expr) = self.parse_expression()? {
             while let Some((e, _)) = self.parse_expression_seq()? {
-                expr = UntypedExpr::Seq {
+                expr = UntypedExpr::Sequence {
                     first: Box::new(expr),
                     then: Box::new(e),
                 }

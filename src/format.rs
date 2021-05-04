@@ -620,7 +620,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { first, then, .. } => self.seq(first, then),
+            UntypedExpr::Sequence { first, then, .. } => self.seq(first, then),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -748,7 +748,7 @@ impl<'comments> Formatter<'comments> {
             matches!(
                 expr,
                 UntypedExpr::Fn { .. }
-                    | UntypedExpr::Seq { .. }
+                    | UntypedExpr::Sequence { .. }
                     | UntypedExpr::Assignment { .. }
                     | UntypedExpr::Call { .. }
                     | UntypedExpr::Case { .. }
@@ -1061,7 +1061,7 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => "{"
+            UntypedExpr::Sequence { .. } | UntypedExpr::Assignment { .. } => "{"
                 .to_doc()
                 .append(force_break())
                 .append(line().append(self.expr(expr)).nest(INDENT))
@@ -1101,7 +1101,7 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => " {"
+            UntypedExpr::Sequence { .. } | UntypedExpr::Assignment { .. } => " {"
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
