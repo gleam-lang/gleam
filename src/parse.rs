@@ -677,15 +677,13 @@ where
                     },
                 ),
             }
-        } else if let Some(mut expr) = self.parse_expression()? {
-            while let Some((e, _)) = self.parse_expression_seq()? {
-                expr = UntypedExpr::Sequence {
-                    first: Box::new(expr),
-                    then: Box::new(e),
-                }
+        } else if let Some(expression) = self.parse_expression()? {
+            let mut expression = expression;
+            while let Some((next, _)) = self.parse_expression_seq()? {
+                expression = expression.append_in_sequence(next);
             }
-            let end = expr.location().end;
-            Ok(Some((expr, end)))
+            let end = expression.location().end;
+            Ok(Some((expression, end)))
         } else {
             Ok(None)
         }

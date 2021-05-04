@@ -83,7 +83,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location, value, ..
             } => self.infer_int(value, location),
 
-            UntypedExpr::Sequence { first, then, .. } => self.infer_seq(*first, *then),
+            UntypedExpr::Sequence {
+                expressions,
+                location,
+            } => self.infer_seq(location, expressions),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -339,28 +342,44 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
 
-    fn infer_seq(&mut self, first: UntypedExpr, then: UntypedExpr) -> Result<TypedExpr, Error> {
-        if first.is_literal() {
+    /// Emit a warning if the given expressions should not be discarded.
+    /// e.g. because it's a literal (why was it made in the first place?)
+    /// e.g. because it's of the `Result` type (errors should be handled)
+    fn expression_discarded(&mut self, discarded: &TypedExpr) {
+        if discarded.is_literal() {
             self.environment.warnings.push(Warning::UnusedLiteral {
-                location: first.location(),
+                location: discarded.location(),
             });
         }
-
-        let first = self.infer(first)?;
-        let then = self.infer(then)?;
-
-        if first.type_().is_result() && !first.is_assignment() {
+        if discarded.type_().is_result() && !discarded.is_assignment() {
             self.environment
                 .warnings
                 .push(Warning::ImplicitlyDiscardedResult {
-                    location: first.location(),
+                    location: discarded.location(),
                 });
         }
+    }
 
+    fn infer_seq(
+        &mut self,
+        location: SrcSpan,
+        untyped: Vec<UntypedExpr>,
+    ) -> Result<TypedExpr, Error> {
+        let count = untyped.len();
+        let mut expressions = Vec::with_capacity(count);
+        for (i, expression) in untyped.into_iter().enumerate() {
+            let expression = self.infer(expression)?;
+            // This isn't the final expression in the sequence, so call the
+            // `expression_discarded` function to see if anything is being
+            // discarded that we think shouldn't be.
+            if i < count - 1 {
+                self.expression_discarded(&expression);
+            }
+            expressions.push(expression);
+        }
         Ok(TypedExpr::Sequence {
-            typ: then.type_(),
-            first: Box::new(first),
-            then: Box::new(then),
+            location,
+            expressions,
         })
     }
 
