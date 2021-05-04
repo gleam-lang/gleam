@@ -1185,6 +1185,7 @@ fn case<'a>(
         line(),
         "end",
     ]
+    .group()
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {
