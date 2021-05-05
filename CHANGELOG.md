@@ -6,6 +6,7 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+
 - Syntax highlighting of Gleam code in generated HTML documentation has been
   improved.
 - Fixed a bug where markdown tables in rendered HTML documentation would have
@@ -30,6 +31,7 @@
 - A compile time error is now raised if a module is defined with the name `gleam`.
 - A compile time error is now raised if a module is defined with the a keyword
   in the name.
+- New projects are generated using `gleam_stdlib` v0.15.0.
 
 ## v0.14.4 - 2021-03-27
 
