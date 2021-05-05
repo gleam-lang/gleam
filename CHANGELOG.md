@@ -7,6 +7,8 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 
+## v0.15.0-rc1 - 2021-05-05
+
 - Syntax highlighting of Gleam code in generated HTML documentation has been
   improved.
 - Fixed a bug where markdown tables in rendered HTML documentation would have
@@ -23,7 +25,8 @@
 - Compiler performance has been improved when working with sequences of
   expressions.
 - Assignments using `let` and `assert` are now expressions and no longer require
-  a following expression in their containing block.
+  a following expression in their containing block. They are now themselves
+  expessions.
 - Fixed a bug where tuple indexing could incorrectly claim a tuple is not of
   type tuple in some circumstances.
 - Glean `new` command now checks if target folder exists, if so it returns
