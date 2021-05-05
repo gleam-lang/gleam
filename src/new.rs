@@ -11,7 +11,7 @@ use strum::{Display, EnumString, EnumVariantNames};
 const GLEAM_STDLIB_VERSION: &str = "0.15.0";
 const GLEAM_OTP_VERSION: &str = "0.1.0";
 const ERLANG_OTP_VERSION: &str = "23.2";
-const PROJECT_VERSION: &str = "1.0.0";
+const PROJECT_VERSION: &str = "0.1.0";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]

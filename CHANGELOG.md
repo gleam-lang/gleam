@@ -32,6 +32,7 @@
 - A compile time error is now raised if a module is defined with the a keyword
   in the name.
 - New projects are generated using `gleam_stdlib` v0.15.0.
+- New projects are generated at v0.1.0.
 
 ## v0.14.4 - 2021-03-27
 
