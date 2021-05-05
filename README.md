@@ -13,10 +13,10 @@
 <!-- A spacer -->
 <div>&nbsp;</div>
 
-Gleam is a type safe functional programming language for building
-scalable concurrent systems. It compiles to [Erlang](http://www.erlang.org/)
-and has straightforward interop with other BEAM languages such as Erlang,
-Elixir and LFE.
+Gleam is a fast, friendly, and functional language for building type-safe, scalable systems!
+
+It compiles to [Erlang](http://www.erlang.org/) and has straightforward interop with other
+BEAM languages such as Erlang, Elixir and LFE.
 
 For more information see the Gleam website: [https://gleam.run](https://gleam.run).
 
