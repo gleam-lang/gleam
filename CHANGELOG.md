@@ -8,6 +8,9 @@
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 
 ## v0.15.0 - 2021-05-06
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.15-released/)
+
 ## v0.15.0-rc1 - 2021-05-05
 
 - Syntax highlighting of Gleam code in generated HTML documentation has been
