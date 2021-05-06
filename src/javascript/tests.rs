@@ -261,7 +261,7 @@ fn binding() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(a, #(b, c, 2), _, 1) = x
+  let #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
         r#""use strict";
@@ -270,6 +270,7 @@ function go(x) {
   let gleam$tmp = x;
   if (!(gleam$tmp[1][2] === 2 && gleam$tmp[3] === 1)) throw new Error("Bad match")
   let a = gleam$tmp[0];
+  let t = gleam$tmp[1];
   let b = gleam$tmp[1][0];
   let c = gleam$tmp[1][1];
   
