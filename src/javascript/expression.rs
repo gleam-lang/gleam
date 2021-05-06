@@ -204,36 +204,11 @@ impl<'module> Generator<'module> {
 
     fn let_<'a>(&mut self, _value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         let mut checks = vec![];
+        let mut path = vec![];
+
         // let mut assignments = vec![];
-        match pattern {
-            Pattern::String { value, .. } => {
-                checks.push(equality(string(value)));
-                Ok(())
-            }
-            Pattern::Int { value, .. } => {
-                checks.push(equality(int(value)));
-                Ok(())
-            }
-            Pattern::Float { value, .. } => {
-                checks.push(equality(float(value)));
-                Ok(())
-            }
-            // TODO test
-            Pattern::Var { .. } => Ok(()),
-            // TODO test
-            Pattern::Discard { .. } => Ok(()),
-            Pattern::Assign { .. } => unimplemented!("as syntax not supported in JS backend"),
+        let () = traverse_pattern(pattern, &mut path, &mut checks)?;
 
-            Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
-            Pattern::Tuple { .. } => unimplemented!("Tuple matching not supported in JS backend"),
-            Pattern::Constructor { .. } => {
-                unimplemented!("Custom type matching not supported in JS backend")
-            }
-
-            Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-                unimplemented!("BitString not supported")
-            }
-        }?;
         let check_line = match checks.is_empty() {
             true => unimplemented!("todo"),
             false => docvec![
@@ -451,6 +426,58 @@ impl<'module> Generator<'module> {
             _ => unsupported("Module function call"),
         }
     }
+}
+
+fn traverse_pattern<'a>(
+    pattern: &'a TypedPattern,
+    path: &mut Vec<Document<'a>>,
+    checks: &mut Vec<Document<'a>>,
+) -> Result<(), Error> {
+    match pattern {
+        Pattern::String { value, .. } => {
+            checks.push(equality(string(value)));
+            Ok(())
+        }
+        Pattern::Int { value, .. } => {
+            checks.push(equality(int(value)));
+            Ok(())
+        }
+        Pattern::Float { value, .. } => {
+            checks.push(equality(float(value)));
+            Ok(())
+        }
+        // TODO test
+        Pattern::Var { .. } => Ok(()),
+        // TODO test
+        Pattern::Discard { .. } => Ok(()),
+        Pattern::Assign { .. } => unimplemented!("as syntax not supported in JS backend"),
+
+        Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
+        Pattern::Tuple { elems, .. } => {
+            // We don't check the length, because type system means it's a tuple
+            println!("{:?}", elems);
+            let _ = elems
+                .into_iter()
+                .enumerate()
+                .map(|x| {
+                    let (index, pattern) = x;
+                    let mut path = path.clone();
+                    path.push(Document::String(format!("{}", index)));
+                    traverse_pattern(pattern, &mut path, checks)
+                    // unimplemented!("Tuple matching not supported in JS backend")
+                })
+                .collect::<Result<Vec<()>, Error>>()?;
+            Ok(())
+        }
+        Pattern::Constructor { .. } => {
+            unimplemented!("Custom type matching not supported in JS backend")
+        }
+
+        Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
+            unimplemented!("BitString not supported")
+        }
+    }?;
+    Ok(())
 }
 
 fn equality<'a>(to_match: Document<'a>) -> Document<'a> {
