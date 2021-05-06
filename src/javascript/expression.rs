@@ -45,7 +45,12 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { .. } => unsupported("List"),
+            TypedExpr::List { elements, .. } => {
+                // println!("{:?}",expression);
+                // unsupported("List")
+                // self.wrap_list(elements, "".to_doc(), "".to_doc())
+                self.wrap_list(elements, "[]".to_doc())
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -134,6 +139,24 @@ impl<'module> Generator<'module> {
             break_("", " "),
             "})()",
         ))
+    }
+
+    fn wrap_list<'a>(&mut self, elements: &'a [TypedExpr], inner: Document<'a>) -> Output<'a> {
+        match elements.split_last() {
+            Some((element, rest)) => {
+                let inner = docvec![
+                    "[",
+                    docvec![
+                        self.not_in_tail_position(|gen| { gen.wrap_expression(element) })?,
+                    break_(",", ", "),
+                    inner,
+                    ].nest(INDENT).group(),
+                    "]",
+                ];
+                self.wrap_list(rest, inner)
+            }
+            None => Ok(inner),
+        }
     }
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
