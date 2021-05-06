@@ -50,7 +50,9 @@ impl<'module> Generator<'module> {
                     .as_ref()
                     .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
                     .unwrap_or(Ok("[]".to_doc()))?;
-                self.wrap_list(elements, inner)
+                let renderer =
+                    |element| self.not_in_tail_position(|gen| gen.wrap_expression(element));
+                wrap_list(elements, inner, renderer)
             }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
@@ -140,26 +142,6 @@ impl<'module> Generator<'module> {
             break_("", " "),
             "})()",
         ))
-    }
-
-    fn wrap_list<'a>(&mut self, elements: &'a [TypedExpr], inner: Document<'a>) -> Output<'a> {
-        match elements.split_last() {
-            Some((element, rest)) => {
-                let inner = docvec![
-                    "[",
-                    docvec![
-                        self.not_in_tail_position(|gen| { gen.wrap_expression(element) })?,
-                        break_(",", ", "),
-                        inner,
-                    ]
-                    .nest(INDENT)
-                    .group(),
-                    "]",
-                ];
-                self.wrap_list(rest, inner)
-            }
-            None => Ok(inner),
-        }
     }
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
@@ -449,7 +431,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
-        Constant::List { .. } => unsupported("List as constant"),
+        Constant::List { elements, .. } => wrap_list(elements, "[]".to_doc(), constant_expression),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -488,6 +470,26 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
         "]"
     ]
     .group())
+}
+
+fn wrap_list<'a, E>(
+    elements: &'a [E],
+    inner: Document<'a>,
+    mut renderer: impl FnMut(&'a E) -> Output<'a>,
+) -> Output<'a> {
+    match elements.split_last() {
+        Some((element, rest)) => {
+            let inner = docvec![
+                "[",
+                docvec![renderer(element)?, break_(",", ", "), inner,]
+                    .nest(INDENT)
+                    .group(),
+                "]",
+            ];
+            wrap_list(rest, inner, renderer)
+        }
+        None => Ok(inner),
+    }
 }
 
 fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
