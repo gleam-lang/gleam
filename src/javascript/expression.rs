@@ -210,7 +210,7 @@ impl<'module> Generator<'module> {
         Ok(documents.to_doc())
     }
 
-    fn let_<'a>(&mut self, _value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+    fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         let mut checks = vec![];
         let mut path = vec![];
 
@@ -222,10 +222,17 @@ impl<'module> Generator<'module> {
             false => docvec![
                 "if (!(",
                 concat(Itertools::intersperse(checks.into_iter(), " && ".to_doc())),
-                ")) throw new Error(\"Bad match\")"
+                ")) throw new Error(\"Bad match\")",
+                line()
             ],
         };
-        Ok(check_line)
+        Ok(docvec![
+            "let gleam$tmp = ",
+            self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
+            ";",
+            line(),
+            check_line
+        ])
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -437,15 +444,15 @@ fn traverse_pattern<'a>(
 ) -> Result<(), Error> {
     match pattern {
         Pattern::String { value, .. } => {
-            checks.push(equality(string(value)));
+            checks.push(equality(&path, string(value)));
             Ok(())
         }
         Pattern::Int { value, .. } => {
-            checks.push(equality(int(value)));
+            checks.push(equality(&path, int(value)));
             Ok(())
         }
         Pattern::Float { value, .. } => {
-            checks.push(equality(float(value)));
+            checks.push(equality(&path, float(value)));
             Ok(())
         }
         // TODO test
@@ -474,16 +481,16 @@ fn traverse_pattern<'a>(
         Pattern::Constructor { .. } => {
             unimplemented!("Custom type matching not supported in JS backend")
         }
-
         Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-            unimplemented!("BitString not supported")
+            unimplemented!("Custom type matching not supported in JS backend")
         }
     }?;
     Ok(())
 }
 
-fn equality<'a>(to_match: Document<'a>) -> Document<'a> {
-    docvec!["gleam$tmp", " === ", to_match]
+fn equality<'a>(path: &Vec<Document<'a>>, to_match: Document<'a>) -> Document<'a> {
+    let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
+    docvec!["gleam$tmp", path_string, " === ", to_match]
 }
 
 fn int(value: &str) -> Document<'_> {
