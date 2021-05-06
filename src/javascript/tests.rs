@@ -238,6 +238,23 @@ const e = [
 }
 
 #[test]
+fn tuple_binding() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let #(1, 2) = x
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  if (!(gleam$tmp === 1 && gleam$tmp === 2)) throw new Error("Bad match")
+}
+"#
+    )
+}
+
+#[test]
 fn external_functions() {
     assert_js!(
         r#"
