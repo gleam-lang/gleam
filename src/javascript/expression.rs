@@ -468,7 +468,17 @@ fn traverse_pattern<'a>(
             Ok(())
         },
         Pattern::Discard { .. } => Ok(()),
-        Pattern::Assign { .. } => unimplemented!("as syntax not supported in JS backend"),
+        Pattern::Assign { name, pattern, .. } => {
+            assignments.push(docvec![
+                "let ",
+                name,
+                " = gleam$tmp",
+                concat(path.clone().into_iter().map(|i| i.clone().surround("[", "]"))),
+                ";",
+                line()
+            ]);
+            traverse_pattern(pattern, path, checks, assignments)
+        },
 
         Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
         Pattern::Tuple { elems, .. } => {
