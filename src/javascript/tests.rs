@@ -247,7 +247,9 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  if (!(gleam$tmp === 1 && gleam$tmp === 2)) throw new Error("Bad match")
+  let gleam$tmp = x;
+  if (!(gleam$tmp[0] === 1 && gleam$tmp[1] === 2)) throw new Error("Bad match")
+  
 }
 "#
     )
