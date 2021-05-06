@@ -52,6 +52,12 @@ To run the compiler tests.
 cargo test
 ```
 
+To run the language integration tests.
+
+```shell
+cd test/language && make
+```
+
 If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
 Run the command below from this directory.
 
