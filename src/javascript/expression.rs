@@ -64,7 +64,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
-            TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
+            TypedExpr::Assignment { value, pattern, .. } => self.let_(value, pattern),
 
             TypedExpr::Try { .. } => unsupported("Try"),
 
@@ -200,6 +200,34 @@ impl<'module> Generator<'module> {
             }
         }
         Ok(documents.to_doc())
+    }
+
+    fn let_<'a>(&mut self, _value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+        let mut checks = vec![];
+        // let mut assignments = vec![];
+        match pattern {
+            Pattern::String { value, .. } => {
+                checks.push(docvec![
+                    "gleam$tmp",
+                    " === ",
+                    string(value)
+                ]);
+                Ok(())
+            },
+            _ => unsupported("The other patterns")
+        }?;
+        let check_line = match checks.is_empty() {
+            true => unimplemented!("todo"),
+            false => docvec![
+                "if (!(",
+                concat(Itertools::intersperse(
+                    checks.into_iter(), 
+                    " && ".to_doc()
+                )),
+                ")) throw new Error(\"Bad match\")"
+            ]
+        };
+        Ok(check_line)
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

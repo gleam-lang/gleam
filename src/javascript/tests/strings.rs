@@ -17,3 +17,20 @@ function go() {
 "#
     );
 }
+
+#[test]
+fn string_patterns() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let "Hello" = x
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  if (!(gleam$tmp === "Hello")) throw new Error("Bad match")
+}
+"#
+    );
+}
