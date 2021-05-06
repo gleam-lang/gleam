@@ -46,7 +46,6 @@ function go() {
     );
 }
 
-
 #[test]
 fn multi_line_list_literals() {
     assert_js!(
@@ -64,6 +63,22 @@ function go(x) {
     })(),
     []];
 }
+"#
+    );
+}
+
+#[test]
+fn list_constants() {
+    assert_js!(
+        r#"
+const a = []
+const b = [1, 2, 3]
+"#,
+        r#""use strict";
+
+const a = [];
+
+const b = [1, [2, [3, []]]];
 "#
     );
 }
