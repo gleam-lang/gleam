@@ -205,12 +205,12 @@ impl<'module> Generator<'module> {
     fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         let mut checks = vec![];
         let mut path = vec![];
+        let mut assignments = vec![];
 
-        // let mut assignments = vec![];
-        let () = traverse_pattern(pattern, &mut path, &mut checks)?;
+        let () = traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
 
         let check_line = match checks.is_empty() {
-            true => unimplemented!("todo"),
+            true => "".to_doc(),
             false => docvec![
                 "if (!(",
                 concat(Itertools::intersperse(checks.into_iter(), " && ".to_doc())),
@@ -218,12 +218,14 @@ impl<'module> Generator<'module> {
                 line()
             ],
         };
+
         Ok(docvec![
             "let gleam$tmp = ",
             self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
             ";",
             line(),
-            check_line
+            check_line,
+            assignments
         ])
     }
 
@@ -439,6 +441,7 @@ fn traverse_pattern<'a>(
     pattern: &'a TypedPattern,
     path: &mut Vec<Document<'a>>,
     checks: &mut Vec<Document<'a>>,
+    assignments: &mut Vec<Document<'a>>,
 ) -> Result<(), Error> {
     match pattern {
         Pattern::String { value, .. } => {
@@ -453,16 +456,23 @@ fn traverse_pattern<'a>(
             checks.push(equality(&path, float(value)));
             Ok(())
         }
-        // TODO test
-        Pattern::Var { .. } => Ok(()),
-        // TODO test
+        Pattern::Var { name, .. } => {
+            assignments.push(docvec![
+                "let ",
+                name,
+                " = gleam$tmp",
+                concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
+                ";",
+                line()
+            ]);
+            Ok(())
+        },
         Pattern::Discard { .. } => Ok(()),
         Pattern::Assign { .. } => unimplemented!("as syntax not supported in JS backend"),
 
         Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
         Pattern::Tuple { elems, .. } => {
             // We don't check the length, because type system means it's a tuple
-            println!("{:?}", elems);
             let _ = elems
                 .into_iter()
                 .enumerate()
@@ -470,7 +480,7 @@ fn traverse_pattern<'a>(
                     let (index, pattern) = x;
                     let mut path = path.clone();
                     path.push(Document::String(format!("{}", index)));
-                    traverse_pattern(pattern, &mut path, checks)
+                    traverse_pattern(pattern, &mut path, checks, assignments)
                     // unimplemented!("Tuple matching not supported in JS backend")
                 })
                 .collect::<Result<Vec<()>, Error>>()?;
