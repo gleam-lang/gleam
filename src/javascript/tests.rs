@@ -238,7 +238,7 @@ const e = [
 }
 
 #[test]
-fn tuple_binding() {
+fn tuple_matching() {
     assert_js!(
         r#"
 fn go(x) {
@@ -255,6 +255,27 @@ function go(x) {
 "#
     )
 }
+
+#[test]
+fn binding() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let #(a, b, _) = x
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  let gleam$tmp = x;
+  let a = gleam$tmp[0];
+  let b = gleam$tmp[1];
+  
+}
+"#
+    )
+}
+
 
 #[test]
 fn external_functions() {
