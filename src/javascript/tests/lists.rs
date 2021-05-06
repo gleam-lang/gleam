@@ -45,3 +45,25 @@ function go() {
 "#
     );
 }
+
+
+#[test]
+fn multi_line_list_literals() {
+    assert_js!(
+        r#"
+fn go(x) {
+    [{True; 1}]
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  return [(() => {
+      true;
+      return 1;
+    })(),
+    []];
+}
+"#
+    );
+}
