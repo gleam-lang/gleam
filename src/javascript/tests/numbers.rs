@@ -148,3 +148,20 @@ function $divide(a, b) {
 "#
     );
 }
+
+#[test]
+fn integer_patterns() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let 4 = x
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  if (!(gleam$tmp === 4)) throw new Error("Bad match")
+}
+"#
+    );
+}
