@@ -45,11 +45,12 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, .. } => {
-                // println!("{:?}",expression);
-                // unsupported("List")
-                // self.wrap_list(elements, "".to_doc(), "".to_doc())
-                self.wrap_list(elements, "[]".to_doc())
+            TypedExpr::List { elements, tail, .. } => {
+                let inner = tail
+                    .as_ref()
+                    .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
+                    .unwrap_or(Ok("[]".to_doc()))?;
+                self.wrap_list(elements, inner)
             }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
@@ -148,9 +149,11 @@ impl<'module> Generator<'module> {
                     "[",
                     docvec![
                         self.not_in_tail_position(|gen| { gen.wrap_expression(element) })?,
-                    break_(",", ", "),
-                    inner,
-                    ].nest(INDENT).group(),
+                        break_(",", ", "),
+                        inner,
+                    ]
+                    .nest(INDENT)
+                    .group(),
                     "]",
                 ];
                 self.wrap_list(rest, inner)

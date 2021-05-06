@@ -5,18 +5,20 @@ use crate::assert_js;
 fn list_literals() {
     assert_js!(
         r#"
-fn go() {
+fn go(x) {
     []
     [1]
     [1, 2]
+    [1, 2, ..x]
 }
 "#,
         r#""use strict";
 
-function go() {
+function go(x) {
   [];
   [1, []];
-  return [1, [2, []]];
+  [1, [2, []]];
+  return [1, [2, x]];
 }
 "#
     );
