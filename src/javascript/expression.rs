@@ -215,25 +215,40 @@ impl<'module> Generator<'module> {
         // let mut assignments = vec![];
         match pattern {
             Pattern::String { value, .. } => {
-                checks.push(docvec![
-                    "gleam$tmp",
-                    " === ",
-                    string(value)
-                ]);
+                checks.push(equality(string(value)));
                 Ok(())
-            },
-            _ => unsupported("The other patterns")
+            }
+            Pattern::Int { value, .. } => {
+                checks.push(equality(int(value)));
+                Ok(())
+            }
+            Pattern::Float { value, .. } => {
+                checks.push(equality(float(value)));
+                Ok(())
+            }
+            // TODO test
+            Pattern::Var { .. } => Ok(()),
+            // TODO test
+            Pattern::Discard { .. } => Ok(()),
+            Pattern::Assign { .. } => unimplemented!("as syntax not supported in JS backend"),
+
+            Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
+            Pattern::Tuple { .. } => unimplemented!("Tuple matching not supported in JS backend"),
+            Pattern::Constructor { .. } => {
+                unimplemented!("Custom type matching not supported in JS backend")
+            }
+
+            Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
+                unimplemented!("BitString not supported")
+            }
         }?;
         let check_line = match checks.is_empty() {
             true => unimplemented!("todo"),
             false => docvec![
                 "if (!(",
-                concat(Itertools::intersperse(
-                    checks.into_iter(), 
-                    " && ".to_doc()
-                )),
+                concat(Itertools::intersperse(checks.into_iter(), " && ".to_doc())),
                 ")) throw new Error(\"Bad match\")"
-            ]
+            ],
         };
         Ok(check_line)
     }
@@ -438,6 +453,10 @@ impl<'module> Generator<'module> {
             _ => unsupported("Module function call"),
         }
     }
+}
+
+fn equality<'a>(to_match: Document<'a>) -> Document<'a> {
+    docvec!["gleam$tmp", " === ", to_match]
 }
 
 fn int(value: &str) -> Document<'_> {
