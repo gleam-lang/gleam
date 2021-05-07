@@ -1062,7 +1062,9 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Sequence { .. } | UntypedExpr::Assignment { .. } => "{"
+            UntypedExpr::Sequence { .. }
+            | UntypedExpr::Assignment { .. }
+            | UntypedExpr::Try { .. } => "{"
                 .to_doc()
                 .append(force_break())
                 .append(line().append(self.expr(expr)).nest(INDENT))
@@ -1103,7 +1105,9 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Sequence { .. } | UntypedExpr::Assignment { .. } => " {"
+            UntypedExpr::Try { .. }
+            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Assignment { .. } => " {"
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
