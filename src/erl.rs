@@ -1132,33 +1132,14 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
     }
 }
 
-fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>, location: &SrcSpan) -> Document<'a> {
-    let case_error_name = "Gleam@Case";
-    let error_clause = docvec![
-        env.next_local_var_name(case_error_name),
-        " ->",
-        docvec![
-            line(),
-            erlang_error(
-                "'case'",
-                "Case pattern match failed",
-                *location,
-                vec![("value", env.local_var_name(case_error_name))],
-                env,
-            )
-            .nest(INDENT)
-        ]
-        .nest(INDENT)
-    ];
+fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     concat(Itertools::intersperse(
-        cs.iter()
-            .map(|c| {
-                let vars = env.current_scope_vars.clone();
-                let erl = clause(c, env);
-                env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
-                erl
-            })
-            .chain(std::iter::once(error_clause)),
+        cs.iter().map(|c| {
+            let vars = env.current_scope_vars.clone();
+            let erl = clause(c, env);
+            env.current_scope_vars = vars; // Reset the known variables now the clauses' scope has ended
+            erl
+        }),
         ";".to_doc().append(lines(2)),
     ))
 }
@@ -1177,15 +1158,43 @@ fn case<'a>(
     } else {
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
+    let case_error_name = "Gleam@Case";
     docvec![
-        "case ",
-        subjects_doc,
-        " of",
-        docvec![line(), clauses(cs, env, location)].nest(INDENT),
+        "try",
+        docvec![
+            line(),
+            "case ",
+            subjects_doc,
+            " of",
+            docvec![line(), clauses(cs, env)].nest(INDENT),
+            line(),
+            "end",
+        ]
+        .nest(INDENT)
+        .group(),
         line(),
-        "end",
+        "catch",
+        docvec![
+            line(),
+            Document::String(format!("error:{{case_clause,{}}} ->", case_error_name)),
+            docvec![
+                line(),
+                erlang_error(
+                    "'case'",
+                    "Case pattern match failed",
+                    *location,
+                    vec![("value", env.local_var_name(case_error_name))],
+                    env,
+                )
+                .nest(INDENT)
+            ]
+            .nest(INDENT)
+        ]
+        .nest(INDENT)
+        .group(),
+        line(),
+        "end"
     ]
-    .group()
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {

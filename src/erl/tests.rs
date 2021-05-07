@@ -58,15 +58,17 @@ fn go(a) {
 
 -spec go(integer()) -> integer().
 go(A) ->
-    case A of
-        99 ->
-            A@1 = A,
-            1;
+    try
+        case A of
+            99 ->
+                A@1 = A,
+                1;
 
-        _ ->
-            A;
-
-        Gleam@Case ->
+            _ ->
+                A
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -352,14 +354,16 @@ fdiv(X, Y) ->
 
 -spec second(list(integer())) -> integer().
 second(List) ->
-    case List of
-        [X, Y] ->
-            Y;
+    try
+        case List of
+            [X, Y] ->
+                Y;
 
-        Z ->
-            1;
-
-        Gleam@Case ->
+            Z ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -370,14 +374,16 @@ second(List) ->
 
 -spec tail(list(H)) -> list(H).
 tail(List) ->
-    case List of
-        [X | Xs] ->
-            Xs;
+    try
+        case List of
+            [X | Xs] ->
+                Xs;
 
-        Z ->
-            List;
-
-        Gleam@Case ->
+            Z ->
+                List
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -395,11 +401,13 @@ tail(List) ->
 
 -spec tail(list(D)) -> D.
 tail(List) ->
-    case List of
-        [X | _] ->
-            X;
-
-        Gleam@Case ->
+    try
+        case List of
+            [X | _] ->
+                X
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -625,11 +633,13 @@ create_user(User_id) ->
 
 -spec run() -> integer().
 run() ->
-    case {1, 2} of
-        {A, B} ->
-            A;
-
-        Gleam@Case ->
+    try
+        case {1, 2} of
+            {A, B} ->
+                A
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -747,12 +757,14 @@ pub fn main(args) {
 
 -spec main(any()) -> integer().
 main(Args) ->
-    case Args of
-        _ ->
-            A = 1,
-            A;
-
-        Gleam@Case ->
+    try
+        case Args of
+            _ ->
+                A = 1,
+                A
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -786,14 +798,16 @@ pub fn bitstring_discard(x) -> Bool {
 
 -spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
-    case X of
-        <<_/utf8, Rest/binary>> ->
-            true;
+    try
+        case X of
+            <<_/utf8, Rest/binary>> ->
+                true;
 
-        _ ->
-            false;
-
-        Gleam@Case ->
+            _ ->
+                false
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -820,14 +834,16 @@ pub fn bitstring_discard(x) -> Bool {
 
 -spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
-    case X of
-        <<_/utf8, Rest/binary>> ->
-            true;
+    try
+        case X of
+            <<_/utf8, Rest/binary>> ->
+                true;
 
-        _ ->
-            false;
-
-        Gleam@Case ->
+            _ ->
+                false
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -878,14 +894,16 @@ pub fn main(args) {
 
 -spec main(any()) -> integer().
 main(Args) ->
-    case Args of
-        X when X =:= Args ->
-            1;
+    try
+        case Args of
+            X when X =:= Args ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -912,14 +930,16 @@ pub fn main(args) {
 
 -spec main(any()) -> integer().
 main(Args) ->
-    case Args of
-        X when (X =/= X) =:= (Args =:= Args) ->
-            1;
+    try
+        case Args of
+            X when (X =/= X) =:= (Args =:= Args) ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -946,14 +966,16 @@ pub fn main(args) {
 
 -spec main(boolean()) -> integer().
 main(Args) ->
-    case Args of
-        X when (X andalso X) orelse ((X =:= X) andalso X) ->
-            1;
+    try
+        case Args of
+            X when (X andalso X) orelse ((X =:= X) andalso X) ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -980,14 +1002,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1, 0} of
-        {X, Y} when X > Y ->
-            1;
+    try
+        case {1, 0} of
+            {X, Y} when X > Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1014,14 +1038,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1, 0} of
-        {X, Y} when X >= Y ->
-            1;
+    try
+        case {1, 0} of
+            {X, Y} when X >= Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1048,14 +1074,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1, 0} of
-        {X, Y} when X < Y ->
-            1;
+    try
+        case {1, 0} of
+            {X, Y} when X < Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1082,14 +1110,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1, 0} of
-        {X, Y} when X =< Y ->
-            1;
+    try
+        case {1, 0} of
+            {X, Y} when X =< Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1116,14 +1146,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1.0, 0.1} of
-        {X, Y} when X > Y ->
-            1;
+    try
+        case {1.0, 0.1} of
+            {X, Y} when X > Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1150,14 +1182,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {1.0, 0.1} of
-        {X, Y} when X >= Y ->
-            1;
+    try
+        case {1.0, 0.1} of
+            {X, Y} when X >= Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1186,14 +1220,16 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0.123,
-    case X of
-        99.9854 ->
-            1;
+    try
+        case X of
+            99.9854 ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1221,11 +1257,13 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0.123,
-    case X of
-        _ when X =:= 3.14 ->
-            1;
-
-        Gleam@Case ->
+    try
+        case X of
+            _ when X =:= 3.14 ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1253,11 +1291,13 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0.123,
-    case X of
-        _ when 0.123 < X ->
-            1;
-
-        Gleam@Case ->
+    try
+        case X of
+            _ when 0.123 < X ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1283,11 +1323,13 @@ pub fn main(x) {
 
 -spec main(list(integer())) -> integer().
 main(X) ->
-    case X of
-        _ when X =:= [1, 2, 3] ->
-            1;
-
-        Gleam@Case ->
+    try
+        case X of
+            _ when X =:= [1, 2, 3] ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1316,14 +1358,16 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0,
-    case X of
-        0 ->
-            1;
+    try
+        case X of
+            0 ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1354,14 +1398,16 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = {1, 2, 3},
-    case X of
-        _ when X =:= {1, 2, 3} ->
-            1;
+    try
+        case X of
+            _ when X =:= {1, 2, 3} ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1391,17 +1437,19 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = {1, 2, 3},
-    case X of
-        _ when X =:= {1, 2, 3} ->
-            1;
+    try
+        case X of
+            _ when X =:= {1, 2, 3} ->
+                1;
 
-        _ when X =:= {2, 3, 4} ->
-            2;
+            _ when X =:= {2, 3, 4} ->
+                2;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1431,11 +1479,13 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0,
-    case X of
-        _ when X =:= 0 ->
-            1;
-
-        Gleam@Case ->
+    try
+        case X of
+            _ when X =:= 0 ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1463,11 +1513,13 @@ pub fn main() {
 -spec main() -> integer().
 main() ->
     X = 0,
-    case X of
-        _ when 0 < X ->
-            1;
-
-        Gleam@Case ->
+    try
+        case X of
+            _ when 0 < X ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1495,11 +1547,13 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case <<"test"/utf8>> of
-        X when X =:= <<"test"/utf8>> ->
-            1;
-
-        Gleam@Case ->
+    try
+        case <<"test"/utf8>> of
+            X when X =:= <<"test"/utf8>> ->
+                1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1536,20 +1590,22 @@ main() ->
 -spec main() -> integer().
 main() ->
     X = {test, 1, 3.0},
-    case X of
-        _ when X =:= {test, 1, 1.0} ->
-            1;
+    try
+        case X of
+            _ when X =:= {test, 1, 1.0} ->
+                1;
 
-        _ when X =:= {test, 2, 2.0} ->
-            2;
+            _ when X =:= {test, 2, 2.0} ->
+                2;
 
-        _ when X =/= {test, 2, 3.0} ->
-            2;
+            _ when X =/= {test, 2, 3.0} ->
+                2;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1578,14 +1634,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {0.1, 1.0} of
-        {X, Y} when X < Y ->
-            1;
+    try
+        case {0.1, 1.0} of
+            {X, Y} when X < Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1612,14 +1670,16 @@ pub fn main() {
 
 -spec main() -> integer().
 main() ->
-    case {0.1, 1.0} of
-        {X, Y} when X =< Y ->
-            1;
+    try
+        case {0.1, 1.0} of
+            {X, Y} when X =< Y ->
+                1;
 
-        {_, _} ->
-            0;
-
-        Gleam@Case ->
+            {_, _} ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1646,17 +1706,19 @@ pub fn main(args) {
 
 -spec main(list(boolean())) -> integer().
 main(Args) ->
-    case Args of
-        [X] when X ->
-            1;
+    try
+        case Args of
+            [X] when X ->
+                1;
 
-        [X, _] when X ->
-            1;
+            [X, _] when X ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -1851,11 +1913,13 @@ fn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    case Triple of
-        {triple, _, The_b, _} ->
-            The_b;
-
-        Gleam@Case ->
+    try
+        case Triple of
+            {triple, _, The_b, _} ->
+                The_b
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2130,14 +2194,16 @@ pub fn main(arg) {
 
 -spec main(binary()) -> integer().
 main(Arg) ->
-    case Arg of
-        _ when Arg =:= <<"constant value"/utf8>> ->
-            1;
+    try
+        case Arg of
+            _ when Arg =:= <<"constant value"/utf8>> ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2166,14 +2232,16 @@ pub fn main(arg) {
 
 -spec main(bitstring()) -> integer().
 main(Arg) ->
-    case Arg of
-        _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
-            1;
+    try
+        case Arg of
+            _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2202,14 +2270,16 @@ pub fn main(arg) {
 
 -spec main({integer(), float()}) -> integer().
 main(Arg) ->
-    case Arg of
-        _ when Arg =:= {1, 2.0} ->
-            1;
+    try
+        case Arg of
+            _ when Arg =:= {1, 2.0} ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2238,14 +2308,16 @@ pub fn main(arg) {
 
 -spec main(float()) -> integer().
 main(Arg) ->
-    case Arg of
-        _ when Arg > 3.14 ->
-            1;
+    try
+        case Arg of
+            _ when Arg > 3.14 ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2280,14 +2352,16 @@ pub fn main(arg) {
 -spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->
     _ = [1, 2, 3],
-    case Arg of
-        {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
-            1;
+    try
+        case Arg of
+            {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2316,14 +2390,16 @@ pub fn main(arg) {
 
 -spec main(list(integer())) -> integer().
 main(Arg) ->
-    case Arg of
-        _ when Arg =:= [1, 2, 3] ->
-            1;
+    try
+        case Arg of
+            _ when Arg =:= [1, 2, 3] ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2358,16 +2434,18 @@ pub fn test() {
 -spec test() -> integer().
 test() ->
     Duplicate_name = 1,
-    case 1 of
-        1 ->
-            Duplicate_name@1 = Duplicate_name + 1,
-            Duplicate_name@1;
+    try
+        case 1 of
+            1 ->
+                Duplicate_name@1 = Duplicate_name + 1,
+                Duplicate_name@1;
 
-        2 ->
-            Duplicate_name@1 = Duplicate_name + 1,
-            Duplicate_name@1;
-
-        Gleam@Case ->
+            2 ->
+                Duplicate_name@1 = Duplicate_name + 1,
+                Duplicate_name@1
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2393,14 +2471,16 @@ pub fn test() {
 
 -spec test() -> integer().
 test() ->
-    case {ok, 1} of
-        {ok, Duplicate_name} ->
-            Duplicate_name;
+    try
+        case {ok, 1} of
+            {ok, Duplicate_name} ->
+                Duplicate_name;
 
-        {error, Duplicate_name} ->
-            Duplicate_name;
-
-        Gleam@Case ->
+            {error, Duplicate_name} ->
+                Duplicate_name
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2429,14 +2509,16 @@ pub fn test() {
 -spec test() -> integer().
 test() ->
     Duplicate_name = 1,
-    case 1 of
-        1 when Duplicate_name =:= 1 ->
-            Duplicate_name;
+    try
+        case 1 of
+            1 when Duplicate_name =:= 1 ->
+                Duplicate_name;
 
-        2 when Duplicate_name =:= 1 ->
-            Duplicate_name;
-
-        Gleam@Case ->
+            2 when Duplicate_name =:= 1 ->
+                Duplicate_name
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2467,14 +2549,16 @@ pub fn main(arg) {
 -spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->
     _ = {ok, 1},
-    case Arg of
-        _ when Arg =:= {ok, 1} ->
-            1;
+    try
+        case Arg of
+            _ when Arg =:= {ok, 1} ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2701,14 +2785,16 @@ fn main() {
 main() ->
     Key = 10,
     X = [{10, 2}, {1, 2}],
-    case X of
-        [First | Rest] when erlang:element(1, First) =:= Key ->
-            <<"ok"/utf8>>;
+    try
+        case X of
+            [First | Rest] when erlang:element(1, First) =:= Key ->
+                <<"ok"/utf8>>;
 
-        _ ->
-            <<"ko"/utf8>>;
-
-        Gleam@Case ->
+            _ ->
+                <<"ko"/utf8>>
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
@@ -2783,14 +2869,16 @@ fn pattern_as() {
 
 -spec a({ok, integer()} | {error, any()}) -> integer().
 a(X) ->
-    case X of
-        {ok, 1 = Y} ->
-            1;
+    try
+        case X of
+            {ok, 1 = Y} ->
+                1;
 
-        _ ->
-            0;
-
-        Gleam@Case ->
+            _ ->
+                0
+        end
+    catch
+        error:{case_clause,Gleam@Case} ->
             erlang:error(#{gleam_error => 'case',
                            message => <<"Case pattern match failed"/utf8>>,
                            value => Gleam@Case,
