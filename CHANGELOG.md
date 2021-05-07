@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Fixed a bug where blocks that contained try expressions could be formatted
+  incorrectly.
 
 ## v0.15.0 - 2021-05-06
 
