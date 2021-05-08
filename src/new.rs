@@ -544,6 +544,12 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
 
     creator.run()?;
 
+    let cd_folder = if options.project_root == *"." {
+        "".to_string()
+    } else {
+        format!("\tcd {}\n", creator.options.name)
+    };
+
     let test_command = match &creator.options.template {
         Template::Lib | Template::App | Template::Escript => "rebar3 eunit",
         Template::GleamLib => "gleam eunit",
@@ -554,8 +560,7 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
 Your Gleam project {} has been successfully created.
 The project can be compiled and tested by running these commands:
 
-    cd {}
-    {}
+{}\t{}
 ",
         creator.options.name,
         creator.root.to_str().gleam_expect("Unable to display path"),
