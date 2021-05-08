@@ -1580,12 +1580,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location,
                 name,
                 args,
+                // field_map, is always None here because untyped not yet unified
                 ..
             } if args.is_empty() => {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
-                let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+                let (tag, field_map) = match &constructor.variant {
+                    ValueConstructorVariant::Record { name, field_map, .. } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1604,6 +1605,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     args: vec![],
                     typ: constructor.type_,
                     tag,
+                    field_map,
                 })
             }
 
@@ -1612,12 +1614,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location,
                 name,
                 mut args,
+                // field_map, is always None here because untyped not yet unified
                 ..
             } => {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
-                let tag = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, .. } => name.clone(),
+                let (tag, field_map) = match &constructor.variant {
+                    ValueConstructorVariant::Record { name, field_map, .. } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1703,6 +1706,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     args,
                     typ: return_type,
                     tag,
+                    field_map
                 })
             }
         }?;
