@@ -59,3 +59,31 @@ function go() {
 "#
     );
 }
+
+
+#[test]
+fn matching_booleans() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+    let True = x
+    let False = x
+    let Nil = y
+}
+"#,
+        r#""use strict";
+
+function go(x, y) {
+  let gleam$tmp = x;
+  if (!(gleam$tmp === true)) throw new Error("Bad match")
+
+  let gleam$tmp = x;
+  if (!(gleam$tmp === false)) throw new Error("Bad match")
+
+  let gleam$tmp = x;
+  if (!(gleam$tmp === undefined)) throw new Error("Bad match")
+
+}
+"#
+    );
+}

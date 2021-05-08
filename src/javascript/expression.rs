@@ -3,7 +3,7 @@ use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
+    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant, PatternConstructor},
 };
 
 static RECORD_KEY: &str = "type";
@@ -538,10 +538,23 @@ fn traverse_pattern<'a>(
                 })
                 .collect::<Result<Vec<()>, Error>>()?;
             Ok(())
-        }
+        },
+        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "True" => {
+            checks.push(equality(&path, "true".to_doc()));
+            Ok(())
+        },
+        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "False" => {
+            checks.push(equality(&path, "false".to_doc()));
+            Ok(())
+        },
+        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "Nil" => {
+            checks.push(equality(&path, "undefined".to_doc()));
+            Ok(())
+        },
         Pattern::Constructor { .. } => {
             unimplemented!("Custom type matching not supported in JS backend")
-        }
+        },
+
         Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
             unimplemented!("Custom type matching not supported in JS backend")
         }
