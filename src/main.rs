@@ -1,11 +1,17 @@
-#![deny(warnings)]
+#![deny(
+    unsafe_code,
+    unused_results,
+    unstable_features,
+    clippy::expect_used,
+    clippy::unwrap_used,
+    clippy::await_holding_lock,
+    clippy::if_let_mutex
+)]
 #![warn(
     clippy::all,
     clippy::doc_markdown,
     clippy::dbg_macro,
     clippy::todo,
-    clippy::empty_enum,
-    clippy::enum_glob_use,
     clippy::mem_forget,
     // TODO: enable once the false positive bug is solved
     // clippy::use_self,
@@ -13,9 +19,7 @@
     clippy::needless_continue,
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
-    clippy::if_let_mutex,
     clippy::mismatched_target_os,
-    clippy::await_holding_lock,
     clippy::match_on_vec_items,
     clippy::imprecise_flops,
     clippy::suboptimal_flops,
@@ -33,16 +37,11 @@
     missing_copy_implementations,
     trivial_casts,
     trivial_numeric_casts,
-    unstable_features,
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
-    unused_results,
     // Safety
-    unsafe_code,
     clippy::unimplemented,
-    clippy::expect_used,
-    clippy::unwrap_used,
     clippy::ok_expect,
     clippy::integer_division,
     clippy::indexing_slicing,
@@ -189,11 +188,11 @@ pub struct NewOptions {
     pub project_root: Option<String>,
 
     #[structopt(
-            long = "template",
-            possible_values = &new::Template::VARIANTS,
-            case_insensitive = true,
-            default_value = "lib"
-        )]
+        long = "template",
+        possible_values = &new::Template::VARIANTS,
+        case_insensitive = true,
+        default_value = "lib"
+    )]
     pub template: new::Template,
 }
 

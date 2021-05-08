@@ -91,8 +91,8 @@ fn compile_erlang_to_beam(
 
     // Run escript to compile Erlang to beam files
     let mut command = process::Command::new("escript");
-    command.arg(escript_path);
-    command.arg(root.build_path());
+    let _ = command.arg(escript_path);
+    let _ = command.arg(root.build_path());
 
     tracing::trace!("Running OS process {:?}", command);
     let status = command.status().map_err(|e| Error::ShellCommand {

@@ -45,7 +45,15 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { .. } => unsupported("List"),
+            TypedExpr::List { elements, tail, .. } => {
+                let inner = tail
+                    .as_ref()
+                    .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
+                    .unwrap_or(Ok("[]".to_doc()))?;
+                let renderer =
+                    |element| self.not_in_tail_position(|gen| gen.wrap_expression(element));
+                wrap_list(elements, inner, renderer)
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -61,8 +69,12 @@ impl<'module> Generator<'module> {
             TypedExpr::Var {
                 name, constructor, ..
             } => self.variable(name, constructor),
-            TypedExpr::Seq { first, then, .. } => self.sequence(first, then),
+
+            TypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
+
             TypedExpr::Assignment { .. } => unsupported("Assigning variables"),
+
+            TypedExpr::Try { .. } => unsupported("Try"),
 
             TypedExpr::BinOp {
                 name, left, right, ..
@@ -84,7 +96,7 @@ impl<'module> Generator<'module> {
             } => self.module_select(module_name, label, constructor),
         }?;
         Ok(match expression {
-            TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => document,
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => document,
             _ => match self.tail_position {
                 true => docvec!["return ", document, ";"],
                 _ => document,
@@ -107,7 +119,7 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => {
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -182,10 +194,20 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn sequence<'a>(&mut self, first: &'a TypedExpr, then: &'a TypedExpr) -> Output<'a> {
-        let first = self.not_in_tail_position(|gen| gen.expression(first))?;
-        let then = self.expression(then)?;
-        Ok(docvec![force_break(), first, ";", line(), then])
+    fn sequence<'a>(&mut self, expressions: &'a [TypedExpr]) -> Output<'a> {
+        let count = expressions.len();
+        let mut documents = Vec::with_capacity(count * 3);
+        documents.push(force_break());
+        for (i, expression) in expressions.iter().enumerate() {
+            if i + 1 < count {
+                documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
+                documents.push(";".to_doc());
+                documents.push(line());
+            } else {
+                documents.push(self.expression(expression)?);
+            }
+        }
+        Ok(documents.to_doc())
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -409,7 +431,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
-        Constant::List { .. } => unsupported("List as constant"),
+        Constant::List { elements, .. } => wrap_list(elements, "[]".to_doc(), constant_expression),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -449,6 +471,26 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
         "]"
     ]
     .group())
+}
+
+fn wrap_list<'a, E>(
+    elements: &'a [E],
+    inner: Document<'a>,
+    mut renderer: impl FnMut(&'a E) -> Output<'a>,
+) -> Output<'a> {
+    match elements.split_last() {
+        Some((element, rest)) => {
+            let inner = docvec![
+                "[",
+                docvec![renderer(element)?, break_(",", ", "), inner,]
+                    .nest(INDENT)
+                    .group(),
+                "]",
+            ];
+            wrap_list(rest, inner, renderer)
+        }
+        None => Ok(inner),
+    }
 }
 
 fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {

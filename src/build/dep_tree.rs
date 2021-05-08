@@ -25,14 +25,14 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
 
     for (value, _deps) in &inputs {
         let index = graph.add_node(());
-        indexes.insert(value.clone(), index);
-        values.insert(index, value.clone());
+        let _ = indexes.insert(value.clone(), index);
+        let _ = values.insert(index, value.clone());
     }
 
     for (value, deps) in inputs {
         let &from_index = indexes.get(&value).gleam_expect("Finding index for value");
         for &to_index in deps.into_iter().filter_map(|dep| indexes.get(&dep)) {
-            graph.add_edge(from_index, to_index, ());
+            let _ = graph.add_edge(from_index, to_index, ());
         }
     }
 
@@ -55,7 +55,7 @@ fn import_cycle(
 ) -> Vec<String> {
     let origin = cycle.node_id();
     let mut path = vec![];
-    find_cycle(origin, origin, &graph, &mut path, &mut HashSet::new());
+    let _ = find_cycle(origin, origin, &graph, &mut path, &mut HashSet::new());
     path.iter()
         .map(|index| {
             values
@@ -72,7 +72,7 @@ fn find_cycle(
     path: &mut Vec<NodeIndex>,
     seen: &mut HashSet<NodeIndex>,
 ) -> bool {
-    seen.insert(parent);
+    let _ = seen.insert(parent);
     for node in graph.neighbors_directed(parent, Direction::Outgoing) {
         if node == origin {
             path.push(node);

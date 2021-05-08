@@ -17,9 +17,9 @@ pub enum UntypedExpr {
         value: String,
     },
 
-    Seq {
-        first: Box<Self>,
-        then: Box<Self>,
+    Sequence {
+        location: SrcSpan,
+        expressions: Vec<Self>,
     },
 
     Var {
@@ -64,8 +64,15 @@ pub enum UntypedExpr {
         location: SrcSpan,
         value: Box<Self>,
         pattern: Pattern<(), ()>,
-        then: Box<Self>,
         kind: AssignmentKind,
+        annotation: Option<TypeAst>,
+    },
+
+    Try {
+        location: SrcSpan,
+        value: Box<Self>,
+        pattern: Pattern<(), ()>,
+        then: Box<Self>,
         annotation: Option<TypeAst>,
     },
 
@@ -113,8 +120,7 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Seq { then, .. } => then.location(),
-            Self::Assignment { then, .. } => then.location(),
+            Self::Try { then, .. } => then.location(),
             Self::Pipe { right, .. } => right.location(),
             Self::Fn { location, .. }
             | Self::Var { location, .. }
@@ -127,16 +133,48 @@ impl UntypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::BitString { location, .. }
+            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
-            | Self::BitString { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
+            Self::Sequence {
+                location,
+                expressions,
+                ..
+            } => expressions.last().map(Self::location).unwrap_or(*location),
+        }
+    }
+
+    pub fn append_in_sequence(self, next: Self) -> Self {
+        match self {
+            Self::Sequence {
+                location,
+                mut expressions,
+            } => {
+                expressions.push(next);
+                Self::Sequence {
+                    location,
+                    expressions,
+                }
+            }
+            _ => Self::Sequence {
+                location: next.location(),
+                expressions: vec![self, next],
+            },
         }
     }
 
     pub fn start_byte_index(&self) -> usize {
         match self {
-            Self::Seq { first, .. } => first.start_byte_index(),
+            Self::Sequence {
+                expressions,
+                location,
+                ..
+            } => expressions
+                .first()
+                .map(|e| e.start_byte_index())
+                .unwrap_or(location.start),
             Self::Pipe { left, .. } => left.start_byte_index(),
             Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
@@ -155,18 +193,6 @@ impl UntypedExpr {
         matches!(
             self,
             Self::String { .. } | Self::Int { .. } | Self::Float { .. }
-        )
-    }
-
-    pub fn is_literal(&self) -> bool {
-        matches!(
-            self,
-            Self::Int { .. }
-                | Self::List { .. }
-                | Self::Float { .. }
-                | Self::Tuple { .. }
-                | Self::String { .. }
-                | Self::BitString { .. }
         )
     }
 }

@@ -466,6 +466,16 @@ where
                 }
             }
 
+            Some((start, Token::Let, _)) => {
+                let _ = self.next_tok();
+                self.parse_assignment(start, AssignmentKind::Let)?
+            }
+
+            Some((start, Token::Assert, _)) => {
+                let _ = self.next_tok();
+                self.parse_assignment(start, AssignmentKind::Assert)?
+            }
+
             // helpful error on possibly trying to group with "("
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
@@ -576,6 +586,42 @@ where
         Ok(Some(expr))
     }
 
+    // An assignment, with `Let` or `Assert` already consumed
+    fn parse_assignment(
+        &mut self,
+        start: usize,
+        kind: AssignmentKind,
+    ) -> Result<UntypedExpr, ParseError> {
+        let pattern = if let Some(p) = self.parse_pattern()? {
+            p
+        } else {
+            // DUPE: 62884
+            return self.next_tok_unexpected(vec![
+                "A pattern".to_string(),
+                "See: https://gleam.run/book/tour/patterns".to_string(),
+            ])?;
+        };
+        let annotation = self.parse_type_annotation(&Token::Colon, false)?;
+        let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
+        let value = self.parse_expression()?.ok_or_else(|| ParseError {
+            error: ParseErrorType::ExpectedValue,
+            location: SrcSpan {
+                start: eq_s,
+                end: eq_e,
+            },
+        })?;
+        Ok(UntypedExpr::Assignment {
+            location: SrcSpan {
+                start,
+                end: value.location().end,
+            },
+            value: Box::new(value),
+            pattern,
+            annotation,
+            kind,
+        })
+    }
+
     // examples:
     //   let pattern = expr
     //   assert pattern: Type = expr
@@ -583,14 +629,15 @@ where
     //   expr expr
     //   expr
     //
-    //   In order to parse an expr sequence, you must try to parse an expr, if it is a binding
+    //   In order to parse an expr sequence, you must try to parse an expr, if it is a `try`
     //   you MUST parse another expr, if it is some other expr, you MAY parse another expr
     fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, usize)>, ParseError> {
-        // binding
-        if let Some((start, kind)) = self.maybe_binding_start() {
+        // assignment
+        if let Some(start) = self.maybe_try_start() {
             let pattern = if let Some(p) = self.parse_pattern()? {
                 p
             } else {
+                // DUPE: 62884
                 return self.next_tok_unexpected(vec![
                     "A pattern".to_string(),
                     "See: https://gleam.run/book/tour/patterns".to_string(),
@@ -602,7 +649,7 @@ where
             let then = self.parse_expression_seq()?;
             match (value, then) {
                 (Some(value), Some((then, seq_end))) => Ok(Some((
-                    UntypedExpr::Assignment {
+                    UntypedExpr::Try {
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -610,7 +657,6 @@ where
                         value: Box::new(value),
                         pattern,
                         annotation,
-                        kind,
                         then: Box::new(then),
                     },
                     seq_end,
@@ -624,41 +670,31 @@ where
                     },
                 ),
                 (Some(val), None) => parse_error(
-                    ParseErrorType::ExprTailBinding,
+                    ParseErrorType::ExprThenlessTry,
                     SrcSpan {
                         start,
                         end: val.location().end,
                     },
                 ),
             }
-        } else if let Some(mut expr) = self.parse_expression()? {
-            while let Some((e, _)) = self.parse_expression_seq()? {
-                expr = UntypedExpr::Seq {
-                    first: Box::new(expr),
-                    then: Box::new(e),
-                }
+        } else if let Some(expression) = self.parse_expression()? {
+            let mut expression = expression;
+            while let Some((next, _)) = self.parse_expression_seq()? {
+                expression = expression.append_in_sequence(next);
             }
-            let end = expr.location().end;
-            Ok(Some((expr, end)))
+            let end = expression.location().end;
+            Ok(Some((expression, end)))
         } else {
             Ok(None)
         }
     }
 
-    // let, assert, or try
-    fn maybe_binding_start(&mut self) -> Option<(usize, AssignmentKind)> {
+    // try
+    fn maybe_try_start(&mut self) -> Option<usize> {
         match self.tok0 {
-            Some((start, Token::Let, _)) => {
-                let _ = self.next_tok();
-                Some((start, AssignmentKind::Let))
-            }
-            Some((start, Token::Assert, _)) => {
-                let _ = self.next_tok();
-                Some((start, AssignmentKind::Assert))
-            }
             Some((start, Token::Try, _)) => {
                 let _ = self.next_tok();
-                Some((start, AssignmentKind::Try))
+                Some(start)
             }
             _ => None,
         }

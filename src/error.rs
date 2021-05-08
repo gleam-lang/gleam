@@ -155,6 +155,10 @@ pub enum Error {
         reason: InvalidProjectNameReason,
     },
 
+    ProjectRootAlreadyExist {
+        path: String,
+    },
+
     UnableToFindProjectRoot {
         path: String,
     },
@@ -321,7 +325,13 @@ numbers and underscores.",
                 };
                 write_project(buf, diagnostic);
             }
-
+            Error::ProjectRootAlreadyExist { path } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Project folder already exists".to_string(),
+                    label: format!("Project folder root:\n\n  {}", path),
+                };
+                write_project(buf, diagnostic);
+            }
             Error::UnableToFindProjectRoot { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project root".to_string(),
@@ -1337,6 +1347,31 @@ and try again.
                     )
                     .unwrap();
                 }
+
+                TypeError::ReservedModuleName { name } => {
+                    let diagnostic = ProjectErrorDiagnostic {
+                        title: "Reserved module name".to_string(),
+                        label: format!(
+                            "The module name `{}` is reserved.
+Try a different name for this module.",
+                            name
+                        ),
+                    };
+                    write_project(buf, diagnostic);
+                }
+
+                TypeError::KeywordInModuleName { name, keyword } => {
+                    let diagnostic = ProjectErrorDiagnostic {
+                        title: "Invalid module name".to_string(),
+                        label: format!(
+                            "The module name `{}` contains the
+keyword `{}`, so importing it would be a syntax error.
+Try a different name for this module.",
+                            name, keyword
+                        ),
+                    };
+                    write_project(buf, diagnostic);
+                }
             },
 
             Error::Parse { path, src, error } => {
@@ -1375,8 +1410,8 @@ and try again.
                         "This paren cannot be understood here.",
                         vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()]
                     ),
-                    ParseErrorType::ExprTailBinding=> (
-                        "A variable binding cannot be the last expression.",
+                    ParseErrorType::ExprThenlessTry=> (
+                        "A `try` cannot be the last expression.",
                         vec!["Hint: Try using the value?".to_string()]
                     ),
                     ParseErrorType::IncorrectName => (

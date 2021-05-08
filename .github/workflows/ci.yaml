@@ -6,6 +6,8 @@ on:
       - main
 jobs:
   test:
+    env:
+      RUSTFLAGS: "-D warnings"
     name: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -126,13 +128,22 @@ jobs:
         sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
       working-directory: ./test
 
+    - name: test/language Erlang
+      run: make clean erlang
+      working-directory: ./test/language
+
+    # Disabling until JavaScript has enough support to run the tests
+    # - name: test/language JavaScript
+    #   run: make clean javascript
+    #   working-directory: ./test/language
+
     - name: test/build_with_gleam
       run: gleam eunit
       working-directory: ./test/build_with_gleam
 
-    - name: test/core_language
+    - name: test/rebar_project
       run: rebar3 eunit
-      working-directory: ./test/core_language
+      working-directory: ./test/rebar_project
 
     - name: test/compile_package0
       run: make

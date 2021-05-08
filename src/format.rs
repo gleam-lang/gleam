@@ -541,35 +541,36 @@ impl<'comments> Formatter<'comments> {
             .group()
     }
 
-    fn seq<'a>(&mut self, first: &'a UntypedExpr, then: &'a UntypedExpr) -> Document<'a> {
-        force_break()
-            .append({
-                let doc = self.expr(first).group();
-                let _ = self.pop_empty_lines(first.location().end);
-                doc
-            })
-            .append(if self.pop_empty_lines(then.start_byte_index()) {
-                lines(2)
-            } else {
-                line()
-            })
-            .append(self.expr(then))
+    fn sequence<'a>(&mut self, expressions: &'a [UntypedExpr]) -> Document<'a> {
+        let count = expressions.len();
+        let mut documents = Vec::with_capacity(count * 2);
+        documents.push(force_break());
+        for (i, expression) in expressions.into_iter().enumerate() {
+            let preceeding_newline = self.pop_empty_lines(expression.start_byte_index());
+            if i != 0 && preceeding_newline {
+                documents.push(lines(2));
+            } else if i != 0 {
+                documents.push(lines(1));
+            }
+            documents.push(self.expr(expression).group());
+        }
+        documents.to_doc()
     }
 
-    fn let_<'a>(
+    fn assignment<'a>(
         &mut self,
         pattern: &'a UntypedPattern,
         value: &'a UntypedExpr,
-        then: &'a UntypedExpr,
-        kind: AssignmentKind,
+        then: Option<&'a UntypedExpr>,
+        kind: Option<AssignmentKind>,
         annotation: &'a Option<TypeAst>,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
-            AssignmentKind::Let => "let ",
-            AssignmentKind::Try => "try ",
-            AssignmentKind::Assert => "assert ",
+            Some(AssignmentKind::Let) => "let ",
+            Some(AssignmentKind::Assert) => "assert ",
+            None => "try ",
         };
 
         let pattern = self.pattern(pattern);
@@ -578,17 +579,25 @@ impl<'comments> Formatter<'comments> {
             .as_ref()
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
-        force_break()
-            .append(keyword)
-            .append(pattern.append(annotation).group())
-            .append(" =")
-            .append(self.assigned_value(value))
-            .append(if self.pop_empty_lines(then.start_byte_index()) {
+        let doc = if then.is_some() {
+            force_break().append(keyword)
+        } else {
+            keyword.to_doc()
+        }
+        .append(pattern.append(annotation).group())
+        .append(" =")
+        .append(self.assigned_value(value));
+
+        if let Some(then) = then {
+            doc.append(if self.pop_empty_lines(then.start_byte_index()) {
                 lines(2)
             } else {
                 line()
             })
             .append(self.expr(then))
+        } else {
+            doc
+        }
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -612,7 +621,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-            UntypedExpr::Seq { first, then, .. } => self.seq(first, then),
+            UntypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -649,10 +658,17 @@ impl<'comments> Formatter<'comments> {
                 value,
                 pattern,
                 annotation,
-                then,
                 kind,
                 ..
-            } => self.let_(pattern, value, then, *kind, annotation),
+            } => self.assignment(pattern, value, None, Some(*kind), annotation),
+
+            UntypedExpr::Try {
+                value,
+                pattern,
+                annotation,
+                then,
+                ..
+            } => self.assignment(pattern, value, Some(then), None, annotation),
 
             UntypedExpr::Case {
                 subjects, clauses, ..
@@ -733,7 +749,7 @@ impl<'comments> Formatter<'comments> {
             matches!(
                 expr,
                 UntypedExpr::Fn { .. }
-                    | UntypedExpr::Seq { .. }
+                    | UntypedExpr::Sequence { .. }
                     | UntypedExpr::Assignment { .. }
                     | UntypedExpr::Call { .. }
                     | UntypedExpr::Case { .. }
@@ -1046,7 +1062,9 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => "{"
+            UntypedExpr::Sequence { .. }
+            | UntypedExpr::Assignment { .. }
+            | UntypedExpr::Try { .. } => "{"
                 .to_doc()
                 .append(force_break())
                 .append(line().append(self.expr(expr)).nest(INDENT))
@@ -1076,6 +1094,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
+        dbg!(tuple);
         match tuple {
             UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
             _ => self.expr(tuple),
@@ -1086,7 +1105,9 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Seq { .. } | UntypedExpr::Assignment { .. } => " {"
+            UntypedExpr::Try { .. }
+            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Assignment { .. } => " {"
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())

@@ -21,10 +21,9 @@ pub enum TypedExpr {
         value: String,
     },
 
-    Seq {
-        typ: Arc<Type>,
-        first: Box<Self>,
-        then: Box<Self>,
+    Sequence {
+        location: SrcSpan,
+        expressions: Vec<Self>,
     },
 
     Var {
@@ -76,8 +75,15 @@ pub enum TypedExpr {
         typ: Arc<Type>,
         value: Box<Self>,
         pattern: Pattern<PatternConstructor, Arc<Type>>,
-        then: Box<Self>,
         kind: AssignmentKind,
+    },
+
+    Try {
+        location: SrcSpan,
+        typ: Arc<Type>,
+        value: Box<Self>,
+        then: Box<Self>,
+        pattern: Pattern<PatternConstructor, Arc<Type>>,
     },
 
     Case {
@@ -152,7 +158,7 @@ impl TypedExpr {
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Assignment { then, .. } | Self::Seq { then, .. } => then.location(),
+            Self::Try { then, .. } => then.location(),
             Self::Fn { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
@@ -165,41 +171,19 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Sequence { location, .. }
+            | Self::BitString { location, .. }
+            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
-            | Self::BitString { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
         }
     }
 
-    pub fn try_binding_location(&self) -> SrcSpan {
-        match self {
-            Self::Assignment {
-                kind: AssignmentKind::Try,
-                location,
-                ..
-            }
-            | Self::Fn { location, .. }
-            | Self::Int { location, .. }
-            | Self::Var { location, .. }
-            | Self::Todo { location, .. }
-            | Self::Case { location, .. }
-            | Self::Call { location, .. }
-            | Self::Pipe { location, .. }
-            | Self::List { location, .. }
-            | Self::Float { location, .. }
-            | Self::BinOp { location, .. }
-            | Self::Tuple { location, .. }
-            | Self::String { location, .. }
-            | Self::TupleIndex { location, .. }
-            | Self::ModuleSelect { location, .. }
-            | Self::RecordAccess { location, .. }
-            | Self::BitString { location, .. }
-            | Self::RecordUpdate { location, .. } => *location,
-
-            Self::Assignment { then, .. } | Self::Seq { then, .. } => then.try_binding_location(),
-        }
+    /// Returns `true` if the typed_expr is [`Assignment`].
+    pub fn is_assignment(&self) -> bool {
+        matches!(self, Self::Assignment { .. })
     }
 }
 
@@ -213,9 +197,9 @@ impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
             Self::Var { constructor, .. } => constructor.type_.clone(),
+            Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
-            Self::Seq { then, .. } => then.type_(),
             Self::Todo { typ, .. } => typ.clone(),
             Self::Case { typ, .. } => typ.clone(),
             Self::List { typ, .. } => typ.clone(),
@@ -231,7 +215,23 @@ impl TypedExpr {
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
             Self::RecordUpdate { typ, .. } => typ.clone(),
+            Self::Sequence { expressions, .. } => expressions
+                .last()
+                .map(TypedExpr::type_)
+                .unwrap_or_else(type_::nil),
         }
+    }
+
+    pub fn is_literal(&self) -> bool {
+        matches!(
+            self,
+            Self::Int { .. }
+                | Self::List { .. }
+                | Self::Float { .. }
+                | Self::Tuple { .. }
+                | Self::String { .. }
+                | Self::BitString { .. }
+        )
     }
 }
 

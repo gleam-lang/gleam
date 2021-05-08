@@ -40,7 +40,7 @@ impl ProjectRoot {
         {
             let config = config::read_project_config(dir_entry.path())?;
             if config.name != root_name {
-                configs.insert(config.name.clone(), config);
+                let _ = configs.insert(config.name.clone(), config);
             }
         }
         Ok(configs)

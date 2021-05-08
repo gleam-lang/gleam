@@ -677,12 +677,19 @@ where
     document
 }
 
-fn seq<'a>(first: &'a TypedExpr, then: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    force_break()
-        .append(expr(first, env))
-        .append(",")
-        .append(line())
-        .append(expr(then, env))
+fn seq<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
+    let count = expressions.len();
+    let mut documents = Vec::with_capacity(count * 3);
+    documents.push(force_break());
+    for (i, expression) in expressions.into_iter().enumerate() {
+        documents.push(expr(expression, env));
+        if i + 1 < count {
+            // This isn't the final expression so add the delimeters
+            documents.push(",".to_doc());
+            documents.push(line());
+        }
+    }
+    documents.to_doc()
 }
 
 fn bin_op<'a>(
@@ -799,12 +806,7 @@ fn try_<'a>(
         .group()
 }
 
-fn assert<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
-    env: &mut Env<'a>,
-) -> Document<'a> {
+fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let var = "Gleam@Assert";
     let body = maybe_block_expr(value, env);
@@ -836,9 +838,7 @@ fn assert<'a>(
         " of",
         docvec![line(), clauses].nest(INDENT),
         line(),
-        "end,",
-        line(),
-        expr(then, env),
+        "end",
     ]
 }
 
@@ -856,19 +856,9 @@ fn assert_assign<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
     }
 }
 
-fn let_<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
-    env: &mut Env<'a>,
-) -> Document<'a> {
+fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env);
-    pattern(pat, env)
-        .append(" = ")
-        .append(body)
-        .append(",")
-        .append(line())
-        .append(expr(then, env))
+    pattern(pat, env).append(" = ").append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -1310,7 +1300,9 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
 ///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match &expression {
-        TypedExpr::Seq { .. } | TypedExpr::Assignment { .. } => begin_end(expr(expression, env)),
+        TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
+            begin_end(expr(expression, env))
+        }
         _ => expr(expression, env),
     }
 }
@@ -1374,7 +1366,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Seq { first, then, .. } => seq(first, then, env),
+        TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
         TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
@@ -1426,29 +1418,26 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
 
-        TypedExpr::Assignment {
+        TypedExpr::Try {
             value,
             pattern,
             then,
-            kind: AssignmentKind::Try,
             ..
         } => try_(value, pattern, then, env),
 
         TypedExpr::Assignment {
             value,
             pattern,
-            then,
             kind: AssignmentKind::Assert,
             ..
-        } => assert(value, pattern, then, env),
+        } => assert(value, pattern, env),
 
         TypedExpr::Assignment {
             value,
             pattern,
-            then,
             kind: AssignmentKind::Let,
             ..
-        } => let_(value, pattern, then, env),
+        } => let_(value, pattern, env),
 
         TypedExpr::Case {
             subjects, clauses, ..

@@ -280,18 +280,6 @@ pub enum PatternConstructor {
     Record { name: String },
 }
 
-pub trait Typer {
-    fn with_environment<T>(&mut self, f: impl FnOnce(&mut Environment<'_, '_>) -> T) -> T;
-
-    fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        self.with_environment(|e| e.new_unbound_var(level))
-    }
-
-    fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-        self.with_environment(|e| e.unify(t1, t2))
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
     Unbound { id: usize, level: usize },
@@ -351,6 +339,8 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let mut environment = Environment::new(uid, &module.name, modules, warnings);
     let module_name = &module.name;
+    validate_module_name(module_name)?;
+
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
     let mut hydrators = HashMap::with_capacity(module.statements.len());
@@ -451,6 +441,23 @@ pub fn infer_module(
             accessors,
         },
     })
+}
+
+fn validate_module_name(name: &[String]) -> Result<(), Error> {
+    if name == &["gleam"] {
+        return Err(Error::ReservedModuleName {
+            name: name.join("/"),
+        });
+    };
+    for segment in name {
+        if crate::parse::lexer::str_to_keyword(segment).is_some() {
+            return Err(Error::KeywordInModuleName {
+                name: name.join("/"),
+                keyword: segment.to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 fn assert_unique_value_name<'a>(

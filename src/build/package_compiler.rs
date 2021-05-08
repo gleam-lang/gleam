@@ -203,7 +203,7 @@ fn type_check(
 
         // Register the types from this module so they can be imported into
         // other modules.
-        module_types.insert(name.clone(), (origin, ast.type_info.clone()));
+        let _ = module_types.insert(name.clone(), (origin, ast.type_info.clone()));
 
         // Register the successfully type checked module data so that it can be
         // used for code generation
@@ -277,7 +277,7 @@ fn parse_sources(
         }
 
         // Register the parsed module
-        parsed_modules.insert(module.name.clone(), module);
+        let _ = parsed_modules.insert(module.name.clone(), module);
     }
     Ok(parsed_modules)
 }
@@ -292,7 +292,7 @@ fn module_name(package_path: &Path, full_module_path: &Path) -> String {
         .to_path_buf();
 
     // my/module
-    module_path.set_extension("");
+    let _ = module_path.set_extension("");
 
     // Stringify
     let name = module_path
