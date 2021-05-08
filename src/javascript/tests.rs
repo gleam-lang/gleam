@@ -293,13 +293,16 @@ fn go(x, foo) {
   let a = 2
   foo(a)
   let #(a, 3) = x
-  // let b = a
-  // foo(b)
-  // let c = {
-  //   let a = a
-  //   #(a, b)
-  // }
-  // let #(a, b) = c
+  let b = a
+  foo(b)
+  let c = {
+    let a = a
+    #(a, b)
+  }
+  foo(a)
+  // make sure arguments are counted in initial state
+  let x = c
+  x
 }
 "#,
         r#""use strict";
@@ -307,12 +310,20 @@ fn go(x, foo) {
 function go(x, foo) {
   let a = 1;
   foo(a);
-  let a$2 = 2;
-  foo(a$2);
+  let a$1 = 2;
+  foo(a$1);
   let gleam$tmp = x;
   if (!(gleam$tmp[1] === 3)) throw new Error("Bad match");
-  let a$3 = gleam$tmp[0];
+  let a$2 = gleam$tmp[0];
   
+  let b = a$2;
+  foo(b);
+  let c = (() => {
+    let a$3 = a$2;
+    return [a$3, b]; })();
+  foo(a$2);
+  let x$1 = c;
+  return x$1;
 }
 "#
     )
