@@ -137,12 +137,12 @@ fn access(cat: Cat) {
     cat.cuteness
 }
 
-// fn destructure(cat) {
-//   let Cat(x, y) = cat
-//   let Cat(name: x, ..) = cat
-//   let Cat(cuteness: 4, name: x) = cat
-//   x
-// }
+fn destructure(cat) {
+  let Cat(x, y) = cat
+  let Cat(name: x, ..) = cat
+  let Cat(cuteness: 4, name: x) = cat
+  x
+}
 "#,
         r#""use strict";
 
@@ -167,6 +167,23 @@ function update(cat) {
 
 function access(cat) {
   return cat.cuteness;
+}
+
+function destructure(cat) {
+  let gleam$tmp = cat;
+  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
+  let x = gleam$tmp[0];
+  let y = gleam$tmp[1];
+  ;
+  let gleam$tmp = cat;
+  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
+  let x = gleam$tmp["name"];
+  ;
+  let gleam$tmp = cat;
+  if (!(gleam$tmp["type"] === "Cat" && gleam$tmp["cuteness"] === 4)) throw new Error("Bad match")
+  let x = gleam$tmp["name"];
+  ;
+  return x;
 }
 "#
     );
