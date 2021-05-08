@@ -54,6 +54,11 @@ fn go() {
     build(Ip)
     Ip("5.6.7.8")
 }
+
+fn destructure(x) {
+  let Ip(raw) = x
+  raw
+}
 "#,
         r#""use strict";
 
@@ -66,6 +71,14 @@ function build(x) {
 function go() {
   build((var0) => { return { type: "Ip", 0: var0 }; });
   return { type: "Ip", 0: "5.6.7.8" };
+}
+
+function destructure(x) {
+  let gleam$tmp = x;
+  if (!(gleam$tmp["type"] === "Ip")) throw new Error("Bad match")
+  let raw = gleam$tmp[0];
+  ;
+  return raw;
 }
 "#
     );
@@ -121,6 +134,13 @@ fn update(cat) {
 fn access(cat: Cat) {
     cat.cuteness
 }
+
+// fn destructure(cat) {
+//   let Cat(x, y) = cat
+//   let Cat(name: x, ..) = cat
+//   let Cat(cuteness: 4, name: x) = cat
+//   x
+// }
 "#,
         r#""use strict";
 
