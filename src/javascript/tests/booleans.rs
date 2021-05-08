@@ -61,7 +61,6 @@ function go() {
 }
 
 #[test]
-#[ignore]
 fn matching_booleans() {
     assert_js!(
         r#"
@@ -75,14 +74,14 @@ fn go(x, y) {
 
 function go(x, y) {
   let gleam$tmp = x;
-  if (!(gleam$tmp === true)) throw new Error("Bad match")
-
+  if (!(gleam$tmp === true)) throw new Error("Bad match");
+  
   let gleam$tmp = x;
-  if (!(gleam$tmp === false)) throw new Error("Bad match")
-
-  let gleam$tmp = x;
-  if (!(gleam$tmp === undefined)) throw new Error("Bad match")
-
+  if (!(gleam$tmp === false)) throw new Error("Bad match");
+  
+  let gleam$tmp = y;
+  if (!(gleam$tmp === undefined)) throw new Error("Bad match");
+  
 }
 "#
     );
