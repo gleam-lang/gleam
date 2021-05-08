@@ -3,7 +3,10 @@ use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant, PatternConstructor},
+    type_::{
+        FieldMap, ModuleValueConstructor, PatternConstructor, ValueConstructor,
+        ValueConstructorVariant,
+    },
 };
 
 static RECORD_KEY: &str = "type";
@@ -468,34 +471,36 @@ fn traverse_pattern<'a>(
                 line()
             ]);
             Ok(())
-        },
+        }
         Pattern::Discard { .. } => Ok(()),
         Pattern::Assign { name, pattern, .. } => {
             assignments.push(docvec![
                 "let ",
                 name,
                 " = gleam$tmp",
-                concat(path.clone().into_iter().map(|i| i.clone().surround("[", "]"))),
+                concat(
+                    path.clone()
+                        .into_iter()
+                        .map(|i| i.clone().surround("[", "]"))
+                ),
                 ";",
                 line()
             ]);
             traverse_pattern(pattern, path, checks, assignments)
-        },
+        }
 
         Pattern::List { elements, tail, .. } => {
             let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
             let length_check = match tail {
                 Some(_) => "?.length !== undefined".to_doc(),
-                None => "?.length === 0".to_doc()
+                None => "?.length === 0".to_doc(),
             };
-            checks.push(
-                docvec![
-                    "gleam$tmp",
-                    path_string,
-                    Document::String("?.[1]".repeat(elements.len())),
-                    length_check,
-                ]
-            );
+            checks.push(docvec![
+                "gleam$tmp",
+                path_string,
+                Document::String("?.[1]".repeat(elements.len())),
+                length_check,
+            ]);
             let _ = elements
                 .into_iter()
                 .enumerate()
@@ -512,13 +517,13 @@ fn traverse_pattern<'a>(
                 .collect::<Result<Vec<()>, Error>>()?;
             if let Some(pattern) = tail {
                 let mut path = path.clone();
-                    for _ in 0..elements.len() {
-                        path.push("1".to_doc());
-                    }
+                for _ in 0..elements.len() {
+                    path.push("1".to_doc());
+                }
                 traverse_pattern(pattern, &mut path, checks, assignments)?
             }
             Ok(())
-        },
+        }
         Pattern::Tuple { elems, .. } => {
             // We don't check the length, because type system means it's a tuple
             let _ = elems
@@ -532,22 +537,31 @@ fn traverse_pattern<'a>(
                 })
                 .collect::<Result<Vec<()>, Error>>()?;
             Ok(())
-        },
-        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "True" => {
+        }
+        Pattern::Constructor {
+            constructor: PatternConstructor::Record { name },
+            ..
+        } if name == "True" => {
             checks.push(equality(&path, "true".to_doc()));
             Ok(())
-        },
-        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "False" => {
+        }
+        Pattern::Constructor {
+            constructor: PatternConstructor::Record { name },
+            ..
+        } if name == "False" => {
             checks.push(equality(&path, "false".to_doc()));
             Ok(())
-        },
-        Pattern::Constructor { constructor: PatternConstructor::Record{name}, .. } if name == "Nil" => {
+        }
+        Pattern::Constructor {
+            constructor: PatternConstructor::Record { name },
+            ..
+        } if name == "Nil" => {
             checks.push(equality(&path, "undefined".to_doc()));
             Ok(())
-        },
+        }
         Pattern::Constructor { .. } => {
             unimplemented!("Custom type matching not supported in JS backend")
-        },
+        }
 
         Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
             unimplemented!("Custom type matching not supported in JS backend")
