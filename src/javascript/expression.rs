@@ -16,6 +16,7 @@ pub struct Generator<'module> {
     module_name: &'module [String],
     line_numbers: &'module LineNumbers,
     function_name: &'module str,
+    current_scope_vars: im::HashMap<String, usize>,
     tail_position: bool,
     // We register whether float division is used within an expression so that
     // the module generator can output a suitable function if it is needed.
@@ -35,10 +36,33 @@ impl<'module> Generator<'module> {
             module_name,
             line_numbers,
             function_name,
+            current_scope_vars: Default::default(),
             tail_position: true,
             float_division_used,
             object_equality_used,
         }
+    }
+
+    fn local_var_name<'a>(&mut self, name: &'a str) -> Document<'a> {
+        match self.current_scope_vars.get(name) {
+            None => {
+                let _ = self.current_scope_vars.insert(name.to_string(), 0);
+                // let _ = self.erl_function_scope_vars.insert(name.to_string(), 0);
+                name.to_doc()
+            }
+            Some(0) => name.to_doc(),
+            Some(n) => {
+                // use std::fmt::Write;
+                // write!(name.to_string(), "@{}", n).gleam_expect("pushing number suffix to name");
+                Document::String(format!("{}${}", name, n))
+            }
+        }
+    }
+
+    fn next_local_var_name<'a>(&mut self, name: &'a str) -> Document<'a> {
+        let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
+        let _ = self.current_scope_vars.insert(name.to_string(), next);
+        self.local_var_name(name)
     }
 
     pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
@@ -136,8 +160,10 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         let tail = self.tail_position;
         self.tail_position = true;
+        let current_scope_vars = self.current_scope_vars.clone();
         let result = self.expression(expression);
         self.tail_position = tail;
+        self.current_scope_vars = current_scope_vars;
         Ok(docvec!(
             docvec!("(() => {", break_("", " "), result?)
                 .nest(INDENT)
@@ -191,7 +217,7 @@ impl<'module> Generator<'module> {
                     "}",
                 ))
             }
-            ValueConstructorVariant::LocalVariable => Ok(name.to_doc()),
+            ValueConstructorVariant::LocalVariable => Ok(self.local_var_name(name)),
             ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
             _ => unsupported("Referencing variables"),
         }
@@ -218,14 +244,16 @@ impl<'module> Generator<'module> {
     }
 
     fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+        // Render the value before printing patterns as patterns might update local variable state.
+        let value = self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?;
         match pattern {
             // Return early don't use gleam$temp if single assignment
             Pattern::Var { name, .. } => {
                 Ok(docvec![
                     "let ",
-                    name,
+                    self.next_local_var_name(name),
                     " = ",
-                    self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
+                    value,
                     ";"
                 ])
             }
@@ -235,7 +263,7 @@ impl<'module> Generator<'module> {
                 let mut path = vec![];
                 let mut assignments = vec![];
         
-                let () = traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
+                let () = self.traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
         
                 let check_line = match checks.is_empty() {
                     true => "".to_doc(),
@@ -257,7 +285,7 @@ impl<'module> Generator<'module> {
         
                 Ok(docvec![
                     "let gleam$tmp = ",
-                    self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
+                    value,
                     ";",
                     line(),
                     check_line,
@@ -265,6 +293,162 @@ impl<'module> Generator<'module> {
                 ])
             }
         }
+    }
+
+    fn traverse_pattern<'a>(
+        &mut self,
+        pattern: &'a TypedPattern,
+        path: &mut Vec<Document<'a>>,
+        checks: &mut Vec<Document<'a>>,
+        assignments: &mut Vec<Document<'a>>,
+    ) -> Result<(), Error> {
+        match pattern {
+            Pattern::String { value, .. } => {
+                checks.push(equality(&path, string(value)));
+                Ok(())
+            }
+            Pattern::Int { value, .. } => {
+                checks.push(equality(&path, int(value)));
+                Ok(())
+            }
+            Pattern::Float { value, .. } => {
+                checks.push(equality(&path, float(value)));
+                Ok(())
+            }
+            Pattern::Var { name, .. } => {
+                assignments.push(docvec![
+                    "let ",
+                    self.next_local_var_name(name),
+                    " = gleam$tmp",
+                    concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
+                    ";",
+                    line()
+                ]);
+                Ok(())
+            }
+            Pattern::Discard { .. } => Ok(()),
+            Pattern::Assign { name, pattern, .. } => {
+                assignments.push(docvec![
+                    "let ",
+                    self.next_local_var_name(name),
+                    " = gleam$tmp",
+                    concat(
+                        path.clone()
+                            .into_iter()
+                            .map(|i| i.clone().surround("[", "]"))
+                    ),
+                    ";",
+                    line()
+                ]);
+                self.traverse_pattern(pattern, path, checks, assignments)
+            }
+    
+            Pattern::List { elements, tail, .. } => {
+                let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
+                let length_check = match tail {
+                    Some(_) => "?.length !== undefined".to_doc(),
+                    None => "?.length === 0".to_doc(),
+                };
+                checks.push(docvec![
+                    "gleam$tmp",
+                    path_string,
+                    Document::String("?.[1]".repeat(elements.len())),
+                    length_check,
+                ]);
+                let _ = elements
+                    .into_iter()
+                    .enumerate()
+                    .map(|x| {
+                        let (index, pattern) = x;
+                        let mut path = path.clone();
+                        for _ in 0..index {
+                            path.push("1".to_doc());
+                        }
+                        path.push("0".to_doc());
+    
+                        self.traverse_pattern(pattern, &mut path, checks, assignments)
+                    })
+                    .collect::<Result<Vec<()>, Error>>()?;
+                if let Some(pattern) = tail {
+                    let mut path = path.clone();
+                    for _ in 0..elements.len() {
+                        path.push("1".to_doc());
+                    }
+                    self.traverse_pattern(pattern, &mut path, checks, assignments)?
+                }
+                Ok(())
+            }
+            Pattern::Tuple { elems, .. } => {
+                // We don't check the length, because type system means it's a tuple
+                let _ = elems
+                    .into_iter()
+                    .enumerate()
+                    .map(|x| {
+                        let (index, pattern) = x;
+                        let mut path = path.clone();
+                        path.push(Document::String(format!("{}", index)));
+                        self.traverse_pattern(pattern, &mut path, checks, assignments)
+                    })
+                    .collect::<Result<Vec<()>, Error>>()?;
+                Ok(())
+            }
+            Pattern::Constructor {
+                constructor: PatternConstructor::Record { name, .. },
+                ..
+            } if name == "True" => {
+                checks.push(equality(&path, "true".to_doc()));
+                Ok(())
+            }
+            Pattern::Constructor {
+                constructor: PatternConstructor::Record { name, .. },
+                ..
+            } if name == "False" => {
+                checks.push(equality(&path, "false".to_doc()));
+                Ok(())
+            }
+            Pattern::Constructor {
+                constructor: PatternConstructor::Record { name, .. },
+                ..
+            } if name == "Nil" => {
+                checks.push(equality(&path, "undefined".to_doc()));
+                Ok(())
+            }
+            Pattern::Constructor {
+                constructor: PatternConstructor::Record { name, field_map },
+                arguments,
+                ..
+            } => {
+                let mut type_path = path.clone();
+                type_path.push(string("type"));
+                checks.push(equality(&type_path, string(name)));
+    
+                let _ = arguments
+                    .iter()
+                    .enumerate()
+                    .map(|x| {
+                        let (index, arg) = x;
+                        let mut path = path.clone();
+                        match field_map {
+                            None => path.push(Document::String(format!("{}", index))),
+                            Some(FieldMap { fields, .. }) => {
+                                let label =
+                                    fields.iter().find_map(
+                                        |(key, &val)| if val == index { Some(key) } else { None },
+                                    );
+                                path.push(string(label.unwrap()))
+                            }
+                        }
+                        self.traverse_pattern(&arg.value, &mut path, checks, assignments)
+                    })
+                    .collect::<Result<Vec<()>, Error>>()?;
+                Ok(())
+            }
+    
+            Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
+                unimplemented!("Custom type matching not supported in JS backend")
+            }
+        }?;
+        Ok(())
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -469,160 +653,7 @@ impl<'module> Generator<'module> {
     }
 }
 
-fn traverse_pattern<'a>(
-    pattern: &'a TypedPattern,
-    path: &mut Vec<Document<'a>>,
-    checks: &mut Vec<Document<'a>>,
-    assignments: &mut Vec<Document<'a>>,
-) -> Result<(), Error> {
-    match pattern {
-        Pattern::String { value, .. } => {
-            checks.push(equality(&path, string(value)));
-            Ok(())
-        }
-        Pattern::Int { value, .. } => {
-            checks.push(equality(&path, int(value)));
-            Ok(())
-        }
-        Pattern::Float { value, .. } => {
-            checks.push(equality(&path, float(value)));
-            Ok(())
-        }
-        Pattern::Var { name, .. } => {
-            assignments.push(docvec![
-                "let ",
-                name,
-                " = gleam$tmp",
-                concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
-                ";",
-                line()
-            ]);
-            Ok(())
-        }
-        Pattern::Discard { .. } => Ok(()),
-        Pattern::Assign { name, pattern, .. } => {
-            assignments.push(docvec![
-                "let ",
-                name,
-                " = gleam$tmp",
-                concat(
-                    path.clone()
-                        .into_iter()
-                        .map(|i| i.clone().surround("[", "]"))
-                ),
-                ";",
-                line()
-            ]);
-            traverse_pattern(pattern, path, checks, assignments)
-        }
 
-        Pattern::List { elements, tail, .. } => {
-            let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
-            let length_check = match tail {
-                Some(_) => "?.length !== undefined".to_doc(),
-                None => "?.length === 0".to_doc(),
-            };
-            checks.push(docvec![
-                "gleam$tmp",
-                path_string,
-                Document::String("?.[1]".repeat(elements.len())),
-                length_check,
-            ]);
-            let _ = elements
-                .into_iter()
-                .enumerate()
-                .map(|x| {
-                    let (index, pattern) = x;
-                    let mut path = path.clone();
-                    for _ in 0..index {
-                        path.push("1".to_doc());
-                    }
-                    path.push("0".to_doc());
-
-                    traverse_pattern(pattern, &mut path, checks, assignments)
-                })
-                .collect::<Result<Vec<()>, Error>>()?;
-            if let Some(pattern) = tail {
-                let mut path = path.clone();
-                for _ in 0..elements.len() {
-                    path.push("1".to_doc());
-                }
-                traverse_pattern(pattern, &mut path, checks, assignments)?
-            }
-            Ok(())
-        }
-        Pattern::Tuple { elems, .. } => {
-            // We don't check the length, because type system means it's a tuple
-            let _ = elems
-                .into_iter()
-                .enumerate()
-                .map(|x| {
-                    let (index, pattern) = x;
-                    let mut path = path.clone();
-                    path.push(Document::String(format!("{}", index)));
-                    traverse_pattern(pattern, &mut path, checks, assignments)
-                })
-                .collect::<Result<Vec<()>, Error>>()?;
-            Ok(())
-        }
-        Pattern::Constructor {
-            constructor: PatternConstructor::Record { name, .. },
-            ..
-        } if name == "True" => {
-            checks.push(equality(&path, "true".to_doc()));
-            Ok(())
-        }
-        Pattern::Constructor {
-            constructor: PatternConstructor::Record { name, .. },
-            ..
-        } if name == "False" => {
-            checks.push(equality(&path, "false".to_doc()));
-            Ok(())
-        }
-        Pattern::Constructor {
-            constructor: PatternConstructor::Record { name, .. },
-            ..
-        } if name == "Nil" => {
-            checks.push(equality(&path, "undefined".to_doc()));
-            Ok(())
-        }
-        Pattern::Constructor {
-            constructor: PatternConstructor::Record { name, field_map },
-            arguments,
-            ..
-        } => {
-            let mut type_path = path.clone();
-            type_path.push(string("type"));
-            checks.push(equality(&type_path, string(name)));
-
-            let _ = arguments
-                .iter()
-                .enumerate()
-                .map(|x| {
-                    let (index, arg) = x;
-                    let mut path = path.clone();
-                    match field_map {
-                        None => path.push(Document::String(format!("{}", index))),
-                        Some(FieldMap { fields, .. }) => {
-                            let label =
-                                fields.iter().find_map(
-                                    |(key, &val)| if val == index { Some(key) } else { None },
-                                );
-                            path.push(string(label.unwrap()))
-                        }
-                    }
-                    traverse_pattern(&arg.value, &mut path, checks, assignments)
-                })
-                .collect::<Result<Vec<()>, Error>>()?;
-            Ok(())
-        }
-
-        Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-            unimplemented!("Custom type matching not supported in JS backend")
-        }
-    }?;
-    Ok(())
-}
 
 fn equality<'a>(path: &Vec<Document<'a>>, to_match: Document<'a>) -> Document<'a> {
     let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
