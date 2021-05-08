@@ -429,7 +429,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 let constructor_typ = cons.type_.clone();
                 let constructor = match cons.variant {
                     ValueConstructorVariant::Record { ref name, .. } => {
-                        PatternConstructor::Record { name: name.clone() }
+                        PatternConstructor::Record {
+                            name: name.clone(),
+                            field_map: cons.field_map().map(|f| f.clone()),
+                        }
                     }
                     ValueConstructorVariant::LocalVariable
                     | ValueConstructorVariant::ModuleConstant { .. }

@@ -539,42 +539,51 @@ fn traverse_pattern<'a>(
             Ok(())
         }
         Pattern::Constructor {
-            constructor: PatternConstructor::Record { name },
+            constructor: PatternConstructor::Record { name, .. },
             ..
         } if name == "True" => {
             checks.push(equality(&path, "true".to_doc()));
             Ok(())
         }
         Pattern::Constructor {
-            constructor: PatternConstructor::Record { name },
+            constructor: PatternConstructor::Record { name, .. },
             ..
         } if name == "False" => {
             checks.push(equality(&path, "false".to_doc()));
             Ok(())
         }
         Pattern::Constructor {
-            constructor: PatternConstructor::Record { name },
+            constructor: PatternConstructor::Record { name, .. },
             ..
         } if name == "Nil" => {
             checks.push(equality(&path, "undefined".to_doc()));
             Ok(())
         }
         Pattern::Constructor {
-            constructor: PatternConstructor::Record { name },
+            constructor: PatternConstructor::Record { name, field_map },
             arguments,
             ..
         } => {
             let mut type_path = path.clone();
             type_path.push(string("type"));
             checks.push(equality(&type_path, string(name)));
-            println!("{:?}", pattern);
+
             let _ = arguments
                 .iter()
                 .enumerate()
                 .map(|x| {
                     let (index, arg) = x;
                     let mut path = path.clone();
-                    path.push(Document::String(format!("{}", index)));
+                    match field_map {
+                        None => path.push(Document::String(format!("{}", index))),
+                        Some(FieldMap { fields, .. }) => {
+                            let label =
+                                fields.iter().find_map(
+                                    |(key, &val)| if val == index { Some(key) } else { None },
+                                );
+                            path.push(string(label.unwrap()))
+                        }
+                    }
                     traverse_pattern(&arg.value, &mut path, checks, assignments)
                 })
                 .collect::<Result<Vec<()>, Error>>()?;
