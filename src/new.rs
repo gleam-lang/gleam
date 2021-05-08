@@ -3,6 +3,7 @@ use crate::{
     NewOptions, Result,
 };
 use serde::{Deserialize, Serialize};
+use std::env;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -35,10 +36,7 @@ pub struct Creator {
 
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Self {
-        let root = match &options.project_root {
-            Some(root) => PathBuf::from(root),
-            None => PathBuf::from(&options.name),
-        };
+        let root = PathBuf::from(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
         let github = root.join(".github");
@@ -527,9 +525,23 @@ pub fn hello_world_test() {{
 }
 
 pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
-    validate_name(&options.name)?;
-    validate_root_folder(&options.name)?;
-    let creator = Creator::new(options, version);
+    let name: String = if options.name.is_empty() {
+        get_foldername(&options.project_root).gleam_expect("unable to get folder name")
+    } else {
+        options.name
+    };
+    validate_name(&name)?;
+    validate_root_folder(&name)?;
+    let creator = Creator::new(
+        NewOptions {
+            name,
+            description: options.description.clone(),
+            project_root: options.project_root.clone(),
+            template: options.template,
+        },
+        version,
+    );
+
     creator.run()?;
 
     let test_command = match &creator.options.template {
