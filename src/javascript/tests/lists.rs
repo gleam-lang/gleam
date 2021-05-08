@@ -105,10 +105,17 @@ function go(x, y) {
   let a = gleam$tmp[0];
   
   let gleam$tmp = x;
-  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[0] === 1 && gleam$tmp[1][0] === 2)) throw new Error("Bad match");
+  if (!(
+    gleam$tmp?.[1]?.[1]?.length === 0 &&
+    gleam$tmp[0] === 1 &&
+    gleam$tmp[1][0] === 2
+  )) throw new Error("Bad match");
   
   let gleam$tmp = y;
-  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[1][0][0] === 3)) throw new Error("Bad match");
+  if (!(
+    gleam$tmp?.[1]?.[1]?.length === 0 &&
+    gleam$tmp[1][0][0] === 3
+  )) throw new Error("Bad match");
   let b = gleam$tmp[1][0][1];
   
   let gleam$tmp = y;

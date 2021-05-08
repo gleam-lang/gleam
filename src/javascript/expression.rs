@@ -228,10 +228,15 @@ impl<'module> Generator<'module> {
             true => "".to_doc(),
             false => docvec![
                 "if (!(",
-                concat(Itertools::intersperse(checks.into_iter(), " && ".to_doc())),
+                docvec![
+                    break_("", ""),
+                    Itertools::intersperse(checks.into_iter(), break_(" &&", " && ")).collect::<Vec<_>>().to_doc(),
+                ].nest(INDENT),
+                break_("", ""),
+
                 ")) throw new Error(\"Bad match\");",
                 line()
-            ],
+            ].group(),
         };
 
         Ok(docvec![
