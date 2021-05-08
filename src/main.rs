@@ -173,7 +173,10 @@ enum Command {
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 pub struct NewOptions {
-    #[structopt(help = "name of the project")]
+    #[structopt(help = "location of the project root")]
+    pub project_root: String,
+
+    #[structopt(help = "name of the project", default_value = "")]
     pub name: String,
 
     #[structopt(
@@ -182,9 +185,6 @@ pub struct NewOptions {
         default_value = "A Gleam project"
     )]
     pub description: String,
-
-    #[structopt(help = "location of the project root")]
-    pub project_root: Option<String>,
 
     #[structopt(
         long = "template",
