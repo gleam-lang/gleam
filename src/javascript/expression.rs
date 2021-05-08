@@ -218,38 +218,53 @@ impl<'module> Generator<'module> {
     }
 
     fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
-        let mut checks = vec![];
-        let mut path = vec![];
-        let mut assignments = vec![];
+        match pattern {
+            // Return early don't use gleam$temp if single assignment
+            Pattern::Var { name, .. } => {
+                Ok(docvec![
+                    "let ",
+                    name,
+                    " = ",
+                    self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
+                    ";"
+                ])
+            }
+            _ => {
 
-        let () = traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
-
-        let check_line = match checks.is_empty() {
-            true => "".to_doc(),
-            false => docvec![
-                "if (!(",
-                docvec![
-                    break_("", ""),
-                    Itertools::intersperse(checks.into_iter(), break_(" &&", " && "))
-                        .collect::<Vec<_>>()
-                        .to_doc(),
-                ]
-                .nest(INDENT),
-                break_("", ""),
-                ")) throw new Error(\"Bad match\");",
-                line()
-            ]
-            .group(),
-        };
-
-        Ok(docvec![
-            "let gleam$tmp = ",
-            self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
-            ";",
-            line(),
-            check_line,
-            assignments
-        ])
+                let mut checks = vec![];
+                let mut path = vec![];
+                let mut assignments = vec![];
+        
+                let () = traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
+        
+                let check_line = match checks.is_empty() {
+                    true => "".to_doc(),
+                    false => docvec![
+                        "if (!(",
+                        docvec![
+                            break_("", ""),
+                            Itertools::intersperse(checks.into_iter(), break_(" &&", " && "))
+                                .collect::<Vec<_>>()
+                                .to_doc(),
+                        ]
+                        .nest(INDENT),
+                        break_("", ""),
+                        ")) throw new Error(\"Bad match\");",
+                        line()
+                    ]
+                    .group(),
+                };
+        
+                Ok(docvec![
+                    "let gleam$tmp = ",
+                    self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?,
+                    ";",
+                    line(),
+                    check_line,
+                    assignments
+                ])
+            }
+        }
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
