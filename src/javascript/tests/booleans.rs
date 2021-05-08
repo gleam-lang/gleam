@@ -60,6 +60,7 @@ function go() {
 }
 
 #[test]
+#[ignore]
 fn matching_booleans() {
     assert_js!(
         r#"

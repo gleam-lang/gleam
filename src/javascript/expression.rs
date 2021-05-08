@@ -559,8 +559,26 @@ fn traverse_pattern<'a>(
             checks.push(equality(&path, "undefined".to_doc()));
             Ok(())
         }
-        Pattern::Constructor { .. } => {
-            unimplemented!("Custom type matching not supported in JS backend")
+        Pattern::Constructor {
+            constructor: PatternConstructor::Record { name },
+            arguments,
+            ..
+        } => {
+            let mut type_path = path.clone();
+            type_path.push(string("type"));
+            checks.push(equality(&type_path, string(name)));
+            println!("{:?}", pattern);
+            let _ = arguments
+                .iter()
+                .enumerate()
+                .map(|x| {
+                    let (index, arg) = x;
+                    let mut path = path.clone();
+                    path.push(Document::String(format!("{}", index)));
+                    traverse_pattern(&arg.value, &mut path, checks, assignments)
+                })
+                .collect::<Result<Vec<()>, Error>>()?;
+            Ok(())
         }
 
         Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
