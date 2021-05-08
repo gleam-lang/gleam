@@ -83,8 +83,6 @@ const b = [1, [2, [3, []]]];
 }
 
 #[test]
-// TODO unignore
-#[ignore]
 fn list_destructuring() {
     assert_js!(
         r#"
@@ -100,23 +98,24 @@ fn go(x, y) {
 
 function go(x, y) {
   let gleam$tmp = x;
-  if (!(gleam$tmp?.length === 0)) throw new Error("Bad match")
+  if (!(gleam$tmp?.length === 0)) throw new Error("Bad match");
   
   let gleam$tmp = x;
-  if (!(gleam$tmp?.[1]?.length === 0)) throw new Error("Bad match")
+  if (!(gleam$tmp?.[1]?.length === 0)) throw new Error("Bad match");
   let a = gleam$tmp[0];
-
+  
   let gleam$tmp = x;
-  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[0] === 1 && gleam$tmp[1][0] === 2)) throw new Error("Bad match")
+  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[0] === 1 && gleam$tmp[1][0] === 2)) throw new Error("Bad match");
   
   let gleam$tmp = y;
-  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[1][0][0] === 3)) throw new Error("Bad match")
+  if (!(gleam$tmp?.[1]?.[1]?.length === 0 && gleam$tmp[1][0][0] === 3)) throw new Error("Bad match");
   let b = gleam$tmp[1][0][1];
-
+  
   let gleam$tmp = y;
-  if (!(gleam$tmp?.[1]?.length !== undefined)) throw new Error("Bad match")
+  if (!(gleam$tmp?.[1]?.length !== undefined)) throw new Error("Bad match");
   let head = gleam$tmp[0];
   let tail = gleam$tmp[1];
+  
 }
 "#
     );

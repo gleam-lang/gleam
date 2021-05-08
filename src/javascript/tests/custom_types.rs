@@ -74,9 +74,9 @@ function go() {
 
 function destructure(x) {
   let gleam$tmp = x;
-  if (!(gleam$tmp["type"] === "Ip")) throw new Error("Bad match")
+  if (!(gleam$tmp["type"] === "Ip")) throw new Error("Bad match");
   let raw = gleam$tmp[0];
-  ;
+  
   return raw;
 }
 "#
@@ -171,18 +171,18 @@ function access(cat) {
 
 function destructure(cat) {
   let gleam$tmp = cat;
-  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
+  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match");
   let x = gleam$tmp["name"];
   let y = gleam$tmp["cuteness"];
-  ;
+  
   let gleam$tmp = cat;
-  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
+  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match");
   let x = gleam$tmp["name"];
-  ;
+  
   let gleam$tmp = cat;
-  if (!(gleam$tmp["type"] === "Cat" && gleam$tmp["cuteness"] === 4)) throw new Error("Bad match")
+  if (!(gleam$tmp["type"] === "Cat" && gleam$tmp["cuteness"] === 4)) throw new Error("Bad match");
   let x = gleam$tmp["name"];
-  ;
+  
   return x;
 }
 "#
