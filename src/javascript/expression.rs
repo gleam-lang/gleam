@@ -230,13 +230,16 @@ impl<'module> Generator<'module> {
                 "if (!(",
                 docvec![
                     break_("", ""),
-                    Itertools::intersperse(checks.into_iter(), break_(" &&", " && ")).collect::<Vec<_>>().to_doc(),
-                ].nest(INDENT),
+                    Itertools::intersperse(checks.into_iter(), break_(" &&", " && "))
+                        .collect::<Vec<_>>()
+                        .to_doc(),
+                ]
+                .nest(INDENT),
                 break_("", ""),
-
                 ")) throw new Error(\"Bad match\");",
                 line()
-            ].group(),
+            ]
+            .group(),
         };
 
         Ok(docvec![
