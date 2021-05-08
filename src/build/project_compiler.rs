@@ -101,7 +101,7 @@ impl<'a> ProjectCompiler<'a> {
         )?;
         ErlangApp::new(&out_path).render(&FileSystemAccessor::new(), &config, &compiled.modules)?;
 
-        self.packages.insert(name, compiled);
+        let _ = self.packages.insert(name, compiled);
         Ok(())
     }
 }

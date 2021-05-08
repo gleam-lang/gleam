@@ -3177,3 +3177,28 @@ fn assert_as_expression() {
 "
     );
 }
+
+#[test]
+fn block_containing_try() {
+    assert_format!(
+        "pub fn main() {
+  let _ = {
+    try _ = 1
+    2
+  }
+}
+"
+    );
+
+    assert_format!(
+        "pub fn main() {
+  #(
+    {
+      try _ = 1
+      2
+    },
+  )
+}
+"
+    );
+}

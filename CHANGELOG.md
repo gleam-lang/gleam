@@ -7,6 +7,15 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 
+## v0.15.1 -2021-05-07
+
+- Fixed a bug where blocks that contained try expressions could be formatted
+  incorrectly.
+
+## v0.15.0 - 2021-05-06
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.15-released/)
+
 ## v0.15.0-rc1 - 2021-05-05
 
 - Syntax highlighting of Gleam code in generated HTML documentation has been

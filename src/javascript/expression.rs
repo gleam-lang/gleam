@@ -45,7 +45,15 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { .. } => unsupported("List"),
+            TypedExpr::List { elements, tail, .. } => {
+                let inner = tail
+                    .as_ref()
+                    .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
+                    .unwrap_or(Ok("[]".to_doc()))?;
+                let renderer =
+                    |element| self.not_in_tail_position(|gen| gen.wrap_expression(element));
+                wrap_list(elements, inner, renderer)
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -524,7 +532,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(&value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
-        Constant::List { .. } => unsupported("List as constant"),
+        Constant::List { elements, .. } => wrap_list(elements, "[]".to_doc(), constant_expression),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -563,6 +571,26 @@ fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Outpu
         "]"
     ]
     .group())
+}
+
+fn wrap_list<'a, E>(
+    elements: &'a [E],
+    inner: Document<'a>,
+    mut renderer: impl FnMut(&'a E) -> Output<'a>,
+) -> Output<'a> {
+    match elements.split_last() {
+        Some((element, rest)) => {
+            let inner = docvec![
+                "[",
+                docvec![renderer(element)?, break_(",", ", "), inner,]
+                    .nest(INDENT)
+                    .group(),
+                "]",
+            ];
+            wrap_list(rest, inner, renderer)
+        }
+        None => Ok(inner),
+    }
 }
 
 fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {

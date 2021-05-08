@@ -46,17 +46,25 @@ If you have a web browser, you can get a fully pre-configured Gleam development 
 
 ## Local development
 
-To run the compiler tests.
+To run the compiler tests. This will require a recent stable version of Rust
+to be installed.
 
 ```shell
 cargo test
+```
+
+To run the language integration tests. This will require a recent stable
+version of Rust, Erlang, and NodeJS to be installed.
+
+```shell
+cd test/language && make
 ```
 
 If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
 Run the command below from this directory.
 
 ```shell
-docker run -v $(pwd):/opt/app -it -w /opt/app rust:1.44.0 bash
+docker run -v $(pwd):/opt/app -it -w /opt/app rust:latest bash
 ```
 
 ## Rust development
