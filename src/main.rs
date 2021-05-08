@@ -176,7 +176,7 @@ pub struct NewOptions {
     #[structopt(help = "location of the project root")]
     pub project_root: String,
 
-    #[structopt(help = "name of the project", default_value = "")]
+    #[structopt(long, help = "name of the project", default_value = "")]
     pub name: String,
 
     #[structopt(
