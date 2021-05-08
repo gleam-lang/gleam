@@ -60,7 +60,6 @@ function go() {
     );
 }
 
-
 #[test]
 fn matching_booleans() {
     assert_js!(

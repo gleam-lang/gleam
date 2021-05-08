@@ -279,7 +279,6 @@ function go(x) {
     )
 }
 
-
 #[test]
 fn external_functions() {
     assert_js!(
