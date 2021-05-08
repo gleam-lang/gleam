@@ -478,7 +478,7 @@ fn traverse_pattern<'a>(
                 " = gleam$tmp",
                 concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
                 ";",
-                break_("", "")
+                line()
             ]);
             Ok(())
         }

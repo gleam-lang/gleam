@@ -161,7 +161,7 @@ fn go(x) {
 
 function go(x) {
   let gleam$tmp = x;
-  if (!(gleam$tmp === 4)) throw new Error("Bad match")
+  if (!(gleam$tmp === 4)) throw new Error("Bad match");
   
 }
 "#

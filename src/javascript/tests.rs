@@ -249,7 +249,7 @@ fn go(x) {
 
 function go(x) {
   let gleam$tmp = x;
-  if (!(gleam$tmp[0] === 1 && gleam$tmp[1] === 2)) throw new Error("Bad match")
+  if (!(gleam$tmp[0] === 1 && gleam$tmp[1] === 2)) throw new Error("Bad match");
   
 }
 "#
@@ -268,7 +268,7 @@ fn go(x) {
 
 function go(x) {
   let gleam$tmp = x;
-  if (!(gleam$tmp[1][2] === 2 && gleam$tmp[3] === 1)) throw new Error("Bad match")
+  if (!(gleam$tmp[1][2] === 2 && gleam$tmp[3] === 1)) throw new Error("Bad match");
   let a = gleam$tmp[0];
   let t = gleam$tmp[1];
   let b = gleam$tmp[1][0];
