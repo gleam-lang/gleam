@@ -68,13 +68,17 @@ go(A) ->
                 A
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,go,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"go"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -363,13 +367,17 @@ second(List) ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"second"/utf8>>,
-                           line => 1})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,second,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"second"/utf8>>,
+                                   line => 1});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 
 -spec tail(list(H)) -> list(H).
@@ -383,13 +391,17 @@ tail(List) ->
                 List
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"tail"/utf8>>,
-                           line => 2})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,tail,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"tail"/utf8>>,
+                                   line => 2});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -407,13 +419,17 @@ tail(List) ->
                 X
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"tail"/utf8>>,
-                           line => 1})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,tail,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"tail"/utf8>>,
+                                   line => 1});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -639,13 +655,17 @@ run() ->
                 A
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"run"/utf8>>,
-                           line => 1})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,run,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"run"/utf8>>,
+                                   line => 1});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -764,13 +784,17 @@ main(Args) ->
                 A
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end,
     A@1 = 2,
     A@1.
@@ -807,13 +831,17 @@ bitstring_discard(X) ->
                 false
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"bitstring_discard"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,bitstring_discard,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"bitstring_discard"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -843,13 +871,17 @@ bitstring_discard(X) ->
                 false
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"bitstring_discard"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,bitstring_discard,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"bitstring_discard"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -903,13 +935,17 @@ main(Args) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -939,13 +975,17 @@ main(Args) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -975,13 +1015,17 @@ main(Args) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1011,13 +1055,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1047,13 +1095,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1083,13 +1135,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1119,13 +1175,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1155,13 +1215,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1191,13 +1255,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1229,13 +1297,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1263,13 +1335,17 @@ main() ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1297,13 +1373,17 @@ main() ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1329,13 +1409,17 @@ main(X) ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1367,13 +1451,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1407,13 +1495,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1449,13 +1541,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1485,13 +1581,17 @@ main() ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1519,13 +1619,17 @@ main() ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 4})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 4});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1553,13 +1657,17 @@ main() ->
                 1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1605,13 +1713,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1643,13 +1755,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1679,13 +1795,17 @@ main() ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1718,13 +1838,17 @@ main(Args) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -1919,13 +2043,17 @@ main() ->
                 The_b
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 8})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 8});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2203,13 +2331,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2241,13 +2373,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2279,13 +2415,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2317,13 +2457,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2361,13 +2505,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 10})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 10});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2399,13 +2547,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2445,13 +2597,17 @@ test() ->
                 Duplicate_name@1
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"test"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,test,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"test"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2480,13 +2636,17 @@ test() ->
                 Duplicate_name
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"test"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,test,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"test"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2518,13 +2678,17 @@ test() ->
                 Duplicate_name
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"test"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,test,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"test"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2558,13 +2722,17 @@ main(Arg) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 6})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 6});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2794,13 +2962,17 @@ main() ->
                 <<"ko"/utf8>>
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 5})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 5});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#,
     );
@@ -2878,13 +3050,17 @@ a(X) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"a"/utf8>>,
-                           line => 2})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{the_app,a,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"the_app"/utf8>>,
+                                   function => <<"a"/utf8>>,
+                                   line => 2});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#
     );

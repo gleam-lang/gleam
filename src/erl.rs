@@ -1159,6 +1159,9 @@ fn case<'a>(
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
     };
     let case_error_name = "Gleam@Case";
+    let error_class = "error";
+    let error_reason = format!("{{case_clause,{}}}", case_error_name);
+    let stacktrace = "StackTrace";
     docvec![
         "try",
         docvec![
@@ -1170,31 +1173,55 @@ fn case<'a>(
             line(),
             "end",
         ]
-        .nest(INDENT)
-        .group(),
+        .nest(INDENT),
         line(),
         "catch",
         docvec![
             line(),
-            Document::String(format!("error:{{case_clause,{}}} ->", case_error_name)),
+            Document::String(format!(
+                "{}:{}:{} ->",
+                error_class, error_reason, stacktrace
+            )),
             docvec![
                 line(),
-                erlang_error(
-                    "'case'",
-                    "Case pattern match failed",
-                    *location,
-                    vec![("value", env.local_var_name(case_error_name))],
-                    env,
-                )
-                .nest(INDENT)
+                Document::String(format!("case {} of", stacktrace)),
+                docvec![
+                    line(),
+                    Document::String(format!(
+                        "[{{{},{},_,_}}|_] ->",
+                        env.module.join("@"),
+                        env.function
+                    )),
+                    docvec![
+                        line(),
+                        erlang_error(
+                            "'case'",
+                            "Case pattern match failed",
+                            *location,
+                            vec![("value", env.local_var_name(case_error_name))],
+                            env,
+                        )
+                        .nest(INDENT),
+                        ";"
+                    ]
+                    .nest(INDENT),
+                    line(),
+                    Document::String(format!(
+                        "_ -> erlang:raise({},{},{})",
+                        error_class, error_reason, stacktrace
+                    )),
+                ]
+                .nest(INDENT),
+                line(),
+                "end"
             ]
             .nest(INDENT)
         ]
-        .nest(INDENT)
-        .group(),
+        .nest(INDENT),
         line(),
         "end"
     ]
+    .group()
 }
 
 fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {

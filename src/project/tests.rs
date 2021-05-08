@@ -1310,13 +1310,17 @@ main(Arg1, Arg2, Arg3) ->
                 0
         end
     catch
-        error:{case_clause,Gleam@Case} ->
-            erlang:error(#{gleam_error => 'case',
-                           message => <<"Case pattern match failed"/utf8>>,
-                           value => Gleam@Case,
-                           module => <<"two"/utf8>>,
-                           function => <<"main"/utf8>>,
-                           line => 3})
+        error:{case_clause,Gleam@Case}:StackTrace ->
+            case StackTrace of
+                [{two,main,_,_}|_] ->
+                    erlang:error(#{gleam_error => 'case',
+                                   message => <<"Case pattern match failed"/utf8>>,
+                                   value => Gleam@Case,
+                                   module => <<"two"/utf8>>,
+                                   function => <<"main"/utf8>>,
+                                   line => 3});
+                _ -> erlang:raise(error,{case_clause,Gleam@Case},StackTrace)
+            end
     end.
 "#
                     .to_string(),
