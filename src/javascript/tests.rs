@@ -257,7 +257,7 @@ function go(x) {
 }
 
 #[test]
-fn binding() {
+fn nested_binding() {
     assert_js!(
         r#"
 fn go(x) {
@@ -276,6 +276,42 @@ function go(x) {
   let t = gleam$tmp[1];
   let b = gleam$tmp[1][0];
   let c = gleam$tmp[1][1];
+  
+}
+"#
+    )
+}
+
+#[test]
+fn variable_renaming() {
+    assert_js!(
+        r#"
+
+fn go(x, foo) {
+  let a = 1
+  foo(a)
+  let a = 2
+  foo(a)
+  let #(a, 3) = x
+  // let b = a
+  // foo(b)
+  // let c = {
+  //   let a = a
+  //   #(a, b)
+  // }
+  // let #(a, b) = c
+}
+"#,
+        r#""use strict";
+
+function go(x, foo) {
+  let a = 1;
+  foo(a);
+  let a$2 = 2;
+  foo(a$2);
+  let gleam$tmp = x;
+  if (!(gleam$tmp[1] === 3)) throw new Error("Bad match");
+  let a$3 = gleam$tmp[0];
   
 }
 "#
