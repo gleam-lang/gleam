@@ -277,7 +277,10 @@ pub struct Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
-    Record { name: String },
+    Record {
+        name: String,
+        field_map: Option<FieldMap>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

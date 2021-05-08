@@ -166,8 +166,8 @@ function access(cat) {
 function destructure(cat) {
   let gleam$tmp = cat;
   if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
-  let x = gleam$tmp[0];
-  let y = gleam$tmp[1];
+  let x = gleam$tmp["name"];
+  let y = gleam$tmp["cuteness"];
   ;
   let gleam$tmp = cat;
   if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match")
