@@ -204,7 +204,11 @@ impl<'module> Generator<'module> {
         for (i, expression) in expressions.iter().enumerate() {
             if i + 1 < count {
                 documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
-                documents.push(";".to_doc());
+                match expression {
+                    // Assignment generates multiple lines of JS and so handles it's own ;
+                    TypedExpr::Assignment { .. } => (),
+                    _ => documents.push(";".to_doc()),
+                }
                 documents.push(line());
             } else {
                 documents.push(self.expression(expression)?);
@@ -225,7 +229,7 @@ impl<'module> Generator<'module> {
             false => docvec![
                 "if (!(",
                 concat(Itertools::intersperse(checks.into_iter(), " && ".to_doc())),
-                ")) throw new Error(\"Bad match\")",
+                ")) throw new Error(\"Bad match\");",
                 line()
             ],
         };
@@ -468,7 +472,7 @@ fn traverse_pattern<'a>(
                 " = gleam$tmp",
                 concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
                 ";",
-                line()
+                break_("", "")
             ]);
             Ok(())
         }
