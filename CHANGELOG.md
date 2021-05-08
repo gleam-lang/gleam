@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Glean `new` command requires a root folder param, project name is
+  optional and if not provided the project name will be inferred from 
+  the folder name.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
