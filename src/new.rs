@@ -613,3 +613,21 @@ fn validate_name(name: &str) -> Result<(), Error> {
         Ok(())
     }
 }
+
+fn get_foldername(path: &str) -> Option<String> {
+    match path {
+        "." => Some(
+            env::current_dir()
+                .gleam_expect("invalid folder")
+                .file_name()
+                .and_then(|x| x.to_str())
+                .map(ToString::to_string)?,
+        ),
+        _ => Some(
+            Path::new(path)
+                .file_name()
+                .and_then(|x| x.to_str())
+                .map(ToString::to_string)?,
+        ),
+    }
+}
