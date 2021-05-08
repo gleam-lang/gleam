@@ -1586,7 +1586,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let (tag, field_map) = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, field_map, .. } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
+                    ValueConstructorVariant::Record {
+                        name, field_map, ..
+                    } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1620,7 +1622,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let (tag, field_map) = match &constructor.variant {
-                    ValueConstructorVariant::Record { name, field_map, .. } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
+                    ValueConstructorVariant::Record {
+                        name, field_map, ..
+                    } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1706,7 +1710,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     args,
                     typ: return_type,
                     tag,
-                    field_map
+                    field_map,
                 })
             }
         }?;

@@ -1,5 +1,5 @@
 use super::*;
-use crate::type_::{HasType, FieldMap};
+use crate::type_::{FieldMap, HasType};
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
