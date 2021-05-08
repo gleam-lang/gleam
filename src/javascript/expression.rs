@@ -245,26 +245,24 @@ impl<'module> Generator<'module> {
 
     fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         // Render the value before printing patterns as patterns might update local variable state.
-        let value = self.not_in_tail_position(|gen| { gen.wrap_expression(value) })?;
+        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
         match pattern {
             // Return early don't use gleam$temp if single assignment
-            Pattern::Var { name, .. } => {
-                Ok(docvec![
-                    "let ",
-                    self.next_local_var_name(name),
-                    " = ",
-                    value,
-                    ";"
-                ])
-            }
+            Pattern::Var { name, .. } => Ok(docvec![
+                "let ",
+                self.next_local_var_name(name),
+                " = ",
+                value,
+                ";"
+            ]),
             _ => {
-
                 let mut checks = vec![];
                 let mut path = vec![];
                 let mut assignments = vec![];
-        
-                let () = self.traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
-        
+
+                let () =
+                    self.traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
+
                 let check_line = match checks.is_empty() {
                     true => "".to_doc(),
                     false => docvec![
@@ -282,7 +280,7 @@ impl<'module> Generator<'module> {
                     ]
                     .group(),
                 };
-        
+
                 Ok(docvec![
                     "let gleam$tmp = ",
                     value,
@@ -342,7 +340,7 @@ impl<'module> Generator<'module> {
                 ]);
                 self.traverse_pattern(pattern, path, checks, assignments)
             }
-    
+
             Pattern::List { elements, tail, .. } => {
                 let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
                 let length_check = match tail {
@@ -365,7 +363,7 @@ impl<'module> Generator<'module> {
                             path.push("1".to_doc());
                         }
                         path.push("0".to_doc());
-    
+
                         self.traverse_pattern(pattern, &mut path, checks, assignments)
                     })
                     .collect::<Result<Vec<()>, Error>>()?;
@@ -421,7 +419,7 @@ impl<'module> Generator<'module> {
                 let mut type_path = path.clone();
                 type_path.push(string("type"));
                 checks.push(equality(&type_path, string(name)));
-    
+
                 let _ = arguments
                     .iter()
                     .enumerate()
@@ -431,10 +429,13 @@ impl<'module> Generator<'module> {
                         match field_map {
                             None => path.push(Document::String(format!("{}", index))),
                             Some(FieldMap { fields, .. }) => {
-                                let label =
-                                    fields.iter().find_map(
-                                        |(key, &val)| if val == index { Some(key) } else { None },
-                                    );
+                                let label = fields.iter().find_map(|(key, &val)| {
+                                    if val == index {
+                                        Some(key)
+                                    } else {
+                                        None
+                                    }
+                                });
                                 path.push(string(label.unwrap()))
                             }
                         }
@@ -443,7 +444,7 @@ impl<'module> Generator<'module> {
                     .collect::<Result<Vec<()>, Error>>()?;
                 Ok(())
             }
-    
+
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
                 unimplemented!("Custom type matching not supported in JS backend")
             }
@@ -652,8 +653,6 @@ impl<'module> Generator<'module> {
         }
     }
 }
-
-
 
 fn equality<'a>(path: &Vec<Document<'a>>, to_match: Document<'a>) -> Document<'a> {
     let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
