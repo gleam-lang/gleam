@@ -488,7 +488,43 @@ fn traverse_pattern<'a>(
             traverse_pattern(pattern, path, checks, assignments)
         },
 
-        Pattern::List { .. } => unimplemented!("List matching not supported in JS backend"),
+        Pattern::List { elements, tail, .. } => {
+            let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
+            let length_check = match tail {
+                Some(_) => "?.length !== undefined".to_doc(),
+                None => "?.length === 0".to_doc()
+            };
+            checks.push(
+                docvec![
+                    "gleam$tmp",
+                    path_string,
+                    Document::String("?.[1]".repeat(elements.len())),
+                    length_check,
+                ]
+            );
+            let _ = elements
+                .into_iter()
+                .enumerate()
+                .map(|x| {
+                    let (index, pattern) = x;
+                    let mut path = path.clone();
+                    for _ in 0..index {
+                        path.push("1".to_doc());
+                    }
+                    path.push("0".to_doc());
+
+                    traverse_pattern(pattern, &mut path, checks, assignments)
+                })
+                .collect::<Result<Vec<()>, Error>>()?;
+            if let Some(pattern) = tail {
+                let mut path = path.clone();
+                    for _ in 0..elements.len() {
+                        path.push("1".to_doc());
+                    }
+                traverse_pattern(pattern, &mut path, checks, assignments)?
+            }
+            Ok(())
+        },
         Pattern::Tuple { elems, .. } => {
             // We don't check the length, because type system means it's a tuple
             let _ = elems
@@ -499,7 +535,6 @@ fn traverse_pattern<'a>(
                     let mut path = path.clone();
                     path.push(Document::String(format!("{}", index)));
                     traverse_pattern(pattern, &mut path, checks, assignments)
-                    // unimplemented!("Tuple matching not supported in JS backend")
                 })
                 .collect::<Result<Vec<()>, Error>>()?;
             Ok(())
