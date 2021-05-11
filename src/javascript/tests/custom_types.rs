@@ -174,14 +174,13 @@ type Cat{
   Cat(name: String, cuteness: Int)
 }
 
-
 fn go(cat) {
   let Cat(x, y) = cat
   let Cat(name: x, ..) = cat
   let Cat(cuteness: 4, name: x) = cat
   x
 }
-  
+
 "#,
         r#""use strict";
 
