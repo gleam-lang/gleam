@@ -75,11 +75,11 @@ function go(x, y) {
   let gleam$tmp = x;
   if (!(gleam$tmp === true)) throw new Error("Bad match");
   
-  let gleam$tmp = x;
-  if (!(gleam$tmp === false)) throw new Error("Bad match");
+  let gleam$tmp$1 = x;
+  if (!(gleam$tmp$1 === false)) throw new Error("Bad match");
   
-  let gleam$tmp = y;
-  if (!(gleam$tmp === undefined)) throw new Error("Bad match");
+  let gleam$tmp$2 = y;
+  if (!(gleam$tmp$2 === undefined)) throw new Error("Bad match");
   
 }
 "#

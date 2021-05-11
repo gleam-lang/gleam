@@ -100,28 +100,28 @@ function go(x, y) {
   let gleam$tmp = x;
   if (!(gleam$tmp?.length === 0)) throw new Error("Bad match");
   
-  let gleam$tmp = x;
-  if (!(gleam$tmp?.[1]?.length === 0)) throw new Error("Bad match");
-  let a = gleam$tmp[0];
+  let gleam$tmp$1 = x;
+  if (!(gleam$tmp$1?.[1]?.length === 0)) throw new Error("Bad match");
+  let a = gleam$tmp$1[0];
   
-  let gleam$tmp = x;
+  let gleam$tmp$2 = x;
   if (!(
-    gleam$tmp?.[1]?.[1]?.length === 0 &&
-    gleam$tmp[0] === 1 &&
-    gleam$tmp[1][0] === 2
+    gleam$tmp$2?.[1]?.[1]?.length === 0 &&
+    gleam$tmp$2[0] === 1 &&
+    gleam$tmp$2[1][0] === 2
   )) throw new Error("Bad match");
   
-  let gleam$tmp = y;
+  let gleam$tmp$3 = y;
   if (!(
-    gleam$tmp?.[1]?.[1]?.length === 0 &&
-    gleam$tmp[1][0][0] === 3
+    gleam$tmp$3?.[1]?.[1]?.length === 0 &&
+    gleam$tmp$3[1][0][0] === 3
   )) throw new Error("Bad match");
-  let b = gleam$tmp[1][0][1];
+  let b = gleam$tmp$3[1][0][1];
   
-  let gleam$tmp = y;
-  if (!(gleam$tmp?.[1]?.length !== undefined)) throw new Error("Bad match");
-  let head = gleam$tmp[0];
-  let tail = gleam$tmp[1];
+  let gleam$tmp$4 = y;
+  if (!(gleam$tmp$4?.[1]?.length !== undefined)) throw new Error("Bad match");
+  let head = gleam$tmp$4[0];
+  let tail = gleam$tmp$4[1];
   
 }
 "#

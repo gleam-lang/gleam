@@ -10,6 +10,7 @@ use crate::{
 };
 
 static RECORD_KEY: &str = "type";
+static TMP_VAR: &str = "gleam$tmp";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -260,8 +261,15 @@ impl<'module> Generator<'module> {
                 let mut path = vec![];
                 let mut assignments = vec![];
 
-                let () =
-                    self.traverse_pattern(pattern, &mut path, &mut checks, &mut assignments)?;
+                let tmp_var = self.next_local_var_name(TMP_VAR);
+
+                let () = self.traverse_pattern(
+                    pattern,
+                    tmp_var.clone(),
+                    &mut path,
+                    &mut checks,
+                    &mut assignments,
+                )?;
 
                 let check_line = match checks.is_empty() {
                     true => "".to_doc(),
@@ -282,7 +290,9 @@ impl<'module> Generator<'module> {
                 };
 
                 Ok(docvec![
-                    "let gleam$tmp = ",
+                    "let ",
+                    tmp_var,
+                    " = ",
                     value,
                     ";",
                     line(),
@@ -296,28 +306,30 @@ impl<'module> Generator<'module> {
     fn traverse_pattern<'a>(
         &mut self,
         pattern: &'a TypedPattern,
+        tmp_var: Document<'a>,
         path: &mut Vec<Document<'a>>,
         checks: &mut Vec<Document<'a>>,
         assignments: &mut Vec<Document<'a>>,
     ) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                checks.push(equality(&path, string(value)));
+                checks.push(equality(tmp_var, &path, string(value)));
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                checks.push(equality(&path, int(value)));
+                checks.push(equality(tmp_var, &path, int(value)));
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                checks.push(equality(&path, float(value)));
+                checks.push(equality(tmp_var, &path, float(value)));
                 Ok(())
             }
             Pattern::Var { name, .. } => {
                 assignments.push(docvec![
                     "let ",
                     self.next_local_var_name(name),
-                    " = gleam$tmp",
+                    " = ",
+                    tmp_var,
                     concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
                     ";",
                     line()
@@ -329,7 +341,8 @@ impl<'module> Generator<'module> {
                 assignments.push(docvec![
                     "let ",
                     self.next_local_var_name(name),
-                    " = gleam$tmp",
+                    " = ",
+                    tmp_var.clone(),
                     concat(
                         path.clone()
                             .into_iter()
@@ -338,7 +351,7 @@ impl<'module> Generator<'module> {
                     ";",
                     line()
                 ]);
-                self.traverse_pattern(pattern, path, checks, assignments)
+                self.traverse_pattern(pattern, tmp_var, path, checks, assignments)
             }
 
             Pattern::List { elements, tail, .. } => {
@@ -348,7 +361,7 @@ impl<'module> Generator<'module> {
                     None => "?.length === 0".to_doc(),
                 };
                 checks.push(docvec![
-                    "gleam$tmp",
+                    tmp_var.clone(),
                     path_string,
                     Document::String("?.[1]".repeat(elements.len())),
                     length_check,
@@ -364,7 +377,13 @@ impl<'module> Generator<'module> {
                         }
                         path.push("0".to_doc());
 
-                        self.traverse_pattern(pattern, &mut path, checks, assignments)
+                        self.traverse_pattern(
+                            pattern,
+                            tmp_var.clone(),
+                            &mut path,
+                            checks,
+                            assignments,
+                        )
                     })
                     .collect::<Result<Vec<()>, Error>>()?;
                 if let Some(pattern) = tail {
@@ -372,7 +391,7 @@ impl<'module> Generator<'module> {
                     for _ in 0..elements.len() {
                         path.push("1".to_doc());
                     }
-                    self.traverse_pattern(pattern, &mut path, checks, assignments)?
+                    self.traverse_pattern(pattern, tmp_var, &mut path, checks, assignments)?
                 }
                 Ok(())
             }
@@ -385,7 +404,13 @@ impl<'module> Generator<'module> {
                         let (index, pattern) = x;
                         let mut path = path.clone();
                         path.push(Document::String(format!("{}", index)));
-                        self.traverse_pattern(pattern, &mut path, checks, assignments)
+                        self.traverse_pattern(
+                            pattern,
+                            tmp_var.clone(),
+                            &mut path,
+                            checks,
+                            assignments,
+                        )
                     })
                     .collect::<Result<Vec<()>, Error>>()?;
                 Ok(())
@@ -394,21 +419,21 @@ impl<'module> Generator<'module> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "True" => {
-                checks.push(equality(&path, "true".to_doc()));
+                checks.push(equality(tmp_var, &path, "true".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "False" => {
-                checks.push(equality(&path, "false".to_doc()));
+                checks.push(equality(tmp_var, &path, "false".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "Nil" => {
-                checks.push(equality(&path, "undefined".to_doc()));
+                checks.push(equality(tmp_var, &path, "undefined".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
@@ -418,7 +443,7 @@ impl<'module> Generator<'module> {
             } => {
                 let mut type_path = path.clone();
                 type_path.push(string("type"));
-                checks.push(equality(&type_path, string(name)));
+                checks.push(equality(tmp_var.clone(), &type_path, string(name)));
 
                 let _ = arguments
                     .iter()
@@ -439,7 +464,13 @@ impl<'module> Generator<'module> {
                                 path.push(string(label.unwrap()))
                             }
                         }
-                        self.traverse_pattern(&arg.value, &mut path, checks, assignments)
+                        self.traverse_pattern(
+                            &arg.value,
+                            tmp_var.clone(),
+                            &mut path,
+                            checks,
+                            assignments,
+                        )
                     })
                     .collect::<Result<Vec<()>, Error>>()?;
                 Ok(())
@@ -654,9 +685,13 @@ impl<'module> Generator<'module> {
     }
 }
 
-fn equality<'a>(path: &Vec<Document<'a>>, to_match: Document<'a>) -> Document<'a> {
+fn equality<'a>(
+    tmp_var: Document<'a>,
+    path: &Vec<Document<'a>>,
+    to_match: Document<'a>,
+) -> Document<'a> {
     let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
-    docvec!["gleam$tmp", path_string, " === ", to_match]
+    docvec![tmp_var, path_string, " === ", to_match]
 }
 
 fn int(value: &str) -> Document<'_> {

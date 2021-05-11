@@ -175,16 +175,16 @@ function destructure(cat) {
   let x = gleam$tmp["name"];
   let y = gleam$tmp["cuteness"];
   
-  let gleam$tmp = cat;
-  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match");
-  let x$1 = gleam$tmp["name"];
+  let gleam$tmp$1 = cat;
+  if (!(gleam$tmp$1["type"] === "Cat")) throw new Error("Bad match");
+  let x$1 = gleam$tmp$1["name"];
   
-  let gleam$tmp = cat;
+  let gleam$tmp$2 = cat;
   if (!(
-    gleam$tmp["type"] === "Cat" &&
-    gleam$tmp["cuteness"] === 4
+    gleam$tmp$2["type"] === "Cat" &&
+    gleam$tmp$2["cuteness"] === 4
   )) throw new Error("Bad match");
-  let x$2 = gleam$tmp["name"];
+  let x$2 = gleam$tmp$2["name"];
   
   return x$2;
 }
