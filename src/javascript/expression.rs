@@ -48,13 +48,10 @@ impl<'module> Generator<'module> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
-                // let _ = self.erl_function_scope_vars.insert(name.to_string(), 0);
                 name.to_doc()
             }
             Some(0) => name.to_doc(),
             Some(n) => {
-                // use std::fmt::Write;
-                // write!(name.to_string(), "@{}", n).gleam_expect("pushing number suffix to name");
                 Document::String(format!("{}${}", name, n))
             }
         }
@@ -477,7 +474,7 @@ impl<'module> Generator<'module> {
             }
 
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-                unimplemented!("Custom type matching not supported in JS backend")
+                unimplemented!("BitString matching not supported in JS backend")
             }
         }?;
         Ok(())
