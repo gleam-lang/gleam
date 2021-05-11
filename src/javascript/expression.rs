@@ -279,21 +279,22 @@ impl<'module> Generator<'module> {
                         .nest(INDENT),
                         break_("", ""),
                         ")) throw new Error(\"Bad match\");",
-                        line()
                     ]
                     .group(),
                 };
 
-                Ok(docvec![
-                    "let ",
-                    tmp_var,
-                    " = ",
-                    value,
-                    ";",
-                    line(),
-                    check_line,
-                    assignments
-                ])
+                let assign_line = docvec!["let ", tmp_var, " = ", value, ";"];
+                use std::iter::once;
+                let lines = once(assign_line).chain(once(check_line)).chain(assignments);
+                // let expressions generate multiple lines of JS.
+                // Add a clear line after the generated JS unless it is tail position.
+                Ok(
+                    concat(Itertools::intersperse(lines, line())).append(if self.tail_position {
+                        "".to_doc()
+                    } else {
+                        line()
+                    }),
+                )
             }
         }
     }
@@ -327,7 +328,6 @@ impl<'module> Generator<'module> {
                     tmp_var,
                     concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
                     ";",
-                    line()
                 ]);
                 Ok(())
             }
@@ -344,7 +344,6 @@ impl<'module> Generator<'module> {
                             .map(|i| i.clone().surround("[", "]"))
                     ),
                     ";",
-                    line()
                 ]);
                 self.traverse_pattern(pattern, tmp_var, path, checks, assignments)
             }
