@@ -392,22 +392,11 @@ impl<'module> Generator<'module> {
             }
             Pattern::Tuple { elems, .. } => {
                 // We don't check the length, because type system means it's a tuple
-                let _ = elems
-                    .into_iter()
-                    .enumerate()
-                    .map(|x| {
-                        let (index, pattern) = x;
-                        let mut path = path.clone();
-                        path.push(Document::String(format!("{}", index)));
-                        self.traverse_pattern(
-                            pattern,
-                            tmp_var.clone(),
-                            &mut path,
-                            checks,
-                            assignments,
-                        )
-                    })
-                    .collect::<Result<Vec<()>, Error>>()?;
+                for (index, pattern) in elems.into_iter().enumerate() {
+                    let mut path = path.clone();
+                    path.push(Document::String(format!("{}", index)));
+                    self.traverse_pattern(pattern, tmp_var.clone(), &mut path, checks, assignments)?
+                }
                 Ok(())
             }
             Pattern::Constructor {
