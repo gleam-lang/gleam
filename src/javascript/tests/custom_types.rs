@@ -136,13 +136,6 @@ fn update(cat) {
 fn access(cat: Cat) {
     cat.cuteness
 }
-
-fn destructure(cat) {
-  let Cat(x, y) = cat
-  let Cat(name: x, ..) = cat
-  let Cat(cuteness: 4, name: x) = cat
-  x
-}
 "#,
         r#""use strict";
 
@@ -168,8 +161,30 @@ function update(cat) {
 function access(cat) {
   return cat.cuteness;
 }
+"#
+    );
+}
 
-function destructure(cat) {
+#[test]
+fn destructure_custom_type_with_named_fields() {
+    assert_js!(
+        r#"
+type Cat{
+  Cat(name: String, cuteness: Int)
+}
+
+
+fn go(cat) {
+  let Cat(x, y) = cat
+  let Cat(name: x, ..) = cat
+  let Cat(cuteness: 4, name: x) = cat
+  x
+}
+  
+"#,
+        r#""use strict";
+
+function go(cat) {
   let gleam$tmp = cat;
   if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match");
   let x = gleam$tmp["name"];
@@ -189,5 +204,5 @@ function destructure(cat) {
   return x$2;
 }
 "#
-    );
+    )
 }
