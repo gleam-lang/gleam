@@ -1,5 +1,5 @@
 use super::*;
-use crate::type_::HasType;
+use crate::type_::{FieldMap, HasType};
 
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
@@ -39,6 +39,7 @@ pub enum Constant<T, RecordTag> {
         args: Vec<CallArg<Self>>,
         tag: RecordTag,
         typ: T,
+        field_map: Option<FieldMap>,
     },
 
     BitString {

@@ -1960,6 +1960,7 @@ where
                 args,
                 tag: (),
                 typ: (),
+                field_map: None,
             }))
         } else {
             Ok(Some(Constant::Record {
@@ -1969,6 +1970,7 @@ where
                 args: vec![],
                 tag: (),
                 typ: (),
+                field_map: None,
             }))
         }
     }

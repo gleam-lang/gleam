@@ -205,6 +205,7 @@ impl ModuleDecoder {
             args,
             tag,
             typ: type_,
+            field_map: None,
         })
     }
 
