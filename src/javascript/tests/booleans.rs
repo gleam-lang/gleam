@@ -80,7 +80,6 @@ function go(x, y) {
   
   let gleam$tmp$2 = y;
   if (!(gleam$tmp$2 === undefined)) throw new Error("Bad match");
-  
 }
 "#
     );

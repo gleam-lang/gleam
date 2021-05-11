@@ -122,7 +122,6 @@ function go(x, y) {
   if (!(gleam$tmp$4?.[1]?.length !== undefined)) throw new Error("Bad match");
   let head = gleam$tmp$4[0];
   let tail = gleam$tmp$4[1];
-  
 }
 "#
     );
