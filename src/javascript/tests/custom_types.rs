@@ -107,6 +107,9 @@ type Cat{
     Cat(name: String, cuteness: Int)
 }
 
+const felix = Cat("Felix", 12)
+const tom = Cat(cuteness: 1, name: "Tom")
+
 fn go() {
     Cat("Nubi", 1)
     Cat(2, name: "Nubi")
@@ -123,6 +126,10 @@ fn access(cat: Cat) {
 }
 "#,
         r#""use strict";
+
+const felix = { type: "Cat", name: "Felix", cuteness: 12 };
+
+const tom = { type: "Cat", name: "Tom", cuteness: 1 };
 
 function go() {
   { type: "Cat", name: "Nubi", cuteness: 1 };

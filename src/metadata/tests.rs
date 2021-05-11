@@ -476,6 +476,7 @@ fn constant_record() {
         ],
         tag: "thetag".to_string(),
         typ: type_::int(),
+        field_map: None,
     });
 
     assert_eq!(roundtrip(&module), module);
