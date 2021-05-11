@@ -490,6 +490,21 @@ fn assert_unique_type_name<'a>(
     }
 }
 
+fn assert_unique_const_name<'a>(
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    name: &'a str,
+    location: &'a SrcSpan,
+) -> Result<(), Error> {
+    match names.insert(name, location) {
+        Some(previous_location) => Err(Error::DuplicateConstName {
+            name: name.to_string(),
+            previous_location: *previous_location,
+            location: *location,
+        }),
+        None => Ok(()),
+    }
+}
+
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &[String],
@@ -720,6 +735,10 @@ fn register_values<'a>(
                     constructor.location,
                 );
             }
+        }
+
+        Statement::ModuleConstant { name, location, .. } => {
+            assert_unique_const_name(names, name, location)?;
         }
 
         _ => (),
