@@ -111,6 +111,12 @@ pub enum Error {
         name: String,
     },
 
+    DuplicateConstName {
+        location: SrcSpan,
+        previous_location: SrcSpan,
+        name: String,
+    },
+
     DuplicateArgument {
         location: SrcSpan,
         label: String,
