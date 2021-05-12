@@ -21,6 +21,7 @@ pub enum Warning {
 
 impl Warning {
     pub fn to_diagnostic(&self) -> (Diagnostic, String) {
+        #[allow(clippy::unwrap_used)]
         match self {
             Self::Type { path, src, warning } => match warning {
                 type_::Warning::Todo { location, typ } => {
@@ -188,6 +189,7 @@ your program.",
     }
 
     pub fn pretty(&self, buffer: &mut Buffer) {
+        #[allow(clippy::expect_used)]
         buffer
             .write_all(b"\n")
             .expect("error pretty buffer write space before");
@@ -202,6 +204,7 @@ your program.",
         let buffer_writer = cli::stderr_buffer_writer();
         let mut buffer = buffer_writer.buffer();
         self.pretty(&mut buffer);
+        #[allow(clippy::unwrap_used)]
         buffer_writer.print(&buffer).unwrap();
     }
 }

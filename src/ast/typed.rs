@@ -1,5 +1,8 @@
 use super::*;
-use crate::type_::{HasType, Type};
+use crate::{
+    type_::{HasType, Type},
+    GleamExpect,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
@@ -147,7 +150,7 @@ impl TypedExpr {
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
         lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").unwrap();
+            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").gleam_expect("NON_ZERO regex");
         }
 
         matches!(
@@ -181,7 +184,7 @@ impl TypedExpr {
         }
     }
 
-    /// Returns `true` if the typed_expr is [`Assignment`].
+    /// Returns `true` if the typed expr is [`Assignment`].
     pub fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment { .. })
     }

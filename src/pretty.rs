@@ -11,6 +11,7 @@
 //!
 //! - `ForceBreak` from Prettier.
 //! - `FlexBreak` from Elixir.
+#![allow(clippy::wrong_self_convention)]
 
 #[cfg(test)]
 mod tests;

@@ -49,7 +49,7 @@ impl<'module> Generator<'module> {
                 let inner = tail
                     .as_ref()
                     .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
-                    .unwrap_or(Ok("[]".to_doc()))?;
+                    .unwrap_or_else(|| Ok("[]".to_doc()))?;
                 let renderer =
                     |element| self.not_in_tail_position(|gen| gen.wrap_expression(element));
                 wrap_list(elements, inner, renderer)
@@ -176,7 +176,7 @@ impl<'module> Generator<'module> {
 
                 let body = docvec![
                     "return ",
-                    construct_record(name, *arity, field_map, vars.clone().into_iter()),
+                    construct_record(name, *arity, field_map, vars.clone()),
                     ";"
                 ];
 
@@ -317,7 +317,7 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        match name {
+        Ok(match name {
             BinOp::And => self.print_bin_op(left, right, "&&"),
             BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
@@ -325,32 +325,26 @@ impl<'module> Generator<'module> {
             BinOp::Eq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                Ok(docvec!(
-                    "$deepEqual",
-                    wrap_args(once(left).chain(once(right)))
-                ))
+                docvec!("$deepEqual", wrap_args(once(left).chain(once(right))))
             }
             BinOp::NotEq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                Ok(docvec!(
-                    "!$deepEqual",
-                    wrap_args(once(left).chain(once(right)))
-                ))
+                docvec!("!$deepEqual", wrap_args(once(left).chain(once(right))))
             }
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
-            BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
+            BinOp::DivInt => self.print_bin_op(left, right, "/").append(" | 0"),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
             BinOp::DivFloat => {
                 use std::iter::once;
                 *self.float_division_used = true;
-                Ok(docvec!("$divide", wrap_args(once(left).chain(once(right)))))
+                docvec!("$divide", wrap_args(once(left).chain(once(right))))
             }
-        }
+        })
     }
 
     fn print_bin_op<'a>(
@@ -358,12 +352,11 @@ impl<'module> Generator<'module> {
         left: Document<'a>,
         right: Document<'a>,
         op: &'a str,
-    ) -> Output<'a> {
-        Ok(left
-            .append(" ")
+    ) -> Document<'a> {
+        left.append(" ")
             .append(op.to_doc())
             .append(" ")
-            .append(right))
+            .append(right)
     }
 
     fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
@@ -403,10 +396,11 @@ impl<'module> Generator<'module> {
             )
         ]
     }
+
     fn module_select<'a>(
         &mut self,
-        module_name: &'a Vec<String>,
-        label: &'a String,
+        module_name: &'a [String],
+        label: &'a str,
         constructor: &'a ModuleValueConstructor,
     ) -> Output<'a> {
         match constructor {
@@ -425,12 +419,12 @@ fn int(value: &str) -> Document<'_> {
 fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
-pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
+pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
-        Constant::String { value, .. } => Ok(string(&value.as_str())),
-        Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(&e))),
+        Constant::String { value, .. } => Ok(string(value.as_str())),
+        Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(e))),
         Constant::List { elements, .. } => wrap_list(elements, "[]".to_doc(), constant_expression),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
@@ -452,7 +446,7 @@ pub fn constant_expression<'a>(expression: &'a TypedConstant) -> Output<'a> {
             Ok(construct_record(
                 tag,
                 args.len(),
-                &field_map,
+                field_map,
                 field_values?.into_iter(),
             ))
         }

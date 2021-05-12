@@ -146,13 +146,13 @@ impl<'a> std::fmt::Write for WrappedWriter<'a> {
     }
 }
 
-pub fn delete_dir(dir: &PathBuf) -> Result<(), Error> {
+pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::trace!("Deleting directory {:?}", dir);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
             kind: FileKind::Directory,
-            path: dir.clone(),
+            path: dir.to_path_buf(),
             err: Some(e.to_string()),
         })?;
     } else {
@@ -269,8 +269,8 @@ pub fn gleam_files(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn gleam_files_excluding_gitignore(dir: &PathBuf) -> impl Iterator<Item = PathBuf> + '_ {
-    ignore::WalkBuilder::new(&dir)
+pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
         .build()

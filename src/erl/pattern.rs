@@ -20,7 +20,7 @@ pub(super) fn to_doc<'a>(
                 .append(env.next_local_var_name(name))
         }
 
-        Pattern::List { elements, tail, .. } => pattern_list(elements, tail.as_ref(), vars, env),
+        Pattern::List { elements, tail, .. } => pattern_list(elements, tail.as_deref(), vars, env),
 
         Pattern::Discard { .. } => "_".to_doc(),
 
@@ -100,12 +100,12 @@ fn pattern_segment<'a>(
 
 fn pattern_list<'a>(
     elements: &'a [TypedPattern],
-    tail: Option<&'a Box<TypedPattern>>,
+    tail: Option<&'a TypedPattern>,
     vars: &mut Vec<&'a str>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let elements = concat(Itertools::intersperse(
-        elements.into_iter().map(|e| to_doc(e, vars, env)),
+        elements.iter().map(|e| to_doc(e, vars, env)),
         break_(",", ", "),
     ));
     let tail = tail.map(|tail| pattern(tail, env));
