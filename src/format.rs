@@ -8,7 +8,7 @@ use crate::{
     parse::extra::Comment,
     pretty::*,
     type_::{self, Type},
-    Error, Result,
+    Error, GleamExpect, Result,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, sync::Arc};
@@ -102,7 +102,10 @@ impl<'comments> Formatter<'comments> {
             end = i + 1;
         }
 
-        self.empty_lines = &self.empty_lines[end..];
+        self.empty_lines = self
+            .empty_lines
+            .get(end..)
+            .gleam_expect("Pop empty lines slicing");
         end != 0
     }
 
@@ -545,7 +548,7 @@ impl<'comments> Formatter<'comments> {
         let count = expressions.len();
         let mut documents = Vec::with_capacity(count * 2);
         documents.push(force_break());
-        for (i, expression) in expressions.into_iter().enumerate() {
+        for (i, expression) in expressions.iter().enumerate() {
             let preceeding_newline = self.pop_empty_lines(expression.start_byte_index());
             if i != 0 && preceeding_newline {
                 documents.push(lines(2));
@@ -633,7 +636,7 @@ impl<'comments> Formatter<'comments> {
                 is_capture: true,
                 body,
                 ..
-            } => self.fn_capture(&body),
+            } => self.fn_capture(body),
 
             UntypedExpr::Fn {
                 return_annotation,
@@ -642,7 +645,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.expr_fn(args, return_annotation.as_ref(), body),
 
-            UntypedExpr::List { elements, tail, .. } => self.list(elements, tail.as_ref()),
+            UntypedExpr::List { elements, tail, .. } => self.list(elements, tail.as_deref()),
 
             UntypedExpr::Call {
                 fun,
@@ -1184,7 +1187,7 @@ impl<'comments> Formatter<'comments> {
     fn list<'a>(
         &mut self,
         elements: &'a [UntypedExpr],
-        tail: Option<&'a Box<UntypedExpr>>,
+        tail: Option<&'a UntypedExpr>,
     ) -> Document<'a> {
         let comma: fn() -> Document<'a> =
             if tail.is_none() && elements.iter().all(|e| e.is_simple_constant()) {
@@ -1575,6 +1578,13 @@ pub fn comments_before<'a>(
         .iter()
         .position(|c| c.start > limit)
         .unwrap_or(comments.len());
-    let popped = comments[0..end].iter().map(|c| c.content);
-    (popped, &comments[end..])
+    let popped = comments
+        .get(0..end)
+        .gleam_expect("Comments before slicing popped")
+        .iter()
+        .map(|c| c.content);
+    (
+        popped,
+        comments.get(end..).gleam_expect("Comments before slicing"),
+    )
 }

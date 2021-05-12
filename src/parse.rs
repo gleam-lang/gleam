@@ -286,7 +286,7 @@ where
                         &mut opstack,
                         &mut estack,
                         &do_reduce_expression,
-                    )?;
+                    );
                 } else {
                     // Is not Op
                     self.tok0 = Some((op_s, t, op_e));
@@ -297,7 +297,12 @@ where
             }
         }
 
-        handle_op(None, &mut opstack, &mut estack, &do_reduce_expression)
+        Ok(handle_op(
+            None,
+            &mut opstack,
+            &mut estack,
+            &do_reduce_expression,
+        ))
     }
 
     // examples:
@@ -603,7 +608,7 @@ where
         };
         let annotation = self.parse_type_annotation(&Token::Colon, false)?;
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
-        let value = self.parse_expression()?.ok_or_else(|| ParseError {
+        let value = self.parse_expression()?.ok_or(ParseError {
             error: ParseErrorType::ExpectedValue,
             location: SrcSpan {
                 start: eq_s,
@@ -928,7 +933,7 @@ where
                             &mut opstack,
                             &mut estack,
                             &do_reduce_clause_guard,
-                        )?;
+                        );
                     } else {
                         // Is not Op
                         self.tok0 = Some((op_s, t, op_e));
@@ -937,7 +942,12 @@ where
                 }
             }
 
-            handle_op(None, &mut opstack, &mut estack, &do_reduce_clause_guard)
+            Ok(handle_op(
+                None,
+                &mut opstack,
+                &mut estack,
+                &do_reduce_clause_guard,
+            ))
         } else {
             Ok(None)
         }
@@ -2385,19 +2395,19 @@ fn handle_op<A>(
     opstack: &mut Vec<(Spanned, u8)>,
     estack: &mut Vec<A>,
     do_reduce: &impl Fn(Spanned, &mut Vec<A>),
-) -> Result<Option<A>, ParseError> {
+) -> Option<A> {
     let mut next_op = next_op;
     loop {
         match (opstack.pop(), next_op.take()) {
             (None, None) => {
                 if let Some(fin) = estack.pop() {
                     if estack.is_empty() {
-                        return Ok(Some(fin));
+                        return Some(fin);
                     } else {
                         fatal_compiler_bug("Expression not fully reduced.")
                     }
                 } else {
-                    return Ok(None);
+                    return None;
                 }
             }
 
@@ -2424,7 +2434,7 @@ fn handle_op<A>(
             }
         }
     }
-    Ok(None)
+    None
 }
 
 fn precedence(t: &Token) -> Option<u8> {

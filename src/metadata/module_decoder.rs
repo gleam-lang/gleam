@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(clippy::unnecessary_wraps)] // Needed for macro
 
 use itertools::Itertools;
 
@@ -144,9 +144,9 @@ impl ModuleDecoder {
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
         use constant::Which;
         match reader.which()? {
-            Which::Int(reader) => self.constant_int(reader?),
-            Which::Float(reader) => self.constant_float(reader?),
-            Which::String(reader) => self.constant_string(reader?),
+            Which::Int(reader) => Ok(self.constant_int(reader?)),
+            Which::Float(reader) => Ok(self.constant_float(reader?)),
+            Which::String(reader) => Ok(self.constant_string(reader?)),
             Which::Tuple(reader) => self.constant_tuple(&reader?),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
@@ -154,25 +154,25 @@ impl ModuleDecoder {
         }
     }
 
-    fn constant_int(&self, value: &str) -> Result<TypedConstant> {
-        Ok(Constant::Int {
+    fn constant_int(&self, value: &str) -> TypedConstant {
+        Constant::Int {
             location: Default::default(),
             value: value.to_string(),
-        })
+        }
     }
 
-    fn constant_float(&self, value: &str) -> Result<TypedConstant> {
-        Ok(Constant::Float {
+    fn constant_float(&self, value: &str) -> TypedConstant {
+        Constant::Float {
             location: Default::default(),
             value: value.to_string(),
-        })
+        }
     }
 
-    fn constant_string(&self, value: &str) -> Result<TypedConstant> {
-        Ok(Constant::String {
+    fn constant_string(&self, value: &str) -> TypedConstant {
+        Constant::String {
             location: Default::default(),
             value: value.to_string(),
-        })
+        }
     }
 
     fn constant_tuple(

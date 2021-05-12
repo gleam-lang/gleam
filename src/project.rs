@@ -80,7 +80,9 @@ fn comments_before<'a>(
     let mut comments = vec![];
     while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
         if start <= &byte {
-            let comment = comment_spans.next().unwrap();
+            let comment = comment_spans
+                .next()
+                .gleam_expect("Comment before accessing next span");
             comments.push(Comment::from((comment, src)).content)
         } else {
             break;

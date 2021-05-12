@@ -50,6 +50,13 @@ jobs:
         command: build
         args: --release --target ${{ matrix.target }}
 
+    - name: Run linter
+      uses: actions-rs/cargo@v1
+      with:
+        use-cross: ${{ matrix.use-cross }}
+        command: clippy
+        args: --workspace --target ${{ matrix.target }} -- -D warnings
+
     - name: Run tests
       uses: actions-rs/cargo@v1
       with:

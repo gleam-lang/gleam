@@ -1,12 +1,3 @@
-#![deny(
-    unsafe_code,
-    unused_results,
-    unstable_features,
-    clippy::expect_used,
-    clippy::unwrap_used,
-    clippy::await_holding_lock,
-    clippy::if_let_mutex
-)]
 #![warn(
     clippy::all,
     clippy::doc_markdown,
@@ -40,13 +31,21 @@
     nonstandard_style,
     unused_import_braces,
     unused_qualifications,
-    // Safety
-    clippy::unimplemented,
-    clippy::ok_expect,
-    clippy::integer_division,
-    clippy::indexing_slicing,
-    clippy::mem_forget
 )]
+#![deny(
+    clippy::await_holding_lock,
+    clippy::expect_used,
+    clippy::if_let_mutex,
+    clippy::indexing_slicing,
+    clippy::mem_forget,
+    clippy::ok_expect,
+    clippy::unimplemented,
+    clippy::unwrap_used,
+    unsafe_code,
+    unstable_features,
+    unused_results
+)]
+#![allow(clippy::match_single_binding)]
 
 #[macro_use]
 mod pretty;

@@ -28,6 +28,12 @@ pub struct ScopeResetData {
     created_type_variable_ids: im::HashSet<usize>,
 }
 
+impl Default for Hydrator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Hydrator {
     pub fn new() -> Self {
         Self {

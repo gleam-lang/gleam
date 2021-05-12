@@ -112,7 +112,7 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 pub fn build_prelude(uid: &mut usize) -> Module {
     let mut new_generic_var = || {
         let t = generic_var(*uid);
-        *uid = *uid + 1;
+        *uid += 1;
         t
     };
 

@@ -122,15 +122,17 @@ impl<'a> Generator<'a> {
                 module,
                 fun,
                 ..
-            } => Some(self.external_function(*public, name, arguments, module, fun)),
+            } => Some(Ok(
+                self.external_function(*public, name, arguments, module, fun)
+            )),
         }
     }
 
     fn import(
         &mut self,
-        module: &'a Vec<String>,
+        module: &'a [String],
         as_name: &'a Option<String>,
-        unqualified: &'a Vec<UnqualifiedImport>,
+        unqualified: &'a [UnqualifiedImport],
     ) -> Document<'a> {
         let module_name = as_name
             .as_ref()
@@ -155,7 +157,7 @@ impl<'a> Generator<'a> {
         match unqualified.len() {
             0 => import_line,
             _ => {
-                let matches = unqualified.into_iter().map(|i| match &i.as_name {
+                let matches = unqualified.iter().map(|i| match &i.as_name {
                     Some(aliased_name) => (i.name.to_doc(), Some(aliased_name.to_doc())),
                     None => (i.name.to_doc(), None),
                 });
@@ -197,7 +199,7 @@ impl<'a> Generator<'a> {
     ) -> Output<'a> {
         let mut generator = expression::Generator::new(
             &self.module.name,
-            &self.line_numbers,
+            self.line_numbers,
             name,
             &mut self.float_division_used,
             &mut self.object_equality_used,
@@ -227,7 +229,7 @@ impl<'a> Generator<'a> {
         arguments: &'a [ExternalFnArg<T>],
         module: &'a str,
         fun: &'a str,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         let head = if public {
             "export function "
         } else {
@@ -242,7 +244,7 @@ impl<'a> Generator<'a> {
             }
         }));
         let body = docvec!["return ", module, ".", fun, arguments.clone()];
-        Ok(docvec![
+        docvec![
             head,
             name,
             arguments,
@@ -250,7 +252,7 @@ impl<'a> Generator<'a> {
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ])
+        ]
     }
 }
 
@@ -276,7 +278,7 @@ fn unsupported<M: ToString, T>(label: M) -> Result<T, Error> {
     })
 }
 
-fn fun_args<'a>(args: &'a [TypedArg]) -> Document<'a> {
+fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => name.to_doc(),

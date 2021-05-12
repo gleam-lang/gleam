@@ -198,7 +198,7 @@ fn type_check(
         // Register any warnings emitted as type warnings
         let type_warnings = type_warnings
             .into_iter()
-            .map(|w| w.to_warning(path.clone(), code.clone()));
+            .map(|w| w.into_warning(path.clone(), code.clone()));
         warnings.extend(type_warnings);
 
         // Register the types from this module so they can be imported into
