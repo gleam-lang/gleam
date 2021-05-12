@@ -10,7 +10,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
-pub const CAPTURE_VARIABLE: &str = "gleam_capture_variable";
+pub const CAPTURE_VARIABLE: &str = "_gleam_capture";
 
 pub trait HasLocation {
     fn location(&self) -> SrcSpan;
