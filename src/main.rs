@@ -45,7 +45,7 @@
     unstable_features,
     unused_results
 )]
-#![allow(clippy::match_single_binding)]
+#![allow(clippy::match_single_binding, clippy::inconsistent_struct_constructor)]
 
 #[macro_use]
 mod pretty;

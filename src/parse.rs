@@ -2441,10 +2441,7 @@ fn precedence(t: &Token) -> Option<u8> {
     if t == &Token::Pipe {
         return Some(5);
     };
-    match tok_to_binop(t) {
-        Some(b) => Some(b.precedence()),
-        None => None,
-    }
+    tok_to_binop(t).map(|op| op.precedence())
 }
 
 fn tok_to_binop(t: &Token) -> Option<BinOp> {

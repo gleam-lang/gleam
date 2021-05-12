@@ -92,3 +92,10 @@ Your PR may fail on CI due to clippy errors. Clippy can be run locally like so:
 cargo clean -p gleam
 cargo clippy
 ```
+
+If you have lint errors on CI but not locally upgrade your Rust version to the
+latest stable.
+
+```shell
+rustup upgrade stable
+```
