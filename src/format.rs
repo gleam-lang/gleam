@@ -1482,13 +1482,11 @@ fn printed_comments<'a, 'comments>(
     comments: impl Iterator<Item = &'comments str>,
 ) -> Option<Document<'a>> {
     let mut comments = comments.peekable();
-    match comments.peek() {
-        None => None,
-        Some(_) => Some(concat(Itertools::intersperse(
-            comments.map(|c| "//".to_doc().append(Document::String(c.to_string()))),
-            line(),
-        ))),
-    }
+    let _ = comments.peek()?;
+    Some(concat(Itertools::intersperse(
+        comments.map(|c| "//".to_doc().append(Document::String(c.to_string()))),
+        line(),
+    )))
 }
 
 fn commented<'a, 'comments>(
