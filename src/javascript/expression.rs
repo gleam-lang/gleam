@@ -89,11 +89,11 @@ impl<'module> Generator<'module> {
             TypedExpr::Pipe { .. } => unsupported("Pipe"),
 
             TypedExpr::ModuleSelect {
-                module_name,
+                module_alias,
                 label,
                 constructor,
                 ..
-            } => self.module_select(module_name, label, constructor),
+            } => self.module_select(module_alias, label, constructor),
         }?;
         Ok(match expression {
             TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => document,
@@ -366,7 +366,7 @@ impl<'module> Generator<'module> {
             .as_ref()
             .map(|s| s.as_str())
             .unwrap_or_else(|| "This has not yet been implemented");
-        let module_name = Document::String(self.module_name.join("_"));
+        let module_name = Document::String(self.module_name.join("_")); // TODO: This isn't right
         let line = self.line_numbers.line_number(location.start);
 
         docvec![
@@ -399,13 +399,13 @@ impl<'module> Generator<'module> {
 
     fn module_select<'a>(
         &mut self,
-        module_name: &'a [String],
+        module: &'a str,
         label: &'a str,
         constructor: &'a ModuleValueConstructor,
     ) -> Output<'a> {
         match constructor {
             ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
-                Ok(docvec![Document::String(module_name.join("_")), ".", label,])
+                Ok(docvec![module, ".", label])
             }
             _ => unsupported("Module function call"),
         }

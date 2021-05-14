@@ -145,7 +145,7 @@ impl<'a> Generator<'a> {
             });
         let path: Document<'a> = docvec![
             "\"",
-            match module.len() {
+            match self.module.name.len() {
                 1 => "./".to_doc(),
                 _ => Document::String("../".repeat(module.len() - 1)),
             },
