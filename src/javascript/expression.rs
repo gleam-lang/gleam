@@ -428,42 +428,39 @@ impl<'module> Generator<'module> {
                 type_path.push(string("type"));
                 checks.push(equality(tmp_var.clone(), &type_path, string(name)));
 
-                let _ = arguments
-                    .iter()
-                    .enumerate()
-                    .map(|x| {
-                        let (index, arg) = x;
-                        let mut path = path.clone();
-                        match field_map {
-                            None => path.push(Document::String(format!("{}", index))),
-                            Some(FieldMap { fields, .. }) => {
-                                let label = fields.iter().find_map(|(key, &val)| {
-                                    if val == index {
-                                        Some(key)
-                                    } else {
-                                        None
-                                    }
-                                });
-                                path.push(string(label.unwrap()))
-                            }
+                for (index, arg) in arguments.iter().enumerate() {
+                    let mut path = path.clone();
+                    match field_map {
+                        None => path.push(Document::String(format!("{}", index))),
+                        Some(FieldMap { fields, .. }) => {
+                            let label =
+                                fields.iter().find_map(
+                                    |(key, &val)| {
+                                        if val == index {
+                                            Some(key)
+                                        } else {
+                                            None
+                                        }
+                                    },
+                                );
+                            path.push(string(label.unwrap()))
                         }
-                        self.traverse_pattern(
-                            &arg.value,
-                            tmp_var.clone(),
-                            &mut path,
-                            checks,
-                            assignments,
-                        )
-                    })
-                    .collect::<Result<Vec<()>, Error>>()?;
+                    }
+                    self.traverse_pattern(
+                        &arg.value,
+                        tmp_var.clone(),
+                        &mut path,
+                        checks,
+                        assignments,
+                    )?
+                }
                 Ok(())
             }
 
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
                 unimplemented!("BitString matching not supported in JS backend")
             }
-        }?;
-        Ok(())
+        }
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
