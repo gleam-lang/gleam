@@ -3,11 +3,9 @@
 use std::fmt;
 use std::mem;
 
-use pubgrub::range::Range;
-
 use self::Error::*;
 use super::lexer::{self, Lexer, Token};
-use crate::version::{Identifier, Version};
+use crate::version::{Identifier, Range, Version};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Error<'input> {
@@ -240,8 +238,8 @@ impl<'input> Parser<'input> {
     /// Parse a version range requirement.
     ///
     /// Like, `~> 1.0.0` or `3.0.0-beta.1 or < 1.0 and > 0.2.3`.
-    pub fn range(&mut self) -> Result<Range<Version>, Error<'input>> {
-        let mut range: Option<Range<Version>> = None;
+    pub fn range(&mut self) -> Result<Range, Error<'input>> {
+        let mut range: Option<Range> = None;
 
         loop {
             let constraint = self.range_ands_section()?;
@@ -261,7 +259,7 @@ impl<'input> Parser<'input> {
         range.ok_or(UnexpectedEnd)
     }
 
-    fn pessimistic_version_constraint(&mut self) -> Result<Range<Version>, Error<'input>> {
+    fn pessimistic_version_constraint(&mut self) -> Result<Range, Error<'input>> {
         let mut included_patch = false;
         let major = self.numeric()?;
         let minor = self.dot_numeric()?;
@@ -291,10 +289,10 @@ impl<'input> Parser<'input> {
         Ok(Range::higher_than(lower).intersection(&Range::strictly_lower_than(upper)))
     }
 
-    fn range_ands_section(&mut self) -> Result<Range<Version>, Error<'input>> {
+    fn range_ands_section(&mut self) -> Result<Range, Error<'input>> {
         use Token::*;
         let mut range = None;
-        let and = |range: Option<Range<Version>>, constraint: Range<Version>| {
+        let and = |range: Option<Range>, constraint: Range| {
             Some(match range {
                 None => constraint,
                 Some(range) => range.intersection(&constraint),

@@ -1,3 +1,5 @@
+use std::cmp::Ordering::{Equal, Greater, Less};
+
 use super::{
     Identifier::{AlphaNumeric, Numeric},
     *,
@@ -316,3 +318,34 @@ parse_range_fail_test!(just_eq, "==");
 parse_range_fail_test!(empty, "");
 
 parse_range_fail_test!(pessimistic_major, "~> 1");
+
+macro_rules! assert_order {
+    ($name:ident, $left:expr, $ord:expr, $right:expr) => {
+        #[test]
+        fn $name() {
+            let left = Version::parse($left);
+            let right = Version::parse($right);
+            assert_eq!(left.cmp(&right), $ord)
+        }
+    };
+}
+
+assert_order!(ord_same, "1.0.0", Equal, "1.0.0");
+assert_order!(ord_same_build_right, "1.0.0", Equal, "1.0.0+1");
+assert_order!(ord_same_build_left, "1.0.0+1", Equal, "1.0.0");
+
+assert_order!(ord_diff_build, "1.0.0+2", Equal, "1.0.0+1");
+
+assert_order!(ord_major_greater, "3.0.0", Greater, "2.0.0");
+assert_order!(ord_major_lesser, "1.0.0", Less, "2.0.0");
+
+assert_order!(ord_minor_greater, "1.1.0", Greater, "1.0.0");
+assert_order!(ord_minor_lesser, "1.0.0", Less, "1.1.0");
+
+assert_order!(ord_patch_greater, "1.0.1", Greater, "1.0.0");
+assert_order!(ord_patch_lesser, "1.0.0", Less, "1.0.1");
+
+assert_order!(ord_pre_smaller_than_zero, "1.0.0", Greater, "1.0.0-rc1");
+assert_order!(ord_pre_smaller_than_zero_flip, "1.0.0-rc1", Less, "1.0.0");
+
+assert_order!(ord_pre_rc1_2, "1.0.0-rc1", Less, "1.0.0-rc2");

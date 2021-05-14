@@ -2,7 +2,10 @@
 //! and compatible with the Elixir Version module, which is used by Hex
 //! internally as well as be the Elixir build tool Hex client.
 
-use std::{convert::TryFrom, fmt};
+// TODO: FIXME: Make it so prereleases are excluded by default.
+// e.g. The range `> 1` doesn't contain `2.0.0-rc1`.
+
+use std::{cmp::Ordering, convert::TryFrom, fmt};
 
 use self::parser::Parser;
 
@@ -10,8 +13,6 @@ mod lexer;
 mod parser;
 #[cfg(test)]
 mod tests;
-
-pub use pubgrub::range::Range;
 
 /// In a nutshell, a version is represented by three numbers:
 ///
@@ -90,7 +91,7 @@ impl Version {
     }
 
     /// Parse a Hex compatible version range. i.e. `> 1 and < 2 or == 4.5.2`.
-    pub fn parse_range(input: &str) -> Result<Range<Self>, parser::Error> {
+    pub fn parse_range(input: &str) -> Result<Range, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.range()?;
         if !parser.is_eof() {
@@ -99,19 +100,24 @@ impl Version {
         Ok(version)
     }
 
-    fn tuple(&self) -> (u32, u32, u32) {
-        (self.major, self.minor, self.patch)
+    fn tuple(&self) -> (u32, u32, u32, PreOrder<'_>) {
+        (
+            self.major,
+            self.minor,
+            self.patch,
+            PreOrder(self.pre.as_slice()),
+        )
     }
 }
 
 impl std::cmp::PartialOrd for Version {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.tuple().cmp(&other.tuple()))
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
 impl std::cmp::Ord for Version {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.tuple().cmp(&other.tuple())
     }
 }
@@ -176,6 +182,61 @@ impl Identifier {
                 s.push_str(add_str);
                 Identifier::AlphaNumeric(s)
             }
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Range(pubgrub::range::Range<Version>);
+
+impl Range {
+    pub fn strictly_lower_than(version: Version) -> Self {
+        Self(pubgrub::range::Range::strictly_lower_than(version))
+    }
+
+    pub fn higher_than(version: Version) -> Self {
+        Self(pubgrub::range::Range::higher_than(version))
+    }
+
+    pub fn exact(version: Version) -> Self {
+        Self(pubgrub::range::Range::exact(version))
+    }
+
+    pub fn intersection(&self, other: &Self) -> Self {
+        Self(self.0.intersection(&other.0))
+    }
+
+    pub fn union(&self, other: &Self) -> Self {
+        Self(self.0.union(&other.0))
+    }
+}
+
+// A wrapper around Vec where an empty vector is greater than a non-empty one
+#[derive(PartialEq, Eq)]
+pub struct PreOrder<'a>(&'a [Identifier]);
+
+impl PreOrder<'_> {
+    fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl std::cmp::PartialOrd for PreOrder<'_> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl std::cmp::Ord for PreOrder<'_> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        if self.is_empty() && other.is_empty() {
+            Ordering::Equal
+        } else if self.is_empty() {
+            Ordering::Greater
+        } else if other.is_empty() {
+            Ordering::Less
+        } else {
+            self.0.cmp(other.0)
         }
     }
 }
