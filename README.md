@@ -28,7 +28,7 @@ please consider sponsoring its development [on GitHub](https://github.com/sponso
 Thank you to our top sponsors! Gleam would not be possible without you.
 
 <p>
-  <a href="https://github.com/mudriyjo"><img width=120 src="https://avatars.githubusercontent.com/u/5278307?u=9ce1cb8684041679c53d87ad60aeb5a47cc152c7&v=4" alt="Alexander Babin"></a>
+  <a href="https://github.com/mrjoelkemp"><img width=120 src="https://avatars.githubusercontent.com/u/865203?v=4" alt="Joel Kemp"></a>
   &nbsp;
   <a href="http://www.ninefx.com"><img width=120 src="https://gleam.run/images/sponsors/nine-fx.png" alt="NineFX"></a>
   <a href="https://skunkwerks.at/"><img width=120 src="https://avatars.githubusercontent.com/u/6563319?s=200&v=4" alt="SkunkWerks GmbH"></a>
