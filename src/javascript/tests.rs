@@ -5,42 +5,10 @@ mod lists;
 mod numbers;
 mod strings;
 
-// TODO have a macro that allows us to compile multiple modules in certain tests.
-// https://github.com/gleam-lang/gleam/pull/1070#discussion_r619806755
-fn rocket_ship_module() -> crate::type_::Module {
-    let src = r#"
-pub const c = 299_792_458
-
-pub fn launch() {
-  Ok("launched")
-}
-pub fn fuel(amount: Int) {
-  Ok("fueled")
-}
-  "#;
-    let (mut ast, _) = crate::parse::parse_module(src).expect("syntax error");
-    ast.name = vec!["rocket_ship".to_string()];
-    let mut modules = std::collections::HashMap::new();
-    let mut uid = 0;
-
-    let _ = modules.insert(
-        "gleam".to_string(),
-        (
-            crate::build::Origin::Src,
-            crate::type_::build_prelude(&mut uid),
-        ),
-    );
-    let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
-        .expect("should successfully infer");
-    ast.type_info
-}
-
 #[macro_export]
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {{
         use crate::javascript::*;
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
         let mut modules = std::collections::HashMap::new();
         let mut uid = 0;
         // DUPE: preludeinsertion
@@ -54,10 +22,41 @@ macro_rules! assert_js {
                 crate::type_::build_prelude(&mut uid),
             ),
         );
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
+        let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
+            .expect("should successfully infer");
+        let mut output = String::new();
+        let line_numbers = LineNumbers::new($src);
+        module(&ast, &line_numbers, &mut output).unwrap();
+        assert_eq!(($src, output), ($src, $erl.to_string()));
+    }};
+
+    (($dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
+        use crate::javascript::*;
+        let mut modules = std::collections::HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
         let _ = modules.insert(
-            "rocket_ship".to_string(),
-            (crate::build::Origin::Src, rocket_ship_module()),
+            "gleam".to_string(),
+            (
+                crate::build::Origin::Src,
+                crate::type_::build_prelude(&mut uid),
+            ),
         );
+        let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
+        ast.name = $dep_name;
+        let dep = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
+            .expect("should successfully infer");
+        let _ = modules.insert(
+            $dep_name.join("/"),
+            (crate::build::Origin::Src, dep.type_info),
+        );
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
         let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
             .expect("should successfully infer");
         let mut output = String::new();
@@ -267,6 +266,19 @@ function baz(x, y) {
 #[test]
 fn importing_a_module() {
     assert_js!(
+        (
+            vec!["rocket_ship".to_string()],
+            r#"
+pub const c = 299_792_458
+
+pub fn launch() {
+  Ok("launched")
+}
+pub fn fuel(amount: Int) {
+  Ok("fueled")
+}
+  "#
+        ),
         r#"
 import rocket_ship
 import rocket_ship as foo
