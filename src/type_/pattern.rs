@@ -431,7 +431,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     ValueConstructorVariant::Record { ref name, .. } => {
                         PatternConstructor::Record {
                             name: name.clone(),
-                            field_map: cons.field_map().map(|f| f.clone()),
+                            field_map: cons.field_map().cloned(),
                         }
                     }
                     ValueConstructorVariant::LocalVariable
