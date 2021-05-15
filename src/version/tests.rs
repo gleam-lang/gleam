@@ -333,6 +333,7 @@ macro_rules! assert_order {
 assert_order!(ord_same, "1.0.0", Equal, "1.0.0");
 assert_order!(ord_same_build_right, "1.0.0", Equal, "1.0.0+1");
 assert_order!(ord_same_build_left, "1.0.0+1", Equal, "1.0.0");
+assert_order!(ord_same_diff_build, "1.0.0+1", Equal, "1.0.0+2");
 
 assert_order!(ord_diff_build, "1.0.0+2", Equal, "1.0.0+1");
 

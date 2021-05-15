@@ -18,6 +18,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::{collections::HashMap, io::BufReader};
 use thiserror::Error;
+use version::Version;
 
 #[async_trait]
 pub trait Client {
@@ -76,7 +77,7 @@ pub trait Client {
     async fn get_repository_versions(
         &self,
         public_key: &[u8],
-    ) -> Result<HashMap<String, Vec<String>>, GetRepositoryVersionsError> {
+    ) -> Result<HashMap<String, Vec<Version>>, GetRepositoryVersionsError> {
         let response = self
             .http_client()
             .get(self.repository_base_url().join("versions").unwrap())
@@ -104,8 +105,19 @@ pub trait Client {
         let versions = Versions::parse_from_bytes(&payload)?
             .take_packages()
             .into_iter()
-            .map(|mut n| (n.take_name(), n.take_versions().into_vec()))
-            .collect();
+            .map(|mut n| {
+                let parse_version = |v: &str| {
+                    let err = |_| GetRepositoryVersionsError::BadVersionFormat(v.to_string());
+                    Version::parse(v).map_err(err)
+                };
+                let versions = n
+                    .take_versions()
+                    .into_iter()
+                    .map(|v| parse_version(v.as_str()))
+                    .collect::<Result<Vec<Version>, GetRepositoryVersionsError>>()?;
+                Ok((n.take_name(), versions))
+            })
+            .collect::<Result<HashMap<_, _>, GetRepositoryVersionsError>>()?;
 
         Ok(versions)
     }
@@ -379,6 +391,9 @@ pub enum ReadAndCheckBodyError {
 pub enum GetRepositoryVersionsError {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
+
+    #[error("unexpected version format {0}")]
+    BadVersionFormat(String),
 
     #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),

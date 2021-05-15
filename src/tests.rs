@@ -631,16 +631,16 @@ async fn get_repository_versions_ok_test() {
 
     assert_eq!(
         &vec![
-            "0.0.0".to_string(),
-            "0.1.0".to_string(),
-            "0.2.0".to_string(),
-            "0.2.1".to_string(),
-            "0.2.2".to_string(),
-            "0.2.3".to_string(),
-            "0.2.4".to_string(),
-            "0.3.0".to_string(),
-            "0.4.0".to_string(),
-            "0.5.0".to_string(),
+            Version::parse("0.0.0").unwrap(),
+            Version::parse("0.1.0").unwrap(),
+            Version::parse("0.2.0").unwrap(),
+            Version::parse("0.2.1").unwrap(),
+            Version::parse("0.2.2").unwrap(),
+            Version::parse("0.2.3").unwrap(),
+            Version::parse("0.2.4").unwrap(),
+            Version::parse("0.3.0").unwrap(),
+            Version::parse("0.4.0").unwrap(),
+            Version::parse("0.5.0").unwrap(),
         ],
         versions.unwrap().get("exfmt").unwrap(),
     );
