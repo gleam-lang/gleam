@@ -5,6 +5,8 @@
 - `Version` and `Requirement` structs have been added for representing
   information about requests versions of packages.
 - Protobuf code updated to use `cfg_attr` rather than deprecated attributes.
+- The `get_repository_versions` method returns `Version` structs rather than
+  strings.
 
 ## v1.3.0 - 2020-03-30
 
