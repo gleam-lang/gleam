@@ -72,7 +72,7 @@ impl Creator {
             }
 
             Template::App => {
-                crate::fs::mkdir(&self.src.join(&self.options.name))?;
+                crate::fs::mkdir(&self.src.join(self.options.name.clone().unwrap()));
                 self.gitignore()?;
                 self.github_ci()?;
                 self.app_readme()?;
@@ -110,7 +110,8 @@ impl Creator {
 
     fn src_escript_module(&self) -> Result<()> {
         write(
-            self.src.join(format!("{}.gleam", self.options.name)),
+            self.src
+                .join(format!("{}.gleam", self.options.name.clone().unwrap())),
             &format!(
                 r#"import gleam/list
 import gleam/io
@@ -129,14 +130,16 @@ pub fn hello_world() -> String {{
 external fn char_list_to_string(CharList) -> String =
   "erlang" "list_to_binary"
 "#,
-                self.options.name
+                self.options.name.clone().unwrap()
             ),
         )
     }
 
     fn src_application_module(&self) -> Result<()> {
         write(
-            self.src.join(&self.options.name).join("application.gleam"),
+            self.src
+                .join(&self.options.name.clone().unwrap())
+                .join("application.gleam"),
             r#"import gleam/otp/supervisor.{ApplicationStartMode, ErlangStartResult}
 import gleam/dynamic.{Dynamic}
 
@@ -162,13 +165,14 @@ pub fn stop(_state: Dynamic) {
 
     fn src_module(&self) -> Result<()> {
         write(
-            self.src.join(format!("{}.gleam", self.options.name)),
+            self.src
+                .join(format!("{}.gleam", self.options.name.clone().unwrap())),
             &format!(
                 r#"pub fn hello_world() -> String {{
   "Hello, from {}!"
 }}
 "#,
-                self.options.name
+                self.options.name.clone().unwrap()
             ),
         )
     }
@@ -218,7 +222,7 @@ pub fn stop(_state: Dynamic) {
     {{gleam_otp, "{otp}"}}
 ]}}.
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
                 stdlib = GLEAM_STDLIB_VERSION,
                 otp = GLEAM_OTP_VERSION,
             ),
@@ -227,12 +231,16 @@ pub fn stop(_state: Dynamic) {
 
     fn erlang_app_src(&self) -> Result<()> {
         let module = match self.options.template {
-            Template::App => format!("\n  {{mod, {{{}@application, []}}}},", self.options.name),
+            Template::App => format!(
+                "\n  {{mod, {{{}@application, []}}}},",
+                self.options.name.clone().unwrap()
+            ),
             _ => "".to_string(),
         };
 
         write(
-            self.src.join(format!("{}.app.src", self.options.name)),
+            self.src
+                .join(format!("{}.app.src", self.options.name.clone().unwrap())),
             &format!(
                 r#"{{application, {application},
  [{{description, "{description}"}},
@@ -250,7 +258,7 @@ pub fn stop(_state: Dynamic) {
   {{links, []}}
 ]}}.
 "#,
-                application = self.options.name,
+                application = self.options.name.clone().unwrap(),
                 description = &self.options.description,
                 version = PROJECT_VERSION,
                 module = module,
@@ -304,7 +312,7 @@ rebar3 eunit
 rebar3 shell
 ```
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
                 description = self.options.description
             ),
         )
@@ -332,7 +340,7 @@ rebar3 escriptize
 _build/default/bin/{name}
 ```
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
                 description = self.options.description
             ),
         )
@@ -357,7 +365,7 @@ gleam shell
 ```
 ```
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
                 description = self.options.description
             ),
         )
@@ -392,7 +400,7 @@ this package can be installed by adding `{name}` to your `rebar.config` dependen
 ]}}.
 ```
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
                 description = self.options.description
             ),
         )
@@ -472,7 +480,7 @@ tool = "gleam"
 version = "0.1.0"
 description = "A Gleam library"
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
             ),
         )
     }
@@ -485,14 +493,15 @@ description = "A Gleam library"
 
 # repository = {{ type = "github", user = "my-user", repo = "{name}" }}
 "#,
-                name = self.options.name,
+                name = self.options.name.clone().unwrap(),
             ),
         )
     }
 
     fn gleam_test_module(&self) -> Result<()> {
         write(
-            self.test.join(format!("{}_test.gleam", self.options.name)),
+            self.test
+                .join(format!("{}_test.gleam", self.options.name.clone().unwrap())),
             &format!(
                 r#"import {name}
 
@@ -501,14 +510,15 @@ pub fn hello_world_test() {{
   Nil
 }}
 "#,
-                name = self.options.name
+                name = self.options.name.clone().unwrap()
             ),
         )
     }
 
     fn test_module(&self) -> Result<()> {
         write(
-            self.test.join(format!("{}_test.gleam", self.options.name)),
+            self.test
+                .join(format!("{}_test.gleam", self.options.name.clone().unwrap())),
             &format!(
                 r#"import {name}
 import gleam/should
@@ -518,29 +528,19 @@ pub fn hello_world_test() {{
   |> should.equal("Hello, from {name}!")
 }}
 "#,
-                name = self.options.name
+                name = self.options.name.clone().unwrap()
             ),
         )
     }
 }
 
-pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
-    let name: String = if options.name.is_empty() {
-        get_foldername(&options.project_root).gleam_expect("unable to get folder name")
-    } else {
-        options.name
+pub fn create(mut options: NewOptions, version: &'static str) -> Result<()> {
+    if options.name.is_none() {
+        options.name = get_foldername(&options.project_root);
     };
-    validate_name(&name)?;
-    validate_root_folder(&name)?;
-    let creator = Creator::new(
-        NewOptions {
-            name,
-            description: options.description.clone(),
-            project_root: options.project_root.clone(),
-            template: options.template,
-        },
-        version,
-    );
+    validate_name(&options.name.clone().unwrap())?;
+    validate_root_folder(&options.name.clone().unwrap())?;
+    let creator = Creator::new(options.clone(), version);
 
     creator.run()?;
 
@@ -562,8 +562,8 @@ The project can be compiled and tested by running these commands:
 
 {}\t{}
 ",
-        creator.options.name,
-        creator.root.to_str().gleam_expect("Unable to display path"),
+        creator.options.name.unwrap(),
+        cd_folder,
         test_command,
     );
     Ok(())
