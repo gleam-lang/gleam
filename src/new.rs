@@ -546,7 +546,7 @@ The project can be compiled and tested by running these commands:
     {}
 ",
         creator.options.name,
-        creator.root.to_str().expect("Unable to display path"),
+        creator.root.to_str().gleam_expect("Unable to display path"),
         test_command,
     );
     Ok(())

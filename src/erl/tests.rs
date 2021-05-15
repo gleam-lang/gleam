@@ -502,6 +502,29 @@ x(Y) ->
 "#,
     );
 
+    //https://github.com/gleam-lang/gleam/issues/1106
+    assert_erl!(
+        r#"pub type State{ Start(Int) End(Int) }
+            pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }
+            pub fn main() { build(End) }"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([build/1, main/0]).
+-export_type([state/0]).
+
+-type state() :: {start, integer()} | {'end', integer()}.
+
+-spec build(fun((integer()) -> A)) -> A.
+build(Constructor) ->
+    Constructor(1).
+
+-spec main() -> state().
+main() ->
+    build(fun(A) -> {'end', A} end).
+"#,
+    );
+
     // Private external function calls are simply inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"

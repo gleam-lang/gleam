@@ -1,6 +1,9 @@
-use crate::ast::SrcSpan;
-use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
+use crate::{ast::SrcSpan, GleamExpect};
+use crate::{
+    error::fatal_compiler_bug,
+    parse::error::{LexicalError, LexicalErrorType},
+};
 use std::char;
 
 pub struct Lexer<T: Iterator<Item = (usize, char)>> {
@@ -219,7 +222,7 @@ where
                     }
                     Some('/') => {
                         let _ = self.next_char();
-                        let comment = self.lex_comment()?;
+                        let comment = self.lex_comment();
                         self.emit(comment);
                     }
                     _ => {
@@ -455,13 +458,13 @@ where
         let start_pos = self.get_pos();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().unwrap());
+            name.push(self.next_char().gleam_expect("lex_name continue"))
         }
 
         // Finish lexing the name and return an error if an uppercase letter is used
         if self.is_name_error_continuation() {
             while self.is_name_error_continuation() {
-                name.push(self.next_char().unwrap())
+                name.push(self.next_char().gleam_expect("lex_name error"))
             }
             let end_pos = self.get_pos();
             if name.starts_with('_') {
@@ -499,13 +502,13 @@ where
         let start_pos = self.get_pos();
 
         while self.is_upname_continuation() {
-            name.push(self.next_char().unwrap());
+            name.push(self.next_char().gleam_expect("lex_upname upname"));
         }
 
         // Finish lexing the upname and return an error if an underscore is used
         if self.is_name_error_continuation() {
             while self.is_name_error_continuation() {
-                name.push(self.next_char().unwrap())
+                name.push(self.next_char().gleam_expect("lex_upname name error"))
             }
             let end_pos = self.get_pos();
             return Err(LexicalError {
@@ -545,10 +548,10 @@ where
                 let _ = self.next_char();
                 self.lex_number_radix(start_pos, 2, "0b")?
             } else {
-                self.lex_normal_number()?
+                self.lex_normal_number()
             }
         } else {
-            self.lex_normal_number()?
+            self.lex_normal_number()
         };
 
         if Some('_') == self.chr0 {
@@ -595,25 +598,25 @@ where
 
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
-    fn lex_normal_number(&mut self) -> LexResult {
+    fn lex_normal_number(&mut self) -> Spanned {
         let start_pos = self.get_pos();
         let mut value = String::new();
         // consume negative sign
         if self.chr0 == Some('-') {
-            value.push(self.next_char().unwrap());
+            value.push(self.next_char().gleam_expect("lex_normal_number negative"));
         }
         // consume first run of digits
         value.push_str(&self.radix_run(10));
 
         // If float:
         if self.chr0 == Some('.') {
-            value.push(self.next_char().unwrap());
+            value.push(self.next_char().gleam_expect("lex_normal_number float"));
             value.push_str(&self.radix_run(10));
             let end_pos = self.get_pos();
-            Ok((start_pos, Token::Float { value }, end_pos))
+            (start_pos, Token::Float { value }, end_pos)
         } else {
             let end_pos = self.get_pos();
-            Ok((start_pos, Token::Int { value }, end_pos))
+            (start_pos, Token::Int { value }, end_pos)
         }
     }
 
@@ -641,7 +644,7 @@ where
         let take_char = Lexer::<T>::is_digit_of_radix(self.chr0, radix);
 
         if take_char {
-            Some(self.next_char().unwrap())
+            Some(self.next_char().gleam_expect("take_number next char"))
         } else {
             None
         }
@@ -654,7 +657,7 @@ where
             8 => matches!(c, Some('0'..='7')),
             10 => matches!(c, Some('0'..='9')),
             16 => matches!(c, Some('0'..='9') | Some('a'..='f') | Some('A'..='F')),
-            other => unimplemented!("Radix not implemented: {}", other),
+            other => fatal_compiler_bug(&format!("Radix not implemented: {}", other)),
         }
     }
 
@@ -663,7 +666,7 @@ where
     // 3 slash, document
     // 4 slash, module
     // this function is entered after 2 slashes
-    fn lex_comment(&mut self) -> LexResult {
+    fn lex_comment(&mut self) -> Spanned {
         let kind = match (self.chr0, self.chr1) {
             (Some('/'), Some('/')) => {
                 let _ = self.next_char();
@@ -681,7 +684,7 @@ where
             let _ = self.next_char();
         }
         let end_pos = self.get_pos();
-        Ok((start_pos, kind, end_pos))
+        (start_pos, kind, end_pos)
     }
 
     fn lex_string(&mut self) -> LexResult {
@@ -778,7 +781,7 @@ where
     // advance the stream and emit a token
     fn eat_single_char(&mut self, ty: Token) {
         let tok_start = self.get_pos();
-        let _ = self.next_char().unwrap();
+        let _ = self.next_char().gleam_expect("eat_single_char");
         let tok_end = self.get_pos();
         self.emit((tok_start, ty, tok_end));
     }

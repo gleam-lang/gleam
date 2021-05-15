@@ -110,8 +110,8 @@ impl SourceTree {
                         == ModuleOrigin::Test
                 {
                     return Err(Error::SrcImportingTest {
-                        path: path.clone(),
-                        src: src.clone(),
+                        path,
+                        src,
                         location,
                         src_module: module_name,
                         test_module: dep,
@@ -129,12 +129,12 @@ impl SourceTree {
         let name = input
             .path
             .strip_prefix(&input.source_base_path)
-            .unwrap()
+            .gleam_expect("Source tree strip prefix")
             .parent()
-            .unwrap()
-            .join(input.path.file_stem().unwrap())
+            .gleam_expect("Source tree parent")
+            .join(input.path.file_stem().gleam_expect("Source tree file stem"))
             .to_str()
-            .unwrap()
+            .gleam_expect("Source tree to_str")
             .to_string()
             .replace("\\", "/");
 

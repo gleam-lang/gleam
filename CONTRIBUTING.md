@@ -83,3 +83,19 @@ similar to `.expect` but prints a more helpful error message to the user.
 The `GLEAM_LOG` environment variable can be used to cause the compiler to
 print more information for debugging and introspection. i.e.
 `GLEAM_LOG=trace`.
+
+### Clippy linter
+
+Your PR may fail on CI due to clippy errors. Clippy can be run locally like so:
+
+```shell
+cargo clean -p gleam
+cargo clippy
+```
+
+If you have lint errors on CI but not locally upgrade your Rust version to the
+latest stable.
+
+```shell
+rustup upgrade stable
+```

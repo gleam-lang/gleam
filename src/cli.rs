@@ -1,10 +1,13 @@
-use crate::error::{Error, StandardIoAction};
+use crate::{
+    error::{Error, StandardIoAction},
+    GleamExpect,
+};
 use std::io::Write;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
 pub fn ask(question: &str) -> Result<String, Error> {
     print!("{}: ", question);
-    std::io::stdout().flush().unwrap();
+    std::io::stdout().flush().gleam_expect("ask stdout flush");
     let mut answer = String::new();
     let _ = std::io::stdin()
         .read_line(&mut answer)
@@ -38,11 +41,15 @@ pub fn print_green_prefix(prefix: &str, text: &str) {
     let mut buffer = buffer_writer.buffer();
     buffer
         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))
-        .unwrap();
-    write!(buffer, "{}", prefix).unwrap();
-    buffer.set_color(&ColorSpec::new()).unwrap();
-    writeln!(buffer, " {}", text).unwrap();
-    buffer_writer.print(&buffer).unwrap();
+        .gleam_expect("print_green_prefix");
+    write!(buffer, "{}", prefix).gleam_expect("print_green_prefix");
+    buffer
+        .set_color(&ColorSpec::new())
+        .gleam_expect("print_green_prefix");
+    writeln!(buffer, " {}", text).gleam_expect("print_green_prefix");
+    buffer_writer
+        .print(&buffer)
+        .gleam_expect("print_green_prefix");
 }
 
 pub fn stderr_buffer_writer() -> BufferWriter {

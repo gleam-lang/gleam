@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_string, cli,
@@ -614,6 +615,32 @@ also be labelled.",
                 } => {
                     let diagnostic = MultiLineDiagnostic {
                         title: format!("Duplicate function definition with name `{}`", fun),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        labels: vec![
+                            DiagnosticLabel {
+                                label: "redefined here".to_string(),
+                                location: *location,
+                                style: LabelStyle::Primary,
+                            },
+                            DiagnosticLabel {
+                                label: "previously defined here".to_string(),
+                                location: *previous_location,
+                                style: LabelStyle::Secondary,
+                            },
+                        ],
+                    };
+                    write_diagnostic(buf, diagnostic, Severity::Error);
+                }
+
+                TypeError::DuplicateConstName {
+                    location,
+                    name,
+                    previous_location,
+                    ..
+                } => {
+                    let diagnostic = MultiLineDiagnostic {
+                        title: format!("Duplicate const definition with name `{}`", name),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         labels: vec![

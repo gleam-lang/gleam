@@ -402,7 +402,7 @@ pub fn infer_module(
     let statements = statements
         .into_iter()
         .map(|s| generalise_statement(s, module_name, &mut environment))
-        .try_collect()?;
+        .collect();
 
     // Generate warnings for unused items
     environment.convert_unused_to_warnings();
@@ -447,7 +447,7 @@ pub fn infer_module(
 }
 
 fn validate_module_name(name: &[String]) -> Result<(), Error> {
-    if name == &["gleam"] {
+    if name == ["gleam"] {
         return Err(Error::ReservedModuleName {
             name: name.join("/"),
         });
@@ -485,6 +485,21 @@ fn assert_unique_type_name<'a>(
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateTypeName {
+            name: name.to_string(),
+            previous_location: *previous_location,
+            location: *location,
+        }),
+        None => Ok(()),
+    }
+}
+
+fn assert_unique_const_name<'a>(
+    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    name: &'a str,
+    location: &'a SrcSpan,
+) -> Result<(), Error> {
+    match names.insert(name, location) {
+        Some(previous_location) => Err(Error::DuplicateConstName {
             name: name.to_string(),
             previous_location: *previous_location,
             location: *location,
@@ -725,6 +740,10 @@ fn register_values<'a>(
             }
         }
 
+        Statement::ModuleConstant { name, location, .. } => {
+            assert_unique_const_name(names, name, location)?;
+        }
+
         _ => (),
     }
     Ok(())
@@ -734,7 +753,7 @@ fn generalise_statement(
     s: TypedStatement,
     module_name: &[String],
     environment: &mut Environment<'_, '_>,
-) -> Result<TypedStatement, Error> {
+) -> TypedStatement {
     match s {
         Statement::Fn {
             doc,
@@ -778,7 +797,7 @@ fn generalise_statement(
                 },
             );
 
-            Ok(Statement::Fn {
+            Statement::Fn {
                 doc,
                 location,
                 name,
@@ -788,10 +807,10 @@ fn generalise_statement(
                 return_annotation,
                 return_type,
                 body,
-            })
+            }
         }
 
-        statement => Ok(statement),
+        statement => statement,
     }
 }
 

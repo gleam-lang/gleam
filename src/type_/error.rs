@@ -111,6 +111,12 @@ pub enum Error {
         name: String,
     },
 
+    DuplicateConstName {
+        location: SrcSpan,
+        previous_location: SrcSpan,
+        name: String,
+    },
+
     DuplicateArgument {
         location: SrcSpan,
         label: String,
@@ -250,7 +256,7 @@ pub enum Warning {
 }
 
 impl Warning {
-    pub fn to_warning(self, path: PathBuf, src: String) -> crate::Warning {
+    pub fn into_warning(self, path: PathBuf, src: String) -> crate::Warning {
         crate::Warning::Type {
             path,
             src,
@@ -527,7 +533,7 @@ impl UnifyError {
         self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
     }
 
-    pub fn to_error(self, location: SrcSpan) -> Error {
+    pub fn into_error(self, location: SrcSpan) -> Error {
         match self {
             Self::CouldNotUnify {
                 expected,
@@ -552,5 +558,5 @@ impl UnifyError {
 }
 
 pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
-    e.to_error(location)
+    e.into_error(location)
 }

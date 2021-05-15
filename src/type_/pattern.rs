@@ -277,7 +277,10 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 tail,
             } => match typ.get_app_args(true, &[], "List", 1, self.environment) {
                 Some(args) => {
-                    let typ = args[0].clone();
+                    let typ = args
+                        .get(0)
+                        .gleam_expect("Failed to get type argument of List")
+                        .clone();
                     let elements = elements
                         .into_iter()
                         .map(|element| self.unify(element, typ.clone()))

@@ -75,13 +75,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         match expr {
             UntypedExpr::Todo {
                 location, label, ..
-            } => self.infer_todo(location, label),
+            } => Ok(self.infer_todo(location, label)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
                 location, value, ..
-            } => self.infer_int(value, location),
+            } => Ok(self.infer_int(value, location)),
 
             UntypedExpr::Sequence {
                 expressions,
@@ -94,11 +94,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
             UntypedExpr::Float {
                 location, value, ..
-            } => self.infer_float(value, location),
+            } => Ok(self.infer_float(value, location)),
 
             UntypedExpr::String {
                 location, value, ..
-            } => self.infer_string(value, location),
+            } => Ok(self.infer_string(value, location)),
 
             UntypedExpr::Pipe {
                 left,
@@ -304,42 +304,42 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         })
     }
 
-    fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> Result<TypedExpr, Error> {
+    fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
         let typ = self.new_unbound_var(self.environment.level);
         self.environment.warnings.push(Warning::Todo {
             location,
             typ: typ.clone(),
         });
 
-        Ok(TypedExpr::Todo {
+        TypedExpr::Todo {
             location,
             label,
             typ,
-        })
+        }
     }
 
-    fn infer_string(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-        Ok(TypedExpr::String {
+    fn infer_string(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+        TypedExpr::String {
             location,
             value,
             typ: string(),
-        })
+        }
     }
 
-    fn infer_int(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-        Ok(TypedExpr::Int {
+    fn infer_int(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+        TypedExpr::Int {
             location,
             value,
             typ: int(),
-        })
+        }
     }
 
-    fn infer_float(&mut self, value: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-        Ok(TypedExpr::Float {
+    fn infer_float(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+        TypedExpr::Float {
             location,
             value,
             typ: float(),
-        })
+        }
     }
 
     /// Emit a warning if the given expressions should not be discarded.
@@ -690,10 +690,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let left = self.infer(left)?;
         self.unify(input_type.clone(), left.type_())
-            .map_err(|e| e.operator_situation(name).to_error(left.location()))?;
+            .map_err(|e| e.operator_situation(name).into_error(left.location()))?;
         let right = self.infer(right)?;
         self.unify(input_type, right.type_())
-            .map_err(|e| e.operator_situation(name).to_error(right.location()))?;
+            .map_err(|e| e.operator_situation(name).into_error(right.location()))?;
 
         Ok(TypedExpr::BinOp {
             location,
@@ -823,7 +823,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         for clause in clauses {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
             self.unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().to_error(typed_clause.location()))?;
+                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
             typed_clauses.push(typed_clause);
         }
         Ok(TypedExpr::Case {
@@ -1588,7 +1588,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name, field_map, ..
-                    } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
+                    } => (name.clone(), field_map.as_ref().cloned()),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1624,7 +1624,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name, field_map, ..
-                    } => (name.clone(), field_map.as_ref().map(|x| x.clone())),
+                    } => (name.clone(), field_map.as_ref().cloned()),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1894,7 +1894,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Check that any return type type is accurate.
         if let Some(return_type) = return_type {
             self.unify(return_type, body.type_())
-                .map_err(|e| e.return_annotation_mismatch().to_error(body.location()))?;
+                .map_err(|e| e.return_annotation_mismatch().into_error(body.location()))?;
         }
 
         Ok((args, body))

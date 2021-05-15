@@ -2902,6 +2902,20 @@ fn duplicate_type_names() {
 }
 
 #[test]
+fn duplicate_const_names() {
+    // We cannot declare two const with the same name in a module
+    assert_module_error!(
+        "const duplicate = 1;
+         pub const duplicate = 1",
+        Error::DuplicateConstName {
+            location: SrcSpan { start: 40, end: 49 },
+            previous_location: SrcSpan { start: 6, end: 15 },
+            name: "duplicate".to_string(),
+        }
+    );
+}
+
+#[test]
 fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
     assert_module_error!(
