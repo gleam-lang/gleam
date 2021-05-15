@@ -547,7 +547,7 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     let cd_folder = if options.project_root == *"." {
         "".to_string()
     } else {
-        format!("\tcd {}\n", creator.options.name)
+        format!("\tcd {}\n", creator.options.project_root)
     };
 
     let test_command = match &creator.options.template {
