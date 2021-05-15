@@ -309,15 +309,15 @@ impl<'module> Generator<'module> {
     ) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                checks.push(equality(tmp_var, &path, string(value)));
+                checks.push(equality(tmp_var, path, string(value)));
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                checks.push(equality(tmp_var, &path, int(value)));
+                checks.push(equality(tmp_var, path, int(value)));
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                checks.push(equality(tmp_var, &path, float(value)));
+                checks.push(equality(tmp_var, path, float(value)));
                 Ok(())
             }
             Pattern::Var { name, .. } => {
@@ -326,7 +326,7 @@ impl<'module> Generator<'module> {
                     self.next_local_var_name(name),
                     " = ",
                     tmp_var,
-                    concat(path.into_iter().map(|i| i.clone().surround("[", "]"))),
+                    concat(path.iter().map(|i| i.clone().surround("[", "]"))),
                     ";",
                 ]);
                 Ok(())
@@ -349,7 +349,7 @@ impl<'module> Generator<'module> {
             }
 
             Pattern::List { elements, tail, .. } => {
-                let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
+                let path_string = concat(path.iter().map(|i| i.clone().surround("[", "]")));
                 let length_check = match tail {
                     Some(_) => "?.length !== undefined".to_doc(),
                     None => "?.length === 0".to_doc(),
@@ -361,7 +361,7 @@ impl<'module> Generator<'module> {
                     length_check,
                 ]);
                 let _ = elements
-                    .into_iter()
+                    .iter()
                     .enumerate()
                     .map(|x| {
                         let (index, pattern) = x;
@@ -391,7 +391,7 @@ impl<'module> Generator<'module> {
             }
             Pattern::Tuple { elems, .. } => {
                 // We don't check the length, because type system means it's a tuple
-                for (index, pattern) in elems.into_iter().enumerate() {
+                for (index, pattern) in elems.iter().enumerate() {
                     let mut path = path.clone();
                     path.push(Document::String(format!("{}", index)));
                     self.traverse_pattern(pattern, tmp_var.clone(), &mut path, checks, assignments)?
@@ -402,21 +402,21 @@ impl<'module> Generator<'module> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "True" => {
-                checks.push(equality(tmp_var, &path, "true".to_doc()));
+                checks.push(equality(tmp_var, path, "true".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "False" => {
-                checks.push(equality(tmp_var, &path, "false".to_doc()));
+                checks.push(equality(tmp_var, path, "false".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "Nil" => {
-                checks.push(equality(tmp_var, &path, "undefined".to_doc()));
+                checks.push(equality(tmp_var, path, "undefined".to_doc()));
                 Ok(())
             }
             Pattern::Constructor {
@@ -667,10 +667,10 @@ impl<'module> Generator<'module> {
 
 fn equality<'a>(
     tmp_var: Document<'a>,
-    path: &Vec<Document<'a>>,
+    path: &[Document<'a>],
     to_match: Document<'a>,
 ) -> Document<'a> {
-    let path_string = concat(path.into_iter().map(|i| i.clone().surround("[", "]")));
+    let path_string = concat(path.iter().map(|i| i.clone().surround("[", "]")));
     docvec![tmp_var, path_string, " === ", to_match]
 }
 
