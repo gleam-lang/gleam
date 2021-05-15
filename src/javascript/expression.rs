@@ -443,7 +443,7 @@ impl<'module> Generator<'module> {
                                         }
                                     },
                                 );
-                            path.push(string(label.unwrap()))
+                            path.push(string(label.gleam_expect("argument present in field map")))
                         }
                     }
                     self.traverse_pattern(
@@ -458,7 +458,7 @@ impl<'module> Generator<'module> {
             }
 
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-                unimplemented!("BitString matching not supported in JS backend")
+                unsupported("BitString matching not supported in JS backend")
             }
         }
     }
