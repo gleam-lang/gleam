@@ -32,10 +32,11 @@ pub struct Creator {
     workflows: PathBuf,
     gleam_version: &'static str,
     options: NewOptions,
+    project_name: String,
 }
 
 impl Creator {
-    fn new(options: NewOptions, gleam_version: &'static str) -> Self {
+    fn new(options: NewOptions, project_name: String, gleam_version: &'static str) -> Self {
         let root = PathBuf::from(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
@@ -49,6 +50,7 @@ impl Creator {
             workflows,
             gleam_version,
             options,
+            project_name,
         }
     }
 
@@ -72,7 +74,7 @@ impl Creator {
             }
 
             Template::App => {
-                crate::fs::mkdir(&self.src.join(self.options.name.clone().unwrap()));
+                crate::fs::mkdir(&self.src.join(self.project_name.clone()));
                 self.gitignore()?;
                 self.github_ci()?;
                 self.app_readme()?;
@@ -110,8 +112,7 @@ impl Creator {
 
     fn src_escript_module(&self) -> Result<()> {
         write(
-            self.src
-                .join(format!("{}.gleam", self.options.name.clone().unwrap())),
+            self.src.join(format!("{}.gleam", self.project_name)),
             &format!(
                 r#"import gleam/list
 import gleam/io
@@ -130,16 +131,14 @@ pub fn hello_world() -> String {{
 external fn char_list_to_string(CharList) -> String =
   "erlang" "list_to_binary"
 "#,
-                self.options.name.clone().unwrap()
+                self.project_name
             ),
         )
     }
 
     fn src_application_module(&self) -> Result<()> {
         write(
-            self.src
-                .join(&self.options.name.clone().unwrap())
-                .join("application.gleam"),
+            self.src.join(&self.project_name).join("application.gleam"),
             r#"import gleam/otp/supervisor.{ApplicationStartMode, ErlangStartResult}
 import gleam/dynamic.{Dynamic}
 
@@ -165,14 +164,13 @@ pub fn stop(_state: Dynamic) {
 
     fn src_module(&self) -> Result<()> {
         write(
-            self.src
-                .join(format!("{}.gleam", self.options.name.clone().unwrap())),
+            self.src.join(format!("{}.gleam", self.project_name)),
             &format!(
                 r#"pub fn hello_world() -> String {{
   "Hello, from {}!"
 }}
 "#,
-                self.options.name.clone().unwrap()
+                self.project_name
             ),
         )
     }
@@ -222,7 +220,7 @@ pub fn stop(_state: Dynamic) {
     {{gleam_otp, "{otp}"}}
 ]}}.
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
                 stdlib = GLEAM_STDLIB_VERSION,
                 otp = GLEAM_OTP_VERSION,
             ),
@@ -231,16 +229,12 @@ pub fn stop(_state: Dynamic) {
 
     fn erlang_app_src(&self) -> Result<()> {
         let module = match self.options.template {
-            Template::App => format!(
-                "\n  {{mod, {{{}@application, []}}}},",
-                self.options.name.clone().unwrap()
-            ),
+            Template::App => format!("\n  {{mod, {{{}@application, []}}}},", self.project_name),
             _ => "".to_string(),
         };
 
         write(
-            self.src
-                .join(format!("{}.app.src", self.options.name.clone().unwrap())),
+            self.src.join(format!("{}.app.src", self.project_name)),
             &format!(
                 r#"{{application, {application},
  [{{description, "{description}"}},
@@ -258,7 +252,7 @@ pub fn stop(_state: Dynamic) {
   {{links, []}}
 ]}}.
 "#,
-                application = self.options.name.clone().unwrap(),
+                application = self.project_name,
                 description = &self.options.description,
                 version = PROJECT_VERSION,
                 module = module,
@@ -312,7 +306,7 @@ rebar3 eunit
 rebar3 shell
 ```
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
                 description = self.options.description
             ),
         )
@@ -340,7 +334,7 @@ rebar3 escriptize
 _build/default/bin/{name}
 ```
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
                 description = self.options.description
             ),
         )
@@ -365,7 +359,7 @@ gleam shell
 ```
 ```
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
                 description = self.options.description
             ),
         )
@@ -400,7 +394,7 @@ this package can be installed by adding `{name}` to your `rebar.config` dependen
 ]}}.
 ```
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
                 description = self.options.description
             ),
         )
@@ -480,7 +474,7 @@ tool = "gleam"
 version = "0.1.0"
 description = "A Gleam library"
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
             ),
         )
     }
@@ -493,15 +487,14 @@ description = "A Gleam library"
 
 # repository = {{ type = "github", user = "my-user", repo = "{name}" }}
 "#,
-                name = self.options.name.clone().unwrap(),
+                name = self.project_name,
             ),
         )
     }
 
     fn gleam_test_module(&self) -> Result<()> {
         write(
-            self.test
-                .join(format!("{}_test.gleam", self.options.name.clone().unwrap())),
+            self.test.join(format!("{}_test.gleam", self.project_name)),
             &format!(
                 r#"import {name}
 
@@ -510,15 +503,14 @@ pub fn hello_world_test() {{
   Nil
 }}
 "#,
-                name = self.options.name.clone().unwrap()
+                name = self.project_name
             ),
         )
     }
 
     fn test_module(&self) -> Result<()> {
         write(
-            self.test
-                .join(format!("{}_test.gleam", self.options.name.clone().unwrap())),
+            self.test.join(format!("{}_test.gleam", self.project_name)),
             &format!(
                 r#"import {name}
 import gleam/should
@@ -528,19 +520,21 @@ pub fn hello_world_test() {{
   |> should.equal("Hello, from {name}!")
 }}
 "#,
-                name = self.options.name.clone().unwrap()
+                name = self.project_name
             ),
         )
     }
 }
 
-pub fn create(mut options: NewOptions, version: &'static str) -> Result<()> {
-    if options.name.is_none() {
-        options.name = get_foldername(&options.project_root);
+pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
+    let name = if let Some(name) = options.name.clone() {
+        name
+    } else {
+        get_foldername(&options.project_root)?
     };
-    validate_name(&options.name.clone().unwrap())?;
-    validate_root_folder(&options.name.clone().unwrap())?;
-    let creator = Creator::new(options.clone(), version);
+    validate_name(name.as_str())?;
+    validate_root_folder(name.as_str())?;
+    let creator = Creator::new(options.clone(), name, version);
 
     creator.run()?;
 
@@ -562,9 +556,7 @@ The project can be compiled and tested by running these commands:
 
 {}\t{}
 ",
-        creator.options.name.unwrap(),
-        cd_folder,
-        test_command,
+        creator.project_name, cd_folder, test_command,
     );
     Ok(())
 }
@@ -631,16 +623,22 @@ fn validate_name(name: &str) -> Result<(), Error> {
     }
 }
 
-fn get_foldername(path: &str) -> Option<String> {
+fn get_foldername(path: &str) -> Result<String, Error> {
     match path {
         "." => env::current_dir()
             .gleam_expect("invalid folder")
             .file_name()
             .and_then(|x| x.to_str())
-            .map(ToString::to_string),
+            .map(ToString::to_string)
+            .ok_or(Error::UnableToFindProjectRoot {
+                path: path.to_string(),
+            }),
         _ => Path::new(path)
             .file_name()
             .and_then(|x| x.to_str())
-            .map(ToString::to_string),
+            .map(ToString::to_string)
+            .ok_or(Error::UnableToFindProjectRoot {
+                path: path.to_string(),
+            }),
     }
 }
