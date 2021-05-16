@@ -29,7 +29,7 @@ fn go(x) {
 
 function go(x) {
   let $ = x;
-  if (!($ === "Hello")) throw new Error("Bad match");
+  if ($ !== "Hello") throw new Error("Bad match");
 }
 "#
     );

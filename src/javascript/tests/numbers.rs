@@ -160,7 +160,7 @@ fn go(x) {
 
 function go(x) {
   let $ = x;
-  if (!($ === 4)) throw new Error("Bad match");
+  if ($ !== 4) throw new Error("Bad match");
 }
 "#
     );

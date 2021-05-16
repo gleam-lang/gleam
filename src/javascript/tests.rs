@@ -250,7 +250,7 @@ fn go(x) {
 
 function go(x) {
   let $ = x;
-  if (!($[0] === 1 && $[1] === 2)) throw new Error("Bad match");
+  if ($[0] !== 1 || $[1] !== 2) throw new Error("Bad match");
 }
 "#
     )
@@ -268,7 +268,7 @@ fn go(x) {
 
 function go(x) {
   let $ = x;
-  if (!($[1][2] === 2 && $[3] === 1)) throw new Error("Bad match");
+  if ($[1][2] !== 2 || $[3] !== 1) throw new Error("Bad match");
   let a = $[0];
   let t = $[1];
   let b = $[1][0];
@@ -309,7 +309,7 @@ function go(x, foo) {
   let a$1 = 2;
   foo(a$1);
   let $ = x;
-  if (!($[1] === 3)) throw new Error("Bad match");
+  if ($[1] !== 3) throw new Error("Bad match");
   let a$2 = $[0];
   
   let b = a$2;

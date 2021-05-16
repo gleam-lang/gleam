@@ -73,13 +73,13 @@ fn go(x, y) {
 
 function go(x, y) {
   let $ = x;
-  if (!($ === true)) throw new Error("Bad match");
+  if ($ !== true) throw new Error("Bad match");
   
   let $1 = x;
-  if (!($1 === false)) throw new Error("Bad match");
+  if ($1 !== false) throw new Error("Bad match");
   
   let $2 = y;
-  if (!($2 === undefined)) throw new Error("Bad match");
+  if ($2 !== undefined) throw new Error("Bad match");
 }
 "#
     );

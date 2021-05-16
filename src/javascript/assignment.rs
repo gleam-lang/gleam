@@ -85,16 +85,16 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 let check_line = match checks.is_empty() {
                     true => "".to_doc(),
                     false => docvec![
-                        "if (!(",
+                        "if (",
                         docvec![
                             break_("", ""),
-                            Itertools::intersperse(checks.into_iter(), break_(" &&", " && "))
+                            Itertools::intersperse(checks.into_iter(), break_(" ||", " || "))
                                 .collect::<Vec<_>>()
                                 .to_doc(),
                         ]
                         .nest(INDENT),
                         break_("", ""),
-                        ")) throw new Error(\"Bad match\");",
+                        ") throw new Error(\"Bad match\");",
                     ]
                     .group(),
                 };
@@ -164,8 +164,8 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             Pattern::List { elements, tail, .. } => {
                 let path_string = self.path_document();
                 let length_check = match tail {
-                    Some(_) => "?.length !== undefined".to_doc(),
-                    None => "?.length === 0".to_doc(),
+                    Some(_) => "?.length === undefined".to_doc(),
+                    None => "?.length !== 0".to_doc(),
                 };
                 checks.push(docvec![
                     tmp_var.clone(),
@@ -261,6 +261,6 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     fn equality(&mut self, tmp_var: Document<'a>, to_match: Document<'a>) -> Document<'a> {
-        docvec![tmp_var, self.path_document(), " === ", to_match]
+        docvec![tmp_var, self.path_document(), " !== ", to_match]
     }
 }
