@@ -10,7 +10,7 @@ const INDENT: isize = 2;
 
 const DEEP_EQUAL: &str = "
 
-function $deepEqual(x, y) {
+function $deep_equal(x, y) {
   if ($isObject(x) && $isObject(y)) {
     const kx = Object.keys(x);
     const ky = Object.keys(x);
@@ -22,7 +22,7 @@ function $deepEqual(x, y) {
     for (const k of kx) {
       const a = x[k];
       const b = y[k];
-      if !$deepEqual(a, b) {
+      if !$deep_equal(a, b) {
         return false
       }
     }

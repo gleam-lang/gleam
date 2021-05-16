@@ -354,12 +354,12 @@ impl<'module> Generator<'module> {
             BinOp::Eq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                docvec!("$deepEqual", wrap_args(once(left).chain(once(right))))
+                docvec!("$deep_equal", wrap_args(once(left).chain(once(right))))
             }
             BinOp::NotEq => {
                 use std::iter::once;
                 *self.object_equality_used = true;
-                docvec!("!$deepEqual", wrap_args(once(left).chain(once(right))))
+                docvec!("!$deep_equal", wrap_args(once(left).chain(once(right))))
             }
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
