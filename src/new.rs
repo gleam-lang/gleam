@@ -544,7 +544,7 @@ pub fn create(mut options: NewOptions, version: &'static str) -> Result<()> {
 
     creator.run()?;
 
-    let cd_folder = if options.project_root == *"." {
+    let cd_folder = if options.project_root == "." {
         "".to_string()
     } else {
         format!("\tcd {}\n", creator.options.project_root)
