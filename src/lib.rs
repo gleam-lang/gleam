@@ -18,7 +18,7 @@ use serde::Deserialize;
 use serde_json::json;
 use std::{collections::HashMap, io::BufReader};
 use thiserror::Error;
-use version::Version;
+use version::{Range, Version};
 
 #[async_trait]
 pub trait Client {
@@ -155,15 +155,15 @@ pub trait Client {
             .map_err(|_| GetPackageError::IncorrectPayloadSignature)?;
 
         let mut package = proto::package::Package::parse_from_bytes(&payload)?;
-
+        let releases = package
+            .take_releases()
+            .into_iter()
+            .map(proto_to_release)
+            .collect::<Result<Vec<_>, _>>()?;
         let package = Package {
             name: package.take_name(),
             repository: package.take_repository(),
-            releases: package
-                .take_releases()
-                .into_iter()
-                .map(proto_to_release)
-                .collect(),
+            releases,
         };
 
         Ok(package)
@@ -251,7 +251,7 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
     }
 }
 
-fn proto_to_dep(mut dep: proto::package::Dependency) -> Dependency {
+fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, GetPackageError> {
     let app = if dep.has_app() {
         Some(dep.take_app())
     } else {
@@ -262,26 +262,30 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Dependency {
     } else {
         None
     };
-    Dependency {
+    let requirement = dep.take_requirement();
+    let requirement = Version::parse_range(&requirement)
+        .map_err(|_| GetPackageError::UnexpectedVersionRequirementFormat(requirement.clone()))?;
+    Ok(Dependency {
         package: dep.take_package(),
-        requirement: dep.take_requirement(),
+        requirement,
         optional: dep.has_optional(),
         app,
         repository,
-    }
+    })
 }
 
-fn proto_to_release(mut release: proto::package::Release) -> Release {
-    Release {
+fn proto_to_release(mut release: proto::package::Release) -> Result<Release, GetPackageError> {
+    let dependencies = release
+        .take_dependencies()
+        .into_iter()
+        .map(proto_to_dep)
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Release {
         version: release.take_version(),
         outer_checksum: release.take_outer_checksum(),
         retirement_status: proto_to_retirement_status(release.take_retired()),
-        dependencies: release
-            .take_dependencies()
-            .into_iter()
-            .map(proto_to_dep)
-            .collect(),
-    }
+        dependencies,
+    })
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -331,7 +335,7 @@ pub struct Dependency {
     /// Package name of dependency
     pub package: String,
     /// Version requirement of dependency
-    pub requirement: String,
+    pub requirement: Range,
     /// If true the package is optional and does not need to be resolved
     /// unless another package has specified it as a non-optional dependency.
     pub optional: bool,
@@ -358,6 +362,9 @@ pub enum GetPackageError {
 
     #[error(transparent)]
     DecodeFailed(#[from] protobuf::ProtobufError),
+
+    #[error("unexpected version requirement format {0}")]
+    UnexpectedVersionRequirementFormat(String),
 }
 
 #[derive(Error, Debug)]
