@@ -161,12 +161,11 @@ impl<'module> Generator<'module> {
         self.tail_position = tail;
         self.current_scope_vars = current_scope_vars;
         Ok(docvec!(
-            docvec!("(() => {", break_("", " "), result?)
-                .nest(INDENT)
-                .group(),
+            docvec!("(() => {", break_("", " "), result?).nest(INDENT),
             break_("", " "),
             "})()",
-        ))
+        )
+        .group())
     }
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {

@@ -1,4 +1,5 @@
-mod booleans;
+mod blocks;
+mod bools;
 mod custom_types;
 mod functions;
 mod lists;
@@ -318,7 +319,8 @@ function go(x, foo) {
   foo(b);
   let c = (() => {
     let a$3 = a$2;
-    return [a$3, b]; })();
+    return [a$3, b];
+  })();
   foo(a$2);
   let x$1 = c;
   return x$1;

@@ -1,7 +1,7 @@
 use crate::assert_js;
 
 #[test]
-fn boolean_literals() {
+fn expressions() {
     assert_js!(
         r#"
 fn go() {
@@ -22,7 +22,7 @@ function go() {
 }
 
 #[test]
-fn boolean_constants() {
+fn constants() {
     assert_js!(
         r#"
 const a = True
@@ -41,7 +41,7 @@ const c = undefined;
 }
 
 #[test]
-fn boolean_operators() {
+fn operators() {
     assert_js!(
         r#"
 fn go() {
@@ -60,7 +60,7 @@ function go() {
 }
 
 #[test]
-fn matching_booleans() {
+fn assigning() {
     assert_js!(
         r#"
 fn go(x, y) {
