@@ -159,8 +159,7 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  let $ = x;
-  if ($ !== 4) throw new Error("Bad match");
+  if (x !== 4) throw new Error("Bad match");
 }
 "#
     );

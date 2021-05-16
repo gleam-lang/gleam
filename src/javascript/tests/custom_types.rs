@@ -73,9 +73,8 @@ function go() {
 }
 
 function destructure(x) {
-  let $ = x;
-  if ($.type !== "Ip") throw new Error("Bad match");
-  let raw = $[0];
+  if (x.type !== "Ip") throw new Error("Bad match");
+  let raw = x[0];
   
   return raw;
 }
@@ -184,18 +183,15 @@ fn go(cat) {
         r#""use strict";
 
 function go(cat) {
-  let $ = cat;
-  if ($.type !== "Cat") throw new Error("Bad match");
-  let x = $.name;
-  let y = $.cuteness;
+  if (cat.type !== "Cat") throw new Error("Bad match");
+  let x = cat.name;
+  let y = cat.cuteness;
   
-  let $1 = cat;
-  if ($1.type !== "Cat") throw new Error("Bad match");
-  let x$1 = $1.name;
+  if (cat.type !== "Cat") throw new Error("Bad match");
+  let x$1 = cat.name;
   
-  let $2 = cat;
-  if ($2.type !== "Cat" || $2.cuteness !== 4) throw new Error("Bad match");
-  let x$2 = $2.name;
+  if (cat.type !== "Cat" || cat.cuteness !== 4) throw new Error("Bad match");
+  let x$2 = cat.name;
   
   return x$2;
 }

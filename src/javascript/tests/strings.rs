@@ -28,8 +28,7 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  let $ = x;
-  if ($ !== "Hello") throw new Error("Bad match");
+  if (x !== "Hello") throw new Error("Bad match");
 }
 "#
     );

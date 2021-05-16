@@ -72,14 +72,11 @@ fn go(x, y) {
         r#""use strict";
 
 function go(x, y) {
-  let $ = x;
-  if ($ !== true) throw new Error("Bad match");
+  if (x !== true) throw new Error("Bad match");
   
-  let $1 = x;
-  if ($1 !== false) throw new Error("Bad match");
+  if (x !== false) throw new Error("Bad match");
   
-  let $2 = y;
-  if ($2 !== undefined) throw new Error("Bad match");
+  if (y !== undefined) throw new Error("Bad match");
 }
 "#
     );
