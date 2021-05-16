@@ -51,6 +51,7 @@ impl<'module> Generator<'module> {
                 name.to_doc()
             }
             Some(0) => name.to_doc(),
+            Some(n) if name == "$" => Document::String(format!("${}", n)),
             Some(n) => Document::String(format!("{}${}", name, n)),
         }
     }

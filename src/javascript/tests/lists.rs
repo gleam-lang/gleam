@@ -100,28 +100,28 @@ function go(x, y) {
   let $ = x;
   if (!($?.length === 0)) throw new Error("Bad match");
   
-  let $$1 = x;
-  if (!($$1?.[1]?.length === 0)) throw new Error("Bad match");
-  let a = $$1[0];
+  let $1 = x;
+  if (!($1?.[1]?.length === 0)) throw new Error("Bad match");
+  let a = $1[0];
   
-  let $$2 = x;
+  let $2 = x;
   if (!(
-    $$2?.[1]?.[1]?.length === 0 &&
-    $$2[0] === 1 &&
-    $$2[1][0] === 2
+    $2?.[1]?.[1]?.length === 0 &&
+    $2[0] === 1 &&
+    $2[1][0] === 2
   )) throw new Error("Bad match");
   
-  let $$3 = y;
+  let $3 = y;
   if (!(
-    $$3?.[1]?.[1]?.length === 0 &&
-    $$3[1][0][0] === 3
+    $3?.[1]?.[1]?.length === 0 &&
+    $3[1][0][0] === 3
   )) throw new Error("Bad match");
-  let b = $$3[1][0][1];
+  let b = $3[1][0][1];
   
-  let $$4 = y;
-  if (!($$4?.[1]?.length !== undefined)) throw new Error("Bad match");
-  let head = $$4[0];
-  let tail = $$4[1];
+  let $4 = y;
+  if (!($4?.[1]?.length !== undefined)) throw new Error("Bad match");
+  let head = $4[0];
+  let tail = $4[1];
 }
 "#
     );

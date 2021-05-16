@@ -189,16 +189,16 @@ function go(cat) {
   let x = $["name"];
   let y = $["cuteness"];
   
-  let $$1 = cat;
-  if (!($$1["type"] === "Cat")) throw new Error("Bad match");
-  let x$1 = $$1["name"];
+  let $1 = cat;
+  if (!($1["type"] === "Cat")) throw new Error("Bad match");
+  let x$1 = $1["name"];
   
-  let $$2 = cat;
+  let $2 = cat;
   if (!(
-    $$2["type"] === "Cat" &&
-    $$2["cuteness"] === 4
+    $2["type"] === "Cat" &&
+    $2["cuteness"] === 4
   )) throw new Error("Bad match");
-  let x$2 = $$2["name"];
+  let x$2 = $2["name"];
   
   return x$2;
 }
