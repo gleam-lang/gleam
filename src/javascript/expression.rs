@@ -10,7 +10,7 @@ use crate::{
 };
 
 static RECORD_KEY: &str = "type";
-static TMP_VAR: &str = "gleam$tmp";
+static ASSIGNMENT_VAR: &str = "$";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -255,7 +255,7 @@ impl<'module> Generator<'module> {
                 let mut path = vec![];
                 let mut assignments = vec![];
 
-                let tmp_var = self.next_local_var_name(TMP_VAR);
+                let tmp_var = self.next_local_var_name(ASSIGNMENT_VAR);
 
                 let () = self.traverse_pattern(
                     pattern,

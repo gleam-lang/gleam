@@ -28,8 +28,8 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  let gleam$tmp = x;
-  if (!(gleam$tmp === "Hello")) throw new Error("Bad match");
+  let $ = x;
+  if (!($ === "Hello")) throw new Error("Bad match");
 }
 "#
     );

@@ -249,8 +249,8 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  let gleam$tmp = x;
-  if (!(gleam$tmp[0] === 1 && gleam$tmp[1] === 2)) throw new Error("Bad match");
+  let $ = x;
+  if (!($[0] === 1 && $[1] === 2)) throw new Error("Bad match");
 }
 "#
     )
@@ -267,15 +267,12 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  let gleam$tmp = x;
-  if (!(
-    gleam$tmp[1][2] === 2 &&
-    gleam$tmp[3] === 1
-  )) throw new Error("Bad match");
-  let a = gleam$tmp[0];
-  let t = gleam$tmp[1];
-  let b = gleam$tmp[1][0];
-  let c = gleam$tmp[1][1];
+  let $ = x;
+  if (!($[1][2] === 2 && $[3] === 1)) throw new Error("Bad match");
+  let a = $[0];
+  let t = $[1];
+  let b = $[1][0];
+  let c = $[1][1];
 }
 "#
     )
@@ -311,9 +308,9 @@ function go(x, foo) {
   foo(a);
   let a$1 = 2;
   foo(a$1);
-  let gleam$tmp = x;
-  if (!(gleam$tmp[1] === 3)) throw new Error("Bad match");
-  let a$2 = gleam$tmp[0];
+  let $ = x;
+  if (!($[1] === 3)) throw new Error("Bad match");
+  let a$2 = $[0];
   
   let b = a$2;
   foo(b);

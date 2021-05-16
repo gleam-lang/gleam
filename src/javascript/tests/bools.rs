@@ -72,14 +72,14 @@ fn go(x, y) {
         r#""use strict";
 
 function go(x, y) {
-  let gleam$tmp = x;
-  if (!(gleam$tmp === true)) throw new Error("Bad match");
+  let $ = x;
+  if (!($ === true)) throw new Error("Bad match");
   
-  let gleam$tmp$1 = x;
-  if (!(gleam$tmp$1 === false)) throw new Error("Bad match");
+  let $$1 = x;
+  if (!($$1 === false)) throw new Error("Bad match");
   
-  let gleam$tmp$2 = y;
-  if (!(gleam$tmp$2 === undefined)) throw new Error("Bad match");
+  let $$2 = y;
+  if (!($$2 === undefined)) throw new Error("Bad match");
 }
 "#
     );

@@ -97,31 +97,31 @@ fn go(x, y) {
         r#""use strict";
 
 function go(x, y) {
-  let gleam$tmp = x;
-  if (!(gleam$tmp?.length === 0)) throw new Error("Bad match");
+  let $ = x;
+  if (!($?.length === 0)) throw new Error("Bad match");
   
-  let gleam$tmp$1 = x;
-  if (!(gleam$tmp$1?.[1]?.length === 0)) throw new Error("Bad match");
-  let a = gleam$tmp$1[0];
+  let $$1 = x;
+  if (!($$1?.[1]?.length === 0)) throw new Error("Bad match");
+  let a = $$1[0];
   
-  let gleam$tmp$2 = x;
+  let $$2 = x;
   if (!(
-    gleam$tmp$2?.[1]?.[1]?.length === 0 &&
-    gleam$tmp$2[0] === 1 &&
-    gleam$tmp$2[1][0] === 2
+    $$2?.[1]?.[1]?.length === 0 &&
+    $$2[0] === 1 &&
+    $$2[1][0] === 2
   )) throw new Error("Bad match");
   
-  let gleam$tmp$3 = y;
+  let $$3 = y;
   if (!(
-    gleam$tmp$3?.[1]?.[1]?.length === 0 &&
-    gleam$tmp$3[1][0][0] === 3
+    $$3?.[1]?.[1]?.length === 0 &&
+    $$3[1][0][0] === 3
   )) throw new Error("Bad match");
-  let b = gleam$tmp$3[1][0][1];
+  let b = $$3[1][0][1];
   
-  let gleam$tmp$4 = y;
-  if (!(gleam$tmp$4?.[1]?.length !== undefined)) throw new Error("Bad match");
-  let head = gleam$tmp$4[0];
-  let tail = gleam$tmp$4[1];
+  let $$4 = y;
+  if (!($$4?.[1]?.length !== undefined)) throw new Error("Bad match");
+  let head = $$4[0];
+  let tail = $$4[1];
 }
 "#
     );

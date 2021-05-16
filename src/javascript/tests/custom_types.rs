@@ -73,9 +73,9 @@ function go() {
 }
 
 function destructure(x) {
-  let gleam$tmp = x;
-  if (!(gleam$tmp["type"] === "Ip")) throw new Error("Bad match");
-  let raw = gleam$tmp[0];
+  let $ = x;
+  if (!($["type"] === "Ip")) throw new Error("Bad match");
+  let raw = $[0];
   
   return raw;
 }
@@ -184,21 +184,21 @@ fn go(cat) {
         r#""use strict";
 
 function go(cat) {
-  let gleam$tmp = cat;
-  if (!(gleam$tmp["type"] === "Cat")) throw new Error("Bad match");
-  let x = gleam$tmp["name"];
-  let y = gleam$tmp["cuteness"];
+  let $ = cat;
+  if (!($["type"] === "Cat")) throw new Error("Bad match");
+  let x = $["name"];
+  let y = $["cuteness"];
   
-  let gleam$tmp$1 = cat;
-  if (!(gleam$tmp$1["type"] === "Cat")) throw new Error("Bad match");
-  let x$1 = gleam$tmp$1["name"];
+  let $$1 = cat;
+  if (!($$1["type"] === "Cat")) throw new Error("Bad match");
+  let x$1 = $$1["name"];
   
-  let gleam$tmp$2 = cat;
+  let $$2 = cat;
   if (!(
-    gleam$tmp$2["type"] === "Cat" &&
-    gleam$tmp$2["cuteness"] === 4
+    $$2["type"] === "Cat" &&
+    $$2["cuteness"] === 4
   )) throw new Error("Bad match");
-  let x$2 = gleam$tmp$2["name"];
+  let x$2 = $$2["name"];
   
   return x$2;
 }
