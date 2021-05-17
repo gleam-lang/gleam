@@ -585,7 +585,9 @@ fn register_values<'a>(
             // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len());
             for (i, arg) in args.iter().enumerate() {
-                if let ArgNames::NamedLabelled { label, .. } = &arg.names {
+                if let ArgNames::NamedLabelled { label, .. }
+                | ArgNames::LabelledDiscard { label, .. } = &arg.names
+                {
                     field_map
                         .insert(label.clone(), i)
                         .map_err(|_| Error::DuplicateField {
