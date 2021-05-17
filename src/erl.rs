@@ -486,6 +486,10 @@ fn fun_spec<'a>(
 }
 
 fn atom<'a>(value: String) -> Document<'a> {
+    Document::String(escape_atom(value))
+}
+
+fn escape_atom(value: String) -> String {
     use regex::Regex;
     lazy_static! {
         static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").gleam_expect("atom RE regex");
@@ -493,13 +497,13 @@ fn atom<'a>(value: String) -> Document<'a> {
 
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
-        Document::String(format!("'{}'", value))
+        format!("'{}'", value)
     } else if RE.is_match(&value) {
         // No need to escape
-        Document::String(value)
+        value
     } else {
         // Escape because of characters contained
-        Document::String(value).surround("'", "'")
+        format!("'{}'", value)
     }
 }
 
@@ -1589,6 +1593,13 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "try"
             | "catch"
             | "after"
+            | "begin"
+            | "let"
+            | "query"
+            | "cond"
+            | "if"
+            | "of"
+            | "case"
     )
 }
 
@@ -1720,7 +1731,6 @@ fn erl_safe_type_name(mut name: String) -> String {
             | "port"
             | "reference"
             | "float"
-            | "fun"
             | "integer"
             | "list"
             | "nonempty_improper_list"
@@ -1753,8 +1763,10 @@ fn erl_safe_type_name(mut name: String) -> String {
             | "neg_integer"
     ) {
         name.push('_');
+        name
+    } else {
+        escape_atom(name)
     }
-    name
 }
 
 #[derive(Debug)]
