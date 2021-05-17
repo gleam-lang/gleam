@@ -161,27 +161,33 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 Ok(())
             }
 
+            // TODO: FIXME: This should only be the case if we know it if the prelude bool
+            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "True" => {
-                self.equality_check("true".to_doc());
+                self.booly_check(true);
                 Ok(())
             }
 
+            // TODO: FIXME: This should only be the case if we know it if the prelude bool
+            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "False" => {
-                self.equality_check("false".to_doc());
+                self.booly_check(false);
                 Ok(())
             }
 
+            // TODO: FIXME: This should only be the case if we know it if the prelude nil
+            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "Nil" => {
-                self.equality_check("undefined".to_doc());
+                self.booly_check(false);
                 Ok(())
             }
 
@@ -223,22 +229,28 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn equality_check(&mut self, to: Document<'a>) {
-        self.checks.push(Check {
-            subject: self.subject.clone(),
-            path: self.path_document(),
-            kind: CheckKind::Equal { to },
+    fn booly_check(&mut self, expected_to_be_truthy: bool) {
+        self.push_check(CheckKind::Booly {
+            expected_to_be_truthy,
         })
     }
 
+    fn equality_check(&mut self, to: Document<'a>) {
+        self.push_check(CheckKind::Equal { to })
+    }
+
     fn list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
+        self.push_check(CheckKind::ListLength {
+            expected_length,
+            has_tail_spread,
+        })
+    }
+
+    fn push_check(&mut self, kind: CheckKind<'a>) {
         self.checks.push(Check {
             subject: self.subject.clone(),
             path: self.path_document(),
-            kind: CheckKind::ListLength {
-                expected_length,
-                has_tail_spread,
-            },
+            kind,
         })
     }
 }
@@ -294,6 +306,18 @@ pub struct Check<'a> {
 impl<'a> Check<'a> {
     pub fn into_doc(self) -> Document<'a> {
         match self.kind {
+            CheckKind::Booly {
+                expected_to_be_truthy: true,
+            } => {
+                docvec!["!", self.subject, self.path]
+            }
+
+            CheckKind::Booly {
+                expected_to_be_truthy: false,
+            } => {
+                docvec![self.subject, self.path]
+            }
+
             CheckKind::Equal { to } => {
                 docvec![self.subject, self.path, " !== ", to]
             }
@@ -326,5 +350,8 @@ enum CheckKind<'a> {
     ListLength {
         expected_length: usize,
         has_tail_spread: bool,
+    },
+    Booly {
+        expected_to_be_truthy: bool,
     },
 }
