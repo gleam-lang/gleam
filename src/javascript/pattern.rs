@@ -14,7 +14,7 @@ pub struct Generator<'module, 'expression, 'a> {
     expression_generator: &'expression mut expression::Generator<'module>,
     path: Vec<Index<'a>>,
     subject: Document<'a>,
-    checks: Vec<Document<'a>>,
+    checks: Vec<Check<'a>>,
     assignments: Vec<Document<'a>>,
 }
 
@@ -135,7 +135,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             }
 
             Pattern::List { elements, tail, .. } => {
-                self.list_length_check(elements.len(), tail.as_deref());
+                self.list_length_check(elements.len(), tail.is_some());
                 for pattern in elements.iter() {
                     self.push_int(0);
                     self.traverse_pattern(pattern)?;
@@ -223,34 +223,29 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn equality_check(&mut self, to_match: Document<'a>) {
-        let check = docvec![
-            self.subject.clone(),
-            self.path_document(),
-            " !== ",
-            to_match
-        ];
-        self.checks.push(check)
+    fn equality_check(&mut self, to: Document<'a>) {
+        self.checks.push(Check {
+            subject: self.subject.clone(),
+            path: self.path_document(),
+            kind: CheckKind::Equal { to },
+        })
     }
 
-    fn list_length_check(&mut self, length: usize, tail: Option<&'a TypedPattern>) {
-        let path_string = self.path_document();
-        let length_check = match tail {
-            Some(_) => "?.length === undefined".to_doc(),
-            None => "?.length !== 0".to_doc(),
-        };
-        self.checks.push(docvec![
-            self.subject.clone(),
-            path_string,
-            Document::String("?.[1]".repeat(length)),
-            length_check,
-        ]);
+    fn list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
+        self.checks.push(Check {
+            subject: self.subject.clone(),
+            path: self.path_document(),
+            kind: CheckKind::ListLength {
+                expected_length,
+                has_tail_spread,
+            },
+        })
     }
 }
 
 #[derive(Debug)]
 pub struct CompiledPattern<'a> {
-    checks: Vec<Document<'a>>,
+    checks: Vec<Check<'a>>,
     assignments: Vec<Document<'a>>,
 }
 
@@ -274,9 +269,9 @@ impl<'a> CompiledPattern<'a> {
         concat(Itertools::intersperse(assignments.into_iter(), line()))
     }
 
-    pub fn checks_doc(checks: Vec<Document<'a>>) -> Document<'a> {
+    pub fn checks_doc(checks: Vec<Check<'a>>) -> Document<'a> {
         let checks = concat(Itertools::intersperse(
-            checks.into_iter(),
+            checks.into_iter().map(Check::into_doc),
             break_(" ||", " || "),
         ));
         docvec![
@@ -287,4 +282,49 @@ impl<'a> CompiledPattern<'a> {
         ]
         .group()
     }
+}
+
+#[derive(Debug)]
+pub struct Check<'a> {
+    subject: Document<'a>,
+    path: Document<'a>,
+    kind: CheckKind<'a>,
+}
+
+impl<'a> Check<'a> {
+    pub fn into_doc(self) -> Document<'a> {
+        match self.kind {
+            CheckKind::Equal { to } => {
+                docvec![self.subject, self.path, " !== ", to]
+            }
+
+            CheckKind::ListLength {
+                expected_length,
+                has_tail_spread,
+            } => {
+                let length_check = if has_tail_spread {
+                    "?.length === undefined".to_doc()
+                } else {
+                    "?.length !== 0".to_doc()
+                };
+                docvec![
+                    self.subject,
+                    self.path,
+                    Document::String("?.[1]".repeat(expected_length)),
+                    length_check,
+                ]
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum CheckKind<'a> {
+    Equal {
+        to: Document<'a>,
+    },
+    ListLength {
+        expected_length: usize,
+        has_tail_spread: bool,
+    },
 }
