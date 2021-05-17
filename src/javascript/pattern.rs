@@ -14,6 +14,8 @@ pub struct Generator<'module, 'expression, 'a> {
     expression_generator: &'expression mut expression::Generator<'module>,
     path: Vec<Index<'a>>,
     subject: Document<'a>,
+    checks: Vec<Document<'a>>,
+    assignments: Vec<Document<'a>>,
 }
 
 impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
@@ -37,9 +39,11 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             }
         };
         let me = Self {
+            path: vec![],
+            checks: vec![],
+            assignments: vec![],
             expression_generator,
             subject: subject.clone(),
-            path: vec![],
         };
         Ok((me, assignment))
     }
@@ -80,74 +84,57 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     pub fn generate(&mut self, pattern: &'a TypedPattern) -> Result<CompiledPattern<'a>, Error> {
-        // match pattern {
-        //     // We can do a regular assignment if it is an assignment to just a pattern
-        //     Pattern::Var { name, .. } => Ok(docvec![
-        //         "let ",
-        //         self.next_local_var_name(name),
-        //         " = ",
-        //         self.subject,
-        //         ";"
-        //     ]),
-        //     _ => {
-        let mut checks = vec![];
-        let mut assignments = vec![];
-
-        let () =
-            self.traverse_pattern(pattern, self.subject.clone(), &mut checks, &mut assignments)?;
+        let _ = self.traverse_pattern(pattern)?;
 
         Ok(CompiledPattern {
-            checks,
-            assignments,
+            checks: std::mem::take(&mut self.checks),
+            assignments: std::mem::take(&mut self.assignments),
         })
-        // }
-        // }
     }
 
-    fn traverse_pattern(
-        &mut self,
-        pattern: &'a TypedPattern,
-        value_name: Document<'a>,
-        checks: &mut Vec<Document<'a>>,
-        assignments: &mut Vec<Document<'a>>,
-    ) -> Result<(), Error> {
+    fn traverse_pattern(&mut self, pattern: &'a TypedPattern) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                checks.push(self.equality(value_name, expression::string(value)));
+                let check = self.equality(expression::string(value));
+                self.checks.push(check);
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                checks.push(self.equality(value_name, expression::int(value)));
+                let check = self.equality(expression::int(value));
+                self.checks.push(check);
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                checks.push(self.equality(value_name, expression::float(value)));
+                let check = self.equality(expression::float(value));
+                self.checks.push(check);
                 Ok(())
             }
 
             Pattern::Var { name, .. } => {
-                assignments.push(docvec![
+                let check = docvec![
                     "let ",
                     self.next_local_var_name(name),
                     " = ",
-                    value_name,
+                    self.subject.clone(),
                     self.path_document(),
                     ";",
-                ]);
+                ];
+                self.assignments.push(check);
                 Ok(())
             }
 
             Pattern::Discard { .. } => Ok(()),
             Pattern::Assign { name, pattern, .. } => {
-                assignments.push(docvec![
+                let check = docvec![
                     "let ",
                     self.next_local_var_name(name),
                     " = ",
-                    value_name.clone(),
+                    self.subject.clone(),
                     self.path_document(),
                     ";",
-                ]);
-                self.traverse_pattern(pattern, value_name, checks, assignments)
+                ];
+                self.assignments.push(check);
+                self.traverse_pattern(pattern)
             }
 
             Pattern::List { elements, tail, .. } => {
@@ -156,22 +143,22 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                     Some(_) => "?.length === undefined".to_doc(),
                     None => "?.length !== 0".to_doc(),
                 };
-                checks.push(docvec![
-                    value_name.clone(),
+                self.checks.push(docvec![
+                    self.subject.clone(),
                     path_string,
                     Document::String("?.[1]".repeat(elements.len())),
                     length_check,
                 ]);
                 for pattern in elements.iter() {
                     self.push_int(0);
-                    self.traverse_pattern(pattern, value_name.clone(), checks, assignments)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop();
                     self.push_int(1);
                 }
                 self.pop_times(elements.len());
                 if let Some(pattern) = tail {
                     self.push_int_times(1, elements.len());
-                    self.traverse_pattern(pattern, value_name, checks, assignments)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop_times(elements.len());
                 }
                 Ok(())
@@ -181,7 +168,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 // We don't check the length, because type system means it's a tuple
                 for (index, pattern) in elems.iter().enumerate() {
                     self.push_int(index);
-                    self.traverse_pattern(pattern, value_name.clone(), checks, assignments)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop();
                 }
                 Ok(())
@@ -191,7 +178,8 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "True" => {
-                checks.push(self.equality(value_name, "true".to_doc()));
+                let check = self.equality("true".to_doc());
+                self.checks.push(check);
                 Ok(())
             }
 
@@ -199,7 +187,8 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "False" => {
-                checks.push(self.equality(value_name, "false".to_doc()));
+                let check = self.equality("false".to_doc());
+                self.checks.push(check);
                 Ok(())
             }
 
@@ -207,7 +196,8 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "Nil" => {
-                checks.push(self.equality(value_name, "undefined".to_doc()));
+                let check = self.equality("undefined".to_doc());
+                self.checks.push(check);
                 Ok(())
             }
 
@@ -217,7 +207,8 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 ..
             } => {
                 self.push_string("type");
-                checks.push(self.equality(value_name.clone(), expression::string(name)));
+                let check = self.equality(expression::string(name));
+                self.checks.push(check);
                 self.pop();
 
                 for (index, arg) in arguments.iter().enumerate() {
@@ -237,7 +228,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                             self.push_string(label.gleam_expect("argument present in field map"));
                         }
                     }
-                    self.traverse_pattern(&arg.value, value_name.clone(), checks, assignments)?;
+                    self.traverse_pattern(&arg.value)?;
                     self.pop_times(arguments.len());
                 }
                 Ok(())
@@ -249,8 +240,13 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn equality(&mut self, value_name: Document<'a>, to_match: Document<'a>) -> Document<'a> {
-        docvec![value_name, self.path_document(), " !== ", to_match]
+    fn equality(&mut self, to_match: Document<'a>) -> Document<'a> {
+        docvec![
+            self.subject.clone(),
+            self.path_document(),
+            " !== ",
+            to_match
+        ]
     }
 }
 
