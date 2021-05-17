@@ -1,5 +1,5 @@
-mod assignment;
 mod expression;
+mod pattern;
 #[cfg(test)]
 mod tests;
 

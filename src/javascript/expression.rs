@@ -236,7 +236,37 @@ impl<'module> Generator<'module> {
     }
 
     fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
-        assignment::Generator::new(self).generate(value, pattern)
+        // If it is a simple assignment to a variable we can generate a normal
+        // JS assignment
+        if let TypedPattern::Var { name, .. } = pattern {
+            // Subject must be rendered before the variable for variable numbering
+            let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+            let name = self.next_local_var_name(name);
+            return Ok(docvec!("let ", name, " = ", subject, ";"));
+        }
+
+        // Otherwise we need to compile the patterns
+        let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
+        let compiled = patten_generator.generate(pattern)?;
+        let value = self.expression(value)?;
+
+        // If there is a subject name given create a variable to hold it for
+        // use in patterns
+        let doc = match subject {
+            Some(name) => docvec!("let ", name, " = ", value, ";", line(), compiled.into_doc()),
+            None => compiled.into_doc(),
+        };
+
+        // Add a clear line after the generated JS unless it is tail position.
+        Ok(self.append_line_unless_tail(doc))
+    }
+
+    fn append_line_unless_tail<'a>(&self, doc: Document<'a>) -> Document<'a> {
+        if self.tail_position {
+            doc
+        } else {
+            doc.append(line())
+        }
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

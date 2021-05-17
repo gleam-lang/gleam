@@ -1,6 +1,5 @@
-use crate::type_::{FieldMap, PatternConstructor};
-
 use super::*;
+use crate::type_::{FieldMap, PatternConstructor};
 
 static ASSIGNMENT_VAR: &str = "$";
 
@@ -14,18 +13,35 @@ enum Index<'a> {
 pub struct Generator<'module, 'expression, 'a> {
     expression_generator: &'expression mut expression::Generator<'module>,
     path: Vec<Index<'a>>,
+    subject: Document<'a>,
 }
 
 impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
-    pub fn new(expression_generator: &'expression mut expression::Generator<'module>) -> Self {
-        Self {
+    pub fn new(
+        expression_generator: &'expression mut expression::Generator<'module>,
+        subject: &'a TypedExpr,
+    ) -> Result<(Self, Option<Document<'a>>), Error> {
+        // If the value is a variable we don't need to assign it to a new
+        // variable, we can the value expression safely without worrying about
+        // performing computation or side effects multiple times.
+        let value_variable_name = match subject {
+            TypedExpr::Var { name, .. } => Some(name),
+            _ => None,
+        };
+        let (subject, assignment) = match &value_variable_name {
+            Some(name) => (expression_generator.local_var_name(name), None),
+            None => {
+                let subject = expression_generator.next_local_var_name(ASSIGNMENT_VAR);
+                let assignment = Some(subject.clone());
+                (subject, assignment)
+            }
+        };
+        let me = Self {
             expression_generator,
+            subject: subject.clone(),
             path: vec![],
-        }
-    }
-
-    fn local_var_name(&mut self, name: &'a str) -> Document<'a> {
-        self.expression_generator.local_var_name(name)
+        };
+        Ok((me, assignment))
     }
 
     fn next_local_var_name(&mut self, name: &'a str) -> Document<'a> {
@@ -63,79 +79,29 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }))
     }
 
-    pub fn generate(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
-        // If the value is a variable we don't need to assign it to a new
-        // variable, we can the value expression safely without worrying about
-        // performing computation or side effects multiple times.
-        let value_variable_name = match value {
-            TypedExpr::Var { name, .. } => Some(name),
-            _ => None,
-        };
-        // Render the value before printing patterns as patterns might update local variable state.
-        let value = self
-            .expression_generator
-            .not_in_tail_position(|gen| gen.wrap_expression(value))?;
-        let value_name = match &value_variable_name {
-            Some(name) => self.local_var_name(name),
-            None => self.next_local_var_name(ASSIGNMENT_VAR),
-        };
+    pub fn generate(&mut self, pattern: &'a TypedPattern) -> Result<CompiledPattern<'a>, Error> {
+        // match pattern {
+        //     // We can do a regular assignment if it is an assignment to just a pattern
+        //     Pattern::Var { name, .. } => Ok(docvec![
+        //         "let ",
+        //         self.next_local_var_name(name),
+        //         " = ",
+        //         self.subject,
+        //         ";"
+        //     ]),
+        //     _ => {
+        let mut checks = vec![];
+        let mut assignments = vec![];
 
-        match pattern {
-            // We can do a regular assignment if it is an assignment to just a pattern
-            Pattern::Var { name, .. } => Ok(docvec![
-                "let ",
-                self.next_local_var_name(name),
-                " = ",
-                value,
-                ";"
-            ]),
-            _ => {
-                let mut checks = vec![];
-                let mut assignments = vec![];
+        let () =
+            self.traverse_pattern(pattern, self.subject.clone(), &mut checks, &mut assignments)?;
 
-                let () = self.traverse_pattern(
-                    pattern,
-                    value_name.clone(),
-                    &mut checks,
-                    &mut assignments,
-                )?;
-
-                let check_line = match checks.is_empty() {
-                    true => "".to_doc(),
-                    false => docvec![
-                        "if (",
-                        docvec![
-                            break_("", ""),
-                            Itertools::intersperse(checks.into_iter(), break_(" ||", " || "))
-                                .collect::<Vec<_>>()
-                                .to_doc(),
-                        ]
-                        .nest(INDENT),
-                        break_("", ""),
-                        ") throw new Error(\"Bad match\");",
-                    ]
-                    .group(),
-                };
-
-                use std::iter::once;
-                let lines = if value_variable_name.is_none() {
-                    let d = docvec!("let ", value_name, " = ", value, ";", line(), check_line);
-                    once(d)
-                } else {
-                    once(check_line)
-                }
-                .chain(assignments);
-                // let expressions generate multiple lines of JS.
-                // Add a clear line after the generated JS unless it is tail position.
-                Ok(concat(Itertools::intersperse(lines, line())).append(
-                    if self.expression_generator.tail_position {
-                        "".to_doc()
-                    } else {
-                        line()
-                    },
-                ))
-            }
-        }
+        Ok(CompiledPattern {
+            checks,
+            assignments,
+        })
+        // }
+        // }
     }
 
     fn traverse_pattern(
@@ -285,5 +251,46 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
     fn equality(&mut self, value_name: Document<'a>, to_match: Document<'a>) -> Document<'a> {
         docvec![value_name, self.path_document(), " !== ", to_match]
+    }
+}
+
+#[derive(Debug)]
+pub struct CompiledPattern<'a> {
+    checks: Vec<Document<'a>>,
+    assignments: Vec<Document<'a>>,
+}
+
+impl<'a> CompiledPattern<'a> {
+    pub fn into_doc(self) -> Document<'a> {
+        if self.checks.is_empty() {
+            return Self::assignments_doc(self.assignments);
+        }
+        if self.assignments.is_empty() {
+            return Self::checks_doc(self.checks);
+        }
+
+        docvec![
+            Self::checks_doc(self.checks),
+            line(),
+            Self::assignments_doc(self.assignments)
+        ]
+    }
+
+    pub fn assignments_doc(assignments: Vec<Document<'a>>) -> Document<'a> {
+        concat(Itertools::intersperse(assignments.into_iter(), line()))
+    }
+
+    pub fn checks_doc(checks: Vec<Document<'a>>) -> Document<'a> {
+        let checks = concat(Itertools::intersperse(
+            checks.into_iter(),
+            break_(" ||", " || "),
+        ));
+        docvec![
+            "if (",
+            docvec![break_("", ""), checks].nest(INDENT),
+            break_("", ""),
+            ") throw new Error(\"Bad match\");",
+        ]
+        .group()
     }
 }
