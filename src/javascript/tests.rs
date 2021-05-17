@@ -82,11 +82,11 @@ fn go() {
         r#""use strict";
 
 function go() {
-  $deep_equal(1, 2);
-  return !$deep_equal(1, 2);
+  $equal(1, 2);
+  return !$equal(1, 2);
 }
 
-function $deep_equal(x, y) {
+function $equal(x, y) {
   if ($isObject(x) && $isObject(y)) {
     const kx = Object.keys(x);
     const ky = Object.keys(x);
@@ -98,7 +98,7 @@ function $deep_equal(x, y) {
     for (const k of kx) {
       const a = x[k];
       const b = y[k];
-      if !$deep_equal(a, b) {
+      if !$equal(a, b) {
         return false
       }
     }
