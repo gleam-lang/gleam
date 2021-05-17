@@ -248,25 +248,29 @@ impl<'module> Generator<'module> {
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
         let compiled = patten_generator.generate(pattern)?;
-        let value = self.expression(value)?;
+        let value = self.not_in_tail_position(|gen| gen.expression(value))?;
+
+        // If we are in tail position we can return value being assigned
+        let afterwards = if self.tail_position {
+            line()
+                .append("return ")
+                .append(subject.clone().unwrap_or_else(|| value.clone()))
+                .append(";")
+        } else {
+            line()
+        };
 
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let doc = match subject {
-            Some(name) => docvec!("let ", name, " = ", value, ";", line(), compiled.into_doc()),
+            Some(name) => {
+                let compiled = compiled.into_doc();
+                docvec!("let ", name, " = ", value, ";", line(), compiled)
+            }
             None => compiled.into_doc(),
         };
 
-        // Add a clear line after the generated JS unless it is tail position.
-        Ok(self.append_line_unless_tail(doc))
-    }
-
-    fn append_line_unless_tail<'a>(&self, doc: Document<'a>) -> Document<'a> {
-        if self.tail_position {
-            doc
-        } else {
-            doc.append(line())
-        }
+        Ok(doc.append(afterwards))
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

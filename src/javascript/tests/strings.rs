@@ -29,6 +29,7 @@ fn go(x) {
 
 function go(x) {
   if (x !== "Hello") throw new Error("Bad match");
+  return x;
 }
 "#
     );

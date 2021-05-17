@@ -160,6 +160,7 @@ fn go(x) {
 
 function go(x) {
   if (x !== 4) throw new Error("Bad match");
+  return x;
 }
 "#
     );

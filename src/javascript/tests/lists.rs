@@ -117,6 +117,7 @@ function go(x, y) {
   if (y?.[1]?.length === undefined) throw new Error("Bad match");
   let head = y[0];
   let tail = y[1];
+  return y;
 }
 "#
     );

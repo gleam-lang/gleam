@@ -24,3 +24,24 @@ function go() {
 "#
     );
 }
+
+#[test]
+fn sequences() {
+    assert_js!(
+        r#"
+fn go() {
+  "one"
+  "two"
+  "three"
+}
+"#,
+        r#""use strict";
+
+function go() {
+  "one";
+  "two";
+  return "three";
+}
+"#
+    );
+}

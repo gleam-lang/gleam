@@ -77,6 +77,7 @@ function go(x, y) {
   if (x !== false) throw new Error("Bad match");
   
   if (y !== undefined) throw new Error("Bad match");
+  return y;
 }
 "#
     );
