@@ -95,23 +95,20 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     fn traverse_pattern(&mut self, pattern: &'a TypedPattern) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                let check = self.equality(expression::string(value));
-                self.checks.push(check);
+                self.equality_check(expression::string(value));
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                let check = self.equality(expression::int(value));
-                self.checks.push(check);
+                self.equality_check(expression::int(value));
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                let check = self.equality(expression::float(value));
-                self.checks.push(check);
+                self.equality_check(expression::float(value));
                 Ok(())
             }
 
             Pattern::Var { name, .. } => {
-                let check = docvec![
+                let assignment = docvec![
                     "let ",
                     self.next_local_var_name(name),
                     " = ",
@@ -119,13 +116,13 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                     self.path_document(),
                     ";",
                 ];
-                self.assignments.push(check);
+                self.assignments.push(assignment);
                 Ok(())
             }
 
             Pattern::Discard { .. } => Ok(()),
             Pattern::Assign { name, pattern, .. } => {
-                let check = docvec![
+                let assignments = docvec![
                     "let ",
                     self.next_local_var_name(name),
                     " = ",
@@ -133,22 +130,12 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                     self.path_document(),
                     ";",
                 ];
-                self.assignments.push(check);
+                self.assignments.push(assignments);
                 self.traverse_pattern(pattern)
             }
 
             Pattern::List { elements, tail, .. } => {
-                let path_string = self.path_document();
-                let length_check = match tail {
-                    Some(_) => "?.length === undefined".to_doc(),
-                    None => "?.length !== 0".to_doc(),
-                };
-                self.checks.push(docvec![
-                    self.subject.clone(),
-                    path_string,
-                    Document::String("?.[1]".repeat(elements.len())),
-                    length_check,
-                ]);
+                self.list_length_check(elements.len(), tail.as_deref());
                 for pattern in elements.iter() {
                     self.push_int(0);
                     self.traverse_pattern(pattern)?;
@@ -178,8 +165,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "True" => {
-                let check = self.equality("true".to_doc());
-                self.checks.push(check);
+                self.equality_check("true".to_doc());
                 Ok(())
             }
 
@@ -187,8 +173,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "False" => {
-                let check = self.equality("false".to_doc());
-                self.checks.push(check);
+                self.equality_check("false".to_doc());
                 Ok(())
             }
 
@@ -196,8 +181,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if name == "Nil" => {
-                let check = self.equality("undefined".to_doc());
-                self.checks.push(check);
+                self.equality_check("undefined".to_doc());
                 Ok(())
             }
 
@@ -207,8 +191,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 ..
             } => {
                 self.push_string("type");
-                let check = self.equality(expression::string(name));
-                self.checks.push(check);
+                self.equality_check(expression::string(name));
                 self.pop();
 
                 for (index, arg) in arguments.iter().enumerate() {
@@ -240,13 +223,28 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn equality(&mut self, to_match: Document<'a>) -> Document<'a> {
-        docvec![
+    fn equality_check(&mut self, to_match: Document<'a>) {
+        let check = docvec![
             self.subject.clone(),
             self.path_document(),
             " !== ",
             to_match
-        ]
+        ];
+        self.checks.push(check)
+    }
+
+    fn list_length_check(&mut self, length: usize, tail: Option<&'a TypedPattern>) {
+        let path_string = self.path_document();
+        let length_check = match tail {
+            Some(_) => "?.length === undefined".to_doc(),
+            None => "?.length !== 0".to_doc(),
+        };
+        self.checks.push(docvec![
+            self.subject.clone(),
+            path_string,
+            Document::String("?.[1]".repeat(length)),
+            length_check,
+        ]);
     }
 }
 
