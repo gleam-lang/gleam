@@ -3055,6 +3055,15 @@ fn x() {
             supplied: vec!["a".to_string()],
         })
     );
+
+    // https://github.com/gleam-lang/gleam/issues/1098
+    // calling function with unused labelled argument should not emit warnings
+    assert_no_warnings!(
+        r#"fn greet(name name: String, title _title: String) {
+            name
+         }
+         pub fn main() {greet(name: "Sam", title: "Mr")}"#,
+    );
 }
 
 #[test]
