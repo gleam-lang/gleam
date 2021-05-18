@@ -8,6 +8,7 @@
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 - A compile time error is now raised when multiple module level constants with the same name are defined.
 - Fixed a bug where declaring a type constructor using reserved erlang keyword in its fields results in invalid erlang code being generated.
+- Fixed a bug where calling a function with discarded labelled arguments incorrectly results in a compile error.
 
 ## v0.15.1 -2021-05-07
 
