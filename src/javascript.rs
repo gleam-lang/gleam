@@ -11,27 +11,36 @@ const INDENT: isize = 2;
 const DEEP_EQUAL: &str = "
 
 function $equal(x, y) {
-  if ($isObject(x) && $isObject(y)) {
-    const kx = Object.keys(x);
-    const ky = Object.keys(x);
+  if (x === y) {
+      return true;
+  }
 
-    if (kx.length != ky.length) {
+  const nonEqualPairs = [x, y];
+
+  while (nonEqualPairs.length) {
+    const a = nonEqualPairs.pop();
+    const b = nonEqualPairs.pop();
+
+    if (!($isObject(a) && $isObject(b))) {
       return false;
     }
 
-    for (const k of kx) {
-      const a = x[k];
-      const b = y[k];
-      if !$equal(a, b) {
-        return false
-      }
+    const ka = Object.keys(a);
+    const kb = Object.keys(b);
+
+    if (ka.length != kb.length) {
+      return false;
     }
 
-    return true;
-
-  } else {
-    return x === y;
+    for (const k of ka) {
+      const ak = a[k];
+      const bk = b[k];
+      if (ak !== bk) {
+        nonEqualPairs.push(ak, bk);
+      }
+    }
   }
+  return true;
 }
 
 function $isObject(object) {
