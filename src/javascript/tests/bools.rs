@@ -108,3 +108,36 @@ function go(x, y) {
 // "#
 //     );
 // }
+
+#[test]
+fn equality() {
+    assert_js!(
+        r#"
+fn go(a, b) {
+  a == True
+  a != True
+  a == False
+  a != False
+  a == a
+  a != a
+  b == Nil
+  b != Nil
+  b == b
+}
+"#,
+        r#""use strict";
+
+function go(a, b) {
+  a === true;
+  a !== true;
+  a === false;
+  a !== false;
+  a === a;
+  a !== a;
+  b === undefined;
+  b !== undefined;
+  return b === b;
+}
+"#
+    );
+}

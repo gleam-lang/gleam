@@ -3,7 +3,7 @@ use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{FieldMap, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
+    type_::{FieldMap, HasType, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
 };
 
 static RECORD_KEY: &str = "type";
@@ -378,48 +378,65 @@ impl<'module> Generator<'module> {
         left: &'a TypedExpr,
         right: &'a TypedExpr,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        Ok(match name {
+        match name {
             BinOp::And => self.print_bin_op(left, right, "&&"),
             BinOp::Or => self.print_bin_op(left, right, "||"),
             BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
             BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
-            BinOp::Eq => {
-                use std::iter::once;
-                *self.object_equality_used = true;
-                docvec!("$equal", wrap_args(once(left).chain(once(right))))
-            }
-            BinOp::NotEq => {
-                use std::iter::once;
-                *self.object_equality_used = true;
-                docvec!("!$equal", wrap_args(once(left).chain(once(right))))
-            }
+            BinOp::Eq => self.equal(left, right, true),
+            BinOp::NotEq => self.equal(left, right, false),
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
-            BinOp::DivInt => self.print_bin_op(left, right, "/").append(" | 0"),
+            BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
-            BinOp::DivFloat => {
-                use std::iter::once;
-                *self.float_division_used = true;
-                docvec!("$divide", wrap_args(once(left).chain(once(right))))
-            }
-        })
+            BinOp::DivFloat => self.div_float(left, right),
+        }
+    }
+
+    fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        use std::iter::once;
+        *self.float_division_used = true;
+        Ok(docvec!("$divide", wrap_args(once(left).chain(once(right)))))
+    }
+
+    fn equal<'a>(
+        &mut self,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
+        should_be_equal: bool,
+    ) -> Output<'a> {
+        use std::iter::once;
+        let left_doc = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right_doc = self.not_in_tail_position(|gen| gen.expression(right))?;
+
+        // If it is a simple scalar type then we can use JS' reference identity
+        let t = left.type_();
+        if t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string() {
+            let operator = if should_be_equal { " === " } else { " !== " };
+            return Ok(docvec!(left_doc, operator, right_doc));
+        }
+
+        // Other types must be compared using structural equality
+        *self.object_equality_used = true;
+        let args = wrap_args(once(left_doc).chain(once(right_doc)));
+        let operator = if should_be_equal { "$equal" } else { "!$equal" };
+        Ok(docvec!(operator, args))
     }
 
     fn print_bin_op<'a>(
         &mut self,
-        left: Document<'a>,
-        right: Document<'a>,
+        left: &'a TypedExpr,
+        right: &'a TypedExpr,
         op: &'a str,
-    ) -> Document<'a> {
-        left.append(" ")
-            .append(op.to_doc())
-            .append(" ")
-            .append(right)
+    ) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        Ok(docvec!(left, " ", op, " ", right))
     }
 
     fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {

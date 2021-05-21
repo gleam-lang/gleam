@@ -34,3 +34,24 @@ function go(x) {
 "#
     );
 }
+
+#[test]
+fn equality() {
+    assert_js!(
+        r#"
+fn go(a) {
+  a == "ok"
+  a != "ok"
+  a == a
+}
+"#,
+        r#""use strict";
+
+function go(a) {
+  a === "ok";
+  a !== "ok";
+  return a === a;
+}
+"#
+    );
+}

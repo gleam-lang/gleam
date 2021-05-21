@@ -122,3 +122,40 @@ function go(x, y) {
 "#
     );
 }
+
+#[test]
+fn equality() {
+    assert_js!(
+        r#"
+fn go() {
+  [] == [1]
+  [] != [1]
+}
+"#,
+        r#""use strict";
+
+function go() {
+  $equal([], [1, []]);
+  return !$equal([], [1, []]);
+}
+
+function $equal(x, y) {
+  let toCheck = [x, y];
+  while (toCheck) {
+    let a = toCheck.pop();
+    let b = toCheck.pop();
+    if (x === y) return true;
+    if (!$is_object(a) || !$is_object(b)) return false;
+    for (let k of Object.keys(a)) {
+      toCheck.push(a[k], b[k]);
+    }
+  }
+  return true;
+}
+
+function $is_object(object) {
+  return object !== null && typeof object === 'object';
+}
+"#
+    );
+}

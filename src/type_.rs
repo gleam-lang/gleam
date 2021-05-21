@@ -90,23 +90,43 @@ impl Type {
     }
 
     pub fn is_nil(&self) -> bool {
-        matches!(self, Self::App { module, name, .. } if "Nil" == name && module.is_empty())
+        match self {
+            Self::App { module, name, .. } if "Nil" == name && module.is_empty() => true,
+            Self::Var { type_ } => type_.borrow().is_nil(),
+            _ => false,
+        }
     }
 
     pub fn is_bool(&self) -> bool {
-        matches!(self, Self::App { module, name, .. } if "Bool" == name && module.is_empty())
+        match self {
+            Self::App { module, name, .. } if "Bool" == name && module.is_empty() => true,
+            Self::Var { type_ } => type_.borrow().is_bool(),
+            _ => false,
+        }
     }
 
     pub fn is_int(&self) -> bool {
-        matches!(self, Self::App { module, name, .. } if "Int" == name && module.is_empty())
+        match self {
+            Self::App { module, name, .. } if "Int" == name && module.is_empty() => true,
+            Self::Var { type_ } => type_.borrow().is_int(),
+            _ => false,
+        }
     }
 
     pub fn is_float(&self) -> bool {
-        matches!(self, Self::App { module, name, .. } if "Float" == name && module.is_empty())
+        match self {
+            Self::App { module, name, .. } if "Float" == name && module.is_empty() => true,
+            Self::Var { type_ } => type_.borrow().is_float(),
+            _ => false,
+        }
     }
 
     pub fn is_string(&self) -> bool {
-        matches!(self, Self::App { module, name, .. } if "String" == name && module.is_empty())
+        match self {
+            Self::App { module, name, .. } if "String" == name && module.is_empty() => true,
+            Self::Var { type_ } => type_.borrow().is_string(),
+            _ => false,
+        }
     }
 
     /// Get the args for the type if the type is a specific `Type::App`.
@@ -293,6 +313,41 @@ pub enum TypeVar {
 impl TypeVar {
     pub fn is_unbound(&self) -> bool {
         matches!(self, Self::Unbound { .. })
+    }
+
+    pub fn is_nil(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_nil(),
+            _ => false,
+        }
+    }
+
+    pub fn is_bool(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_bool(),
+            _ => false,
+        }
+    }
+
+    pub fn is_int(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_int(),
+            _ => false,
+        }
+    }
+
+    pub fn is_float(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_float(),
+            _ => false,
+        }
+    }
+
+    pub fn is_string(&self) -> bool {
+        match self {
+            Self::Link { type_ } => type_.is_string(),
+            _ => false,
+        }
     }
 }
 
