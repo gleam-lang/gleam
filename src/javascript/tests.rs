@@ -87,40 +87,21 @@ function go() {
 }
 
 function $equal(x, y) {
-  if (x === y) {
-      return true;
-  }
-
-  const nonEqualPairs = [x, y];
-
-  while (nonEqualPairs.length) {
-    const a = nonEqualPairs.pop();
-    const b = nonEqualPairs.pop();
-
-    if (!($isObject(a) && $isObject(b))) {
-      return false;
-    }
-
-    const ka = Object.keys(a);
-    const kb = Object.keys(b);
-
-    if (ka.length != kb.length) {
-      return false;
-    }
-
-    for (const k of ka) {
-      const ak = a[k];
-      const bk = b[k];
-      if (ak !== bk) {
-        nonEqualPairs.push(ak, bk);
-      }
+  let toCheck = [x, y];
+  while (toCheck) {
+    let a = toCheck.pop();
+    let b = toCheck.pop();
+    if (x === y) return true;
+    if (!$is_object(a) || !$is_object(b)) return false;
+    for (let k of Object.keys(a)) {
+      toCheck.push(a[k], b[k]);
     }
   }
   return true;
 }
 
-function $isObject(object) {
-  return object != null && typeof object === 'object';
+function $is_object(object) {
+  return object !== null && typeof object === 'object';
 }
 "#
     );
