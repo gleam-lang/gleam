@@ -349,15 +349,22 @@ impl<'a> Check<'a> {
                 docvec![self.subject, self.path, operator, to]
             }
 
-            // TODO: negate if needed
             CheckKind::ListLength {
                 expected_length,
                 has_tail_spread,
             } => {
                 let length_check = if has_tail_spread {
-                    "?.length === undefined".to_doc()
+                    if match_desired {
+                        "?.length !== undefined".to_doc()
+                    } else {
+                        "?.length === undefined".to_doc()
+                    }
                 } else {
-                    "?.length !== 0".to_doc()
+                    if match_desired {
+                        "?.length === 0".to_doc()
+                    } else {
+                        "?.length !== 0".to_doc()
+                    }
                 };
                 docvec![
                     self.subject,

@@ -6,7 +6,7 @@ function print(string) {
 }
 
 function append(a, b) {
-  return a + b;
+  return `${a}${b}`;
 }
 
 let status = main(print, String, append);

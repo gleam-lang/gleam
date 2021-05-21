@@ -159,3 +159,35 @@ function $is_object(object) {
 "#
     );
 }
+
+#[test]
+fn case() {
+    assert_js!(
+        r#"
+fn go(xs) {
+  case xs {
+    [] -> 0
+    [_] -> 1
+    [_, _] -> 2
+    _ -> 9999
+  }
+}
+"#,
+        r#""use strict";
+
+function go(xs) {
+  if (xs?.length === 0) {
+    return 0;
+  } else if (xs?.[1]?.length === 0) {
+    return 1;
+  } else if (xs?.[1]?.[1]?.length === 0) {
+    return 2;
+  } else if (true) {
+    return 9999;
+  } else {
+    throw new Error("Bad match");
+  }
+}
+"#
+    );
+}
