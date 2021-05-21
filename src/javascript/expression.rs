@@ -301,7 +301,11 @@ impl<'module> Generator<'module> {
             }
 
             // TODO: handle alternatives / multiple subjects gracefully
-            let mut compiled = gen.generate(&clause.pattern[0])?;
+            let pattern = clause
+                .pattern
+                .get(0)
+                .gleam_expect("JS clause pattern indexing");
+            let mut compiled = gen.generate(pattern)?;
             let consequence = gen.expression_generator.expression(&clause.then)?;
             // Reset the scope now that this clause has finished, causing the
             // variables to go out of scope.
