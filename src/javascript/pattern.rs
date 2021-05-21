@@ -353,18 +353,14 @@ impl<'a> Check<'a> {
                 expected_length,
                 has_tail_spread,
             } => {
-                let length_check = if has_tail_spread {
-                    if match_desired {
-                        "?.length !== undefined".to_doc()
-                    } else {
-                        "?.length === undefined".to_doc()
-                    }
+                let length_check = if has_tail_spread && match_desired {
+                    "?.length !== undefined".to_doc()
+                } else if has_tail_spread {
+                    "?.length === undefined".to_doc()
+                } else if match_desired {
+                    "?.length === 0".to_doc()
                 } else {
-                    if match_desired {
-                        "?.length === 0".to_doc()
-                    } else {
-                        "?.length !== 0".to_doc()
-                    }
+                    "?.length !== 0".to_doc()
                 };
                 docvec![
                     self.subject,
