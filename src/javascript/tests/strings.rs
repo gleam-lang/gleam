@@ -55,3 +55,35 @@ function go(a) {
 "#
     );
 }
+
+#[test]
+fn case() {
+    assert_js!(
+        r#"
+fn go(a) {
+  case a {
+    "" -> 0
+    "one" -> 1
+    "two" -> 2
+    _ -> 3
+  }
+}
+"#,
+        r#""use strict";
+
+function go(a) {
+  if (a === "") {
+    return 0;
+  } else if (a === "one") {
+    return 1;
+  } else if (a === "two") {
+    return 2;
+  } else if (true) {
+    return 3;
+  } else {
+    throw new Error("Bad match");
+  }
+}
+"#
+    );
+}

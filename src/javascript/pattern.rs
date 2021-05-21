@@ -11,7 +11,7 @@ enum Index<'a> {
 
 #[derive(Debug)]
 pub struct Generator<'module, 'expression, 'a> {
-    expression_generator: &'expression mut expression::Generator<'module>,
+    pub expression_generator: &'expression mut expression::Generator<'module>,
     path: Vec<Index<'a>>,
     subject: Document<'a>,
     checks: Vec<Check<'a>>,
@@ -262,30 +262,58 @@ pub struct CompiledPattern<'a> {
 }
 
 impl<'a> CompiledPattern<'a> {
-    pub fn into_doc(self) -> Document<'a> {
+    pub fn into_assignment_doc(self) -> Document<'a> {
         if self.checks.is_empty() {
             return Self::assignments_doc(self.assignments);
         }
         if self.assignments.is_empty() {
-            return Self::checks_doc(self.checks);
+            return Self::checks_or_throw_doc(self.checks);
         }
 
         docvec![
-            Self::checks_doc(self.checks),
+            Self::checks_or_throw_doc(self.checks),
             line(),
             Self::assignments_doc(self.assignments)
         ]
+    }
+
+    pub fn has_assignments(&self) -> bool {
+        !self.assignments.is_empty()
+    }
+
+    pub fn take_assignments_doc(&mut self) -> Document<'a> {
+        let assignments = std::mem::take(&mut self.assignments);
+        Self::assignments_doc(assignments)
     }
 
     pub fn assignments_doc(assignments: Vec<Document<'a>>) -> Document<'a> {
         concat(Itertools::intersperse(assignments.into_iter(), line()))
     }
 
-    pub fn checks_doc(checks: Vec<Check<'a>>) -> Document<'a> {
-        let checks = concat(Itertools::intersperse(
-            checks.into_iter().map(Check::into_doc),
-            break_(" ||", " || "),
-        ));
+    pub fn take_checks_doc(&mut self, match_desired: bool) -> Document<'a> {
+        let checks = std::mem::take(&mut self.checks);
+        Self::checks_doc(checks, match_desired)
+    }
+
+    pub fn checks_doc(checks: Vec<Check<'a>>, match_desired: bool) -> Document<'a> {
+        if checks.is_empty() {
+            return "true".to_doc();
+        };
+        let operator = if match_desired {
+            break_(" &&", " && ")
+        } else {
+            break_(" ||", " || ")
+        };
+        concat(Itertools::intersperse(
+            checks
+                .into_iter()
+                .map(|check| check.into_doc(match_desired)),
+            operator,
+        ))
+    }
+
+    pub fn checks_or_throw_doc(checks: Vec<Check<'a>>) -> Document<'a> {
+        let checks = Self::checks_doc(checks, false);
         docvec![
             "if (",
             docvec![break_("", ""), checks].nest(INDENT),
@@ -304,24 +332,24 @@ pub struct Check<'a> {
 }
 
 impl<'a> Check<'a> {
-    pub fn into_doc(self) -> Document<'a> {
+    pub fn into_doc(self, match_desired: bool) -> Document<'a> {
         match self.kind {
             CheckKind::Booly {
-                expected_to_be_truthy: true,
+                expected_to_be_truthy,
             } => {
-                docvec!["!", self.subject, self.path]
-            }
-
-            CheckKind::Booly {
-                expected_to_be_truthy: false,
-            } => {
-                docvec![self.subject, self.path]
+                if expected_to_be_truthy == match_desired {
+                    docvec![self.subject, self.path]
+                } else {
+                    docvec!["!", self.subject, self.path]
+                }
             }
 
             CheckKind::Equal { to } => {
-                docvec![self.subject, self.path, " !== ", to]
+                let operator = if match_desired { " === " } else { " !== " };
+                docvec![self.subject, self.path, operator, to]
             }
 
+            // TODO: negate if needed
             CheckKind::ListLength {
                 expected_length,
                 has_tail_spread,

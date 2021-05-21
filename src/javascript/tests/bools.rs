@@ -141,3 +141,52 @@ function go(a, b) {
 "#
     );
 }
+
+#[test]
+fn case() {
+    assert_js!(
+        r#"
+fn go(a) {
+  case a {
+    True -> 1
+    False -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go(a) {
+  if (a) {
+    return 1;
+  } else if (!a) {
+    return 0;
+  } else {
+    throw new Error("Bad match");
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn nil_case() {
+    assert_js!(
+        r#"
+fn go(a) {
+  case a {
+    Nil -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go(a) {
+  if (!a) {
+    return 0;
+  } else {
+    throw new Error("Bad match");
+  }
+}
+"#
+    );
+}

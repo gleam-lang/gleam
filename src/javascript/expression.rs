@@ -78,7 +78,9 @@ impl<'module> Generator<'module> {
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            TypedExpr::Case { .. } => unsupported("Case"),
+            TypedExpr::Case {
+                subjects, clauses, ..
+            } => self.case(subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fun(args, body),
@@ -116,7 +118,9 @@ impl<'module> Generator<'module> {
             } => self.module_select(module_alias, label, constructor),
         }?;
         Ok(match expression {
-            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => document,
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Case { .. } => {
+                document
+            }
             _ => match self.tail_position {
                 true => docvec!["return ", document, ";"],
                 _ => document,
@@ -223,8 +227,7 @@ impl<'module> Generator<'module> {
             if i + 1 < count {
                 documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
                 match expression {
-                    // Assignment generates multiple lines of JS and so handles it's own ;
-                    TypedExpr::Assignment { .. } => (),
+                    TypedExpr::Assignment { .. } | TypedExpr::Case { .. } => (),
                     _ => documents.push(";".to_doc()),
                 }
                 documents.push(line());
@@ -264,13 +267,70 @@ impl<'module> Generator<'module> {
         // use in patterns
         let doc = match subject {
             Some(name) => {
-                let compiled = compiled.into_doc();
+                let compiled = compiled.into_assignment_doc();
                 docvec!("let ", name, " = ", value, ";", line(), compiled)
             }
-            None => compiled.into_doc(),
+            None => compiled.into_assignment_doc(),
         };
 
         Ok(doc.append(afterwards))
+    }
+
+    fn case<'a>(&mut self, subjects: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
+        let value = match subjects {
+            [subject] => subject,
+            _ => return unsupported("Cases with multiple subjects"),
+        };
+
+        let (mut gen, subject) = pattern::Generator::new(self, value)?;
+        let value = gen
+            .expression_generator
+            .not_in_tail_position(|gen| gen.expression(value))?;
+
+        // If there is a subject name given create a variable to hold it for
+        // use in patterns
+        let mut doc = match subject {
+            Some(name) => docvec!("let ", name, " = ", value, ";", line()),
+            None => docvec!(),
+        };
+
+        for (i, clause) in clauses.iter().enumerate() {
+            let scope = gen.expression_generator.current_scope_vars.clone();
+            if clause.guard.is_some() {
+                return unsupported("Case clause guards");
+            }
+
+            // TODO: handle alternatives / multiple subjects gracefully
+            let mut compiled = gen.generate(&clause.pattern[0])?;
+            let consequence = gen.expression_generator.expression(&clause.then)?;
+            // Reset the scope now that this clause has finished, causing the
+            // variables to go out of scope.
+            gen.expression_generator.current_scope_vars = scope;
+
+            // If the pattern assigns any variables we need to render assignments
+            let body = if compiled.has_assignments() {
+                docvec!(line(), compiled.take_assignments_doc(), line(), consequence).nest(INDENT)
+            } else {
+                docvec!(line(), consequence).nest(INDENT)
+            };
+
+            doc = doc
+                .append(if i == 0 { "if (" } else { " else if (" })
+                .append(compiled.take_checks_doc(true))
+                .append(") {")
+                .append(body)
+                .append(line())
+                .append("}");
+        }
+
+        // Lastly append an error if no clause matches.
+        // We can remove this when we get exhaustiveness checking.
+        // TODO: If the last clause if a var or a discard we don't need to render the else
+        Ok(doc
+            .append(" else {")
+            .append(docvec!(line(), r#"throw new Error("Bad match");"#).nest(INDENT))
+            .append(line())
+            .append("}"))
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
