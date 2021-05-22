@@ -1,4 +1,4 @@
-import test.{Functions, Test, operator_test, suite}
+import test.{Functions, Test, example, operator_test, suite}
 
 pub fn main(
   print: fn(String) -> String,
@@ -9,7 +9,11 @@ pub fn main(
 
   let fns = Functions(print, to_string, append)
   let stats =
-    [suite("int", int_tests(fns)), suite("float", float_tests(fns))]
+    [
+      suite("int", int_tests(fns)),
+      suite("float", float_tests(fns)),
+      suite("tail call optimisation", tail_call_optimisation_tests(fns)),
+    ]
     |> test.run(fns)
 
   case stats.failures {
@@ -64,4 +68,20 @@ fn float_tests(fns) -> List(Test) {
       subtraction(1., 4.5, -3.5),
     ]),
   ]
+}
+
+fn tail_call_optimisation_tests(_fns) -> List(Test) {
+  [
+    example(
+      "10 million recursions doesn't overflow the stack",
+      fn() { test.assert_equal(Nil, count_down(from: 10_000_000)) },
+    ),
+  ]
+}
+
+fn count_down(from i) {
+  case i <= 0 {
+    True -> Nil
+    False -> count_down(i - 1)
+  }
 }

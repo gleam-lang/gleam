@@ -140,15 +140,19 @@ impl<'module> Generator<'module> {
                 ..
             } => self.module_select(module_alias, label, constructor),
         }?;
-        Ok(match expression {
-            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Case { .. } => {
-                document
-            }
-            _ => match self.tail_position {
-                true => docvec!["return ", document, ";"],
-                _ => document,
-            },
+        Ok(if expression.handles_own_return() {
+            document
+        } else {
+            self.wrap_return(document)
         })
+    }
+
+    pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
+        if self.tail_position {
+            docvec!["return ", document, ";"]
+        } else {
+            document
+        }
     }
 
     pub fn not_in_tail_position<'a, CompileFn>(&mut self, compile: CompileFn) -> Output<'a>
@@ -391,12 +395,12 @@ impl<'module> Generator<'module> {
                     .collect::<Result<Vec<_>, _>>()?;
                 self.tail_position = tail;
 
-                Ok(construct_record(
+                Ok(self.wrap_return(construct_record(
                     name,
                     *arity,
                     field_map,
                     arguments.into_iter(),
-                ))
+                )))
             }
 
             // Tail call optimisation. If we are calling the current function
@@ -433,6 +437,9 @@ impl<'module> Generator<'module> {
                     docs.push(self.wrap_expression(&element.value)?);
                     docs.push(";".to_doc());
                 }
+                // Reset the tail position tracking so that any later
+                // expressions (e.g. following case clauses) render correctly.
+                self.tail_position = true;
                 Ok(docs.to_doc())
             }
 
@@ -445,7 +452,7 @@ impl<'module> Generator<'module> {
                             .map(|element| gen.wrap_expression(&element.value)),
                     )
                 })?;
-                Ok(docvec![fun, arguments])
+                Ok(self.wrap_return(docvec![fun, arguments]))
             }
         }
     }
@@ -739,4 +746,16 @@ fn construct_record<'a>(
         .map(|(name, value)| (name, Some(value)));
 
     wrap_object(std::iter::once(record_head).chain(record_values))
+}
+
+impl TypedExpr {
+    fn handles_own_return(&self) -> bool {
+        matches!(
+            self,
+            TypedExpr::Call { .. }
+                | TypedExpr::Sequence { .. }
+                | TypedExpr::Assignment { .. }
+                | TypedExpr::Case { .. }
+        )
+    }
 }

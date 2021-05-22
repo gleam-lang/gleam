@@ -213,6 +213,35 @@ export function count(xs, n) {
     );
 }
 
+#[test]
+fn tail_call_doesnt_clobber_tail_position_tracking() {
+    assert_js!(
+        r#"
+pub fn loop(indentation) {
+  case indentation > 0 {
+    True -> loop(indentation - 1)
+    False -> Nil
+  }
+}
+"#,
+        r#""use strict";
+
+export function loop(indentation) {
+  while (true) {
+    let $ = indentation > 0;
+    if ($) {
+      indentation = indentation - 1;
+    } else if (!$) {
+      return undefined;
+    } else {
+      throw new Error("Bad match");
+    }
+  }
+}
+"#
+    );
+}
+
 // TODO: shadowing of current function
 // TODO: arguments that are discarded but then given in the recursive call
 // TODO: anonymous functions that call the parent function as a tail call (should not apply optimisation)

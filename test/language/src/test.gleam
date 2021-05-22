@@ -1,5 +1,5 @@
 pub opaque type Test {
-  Test(name: String, proc: fn() -> Outcome)
+  Example(name: String, proc: fn() -> Outcome)
   Suite(name: String, tests: List(Test))
 }
 
@@ -11,8 +11,8 @@ pub type Functions(anything) {
   )
 }
 
-pub fn test(name: String, proc: fn() -> Outcome) {
-  Test(name, proc)
+pub fn example(name: String, proc: fn() -> Outcome) {
+  Example(name, proc)
 }
 
 pub fn suite(name: String, tests: List(Test)) {
@@ -61,7 +61,7 @@ pub fn operator_test(operator_name, operator, fns) {
       |> append(to_string(b))
       |> append(" == ")
       |> append(to_string(expected))
-    test(name, fn() { assert_equal(operator(a, b), expected) })
+    Example(name, fn() { assert_equal(operator(a, b), expected) })
   }
 }
 
@@ -86,7 +86,7 @@ fn run_test(
   indentation: Int,
 ) -> Stats {
   case test {
-    Test(name: name, proc: proc) ->
+    Example(name: name, proc: proc) ->
       run_single_test(name, proc, fns, stats, indentation)
     Suite(name: name, tests: tests) ->
       run_suite(name, tests, fns, stats, indentation)
