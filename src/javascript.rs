@@ -186,10 +186,15 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
+        let argument_names = args
+            .iter()
+            .map(|arg| arg.names.get_variable_name())
+            .collect();
         let mut generator = expression::Generator::new(
             &self.module.name,
             self.line_numbers,
             name,
+            argument_names,
             &mut self.float_division_used,
             &mut self.object_equality_used,
         );
@@ -203,7 +208,7 @@ impl<'a> Generator<'a> {
             name,
             fun_args(args),
             " {",
-            docvec![line(), generator.expression(body)?]
+            docvec![line(), generator.function_body(body)?]
                 .nest(INDENT)
                 .group(),
             line(),

@@ -13,12 +13,18 @@ pub struct Generator<'module> {
     module_name: &'module [String],
     line_numbers: &'module LineNumbers,
     function_name: &'module str,
+    function_arguments: Vec<Option<&'module str>>,
     current_scope_vars: im::HashMap<String, usize>,
     pub tail_position: bool,
-    // We register whether float division is used within an expression so that
-    // the module generator can output a suitable function if it is needed.
+    // We register whether float division or object equality are used within an
+    // expression so that the module generator can output a suitable function if
+    // it is needed.
     float_division_used: &'module mut bool,
     object_equality_used: &'module mut bool,
+    // We track whether tail call recusion is used so that we can render a loop
+    // at the top level of the function to use in place of pushing new stack
+    // frames.
+    tail_recursion_used: bool,
 }
 
 impl<'module> Generator<'module> {
@@ -26,6 +32,7 @@ impl<'module> Generator<'module> {
         module_name: &'module [String],
         line_numbers: &'module LineNumbers,
         function_name: &'module str,
+        function_arguments: Vec<Option<&'module str>>,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
     ) -> Self {
@@ -33,6 +40,8 @@ impl<'module> Generator<'module> {
             module_name,
             line_numbers,
             function_name,
+            function_arguments,
+            tail_recursion_used: false,
             current_scope_vars: Default::default(),
             tail_position: true,
             float_division_used,
@@ -56,6 +65,20 @@ impl<'module> Generator<'module> {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.to_string(), next);
         self.local_var_name(name)
+    }
+
+    pub fn function_body<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        let body = self.expression(expression)?;
+        if self.tail_recursion_used {
+            Ok(docvec!(
+                "while (true) {",
+                docvec!(line(), body).nest(INDENT),
+                line(),
+                "}"
+            ))
+        } else {
+            Ok(body)
+        }
     }
 
     pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
@@ -375,6 +398,44 @@ impl<'module> Generator<'module> {
                     arguments.into_iter(),
                 ))
             }
+
+            // Tail call optimisation. If we are calling the current function
+            // and we are in tail position we can avoid creating a new stack
+            // frame, enabling recursion with constant memory usage.
+            TypedExpr::Var { name, .. }
+                if name == self.function_name
+                    && self.tail_position
+                    && !self.current_scope_vars.contains_key(name) =>
+            {
+                let mut docs = Vec::with_capacity(arguments.len() * 4);
+                // We are handling the tail position, so ensure child expressions do not
+                self.tail_position = false;
+                // Record that tail recursion is happening so that we know to
+                // render the loop at the top level of the function.
+                self.tail_recursion_used = true;
+
+                for (i, (element, argument)) in arguments
+                    .iter()
+                    // TODO: work out how to avoid cloning the arguments here.
+                    .zip(self.function_arguments.clone())
+                    .enumerate()
+                {
+                    if i != 0 {
+                        docs.push(line());
+                    }
+                    // Create an assignment for each variable created by the function arguments
+                    if let Some(name) = argument {
+                        docs.push(Document::String(format!("{} = ", name)));
+                    }
+                    // Render the value given to the function. Even if it is not
+                    // assigned we still render it because the expression may
+                    // have some side effects.
+                    docs.push(self.wrap_expression(&element.value)?);
+                    docs.push(";".to_doc());
+                }
+                Ok(docs.to_doc())
+            }
+
             _ => {
                 let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
                 let arguments = self.not_in_tail_position(|gen| {

@@ -105,6 +105,15 @@ pub enum ArgNames {
     NamedLabelled { name: String, label: String },
 }
 
+impl ArgNames {
+    pub fn get_variable_name(&self) -> Option<&str> {
+        match self {
+            ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,

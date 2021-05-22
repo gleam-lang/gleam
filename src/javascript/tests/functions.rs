@@ -182,3 +182,37 @@ function baz(x, y) {
 "#
     );
 }
+
+#[test]
+fn tail_call() {
+    assert_js!(
+        r#"
+pub fn count(xs, n) {
+  case xs {
+    [] -> n
+    [_, ..xs] -> count(xs, n + 1)
+  }
+}
+"#,
+        r#""use strict";
+
+export function count(xs, n) {
+  while (true) {
+    if (xs?.length === 0) {
+      return n;
+    } else if (xs?.[1]?.length !== undefined) {
+      let xs$1 = xs[1];
+      xs = xs$1;
+      n = n + 1;
+    } else {
+      throw new Error("Bad match");
+    }
+  }
+}
+"#
+    );
+}
+
+// TODO: shadowing of current function
+// TODO: arguments that are discarded but then given in the recursive call
+// TODO: anonymous functions that call the parent function as a tail call (should not apply optimisation)
