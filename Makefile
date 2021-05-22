@@ -17,6 +17,11 @@ install: ## Build the Gleam compiler and place it on PATH
 .PHONY: test ## Run all tests
 test:
 	cargo test
+	cd test/language && make
+
+.PHONY: test ## Run the integration tests for all targets
+test-language:
+	cd test/language && make
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change

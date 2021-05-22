@@ -80,8 +80,8 @@ fn tail_call_optimisation_tests(_fns) -> List(Test) {
 }
 
 fn count_down(from i) {
-  case i <= 0 {
-    True -> Nil
-    False -> count_down(i - 1)
+  case i {
+    0 -> Nil
+    _ -> count_down(i - 1)
   }
 }
