@@ -1,5 +1,5 @@
 use super::*;
-use crate::type_::{FieldMap, PatternConstructor};
+use crate::type_::{FieldMap, PatternConstructor, Type};
 
 static ASSIGNMENT_VAR: &str = "$";
 
@@ -161,67 +161,49 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 Ok(())
             }
 
-            // TODO: FIXME: This should only be the case if we know it if the prelude bool
-            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
-                constructor: PatternConstructor::Record { name, .. },
-                ..
-            } if name == "True" => {
-                self.booly_check(true);
-                Ok(())
-            }
-
-            // TODO: FIXME: This should only be the case if we know it if the prelude bool
-            // https://github.com/gleam-lang/gleam/issues/1112
-            Pattern::Constructor {
-                constructor: PatternConstructor::Record { name, .. },
-                ..
-            } if name == "False" => {
-                self.booly_check(false);
-                Ok(())
-            }
-
-            // TODO: FIXME: This should only be the case if we know it if the prelude nil
-            // https://github.com/gleam-lang/gleam/issues/1112
-            Pattern::Constructor {
-                constructor: PatternConstructor::Record { name, .. },
-                ..
-            } if name == "Nil" => {
-                self.booly_check(false);
-                Ok(())
-            }
-
-            Pattern::Constructor {
+                type_,
                 constructor: PatternConstructor::Record { name, field_map },
                 arguments,
                 ..
-            } => {
-                self.push_string("type");
-                self.equality_check(expression::string(name));
-                self.pop();
-
-                for (index, arg) in arguments.iter().enumerate() {
-                    match field_map {
-                        None => self.push_int(index),
-                        Some(FieldMap { fields, .. }) => {
-                            let label =
-                                fields.iter().find_map(
-                                    |(key, &val)| {
-                                        if val == index {
-                                            Some(key)
-                                        } else {
-                                            None
-                                        }
-                                    },
-                                );
-                            self.push_string(label.gleam_expect("argument present in field map"));
-                        }
-                    }
-                    self.traverse_pattern(&arg.value)?;
-                    self.pop_times(arguments.len());
+            } => match &**type_ {
+                Type::App { module, .. } if module.is_empty() && name == "True" => {
+                    self.booly_check(true);
+                    Ok(())
                 }
-                Ok(())
-            }
+                Type::App { module, .. }
+                    if module.is_empty() && (name == "False" || name == "Nil") =>
+                {
+                    self.booly_check(false);
+                    Ok(())
+                }
+                _ => {
+                    self.push_string("type");
+                    self.equality_check(expression::string(name));
+                    self.pop();
+
+                    for (index, arg) in arguments.iter().enumerate() {
+                        match field_map {
+                            None => self.push_int(index),
+                            Some(FieldMap { fields, .. }) => {
+                                let label = fields.iter().find_map(|(key, &val)| {
+                                    if val == index {
+                                        Some(key)
+                                    } else {
+                                        None
+                                    }
+                                });
+                                self.push_string(
+                                    label.gleam_expect("argument present in field map"),
+                                );
+                            }
+                        }
+                        self.traverse_pattern(&arg.value)?;
+                        self.pop_times(arguments.len());
+                    }
+                    Ok(())
+                }
+            },
 
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
                 unsupported("BitString matching not supported in JS backend")

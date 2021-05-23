@@ -83,31 +83,32 @@ function go(x, y) {
     );
 }
 
-// // TODO: FIXME: https://github.com/gleam-lang/gleam/issues/1112
-// #[test]
-// fn shadowed_bools_and_nil() {
-//     assert_js!(
-//         r#"
-// pub type Things { True False Nil }
-// fn go(x, y) {
-//     let True = x
-//     let False = x
-//     let Nil = y
-// }
-// "#,
-//         r#""use strict";
-//
-// function go(x, y) {
-//   if (x.type !== "True") throw new Error("Bad match");
-//
-//   if (x.type !== "False") throw new Error("Bad match");
-//
-//   if (x.type !== "Nil") throw new Error("Bad match");
-//   return y;
-// }
-// "#
-//     );
-// }
+// https://github.com/gleam-lang/gleam/issues/1112
+// differentiate between prelude constructors and custom type constructors
+#[test]
+fn shadowed_bools_and_nil() {
+    assert_js!(
+        r#"
+pub type True { True False Nil }
+fn go(x, y) {
+    let True = x
+    let False = x
+    let Nil = y
+}
+"#,
+        r#""use strict";
+
+function go(x, y) {
+  if (x.type !== "True") throw new Error("Bad match");
+  
+  if (x.type !== "False") throw new Error("Bad match");
+  
+  if (y.type !== "Nil") throw new Error("Bad match");
+  return y;
+}
+"#
+    );
+}
 
 #[test]
 fn equality() {

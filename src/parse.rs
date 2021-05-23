@@ -1040,6 +1040,7 @@ where
             name,
             with_spread,
             constructor: (),
+            type_: (),
         })
     }
 

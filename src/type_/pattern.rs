@@ -477,6 +477,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 arguments: pattern_args,
                                 constructor,
                                 with_spread,
+                                type_: instantiated_constructor_type,
                             })
                         } else {
                             Err(Error::IncorrectArity {
@@ -491,7 +492,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     Type::App { .. } => {
                         if pattern_args.is_empty() {
                             self.environment
-                                .unify(typ, instantiated_constructor_type)
+                                .unify(typ, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
                             Ok(Pattern::Constructor {
                                 location,
@@ -500,6 +501,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                                 arguments: vec![],
                                 constructor,
                                 with_spread,
+                                type_: instantiated_constructor_type,
                             })
                         } else {
                             Err(Error::IncorrectArity {

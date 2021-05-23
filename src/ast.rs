@@ -649,8 +649,7 @@ pub enum Pattern<Constructor, Type> {
         module: Option<String>,
         constructor: Constructor,
         with_spread: bool,
-        // TODO: https://github.com/gleam-lang/gleam/issues/1112
-        // type_: Type,
+        type_: Type,
     },
 
     Tuple {
