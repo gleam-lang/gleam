@@ -515,7 +515,7 @@ call_thing() ->
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_Point.hrl"),
-                    text: "-record(point, {x, y}).\n".to_string(),
+                    text: "-record(point, {x :: integer(), y :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -872,7 +872,7 @@ pub fn get_name(person: Person) { person.name }"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_Person.hrl"),
-                    text: "-record(person, {name, age}).\n".to_string(),
+                    text: "-record(person, {name :: binary(), age :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -926,7 +926,7 @@ type Two = one.Person"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_Person.hrl"),
-                    text: "-record(person, {name, age}).\n".to_string(),
+                    text: "-record(person, {name :: binary(), age :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -967,7 +967,7 @@ type Two = Person"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_Person.hrl"),
-                    text: "-record(person, {name, age}).\n".to_string(),
+                    text: "-record(person, {name :: binary(), age :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -1009,7 +1009,7 @@ fn main() { C }"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_C.hrl"),
-                    text: "-record(c, {a, b}).\n".to_string(),
+                    text: "-record(c, {a :: integer(), b :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -1055,7 +1055,7 @@ main() ->
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_X.hrl"),
-                    text: "-record(x, {x}).\n".to_string(),
+                    text: "-record(x, {x :: integer()}).\n".to_string(),
 
                 },
                 OutputFile {
@@ -1107,7 +1107,7 @@ fn main() { one.C }"
             expected: Ok(vec![
                 OutputFile {
                     path: PathBuf::from("/gen/src/one_C.hrl"),
-                    text: "-record(c, {a, b}).\n".to_string(),
+                    text: "-record(c, {a :: integer(), b :: integer()}).\n".to_string(),
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/one.erl"),
@@ -1343,7 +1343,7 @@ main(Arg1, Arg2, Arg3) ->
                 },
                 OutputFile {
                     path: PathBuf::from("/gen/src/two_Two.hrl"),
-                    text: "-record(two, {thing}).\n"
+                    text: "-record(two, {thing :: one:one(integer())}).\n"
                         .to_string(),
                 },
                 OutputFile {

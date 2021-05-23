@@ -1,18 +1,48 @@
 use super::*;
-use crate::{build::Origin, type_::build_prelude};
+use crate::{build::Origin, type_, type_::build_prelude};
 use std::collections::HashMap;
 
 #[test]
 fn record_definition_test() {
+    let name = vec!["name".to_string()];
+    let documentation = vec![];
+    let type_info = type_::Module {
+        name: vec!["ok".to_string()],
+        types: HashMap::new(), // Core type constructors like String and Int are not included
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+    };
+    let statements = vec![];
+    let module = TypedModule{
+        name,
+        documentation,
+        type_info,
+        statements
+    };
     assert_eq!(
-        record_definition("PetCat", &["name", "is_cute",]),
-        "-record(pet_cat, {name, is_cute}).\n".to_string()
+        record_definition(
+            &module,
+            "PetCat",
+            &[
+                ("name", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("is_cute", &Arc::new(type_::Type::Tuple{elems: vec![]}))
+            ]
+        ),
+        "-record(pet_cat, {name :: {}, is_cute :: {}}).\n".to_string()
     );
 
     // Reserved words are escaped in record names and fields
     assert_eq!(
-        record_definition("div", &["receive", "catch", "unreserved"]),
-        "-record(\'div\', {\'receive\', \'catch\', unreserved}).\n".to_string()
+        record_definition(
+            &module,
+            "div",
+            &[
+                ("receive", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("catch", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("unreserved", &Arc::new(type_::Type::Tuple{elems: vec![]}))
+            ]
+        ),
+        "-record(\'div\', {\'receive\' :: {}, \'catch\' :: {}, unreserved :: {}}).\n".to_string()
     );
 }
 
