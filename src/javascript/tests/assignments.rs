@@ -113,6 +113,27 @@ function go(x, foo) {
 }
 
 #[test]
+fn constant_assignmentss() {
+    assert_js!(
+        r#"
+const a = True
+
+fn go() {
+  a
+}
+"#,
+        r#""use strict";
+
+const a = true;
+
+function go() {
+  return a;
+}
+"#
+    );
+}
+
+#[test]
 fn returning_literal_subject() {
     assert_js!(
         r#"fn go(x) { assert 1 = x + 1 }"#,

@@ -241,8 +241,8 @@ impl<'module> Generator<'module> {
                 ))
             }
             ValueConstructorVariant::LocalVariable => Ok(self.local_var_name(name)),
-            ValueConstructorVariant::ModuleFn { .. } => Ok(name.to_doc()),
-            _ => unsupported("Referencing variables"),
+            ValueConstructorVariant::ModuleFn { .. }
+            | ValueConstructorVariant::ModuleConstant { .. } => Ok(name.to_doc()),
         }
     }
 
