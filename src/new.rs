@@ -74,7 +74,7 @@ impl Creator {
             }
 
             Template::App => {
-                crate::fs::mkdir(&self.src.join(self.project_name.clone()));
+                crate::fs::mkdir(&self.src.join(self.project_name.clone()))?;
                 self.gitignore()?;
                 self.github_ci()?;
                 self.app_readme()?;
