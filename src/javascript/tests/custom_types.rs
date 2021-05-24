@@ -49,25 +49,24 @@ const that = {
     );
 }
 
-// TODO
-// #[test]
-// fn zero_arity_imported() {
-//     assert_js!(
-//         (vec!["other".to_string()], r#"pub type One { Two }"#),
-//         r#"import other
-// pub fn main() {
-//   other.Two
-// }"#,
-//         r#""use strict";
-// import * as other from "./other.js";
-// const { Two } = other;
-//
-// export function main() {
-//   return { type: "Two" };
-// }
-// "#
-//     );
-// }
+#[test]
+fn zero_arity_imported() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two }"#),
+        r#"import other
+pub fn main() {
+  other.Two
+}"#,
+        r#""use strict";
+
+import * as other from "./other.js";
+
+export function main() {
+  return { type: "Two" };
+}
+"#
+    );
+}
 
 #[test]
 fn zero_arity_imported_unqualified() {

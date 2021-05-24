@@ -631,6 +631,11 @@ impl<'module> Generator<'module> {
             ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
                 Ok(docvec![module, ".", label])
             }
+
+            ModuleValueConstructor::Record { name, arity: 0 } => {
+                Ok(construct_record(name, 0, &None, std::iter::empty()))
+            }
+
             _ => unsupported("Module function call"),
         }
     }
