@@ -281,6 +281,10 @@ impl<'a> CompiledPattern<'a> {
         !self.assignments.is_empty()
     }
 
+    pub fn has_checks(&self) -> bool {
+        !self.checks.is_empty()
+    }
+
     pub fn take_assignments_doc(&mut self) -> Document<'a> {
         let assignments = std::mem::take(&mut self.assignments);
         Self::assignments_doc(assignments)

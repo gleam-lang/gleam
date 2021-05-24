@@ -78,10 +78,8 @@ function go(a) {
     return 1;
   } else if (a === "two") {
     return 2;
-  } else if (true) {
-    return 3;
   } else {
-    throw new Error("Bad match");
+    return 3;
   }
 }
 "#

@@ -182,10 +182,8 @@ function go(xs) {
     return 1;
   } else if (xs?.[1]?.[1]?.length === 0) {
     return 2;
-  } else if (true) {
-    return 9999;
   } else {
-    throw new Error("Bad match");
+    return 9999;
   }
 }
 "#

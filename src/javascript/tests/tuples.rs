@@ -169,12 +169,10 @@ function go(a) {
     return a$1;
   } else if (a[0] === 1 && a[1] === 1) {
     return 1;
-  } else if (true) {
+  } else {
     let a$1 = a[0];
     let b = a[1];
     return a$1 + b;
-  } else {
-    throw new Error("Bad match");
   }
 }
 "#

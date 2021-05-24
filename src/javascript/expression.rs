@@ -304,6 +304,8 @@ impl<'module> Generator<'module> {
     }
 
     fn case<'a>(&mut self, subjects: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
+        let mut possibility_of_no_match = true;
+
         let value = match subjects {
             [subject] => subject,
             _ => return unsupported("Cases with multiple subjects"),
@@ -345,23 +347,33 @@ impl<'module> Generator<'module> {
                 docvec!(line(), consequence).nest(INDENT)
             };
 
-            doc = doc
-                .append(if i == 0 { "if (" } else { " else if (" })
-                .append(compiled.take_checks_doc(true))
-                .append(") {")
-                .append(body)
-                .append(line())
-                .append("}");
+            let is_final_clause = i == clauses.len() - 1;
+            doc = if is_final_clause && !compiled.has_checks() {
+                // If this is the final clause and there are no checks then we can
+                // render `else` instead of `else if (...)`
+                possibility_of_no_match = false;
+                doc.append(" else {")
+            } else {
+                doc.append(if i == 0 { "if (" } else { " else if (" })
+                    .append(compiled.take_checks_doc(true))
+                    .append(") {")
+            };
+
+            doc = doc.append(body).append(line()).append("}");
         }
 
-        // Lastly append an error if no clause matches.
-        // We can remove this when we get exhaustiveness checking.
-        // TODO: If the last clause if a var or a discard we don't need to render the else
-        Ok(doc
-            .append(" else {")
-            .append(docvec!(line(), r#"throw new Error("Bad match");"#).nest(INDENT))
-            .append(line())
-            .append("}"))
+        if possibility_of_no_match {
+            // Lastly append an error if no clause matches.
+            // We can remove this when we get exhaustiveness checking.
+            // TODO: If the last clause if a var or a discard we don't need to render the else
+            Ok(doc
+                .append(" else {")
+                .append(docvec!(line(), r#"throw new Error("Bad match");"#).nest(INDENT))
+                .append(line())
+                .append("}"))
+        } else {
+            Ok(doc)
+        }
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
