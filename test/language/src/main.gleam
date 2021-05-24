@@ -1,4 +1,5 @@
 import test.{Functions, Test, example, operator_test, suite}
+import importable.{NoFields}
 
 pub fn main(
   print: fn(String) -> String,
@@ -13,6 +14,7 @@ pub fn main(
       suite("int", int_tests(fns)),
       suite("float", float_tests(fns)),
       suite("constants", constants_tests(fns)),
+      suite("imported custom types", imported_custom_types_test(fns)),
       suite("tail call optimisation", tail_call_optimisation_tests(fns)),
     ]
     |> test.run(fns)
@@ -104,9 +106,6 @@ const const_list_1 = [1]
 const const_list_2 = [1, 2]
 
 fn constants_tests(_fns) -> List(Test) {
-  let equality_test = fn(name, left: a, right: a) {
-    example(name, fn() { test.assert_equal(left, right) })
-  }
   [
     equality_test("int", const_int, 5),
     equality_test("float", const_float, 1.0),
@@ -117,4 +116,18 @@ fn constants_tests(_fns) -> List(Test) {
     equality_test("list 1", const_list_1, [1]),
     equality_test("list 2", const_list_2, [1, 2]),
   ]
+}
+
+fn imported_custom_types_test(_fns) -> List(Test) {
+  [
+    equality_test(
+      "No fields, qualified and unqualified",
+      importable.NoFields,
+      NoFields,
+    ),
+  ]
+}
+
+fn equality_test(name: String, left: a, right: a) {
+  example(name, fn() { test.assert_equal(left, right) })
 }
