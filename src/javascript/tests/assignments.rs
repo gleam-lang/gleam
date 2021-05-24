@@ -120,6 +120,8 @@ const a = True
 
 fn go() {
   a
+  let a = 10
+  a + 20
 }
 "#,
         r#""use strict";
@@ -127,7 +129,9 @@ fn go() {
 const a = true;
 
 function go() {
-  return a;
+  a;
+  let a$1 = 10;
+  return a$1 + 20;
 }
 "#
     );
