@@ -15,7 +15,7 @@ function $equal(x, y) {
   while (toCheck) {
     let a = toCheck.pop();
     let b = toCheck.pop();
-    if (x === y) return true;
+    if (a === b) return true;
     if (!$is_object(a) || !$is_object(b)) return false;
     for (let k of Object.keys(a)) {
       toCheck.push(a[k], b[k]);
