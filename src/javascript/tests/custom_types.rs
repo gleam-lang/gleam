@@ -1,7 +1,7 @@
 use crate::assert_js;
 
 #[test]
-fn zero_arity_custom_type() {
+fn zero_arity_literal() {
     assert_js!(
         r#"
 type Mine{
@@ -9,21 +9,12 @@ type Mine{
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 
-const this = This;
-const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
-
 fn go() {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 "#,
         r#""use strict";
-
-const this = { type: "This" };
-
-const that = {
-  type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
-};
 
 function go() {
   { type: "This" };
@@ -36,7 +27,142 @@ function go() {
 }
 
 #[test]
-fn custom_type_with_unnamed_fields() {
+fn zero_arity_const() {
+    assert_js!(
+        r#"
+type Mine{
+    This
+    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
+}
+
+const this = This;
+const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
+"#,
+        r#""use strict";
+
+const this = { type: "This" };
+
+const that = {
+  type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
+};
+"#
+    );
+}
+
+// TODO
+// #[test]
+// fn zero_arity_imported() {
+//     assert_js!(
+//         (vec!["other".to_string()], r#"pub type One { Two }"#),
+//         r#"import other
+// pub fn main() {
+//   other.Two
+// }"#,
+//         r#""use strict";
+// import * as other from "./other.js";
+// const { Two } = other;
+//
+// export function main() {
+//   return { type: "Two" };
+// }
+// "#
+//     );
+// }
+
+#[test]
+fn zero_arity_imported_unqualified() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two }"#),
+        r#"import other.{Two}
+pub fn main() {
+  Two
+}"#,
+        r#""use strict";
+
+import * as other from "./other.js";
+const { Two } = other;
+
+export function main() {
+  return { type: "Two" };
+}
+"#
+    );
+}
+
+// TODO
+// #[test]
+// fn zero_arity_imported_unqualified_aliased() {
+//     assert_js!(
+//         (vec!["other".to_string()], r#"pub type One { Two }"#),
+//         r#"import other.{Two as Three}
+// pub fn main() {
+//   Three
+// }"#,
+//         r#""use strict";
+//
+// import * as other from "./other.js";
+// const { Two as Three } = other;
+//
+// export function main() {
+//   return { type: "Two" };
+// }
+// "#
+//     );
+// }
+
+#[test]
+fn const_zero_arity_imported() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two }"#),
+        r#"import other
+const x = other.Two
+"#,
+        r#""use strict";
+
+const x = { type: "Two" };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_zero_arity_imported_unqualified() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two }"#),
+        r#"import other.{Two}
+const a = Two
+"#,
+        r#""use strict";
+
+const a = { type: "Two" };
+
+import * as other from "./other.js";
+const { Two } = other;
+"#
+    );
+}
+
+// TODO
+// #[test]
+// fn const_zero_arity_imported_unqualified_aliased() {
+//     assert_js!(
+//         (vec!["other".to_string()], r#"pub type One { Two }"#),
+//         r#"import other.{Two as Three}
+// const a = Three
+// "#,
+//         r#""use strict";
+
+// const a = { type: "Two" };
+
+// import * as other from "./other.js";
+// const { Two as Three } = other;
+// "#
+//     );
+// }
+
+#[test]
+fn unnamed_fields() {
     assert_js!(
         r#"
 type Ip{
