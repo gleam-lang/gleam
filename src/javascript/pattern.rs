@@ -204,21 +204,19 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                     match field_map {
                         None => self.push_int(index),
                         Some(FieldMap { fields, .. }) => {
-                            let label =
-                                fields.iter().find_map(
-                                    |(key, &val)| {
-                                        if val == index {
-                                            Some(key)
-                                        } else {
-                                            None
-                                        }
-                                    },
-                                );
+                            let find = |(key, &val)| {
+                                if val == index {
+                                    Some(key)
+                                } else {
+                                    None
+                                }
+                            };
+                            let label = fields.iter().find_map(find);
                             self.push_string(label.gleam_expect("argument present in field map"));
                         }
                     }
                     self.traverse_pattern(&arg.value)?;
-                    self.pop_times(arguments.len());
+                    self.pop();
                 }
                 Ok(())
             }

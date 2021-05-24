@@ -198,3 +198,29 @@ function go(cat) {
 "#
     )
 }
+
+#[test]
+fn nested_pattern_with_labels() {
+    assert_js!(
+        r#"pub type Box(x) { Box(a: Int, b: x) }
+fn go(x) {
+  case x {
+    Box(a: _, b: Box(a: a, b: b)) -> a + b
+    _ -> 1
+  }
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  if (x.type === "Box" && x.b.type === "Box") {
+    let a = x.b.a;
+    let b = x.b.b;
+    return a + b;
+  } else {
+    return 1;
+  }
+}
+"#
+    );
+}
