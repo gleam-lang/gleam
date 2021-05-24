@@ -12,6 +12,7 @@ pub fn main(
     [
       suite("int", int_tests(fns)),
       suite("float", float_tests(fns)),
+      suite("constants", constants_tests(fns)),
       suite("tail call optimisation", tail_call_optimisation_tests(fns)),
     ]
     |> test.run(fns)
@@ -84,4 +85,36 @@ fn count_down(from i) {
     0 -> Nil
     _ -> count_down(i - 1)
   }
+}
+
+const const_int = 5
+
+const const_float = 1.0
+
+const const_string = "Gleam"
+
+const const_nil = Nil
+
+const const_ok = Ok(1)
+
+const const_list_empty = []
+
+const const_list_1 = [1]
+
+const const_list_2 = [1, 2]
+
+fn constants_tests(_fns) -> List(Test) {
+  let equality_test = fn(name, left: a, right: a) {
+    example(name, fn() { test.assert_equal(left, right) })
+  }
+  [
+    equality_test("int", const_int, 5),
+    equality_test("float", const_float, 1.0),
+    equality_test("string", const_string, "Gleam"),
+    equality_test("Nil", const_nil, Nil),
+    equality_test("Ok", const_ok, Ok(1)),
+    equality_test("list empty", const_list_empty, []),
+    equality_test("list 1", const_list_1, [1]),
+    equality_test("list 2", const_list_2, [1, 2]),
+  ]
 }
