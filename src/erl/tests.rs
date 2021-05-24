@@ -2652,8 +2652,8 @@ fn assert() {
 
 -spec go() -> integer().
 go() ->
-    Y@1 = case {ok, 1} of
-        {ok, Y} -> Y;
+    {ok, Y} = case {ok, 1} of
+        {ok, Y} -> {ok, Y};
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2662,7 +2662,7 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    Y@1.
+    Y.
 "#,
     );
 
@@ -2677,8 +2677,8 @@ go() ->
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
-    {A@1, B@1, C@1} = case X of
-        [1, A, B, C] -> {A, B, C};
+    [1, A, B, C] = case X of
+        [1, A, B, C] -> [1, A, B, C];
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2687,7 +2687,7 @@ go(X) ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    [A@1, B@1, C@1].
+    [A, B, C].
 "#,
     );
 
@@ -2702,8 +2702,8 @@ go(X) ->
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
-    {A@1, B@1, C@1} = case X of
-        [1 = A, B, C] -> {A, B, C};
+    [1 = A, B, C] = case X of
+        [1 = A, B, C] -> [1 = A, B, C];
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2712,7 +2712,7 @@ go(X) ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    [A@1, B@1, C@1].
+    [A, B, C].
 "#,
     );
 
@@ -2728,8 +2728,8 @@ go(X) ->
 
 -spec go() -> integer().
 go() ->
-    Y@1 = case {ok, 1} of
-        {ok, Y} -> Y;
+    {ok, Y} = case {ok, 1} of
+        {ok, Y} -> {ok, Y};
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2738,8 +2738,8 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    Y@3 = case {ok, 1} of
-        {ok, Y@2} -> Y@2;
+    {ok, Y@1} = case {ok, 1} of
+        {ok, Y@1} -> {ok, Y@1};
         Gleam@Assert@1 ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2748,7 +2748,7 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 3})
     end,
-    Y@3.
+    Y@1.
 "#,
     );
 

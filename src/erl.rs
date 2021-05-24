@@ -814,10 +814,11 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
     let mut vars: Vec<&str> = vec![];
     let var = "Gleam@Assert";
     let body = maybe_block_expr(value, env);
+    let pattern = pattern::to_doc(pat, &mut vars, env);
     let clauses = docvec![
-        pattern::to_doc(pat, &mut vars, env),
+        pattern.clone(),
         " -> ",
-        assert_return(&vars, env),
+        pattern.clone(),
         ";",
         line(),
         env.next_local_var_name(var),
@@ -836,7 +837,7 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
         .nest(INDENT)
     ];
     docvec![
-        assert_assign(&vars, env),
+        pattern,
         " = case ",
         body,
         " of",
@@ -844,20 +845,6 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
         line(),
         "end",
     ]
-}
-
-fn assert_return<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
-    match vars {
-        [v] => env.local_var_name(v),
-        _ => tuple(vars.iter().map(|v| env.local_var_name(v))),
-    }
-}
-
-fn assert_assign<'a>(vars: &[&str], env: &mut Env<'a>) -> Document<'a> {
-    match vars {
-        [v] => env.next_local_var_name(v),
-        _ => tuple(vars.iter().map(|v| env.next_local_var_name(v))),
-    }
 }
 
 fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {

@@ -125,9 +125,23 @@ fn imported_custom_types_test(_fns) -> List(Test) {
       importable.NoFields,
       NoFields,
     ),
+    lazy_equality_test(
+      "No fields assignment",
+      fn() { assert importable.NoFields = importable.NoFields },
+      importable.NoFields,
+    ),
+    lazy_equality_test(
+      "No fields unqualified assignment",
+      fn() { assert NoFields = importable.NoFields },
+      importable.NoFields,
+    ),
   ]
 }
 
 fn equality_test(name: String, left: a, right: a) {
   example(name, fn() { test.assert_equal(left, right) })
+}
+
+fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
+  example(name, fn() { test.assert_equal(left(), right) })
 }
