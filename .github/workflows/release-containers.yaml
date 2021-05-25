@@ -17,6 +17,9 @@ jobs:
           - elixir
           - elixir-slim
           - elixir-alpine
+          - node
+          - node-slim
+          - node-alpine
 
     steps: 
       - name: Checkout repository
