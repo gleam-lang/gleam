@@ -531,7 +531,7 @@ impl<'module> Generator<'module> {
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
-            BinOp::MultInt => return self.mult_int(left, right),
+            BinOp::MultInt => self.mult_int(left, right),
             BinOp::MultFloat => self.print_bin_op(left, right, "*"),
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
