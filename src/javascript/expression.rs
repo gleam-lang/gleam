@@ -88,15 +88,13 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, tail, .. } => {
-                let inner = tail
-                    .as_ref()
-                    .map(|t| self.not_in_tail_position(|gen| gen.wrap_expression(t)))
-                    .unwrap_or_else(|| Ok("[]".to_doc()))?;
-                let renderer =
-                    |element| self.not_in_tail_position(|gen| gen.wrap_expression(element));
-                wrap_list(elements, inner, renderer)
-            }
+            TypedExpr::List { elements, tail, .. } => self.not_in_tail_position(|gen| {
+                let tail = match tail.as_ref() {
+                    Some(tail) => Some(gen.wrap_expression(tail)?),
+                    None => None,
+                };
+                list(elements.iter().map(|e| gen.wrap_expression(e)), tail)
+            }),
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -666,7 +664,7 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(value.as_str())),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(e))),
-        Constant::List { elements, .. } => wrap_list(elements, "[]".to_doc(), constant_expression),
+        Constant::List { elements, .. } => list(elements.iter().map(constant_expression), None),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -712,24 +710,26 @@ pub fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> O
     .group())
 }
 
-fn wrap_list<'a, E>(
-    elements: &'a [E],
-    inner: Document<'a>,
-    mut renderer: impl FnMut(&'a E) -> Output<'a>,
+fn list<'a>(
+    elements: impl Iterator<Item = Output<'a>> + DoubleEndedIterator + ExactSizeIterator,
+    mut tail: Option<Document<'a>>,
 ) -> Output<'a> {
-    match elements.split_last() {
-        Some((element, rest)) => {
-            let inner = docvec![
-                "[",
-                docvec![renderer(element)?, break_(",", ", "), inner,]
-                    .nest(INDENT)
-                    .group(),
-                "]",
-            ];
-            wrap_list(rest, inner, renderer)
+    for (i, element) in elements.enumerate().rev() {
+        let mut doc = match tail {
+            Some(tail) => docvec![element?.group(), break_(",", ", "), tail],
+            None => docvec![element?.group(), break_(",", ", "), "[]"],
+        };
+        if i != 0 {
+            doc = docvec!("[", doc, "]");
         }
-        None => Ok(inner),
+        tail = Some(doc);
     }
+    Ok(docvec![
+        "[",
+        docvec!(docvec!(break_("", ""), tail).nest(INDENT), break_(",", ""),),
+        "]"
+    ]
+    .group())
 }
 
 fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
