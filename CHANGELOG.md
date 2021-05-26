@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-- Glean `new` command requires a root folder param, project name is
-  optional and if not provided the project name will be inferred from 
-  the folder name.
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
@@ -13,7 +10,9 @@
 - Fixed a bug where declaring a type constructor using reserved erlang keyword in its fields results in invalid erlang code being generated.
 - Fixed a bug where calling a function with discarded labelled arguments incorrectly results in a compile error.
 - Fixed a bug where assert statements return the wrong value.
-- The `gleam new` command has been altered to be easier to use.
+- Glean `new` command requires a root folder param, project name is
+  optional and if not provided the project name will be inferred from 
+  the folder name.
 
 ## v0.15.1 -2021-05-07
 
