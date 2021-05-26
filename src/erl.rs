@@ -29,7 +29,6 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 const INDENT: isize = 4;
-const MAX_COLUMNS: isize = 80;
 
 pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     let mut files = Vec::with_capacity(analysed.len() * 2);
@@ -147,26 +146,15 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
             constructor
                 .arguments
                 .iter()
-                .map(
-                    |RecordConstructorArg {
-                         label,
-                         ast: _,
-                         location: _,
-                         type_,
-                     }| { label.as_deref().map(|label| (label, type_)) },
-                )
+                .map(|RecordConstructorArg { label, .. }| label.as_deref())
                 .collect::<Option<Vec<_>>>()
                 .map(|fields| (constructor.name.as_str(), fields))
         })
-        .map(|(name, fields)| (name, record_definition(module, name, &fields)))
+        .map(|(name, fields)| (name, record_definition(name, &fields)))
         .collect()
 }
 
-pub fn record_definition(
-    module: &TypedModule,
-    name: &str,
-    fields: &[(&str, &Arc<Type>)],
-) -> String {
+pub fn record_definition(name: &str, fields: &[&str]) -> String {
     let name = &name.to_snake_case();
     let escaped_name = if is_erlang_reserved_word(name) {
         format!("'{}'", name)
@@ -175,20 +163,7 @@ pub fn record_definition(
     };
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
-    let type_printer = TypePrinter::new(&module.name);
-    let fields = fields
-        .iter()
-        .map(move |(field_name, field_type)| {
-            let escaped_field = if is_erlang_reserved_word(field_name) {
-                format!("'{}'", field_name)
-            } else {
-                (*field_name).to_string()
-            };
-            let type_name = type_printer.print(field_type).to_pretty_string(MAX_COLUMNS);
-            format!("{} :: {}", escaped_field, type_name)
-        })
-        .collect::<Vec<_>>();
-    for field in Itertools::intersperse(fields.iter(), &", ".to_string()) {
+    for &field in Itertools::intersperse(fields.iter(), &", ") {
         let escaped_field = if is_erlang_reserved_word(field) {
             format!("'{}'", field)
         } else {
@@ -405,7 +380,7 @@ pub fn module(
         .append(type_defs)
         .append(statements)
         .append(line())
-        .pretty_print(MAX_COLUMNS, writer)
+        .pretty_print(80, writer)
 }
 
 fn statement<'a>(

@@ -13,19 +13,19 @@ fn record_definition_test() {
         accessors: HashMap::new(),
     };
     let statements = vec![];
-    let module = TypedModule {
+    let module = TypedModule{
         name,
         documentation,
         type_info,
-        statements,
+        statements
     };
     assert_eq!(
         record_definition(
             &module,
             "PetCat",
             &[
-                ("name", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                ("is_cute", &Arc::new(type_::Type::Tuple { elems: vec![] }))
+                ("name", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("is_cute", &Arc::new(type_::Type::Tuple{elems: vec![]}))
             ]
         ),
         "-record(pet_cat, {name :: {}, is_cute :: {}}).\n".to_string()
@@ -37,12 +37,9 @@ fn record_definition_test() {
             &module,
             "div",
             &[
-                ("receive", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                ("catch", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                (
-                    "unreserved",
-                    &Arc::new(type_::Type::Tuple { elems: vec![] })
-                )
+                ("receive", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("catch", &Arc::new(type_::Type::Tuple{elems: vec![]})),
+                ("unreserved", &Arc::new(type_::Type::Tuple{elems: vec![]}))
             ]
         ),
         "-record(\'div\', {\'receive\' :: {}, \'catch\' :: {}, unreserved :: {}}).\n".to_string()
