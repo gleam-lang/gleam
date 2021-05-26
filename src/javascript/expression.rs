@@ -298,7 +298,7 @@ impl<'module> Generator<'module> {
             None => compiled.into_assignment_doc(),
         };
 
-        Ok(doc.append(afterwards))
+        Ok(docvec!(force_break(), doc.append(afterwards)))
     }
 
     fn case<'a>(&mut self, subjects: &'a [TypedExpr], clauses: &'a [TypedClause]) -> Output<'a> {
@@ -473,7 +473,7 @@ impl<'module> Generator<'module> {
         let result = self.expression(body);
         self.tail_position = tail;
         Ok(docvec!(
-            docvec!(fun_args(arguments), " => {", break_("", " "), result?,)
+            docvec!(fun_args(arguments), " => {", break_("", " "), result?)
                 .nest(INDENT)
                 .append(break_("", " "))
                 .group(),
