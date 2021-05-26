@@ -2685,7 +2685,7 @@ fn assert() {
 
 -spec go() -> integer().
 go() ->
-    {ok, Y} = case {ok, 1} of
+    {ok, Y@1} = case {ok, 1} of
         {ok, Y} -> {ok, Y};
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
@@ -2695,7 +2695,7 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    Y.
+    Y@1.
 "#,
     );
 
@@ -2710,7 +2710,7 @@ go() ->
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
-    [1, A, B, C] = case X of
+    [1, A@1, B@1, C@1] = case X of
         [1, A, B, C] -> [1, A, B, C];
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
@@ -2720,7 +2720,7 @@ go(X) ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    [A, B, C].
+    [A@1, B@1, C@1].
 "#,
     );
 
@@ -2735,7 +2735,7 @@ go(X) ->
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
-    [1 = A, B, C] = case X of
+    [1 = A@1, B@1, C@1] = case X of
         [1 = A, B, C] -> [1 = A, B, C];
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
@@ -2745,7 +2745,7 @@ go(X) ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    [A, B, C].
+    [A@1, B@1, C@1].
 "#,
     );
 
@@ -2761,7 +2761,7 @@ go(X) ->
 
 -spec go() -> integer().
 go() ->
-    {ok, Y} = case {ok, 1} of
+    {ok, Y@1} = case {ok, 1} of
         {ok, Y} -> {ok, Y};
         Gleam@Assert ->
             erlang:error(#{gleam_error => assert,
@@ -2771,8 +2771,8 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y@1} -> {ok, Y@1};
+    {ok, Y@3} = case {ok, 1} of
+        {ok, Y@2} -> {ok, Y@2};
         Gleam@Assert@1 ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
@@ -2781,7 +2781,7 @@ go() ->
                            function => <<"go"/utf8>>,
                            line => 3})
     end,
-    Y@1.
+    Y@3.
 "#,
     );
 

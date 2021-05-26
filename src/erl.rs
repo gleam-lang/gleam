@@ -839,11 +839,12 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
     let mut vars: Vec<&str> = vec![];
     let var = "Gleam@Assert";
     let body = maybe_block_expr(value, env);
-    let pattern = pattern::to_doc(pat, &mut vars, env);
+    let pattern1 = pattern::to_doc(pat, &mut vars, env);
+    let pattern2 = pattern::to_doc(pat, &mut vars, env);
     let clauses = docvec![
-        pattern.clone(),
+        pattern1.clone(),
         " -> ",
-        pattern.clone(),
+        pattern1.clone(),
         ";",
         line(),
         env.next_local_var_name(var),
@@ -862,7 +863,7 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
         .nest(INDENT)
     ];
     docvec![
-        pattern,
+        pattern2,
         " = case ",
         body,
         " of",
