@@ -653,7 +653,7 @@ call_thing() ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Point.hrl"),
-                text: "-record(point, {x :: integer(), y :: integer()}).
+                text: "-record(point, {x, y}).
 "
                 .to_string(),
             },
@@ -1027,7 +1027,7 @@ funky() ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                text: "-record(person, {name, age}).
 "
                 .to_string(),
             },
@@ -1083,7 +1083,7 @@ get_name(Person) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                text: "-record(person, {name, age}).
 "
                 .to_string(),
             },
@@ -1129,7 +1129,7 @@ get_name(Person) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                text: "-record(person, {name, age}).
 "
                 .to_string(),
             },
@@ -1175,7 +1175,7 @@ get_name(Person) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_C.hrl"),
-                text: "-record(c, {a :: integer(), b :: integer()}).
+                text: "-record(c, {a, b}).
 "
                 .to_string(),
             },
@@ -1228,7 +1228,7 @@ id(X) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_X.hrl"),
-                text: "-record(x, {x :: integer()}).
+                text: "-record(x, {x}).
 "
                 .to_string(),
             },
@@ -1278,7 +1278,7 @@ make() ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one_C.hrl"),
-                text: "-record(c, {a :: integer(), b :: integer()}).
+                text: "-record(c, {a, b}).
 "
                 .to_string(),
             },
@@ -1431,7 +1431,7 @@ main() ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two_Two.hrl",),
-                text: "-record(two, {thing :: one:one(integer())}).
+                text: "-record(two, {thing}).
 "
                 .to_string(),
             },
@@ -1494,7 +1494,7 @@ to_int(P) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/power_Power.hrl",),
-                text: "-record(power, {value :: integer()}).
+                text: "-record(power, {value}).
 "
                 .to_string(),
             },
