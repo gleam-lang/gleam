@@ -161,32 +161,29 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 Ok(())
             }
 
-            // TODO: FIXME: This should only be the case if we know it if the prelude bool
-            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
+                type_,
                 constructor: PatternConstructor::Record { name, .. },
                 ..
-            } if name == "True" => {
+            } if type_.is_bool() && name == "True" => {
                 self.booly_check(true);
                 Ok(())
             }
 
-            // TODO: FIXME: This should only be the case if we know it if the prelude bool
-            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
+                type_,
                 constructor: PatternConstructor::Record { name, .. },
                 ..
-            } if name == "False" => {
+            } if type_.is_bool() && name == "False" => {
                 self.booly_check(false);
                 Ok(())
             }
 
-            // TODO: FIXME: This should only be the case if we know it if the prelude nil
-            // https://github.com/gleam-lang/gleam/issues/1112
             Pattern::Constructor {
+                type_,
                 constructor: PatternConstructor::Record { name, .. },
                 ..
-            } if name == "Nil" => {
+            } if type_.is_nil() && name == "Nil" => {
                 self.booly_check(false);
                 Ok(())
             }
