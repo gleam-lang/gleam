@@ -76,7 +76,20 @@ pub type Stats {
 }
 
 pub fn run(tests: List(Test), fns: Functions(a)) -> Stats {
-  run_list_of_tests(tests, fns, Stats(0, 0), 0)
+  let stats = run_list_of_tests(tests, fns, Stats(0, 0), 0)
+  print_summary(stats, fns)
+  stats
+}
+
+fn print_summary(stats: Stats, fns) {
+  let Functions(to_string: to_string, print: print, ..) = fns
+  print("\n\n")
+  print(to_string(stats.passes + stats.failures))
+  print(" tests\n")
+  print(to_string(stats.passes))
+  print(" passes\n")
+  print(to_string(stats.failures))
+  print(" failures\n")
 }
 
 fn run_test(
@@ -95,12 +108,14 @@ fn run_test(
 
 fn run_suite(name, tests, fns, stats, indentation) {
   print_indentation(fns, indentation)
+  fns.print("\n")
   fns.print(name)
   fns.print("\n")
+  print_indentation(fns, indentation + 1)
   run_list_of_tests(tests, fns, stats, indentation + 1)
 }
 
-fn run_list_of_tests(tests, fns, stats, indentation) {
+fn run_list_of_tests(tests, fns, stats, indentation) -> Stats {
   case tests {
     [] -> stats
     [test, ..tests] -> {
@@ -111,16 +126,15 @@ fn run_list_of_tests(tests, fns, stats, indentation) {
 }
 
 fn run_single_test(name, proc, fns, stats, indentation) {
-  print_indentation(fns, indentation)
   case proc() {
     Ok(Pass) -> {
-      fns.print("✨ ")
-      fns.print(name)
-      fns.print("\n")
+      fns.print("✨")
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail(expected: expected, got: got)) -> {
-      fns.print("❌ ")
+      fns.print("❌")
+      fns.print("\n\n")
+      print_indentation(fns, indentation)
       fns.print(name)
       fns.print("\n")
       print_indentation(fns, indentation)

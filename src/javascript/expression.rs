@@ -533,11 +533,22 @@ impl<'module> Generator<'module> {
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
             BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
-            BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
+            BinOp::MultInt => return self.mult_int(left, right),
+            BinOp::MultFloat => self.print_bin_op(left, right, "*"),
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
             BinOp::DivFloat => self.div_float(left, right),
         }
+    }
+
+    fn mult_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        use std::iter::once;
+        Ok(docvec!(
+            "Math.imul",
+            wrap_args(once(left).chain(once(right)))
+        ))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
