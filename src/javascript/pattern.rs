@@ -183,7 +183,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 type_,
                 constructor: PatternConstructor::Record { name, .. },
                 ..
-            } if type_.is_nil() && name == "Nil" => {
+            } if type_.is_nil() => {
                 self.booly_check(false);
                 Ok(())
             }
