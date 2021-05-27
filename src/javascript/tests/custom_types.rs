@@ -79,7 +79,6 @@ pub fn main() {
         r#""use strict";
 
 import * as other from "./other.js";
-const { Two } = other;
 
 export function main() {
   return { type: "Two" };
@@ -137,7 +136,6 @@ const a = Two
 const a = { type: "Two" };
 
 import * as other from "./other.js";
-const { Two } = other;
 "#
     );
 }

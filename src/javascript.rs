@@ -143,23 +143,36 @@ impl<'a> Generator<'a> {
         ];
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
-        match unqualified.len() {
-            0 => import_line,
-            _ => {
-                let matches = unqualified.iter().map(|i| match &i.as_name {
-                    Some(aliased_name) => (i.name.to_doc(), Some(aliased_name.to_doc())),
-                    None => (i.name.to_doc(), None),
-                });
-                docvec![
-                    import_line,
-                    line(),
-                    "const ",
-                    wrap_object(matches),
-                    " = ",
-                    module_name,
-                    ";"
-                ]
-            }
+        let mut any_unqualified_values = false;
+        let matches = unqualified
+            .iter()
+            .filter(|i| {
+                // We do not create a JS import for uppercase names are they are
+                // type or record constructors, both of which are not used at runtime
+                i.name
+                    .chars()
+                    .next()
+                    .map(char::is_lowercase)
+                    .unwrap_or(false)
+            })
+            .map(|i| {
+                any_unqualified_values = true;
+                (i.name.to_doc(), i.as_name.as_ref().map(|n| n.to_doc()))
+            });
+
+        let matches = wrap_object(matches);
+        if any_unqualified_values {
+            docvec![
+                import_line,
+                line(),
+                "const ",
+                matches,
+                " = ",
+                module_name,
+                ";"
+            ]
+        } else {
+            import_line
         }
     }
 
