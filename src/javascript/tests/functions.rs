@@ -242,6 +242,28 @@ export function loop(indentation) {
     );
 }
 
+#[test]
+fn pipe_last() {
+    assert_js!(
+        r#"fn id(x) { x }
+pub fn main() {
+  1
+  |> id
+}
+"#,
+        r#""use strict";
+
+function id(x) {
+  return x;
+}
+
+export function main() {
+  return id(1);
+}
+"#
+    );
+}
+
 // TODO: shadowing of current function
 // TODO: arguments that are discarded but then given in the recursive call
 // TODO: anonymous functions that call the parent function as a tail call (should not apply optimisation)

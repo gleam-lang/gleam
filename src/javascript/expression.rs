@@ -129,7 +129,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
-            TypedExpr::Pipe { .. } => unsupported("Pipe"),
+            TypedExpr::Pipe { left, right, .. } => self.pipe(left, right),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -380,7 +380,27 @@ impl<'module> Generator<'module> {
         })
     }
 
+    pub fn pipe<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+        let argument = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
+        self.call_with_doc_args(right, vec![argument])
+    }
+
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
+        let tail = self.tail_position;
+        self.tail_position = false;
+        let arguments = arguments
+            .iter()
+            .map(|element| self.wrap_expression(&element.value))
+            .collect::<Result<Vec<_>, _>>()?;
+        self.tail_position = tail;
+        self.call_with_doc_args(fun, arguments)
+    }
+
+    fn call_with_doc_args<'a>(
+        &mut self,
+        fun: &'a TypedExpr,
+        arguments: Vec<Document<'a>>,
+    ) -> Output<'a> {
         match fun {
             // Short circuit creation of a record so the rendered JS creates the record inline.
             TypedExpr::Var {
@@ -396,22 +416,12 @@ impl<'module> Generator<'module> {
                         ..
                     },
                 ..
-            } => {
-                let tail = self.tail_position;
-                self.tail_position = false;
-                let arguments = arguments
-                    .iter()
-                    .map(|element| self.wrap_expression(&element.value))
-                    .collect::<Result<Vec<_>, _>>()?;
-                self.tail_position = tail;
-
-                Ok(self.wrap_return(construct_record(
-                    name,
-                    *arity,
-                    field_map,
-                    arguments.into_iter(),
-                )))
-            }
+            } => Ok(self.wrap_return(construct_record(
+                name,
+                *arity,
+                field_map,
+                arguments.into_iter(),
+            ))),
 
             // Tail call optimisation. If we are calling the current function
             // and we are in tail position we can avoid creating a new stack
@@ -422,15 +432,12 @@ impl<'module> Generator<'module> {
                     && !self.current_scope_vars.contains_key(name) =>
             {
                 let mut docs = Vec::with_capacity(arguments.len() * 4);
-                // We are handling the tail position, so ensure child expressions do not
-                self.tail_position = false;
                 // Record that tail recursion is happening so that we know to
                 // render the loop at the top level of the function.
                 self.tail_recursion_used = true;
 
                 for (i, (element, argument)) in arguments
-                    .iter()
-                    // TODO: work out how to avoid cloning the arguments here.
+                    .into_iter()
                     .zip(self.function_arguments.clone())
                     .enumerate()
                 {
@@ -444,24 +451,15 @@ impl<'module> Generator<'module> {
                     // Render the value given to the function. Even if it is not
                     // assigned we still render it because the expression may
                     // have some side effects.
-                    docs.push(self.wrap_expression(&element.value)?);
+                    docs.push(element);
                     docs.push(";".to_doc());
                 }
-                // Reset the tail position tracking so that any later
-                // expressions (e.g. following case clauses) render correctly.
-                self.tail_position = true;
                 Ok(docs.to_doc())
             }
 
             _ => {
                 let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
-                let arguments = self.not_in_tail_position(|gen| {
-                    call_arguments(
-                        arguments
-                            .iter()
-                            .map(|element| gen.wrap_expression(&element.value)),
-                    )
-                })?;
+                let arguments = call_arguments(arguments.into_iter().map(Ok))?;
                 Ok(self.wrap_return(docvec![fun, arguments]))
             }
         }
@@ -652,7 +650,9 @@ impl<'module> Generator<'module> {
                 Ok(construct_record(name, 0, &None, std::iter::empty()))
             }
 
-            _ => unsupported("Module function call"),
+            ModuleValueConstructor::Record { .. } => {
+                unsupported("Qualified record constructor usage")
+            }
         }
     }
 }
@@ -788,9 +788,10 @@ impl TypedExpr {
         matches!(
             self,
             TypedExpr::Call { .. }
+                | TypedExpr::Case { .. }
+                | TypedExpr::Pipe { .. }
                 | TypedExpr::Sequence { .. }
                 | TypedExpr::Assignment { .. }
-                | TypedExpr::Case { .. }
         )
     }
 
