@@ -4,24 +4,9 @@ use std::collections::HashMap;
 
 #[test]
 fn record_definition_test() {
-    let name = vec!["name".to_string()];
-    let documentation = vec![];
-    let type_info = type_::Module {
-        name: vec!["ok".to_string()],
-        types: HashMap::new(), // Core type constructors like String and Int are not included
-        values: HashMap::new(),
-        accessors: HashMap::new(),
-    };
-    let statements = vec![];
-    let module = TypedModule {
-        name,
-        documentation,
-        type_info,
-        statements,
-    };
+    let module_name = vec!["name".to_string()];
     assert_eq!(
         record_definition(
-            &module,
             "PetCat",
             &[
                 ("name", type_::tuple(vec![])),
@@ -34,7 +19,6 @@ fn record_definition_test() {
     // Reserved words are escaped in record names and fields
     assert_eq!(
         record_definition(
-            &module,
             "div",
             &[
                 ("receive", type_::int()),
@@ -49,7 +33,6 @@ fn record_definition_test() {
     // Type vars are printed as `any()` because records don't support generics
     assert_eq!(
         record_definition(
-            &module,
             "PetCat",
             &[
                 ("name", type_::generic_var(1)),
@@ -60,10 +43,26 @@ fn record_definition_test() {
         "-record(pet_cat, {name :: any(), is_cute :: any(), linked :: integer()}).\n".to_string()
     );
 
+    // Types are printed with module qualifiers
+    assert_eq!(
+        record_definition(
+            "PetCat",
+            &[(
+                "name",
+                Arc::new(type_::Type::App {
+                    public: true,
+                    module: module_name,
+                    name: "my_type".to_string(),
+                    args: vec![]
+                })
+            )]
+        ),
+        "-record(pet_cat, {name :: name:my_type()}).\n".to_string()
+    );
+
     // Long definition formatting
     assert_eq!(
         record_definition(
-            &module,
             "PetCat",
             &[
                 ("name", type_::generic_var(1)),

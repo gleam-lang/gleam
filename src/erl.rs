@@ -160,13 +160,13 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                 .collect::<Option<Vec<_>>>()
                 .map(|fields| (constructor.name.as_str(), fields))
         })
-        .map(|(name, fields)| (name, record_definition(module, name, &fields)))
+        .map(|(name, fields)| (name, record_definition(name, &fields)))
         .collect()
 }
 
-pub fn record_definition(module: &TypedModule, name: &str, fields: &[(&str, Arc<Type>)]) -> String {
+pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let name = &name.to_snake_case();
-    let type_printer = TypePrinter::new(&module.name).var_as_any();
+    let type_printer = TypePrinter::new(&[]).var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
         docvec!(atom(name.to_string()), " :: ", type_.group())
