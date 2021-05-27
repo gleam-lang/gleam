@@ -59,6 +59,42 @@ fn record_definition_test() {
         ),
         "-record(pet_cat, {name :: any(), is_cute :: any(), linked :: integer()}).\n".to_string()
     );
+
+    // Long definition formatting
+    assert_eq!(
+        record_definition(
+            &module,
+            "PetCat",
+            &[
+                ("name", type_::generic_var(1)),
+                ("is_cute", type_::unbound_var(1, 1)),
+                ("linked", type_::link(type_::int())),
+                (
+                    "whatever",
+                    type_::list(type_::tuple(vec![
+                        type_::nil(),
+                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
+                        type_::nil(),
+                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
+                        type_::nil(),
+                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
+                    ]))
+                ),
+            ]
+        ),
+        "-record(pet_cat, {
+    name :: any(),
+    is_cute :: any(),
+    linked :: integer(),
+    whatever :: list({nil,
+                      list({nil, nil, nil}),
+                      nil,
+                      list({nil, nil, nil}),
+                      nil,
+                      list({nil, nil, nil})})
+}).\n"
+            .to_string()
+    );
 }
 
 macro_rules! assert_erl {

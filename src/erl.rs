@@ -166,36 +166,25 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
 
 pub fn record_definition(module: &TypedModule, name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let name = &name.to_snake_case();
-    let escaped_name = if is_erlang_reserved_word(name) {
-        format!("'{}'", name)
-    } else {
-        name.to_string()
-    };
-    use std::fmt::Write;
-    let mut buffer = format!("-record({}, {{", escaped_name);
     let type_printer = TypePrinter::new(&module.name).var_as_any();
-    let fields = fields
-        .iter()
-        .map(move |(field_name, field_type)| {
-            let escaped_field = if is_erlang_reserved_word(field_name) {
-                format!("'{}'", field_name)
-            } else {
-                (*field_name).to_string()
-            };
-            let type_name = type_printer.print(field_type).to_pretty_string(MAX_COLUMNS);
-            format!("{} :: {}", escaped_field, type_name)
-        })
-        .collect::<Vec<_>>();
-    for field in Itertools::intersperse(fields.iter(), &", ".to_string()) {
-        let escaped_field = if is_erlang_reserved_word(field) {
-            format!("'{}'", field)
-        } else {
-            field.to_string()
-        };
-        write!(buffer, "{}", escaped_field).unwrap();
-    }
-    writeln!(buffer, "}}).").unwrap();
-    buffer
+    let fields = fields.iter().map(move |(name, type_)| {
+        let type_ = type_printer.print(type_);
+        docvec!(atom(name.to_string()), " :: ", type_.group())
+    });
+    let fields = break_("", "")
+        .append(concat(Itertools::intersperse(fields, break_(",", ", "))))
+        .nest(INDENT)
+        .append(break_("", ""))
+        .group();
+    docvec!(
+        "-record(",
+        atom(name.to_string()),
+        ", {",
+        fields,
+        "}).",
+        line()
+    )
+    .to_pretty_string(MAX_COLUMNS)
 }
 
 pub fn module(
