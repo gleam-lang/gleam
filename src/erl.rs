@@ -169,7 +169,7 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let type_printer = TypePrinter::new(&[]).var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
-        docvec!(atom(name.to_string()), " :: ", type_.group())
+        docvec!(atom((*name).to_string()), " :: ", type_.group())
     });
     let fields = break_("", "")
         .append(concat(Itertools::intersperse(fields, break_(",", ", "))))
