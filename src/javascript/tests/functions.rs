@@ -264,6 +264,22 @@ export function main() {
     );
 }
 
+#[test]
+fn calling_fn_literal() {
+    assert_js!(
+        r#"pub fn main() {
+  fn(x) { x }(1)
+}
+"#,
+        r#""use strict";
+
+export function main() {
+  return ((x) => { return x; })(1);
+}
+"#
+    );
+}
+
 // TODO: shadowing of current function
 // TODO: arguments that are discarded but then given in the recursive call
 // TODO: anonymous functions that call the parent function as a tail call (should not apply optimisation)

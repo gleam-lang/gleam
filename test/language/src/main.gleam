@@ -99,21 +99,20 @@ fn pipes_tests(_fns) -> List(Test) {
         |> identity
       assert_equal(100, result)
     }),
-    // TODO: JS support
-    // "pipe into anon"
-    // |> example(fn() {
-    //   let result =
-    //     100
-    //     |> fn(x) { x }
-    //   assert_equal(100, result)
-    // }),
-    // "pipe into capture"
-    // |> example(fn() {
-    //   let result =
-    //     1
-    //     |> pair(2, _)
-    //   assert_equal(#(2, 1), result)
-    // }),
+    "pipe into anon"
+    |> example(fn() {
+      let result =
+        100
+        |> fn(x) { x }
+      assert_equal(100, result)
+    }),
+    "pipe into capture"
+    |> example(fn() {
+      let result =
+        1
+        |> pair(2, _)
+      assert_equal(#(2, 1), result)
+    }),
     "pipe first"
     |> example(fn() {
       let result =

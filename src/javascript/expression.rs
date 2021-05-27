@@ -458,7 +458,15 @@ impl<'module> Generator<'module> {
             }
 
             _ => {
-                let fun = self.not_in_tail_position(|gen| gen.expression(fun))?;
+                let fun = self.not_in_tail_position(|gen| {
+                    let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
+                    let fun = gen.expression(fun)?;
+                    if is_fn_literal {
+                        Ok(docvec!("(", fun, ")"))
+                    } else {
+                        Ok(fun)
+                    }
+                })?;
                 let arguments = call_arguments(arguments.into_iter().map(Ok))?;
                 Ok(self.wrap_return(docvec![fun, arguments]))
             }
