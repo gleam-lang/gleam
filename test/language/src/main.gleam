@@ -90,6 +90,10 @@ fn pair(x, y) {
   #(x, y)
 }
 
+fn triplet(x x, y y, z z) {
+  #(x, y, z)
+}
+
 fn pipes_tests(_fns) -> List(Test) {
   [
     "pipe last"
@@ -119,6 +123,20 @@ fn pipes_tests(_fns) -> List(Test) {
         1
         |> pair(2)
       assert_equal(#(1, 2), result)
+    }),
+    "pipe middle with label requires no capture"
+    |> example(fn() {
+      let result =
+        2
+        |> triplet(z: 3, x: 1)
+      assert_equal(#(1, 2, 3), result)
+    }),
+    "pipe last with label requires no capture"
+    |> example(fn() {
+      let result =
+        3
+        |> triplet(y: 2, x: 1)
+      assert_equal(#(1, 2, 3), result)
     }),
   ]
 }
