@@ -12,7 +12,7 @@ static RECORD_KEY: &str = "type";
 pub struct Generator<'module> {
     module_name: &'module [String],
     line_numbers: &'module LineNumbers,
-    function_name: &'module str,
+    function_name: Option<&'module str>,
     function_arguments: Vec<Option<&'module str>>,
     current_scope_vars: im::HashMap<String, usize>,
     pub tail_position: bool,
@@ -39,7 +39,7 @@ impl<'module> Generator<'module> {
         Self {
             module_name,
             line_numbers,
-            function_name,
+            function_name: Some(function_name),
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars: Default::default(),
@@ -104,7 +104,7 @@ impl<'module> Generator<'module> {
             } => self.case(subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
-            TypedExpr::Fn { args, body, .. } => self.fun(args, body),
+            TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
             TypedExpr::RecordUpdate { spread, args, .. } => self.record_update(spread, args),
@@ -427,7 +427,7 @@ impl<'module> Generator<'module> {
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if name == self.function_name
+                if self.function_name == Some(name.as_str())
                     && self.tail_position
                     && !self.current_scope_vars.contains_key(name) =>
             {
@@ -473,11 +473,23 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn fun<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
+    fn fn_<'a>(&mut self, arguments: &'a [TypedArg], body: &'a TypedExpr) -> Output<'a> {
+        // New function, this is now the tail position
         let tail = self.tail_position;
         self.tail_position = true;
+
+        // This is a new function so unset the recorded name so that we don't
+        // mistakenly trigger tail call optimisation
+        let mut name = None;
+        std::mem::swap(&mut self.function_name, &mut name);
+
+        // Generate the function body
         let result = self.expression(body);
+
+        // Reset function name and tail position tracking
         self.tail_position = tail;
+        std::mem::swap(&mut self.function_name, &mut name);
+
         Ok(docvec!(
             docvec!(fun_args(arguments), " => {", break_("", " "), result?)
                 .nest(INDENT)
@@ -629,8 +641,10 @@ impl<'module> Generator<'module> {
                                 Some(
                                     // TODO switch to use `string(self.function_name)`
                                     // This will require resolving the difference in lifetimes 'module and 'a.
-                                    Document::String(self.function_name.to_string())
-                                        .surround("\"", "\"")
+                                    Document::String(
+                                        self.function_name.unwrap_or_default().to_string()
+                                    )
+                                    .surround("\"", "\"")
                                 )
                             ),
                             ("line".to_doc(), Some(line.to_doc())),

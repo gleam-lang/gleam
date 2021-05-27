@@ -280,6 +280,61 @@ export function main() {
     );
 }
 
-// TODO: shadowing of current function
-// TODO: arguments that are discarded but then given in the recursive call
-// TODO: anonymous functions that call the parent function as a tail call (should not apply optimisation)
+// Don't mistake calling a function with the same name as the current function
+// as tail recursion
+#[test]
+fn shadowing_current() {
+    assert_js!(
+        r#"pub fn main() {
+  let main = fn() { 0 }
+  main()
+}
+"#,
+        r#""use strict";
+
+export function main() {
+  let main = () => { return 0; };
+  return main();
+}
+"#
+    );
+}
+
+#[test]
+fn recursion_with_discards() {
+    assert_js!(
+        r#"pub fn main(f, _) {
+  f()
+  main(f, 1)
+}
+"#,
+        r#""use strict";
+
+export function main(f, _) {
+  while (true) {
+    f();
+    f = f;
+    1;
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn no_recur_in_anon_fn() {
+    assert_js!(
+        r#"pub fn main() {
+  fn() { main() }
+  1
+}
+"#,
+        r#""use strict";
+
+export function main() {
+  () => { return main(); };
+  return 1;
+}
+"#
+    );
+}
