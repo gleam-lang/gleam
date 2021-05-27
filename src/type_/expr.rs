@@ -713,7 +713,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
-        let value_typ = generalise(value.type_(), self.environment.level + 1);
+        let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
         let pattern =

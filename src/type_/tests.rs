@@ -2390,7 +2390,7 @@ fn demo() {
             situation: None,
             location: SrcSpan { start: 44, end: 51 },
             expected: list(string()),
-            given: list(int()),
+            given: list(link(int())),
         },
     );
 
@@ -2410,7 +2410,7 @@ fn demo() {
                     type_: Arc::new(RefCell::new(TypeVar::Generic { id: 9 }))
                 }))
             ]),
-            given: tuple(vec![string(), list(int())]),
+            given: tuple(vec![string(), list(link(int()))]),
         },
     );
 
@@ -2440,7 +2440,7 @@ fn demo() {
                 public: true,
                 module: vec!["my_module".to_string()],
                 name: "Box".to_string(),
-                args: vec![int()]
+                args: vec![link(int())]
             }),
         },
     );
