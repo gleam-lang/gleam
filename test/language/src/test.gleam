@@ -136,6 +136,7 @@ fn run_single_test(name, proc, fns, stats, indentation) {
       fns.print("\n\n")
       print_indentation(fns, indentation)
       fns.print(name)
+      fns.print(" test failed!")
       fns.print("\n")
       print_indentation(fns, indentation)
       fns.print("expected: ")

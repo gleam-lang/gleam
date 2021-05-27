@@ -231,3 +231,20 @@ function go(y) {
 "#
     );
 }
+
+#[test]
+fn operator_precedence() {
+    assert_js!(
+        r#"
+fn go() {
+  2.4 *. { 3.5 +. 6.0 }
+}
+"#,
+        r#""use strict";
+
+function go() {
+  return 2.4 * (3.5 + 6.0);
+}
+"#
+    )
+}

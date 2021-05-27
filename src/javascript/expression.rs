@@ -513,7 +513,6 @@ impl<'module> Generator<'module> {
         })
     }
 
-    // TODO: handle precedence rules
     fn bin_op<'a>(
         &mut self,
         name: &'a BinOp,
@@ -547,6 +546,14 @@ impl<'module> Generator<'module> {
             "Math.imul",
             wrap_args(once(left).chain(once(right)))
         ))
+    }
+
+    pub fn binop_child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        if expression.is_operator_to_wrap() {
+            Ok(docvec!("(", self.expression(expression)?, ")"))
+        } else {
+            self.expression(expression)
+        }
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
@@ -587,8 +594,8 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.binop_child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.binop_child_expression(right))?;
         Ok(docvec!(left, " ", op, " ", right))
     }
 
@@ -785,5 +792,40 @@ impl TypedExpr {
                 | TypedExpr::Assignment { .. }
                 | TypedExpr::Case { .. }
         )
+    }
+
+    fn is_operator_to_wrap(&self) -> bool {
+        match self {
+            Self::BinOp { name, .. } => name.is_operator_to_wrap(),
+            _ => false,
+        }
+    }
+}
+
+impl BinOp {
+    fn is_operator_to_wrap(&self) -> bool {
+        match self {
+            BinOp::And
+            | BinOp::Or
+            | BinOp::Eq
+            | BinOp::NotEq
+            | BinOp::LtInt
+            | BinOp::LtEqInt
+            | BinOp::LtFloat
+            | BinOp::LtEqFloat
+            | BinOp::GtEqInt
+            | BinOp::GtInt
+            | BinOp::GtEqFloat
+            | BinOp::GtFloat
+            | BinOp::AddInt
+            | BinOp::AddFloat
+            | BinOp::SubInt
+            | BinOp::SubFloat
+            | BinOp::MultFloat
+            | BinOp::DivInt
+            | BinOp::DivFloat
+            | BinOp::ModuloInt => true,
+            BinOp::MultInt => false,
+        }
     }
 }

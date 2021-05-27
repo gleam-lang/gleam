@@ -44,25 +44,40 @@ fn int_tests(fns) -> List(Test) {
     basic_multiplication(2, 4, 8),
     basic_multiplication(-2, 4, -8),
     basic_multiplication(2, -4, -8),
+    equality_test("Precedence 0", 7, 2 * 2 + 3),
+    equality_test("Precedence 1", 8, 2 + 2 * 3),
+    equality_test("Precedence 2", 10, 2 * { 2 + 3 }),
+    equality_test("Precedence 3", 12, { 2 + 2 } * 3),
   ]
 }
 
 fn float_tests(fns) -> List(Test) {
-  let addition = operator_test("+.", fn(a, b) { a +. b }, fns)
-  let subtraction = operator_test("-.", fn(a, b) { a -. b }, fns)
+  let basic_addition = operator_test("+.", fn(a, b) { a +. b }, fns)
+  let basic_subtraction = operator_test("-.", fn(a, b) { a -. b }, fns)
+  let basic_multiplication = operator_test("*.", fn(a, b) { a *. b }, fns)
   [
-    addition(0., 0., 0.),
-    addition(1., 1., 2.),
-    addition(5., 1., 6.),
-    addition(1., 3., 4.),
-    addition(1., -3., -2.),
-    subtraction(0., 0., 0.),
-    subtraction(1., 1., 0.),
-    subtraction(5., 1., 4.),
-    subtraction(1., 3., -2.),
-    subtraction(1., -3., 4.),
-    subtraction(0.5, 0., 0.5),
-    subtraction(1., 4.5, -3.5),
+    basic_addition(0., 0., 0.),
+    basic_addition(1., 1., 2.),
+    basic_addition(5., 1., 6.),
+    basic_addition(1., 3., 4.),
+    basic_addition(1., -3., -2.),
+    basic_subtraction(0., 0., 0.),
+    basic_subtraction(1., 1., 0.),
+    basic_subtraction(5., 1., 4.),
+    basic_subtraction(1., 3., -2.),
+    basic_subtraction(1., -3., 4.),
+    basic_subtraction(0.5, 0., 0.5),
+    basic_subtraction(1., 4.5, -3.5),
+    basic_multiplication(0.0, 0.0, 0.0),
+    basic_multiplication(1.0, 1.0, 1.0),
+    basic_multiplication(2.0, 2.0, 4.0),
+    basic_multiplication(2.0, 4.0, 8.0),
+    basic_multiplication(-2.0, 4.0, -8.0),
+    basic_multiplication(2.0, -4.0, -8.0),
+    equality_test("Precedence 0", 7.0, 2.0 *. 2.0 +. 3.0),
+    equality_test("Precedence 1", 8.0, 2.0 +. 2.0 *. 3.0),
+    equality_test("Precedence 2", 10.0, 2.0 *. { 2.0 +. 3.0 }),
+    equality_test("Precedence 3", 12.0, { 2.0 +. 2.0 } *. 3.0),
   ]
 }
 
