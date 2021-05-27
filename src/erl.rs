@@ -153,7 +153,9 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          ast: _,
                          location: _,
                          type_,
-                     }| { label.as_deref().map(|label| (label, type_)) },
+                     }| {
+                        label.as_deref().map(|label| (label, type_.clone()))
+                    },
                 )
                 .collect::<Option<Vec<_>>>()
                 .map(|fields| (constructor.name.as_str(), fields))
@@ -162,11 +164,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .collect()
 }
 
-pub fn record_definition(
-    module: &TypedModule,
-    name: &str,
-    fields: &[(&str, &Arc<Type>)],
-) -> String {
+pub fn record_definition(module: &TypedModule, name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let name = &name.to_snake_case();
     let escaped_name = if is_erlang_reserved_word(name) {
         format!("'{}'", name)
@@ -175,7 +173,7 @@ pub fn record_definition(
     };
     use std::fmt::Write;
     let mut buffer = format!("-record({}, {{", escaped_name);
-    let type_printer = TypePrinter::new(&module.name);
+    let type_printer = TypePrinter::new(&module.name).var_as_any();
     let fields = fields
         .iter()
         .map(move |(field_name, field_type)| {
@@ -1784,6 +1782,7 @@ fn erl_safe_type_name(mut name: String) -> String {
 
 #[derive(Debug)]
 struct TypePrinter<'a> {
+    var_as_any: bool,
     current_module: &'a [String],
     var_usages: Option<&'a HashMap<usize, usize>>,
 }
@@ -1793,6 +1792,7 @@ impl<'a> TypePrinter<'a> {
         Self {
             current_module,
             var_usages: None,
+            var_as_any: false,
         }
     }
 
@@ -1821,6 +1821,9 @@ impl<'a> TypePrinter<'a> {
 
     fn print_var(&self, type_: &TypeVar) -> Document<'static> {
         match type_ {
+            TypeVar::Generic { .. } | TypeVar::Unbound { .. } if self.var_as_any => {
+                "any()".to_doc()
+            }
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => match &self.var_usages {
                 Some(usages) => match usages.get(id) {
                     Some(&0) => nil(),
@@ -1895,5 +1898,11 @@ impl<'a> TypePrinter<'a> {
             .append(") -> ")
             .append(retrn)
             .append(")")
+    }
+
+    /// Print type vars as `any()`.
+    fn var_as_any(mut self) -> Self {
+        self.var_as_any = true;
+        self
     }
 }

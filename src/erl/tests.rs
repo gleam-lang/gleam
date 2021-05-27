@@ -24,8 +24,8 @@ fn record_definition_test() {
             &module,
             "PetCat",
             &[
-                ("name", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                ("is_cute", &Arc::new(type_::Type::Tuple { elems: vec![] }))
+                ("name", type_::tuple(vec![])),
+                ("is_cute", type_::tuple(vec![]))
             ]
         ),
         "-record(pet_cat, {name :: {}, is_cute :: {}}).\n".to_string()
@@ -37,15 +37,27 @@ fn record_definition_test() {
             &module,
             "div",
             &[
-                ("receive", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                ("catch", &Arc::new(type_::Type::Tuple { elems: vec![] })),
-                (
-                    "unreserved",
-                    &Arc::new(type_::Type::Tuple { elems: vec![] })
-                )
+                ("receive", type_::int()),
+                ("catch", type_::tuple(vec![])),
+                ("unreserved", type_::tuple(vec![]))
             ]
         ),
-        "-record(\'div\', {\'receive\' :: {}, \'catch\' :: {}, unreserved :: {}}).\n".to_string()
+        "-record(\'div\', {\'receive\' :: integer(), \'catch\' :: {}, unreserved :: {}}).\n"
+            .to_string()
+    );
+
+    // Type vars are printed as `any()` because records don't support generics
+    assert_eq!(
+        record_definition(
+            &module,
+            "PetCat",
+            &[
+                ("name", type_::generic_var(1)),
+                ("is_cute", type_::unbound_var(1, 1)),
+                ("linked", type_::link(type_::int()))
+            ]
+        ),
+        "-record(pet_cat, {name :: any(), is_cute :: any(), linked :: integer()}).\n".to_string()
     );
 }
 
