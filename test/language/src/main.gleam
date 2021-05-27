@@ -11,6 +11,7 @@ pub fn main(
     [
       suite("int", int_tests(fns)),
       suite("float", float_tests(fns)),
+      suite("pipes", pipes_tests(fns)),
       suite("constants", constants_tests(fns)),
       suite("imported custom types", imported_custom_types_test(fns)),
       suite("tail call optimisation", tail_call_optimisation_tests(fns)),
@@ -78,6 +79,48 @@ fn float_tests(fns) -> List(Test) {
     equality_test("Precedence 1", 8.0, 2.0 +. 2.0 *. 3.0),
     equality_test("Precedence 2", 10.0, 2.0 *. { 2.0 +. 3.0 }),
     equality_test("Precedence 3", 12.0, { 2.0 +. 2.0 } *. 3.0),
+  ]
+}
+
+fn identity(x) {
+  x
+}
+
+fn pair(x, y) {
+  #(x, y)
+}
+
+fn pipes_tests(_fns) -> List(Test) {
+  [
+    "pipe last"
+    |> example(fn() {
+      let result =
+        100
+        |> identity
+      assert_equal(100, result)
+    }),
+    // TODO: JS support
+    // "pipe into anon"
+    // |> example(fn() {
+    //   let result =
+    //     100
+    //     |> fn(x) { x }
+    //   assert_equal(100, result)
+    // }),
+    // "pipe into capture"
+    // |> example(fn() {
+    //   let result =
+    //     1
+    //     |> pair(2, _)
+    //   assert_equal(#(2, 1), result)
+    // }),
+    "pipe first"
+    |> example(fn() {
+      let result =
+        1
+        |> pair(2)
+      assert_equal(#(1, 2), result)
+    }),
   ]
 }
 
