@@ -35,6 +35,7 @@ impl<'module> Generator<'module> {
         function_arguments: Vec<Option<&'module str>>,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
+        current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
         Self {
             module_name,
@@ -42,7 +43,7 @@ impl<'module> Generator<'module> {
             function_name: Some(function_name),
             function_arguments,
             tail_recursion_used: false,
-            current_scope_vars: Default::default(),
+            current_scope_vars,
             tail_position: true,
             float_division_used,
             object_equality_used,

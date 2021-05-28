@@ -113,13 +113,18 @@ function go(x, foo) {
 }
 
 #[test]
-fn constant_assignmentss() {
+fn constant_assignments() {
     assert_js!(
         r#"
 const a = True
 
 fn go() {
   a
+  let a = 10
+  a + 20
+}
+
+fn second() {
   let a = 10
   a + 20
 }
@@ -130,6 +135,11 @@ const a = true;
 
 function go() {
   a;
+  let a$1 = 10;
+  return a$1 + 20;
+}
+
+function second() {
   let a$1 = 10;
   return a$1 + 20;
 }

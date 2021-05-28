@@ -43,6 +43,7 @@ pub struct Generator<'a> {
     module: &'a TypedModule,
     float_division_used: bool,
     object_equality_used: bool,
+    initial_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'a> Generator<'a> {
@@ -52,6 +53,7 @@ impl<'a> Generator<'a> {
             module,
             float_division_used: false,
             object_equality_used: false,
+            initial_scope_vars: Default::default(),
         }
     }
 
@@ -183,6 +185,7 @@ impl<'a> Generator<'a> {
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if public { "export const " } else { "const " };
+        let _ = self.initial_scope_vars.insert(name.to_string(), 0);
         Ok(docvec![
             head,
             name,
@@ -210,6 +213,7 @@ impl<'a> Generator<'a> {
             argument_names,
             &mut self.float_division_used,
             &mut self.object_equality_used,
+            self.initial_scope_vars.clone(),
         );
         let head = if public {
             "export function "
