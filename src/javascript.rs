@@ -241,20 +241,58 @@ impl<'a> Generator<'a> {
         module: &'a str,
         fun: &'a str,
     ) -> Document<'a> {
+        if module == "" {
+            self.global_external_function(public, name, arguments, fun)
+        } else {
+            self.imported_external_function(public, name, module, fun)
+        }
+    }
+
+    fn imported_external_function(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        module: &'a str,
+        fun: &'a str,
+    ) -> Document<'a> {
+        let import = if name == fun {
+            docvec!["import { ", name, r#" } from ""#, module, r#"";"#]
+        } else {
+            docvec![
+                "import { ",
+                fun,
+                " as ",
+                name,
+                r#" } from ""#,
+                module,
+                r#"";"#
+            ]
+        };
+        if public {
+            import
+                .append(line())
+                .append("export { ")
+                .append(name)
+                .append(" };")
+        } else {
+            import
+        }
+    }
+
+    fn global_external_function<T>(
+        &mut self,
+        public: bool,
+        name: &'a str,
+        arguments: &'a [ExternalFnArg<T>],
+        fun: &'a str,
+    ) -> Document<'a> {
         let head = if public {
             "export function "
         } else {
             "function "
         };
-        let arguments = wrap_args(arguments.iter().enumerate().map(|a| {
-            match a {
-                (index, ExternalFnArg { label, .. }) => label
-                    .as_ref()
-                    .map(|l| l.as_str().to_doc())
-                    .unwrap_or_else(|| Document::String(format!("arg{}", index))),
-            }
-        }));
-        let body = docvec!["return ", module, ".", fun, arguments.clone()];
+        let arguments = external_fn_args(arguments);
+        let body = docvec!["return ", fun, arguments.clone()];
         docvec![
             head,
             name,
@@ -265,6 +303,17 @@ impl<'a> Generator<'a> {
             "}",
         ]
     }
+}
+
+fn external_fn_args<'a, T>(arguments: &'a [ExternalFnArg<T>]) -> Document<'a> {
+    wrap_args(arguments.iter().enumerate().map(|a| {
+        match a {
+            (index, ExternalFnArg { label, .. }) => label
+                .as_ref()
+                .map(|l| l.as_str().to_doc())
+                .unwrap_or_else(|| Document::String(format!("arg{}", index))),
+        }
+    }))
 }
 
 pub fn module(

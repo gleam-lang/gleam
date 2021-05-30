@@ -2,6 +2,7 @@ mod assignments;
 mod blocks;
 mod bools;
 mod custom_types;
+mod externals;
 mod functions;
 mod lists;
 mod modules;

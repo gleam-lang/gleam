@@ -283,6 +283,9 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         let mut docs = vec![];
 
+        // If the subject is not a variable then we will need to save it to a
+        // variable to prevent any side effects from rendering the same
+        // expression twice.
         let subject_doc = if let TypedExpr::Var { name, .. } = subject {
             self.local_var(name)
         } else {
@@ -297,6 +300,7 @@ impl<'module> Generator<'module> {
             name
         };
 
+        // We return early if the subject is an error
         docs.push("if (".to_doc());
         docs.push(subject_doc.clone());
         docs.push(r#".type === "Error") return "#.to_doc());
@@ -304,6 +308,7 @@ impl<'module> Generator<'module> {
         docs.push(";".to_doc());
 
         match pattern {
+            // Assign the inner value to a variable if it used
             TypedPattern::Var { name, .. } => {
                 docs.push(line());
                 docs.push("let ".to_doc());
