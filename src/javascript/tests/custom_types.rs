@@ -731,3 +731,38 @@ import * as other from "./other.js";
 "#
     );
 }
+
+#[test]
+fn imported_pattern() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
+        ),
+        r#"import other.{Two}
+
+pub fn main(x) {
+  case x {
+    Two(a: 1, ..) -> 1
+    other.Two(b: 2, c: c, ..) -> c
+    _ -> 3
+  }
+}
+"#,
+        r#""use strict";
+
+import * as other from "./other.js";
+
+export function main(x) {
+  if (x.type === "Two" && x.a === 1) {
+    return 1;
+  } else if (x.type === "Two" && x.b === 2) {
+    let c = x.c;
+    return c;
+  } else {
+    return 3;
+  }
+}
+"#
+    );
+}
