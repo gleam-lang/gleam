@@ -1,9 +1,14 @@
 use crate::assert_js;
+use crate::javascript::tests::CURRENT_PACKAGE;
 
 #[test]
 fn unqualified_fn_call() {
     assert_js!(
-        (vec!["rocket_ship".to_string()], r#"pub fn launch() { 1 }"#),
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub fn launch() { 1 }"#
+        ),
         r#"import rocket_ship.{launch}
 pub fn go() { launch() }
 "#,
@@ -22,7 +27,11 @@ export function go() {
 #[test]
 fn aliased_unqualified_fn_call() {
     assert_js!(
-        (vec!["rocket_ship".to_string()], r#"pub fn launch() { 1 }"#),
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub fn launch() { 1 }"#
+        ),
         r#"import rocket_ship.{launch as boom_time}
 pub fn go() { boom_time() }
 "#,
@@ -42,6 +51,7 @@ export function go() {
 fn multiple_unqualified_fn_call() {
     assert_js!(
         (
+            CURRENT_PACKAGE,
             vec!["rocket_ship".to_string()],
             r#"
 pub fn a() { 1 }
@@ -65,7 +75,11 @@ export function go() {
 #[test]
 fn constant() {
     assert_js!(
-        (vec!["rocket_ship".to_string()], r#"pub const x = 1"#),
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub const x = 1"#
+        ),
         r#"
 import rocket_ship
 pub fn go() { rocket_ship.x }
@@ -84,7 +98,11 @@ export function go() {
 #[test]
 fn alias_constant() {
     assert_js!(
-        (vec!["rocket_ship".to_string()], r#"pub const x = 1"#),
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub const x = 1"#
+        ),
         r#"
 import rocket_ship as boop
 pub fn go() { boop.x }
@@ -103,7 +121,11 @@ export function go() {
 #[test]
 fn alias_fn_call() {
     assert_js!(
-        (vec!["rocket_ship".to_string()], r#"pub fn go() { 1 }"#),
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub fn go() { 1 }"#
+        ),
         r#"
 import rocket_ship as boop
 pub fn go() { boop.go() }
@@ -123,6 +145,7 @@ export function go() {
 fn nested_fn_call() {
     assert_js!(
         (
+            CURRENT_PACKAGE,
             vec!["one".to_string(), "two".to_string()],
             r#"pub fn go() { 1 }"#
         ),
@@ -143,6 +166,7 @@ export function go() {
 fn nested_nested_fn_call() {
     assert_js!(
         (
+            CURRENT_PACKAGE,
             vec!["one".to_string(), "two".to_string(), "three".to_string()],
             r#"pub fn go() { 1 }"#
         ),
@@ -154,6 +178,28 @@ import * as three from "./one/two/three.js";
 
 export function go() {
   return three.go();
+}
+"#
+    );
+}
+
+#[test]
+fn different_package_import() {
+    assert_js!(
+        (
+            "other_package",
+            vec!["one".to_string()],
+            r#"pub fn go() { 1 }"#
+        ),
+        r#"import one
+pub fn go() { one.go() }
+"#,
+        r#""use strict";
+
+import * as one from "other_package/one.js";
+
+export function go() {
+  return one.go();
 }
 "#
     );

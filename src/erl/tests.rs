@@ -107,9 +107,16 @@ macro_rules! assert_erl {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
-        let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
-            .expect("should successfully infer");
+        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let ast = crate::type_::infer_module(
+            &mut 0,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();

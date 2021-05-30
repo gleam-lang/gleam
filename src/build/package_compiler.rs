@@ -61,15 +61,18 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
-        existing_modules: &mut HashMap<String, (Origin, type_::Module)>,
+        existing_modules: &mut HashMap<String, type_::Module>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
     ) -> Result<Package, Error> {
         let span = tracing::info_span!("compile", package = self.options.name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
-        let parsed_modules =
-            parse_sources(std::mem::take(&mut self.sources), already_defined_modules)?;
+        let parsed_modules = parse_sources(
+            &self.options.name,
+            std::mem::take(&mut self.sources),
+            already_defined_modules,
+        )?;
 
         // Determine order in which modules are to be processed
         let sequence =
@@ -77,7 +80,13 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
                 .map_err(convert_deps_tree_error)?;
 
         tracing::info!("Type checking modules");
-        let modules = type_check(sequence, parsed_modules, existing_modules, warnings)?;
+        let modules = type_check(
+            &self.options.name,
+            sequence,
+            parsed_modules,
+            existing_modules,
+            warnings,
+        )?;
 
         tracing::info!("Performing code generation");
         self.perform_codegen(&modules)?;
@@ -156,9 +165,10 @@ impl<Writer: FileSystemWriter> PackageCompiler<Writer> {
 }
 
 fn type_check(
+    package_name: &str,
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
-    module_types: &mut HashMap<String, (Origin, type_::Module)>,
+    module_types: &mut HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
@@ -169,10 +179,7 @@ fn type_check(
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = module_types.insert(
-        "gleam".to_string(),
-        (Origin::Src, type_::build_prelude(&mut uid)),
-    );
+    let _ = module_types.insert("gleam".to_string(), type_::build_prelude(&mut uid));
 
     for name in sequence {
         let Parsed {
@@ -181,19 +188,26 @@ fn type_check(
             ast,
             path,
             origin,
+            package,
         } = parsed_modules
             .remove(&name)
             .gleam_expect("Getting parsed module for name");
 
         tracing::trace!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
-        let ast = type_::infer_module(&mut uid, ast, module_types, &mut type_warnings).map_err(
-            |error| Error::Type {
-                path: path.clone(),
-                src: code.clone(),
-                error,
-            },
-        )?;
+        let ast = type_::infer_module(
+            &mut uid,
+            ast,
+            origin,
+            package_name,
+            module_types,
+            &mut type_warnings,
+        )
+        .map_err(|error| Error::Type {
+            path: path.clone(),
+            src: code.clone(),
+            error,
+        })?;
 
         // Register any warnings emitted as type warnings
         let type_warnings = type_warnings
@@ -203,7 +217,7 @@ fn type_check(
 
         // Register the types from this module so they can be imported into
         // other modules.
-        let _ = module_types.insert(name.clone(), (origin, ast.type_info.clone()));
+        let _ = module_types.insert(name.clone(), ast.type_info.clone());
 
         // Register the successfully type checked module data so that it can be
         // used for code generation
@@ -237,6 +251,7 @@ fn module_deps_for_graph(module: &Parsed) -> (String, Vec<String>) {
 }
 
 fn parse_sources(
+    package_name: &str,
     sources: Vec<Source>,
     already_defined_modules: &mut HashMap<String, PathBuf>,
 ) -> Result<HashMap<String, Parsed>, Error> {
@@ -258,6 +273,7 @@ fn parse_sources(
         ast.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
 
         let module = Parsed {
+            package: package_name.to_string(),
             origin,
             path,
             name,
@@ -318,5 +334,6 @@ struct Parsed {
     name: String,
     code: String,
     origin: Origin,
+    package: String,
     ast: UntypedModule,
 }
