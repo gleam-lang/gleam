@@ -565,3 +565,149 @@ export function main() {
 "#
     );
 }
+
+#[test]
+fn const_imported_no_label() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two(Int) }"#),
+        r#"import other
+pub const main = other.Two(1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", 0: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_imported_ignoring_label() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(field: Int) }"#
+        ),
+        r#"import other
+pub const main = other.Two(1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", field: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_imported_using_label() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(field: Int) }"#
+        ),
+        r#"import other
+pub const main = other.Two(field: 1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", field: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_imported_multiple_fields() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
+        ),
+        r#"import other
+pub const main = other.Two(b: 2, c: 3, a: 1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", a: 1, b: 2, c: 3 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_unqualified_imported_no_label() {
+    assert_js!(
+        (vec!["other".to_string()], r#"pub type One { Two(Int) }"#),
+        r#"import other.{Two}
+pub const main = Two(1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", 0: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_unqualified_imported_ignoring_label() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(field: Int) }"#
+        ),
+        r#"import other.{Two}
+pub const main = Two(1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", field: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_unqualified_imported_using_label() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(field: Int) }"#
+        ),
+        r#"import other.{Two}
+pub const main = Two(field: 1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", field: 1 };
+
+import * as other from "./other.js";
+"#
+    );
+}
+
+#[test]
+fn const_unqualified_imported_multiple_fields() {
+    assert_js!(
+        (
+            vec!["other".to_string()],
+            r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
+        ),
+        r#"import other.{Two}
+pub const main = Two(b: 2, c: 3, a: 1)
+"#,
+        r#""use strict";
+
+export const main = { type: "Two", a: 1, b: 2, c: 3 };
+
+import * as other from "./other.js";
+"#
+    );
+}
