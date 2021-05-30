@@ -79,6 +79,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Lars Wikman](https://github.com/lawik)
  - [Marcin Puc](https://github.com/tranzystorek-io)
  - [Mario Vellandi](https://github.com/mvellandi)
+ - [Marius Kalvø](https://github.com/mariuskalvo)
  - [Mark Markaryan](https://github.com/markmark206)
  - [Matthew Cheely](https://github.com/MattCheely)
  - [Memo](https://sendmemo.app)
