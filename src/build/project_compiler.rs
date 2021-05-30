@@ -19,7 +19,7 @@ pub struct ProjectCompiler<'a> {
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
     packages: HashMap<String, Package>,
-    type_manifests: HashMap<String, (Origin, type_::Module)>,
+    importable_modules: HashMap<String, type_::Module>,
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
 }
@@ -37,7 +37,7 @@ impl<'a> ProjectCompiler<'a> {
         let estimated_number_of_modules = configs.len() * 5;
         Self {
             packages: HashMap::with_capacity(configs.len()),
-            type_manifests: HashMap::with_capacity(estimated_number_of_modules),
+            importable_modules: HashMap::with_capacity(estimated_number_of_modules),
             defined_modules: HashMap::with_capacity(estimated_number_of_modules),
             warnings: Vec::new(),
             root_config,
@@ -96,7 +96,7 @@ impl<'a> ProjectCompiler<'a> {
         // Compile project
         let compiled = compiler.compile(
             &mut self.warnings,
-            &mut self.type_manifests,
+            &mut self.importable_modules,
             &mut self.defined_modules,
         )?;
         ErlangApp::new(&out_path).render(&FileSystemAccessor::new(), &config, &compiled.modules)?;

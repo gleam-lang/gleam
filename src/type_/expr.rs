@@ -1211,7 +1211,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (module_name, constructor) = {
-            let (_, module) = self
+            let module = self
                 .environment
                 .imported_modules
                 .get(module_alias)
@@ -1304,7 +1304,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .environment
                 .importable_modules
                 .get(&module.join("/"))
-                .and_then(|(_, module)| module.accessors.get(name)),
+                .and_then(|module| module.accessors.get(name)),
 
             _something_without_fields => return Err(unknown_field(vec![])),
         }
@@ -1512,8 +1512,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             .keys()
                             .map(|t| t.to_string())
                             .collect(),
-                    })?
-                    .1;
+                    })?;
                 module
                     .values
                     .get(name)
@@ -1650,7 +1649,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             .imported_modules
                             .get(module_name)
                             .gleam_expect("Failed to find previously located module import")
-                            .1
                             .name
                             .clone(),
                         typ: constructor.type_.clone(),

@@ -90,8 +90,9 @@ impl<'a> Generator<'a> {
                 module,
                 as_name,
                 unqualified,
+                package,
                 ..
-            } => Some(Ok(self.import(module, as_name, unqualified))),
+            } => Some(Ok(self.import(package, module, as_name, unqualified))),
             Statement::ExternalType { .. } => None,
             Statement::ModuleConstant {
                 public,
@@ -119,8 +120,25 @@ impl<'a> Generator<'a> {
         }
     }
 
+    fn import_path(&mut self, package: &'a str, module: &'a [String]) -> Document<'a> {
+        let path = Document::String(module.join("/"));
+
+        if package == self.module.type_info.package {
+            // Same package uses relative paths
+            let prefix = match self.module.name.len() {
+                1 => "./".to_doc(),
+                _ => Document::String("../".repeat(module.len() - 1)),
+            };
+            docvec!["\"", prefix, path, ".js\""]
+        } else {
+            // Different packages uses absolute imports
+            docvec!["\"", package, "/", path, ".js\""]
+        }
+    }
+
     fn import(
         &mut self,
+        package: &'a str,
         module: &'a [String],
         as_name: &'a Option<String>,
         unqualified: &'a [UnqualifiedImport],
@@ -134,15 +152,7 @@ impl<'a> Generator<'a> {
                     .gleam_expect("JavaScript code generator could not identify module name.")
                     .to_doc()
             });
-        let path: Document<'a> = docvec![
-            "\"",
-            match self.module.name.len() {
-                1 => "./".to_doc(),
-                _ => Document::String("../".repeat(module.len() - 1)),
-            },
-            Document::String(module.join("/")),
-            ".js\""
-        ];
+        let path: Document<'a> = self.import_path(package, module);
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
         let mut any_unqualified_values = false;

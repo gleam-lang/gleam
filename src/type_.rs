@@ -303,6 +303,8 @@ pub enum ModuleValueConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
     pub name: Vec<String>,
+    pub origin: Origin,
+    pub package: String,
     pub types: HashMap<String, TypeConstructor>,
     pub values: HashMap<String, ValueConstructor>,
     pub accessors: HashMap<String, AccessorsMap>,
@@ -399,13 +401,16 @@ impl ValueConstructor {
     }
 }
 
+// TODO: This takes too many arguments.
 /// Crawl the AST, annotating each node with the inferred type or
 /// returning an error.
 ///
 pub fn infer_module(
     uid: &mut usize,
     module: UntypedModule,
-    modules: &HashMap<String, (Origin, Module)>,
+    origin: Origin,
+    package: &str,
+    modules: &HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
     let mut environment = Environment::new(uid, &module.name, modules, warnings);
@@ -510,6 +515,8 @@ pub fn infer_module(
             types,
             values,
             accessors,
+            origin,
+            package: package.to_string(),
         },
     })
 }
@@ -1141,12 +1148,24 @@ fn infer_statement(
             module,
             as_name,
             unqualified,
-        } => Ok(Statement::Import {
-            location,
-            module,
-            as_name,
-            unqualified,
-        }),
+            ..
+        } => {
+            // Find imported module
+            let module_info = environment
+                .importable_modules
+                .get(&module.join("/"))
+                .gleam_expect(
+                    "Typer could not find a module being imported during inference.
+Missing modules should be detected prior to type checking",
+                );
+            Ok(Statement::Import {
+                location,
+                module,
+                as_name,
+                unqualified,
+                package: module_info.package.clone(),
+            })
+        }
 
         Statement::ModuleConstant {
             doc,
@@ -1631,8 +1650,6 @@ pub fn register_import(
 Missing modules should be detected prior to type checking",
                 );
 
-            let (_, imported_module) = module_info;
-
             // Determine local alias of imported module
             let module_name = as_name
                 .as_ref()
@@ -1654,7 +1671,7 @@ Missing modules should be detected prior to type checking",
                 let imported_name = as_name.as_ref().unwrap_or(name);
 
                 // Register the unqualified import if it is a value
-                if let Some(value) = imported_module.values.get(name) {
+                if let Some(value) = module_info.values.get(name) {
                     environment.insert_variable(
                         imported_name.clone(),
                         value.variant.clone(),
@@ -1666,7 +1683,7 @@ Missing modules should be detected prior to type checking",
                 }
 
                 // Register the unqualified import if it is a type constructor
-                if let Some(typ) = imported_module.types.get(name) {
+                if let Some(typ) = module_info.types.get(name) {
                     let typ_info = TypeConstructor {
                         origin: *location,
                         ..typ.clone()
@@ -1710,12 +1727,12 @@ Missing modules should be detected prior to type checking",
                         location: *location,
                         name: name.clone(),
                         module_name: module.clone(),
-                        value_constructors: imported_module
+                        value_constructors: module_info
                             .values
                             .keys()
                             .map(|t| t.to_string())
                             .collect(),
-                        type_constructors: imported_module
+                        type_constructors: module_info
                             .types
                             .keys()
                             .map(|t| t.to_string())

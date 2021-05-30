@@ -1,3 +1,5 @@
+use crate::build::Origin;
+
 use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
@@ -125,6 +127,8 @@ pub fn build_prelude(uid: &mut usize) -> Module {
 
     let mut prelude = Module {
         name: vec!["gleam".to_string()],
+        package: "".to_string(),
+        origin: Origin::Src,
         types: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),

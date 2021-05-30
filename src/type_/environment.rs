@@ -6,8 +6,8 @@ pub struct Environment<'a, 'b> {
     pub current_module: &'a [String],
     pub uid: &'b mut usize,
     pub level: usize,
-    pub importable_modules: &'a HashMap<String, (Origin, Module)>,
-    pub imported_modules: HashMap<String, (Origin, Module)>,
+    pub importable_modules: &'a HashMap<String, Module>,
+    pub imported_modules: HashMap<String, Module>,
 
     // Values defined in the current function (or the prelude)
     pub local_values: im::HashMap<String, ValueConstructor>,
@@ -54,10 +54,10 @@ impl<'a, 'b> Environment<'a, 'b> {
     pub fn new(
         uid: &'b mut usize,
         current_module: &'a [String],
-        importable_modules: &'a HashMap<String, (Origin, Module)>,
+        importable_modules: &'a HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
-        let (_, prelude) = importable_modules
+        let prelude = importable_modules
             .get("gleam")
             .gleam_expect("Unable to find prelude in importable modules");
         Self {
@@ -224,7 +224,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }
 
             Some(m) => {
-                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
+                let module = self.imported_modules.get(m).ok_or_else(|| {
                     GetTypeConstructorError::UnknownModule {
                         name: name.to_string(),
                         imported_modules: self
@@ -262,7 +262,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }),
 
             Some(module) => {
-                let (_, module) = self.imported_modules.get(module).ok_or_else(|| {
+                let module = self.imported_modules.get(module).ok_or_else(|| {
                     GetValueConstructorError::UnknownModule {
                         name: name.to_string(),
                         imported_modules: self

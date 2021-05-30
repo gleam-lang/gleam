@@ -15,7 +15,7 @@ pub fn env_types() -> Vec<String> {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+    let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
     Environment::new(&mut 0, &[], &modules, &mut vec![])
         .module_types
         .keys()
@@ -38,7 +38,7 @@ pub fn env_vars() -> Vec<String> {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), (Origin::Src, build_prelude(&mut uid)));
+    let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
     Environment::new(&mut 0, &[], &modules, &mut vec![])
         .local_values
         .keys()
