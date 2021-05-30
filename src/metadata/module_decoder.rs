@@ -7,6 +7,7 @@ use crate::{
         BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
         TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
     },
+    build::Origin,
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
@@ -58,7 +59,9 @@ impl ModuleDecoder {
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(Module {
-            name: name(&reader.get_name()?)?,
+            name: module_name(&reader.get_name()?)?,
+            package: reader.get_package()?.to_string(),
+            origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
@@ -70,7 +73,7 @@ impl ModuleDecoder {
         reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
-        let module = name(&reader.get_module()?)?;
+        let module = module_name(&reader.get_module()?)?;
         Ok(TypeConstructor {
             public: true,
             origin: Default::default(),
@@ -91,7 +94,7 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
-        let module = name(&reader.get_module()?)?;
+        let module = module_name(&reader.get_module()?)?;
         let name = reader.get_name()?.to_string();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::App {
@@ -332,7 +335,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleFn {
             name: reader.get_name()?.to_string(),
-            module: name(&reader.get_module()?)?,
+            module: module_name(&reader.get_module()?)?,
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
         })
@@ -384,7 +387,7 @@ impl ModuleDecoder {
     }
 }
 
-fn name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
+fn module_name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
     let name = module.iter().map_ok(String::from).try_collect()?;
     Ok(name)
 }

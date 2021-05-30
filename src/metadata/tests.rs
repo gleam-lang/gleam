@@ -6,6 +6,7 @@ use crate::{
         BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
         TypedConstantBitStringSegmentOption,
     },
+    build::Origin,
     fs::test::InMemoryFile,
     type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
 };
@@ -22,6 +23,8 @@ fn roundtrip(input: &Module) -> Module {
 
 fn constant_module(constant: TypedConstant) -> Module {
     Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
@@ -57,6 +60,8 @@ fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption)
 #[test]
 fn empty_module() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["one".to_string(), "two".to_string()],
         types: HashMap::new(),
         values: HashMap::new(),
@@ -68,6 +73,8 @@ fn empty_module() {
 #[test]
 fn module_with_app_type() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
         types: vec![(
             "ListIntType".to_string(),
@@ -90,6 +97,8 @@ fn module_with_app_type() {
 #[test]
 fn module_with_fn_type() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
         types: vec![(
             "FnType".to_string(),
@@ -112,6 +121,8 @@ fn module_with_fn_type() {
 #[test]
 fn module_with_tuple_type() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
         types: vec![(
             "TupleType".to_string(),
@@ -140,6 +151,8 @@ fn module_with_generic_type() {
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> Module {
         Module {
+            package: "some_package".to_string(),
+            origin: Origin::Src,
             name: vec!["a".to_string(), "b".to_string()],
             types: vec![(
                 "TupleType".to_string(),
@@ -168,6 +181,8 @@ fn module_with_type_links() {
 
     fn make(type_: Arc<Type>) -> Module {
         Module {
+            package: "some_package".to_string(),
+            origin: Origin::Src,
             name: vec!["a".to_string()],
             types: vec![(
                 "SomeType".to_string(),
@@ -192,6 +207,8 @@ fn module_with_type_links() {
 #[test]
 fn module_fn_value() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
@@ -219,6 +236,8 @@ fn module_fn_value() {
 #[test]
 fn module_fn_value_with_field_map() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
@@ -251,6 +270,8 @@ fn module_fn_value_with_field_map() {
 #[test]
 fn record_value() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
@@ -277,6 +298,8 @@ fn record_value() {
 #[test]
 fn record_value_with_field_map() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
@@ -308,6 +331,8 @@ fn record_value_with_field_map() {
 #[test]
 fn accessors() {
     let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
         values: HashMap::new(),

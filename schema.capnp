@@ -24,6 +24,7 @@ struct Module {
   types @1 :List(Property(TypeConstructor));
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
+  package @4 :Text;
 }
 
 struct TypeConstructor {

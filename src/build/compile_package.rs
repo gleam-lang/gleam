@@ -11,8 +11,6 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub type Manifests = HashMap<String, (Origin, Module)>;
-
 pub fn command(options: CompilePackage) -> Result<()> {
     let mut type_manifests = load_libraries(&options.libraries)?;
     let mut defined_modules = HashMap::new();
@@ -37,14 +35,14 @@ pub fn command(options: CompilePackage) -> Result<()> {
     Ok(())
 }
 
-fn load_libraries(libs: &[PathBuf]) -> Result<Manifests> {
+fn load_libraries(libs: &[PathBuf]) -> Result<HashMap<String, Module>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = HashMap::with_capacity(libs.len() * 10);
     for lib in libs {
         for module in fs::gleam_modules_metadata_paths(lib)? {
             let reader = fs::buffered_reader(module)?;
             let module = metadata::ModuleDecoder::new().read(reader)?;
-            let _ = manifests.insert(module.name.join("/"), (Origin::Src, module));
+            let _ = manifests.insert(module.name.join("/"), module);
         }
     }
     Ok(manifests)

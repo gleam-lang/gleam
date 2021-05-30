@@ -11,6 +11,8 @@ mod strings;
 mod try_;
 mod tuples;
 
+pub static CURRENT_PACKAGE: &str = "thepackage";
+
 #[macro_export]
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {{
@@ -21,24 +23,26 @@ macro_rules! assert_js {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert(
-            "gleam".to_string(),
-            (
-                crate::build::Origin::Src,
-                crate::type_::build_prelude(&mut uid),
-            ),
-        );
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
+
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
-        let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
-            .expect("should successfully infer");
+        let ast = crate::type_::infer_module(
+            &mut 0,
+            ast,
+            crate::build::Origin::Src,
+            "thepackage",
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
 
-    (($dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
+    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
         use crate::javascript::*;
         let mut modules = std::collections::HashMap::new();
         let mut uid = 0;
@@ -46,25 +50,30 @@ macro_rules! assert_js {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert(
-            "gleam".to_string(),
-            (
-                crate::build::Origin::Src,
-                crate::type_::build_prelude(&mut uid),
-            ),
-        );
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
         let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
-        let dep = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
-            .expect("should successfully infer");
-        let _ = modules.insert(
-            $dep_name.join("/"),
-            (crate::build::Origin::Src, dep.type_info),
-        );
+        let dep = crate::type_::infer_module(
+            &mut 0,
+            ast,
+            crate::build::Origin::Src,
+            $dep_package,
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert($dep_name.join("/"), dep.type_info);
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
-        let ast = crate::type_::infer_module(&mut 0, ast, &modules, &mut vec![])
-            .expect("should successfully infer");
+        let ast = crate::type_::infer_module(
+            &mut 0,
+            ast,
+            crate::build::Origin::Src,
+            CURRENT_PACKAGE,
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();

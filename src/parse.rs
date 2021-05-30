@@ -1774,6 +1774,7 @@ where
             unqualified,
             module,
             as_name,
+            package: (),
         }))
     }
 
