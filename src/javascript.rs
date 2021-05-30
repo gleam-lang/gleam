@@ -251,7 +251,7 @@ impl<'a> Generator<'a> {
         module: &'a str,
         fun: &'a str,
     ) -> Document<'a> {
-        if module == "" {
+        if module.is_empty() {
             self.global_external_function(public, name, arguments, fun)
         } else {
             self.imported_external_function(public, name, module, fun)
@@ -315,7 +315,7 @@ impl<'a> Generator<'a> {
     }
 }
 
-fn external_fn_args<'a, T>(arguments: &'a [ExternalFnArg<T>]) -> Document<'a> {
+fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
     wrap_args(arguments.iter().enumerate().map(|a| {
         match a {
             (index, ExternalFnArg { label, .. }) => label
