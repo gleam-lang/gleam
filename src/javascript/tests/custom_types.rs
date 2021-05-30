@@ -159,6 +159,26 @@ import * as other from "./other.js";
 // }
 
 #[test]
+fn const_with_fields() {
+    assert_js!(
+        r#"
+type Mine {
+  Mine(a: Int, b: Int)
+}
+
+const labels = Mine(b: 2, a: 1)
+const no_labels = Mine(3, 4)
+"#,
+        r#""use strict";
+
+const labels = { type: "Mine", a: 1, b: 2 };
+
+const no_labels = { type: "Mine", a: 3, b: 4 };
+"#
+    );
+}
+
+#[test]
 fn unnamed_fields() {
     assert_js!(
         r#"
