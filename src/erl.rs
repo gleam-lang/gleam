@@ -1386,7 +1386,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Call { fun, args, .. } => call(fun, args, env),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name, arity: 0 },
+            constructor: ModuleValueConstructor::Record { name, arity: 0, .. },
             ..
         } => atom(name.to_snake_case()),
 
@@ -1396,7 +1396,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => const_inline(literal, env),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Record { name, arity },
+            constructor: ModuleValueConstructor::Record { name, arity, .. },
             ..
         } => {
             let chars = incrementing_args_list(*arity);

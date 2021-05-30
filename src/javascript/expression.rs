@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use super::*;
 use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{FieldMap, HasType, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant},
+    type_::{
+        FieldMap, HasType, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
+    },
 };
 
 static RECORD_KEY: &str = "type";
@@ -112,7 +116,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Var {
                 name, constructor, ..
-            } => self.variable(name, constructor),
+            } => Ok(self.variable(name, constructor)),
 
             TypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
@@ -137,7 +141,7 @@ impl<'module> Generator<'module> {
                 label,
                 constructor,
                 ..
-            } => self.module_select(module_alias, label, constructor),
+            } => Ok(self.module_select(module_alias, label, constructor)),
         }?;
         Ok(if expression.handles_own_return() {
             document
@@ -195,53 +199,55 @@ impl<'module> Generator<'module> {
         .group())
     }
 
-    fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Output<'a> {
+    fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::Record { name, .. }
-                if constructor.type_.is_bool() && name == "True" =>
-            {
-                Ok("true".to_doc())
-            }
-            ValueConstructorVariant::Record { name, .. }
-                if constructor.type_.is_bool() && name == "False" =>
-            {
-                Ok("false".to_doc())
-            }
-            ValueConstructorVariant::Record { .. } if constructor.type_.is_nil() => {
-                Ok("undefined".to_doc())
-            }
-            ValueConstructorVariant::Record { name, arity: 0, .. } => {
-                let record_type = name.to_doc().surround("\"", "\"");
-                let record_head = (RECORD_KEY.to_doc(), Some(record_type));
-                Ok(wrap_object(std::iter::once(record_head)))
-            }
             ValueConstructorVariant::Record {
                 name,
                 arity,
                 field_map,
                 ..
-            } => {
-                let vars = (0..*arity)
-                    .into_iter()
-                    .map(|i| Document::String(format!("var{}", i)));
-
-                let body = docvec![
-                    "return ",
-                    construct_record(name, *arity, field_map, vars.clone()),
-                    ";"
-                ];
-
-                Ok(docvec!(
-                    docvec!(wrap_args(vars), " => {", break_("", " "), body,)
-                        .nest(INDENT)
-                        .append(break_("", " "))
-                        .group(),
-                    "}",
-                ))
-            }
-            ValueConstructorVariant::LocalVariable => Ok(self.local_var_name(name)),
+            } => self.record_constructor(constructor.type_.clone(), name, *arity, field_map),
+            ValueConstructorVariant::LocalVariable => self.local_var_name(name),
             ValueConstructorVariant::ModuleFn { .. }
-            | ValueConstructorVariant::ModuleConstant { .. } => Ok(name.to_doc()),
+            | ValueConstructorVariant::ModuleConstant { .. } => name.to_doc(),
+        }
+    }
+
+    fn record_constructor<'a>(
+        &mut self,
+        type_: Arc<Type>,
+        name: &'a str,
+        arity: usize,
+        field_map: &'a Option<FieldMap>,
+    ) -> Document<'a> {
+        if type_.is_bool() && name == "True" {
+            "true".to_doc()
+        } else if type_.is_bool() {
+            "false".to_doc()
+        } else if type_.is_nil() {
+            "undefined".to_doc()
+        } else if arity == 0 {
+            let record_type = name.to_doc().surround("\"", "\"");
+            let record_head = (RECORD_KEY.to_doc(), Some(record_type));
+            wrap_object(std::iter::once(record_head))
+        } else {
+            let vars = (0..arity)
+                .into_iter()
+                .map(|i| Document::String(format!("var{}", i)));
+
+            let body = docvec![
+                "return ",
+                construct_record(name, arity, field_map, vars.clone()),
+                ";"
+            ];
+
+            docvec!(
+                docvec!(wrap_args(vars), " => {", break_("", " "), body)
+                    .nest(INDENT)
+                    .append(break_("", " "))
+                    .group(),
+                "}",
+            )
         }
     }
 
@@ -403,8 +409,18 @@ impl<'module> Generator<'module> {
         arguments: Vec<Document<'a>>,
     ) -> Output<'a> {
         match fun {
-            // Short circuit creation of a record so the rendered JS creates the record inline.
-            TypedExpr::Var {
+            // Record construction
+            TypedExpr::ModuleSelect {
+                constructor:
+                    ModuleValueConstructor::Record {
+                        name,
+                        arity,
+                        field_map,
+                        ..
+                    },
+                ..
+            }
+            | TypedExpr::Var {
                 constructor:
                     ValueConstructor {
                         variant:
@@ -663,19 +679,23 @@ impl<'module> Generator<'module> {
         module: &'a str,
         label: &'a str,
         constructor: &'a ModuleValueConstructor,
-    ) -> Output<'a> {
+    ) -> Document<'a> {
         match constructor {
             ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
-                Ok(docvec![module, ".", label])
+                docvec![module, ".", label]
             }
 
-            ModuleValueConstructor::Record { name, arity: 0 } => {
-                Ok(construct_record(name, 0, &None, std::iter::empty()))
+            ModuleValueConstructor::Record { name, arity: 0, .. } => {
+                construct_record(name, 0, &None, std::iter::empty())
             }
 
-            ModuleValueConstructor::Record { .. } => {
-                unsupported("Qualified record constructor usage")
-            }
+            ModuleValueConstructor::Record {
+                name,
+                arity,
+                field_map,
+                type_,
+                ..
+            } => self.record_constructor(type_.clone(), name, *arity, field_map),
         }
     }
 }

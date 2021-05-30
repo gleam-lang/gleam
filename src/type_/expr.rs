@@ -1243,13 +1243,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             (module.name.clone(), constructor.clone())
         };
 
+        let type_ = self.instantiate(constructor.type_, self.environment.level, &mut hashmap![]);
         Ok(TypedExpr::ModuleSelect {
             label,
-            typ: self.instantiate(constructor.type_, self.environment.level, &mut hashmap![]),
+            typ: type_.clone(),
             location: select_location,
             module_name,
             module_alias: module_alias.to_string(),
-            constructor: constructor.variant.to_module_value_constructor(),
+            constructor: constructor.variant.to_module_value_constructor(type_),
         })
     }
 
@@ -1654,7 +1655,9 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             .clone(),
                         typ: constructor.type_.clone(),
                         module_alias: module_name.clone(),
-                        constructor: constructor.variant.to_module_value_constructor(),
+                        constructor: constructor
+                            .variant
+                            .to_module_value_constructor(constructor.type_.clone()),
                         location,
                     },
 
