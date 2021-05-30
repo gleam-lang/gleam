@@ -1,7 +1,7 @@
 use super::*;
 use crate::type_::{FieldMap, PatternConstructor};
 
-static ASSIGNMENT_VAR: &str = "$";
+pub static ASSIGNMENT_VAR: &str = "$";
 
 #[derive(Debug)]
 enum Index<'a> {
@@ -31,9 +31,9 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             _ => None,
         };
         let (subject, assignment) = match &value_variable_name {
-            Some(name) => (expression_generator.local_var_name(name), None),
+            Some(name) => (expression_generator.local_var(name), None),
             None => {
-                let subject = expression_generator.next_local_var_name(ASSIGNMENT_VAR);
+                let subject = expression_generator.next_local_var(ASSIGNMENT_VAR);
                 let assignment = Some(subject.clone());
                 (subject, assignment)
             }
@@ -49,7 +49,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     fn next_local_var_name(&mut self, name: &'a str) -> Document<'a> {
-        self.expression_generator.next_local_var_name(name)
+        self.expression_generator.next_local_var(name)
     }
 
     fn push_string(&mut self, s: &'a str) {

@@ -7,6 +7,7 @@ mod lists;
 mod modules;
 mod numbers;
 mod strings;
+mod try_;
 mod tuples;
 
 #[macro_export]

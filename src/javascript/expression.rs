@@ -54,7 +54,7 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var_name<'a>(&mut self, name: &'a str) -> Document<'a> {
+    pub fn local_var<'a>(&mut self, name: &'a str) -> Document<'a> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
@@ -66,10 +66,10 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn next_local_var_name<'a>(&mut self, name: &'a str) -> Document<'a> {
+    pub fn next_local_var<'a>(&mut self, name: &'a str) -> Document<'a> {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.to_string(), next);
-        self.local_var_name(name)
+        self.local_var(name)
     }
 
     pub fn function_body<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
@@ -120,9 +120,14 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
-            TypedExpr::Assignment { value, pattern, .. } => self.let_(value, pattern),
+            TypedExpr::Assignment { value, pattern, .. } => self.assignment(value, pattern),
 
-            TypedExpr::Try { .. } => unsupported("Try"),
+            TypedExpr::Try {
+                value,
+                then,
+                pattern,
+                ..
+            } => self.try_(value, pattern, then),
 
             TypedExpr::BinOp {
                 name, left, right, ..
@@ -207,7 +212,7 @@ impl<'module> Generator<'module> {
                 field_map,
                 ..
             } => self.record_constructor(constructor.type_.clone(), name, *arity, field_map),
-            ValueConstructorVariant::LocalVariable => self.local_var_name(name),
+            ValueConstructorVariant::LocalVariable => self.local_var(name),
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. } => name.to_doc(),
         }
@@ -270,13 +275,69 @@ impl<'module> Generator<'module> {
         Ok(documents.to_doc())
     }
 
-    fn let_<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+    fn try_<'a>(
+        &mut self,
+        subject: &'a TypedExpr,
+        pattern: &'a TypedPattern,
+        then: &'a TypedExpr,
+    ) -> Output<'a> {
+        let mut docs = vec![];
+
+        let subject_doc = if let TypedExpr::Var { name, .. } = subject {
+            self.local_var(name)
+        } else {
+            let subject = self.not_in_tail_position(|gen| gen.wrap_expression(subject))?;
+            let name = self.next_local_var(pattern::ASSIGNMENT_VAR);
+            docs.push("let ".to_doc());
+            docs.push(name.clone());
+            docs.push(" = ".to_doc());
+            docs.push(subject);
+            docs.push(";".to_doc());
+            docs.push(line());
+            name
+        };
+
+        docs.push("if (".to_doc());
+        docs.push(subject_doc.clone());
+        docs.push(r#".type === "Error") return "#.to_doc());
+        docs.push(subject_doc.clone());
+        docs.push(";".to_doc());
+
+        match pattern {
+            TypedPattern::Var { name, .. } => {
+                docs.push(line());
+                docs.push("let ".to_doc());
+                docs.push(self.next_local_var(name));
+                docs.push(" = ".to_doc());
+                docs.push(subject_doc);
+                docs.push("[0];".to_doc());
+                docs.push(lines(2));
+            }
+
+            TypedPattern::Discard { .. } => {
+                docs.push(lines(1));
+            }
+
+            // TODO: to support this we will need to adapt the `assignment`
+            // method to take a Document as a value and pass the subject
+            // document into that also rather than letting the pattern generator
+            // determine what it should be.
+            _ => return unsupported("Patterns in try"),
+        }
+
+        // Lastly, whatever comes next
+        docs.push(self.expression(then)?);
+
+        Ok(docs.to_doc())
+    }
+
+    fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
         if let TypedPattern::Var { name, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-            let name = self.next_local_var_name(name);
+            let name = self.next_local_var(name);
             return Ok(docvec!("let ", name, " = ", subject, ";"));
         }
 
@@ -830,7 +891,8 @@ impl TypedExpr {
     fn handles_own_return(&self) -> bool {
         matches!(
             self,
-            TypedExpr::Call { .. }
+            TypedExpr::Try { .. }
+                | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Pipe { .. }
                 | TypedExpr::Sequence { .. }
