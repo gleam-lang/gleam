@@ -23,17 +23,8 @@ pub opaque type Pass {
   Pass
 }
 
-external type Dynamic
-
-external fn erase(a) -> Dynamic =
-  "test" "identity"
-
-pub fn identity(a) {
-  a
-}
-
 pub opaque type Fail {
-  Fail(expected: Dynamic, got: Dynamic)
+  Fail
 }
 
 pub type Outcome =
@@ -46,7 +37,8 @@ pub fn pass() -> Outcome {
 pub fn assert_equal(expected: a, got: a) -> Outcome {
   case expected == got {
     True -> pass()
-    False -> Error(Fail(expected: erase(expected), got: erase(got)))
+    // TODO: print diff on failure
+    False -> Error(Fail)
   }
 }
 
@@ -131,21 +123,21 @@ fn run_single_test(name, proc, fns, stats, indentation) {
       fns.print("✨")
       Stats(..stats, passes: stats.passes + 1)
     }
-    Error(Fail(expected: expected, got: got)) -> {
+    Error(Fail) -> {
       fns.print("❌")
       fns.print("\n\n")
       print_indentation(fns, indentation)
       fns.print(name)
       fns.print(" test failed!")
       fns.print("\n")
-      print_indentation(fns, indentation)
-      fns.print("expected: ")
-      fns.print(fns.to_string(expected))
-      fns.print("\n")
-      print_indentation(fns, indentation)
-      fns.print("     got: ")
-      fns.print(fns.to_string(got))
-      fns.print("\n")
+      // print_indentation(fns, indentation)
+      // fns.print("expected: ")
+      // fns.print(fns.to_string(expected))
+      // fns.print("\n")
+      // print_indentation(fns, indentation)
+      // fns.print("     got: ")
+      // fns.print(fns.to_string(got))
+      // fns.print("\n")
       Stats(..stats, failures: stats.failures + 1)
     }
   }
