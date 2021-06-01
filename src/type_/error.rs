@@ -105,6 +105,12 @@ pub enum Error {
         name: String,
     },
 
+    DuplicateImport {
+        location: SrcSpan,
+        previous_location: SrcSpan,
+        name: String,
+    },
+
     DuplicateTypeName {
         location: SrcSpan,
         previous_location: SrcSpan,

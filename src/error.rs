@@ -633,6 +633,32 @@ also be labelled.",
                     write_diagnostic(buf, diagnostic, Severity::Error);
                 }
 
+                TypeError::DuplicateImport {
+                    location,
+                    previous_location,
+                    name,
+                    ..
+                } => {
+                    let diagnostic = MultiLineDiagnostic {
+                        title: format!("Duplicate import with name `{}`", name),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        labels: vec![
+                            DiagnosticLabel {
+                                label: "redefined here".to_string(),
+                                location: *location,
+                                style: LabelStyle::Primary,
+                            },
+                            DiagnosticLabel {
+                                label: "previously defined here".to_string(),
+                                location: *previous_location,
+                                style: LabelStyle::Secondary,
+                            },
+                        ],
+                    };
+                    write_diagnostic(buf, diagnostic, Severity::Error);
+                }
+
                 TypeError::DuplicateConstName {
                     location,
                     name,
