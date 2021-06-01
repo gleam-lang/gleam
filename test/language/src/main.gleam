@@ -9,6 +9,7 @@ pub fn main(
   let fns = Functions(print, to_string, append)
   let stats =
     [
+      suite("try", try_tests(fns)),
       suite("int", int_tests(fns)),
       suite("float", float_tests(fns)),
       suite("pipes", pipes_tests(fns)),
@@ -220,4 +221,38 @@ fn equality_test(name: String, left: a, right: a) {
 
 fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
   example(name, fn() { assert_equal(left(), right) })
+}
+
+fn try_fn(result) {
+  try x = result
+  Ok(x + 1)
+}
+
+fn try_tests(_fns) -> List(Test) {
+  [
+    "ok"
+    |> example(fn() { assert_equal(Ok(2), try_fn(Ok(1))) }),
+    "error"
+    |> example(fn() { assert_equal(Error("error"), try_fn(Error("error"))) }),
+    "ok in block"
+    |> example(fn() {
+      assert_equal(
+        Ok(2),
+        {
+          try x = Ok(1)
+          Ok(x + 1)
+        },
+      )
+    }),
+    "error in block"
+    |> example(fn() {
+      assert_equal(
+        Error(Nil),
+        {
+          try x = Error(Nil)
+          Ok(x + 1)
+        },
+      )
+    }),
+  ]
 }
