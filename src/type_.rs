@@ -1670,6 +1670,14 @@ Missing modules should be detected prior to type checking",
 
                 let imported_name = as_name.as_ref().unwrap_or(name);
 
+                // Check if value already was imported
+                if let Some(value) = environment.local_values.get(name) {
+                    return Err(Error::DuplicateImport {
+                        location: *location,
+                        previous_location: value.origin,
+                        name: name.to_string(),
+                    });
+                }
                 // Register the unqualified import if it is a value
                 if let Some(value) = module_info.values.get(name) {
                     environment.insert_variable(
