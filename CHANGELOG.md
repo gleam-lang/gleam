@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Gleam compiler now is catching values which are being imported more than once 
+  in an unqualified fashion, this will raise a compile time error. 
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
