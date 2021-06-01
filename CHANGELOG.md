@@ -17,6 +17,7 @@
   optional and if not provided the project name will be inferred from 
   the folder name.
 - Generated Erlang record header files now contain Erlang type information.
+- New OTP application projects depend on `gleam_otp` v0.1.5.
 
 ## v0.15.1 -2021-05-07
 
