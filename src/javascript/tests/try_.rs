@@ -64,3 +64,55 @@ export function main(x, y) {
 "#
     )
 }
+
+#[test]
+fn in_block() {
+    assert_js!(
+        r#"pub fn main(x) {
+  let y = {
+    try z = x
+    Ok(z + 1)
+  }
+  y
+}"#,
+        r#""use strict";
+
+export function main(x) {
+  let y = (() => {
+    if (x.type === "Error") return x;
+    let z = x[0];
+
+    return { type: "Ok", 0: z + 1 };
+  })();
+  return y;
+}
+"#
+    )
+}
+
+#[test]
+fn assert_in_block() {
+    assert_js!(
+        r#"pub fn main(x) {
+  assert Ok(y) = {
+    try z = x
+    Ok(z + 1)
+  }
+  y
+}"#,
+        r#""use strict";
+
+export function main(x) {
+  let $ = (() => {
+    if (x.type === "Error") return x;
+    let z = x[0];
+
+    return { type: "Ok", 0: z + 1 };
+  })();
+  if ($.type !== "Ok") throw new Error("Bad match");
+  let y = $[0];
+  return y;
+}
+"#
+    )
+}

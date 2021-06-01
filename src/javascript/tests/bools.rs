@@ -64,18 +64,16 @@ fn assigning() {
     assert_js!(
         r#"
 fn go(x, y) {
-    assert True = x
-    assert False = x
-    assert Nil = y
+  assert True = x
+  assert False = x
+  assert Nil = y
 }
 "#,
         r#""use strict";
 
 function go(x, y) {
   if (!x) throw new Error("Bad match");
-  
   if (x) throw new Error("Bad match");
-  
   if (y) throw new Error("Bad match");
   return y;
 }
@@ -91,18 +89,16 @@ fn shadowed_bools_and_nil() {
         r#"
 pub type True { True False Nil }
 fn go(x, y) {
-    let True = x
-    let False = x
-    let Nil = y
+  let True = x
+  let False = x
+  let Nil = y
 }
 "#,
         r#""use strict";
 
 function go(x, y) {
   if (x.type !== "True") throw new Error("Bad match");
-  
   if (x.type !== "False") throw new Error("Bad match");
-  
   if (y.type !== "Nil") throw new Error("Bad match");
   return y;
 }

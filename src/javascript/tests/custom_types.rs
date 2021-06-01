@@ -235,7 +235,6 @@ function go() {
 function destructure(x) {
   if (x.type !== "Ip") throw new Error("Bad match");
   let raw = x[0];
-  
   return raw;
 }
 "#
@@ -244,12 +243,12 @@ function destructure(x) {
     assert_js!(
         r#"
 type TypeWithALongNameAndSeveralArguments{
-    TypeWithALongNameAndSeveralArguments(String, String, String, String, String)
+  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)
 }
 
 
 fn go() {
-    TypeWithALongNameAndSeveralArguments
+  TypeWithALongNameAndSeveralArguments
 }
 "#,
         r#""use strict";
@@ -274,26 +273,26 @@ function go() {
 fn custom_type_with_named_fields() {
     assert_js!(
         r#"
-type Cat{
-    Cat(name: String, cuteness: Int)
+type Cat {
+  Cat(name: String, cuteness: Int)
 }
 
 const felix = Cat("Felix", 12)
 const tom = Cat(cuteness: 1, name: "Tom")
 
 fn go() {
-    Cat("Nubi", 1)
-    Cat(2, name: "Nubi")
-    Cat(cuteness: 3, name: "Nubi")
+  Cat("Nubi", 1)
+  Cat(2, name: "Nubi")
+  Cat(cuteness: 3, name: "Nubi")
 }
 
 fn update(cat) {
-    Cat(..cat, name: "Sid")
-    Cat(..cat, name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!")
+  Cat(..cat, name: "Sid")
+  Cat(..cat, name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!")
 }
 
 fn access(cat: Cat) {
-    cat.cuteness
+  cat.cuteness
 }
 "#,
         r#""use strict";
@@ -328,7 +327,7 @@ function access(cat) {
 fn destructure_custom_type_with_named_fields() {
     assert_js!(
         r#"
-type Cat{
+type Cat {
   Cat(name: String, cuteness: Int)
 }
 
@@ -346,13 +345,10 @@ function go(cat) {
   if (cat.type !== "Cat") throw new Error("Bad match");
   let x = cat.name;
   let y = cat.cuteness;
-  
   if (cat.type !== "Cat") throw new Error("Bad match");
   let x$1 = cat.name;
-  
   if (cat.type !== "Cat" || cat.cuteness !== 4) throw new Error("Bad match");
   let x$2 = cat.name;
-  
   return x$2;
 }
 "#

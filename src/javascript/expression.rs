@@ -178,7 +178,7 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Try { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -281,7 +281,7 @@ impl<'module> Generator<'module> {
         pattern: &'a TypedPattern,
         then: &'a TypedExpr,
     ) -> Output<'a> {
-        let mut docs = vec![];
+        let mut docs = vec![force_break()];
 
         // If the subject is not a variable then we will need to save it to a
         // variable to prevent any side effects from rendering the same
@@ -343,13 +343,13 @@ impl<'module> Generator<'module> {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let name = self.next_local_var(name);
-            return Ok(docvec!("let ", name, " = ", subject, ";"));
+            return Ok(docvec!(force_break(), "let ", name, " = ", subject, ";"));
         }
 
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
         let compiled = patten_generator.generate(pattern)?;
-        let value = self.not_in_tail_position(|gen| gen.expression(value))?;
+        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
         let afterwards = if self.tail_position {
@@ -358,7 +358,7 @@ impl<'module> Generator<'module> {
                 .append(subject.clone().unwrap_or_else(|| value.clone()))
                 .append(";")
         } else {
-            line()
+            nil()
         };
 
         // If there is a subject name given create a variable to hold it for

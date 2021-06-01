@@ -97,7 +97,6 @@ function go(x, foo) {
   foo(a$1);
   if (x[1] !== 3) throw new Error("Bad match");
   let a$2 = x[0];
-  
   let b = a$2;
   foo(b);
   let c = (() => {

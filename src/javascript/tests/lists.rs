@@ -90,33 +90,29 @@ fn list_destructuring() {
     assert_js!(
         r#"
 fn go(x, y) {
-    let [] = x
-    let [a] = x
-    let [1, 2] = x
-    let [_, #(3, b)] = y
-    let [head, ..tail] = y
+  let [] = x
+  let [a] = x
+  let [1, 2] = x
+  let [_, #(3, b)] = y
+  let [head, ..tail] = y
 }
 "#,
         r#""use strict";
 
 function go(x, y) {
   if (x?.length !== 0) throw new Error("Bad match");
-  
   if (x?.[1]?.length !== 0) throw new Error("Bad match");
   let a = x[0];
-  
   if (
     x?.[1]?.[1]?.length !== 0 ||
     x[0] !== 1 ||
     x[1][0] !== 2
   ) throw new Error("Bad match");
-  
   if (
     y?.[1]?.[1]?.length !== 0 ||
     y[1][0][0] !== 3
   ) throw new Error("Bad match");
   let b = y[1][0][1];
-  
   if (y?.[1]?.length === undefined) throw new Error("Bad match");
   let head = y[0];
   let tail = y[1];
