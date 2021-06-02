@@ -311,3 +311,30 @@ export function main() {
 "#
     );
 }
+
+#[test]
+fn case_in_call() {
+    assert_js!(
+        r#"pub fn main(f, x) {
+  f(case x {
+    1 -> 2
+    _ -> 0
+  })
+}
+"#,
+        r#""use strict";
+
+export function main(f, x) {
+  return f(
+    (() => {
+      if (x === 1) {
+        return 2;
+      } else {
+        return 0;
+      }
+    })(),
+  );
+}
+"#
+    );
+}

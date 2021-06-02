@@ -145,25 +145,43 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 docvec!(left, " !== ", right)
             }
 
-            ClauseGuard::GtInt { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " > ", right)
+            }
 
-            ClauseGuard::GtEqInt { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " >= ", right)
+            }
 
-            ClauseGuard::LtInt { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " < ", right)
+            }
 
-            ClauseGuard::LtEqInt { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " <= ", right)
+            }
 
-            ClauseGuard::GtFloat { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::Or { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " || ", right)
+            }
 
-            ClauseGuard::GtEqFloat { .. } => return unsupported("Case clause guard expression"),
-
-            ClauseGuard::LtFloat { .. } => return unsupported("Case clause guard expression"),
-
-            ClauseGuard::LtEqFloat { .. } => return unsupported("Case clause guard expression"),
-
-            ClauseGuard::Or { .. } => return unsupported("Case clause guard expression"),
-
-            ClauseGuard::And { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::And { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                docvec!(left, " && ", right)
+            }
 
             ClauseGuard::Var { name, .. } => self
                 .path_doc_from_assignments(name)

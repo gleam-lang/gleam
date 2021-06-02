@@ -14,6 +14,7 @@ pub fn main(
       suite("float", float_tests(fns)),
       suite("pipes", pipes_tests(fns)),
       suite("constants", constants_tests(fns)),
+      suite("clause guards", clause_guard_tests(fns)),
       suite("imported custom types", imported_custom_types_test(fns)),
       suite("tail call optimisation", tail_call_optimisation_tests(fns)),
     ]
@@ -255,4 +256,37 @@ fn try_tests(_fns) -> List(Test) {
       )
     }),
   ]
+}
+
+fn clause_guard_tests(_fns) -> List(Test) {
+  let yes = True
+  let no = False
+  [
+    "var True"
+    |> example(fn() { assert_equal(0, case Nil {
+          _ if yes -> 0
+          _ -> 1
+        }) }),
+    "var False"
+    |> example(fn() { assert_equal(1, case Nil {
+          _ if no -> 0
+          _ -> 1
+        }) }),
+  ]
+  // TODO
+  // ClauseGuard::Equals { left, right, .. } => {
+  // ClauseGuard::NotEquals { left, right, .. } => {
+  // ClauseGuard::GtFloat { left, right, .. } 
+  // ClauseGuard::GtInt { left, right, .. } => {
+  // ClauseGuard::GtEqFloat { left, right, .. }
+  // ClauseGuard::GtEqInt { left, right, .. } => {
+  // ClauseGuard::LtFloat { left, right, .. } | 
+  // ClauseGuard::LtInt { left, right, .. } => {
+  // ClauseGuard::LtEqFloat { left, right, .. }
+  // ClauseGuard::LtEqInt { left, right, .. } => {
+  // ClauseGuard::Or { left, right, .. } => {
+  // ClauseGuard::And { left, right, .. } => {
+  // ClauseGuard::TupleIndex { .. } => 
+  // ClauseGuard::Constant(_) => 
+  // nested operators to check precedence
 }

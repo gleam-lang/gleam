@@ -181,9 +181,10 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Try { .. } => {
-                self.immediately_involked_function_expression(expression)
-            }
+            TypedExpr::Case { .. }
+            | TypedExpr::Sequence { .. }
+            | TypedExpr::Assignment { .. }
+            | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
             _ => self.expression(expression),
         }
     }
@@ -196,9 +197,10 @@ impl<'module> Generator<'module> {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
-            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Try { .. } => {
-                self.immediately_involked_function_expression(expression)
-            }
+            TypedExpr::Case { .. }
+            | TypedExpr::Sequence { .. }
+            | TypedExpr::Assignment { .. }
+            | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
             _ => self.expression(expression),
         }
     }
@@ -405,7 +407,7 @@ impl<'module> Generator<'module> {
             .expression_generator
             .not_in_tail_position(|gen| gen.expression(value))?;
 
-        let mut doc = nil();
+        let mut doc = force_break();
 
         for (i, clause) in clauses.iter().enumerate() {
             let scope = gen.expression_generator.current_scope_vars.clone();
