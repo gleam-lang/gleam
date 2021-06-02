@@ -111,6 +111,9 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
     fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
         match guard {
+            ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } | ClauseGuard::Constant(_) => {
+                self.guard(guard)
+            }
             ClauseGuard::Equals { .. }
             | ClauseGuard::NotEquals { .. }
             | ClauseGuard::GtInt { .. }
@@ -123,9 +126,6 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             | ClauseGuard::LtEqFloat { .. }
             | ClauseGuard::Or { .. }
             | ClauseGuard::And { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
-            ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } | ClauseGuard::Constant(_) => {
-                self.guard(guard)
-            }
         }
     }
 
@@ -138,7 +138,12 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 docvec!(left, " === ", right)
             }
 
-            ClauseGuard::NotEquals { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::NotEquals { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                // TODO: complex equality
+                docvec!(left, " !== ", right)
+            }
 
             ClauseGuard::GtInt { .. } => return unsupported("Case clause guard expression"),
 
