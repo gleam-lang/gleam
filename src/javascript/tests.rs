@@ -1,6 +1,7 @@
 mod assignments;
 mod blocks;
 mod bools;
+mod case_clause_guards;
 mod custom_types;
 mod externals;
 mod functions;

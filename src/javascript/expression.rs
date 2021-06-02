@@ -348,7 +348,7 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
-        let compiled = patten_generator.generate(pattern)?;
+        let compiled = patten_generator.generate(pattern, None)?;
         let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
@@ -391,16 +391,13 @@ impl<'module> Generator<'module> {
 
         for (i, clause) in clauses.iter().enumerate() {
             let scope = gen.expression_generator.current_scope_vars.clone();
-            if clause.guard.is_some() {
-                return unsupported("Case clause guards");
-            }
 
             // TODO: handle alternatives / multiple subjects gracefully
             let pattern = clause
                 .pattern
                 .get(0)
                 .gleam_expect("JS clause pattern indexing");
-            let mut compiled = gen.generate(pattern)?;
+            let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
             let consequence = gen.expression_generator.expression(&clause.then)?;
             // Reset the scope now that this clause has finished, causing the
             // variables to go out of scope.
@@ -419,7 +416,7 @@ impl<'module> Generator<'module> {
             };
 
             let is_final_clause = i == clauses.len() - 1;
-            doc = if is_final_clause && !compiled.has_checks() {
+            doc = if is_final_clause && !compiled.has_checks() && clause.guard.is_none() {
                 // If this is the final clause and there are no checks then we can
                 // render `else` instead of `else if (...)`
                 possibility_of_no_match = false;

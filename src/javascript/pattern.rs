@@ -83,13 +83,73 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }))
     }
 
-    pub fn generate(&mut self, pattern: &'a TypedPattern) -> Result<CompiledPattern<'a>, Error> {
+    pub fn generate(
+        &mut self,
+        pattern: &'a TypedPattern,
+        guard: Option<&'a TypedClauseGuard>,
+    ) -> Result<CompiledPattern<'a>, Error> {
         let _ = self.traverse_pattern(pattern)?;
+        if let Some(guard) = guard {
+            let _ = self.push_guard_check(guard)?;
+        }
 
         Ok(CompiledPattern {
             checks: std::mem::take(&mut self.checks),
             assignments: std::mem::take(&mut self.assignments),
         })
+    }
+
+    fn push_guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<(), Error> {
+        let expression = self.guard_check(guard)?;
+        self.checks.push(Check::Guard { expression });
+        Ok(())
+    }
+
+    fn guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
+        Ok(match guard {
+            ClauseGuard::Equals { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::NotEquals { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::GtInt { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::GtEqInt { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::LtInt { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::LtEqInt { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::GtFloat { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::GtEqFloat { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::LtFloat { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::LtEqFloat { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::Or { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::And { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::Var { name, .. } => self
+                .path_doc_from_assignments(name)
+                .unwrap_or_else(|| name.to_doc()),
+
+            ClauseGuard::TupleIndex { .. } => return unsupported("Case clause guard expression"),
+
+            ClauseGuard::Constant(_) => return unsupported("Case clause guard expression"),
+        })
+    }
+
+    /// Get the path that would assign a variable, if there is one for the given name.
+    /// This is in used in clause guards where may use variables defined in
+    /// patterns can be referenced, but in the compiled JavaScript they have not
+    /// yet been defined.
+    fn path_doc_from_assignments(&self, name: &str) -> Option<Document<'a>> {
+        self.assignments
+            .iter()
+            .find(|assignment| assignment.name == name)
+            .map(|assignment| self.subject.clone().append(assignment.path.clone()))
     }
 
     fn traverse_pattern(&mut self, pattern: &'a TypedPattern) -> Result<(), Error> {
@@ -215,27 +275,27 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     fn push_booly_check(&mut self, expected_to_be_truthy: bool) {
-        self.push_check(CheckKind::Booly {
+        self.checks.push(Check::Booly {
             expected_to_be_truthy,
+            subject: self.subject.clone(),
+            path: self.path_document(),
         })
     }
 
     fn push_equality_check(&mut self, to: Document<'a>) {
-        self.push_check(CheckKind::Equal { to })
-    }
-
-    fn push_list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
-        self.push_check(CheckKind::ListLength {
-            expected_length,
-            has_tail_spread,
+        self.checks.push(Check::Equal {
+            to,
+            subject: self.subject.clone(),
+            path: self.path_document(),
         })
     }
 
-    fn push_check(&mut self, kind: CheckKind<'a>) {
-        self.checks.push(Check {
+    fn push_list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
+        self.checks.push(Check::ListLength {
+            expected_length,
+            has_tail_spread,
             subject: self.subject.clone(),
             path: self.path_document(),
-            kind,
         })
     }
 }
@@ -327,31 +387,59 @@ pub struct Assignment<'a> {
 }
 
 #[derive(Debug)]
-pub struct Check<'a> {
-    subject: Document<'a>,
-    path: Document<'a>,
-    kind: CheckKind<'a>,
+pub enum Check<'a> {
+    Equal {
+        subject: Document<'a>,
+        path: Document<'a>,
+        to: Document<'a>,
+    },
+    ListLength {
+        subject: Document<'a>,
+        path: Document<'a>,
+        expected_length: usize,
+        has_tail_spread: bool,
+    },
+    Booly {
+        subject: Document<'a>,
+        path: Document<'a>,
+        expected_to_be_truthy: bool,
+    },
+    Guard {
+        expression: Document<'a>,
+    },
 }
 
 impl<'a> Check<'a> {
     pub fn into_doc(self, match_desired: bool) -> Document<'a> {
-        match self.kind {
-            CheckKind::Booly {
-                expected_to_be_truthy,
-            } => {
-                if expected_to_be_truthy == match_desired {
-                    docvec![self.subject, self.path]
+        match self {
+            Check::Guard { expression } => {
+                if match_desired {
+                    expression
                 } else {
-                    docvec!["!", self.subject, self.path]
+                    docvec!["!", expression]
                 }
             }
 
-            CheckKind::Equal { to } => {
-                let operator = if match_desired { " === " } else { " !== " };
-                docvec![self.subject, self.path, operator, to]
+            Check::Booly {
+                expected_to_be_truthy,
+                subject,
+                path,
+            } => {
+                if expected_to_be_truthy == match_desired {
+                    docvec![subject, path]
+                } else {
+                    docvec!["!", subject, path]
+                }
             }
 
-            CheckKind::ListLength {
+            Check::Equal { subject, path, to } => {
+                let operator = if match_desired { " === " } else { " !== " };
+                docvec![subject, path, operator, to]
+            }
+
+            Check::ListLength {
+                subject,
+                path,
                 expected_length,
                 has_tail_spread,
             } => {
@@ -365,26 +453,12 @@ impl<'a> Check<'a> {
                     "?.length !== 0".to_doc()
                 };
                 docvec![
-                    self.subject,
-                    self.path,
+                    subject,
+                    path,
                     Document::String("?.[1]".repeat(expected_length)),
                     length_check,
                 ]
             }
         }
     }
-}
-
-#[derive(Debug)]
-enum CheckKind<'a> {
-    Equal {
-        to: Document<'a>,
-    },
-    ListLength {
-        expected_length: usize,
-        has_tail_spread: bool,
-    },
-    Booly {
-        expected_to_be_truthy: bool,
-    },
 }
