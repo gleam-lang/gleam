@@ -76,22 +76,46 @@ export function main() {
     );
 }
 
+#[test]
+fn eq_scalar() {
+    assert_js!(
+        r#"pub fn main(xs, y) {
+  case xs {
+    #(x) if x == y -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs, y) {
+  if (xs[0] === y) {
+    let x = xs[0];
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}
+
 // #[test]
-// fn eq_scalar() {
+// fn eq_complex() {
 //     assert_js!(
 //         r#"pub fn main(xs, y) {
 //   case xs {
-//     #(x) if x == y -> 1
+//     #(x) if xs == y -> x
 //     _ -> 0
 //   }
 // }
 // "#,
 //         r#""use strict";
-
+//
 // export function main(xs, y) {
-//   if (xs[0] === y) {
+//   if ($equal(xs, y)) {
 //     let x = xs[0];
-//     return 1;
+//     return x;
 //   } else {
 //     return 0;
 //   }

@@ -104,14 +104,39 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     fn push_guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<(), Error> {
-        let expression = self.guard_check(guard)?;
+        let expression = self.guard(guard)?;
         self.checks.push(Check::Guard { expression });
         Ok(())
     }
 
-    fn guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
+    fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
+        match guard {
+            ClauseGuard::Equals { .. }
+            | ClauseGuard::NotEquals { .. }
+            | ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. }
+            | ClauseGuard::Or { .. }
+            | ClauseGuard::And { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
+            ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } | ClauseGuard::Constant(_) => {
+                self.guard(guard)
+            }
+        }
+    }
+
+    fn guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
         Ok(match guard {
-            ClauseGuard::Equals { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::Equals { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                // TODO: complex equality
+                docvec!(left, " === ", right)
+            }
 
             ClauseGuard::NotEquals { .. } => return unsupported("Case clause guard expression"),
 
