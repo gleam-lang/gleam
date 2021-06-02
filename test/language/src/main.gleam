@@ -258,9 +258,26 @@ fn try_tests(_fns) -> List(Test) {
   ]
 }
 
+fn make_true() {
+  True
+}
+
+fn make_false() {
+  False
+}
+
+fn make_int_zero() {
+  0
+}
+
 fn clause_guard_tests(_fns) -> List(Test) {
-  let yes = True
-  let no = False
+  // Constructor functions are used rather than literals to stop the Erlang
+  // compiler being clever and complaining about the guards always having the
+  // same result
+  let yes = make_true()
+  let no = make_false()
+  let int_zero = make_int_zero()
+  let int_one = make_int_zero() + 1
   [
     "var True"
     |> example(fn() {
@@ -282,21 +299,139 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
+    "scalar equals match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero == int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "scalar equals nomatch"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero == int_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "scalar not equals match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero != int_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "scalar not equals nomatch"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero != int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "and true true"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if yes && yes -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "and true false"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if yes && no -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "and false true"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if no && yes -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "and false false"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if no && no -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "or true true"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if yes || yes -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "or true false"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if yes || no -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "or false true"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if no || yes -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "or false false"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if no || no -> 0
+          _ -> 1
+        },
+      )
+    }),
   ]
   // TODO
-  // ClauseGuard::Equals { left, right, .. } => {
-  // ClauseGuard::NotEquals { left, right, .. } => {
-  // ClauseGuard::GtFloat { left, right, .. } 
-  // ClauseGuard::GtInt { left, right, .. } => {
-  // ClauseGuard::GtEqFloat { left, right, .. }
-  // ClauseGuard::GtEqInt { left, right, .. } => {
-  // ClauseGuard::LtFloat { left, right, .. } | 
-  // ClauseGuard::LtInt { left, right, .. } => {
-  // ClauseGuard::LtEqFloat { left, right, .. }
-  // ClauseGuard::LtEqInt { left, right, .. } => {
-  // ClauseGuard::Or { left, right, .. } => {
-  // ClauseGuard::And { left, right, .. } => {
-  // ClauseGuard::TupleIndex { .. } => 
+  // ClauseGuard::Equals COMPLEX
+  // ClauseGuard::NotEquals COMPLEX
+  // ClauseGuard::GtFloat
+  // ClauseGuard::GtInt
+  // ClauseGuard::GtEqFloat
+  // ClauseGuard::GtEqInt
+  // ClauseGuard::LtFloat
+  // ClauseGuard::LtInt
+  // ClauseGuard::LtEqFloat
+  // ClauseGuard::LtEqInt
+  // ClauseGuard::TupleIndex
   // ClauseGuard::Constant(_) => 
   // nested operators to check precedence
 }
