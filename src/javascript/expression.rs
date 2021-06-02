@@ -41,10 +41,8 @@ impl<'module> Generator<'module> {
         object_equality_used: &'module mut bool,
         mut current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
-        for name in &function_arguments {
-            if let Some(name) = name {
-                let _ = current_scope_vars.insert(name.to_string(), 0);
-            }
+        for name in function_arguments.iter().flatten() {
+            let _ = current_scope_vars.insert((*name).to_string(), 0);
         }
         Self {
             module_name,
@@ -183,6 +181,21 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
+            TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Try { .. } => {
+                self.immediately_involked_function_expression(expression)
+            }
+            _ => self.expression(expression),
+        }
+    }
+
+    /// Wrap an expression in an immediately involked function expression if
+    /// required due to being a JS statement, or in parens if required due to
+    /// being an operator
+    pub fn binop_child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        match expression {
+            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
+                Ok(docvec!("(", self.expression(expression)?, ")"))
+            }
             TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } | TypedExpr::Try { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
@@ -655,14 +668,6 @@ impl<'module> Generator<'module> {
         ))
     }
 
-    pub fn binop_child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
-        if expression.is_operator_to_wrap() {
-            Ok(docvec!("(", self.expression(expression)?, ")"))
-        } else {
-            self.expression(expression)
-        }
-    }
-
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
@@ -678,18 +683,20 @@ impl<'module> Generator<'module> {
         should_be_equal: bool,
     ) -> Output<'a> {
         use std::iter::once;
-        let left_doc = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right_doc = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let t = left.type_();
 
         // If it is a simple scalar type then we can use JS' reference identity
-        let t = left.type_();
         if t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string() {
+            let left_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(left))?;
+            let right_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(right))?;
             let operator = if should_be_equal { " === " } else { " !== " };
             return Ok(docvec!(left_doc, operator, right_doc));
         }
 
         // Other types must be compared using structural equality
         *self.object_equality_used = true;
+        let left_doc = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
+        let right_doc = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
         let args = wrap_args(once(left_doc).chain(once(right_doc)));
         let operator = if should_be_equal { "$equal" } else { "!$equal" };
         Ok(docvec!(operator, args))
@@ -909,13 +916,6 @@ impl TypedExpr {
                 | TypedExpr::Sequence { .. }
                 | TypedExpr::Assignment { .. }
         )
-    }
-
-    fn is_operator_to_wrap(&self) -> bool {
-        match self {
-            Self::BinOp { name, .. } => name.is_operator_to_wrap(),
-            _ => false,
-        }
     }
 }
 

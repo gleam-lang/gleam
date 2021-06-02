@@ -45,3 +45,49 @@ function go() {
 "#
     );
 }
+
+#[test]
+fn left_operator_sequence() {
+    assert_js!(
+        r#"
+fn go() {
+  1 == {
+    1
+    2
+  }
+}
+"#,
+        r#""use strict";
+
+function go() {
+  return 1 === (() => {
+    1;
+    return 2;
+  })();
+}
+"#
+    );
+}
+
+#[test]
+fn right_operator_sequence() {
+    assert_js!(
+        r#"
+fn go() {
+  {
+    1
+    2
+  } == 1
+}
+"#,
+        r#""use strict";
+
+function go() {
+  return (() => {
+    1;
+    return 2;
+  })() === 1;
+}
+"#
+    );
+}

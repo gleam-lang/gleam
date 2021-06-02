@@ -75,3 +75,27 @@ export function main() {
 "#
     );
 }
+
+// #[test]
+// fn eq_scalar() {
+//     assert_js!(
+//         r#"pub fn main(xs, y) {
+//   case xs {
+//     #(x) if x == y -> 1
+//     _ -> 0
+//   }
+// }
+// "#,
+//         r#""use strict";
+
+// export function main(xs, y) {
+//   if (xs[0] === y) {
+//     let x = xs[0];
+//     return 1;
+//   } else {
+//     return 0;
+//   }
+// }
+// "#
+//     );
+// }
