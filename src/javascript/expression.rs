@@ -412,7 +412,7 @@ impl<'module> Generator<'module> {
                     None => &value,
                     Some(ref name) => name,
                 };
-                let assignments = compiled.take_assignments_doc(&subject);
+                let assignments = compiled.take_assignments_doc(subject);
                 docvec!(line(), assignments, line(), consequence).nest(INDENT)
             } else {
                 docvec!(line(), consequence).nest(INDENT)

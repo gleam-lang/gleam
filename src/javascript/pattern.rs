@@ -282,7 +282,7 @@ impl<'a> CompiledPattern<'a> {
         let assignments = assignments.into_iter().map(|Assignment { var, path, .. }| {
             docvec!["let ", var, " = ", subject.clone(), path, ";"]
         });
-        concat(Itertools::intersperse(assignments.into_iter(), line()))
+        concat(Itertools::intersperse(assignments, line()))
     }
 
     pub fn take_checks_doc(&mut self, match_desired: bool) -> Document<'a> {
