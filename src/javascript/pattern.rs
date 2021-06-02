@@ -48,8 +48,12 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         Ok((me, assignment))
     }
 
-    fn next_local_var_name(&mut self, name: &'a str) -> Document<'a> {
+    fn next_local_var(&mut self, name: &'a str) -> Document<'a> {
         self.expression_generator.next_local_var(name)
+    }
+
+    fn local_var(&mut self, name: &'a str) -> Document<'a> {
+        self.expression_generator.local_var(name)
     }
 
     fn push_string(&mut self, s: &'a str) {
@@ -133,7 +137,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
             ClauseGuard::Var { name, .. } => self
                 .path_doc_from_assignments(name)
-                .unwrap_or_else(|| name.to_doc()),
+                .unwrap_or_else(|| self.local_var(name)),
 
             ClauseGuard::TupleIndex { .. } => return unsupported("Case clause guard expression"),
 
@@ -269,7 +273,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     }
 
     fn push_assignment(&mut self, name: &'a str) {
-        let var = self.next_local_var_name(name);
+        let var = self.next_local_var(name);
         let path = self.path_document();
         self.assignments.push(Assignment { path, var, name });
     }

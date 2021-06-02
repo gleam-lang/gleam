@@ -49,29 +49,29 @@ export function main(xs) {
     );
 }
 
-// #[test]
-// fn rebound_var() {
-//     assert_js!(
-//         r#"pub fn main() {
-//   let x = False
-//   let x = True
-//   case x {
-//     _ if x -> 1
-//     _ -> 0
-//   }
-// }
-// "#,
-//         r#""use strict";
+#[test]
+fn rebound_var() {
+    assert_js!(
+        r#"pub fn main() {
+  let x = False
+  let x = True
+  case x {
+    _ if x -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
 
-// export function main() {
-//   let x = false;
-//   let x$1 = true;
-//   if (x$1) {
-//     return 1;
-//   } else {
-//     return 0;
-//   }
-// }
-// "#
-//     );
-// }
+export function main() {
+  let x = false;
+  let x$1 = true;
+  if (x$1) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}
