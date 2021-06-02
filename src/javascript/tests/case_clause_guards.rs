@@ -77,6 +77,54 @@ export function main() {
 }
 
 #[test]
+fn operator_wrapping_right() {
+    assert_js!(
+        r#"pub fn main(xs, y, z) {
+  case xs {
+    #(x) if x == { y == z } -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs, y, z) {
+  if (xs[0] === (y === z)) {
+    let x = xs[0];
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn operator_wrapping_left() {
+    assert_js!(
+        r#"pub fn main(xs, y, z) {
+  case xs {
+    #(x) if { x == y } == z -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs, y, z) {
+  if ((xs[0] === y) === z) {
+    let x = xs[0];
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}
+
+#[test]
 fn eq_scalar() {
     assert_js!(
         r#"pub fn main(xs, y) {
