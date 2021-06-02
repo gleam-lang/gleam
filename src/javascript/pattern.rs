@@ -15,7 +15,7 @@ pub struct Generator<'module, 'expression, 'a> {
     path: Vec<Index<'a>>,
     subject: Document<'a>,
     checks: Vec<Check<'a>>,
-    assignments: Vec<Document<'a>>,
+    assignments: Vec<Assignment<'a>>,
 }
 
 impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
@@ -95,47 +95,31 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
     fn traverse_pattern(&mut self, pattern: &'a TypedPattern) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                self.equality_check(expression::string(value));
+                self.push_equality_check(expression::string(value));
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                self.equality_check(expression::int(value));
+                self.push_equality_check(expression::int(value));
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                self.equality_check(expression::float(value));
-                Ok(())
-            }
-
-            Pattern::Var { name, .. } => {
-                let assignment = docvec![
-                    "let ",
-                    self.next_local_var_name(name),
-                    " = ",
-                    self.subject.clone(),
-                    self.path_document(),
-                    ";",
-                ];
-                self.assignments.push(assignment);
+                self.push_equality_check(expression::float(value));
                 Ok(())
             }
 
             Pattern::Discard { .. } => Ok(()),
+
+            Pattern::Var { name, .. } => {
+                self.push_assignment(name);
+                Ok(())
+            }
             Pattern::Assign { name, pattern, .. } => {
-                let assignments = docvec![
-                    "let ",
-                    self.next_local_var_name(name),
-                    " = ",
-                    self.subject.clone(),
-                    self.path_document(),
-                    ";",
-                ];
-                self.assignments.push(assignments);
+                self.push_assignment(name);
                 self.traverse_pattern(pattern)
             }
 
             Pattern::List { elements, tail, .. } => {
-                self.list_length_check(elements.len(), tail.is_some());
+                self.push_list_length_check(elements.len(), tail.is_some());
                 for pattern in elements.iter() {
                     self.push_int(0);
                     self.traverse_pattern(pattern)?;
@@ -152,7 +136,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             }
 
             Pattern::Tuple { elems, .. } => {
-                // We don't check the length, because type system means it's a tuple
+                // We don't check the length because type system ensures it's a tuple
                 for (index, pattern) in elems.iter().enumerate() {
                     self.push_int(index);
                     self.traverse_pattern(pattern)?;
@@ -166,7 +150,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if type_.is_bool() && name == "True" => {
-                self.booly_check(true);
+                self.push_booly_check(true);
                 Ok(())
             }
 
@@ -175,7 +159,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if type_.is_bool() && name == "False" => {
-                self.booly_check(false);
+                self.push_booly_check(false);
                 Ok(())
             }
 
@@ -184,7 +168,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { .. },
                 ..
             } if type_.is_nil() => {
-                self.booly_check(false);
+                self.push_booly_check(false);
                 Ok(())
             }
 
@@ -194,7 +178,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 ..
             } => {
                 self.push_string("type");
-                self.equality_check(expression::string(name));
+                self.push_equality_check(expression::string(name));
                 self.pop();
 
                 for (index, arg) in arguments.iter().enumerate() {
@@ -224,17 +208,23 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn booly_check(&mut self, expected_to_be_truthy: bool) {
+    fn push_assignment(&mut self, name: &'a str) {
+        let var = self.next_local_var_name(name);
+        let path = self.path_document();
+        self.assignments.push(Assignment { path, var, name });
+    }
+
+    fn push_booly_check(&mut self, expected_to_be_truthy: bool) {
         self.push_check(CheckKind::Booly {
             expected_to_be_truthy,
         })
     }
 
-    fn equality_check(&mut self, to: Document<'a>) {
+    fn push_equality_check(&mut self, to: Document<'a>) {
         self.push_check(CheckKind::Equal { to })
     }
 
-    fn list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
+    fn push_list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
         self.push_check(CheckKind::ListLength {
             expected_length,
             has_tail_spread,
@@ -253,13 +243,13 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 #[derive(Debug)]
 pub struct CompiledPattern<'a> {
     checks: Vec<Check<'a>>,
-    assignments: Vec<Document<'a>>,
+    assignments: Vec<Assignment<'a>>,
 }
 
 impl<'a> CompiledPattern<'a> {
-    pub fn into_assignment_doc(self) -> Document<'a> {
+    pub fn into_assignment_doc(self, subject: &Document<'a>) -> Document<'a> {
         if self.checks.is_empty() {
-            return Self::assignments_doc(self.assignments);
+            return Self::assignments_doc(subject, self.assignments);
         }
         if self.assignments.is_empty() {
             return Self::checks_or_throw_doc(self.checks);
@@ -268,7 +258,7 @@ impl<'a> CompiledPattern<'a> {
         docvec![
             Self::checks_or_throw_doc(self.checks),
             line(),
-            Self::assignments_doc(self.assignments)
+            Self::assignments_doc(subject, self.assignments)
         ]
     }
 
@@ -280,12 +270,18 @@ impl<'a> CompiledPattern<'a> {
         !self.checks.is_empty()
     }
 
-    pub fn take_assignments_doc(&mut self) -> Document<'a> {
+    pub fn take_assignments_doc(&mut self, subject: &Document<'a>) -> Document<'a> {
         let assignments = std::mem::take(&mut self.assignments);
-        Self::assignments_doc(assignments)
+        Self::assignments_doc(subject, assignments)
     }
 
-    pub fn assignments_doc(assignments: Vec<Document<'a>>) -> Document<'a> {
+    pub fn assignments_doc(
+        subject: &Document<'a>,
+        assignments: Vec<Assignment<'a>>,
+    ) -> Document<'a> {
+        let assignments = assignments.into_iter().map(|Assignment { var, path, .. }| {
+            docvec!["let ", var, " = ", subject.clone(), path, ";"]
+        });
         concat(Itertools::intersperse(assignments.into_iter(), line()))
     }
 
@@ -321,6 +317,13 @@ impl<'a> CompiledPattern<'a> {
         ]
         .group()
     }
+}
+
+#[derive(Debug)]
+pub struct Assignment<'a> {
+    name: &'a str,
+    var: Document<'a>,
+    path: Document<'a>,
 }
 
 #[derive(Debug)]

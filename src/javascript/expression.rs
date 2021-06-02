@@ -365,10 +365,10 @@ impl<'module> Generator<'module> {
         // use in patterns
         let doc = match subject {
             Some(name) => {
-                let compiled = compiled.into_assignment_doc();
+                let compiled = compiled.into_assignment_doc(&name);
                 docvec!("let ", name, " = ", value, ";", line(), compiled)
             }
-            None => compiled.into_assignment_doc(),
+            None => compiled.into_assignment_doc(&value),
         };
 
         Ok(docvec!(force_break(), doc.append(afterwards)))
@@ -387,12 +387,7 @@ impl<'module> Generator<'module> {
             .expression_generator
             .not_in_tail_position(|gen| gen.expression(value))?;
 
-        // If there is a subject name given create a variable to hold it for
-        // use in patterns
-        let mut doc = match subject {
-            Some(name) => docvec!("let ", name, " = ", value, ";", line()),
-            None => docvec!(),
-        };
+        let mut doc = nil();
 
         for (i, clause) in clauses.iter().enumerate() {
             let scope = gen.expression_generator.current_scope_vars.clone();
@@ -413,7 +408,12 @@ impl<'module> Generator<'module> {
 
             // If the pattern assigns any variables we need to render assignments
             let body = if compiled.has_assignments() {
-                docvec!(line(), compiled.take_assignments_doc(), line(), consequence).nest(INDENT)
+                let subject = match subject {
+                    None => &value,
+                    Some(ref name) => name,
+                };
+                let assignments = compiled.take_assignments_doc(&subject);
+                docvec!(line(), assignments, line(), consequence).nest(INDENT)
             } else {
                 docvec!(line(), consequence).nest(INDENT)
             };
@@ -436,15 +436,19 @@ impl<'module> Generator<'module> {
         if possibility_of_no_match {
             // Lastly append an error if no clause matches.
             // We can remove this when we get exhaustiveness checking.
-            // TODO: If the last clause if a var or a discard we don't need to render the else
-            Ok(doc
+            doc = doc
                 .append(" else {")
                 .append(docvec!(line(), r#"throw new Error("Bad match");"#).nest(INDENT))
                 .append(line())
-                .append("}"))
-        } else {
-            Ok(doc)
+                .append("}")
         }
+
+        // If there is a subject name given create a variable to hold it for
+        // use in patterns
+        Ok(match subject {
+            Some(name) => docvec!("let ", name, " = ", value, ";", line(), doc),
+            None => doc,
+        })
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
