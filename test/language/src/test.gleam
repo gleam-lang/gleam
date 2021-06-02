@@ -124,12 +124,12 @@ fn run_single_test(name, proc, fns, stats, indentation) {
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail) -> {
-      fns.print("❌")
-      fns.print("\n\n")
-      print_indentation(fns, indentation)
-      fns.print(name)
-      fns.print(" test failed!")
       fns.print("\n")
+      print_indentation(fns, indentation)
+      fns.print("❌ ")
+      fns.print(name)
+      fns.print(" failed!\n")
+      print_indentation(fns, indentation)
       // print_indentation(fns, indentation)
       // fns.print("expected: ")
       // fns.print(fns.to_string(expected))

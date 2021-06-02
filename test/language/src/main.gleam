@@ -270,6 +270,10 @@ fn make_int_zero() {
   0
 }
 
+fn make_float_zero() {
+  0.0
+}
+
 fn clause_guard_tests(_fns) -> List(Test) {
   // Constructor functions are used rather than literals to stop the Erlang
   // compiler being clever and complaining about the guards always having the
@@ -278,6 +282,8 @@ fn clause_guard_tests(_fns) -> List(Test) {
   let no = make_false()
   let int_zero = make_int_zero()
   let int_one = make_int_zero() + 1
+  let float_zero = make_float_zero()
+  let float_one = make_float_zero() +. 1.0
   [
     "var True"
     |> example(fn() {
@@ -419,18 +425,210 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
+    "1. >. 0."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_one >. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. >. 0."
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if float_zero >. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "1. >=. 0."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_one >=. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. >=. 0."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_zero >=. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. >=. 1."
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if float_zero >=. float_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. <. 1."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_zero <. float_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. <. 0."
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if float_zero <. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. <=. 1."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_zero <=. float_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0. <=. 0."
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if float_zero <=. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "1. <=. 0."
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if float_one <=. float_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "1 > 0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_one > int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 > 0"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero > int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "1 >= 0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_one >= int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 >= 0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero >= int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 >= 1"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero >= int_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 < 1"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero < int_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 < 0"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero < int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 <= 1"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero <= int_one -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "0 <= 0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero <= int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "1 <= 0"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_one <= int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
   ]
   // TODO
   // ClauseGuard::Equals COMPLEX
   // ClauseGuard::NotEquals COMPLEX
-  // ClauseGuard::GtFloat
-  // ClauseGuard::GtInt
-  // ClauseGuard::GtEqFloat
-  // ClauseGuard::GtEqInt
-  // ClauseGuard::LtFloat
-  // ClauseGuard::LtInt
-  // ClauseGuard::LtEqFloat
-  // ClauseGuard::LtEqInt
   // ClauseGuard::TupleIndex
   // ClauseGuard::Constant(_) => 
   // nested operators to check precedence
