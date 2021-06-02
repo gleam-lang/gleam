@@ -160,3 +160,21 @@ function go(x) {
 "#
     );
 }
+
+#[test]
+fn rebound_argument() {
+    assert_js!(
+        r#"pub fn main(x) {
+  let x = False
+  x
+}
+"#,
+        r#""use strict";
+
+export function main(x) {
+  let x$1 = false;
+  return x$1;
+}
+"#
+    );
+}

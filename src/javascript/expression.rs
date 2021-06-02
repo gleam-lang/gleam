@@ -39,8 +39,13 @@ impl<'module> Generator<'module> {
         function_arguments: Vec<Option<&'module str>>,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
-        current_scope_vars: im::HashMap<String, usize>,
+        mut current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
+        for name in &function_arguments {
+            if let Some(name) = name {
+                let _ = current_scope_vars.insert(name.to_string(), 0);
+            }
+        }
         Self {
             module_name,
             line_numbers,
