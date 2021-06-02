@@ -263,15 +263,25 @@ fn clause_guard_tests(_fns) -> List(Test) {
   let no = False
   [
     "var True"
-    |> example(fn() { assert_equal(0, case Nil {
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
           _ if yes -> 0
           _ -> 1
-        }) }),
+        },
+      )
+    }),
     "var False"
-    |> example(fn() { assert_equal(1, case Nil {
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
           _ if no -> 0
           _ -> 1
-        }) }),
+        },
+      )
+    }),
   ]
   // TODO
   // ClauseGuard::Equals { left, right, .. } => {

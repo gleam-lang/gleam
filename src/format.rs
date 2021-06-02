@@ -789,8 +789,8 @@ impl<'comments> Formatter<'comments> {
 
         let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
 
-        "case "
-            .to_doc()
+        force_break()
+            .append("case ")
             .append(subjects_doc)
             .append(" {")
             .append(
