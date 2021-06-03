@@ -197,7 +197,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
             Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
 
             Pattern::Var { name, location, .. } => {
-                self.insert_variable(&name, type_.clone(), location)
+                self.insert_variable(&name, type_, location)
                     .map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Var { name, location })
             }
