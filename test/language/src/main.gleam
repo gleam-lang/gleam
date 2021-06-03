@@ -274,6 +274,10 @@ fn make_float_zero() {
   0.0
 }
 
+fn make_pair(a, b) {
+  #(a, b)
+}
+
 fn clause_guard_tests(_fns) -> List(Test) {
   // Constructor functions are used rather than literals to stop the Erlang
   // compiler being clever and complaining about the guards always having the
@@ -284,6 +288,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
   let int_one = make_int_zero() + 1
   let float_zero = make_float_zero()
   let float_one = make_float_zero() +. 1.0
+  let tuple_true_false = make_pair(True, False)
   [
     "var True"
     |> example(fn() {
@@ -621,6 +626,26 @@ fn clause_guard_tests(_fns) -> List(Test) {
         1,
         case Nil {
           _ if int_one <= int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "#(True, False).0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if tuple_true_false.0 -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "#(True, False).1"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if tuple_true_false.1 -> 0
           _ -> 1
         },
       )

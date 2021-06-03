@@ -187,9 +187,13 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 .path_doc_from_assignments(name)
                 .unwrap_or_else(|| self.local_var(name)),
 
-            ClauseGuard::TupleIndex { .. } => return unsupported("Case clause guard expression"),
+            ClauseGuard::TupleIndex { tuple, index, .. } => {
+                docvec!(self.guard(tuple)?, "[", index, "]")
+            }
 
-            ClauseGuard::Constant(_) => return unsupported("Case clause guard expression"),
+            ClauseGuard::Constant(_) => {
+                return unsupported("A constant expressions in a case clause guard")
+            }
         })
     }
 

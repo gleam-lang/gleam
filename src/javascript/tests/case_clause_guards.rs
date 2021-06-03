@@ -172,6 +172,29 @@ export function main(xs, y) {
     );
 }
 
+#[test]
+fn tuple_index() {
+    assert_js!(
+        r#"pub fn main(x, xs: #(Bool, Bool, Bool)) {
+  case x {
+    _ if xs.2 -> 1
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(x, xs) {
+  if (xs[2]) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}
+
 // #[test]
 // fn not_eq_complex() {
 //     assert_js!(
