@@ -1,5 +1,7 @@
 use crate::assert_js;
 
+use super::CURRENT_PACKAGE;
+
 #[test]
 fn exported_functions() {
     assert_js!(
@@ -334,6 +336,96 @@ export function main(f, x) {
       }
     })(),
   );
+}
+"#
+    );
+}
+
+#[test]
+fn reserved_word_fn() {
+    assert_js!(
+        r#"pub fn class() {
+  Nil
+}
+"#,
+        r#""use strict";
+
+export function class$() {
+  return undefined;
+}
+"#
+    );
+}
+
+#[test]
+fn reserved_word_imported() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["for".to_string()],
+            "pub fn class() { 1 }"
+        ),
+        r#"import for.{class}
+
+pub fn export() {
+  class()
+}
+"#,
+        r#""use strict";
+
+import * as for$ from "./for.js";
+const { class$ } = for$;
+
+export function export$() {
+  return class$();
+}
+"#
+    );
+}
+
+#[test]
+fn reserved_word_imported_alias() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["for".to_string()],
+            "pub fn class() { 1 }"
+        ),
+        r#"import for.{class as while} as function
+
+pub fn export() {
+  let delete = function.class
+  while()
+}
+"#,
+        r#""use strict";
+
+import * as function$ from "./for.js";
+const { class$: while$ } = function$;
+
+export function export$() {
+  let delete$ = function$.class$;
+  return while$();
+}
+"#
+    );
+}
+
+#[test]
+fn reserved_word_const() {
+    assert_js!(
+        r#"const in = 1
+
+pub fn export() {
+  in
+}
+"#,
+        r#""use strict";
+
+const in$ = 1;
+
+export function export$() {
+  return in$;
 }
 "#
     );

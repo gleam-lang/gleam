@@ -61,9 +61,9 @@ impl<'module> Generator<'module> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
-                name.to_doc()
+                maybe_escape_identifier(name)
             }
-            Some(0) => name.to_doc(),
+            Some(0) => maybe_escape_identifier(name),
             Some(n) if name == "$" => Document::String(format!("${}", n)),
             Some(n) => Document::String(format!("{}${}", name, n)),
         }
@@ -232,9 +232,9 @@ impl<'module> Generator<'module> {
                 field_map,
                 ..
             } => self.record_constructor(constructor.type_.clone(), name, *arity, field_map),
-            ValueConstructorVariant::LocalVariable => self.local_var(name),
             ValueConstructorVariant::ModuleFn { .. }
-            | ValueConstructorVariant::ModuleConstant { .. } => name.to_doc(),
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalVariable => self.local_var(name),
         }
     }
 
@@ -772,7 +772,11 @@ impl<'module> Generator<'module> {
     ) -> Document<'a> {
         match constructor {
             ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
-                docvec![module, ".", label]
+                docvec![
+                    maybe_escape_identifier(module),
+                    ".",
+                    maybe_escape_identifier(label)
+                ]
             }
 
             ModuleValueConstructor::Record { name, arity: 0, .. } => {

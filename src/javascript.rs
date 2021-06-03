@@ -143,15 +143,12 @@ impl<'a> Generator<'a> {
         as_name: &'a Option<String>,
         unqualified: &'a [UnqualifiedImport],
     ) -> Document<'a> {
-        let module_name = as_name
-            .as_ref()
-            .map(|n| n.as_str().to_doc())
-            .unwrap_or_else(|| {
-                module
-                    .last()
-                    .gleam_expect("JavaScript code generator could not identify module name.")
-                    .to_doc()
-            });
+        let module_name =
+            maybe_escape_identifier(as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
+                module.last().gleam_expect(
+                    "JavaScript code generator could not identify imported module name.",
+                )
+            }));
         let path: Document<'a> = self.import_path(package, module);
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
@@ -169,7 +166,10 @@ impl<'a> Generator<'a> {
             })
             .map(|i| {
                 any_unqualified_values = true;
-                (i.name.to_doc(), i.as_name.as_ref().map(|n| n.to_doc()))
+                (
+                    maybe_escape_identifier(&i.name),
+                    i.as_name.as_ref().map(|n| maybe_escape_identifier(n)),
+                )
             });
 
         let matches = wrap_object(matches);
@@ -198,7 +198,7 @@ impl<'a> Generator<'a> {
         let _ = self.initial_scope_vars.insert(name.to_string(), 0);
         Ok(docvec![
             head,
-            name,
+            maybe_escape_identifier(name),
             " = ",
             expression::constant_expression(value)?,
             ";",
@@ -232,7 +232,7 @@ impl<'a> Generator<'a> {
         };
         Ok(docvec![
             head,
-            name,
+            maybe_escape_identifier(name),
             fun_args(args),
             " {",
             docvec![line(), generator.function_body(body)?]
@@ -386,4 +386,72 @@ fn wrap_object<'a>(
         .group(),
         "}"
     ]
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
+// And we add `undefined` to avoid any unintentional overriding which could
+// cause bugs.
+fn is_valid_js_identifier(word: &str) -> bool {
+    !matches!(
+        word,
+        "await"
+            | "break"
+            | "case"
+            | "catch"
+            | "class"
+            | "const"
+            | "continue"
+            | "debugger"
+            | "default"
+            | "delete"
+            | "do"
+            | "else"
+            | "enum"
+            | "export"
+            | "extends"
+            | "false"
+            | "finally"
+            | "for"
+            | "function"
+            | "if"
+            | "implements"
+            | "import"
+            | "in"
+            | "instanceof"
+            | "interface"
+            | "let"
+            | "new"
+            | "null"
+            | "package"
+            | "private"
+            | "protected"
+            | "public"
+            | "return"
+            | "static"
+            | "super"
+            | "switch"
+            | "this"
+            | "throw"
+            | "true"
+            | "try"
+            | "typeof"
+            | "undefined"
+            | "var"
+            | "void"
+            | "while"
+            | "with"
+            | "yield"
+    )
+}
+
+fn maybe_escape_identifier<'a>(word: &'a str) -> Document<'a> {
+    if is_valid_js_identifier(word) {
+        word.to_doc()
+    } else {
+        escape_identifier(word)
+    }
+}
+
+fn escape_identifier<'a>(word: &'a str) -> Document<'a> {
+    Document::String(format!("{}$", word))
 }

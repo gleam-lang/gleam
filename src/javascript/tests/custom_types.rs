@@ -5,7 +5,7 @@ use crate::javascript::tests::CURRENT_PACKAGE;
 fn zero_arity_literal() {
     assert_js!(
         r#"
-type Mine{
+type Mine {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
@@ -31,7 +31,7 @@ function go() {
 fn zero_arity_const() {
     assert_js!(
         r#"
-type Mine{
+type Mine {
     This
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
@@ -41,7 +41,7 @@ const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVar
 "#,
         r#""use strict";
 
-const this = { type: "This" };
+const this$ = { type: "This" };
 
 const that = {
   type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
