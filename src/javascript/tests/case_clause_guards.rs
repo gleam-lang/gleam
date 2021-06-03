@@ -79,7 +79,7 @@ export function main() {
 #[test]
 fn operator_wrapping_right() {
     assert_js!(
-        r#"pub fn main(xs, y, z) {
+        r#"pub fn main(xs, y: Bool, z: Bool) {
   case xs {
     #(x) if x == { y == z } -> 1
     _ -> 0
@@ -103,7 +103,7 @@ export function main(xs, y, z) {
 #[test]
 fn operator_wrapping_left() {
     assert_js!(
-        r#"pub fn main(xs, y, z) {
+        r#"pub fn main(xs, y: Bool, z: Bool) {
   case xs {
     #(x) if { x == y } == z -> 1
     _ -> 0
@@ -127,7 +127,7 @@ export function main(xs, y, z) {
 #[test]
 fn eq_scalar() {
     assert_js!(
-        r#"pub fn main(xs, y) {
+        r#"pub fn main(xs, y: Int) {
   case xs {
     #(x) if x == y -> 1
     _ -> 0
@@ -151,7 +151,7 @@ export function main(xs, y) {
 #[test]
 fn not_eq_scalar() {
     assert_js!(
-        r#"pub fn main(xs, y) {
+        r#"pub fn main(xs, y: Int) {
   case xs {
     #(x) if x != y -> 1
     _ -> 0
@@ -195,50 +195,86 @@ export function main(x, xs) {
     );
 }
 
-// #[test]
-// fn not_eq_complex() {
-//     assert_js!(
-//         r#"pub fn main(xs, y) {
-//   case xs {
-//     #(x) if xs != y -> x
-//     _ -> 0
-//   }
-// }
-// "#,
-//         r#""use strict";
-//
-// export function main(xs, y) {
-//   if (!$equal(xs, y)) {
-//     let x = xs[0];
-//     return x;
-//   } else {
-//     return 0;
-//   }
-// }
-// "#
-//     );
-// }
+#[test]
+fn not_eq_complex() {
+    assert_js!(
+        r#"pub fn main(xs, y) {
+  case xs {
+    #(x) if xs != y -> x
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
 
-// #[test]
-// fn eq_complex() {
-//     assert_js!(
-//         r#"pub fn main(xs, y) {
-//   case xs {
-//     #(x) if xs == y -> x
-//     _ -> 0
-//   }
-// }
-// "#,
-//         r#""use strict";
-//
-// export function main(xs, y) {
-//   if ($equal(xs, y)) {
-//     let x = xs[0];
-//     return x;
-//   } else {
-//     return 0;
-//   }
-// }
-// "#
-//     );
-// }
+export function main(xs, y) {
+  if (!$equal(xs, y)) {
+    let x = xs[0];
+    return x;
+  } else {
+    return 0;
+  }
+}
+
+function $equal(x, y) {
+  let toCheck = [x, y];
+  while (toCheck) {
+    let a = toCheck.pop();
+    let b = toCheck.pop();
+    if (a === b) return true;
+    if (!$is_object(a) || !$is_object(b)) return false;
+    for (let k of Object.keys(a)) {
+      toCheck.push(a[k], b[k]);
+    }
+  }
+  return true;
+}
+
+function $is_object(object) {
+  return object !== null && typeof object === 'object';
+}
+"#
+    );
+}
+
+#[test]
+fn eq_complex() {
+    assert_js!(
+        r#"pub fn main(xs, y) {
+  case xs {
+    #(x) if xs == y -> x
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs, y) {
+  if ($equal(xs, y)) {
+    let x = xs[0];
+    return x;
+  } else {
+    return 0;
+  }
+}
+
+function $equal(x, y) {
+  let toCheck = [x, y];
+  while (toCheck) {
+    let a = toCheck.pop();
+    let b = toCheck.pop();
+    if (a === b) return true;
+    if (!$is_object(a) || !$is_object(b)) return false;
+    for (let k of Object.keys(a)) {
+      toCheck.push(a[k], b[k]);
+    }
+  }
+  return true;
+}
+
+function $is_object(object) {
+  return object !== null && typeof object === 'object';
+}
+"#
+    );
+}

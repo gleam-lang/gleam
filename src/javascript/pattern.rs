@@ -1,4 +1,4 @@
-use super::*;
+use super::{expression::is_js_scalar, *};
 use crate::type_::{FieldMap, PatternConstructor};
 
 pub static ASSIGNMENT_VAR: &str = "$";
@@ -131,18 +131,30 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
     fn guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
         Ok(match guard {
-            ClauseGuard::Equals { left, right, .. } => {
+            ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                // TODO: complex equality
                 docvec!(left, " === ", right)
             }
 
-            ClauseGuard::NotEquals { left, right, .. } => {
+            ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                // TODO: complex equality
                 docvec!(left, " !== ", right)
+            }
+
+            ClauseGuard::Equals { left, right, .. } => {
+                let left = self.guard(left)?;
+                let right = self.guard(right)?;
+                self.expression_generator
+                    .dollar_equal_call(true, left, right)
+            }
+
+            ClauseGuard::NotEquals { left, right, .. } => {
+                let left = self.guard(left)?;
+                let right = self.guard(right)?;
+                self.expression_generator
+                    .dollar_equal_call(false, left, right)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
@@ -192,7 +204,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             }
 
             ClauseGuard::Constant(_) => {
-                return unsupported("A constant expressions in a case clause guard")
+                return unsupported("A constant expression in a case clause guard")
             }
         })
     }
@@ -229,6 +241,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 self.push_assignment(name);
                 Ok(())
             }
+
             Pattern::Assign { name, pattern, .. } => {
                 self.push_assignment(name);
                 self.traverse_pattern(pattern)
@@ -319,7 +332,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             }
 
             Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-                unsupported("BitString matching not supported in JS backend")
+                unsupported("Bit string matching")
             }
         }
     }

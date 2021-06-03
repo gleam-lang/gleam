@@ -278,6 +278,14 @@ fn make_pair(a, b) {
   #(a, b)
 }
 
+fn make_ok(value) {
+  Ok(value)
+}
+
+fn make_error(reason) {
+  Error(reason)
+}
+
 fn clause_guard_tests(_fns) -> List(Test) {
   // Constructor functions are used rather than literals to stop the Erlang
   // compiler being clever and complaining about the guards always having the
@@ -289,6 +297,8 @@ fn clause_guard_tests(_fns) -> List(Test) {
   let float_zero = make_float_zero()
   let float_one = make_float_zero() +. 1.0
   let tuple_true_false = make_pair(True, False)
+  let ok = make_ok(1)
+  let error = make_error(1)
   [
     "var True"
     |> example(fn() {
@@ -310,7 +320,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
-    "scalar equals match"
+    "int equals match"
     |> example(fn() {
       assert_equal(
         0,
@@ -320,7 +330,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
-    "scalar equals nomatch"
+    "int equals nomatch"
     |> example(fn() {
       assert_equal(
         1,
@@ -330,7 +340,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
-    "scalar not equals match"
+    "int not equals match"
     |> example(fn() {
       assert_equal(
         0,
@@ -340,12 +350,52 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
-    "scalar not equals nomatch"
+    "int not equals nomatch"
     |> example(fn() {
       assert_equal(
         1,
         case Nil {
           _ if int_zero != int_zero -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "record equals match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if ok == ok -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "record equals nomatch"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if ok == error -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "record not equals match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if ok != error -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "record not equals nomatch"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if error != error -> 0
           _ -> 1
         },
       )
@@ -652,9 +702,6 @@ fn clause_guard_tests(_fns) -> List(Test) {
     }),
   ]
   // TODO
-  // ClauseGuard::Equals COMPLEX
-  // ClauseGuard::NotEquals COMPLEX
-  // ClauseGuard::TupleIndex
   // ClauseGuard::Constant(_) => 
   // nested operators to check precedence
 }

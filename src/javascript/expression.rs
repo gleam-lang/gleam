@@ -684,11 +684,8 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         should_be_equal: bool,
     ) -> Output<'a> {
-        use std::iter::once;
-        let t = left.type_();
-
         // If it is a simple scalar type then we can use JS' reference identity
-        if t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string() {
+        if is_js_scalar(left.type_()) {
             let left_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(left))?;
             let right_doc = self.not_in_tail_position(|gen| gen.binop_child_expression(right))?;
             let operator = if should_be_equal { " === " } else { " !== " };
@@ -696,12 +693,24 @@ impl<'module> Generator<'module> {
         }
 
         // Other types must be compared using structural equality
+        let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
+        Ok(self.dollar_equal_call(should_be_equal, left, right))
+    }
+
+    pub(super) fn dollar_equal_call<'a>(
+        &mut self,
+        should_be_equal: bool,
+        left: Document<'a>,
+        right: Document<'a>,
+    ) -> Document<'a> {
+        // Record that we need to render the $equal function into the module
         *self.object_equality_used = true;
-        let left_doc = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        let right_doc = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
-        let args = wrap_args(once(left_doc).chain(once(right_doc)));
+        // Construct the call
+        use std::iter::once;
+        let args = wrap_args(once(left).chain(once(right)));
         let operator = if should_be_equal { "$equal" } else { "!$equal" };
-        Ok(docvec!(operator, args))
+        docvec!(operator, args)
     }
 
     fn print_bin_op<'a>(
@@ -947,4 +956,8 @@ impl BinOp {
             BinOp::MultInt => false,
         }
     }
+}
+
+pub fn is_js_scalar(t: Arc<Type>) -> bool {
+    t.is_int() || t.is_float() || t.is_bool() || t.is_nil() || t.is_string()
 }
