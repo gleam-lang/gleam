@@ -126,14 +126,14 @@ fn pipes_tests(_fns) -> List(Test) {
         |> pair(2)
       assert_equal(#(1, 2), result)
     }),
-    "pipe middle with label requires no capture"
+    "pipe middle with label requires false capture"
     |> example(fn() {
       let result =
         2
         |> triplet(z: 3, x: 1)
       assert_equal(#(1, 2, 3), result)
     }),
-    "pipe last with label requires no capture"
+    "pipe last with label requires false capture"
     |> example(fn() {
       let result =
         3
@@ -258,11 +258,11 @@ fn try_tests(_fns) -> List(Test) {
   ]
 }
 
-fn make_true() {
+fn true() {
   True
 }
 
-fn make_false() {
+fn false() {
   False
 }
 
@@ -286,12 +286,14 @@ fn make_error(reason) {
   Error(reason)
 }
 
+// Constructor functions are used rather than literals to stop the Erlang
+// compiler being clever and complaining about the guards always having the
+// same result
 fn clause_guard_tests(_fns) -> List(Test) {
-  // Constructor functions are used rather than literals to stop the Erlang
-  // compiler being clever and complaining about the guards always having the
-  // same result
-  let yes = make_true()
-  let no = make_false()
+  // Testing that the name reuse is valid
+  let true = true()
+  // Testing that the name reuse is valid
+  let false = false()
   let int_zero = make_int_zero()
   let int_one = make_int_zero() + 1
   let float_zero = make_float_zero()
@@ -305,7 +307,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if yes -> 0
+          _ if true -> 0
           _ -> 1
         },
       )
@@ -315,7 +317,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if no -> 0
+          _ if false -> 0
           _ -> 1
         },
       )
@@ -405,7 +407,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if yes && yes -> 0
+          _ if true && true -> 0
           _ -> 1
         },
       )
@@ -415,7 +417,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if yes && no -> 0
+          _ if true && false -> 0
           _ -> 1
         },
       )
@@ -425,7 +427,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if no && yes -> 0
+          _ if false && true -> 0
           _ -> 1
         },
       )
@@ -435,7 +437,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if no && no -> 0
+          _ if false && false -> 0
           _ -> 1
         },
       )
@@ -445,7 +447,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if yes || yes -> 0
+          _ if true || true -> 0
           _ -> 1
         },
       )
@@ -455,7 +457,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if yes || no -> 0
+          _ if true || false -> 0
           _ -> 1
         },
       )
@@ -465,7 +467,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if no || yes -> 0
+          _ if false || true -> 0
           _ -> 1
         },
       )
@@ -475,7 +477,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if no || no -> 0
+          _ if false || false -> 0
           _ -> 1
         },
       )
