@@ -452,7 +452,7 @@ fn is_valid_js_identifier(word: &str) -> bool {
     )
 }
 
-fn maybe_escape_identifier<'a>(word: &'a str) -> Document<'a> {
+fn maybe_escape_identifier(word: &str) -> Document<'_> {
     if is_valid_js_identifier(word) {
         word.to_doc()
     } else {
@@ -460,6 +460,6 @@ fn maybe_escape_identifier<'a>(word: &'a str) -> Document<'a> {
     }
 }
 
-fn escape_identifier<'a>(word: &'a str) -> Document<'a> {
+fn escape_identifier(word: &str) -> Document<'_> {
     Document::String(format!("{}$", word))
 }
