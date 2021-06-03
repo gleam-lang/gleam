@@ -43,7 +43,7 @@ pub struct Generator<'a> {
     module: &'a TypedModule,
     float_division_used: bool,
     object_equality_used: bool,
-    initial_scope_vars: im::HashMap<String, usize>,
+    module_scope: im::HashMap<String, usize>,
 }
 
 impl<'a> Generator<'a> {
@@ -53,7 +53,7 @@ impl<'a> Generator<'a> {
             module,
             float_division_used: false,
             object_equality_used: false,
-            initial_scope_vars: Default::default(),
+            module_scope: Default::default(),
         }
     }
 
@@ -143,12 +143,13 @@ impl<'a> Generator<'a> {
         as_name: &'a Option<String>,
         unqualified: &'a [UnqualifiedImport],
     ) -> Document<'a> {
-        let module_name =
-            maybe_escape_identifier(as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
-                module.last().gleam_expect(
-                    "JavaScript code generator could not identify imported module name.",
-                )
-            }));
+        let module_name = as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
+            module
+                .last()
+                .gleam_expect("JavaScript code generator could not identify imported module name.")
+        });
+        self.register_in_scope(module_name);
+        let module_name = maybe_escape_identifier(module_name);
         let path: Document<'a> = self.import_path(package, module);
 
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
@@ -166,10 +167,12 @@ impl<'a> Generator<'a> {
             })
             .map(|i| {
                 any_unqualified_values = true;
-                (
-                    maybe_escape_identifier(&i.name),
-                    i.as_name.as_ref().map(|n| maybe_escape_identifier(n)),
-                )
+
+                let alias = i.as_name.as_ref().map(|n| {
+                    self.register_in_scope(n);
+                    maybe_escape_identifier(n)
+                });
+                (maybe_escape_identifier(&i.name), alias)
             });
 
         let matches = wrap_object(matches);
@@ -195,7 +198,7 @@ impl<'a> Generator<'a> {
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if public { "export const " } else { "const " };
-        let _ = self.initial_scope_vars.insert(name.to_string(), 0);
+        self.register_in_scope(name);
         Ok(docvec![
             head,
             maybe_escape_identifier(name),
@@ -205,6 +208,10 @@ impl<'a> Generator<'a> {
         ])
     }
 
+    fn register_in_scope(&mut self, name: &str) {
+        let _ = self.module_scope.insert(name.to_string(), 0);
+    }
+
     fn module_function(
         &mut self,
         public: bool,
@@ -212,6 +219,7 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
+        self.register_in_scope(name);
         let argument_names = args
             .iter()
             .map(|arg| arg.names.get_variable_name())
@@ -223,7 +231,7 @@ impl<'a> Generator<'a> {
             argument_names,
             &mut self.float_division_used,
             &mut self.object_equality_used,
-            self.initial_scope_vars.clone(),
+            self.module_scope.clone(),
         );
         let head = if public {
             "export function "

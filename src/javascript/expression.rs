@@ -533,7 +533,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Var { name, .. }
                 if self.function_name == Some(name.as_str())
                     && self.tail_position
-                    && !self.current_scope_vars.contains_key(name) =>
+                    && self.current_scope_vars.get(name) == Some(&0) =>
             {
                 let mut docs = Vec::with_capacity(arguments.len() * 4);
                 // Record that tail recursion is happening so that we know to

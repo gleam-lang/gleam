@@ -268,8 +268,8 @@ fn shadowing_current() {
         r#""use strict";
 
 export function main() {
-  let main = () => { return 0; };
-  return main();
+  let main$1 = () => { return 0; };
+  return main$1();
 }
 "#
     );

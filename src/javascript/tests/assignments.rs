@@ -178,3 +178,55 @@ export function main(x) {
 "#
     );
 }
+
+#[test]
+fn rebound_function() {
+    assert_js!(
+        r#"pub fn x() { 
+  Nil
+}
+        
+pub fn main() {
+  let x = False
+  x
+}
+"#,
+        r#""use strict";
+
+export function x() {
+  return undefined;
+}
+
+export function main() {
+  let x$1 = false;
+  return x$1;
+}
+"#
+    );
+}
+
+#[test]
+fn rebound_function_and_arg() {
+    assert_js!(
+        r#"pub fn x() { 
+  Nil
+}
+        
+pub fn main(x) {
+  let x = False
+  x
+}
+"#,
+        r#""use strict";
+
+export function x() {
+  return undefined;
+}
+
+export function main(x) {
+  let x$1 = false;
+  return x$1;
+}
+"#
+    );
+}
