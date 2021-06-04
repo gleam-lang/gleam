@@ -278,3 +278,27 @@ function $is_object(object) {
 "#
     );
 }
+
+#[test]
+fn constant() {
+    assert_js!(
+        r#"pub fn main(xs) {
+  case xs {
+    #(x) if x == 1 -> x
+    _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs) {
+  if (xs[0] === 1) {
+    let x = xs[0];
+    return x;
+  } else {
+    return 0;
+  }
+}
+"#
+    );
+}

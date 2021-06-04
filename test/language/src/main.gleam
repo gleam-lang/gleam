@@ -301,6 +301,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
   let tuple_true_false = make_pair(True, False)
   let ok = make_ok(1)
   let error = make_error(1)
+
   [
     "var True"
     |> example(fn() {
@@ -702,8 +703,47 @@ fn clause_guard_tests(_fns) -> List(Test) {
         },
       )
     }),
+    "const 0"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if int_zero == 0 -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "const 1"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if int_zero == 1 -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "const Ok(1)"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case Nil {
+          _ if ok == Ok(1) -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "const Error(1)"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case Nil {
+          _ if ok == Error(1) -> 0
+          _ -> 1
+        },
+      )
+    }),
   ]
   // TODO
-  // ClauseGuard::Constant(_) => 
   // nested operators to check precedence
 }

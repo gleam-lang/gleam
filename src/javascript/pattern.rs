@@ -1,4 +1,7 @@
-use super::{expression::is_js_scalar, *};
+use super::{
+    expression::{constant_expression, is_js_scalar},
+    *,
+};
 use crate::type_::{FieldMap, PatternConstructor};
 
 pub static ASSIGNMENT_VAR: &str = "$";
@@ -129,7 +132,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }
     }
 
-    fn guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
+    fn guard(&mut self, guard: &'a TypedClauseGuard) -> Output<'a> {
         Ok(match guard {
             ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
@@ -203,9 +206,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 docvec!(self.guard(tuple)?, "[", index, "]")
             }
 
-            ClauseGuard::Constant(_) => {
-                return unsupported("A constant expression in a case clause guard")
-            }
+            ClauseGuard::Constant(constant) => return constant_expression(constant),
         })
     }
 
