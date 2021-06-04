@@ -8,6 +8,11 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+
+## v0.16.0-rc1 - 2021-06-04
+
+- Gleam can now compile to JavaScript! Specify the `--target javascript` flag to
+  `gleam compile-package` to use it today.
 - A compile time error is now raised when multiple module level constants with
   the same name are defined.
 - Fixed a bug where declaring a type constructor using reserved erlang keyword
@@ -20,9 +25,9 @@
   the folder name.
 - Generated Erlang record header files now contain Erlang type information.
 - New OTP application projects depend on `gleam_otp` v0.1.5.
-- The output of the format has been improved.
+- The output of the formatter has been improved.
 
-## v0.15.1 -2021-05-07
+## v0.15.1 - 2021-05-07
 
 - Fixed a bug where blocks that contained try expressions could be formatted
   incorrectly.
