@@ -838,7 +838,11 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
 }
 
 pub fn string(value: &str) -> Document<'_> {
-    value.to_doc().surround("\"", "\"")
+    if value.contains('\n') {
+        Document::String(value.replace('\n', r#"\n"#)).surround("\"", "\"")
+    } else {
+        value.to_doc().surround("\"", "\"")
+    }
 }
 
 pub fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {

@@ -10,9 +10,10 @@ pub fn main(
   let stats =
     [
       suite("try", try_tests(fns)),
-      suite("int", int_tests(fns)),
-      suite("float", float_tests(fns)),
+      suite("ints", int_tests(fns)),
+      suite("floats", float_tests(fns)),
       suite("pipes", pipes_tests(fns)),
+      suite("strings", strings_tests(fns)),
       suite("constants", constants_tests(fns)),
       suite("clause guards", clause_guard_tests(fns)),
       suite("imported custom types", imported_custom_types_test(fns)),
@@ -82,6 +83,11 @@ fn float_tests(fns) -> List(Test) {
     equality_test("Precedence 2", 10.0, 2.0 *. { 2.0 +. 3.0 }),
     equality_test("Precedence 3", 12.0, { 2.0 +. 2.0 } *. 3.0),
   ]
+}
+
+fn strings_tests(_fns) -> List(Test) {
+  [equality_test("Empty", "", ""), equality_test("Newlines", "
+", "\n")]
 }
 
 fn identity(x) {
