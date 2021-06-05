@@ -261,6 +261,20 @@ pub enum Warning {
     },
 }
 
+impl Error {
+    pub fn with_unify_error_situation(mut self, new_situation: UnifyErrorSituation) -> Self {
+        match self {
+            Error::CouldNotUnify {
+                ref mut situation, ..
+            } => {
+                *situation = Some(new_situation);
+                self
+            }
+            _ => self,
+        }
+    }
+}
+
 impl Warning {
     pub fn into_warning(self, path: PathBuf, src: String) -> crate::Warning {
         crate::Warning::Type {
@@ -533,10 +547,6 @@ impl UnifyError {
 
     pub fn case_clause_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
-    }
-
-    pub fn pipe_type_mismatch(self) -> Self {
-        self.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
     }
 
     pub fn return_annotation_mismatch(self) -> Self {

@@ -1201,7 +1201,7 @@ fn pipe_mismatch_error() {
          fn main() { 42.0 |> fun() }",
         Error::CouldNotUnify {
             situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-            location: SrcSpan { start: 49, end: 62 },
+            location: SrcSpan { start: 49, end: 53 },
             expected: int(),
             given: float(),
         },
@@ -1222,17 +1222,32 @@ fn pipe_mismatch_error() {
         Error::CouldNotUnify {
             situation: Some(UnifyErrorSituation::PipeTypeMismatch),
             location: SrcSpan { start: 57, end: 70 },
-            expected: Arc::new(Type::App {
-                public: false,
-                module: vec!["my_module".to_string(),],
-                name: "Veg".to_string(),
-                args: vec![],
+            expected: Arc::new(Type::Fn {
+                args: vec![
+                    Arc::new(Type::App {
+                        public: false,
+                        module: vec!["my_module".to_string(),],
+                        name: "Veg".to_string(),
+                        args: vec![],
+                    }),
+                ],
+                retrn: Arc::new(Type::App {
+                    public: true,
+                    module: vec![],
+                    name: "String".to_string(),
+                    args: vec![],
+                }),
             }),
-            given: Arc::new(Type::App {
-                public: false,
-                module: vec!["my_module".to_string(),],
-                name: "Fruit".to_string(),
-                args: vec![],
+            given: Arc::new(Type::Fn {
+                args: vec![Arc::new(Type::App {
+                    public: false,
+                    module: vec!["my_module".to_string(),],
+                    name: "Fruit".to_string(),
+                    args: vec![],
+                }),],
+                retrn: Arc::new(Type::Var {
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 3 })),
+                })
             })
         },
     );
