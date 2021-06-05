@@ -860,6 +860,18 @@ But this argument has this type:
                         src: src.to_string(),
                         location: *location,
                     };
+
+                    // Remap the pipe function type into just the type expected by the pipe.
+                    let expected = expected
+                        .fn_types()
+                        .and_then(|(args, _)| args.get(0).cloned());
+
+                    // Remap the argument as well, if it's a function.
+                    let given = given
+                        .fn_types()
+                        .and_then(|(args, _)| args.get(0).cloned())
+                        .unwrap_or_else(|| given.clone());
+
                     write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
                     writeln!(
@@ -873,8 +885,10 @@ But (|>) is piping it to a function that expects:
 {expected}
 
 \n",
-                        expected = printer.pretty_print(expected, 4),
-                        given = printer.pretty_print(given, 4)
+                        expected = expected
+                            .map(|v| printer.pretty_print(&v, 4))
+                            .unwrap_or_else(|| "    No arguments".to_string()),
+                        given = printer.pretty_print(&given, 4)
                     )
                     .unwrap();
                 }
