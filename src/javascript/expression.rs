@@ -368,7 +368,9 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
-        let compiled = patten_generator.generate(pattern, None)?;
+        patten_generator.traverse_pattern(pattern, false)?;
+
+        let compiled = patten_generator.generate()?;
         let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
@@ -412,12 +414,23 @@ impl<'module> Generator<'module> {
         for (i, clause) in clauses.iter().enumerate() {
             let scope = gen.expression_generator.current_scope_vars.clone();
 
-            // TODO: handle alternatives / multiple subjects gracefully
+            // TODO: multiple subjects gracefully
             let pattern = clause
                 .pattern
                 .get(0)
                 .gleam_expect("JS clause pattern indexing");
-            let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
+
+            gen.traverse_pattern(pattern, false)?;
+            if let Some(guard) = clause.guard.as_ref() {
+                gen.push_guard_check(guard)?;
+            }
+
+            for alternative_pattern in clause.alternative_patterns.iter().flatten() {
+                gen.traverse_pattern(alternative_pattern, true)?;
+            }
+
+            let mut compiled = gen.generate()?;
+
             let consequence = gen.expression_generator.expression(&clause.then)?;
             // Reset the scope now that this clause has finished, causing the
             // variables to go out of scope.

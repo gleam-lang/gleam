@@ -302,3 +302,49 @@ export function main(xs) {
 "#
     );
 }
+
+#[test]
+fn alternative_patterns() {
+    assert_js!(
+        r#"pub fn main(xs) {
+  case xs {
+    1 | 2 -> 0
+    _ -> 1
+  }
+}
+"#,
+        r#""use strict";
+
+export function main(xs) {
+  if (xs === 1 || xs === 2) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn alternative_patterns_list() {
+    assert_js!(
+        r#"pub fn main(xs) -> Int {
+  case xs {
+    [1] | [1, 2] -> 0
+    _ -> 1
+  }
+}    
+"#,
+        r#""use strict";
+
+export function main(xs) {
+  if (xs?.[1]?.length === 0 && xs[0] === 1 || xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+"#
+    );
+}
