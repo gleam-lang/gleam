@@ -1195,6 +1195,50 @@ fn annotated_functions_unification_error() {
 }
 
 #[test]
+fn pipe_mismatch_error() {
+    assert_module_error!(
+        "fn fun(x: Int) -> Int { x }
+         fn main() { 42.0 |> fun() }",
+        Error::CouldNotUnify {
+            situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+            location: SrcSpan { start: 49, end: 62 },
+            expected: int(),
+            given: float(),
+        },
+    );
+
+    assert_module_error!(
+        "pub fn main() -> String {
+            Orange
+            |> eat_veggie
+         }
+          
+         type Fruit{ Orange }
+         type Veg{ Lettuce }
+          
+         fn eat_veggie(v: Veg) -> String {
+            \"Ok\"
+         }",
+        Error::CouldNotUnify {
+            situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+            location: SrcSpan { start: 57, end: 70 },
+            expected: Arc::new(Type::App {
+                public: false,
+                module: vec!["my_module".to_string(),],
+                name: "Veg".to_string(),
+                args: vec![],
+            }),
+            given: Arc::new(Type::App {
+                public: false,
+                module: vec!["my_module".to_string(),],
+                name: "Fruit".to_string(),
+                args: vec![],
+            })
+        },
+    );
+}
+
+#[test]
 fn the_rest() {
     assert_error!(
         "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",

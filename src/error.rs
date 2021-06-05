@@ -849,6 +849,40 @@ But this argument has this type:
                     location,
                     expected,
                     given,
+                    situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+                } => {
+                    let diagnostic = Diagnostic {
+                        title:
+                            "This function cannot handle the argument sent through the (|>) pipe:"
+                                .to_string(),
+                        label: "".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buf, diagnostic, Severity::Error);
+                    let mut printer = Printer::new();
+                    writeln!(
+                        buf,
+                        "The argument is:
+
+{given}
+
+But (|>) is piping it to a function that expects:
+
+{expected}
+
+\n",
+                        expected = printer.pretty_print(expected, 4),
+                        given = printer.pretty_print(given, 4)
+                    )
+                    .unwrap();
+                }
+
+                TypeError::CouldNotUnify {
+                    location,
+                    expected,
+                    given,
                     situation,
                 } => {
                     let diagnostic = Diagnostic {

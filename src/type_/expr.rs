@@ -228,7 +228,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         left: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, false)?;
         let fun = TypedExpr::Call {
             location,
             typ,
@@ -240,7 +240,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             location: left.location(),
             value: left,
         }];
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, false)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -269,8 +269,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         });
         new_args.extend(args.iter().cloned());
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
-        // TODO: Preserve the fact this is a pipe instead of making it a Call
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location, true)?;
+
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -293,8 +293,24 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             args: vec![left.type_()],
             retrn: typ.clone(),
         });
-        self.unify(right.type_(), fn_typ)
-            .map_err(|e| convert_unify_error(e, location))?;
+
+        let first_fn_type = right
+            .type_()
+            .fn_types()
+            .and_then(|(args, _)| args.get(0).cloned());
+
+        self.unify(right.type_(), fn_typ.clone()).map_err(|e| {
+            if let Some(first_fn_type) = first_fn_type {
+                UnifyError::CouldNotUnify {
+                    expected: first_fn_type,
+                    given: left.type_(),
+                    situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+                }
+            } else {
+                e // TODO improve this error.
+            }
+            .into_error(location)
+        })?;
 
         Ok(TypedExpr::Pipe {
             location,
@@ -1792,7 +1808,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         location: SrcSpan,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         let fun = self.infer(fun)?;
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, false)?;
         Ok((fun, args, typ))
     }
 
@@ -1801,6 +1817,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         fun: TypedExpr,
         mut args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
+        pipe: bool,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
         // Check to see if the function accepts labelled arguments
         match self
@@ -1830,8 +1847,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                     location,
                 } = arg;
                 let value = self.infer(value)?;
-                self.unify(typ.clone(), value.type_())
-                    .map_err(|e| convert_unify_error(e, value.location()))?;
+                self.unify(typ.clone(), value.type_()).map_err(|e| {
+                    if pipe {
+                        e.pipe_type_mismatch().into_error(location)
+                    } else {
+                        convert_unify_error(e, value.location())
+                    }
+                })?;
                 Ok(CallArg {
                     label,
                     value,

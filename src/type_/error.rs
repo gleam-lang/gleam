@@ -475,6 +475,7 @@ fn unify_enclosed_type_test() {
 pub enum UnifyErrorSituation {
     CaseClauseMismatch,
     ReturnAnnotationMismatch,
+    PipeTypeMismatch,
     Operator(BinOp),
 }
 
@@ -489,6 +490,9 @@ one, but all case clauses must return the same type.",
                 "The type of this returned value doesn't match the return type 
 annotation of this function.",
             ),
+            Self::PipeTypeMismatch => {
+                Some("This function cannot handle the argument sent through the (|>) pipe:")
+            }
             Self::Operator(_op) => None,
         }
     }
@@ -529,6 +533,10 @@ impl UnifyError {
 
     pub fn case_clause_mismatch(self) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
+    }
+
+    pub fn pipe_type_mismatch(self) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
     }
 
     pub fn return_annotation_mismatch(self) -> Self {
