@@ -273,7 +273,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
         // TODO: Preserve the fact this is a pipe instead of making it a Call
-
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -296,7 +295,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             args: vec![left.type_()],
             retrn: typ.clone(),
         });
-
         self.unify(right.type_(), fn_typ)
             .map_err(|e| convert_unify_error(e, location))?;
 
