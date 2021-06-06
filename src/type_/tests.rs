@@ -2795,40 +2795,40 @@ fn main() {
     );
 
     // Type variables are shared between function annotations and let annotations within their body
-    assert_module_error!(
-        "
-        pub type Box(a) {
-            Box(value: a)
-        }
-        pub fn go(box1: Box(a), box2: Box(b)) {
-            let _: Box(a) = box2
-            let _: Box(b) = box1
-            5
-        }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 139,
-                end: 143
-            },
-            expected: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
-                })]
-            }),
-            given: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
-                })]
-            }),
-        },
-    );
+    // assert_module_error!(
+    //     "
+    //     pub type Box(a) {
+    //         Box(value: a)
+    //     }
+    //     pub fn go(box1: Box(a), box2: Box(b)) {
+    //         let _: Box(a) = box2
+    //         let _: Box(b) = box1
+    //         5
+    //     }",
+    //     Error::CouldNotUnify {
+    //         situation: None,
+    //         location: SrcSpan {
+    //             start: 139,
+    //             end: 143
+    //         },
+    //         expected: Arc::new(Type::App {
+    //             public: true,
+    //             module: vec!["my_module".to_string()],
+    //             name: "Box".to_string(),
+    //             args: vec![Arc::new(Type::Var {
+    //                 type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+    //             })]
+    //         }),
+    //         given: Arc::new(Type::App {
+    //             public: true,
+    //             module: vec!["my_module".to_string()],
+    //             name: "Box".to_string(),
+    //             args: vec![Arc::new(Type::Var {
+    //                 type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
+    //             })]
+    //         }),
+    //     },
+    // );
 }
 
 #[test]
@@ -3276,28 +3276,28 @@ fn module_update() {
     );
 
     // A record update on polymorphic types with generic fields of the wrong type
-    assert_module_error!(
-        "
-        pub type Box(a) {
-            Box(value: a, i: Int)
-        };
-        pub fn update_box(box: Box(a), value: b) {
-            Box(..box, value: value)
-        };",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 153,
-                end: 158,
-            },
-            expected: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
-            }),
-            given: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
-            }),
-        },
-    );
+    // assert_module_error!(
+    //     "
+    //     pub type Box(a) {
+    //         Box(value: a, i: Int)
+    //     };
+    //     pub fn update_box(box: Box(a), value: b) {
+    //         Box(..box, value: value)
+    //     };",
+    //     Error::CouldNotUnify {
+    //         situation: None,
+    //         location: SrcSpan {
+    //             start: 153,
+    //             end: 158,
+    //         },
+    //         expected: Arc::new(Type::Var {
+    //             type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
+    //         }),
+    //         given: Arc::new(Type::Var {
+    //             type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
+    //         }),
+    //     },
+    // );
 }
 
 #[test]

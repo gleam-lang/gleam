@@ -330,6 +330,10 @@ impl TypeVar {
         matches!(self, Self::Unbound { .. })
     }
 
+    pub fn is_generic(&self) -> bool {
+        matches!(self, Self::Generic { .. })
+    }
+
     pub fn is_nil(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_nil(),

@@ -388,7 +388,7 @@ impl<'a, 'b> Environment<'a, 'b> {
 
                 TypeVar::Generic { id } => {
                     if let Type::Var { type_: typ } = t2.deref() {
-                        if typ.borrow().is_unbound() {
+                        if typ.borrow().is_unbound() || typ.borrow().is_generic() {
                             *typ.borrow_mut() = TypeVar::Generic { id: *id };
                             return Ok(());
                         }
