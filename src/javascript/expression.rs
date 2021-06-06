@@ -368,9 +368,8 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
-        patten_generator.traverse_pattern(pattern, false)?;
+        let compiled = patten_generator.generate(pattern, None)?;
 
-        let compiled = patten_generator.generate()?;
         let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
@@ -411,56 +410,62 @@ impl<'module> Generator<'module> {
 
         let mut doc = force_break();
 
-        for (i, clause) in clauses.iter().enumerate() {
-            let scope = gen.expression_generator.current_scope_vars.clone();
+        let mut i = 0;
+        let total_patterns: usize = clauses
+            .iter()
+            .map(|c| c.alternative_patterns.len())
+            .sum::<usize>()
+            + clauses.len();
 
-            // TODO: multiple subjects gracefully
-            let pattern = clause
+        // TODO: handle multiple subjects gracefully
+        for clause in clauses.iter() {
+            let mut patterns = vec![clause
                 .pattern
                 .get(0)
-                .gleam_expect("JS clause pattern indexing");
+                .gleam_expect("JS clause pattern indexing")];
 
-            gen.traverse_pattern(pattern, false)?;
-            if let Some(guard) = clause.guard.as_ref() {
-                gen.push_guard_check(guard)?;
-            }
+            patterns.extend(clause.alternative_patterns.iter().flatten());
 
-            for alternative_pattern in clause.alternative_patterns.iter().flatten() {
-                gen.traverse_pattern(alternative_pattern, true)?;
-            }
+            for pattern in patterns.iter() {
+                let scope = gen.expression_generator.current_scope_vars.clone();
 
-            let mut compiled = gen.generate()?;
+                let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
 
-            let consequence = gen.expression_generator.expression(&clause.then)?;
-            // Reset the scope now that this clause has finished, causing the
-            // variables to go out of scope.
-            gen.expression_generator.current_scope_vars = scope;
+                let consequence = gen.expression_generator.expression(&clause.then)?;
 
-            // If the pattern assigns any variables we need to render assignments
-            let body = if compiled.has_assignments() {
-                let subject = match subject {
-                    None => &value,
-                    Some(ref name) => name,
+                // Reset the scope now that this clause has finished, causing the
+                // variables to go out of scope.
+                gen.expression_generator.current_scope_vars = scope;
+
+                // If the pattern assigns any variables we need to render assignments
+                let body = if compiled.has_assignments() {
+                    let subject = match subject {
+                        None => &value,
+                        Some(ref name) => name,
+                    };
+                    let assignments = compiled.take_assignments_doc(subject);
+
+                    docvec!(line(), assignments, line(), consequence).nest(INDENT)
+                } else {
+                    docvec!(line(), consequence).nest(INDENT)
                 };
-                let assignments = compiled.take_assignments_doc(subject);
-                docvec!(line(), assignments, line(), consequence).nest(INDENT)
-            } else {
-                docvec!(line(), consequence).nest(INDENT)
-            };
 
-            let is_final_clause = i == clauses.len() - 1;
-            doc = if is_final_clause && !compiled.has_checks() && clause.guard.is_none() {
-                // If this is the final clause and there are no checks then we can
-                // render `else` instead of `else if (...)`
-                possibility_of_no_match = false;
-                doc.append(" else {")
-            } else {
-                doc.append(if i == 0 { "if (" } else { " else if (" })
-                    .append(compiled.take_checks_doc(true))
-                    .append(") {")
-            };
+                let is_final_clause = i == total_patterns - 1;
+                doc = if is_final_clause && !compiled.has_checks() && clause.guard.is_none() {
+                    // If this is the final clause and there are no checks then we can
+                    // render `else` instead of `else if (...)`
+                    possibility_of_no_match = false;
+                    doc.append(" else {")
+                } else {
+                    doc.append(if i == 0 { "if (" } else { " else if (" })
+                        .append(compiled.take_checks_doc(true))
+                        .append(") {")
+                };
 
-            doc = doc.append(body).append(line()).append("}");
+                doc = doc.append(body).append(line()).append("}");
+
+                i += 1;
+            }
         }
 
         if possibility_of_no_match {
