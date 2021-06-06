@@ -3,7 +3,6 @@ use super::{
     *,
 };
 use crate::type_::{FieldMap, PatternConstructor};
-use std::array::IntoIter;
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
@@ -19,7 +18,6 @@ pub struct Generator<'module, 'expression, 'a> {
     path: Vec<Index<'a>>,
     subject: Document<'a>,
     checks: Vec<Check<'a>>,
-    alternative_checks: Vec<Check<'a>>,
     assignments: Vec<Assignment<'a>>,
 }
 
@@ -46,7 +44,6 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         let me = Self {
             path: vec![],
             checks: vec![],
-            alternative_checks: vec![],
             assignments: vec![],
             expression_generator,
             subject: subject.clone(),
@@ -93,15 +90,23 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         }))
     }
 
-    pub fn generate(&mut self) -> Result<CompiledPattern<'a>, Error> {
+    pub fn generate(
+        &mut self,
+        pattern: &'a TypedPattern,
+        guard: Option<&'a TypedClauseGuard>,
+    ) -> Result<CompiledPattern<'a>, Error> {
+        let _ = self.traverse_pattern(pattern)?;
+        if let Some(guard) = guard {
+            let _ = self.push_guard_check(guard)?;
+        }
+
         Ok(CompiledPattern {
             checks: std::mem::take(&mut self.checks),
-            alternative_checks: std::mem::take(&mut self.alternative_checks),
             assignments: std::mem::take(&mut self.assignments),
         })
     }
 
-    pub fn push_guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<(), Error> {
+    fn push_guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<(), Error> {
         let expression = self.guard(guard)?;
         self.checks.push(Check::Guard { expression });
         Ok(())
@@ -216,22 +221,18 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             .map(|assignment| self.subject.clone().append(assignment.path.clone()))
     }
 
-    pub fn traverse_pattern(
-        &mut self,
-        pattern: &'a TypedPattern,
-        alternative: bool,
-    ) -> Result<(), Error> {
+    fn traverse_pattern(&mut self, pattern: &'a TypedPattern) -> Result<(), Error> {
         match pattern {
             Pattern::String { value, .. } => {
-                self.push_equality_check(expression::string(value), alternative);
+                self.push_equality_check(expression::string(value));
                 Ok(())
             }
             Pattern::Int { value, .. } => {
-                self.push_equality_check(expression::int(value), alternative);
+                self.push_equality_check(expression::int(value));
                 Ok(())
             }
             Pattern::Float { value, .. } => {
-                self.push_equality_check(expression::float(value), alternative);
+                self.push_equality_check(expression::float(value));
                 Ok(())
             }
 
@@ -244,21 +245,21 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
             Pattern::Assign { name, pattern, .. } => {
                 self.push_assignment(name);
-                self.traverse_pattern(pattern, alternative)
+                self.traverse_pattern(pattern)
             }
 
             Pattern::List { elements, tail, .. } => {
-                self.push_list_length_check(elements.len(), tail.is_some(), alternative);
+                self.push_list_length_check(elements.len(), tail.is_some());
                 for pattern in elements.iter() {
                     self.push_int(0);
-                    self.traverse_pattern(pattern, alternative)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop();
                     self.push_int(1);
                 }
                 self.pop_times(elements.len());
                 if let Some(pattern) = tail {
                     self.push_int_times(1, elements.len());
-                    self.traverse_pattern(pattern, alternative)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop_times(elements.len());
                 }
                 Ok(())
@@ -268,7 +269,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 // We don't check the length because type system ensures it's a tuple
                 for (index, pattern) in elems.iter().enumerate() {
                     self.push_int(index);
-                    self.traverse_pattern(pattern, alternative)?;
+                    self.traverse_pattern(pattern)?;
                     self.pop();
                 }
                 Ok(())
@@ -279,7 +280,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if type_.is_bool() && name == "True" => {
-                self.push_booly_check(true, alternative);
+                self.push_booly_check(true);
                 Ok(())
             }
 
@@ -288,7 +289,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { name, .. },
                 ..
             } if type_.is_bool() && name == "False" => {
-                self.push_booly_check(false, alternative);
+                self.push_booly_check(false);
                 Ok(())
             }
 
@@ -297,7 +298,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 constructor: PatternConstructor::Record { .. },
                 ..
             } if type_.is_nil() => {
-                self.push_booly_check(false, alternative);
+                self.push_booly_check(false);
                 Ok(())
             }
 
@@ -307,7 +308,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                 ..
             } => {
                 self.push_string("type");
-                self.push_equality_check(expression::string(name), alternative);
+                self.push_equality_check(expression::string(name));
                 self.pop();
 
                 for (index, arg) in arguments.iter().enumerate() {
@@ -325,7 +326,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                             self.push_string(label.gleam_expect("argument present in field map"));
                         }
                     }
-                    self.traverse_pattern(&arg.value, alternative)?;
+                    self.traverse_pattern(&arg.value)?;
                     self.pop();
                 }
                 Ok(())
@@ -343,58 +344,35 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         self.assignments.push(Assignment { path, var, name });
     }
 
-    fn push_booly_check(&mut self, expected_to_be_truthy: bool, alternative: bool) {
-        self.push_check(
-            Check::Booly {
-                expected_to_be_truthy,
-                subject: self.subject.clone(),
-                path: self.path_document(),
-            },
-            alternative,
-        )
+    fn push_booly_check(&mut self, expected_to_be_truthy: bool) {
+        self.checks.push(Check::Booly {
+            expected_to_be_truthy,
+            subject: self.subject.clone(),
+            path: self.path_document(),
+        })
     }
 
-    fn push_equality_check(&mut self, to: Document<'a>, alternative: bool) {
-        self.push_check(
-            Check::Equal {
-                to,
-                subject: self.subject.clone(),
-                path: self.path_document(),
-            },
-            alternative,
-        )
+    fn push_equality_check(&mut self, to: Document<'a>) {
+        self.checks.push(Check::Equal {
+            to,
+            subject: self.subject.clone(),
+            path: self.path_document(),
+        })
     }
 
-    fn push_list_length_check(
-        &mut self,
-        expected_length: usize,
-        has_tail_spread: bool,
-        alternative: bool,
-    ) {
-        self.push_check(
-            Check::ListLength {
-                expected_length,
-                has_tail_spread,
-                subject: self.subject.clone(),
-                path: self.path_document(),
-            },
-            alternative,
-        )
-    }
-
-    fn push_check(&mut self, check: Check<'a>, alternative: bool) {
-        if alternative {
-            self.alternative_checks.push(check)
-        } else {
-            self.checks.push(check)
-        }
+    fn push_list_length_check(&mut self, expected_length: usize, has_tail_spread: bool) {
+        self.checks.push(Check::ListLength {
+            expected_length,
+            has_tail_spread,
+            subject: self.subject.clone(),
+            path: self.path_document(),
+        })
     }
 }
 
 #[derive(Debug)]
 pub struct CompiledPattern<'a> {
     checks: Vec<Check<'a>>,
-    alternative_checks: Vec<Check<'a>>,
     assignments: Vec<Assignment<'a>>,
 }
 
@@ -439,15 +417,10 @@ impl<'a> CompiledPattern<'a> {
 
     pub fn take_checks_doc(&mut self, match_desired: bool) -> Document<'a> {
         let checks = std::mem::take(&mut self.checks);
-        let alternative_checks = std::mem::take(&mut self.alternative_checks);
-        Self::checks_doc(checks, alternative_checks, match_desired)
+        Self::checks_doc(checks, match_desired)
     }
 
-    pub fn checks_doc(
-        checks: Vec<Check<'a>>,
-        alternative_checks: Vec<Check<'a>>,
-        match_desired: bool,
-    ) -> Document<'a> {
+    pub fn checks_doc(checks: Vec<Check<'a>>, match_desired: bool) -> Document<'a> {
         if checks.is_empty() {
             return "true".to_doc();
         };
@@ -457,32 +430,16 @@ impl<'a> CompiledPattern<'a> {
             break_(" ||", " || ")
         };
 
-        let checks_doc = concat(Itertools::intersperse(
+        concat(Itertools::intersperse(
             checks
                 .into_iter()
                 .map(|check| check.into_doc(match_desired)),
-            operator.clone(),
-        ));
-
-        if alternative_checks.is_empty() {
-            checks_doc
-        } else {
-            let alternative_checks_doc = concat(Itertools::intersperse(
-                alternative_checks
-                    .into_iter()
-                    .map(|alt_check| alt_check.into_doc(match_desired)),
-                operator,
-            ));
-
-            concat(Itertools::intersperse(
-                IntoIter::new([checks_doc, alternative_checks_doc]),
-                break_(" ||", " || "),
-            ))
-        }
+            operator,
+        ))
     }
 
     pub fn checks_or_throw_doc(checks: Vec<Check<'a>>) -> Document<'a> {
-        let checks = Self::checks_doc(checks, Vec::new(), false);
+        let checks = Self::checks_doc(checks, false);
         docvec![
             "if (",
             docvec![break_("", ""), checks].nest(INDENT),

@@ -316,7 +316,9 @@ fn alternative_patterns() {
         r#""use strict";
 
 export function main(xs) {
-  if (xs === 1 || xs === 2) {
+  if (xs === 1) {
+    return 0;
+  } else if (xs === 2) {
     return 0;
   } else {
     return 1;
@@ -334,15 +336,71 @@ fn alternative_patterns_list() {
     [1] | [1, 2] -> 0
     _ -> 1
   }
-}    
+}
 "#,
         r#""use strict";
 
 export function main(xs) {
-  if (xs?.[1]?.length === 0 && xs[0] === 1 || xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
+  if (xs?.[1]?.length === 0 && xs[0] === 1) {
+    return 0;
+  } else if (xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
     return 0;
   } else {
     return 1;
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn alternative_patterns_assignment() {
+    assert_js!(
+        r#"pub fn main(xs) -> Int {
+  case xs {
+    [x] | [_, x] -> x
+    _ -> 1
+  }
+}  
+"#,
+        r#""use strict";
+
+export function main(xs) {
+  if (xs?.[1]?.length === 0) {
+    let x = xs[0];
+    return x;
+  } else if (xs?.[1]?.[1]?.length === 0) {
+    let x = xs[1][0];
+    return x;
+  } else {
+    return 1;
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn alternative_patterns_guard() {
+    assert_js!(
+        r#"pub fn main(xs) -> Int {
+  case xs {
+    [x] | [_, x] if x == 1 -> x
+    _ -> 0
+  }
+}   
+"#,
+        r#""use strict";
+
+export function main(xs) {
+  if (xs?.[1]?.length === 0 && xs[0] === 1) {
+    let x = xs[0];
+    return x;
+  } else if (xs?.[1]?.[1]?.length === 0 && xs[1][0] === 1) {
+    let x = xs[1][0];
+    return x;
+  } else {
+    return 0;
   }
 }
 "#
