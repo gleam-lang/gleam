@@ -428,9 +428,7 @@ impl<'module> Generator<'module> {
 
             for pattern in patterns.iter() {
                 let scope = gen.expression_generator.current_scope_vars.clone();
-
                 let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
-
                 let consequence = gen.expression_generator.expression(&clause.then)?;
 
                 // Reset the scope now that this clause has finished, causing the
