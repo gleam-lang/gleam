@@ -429,7 +429,6 @@ impl<'a> CompiledPattern<'a> {
         } else {
             break_(" ||", " || ")
         };
-
         concat(Itertools::intersperse(
             checks
                 .into_iter()

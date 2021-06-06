@@ -369,7 +369,6 @@ impl<'module> Generator<'module> {
         // Otherwise we need to compile the patterns
         let (mut patten_generator, subject) = pattern::Generator::new(self, value)?;
         let compiled = patten_generator.generate(pattern, None)?;
-
         let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
