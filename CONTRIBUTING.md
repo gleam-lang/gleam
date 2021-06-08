@@ -51,13 +51,17 @@ to be installed.
 
 ```shell
 cargo test
+
+# Or if you have watchexec installed you can run them automatically 
+# when files change
+make test-watch
 ```
 
 To run the language integration tests. This will require a recent stable
 version of Rust, Erlang, and NodeJS to be installed.
 
 ```shell
-cd test/language && make
+make language-test
 ```
 
 If you don't have Rust or Cargo installed you can run the above command in a docker sandbox.
