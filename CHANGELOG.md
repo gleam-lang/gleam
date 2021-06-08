@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Gleam now supports alternative patterns in case expressions for the JavaScript target.
 - Gleam compiler now is catching values which are being imported more than once 
   in an unqualified fashion, this will raise a compile time error. 
 - Gleam can now compile Gleam projects without an external build tool.
