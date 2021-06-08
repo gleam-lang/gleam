@@ -86,6 +86,8 @@ impl<'a> Generator<'a> {
         match statement {
             Statement::TypeAlias { .. } => None,
             Statement::CustomType { .. } => None,
+
+            Statement::Import { module, .. } if module == &["gleam"] => None,
             Statement::Import {
                 module,
                 as_name,
@@ -93,6 +95,7 @@ impl<'a> Generator<'a> {
                 package,
                 ..
             } => Some(Ok(self.import(package, module, as_name, unqualified))),
+
             Statement::ExternalType { .. } => None,
             Statement::ModuleConstant {
                 public,
@@ -146,7 +149,7 @@ impl<'a> Generator<'a> {
         let module_name = as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
             module
                 .last()
-                .gleam_expect("JavaScript code generator could not identify imported module name.")
+                .gleam_expect("JavaScript generator could not identify imported module name.")
         });
         self.register_in_scope(module_name);
         let module_name = maybe_escape_identifier(module_name);

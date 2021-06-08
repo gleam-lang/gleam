@@ -1,5 +1,6 @@
 import test.{Functions, Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
+import gleam
 
 pub fn main(
   print: fn(String) -> String,
@@ -11,8 +12,9 @@ pub fn main(
     [
       suite("try", try_tests(fns)),
       suite("ints", int_tests(fns)),
-      suite("floats", float_tests(fns)),
       suite("pipes", pipes_tests(fns)),
+      suite("floats", float_tests(fns)),
+      suite("prelude", prelude_tests(fns)),
       suite("strings", strings_tests(fns)),
       suite("constants", constants_tests(fns)),
       suite("clause guards", clause_guard_tests(fns)),
@@ -752,4 +754,13 @@ fn clause_guard_tests(_fns) -> List(Test) {
   ]
   // TODO
   // nested operators to check precedence
+}
+
+fn prelude_tests(_fns) -> List(Test) {
+  [
+    "gleam.Ok"
+    |> example(fn() { assert_equal(Ok(1), gleam.Ok(1)) }),
+    "gleam.Error"
+    |> example(fn() { assert_equal(Error(1), gleam.Error(1)) }),
+  ]
 }

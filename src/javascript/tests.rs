@@ -8,6 +8,7 @@ mod functions;
 mod lists;
 mod modules;
 mod numbers;
+mod prelude;
 mod strings;
 mod try_;
 mod tuples;
