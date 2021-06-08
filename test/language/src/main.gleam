@@ -20,6 +20,7 @@ pub fn main(
       suite("clause guards", clause_guard_tests(fns)),
       suite("imported custom types", imported_custom_types_test(fns)),
       suite("tail call optimisation", tail_call_optimisation_tests(fns)),
+      suite("alternative patterns", alternative_patterns_tests(fns)),
     ]
     |> test.run(fns)
 
@@ -764,5 +765,70 @@ fn prelude_tests(_fns) -> List(Test) {
     |> example(fn() { assert_equal(Error(1), gleam.Error(1)) }),
     "gleam.Nil"
     |> example(fn() { assert_equal(Nil, gleam.Nil) }),
+  ]
+}
+
+fn alternative_patterns_tests(_fns) -> List(Test) {
+  [
+    "numbers"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case 4 {
+          1 | 2 | 3 | 4 -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "lists"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case [1, 2] {
+          [0] | [1, 2] -> 0
+          _ -> 1
+        },
+      )
+    }),
+    "assignment"
+    |> example(fn() {
+      assert_equal(
+        2,
+        case [1, 2] {
+          [x] | [_, x] -> x
+          _ -> 0
+        },
+      )
+    }),
+    "multiple assignment"
+    |> example(fn() {
+      assert_equal(
+        #(1, 2),
+        case [1, 2, 3] {
+          [x, y] | [x, y, 3] -> #(x, y)
+          _ -> #(0, 0)
+        },
+      )
+    }),
+    "guard"
+    |> example(fn() {
+      assert_equal(
+        2,
+        case [1, 2] {
+          [x] | [_, x] if x == 2 -> x
+          _ -> 0
+        },
+      )
+    }),
+    "guard left-hand side"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case [1] {
+          [x] | [_, x] if x == 1 -> x
+          _ -> 0
+        },
+      )
+    }),
   ]
 }
