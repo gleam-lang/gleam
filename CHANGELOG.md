@@ -14,6 +14,7 @@
   build compiler API.
 - Fixed a bug where if a JavaScript global function was imported as an external
   function with the same name the generated code would diverge.
+- Type error messages coming from pipe usage have been improved.
 
 ## v0.16.0-rc1 - 2021-06-04
 

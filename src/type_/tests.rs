@@ -1223,14 +1223,12 @@ fn pipe_mismatch_error() {
             situation: Some(UnifyErrorSituation::PipeTypeMismatch),
             location: SrcSpan { start: 57, end: 70 },
             expected: Arc::new(Type::Fn {
-                args: vec![
-                    Arc::new(Type::App {
-                        public: false,
-                        module: vec!["my_module".to_string(),],
-                        name: "Veg".to_string(),
-                        args: vec![],
-                    }),
-                ],
+                args: vec![Arc::new(Type::App {
+                    public: false,
+                    module: vec!["my_module".to_string(),],
+                    name: "Veg".to_string(),
+                    args: vec![],
+                }),],
                 retrn: Arc::new(Type::App {
                     public: true,
                     module: vec![],
