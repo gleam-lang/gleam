@@ -779,10 +779,6 @@ impl<'module> Generator<'module> {
                 ]
             }
 
-            ModuleValueConstructor::Record { name, arity: 0, .. } => {
-                construct_record(name, 0, &None, std::iter::empty())
-            }
-
             ModuleValueConstructor::Record {
                 name,
                 arity,

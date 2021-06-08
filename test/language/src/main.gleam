@@ -762,5 +762,7 @@ fn prelude_tests(_fns) -> List(Test) {
     |> example(fn() { assert_equal(Ok(1), gleam.Ok(1)) }),
     "gleam.Error"
     |> example(fn() { assert_equal(Error(1), gleam.Error(1)) }),
+    "gleam.Nil"
+    |> example(fn() { assert_equal(Nil, gleam.Nil) }),
   ]
 }

@@ -29,3 +29,18 @@ export function go() {
 "#
     );
 }
+
+#[test]
+fn qualified_nil() {
+    assert_js!(
+        r#"import gleam
+pub fn go() { gleam.Nil }
+"#,
+        r#""use strict";
+
+export function go() {
+  return undefined;
+}
+"#
+    );
+}
