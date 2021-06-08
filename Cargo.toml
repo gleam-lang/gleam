@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.16.0-rc1"
+version = "0.16.0-rc2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
 license-file = "LICENCE"
