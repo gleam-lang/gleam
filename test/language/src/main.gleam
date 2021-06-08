@@ -756,6 +756,9 @@ fn clause_guard_tests(_fns) -> List(Test) {
 }
 
 fn alternative_patterns_tests(_fns) -> List(Test) {
+  let int_one = make_int_zero() + 1
+  let int_two = make_int_zero() + 2
+
   [
     "numbers"
     |> example(fn() {
@@ -802,7 +805,7 @@ fn alternative_patterns_tests(_fns) -> List(Test) {
       assert_equal(
         2,
         case [1, 2] {
-          [x] | [_, x] if x == 2 -> x
+          [x] | [_, x] if x == int_two -> x
           _ -> 0
         },
       )
@@ -812,7 +815,7 @@ fn alternative_patterns_tests(_fns) -> List(Test) {
       assert_equal(
         1,
         case [1] {
-          [x] | [_, x] if x == 1 -> x
+          [x] | [_, x] if x == int_one -> x
           _ -> 0
         },
       )
