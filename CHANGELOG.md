@@ -12,6 +12,8 @@
 - The `gleam` prelude module can now be imported when compiling to JavaScript.
 - Fixed a bug where the prelude module could not be imported when using the old
   build compiler API.
+- Fixed a bug where if a JavaScript global function was imported as an external
+  function with the same name the generated code would diverge.
 
 ## v0.16.0-rc1 - 2021-06-04
 
