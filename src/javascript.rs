@@ -312,17 +312,16 @@ impl<'a> Generator<'a> {
         } else {
             "function "
         };
-        let arguments = external_fn_args(arguments);
-        let body = docvec!["return ", fun, arguments.clone()];
-        docvec![
-            head,
-            name,
-            arguments,
-            " {",
-            docvec![line(), body].nest(INDENT).group(),
-            line(),
-            "}",
-        ]
+        let args = external_fn_args(arguments);
+        let (import, fun) = if name == fun {
+            let import = docvec!["let external$", fun, " = ", fun, ";", line()];
+            (import, docvec!["external$", fun])
+        } else {
+            (nil(), fun.to_doc())
+        };
+        let body = docvec!["return ", fun, args.clone()];
+        let body = docvec![line(), body].nest(INDENT).group();
+        docvec![import, head, name, args, " {", body, line(), "}"]
     }
 }
 

@@ -57,3 +57,17 @@ export function down(arg0) {
 "#
     );
 }
+
+#[test]
+fn same_name_global_external() {
+    assert_js!(
+        r#"pub external fn fetch(Nil) -> Nil = "" "fetch""#,
+        r#""use strict";
+
+let external$fetch = fetch;
+export function fetch(arg0) {
+  return external$fetch(arg0)
+}
+"#
+    );
+}
