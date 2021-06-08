@@ -410,7 +410,10 @@ impl<'module> Generator<'module> {
 
         let mut doc = force_break();
 
-        let mut i = 0;
+        // We wish to be able to know whether this is the first or clause being
+        // processed, so record the index number. We use this instead of
+        // `Iterator.enumerate` because we are using a nested for loop.
+        let mut clause_number = 0;
         let total_patterns: usize = clauses
             .iter()
             .map(|c| c.alternative_patterns.len())
@@ -431,6 +434,9 @@ impl<'module> Generator<'module> {
                 let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
                 let consequence = gen.expression_generator.expression(&clause.then)?;
 
+                // We've seen one more clause
+                clause_number += 1;
+
                 // Reset the scope now that this clause has finished, causing the
                 // variables to go out of scope.
                 gen.expression_generator.current_scope_vars = scope;
@@ -448,21 +454,23 @@ impl<'module> Generator<'module> {
                     docvec!(line(), consequence).nest(INDENT)
                 };
 
-                let is_final_clause = i == total_patterns - 1;
+                let is_final_clause = clause_number == total_patterns;
                 doc = if is_final_clause && !compiled.has_checks() && clause.guard.is_none() {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
                     possibility_of_no_match = false;
                     doc.append(" else {")
                 } else {
-                    doc.append(if i == 0 { "if (" } else { " else if (" })
-                        .append(compiled.take_checks_doc(true))
-                        .append(") {")
+                    doc.append(if clause_number == 1 {
+                        "if ("
+                    } else {
+                        " else if ("
+                    })
+                    .append(compiled.take_checks_doc(true))
+                    .append(") {")
                 };
 
                 doc = doc.append(body).append(line()).append("}");
-
-                i += 1;
             }
         }
 

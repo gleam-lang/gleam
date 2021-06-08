@@ -2,13 +2,13 @@
 
 ## Unreleased
 
-- Gleam now supports alternative patterns in case expressions for the JavaScript target.
 - Gleam compiler now is catching values which are being imported more than once 
   in an unqualified fashion, this will raise a compile time error. 
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Gleam now supports alternative patterns in case expressions for the JavaScript target.
 - The `gleam` prelude module can now be imported when compiling to JavaScript.
 - Fixed a bug where the prelude module could not be imported when using the old
   build compiler API.
