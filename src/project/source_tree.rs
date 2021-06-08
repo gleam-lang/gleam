@@ -88,6 +88,9 @@ impl SourceTree {
             );
 
             for (dep, location) in deps {
+                if dep == "gleam" {
+                    continue;
+                }
                 let &dep_index = self.indexes.get(&dep).ok_or_else(|| Error::UnknownImport {
                     module: module_name.clone(),
                     import: dep.clone(),
