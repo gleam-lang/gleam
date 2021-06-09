@@ -286,9 +286,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
                     arguments: constructor
                         .arguments
                         .iter()
-                        .filter_map(|arg| {
-                            arg.label.clone().map(|label| (arg, label))
-                        })
+                        .filter_map(|arg| arg.label.clone().map(|label| (arg, label)))
                         .map(|(argument, label)| TypeConstructorArg {
                             name: label.trim_end().to_string(),
                             doc: markdown_documentation(&argument.doc),
