@@ -67,9 +67,35 @@
       <ul class="constructor-list">
         {% for constructor in typ.constructors %}
         <li class="constructor-item">
-          <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
-          <pre class="constructor-name"><code class="hljs gleam">{{ constructor.definition }}</code></pre>
-          {{ constructor.documentation|safe }}
+          <div class="constructor-row">
+            <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
+            <pre class="constructor-name"><code class="hljs gleam">{{ constructor.definition }}</code></pre>
+          </div>
+
+          <div class="constructor-item-docs">
+            {{ constructor.documentation|safe }}
+
+            {% if !constructor.arguments.is_empty() %}
+            <h4>
+              Arguments
+            </h4>
+
+            <ul class="constructor-argument-list">
+            {% for argument in constructor.arguments %}
+              <li>
+                <div class="constructor-argument-item">
+                  <p class="constructor-argument-label">
+                    <i>{{ argument.name }}</i>
+                  </p>
+                  <div class="constructor-argument-doc">
+                    {{ argument.doc|safe }}
+                  </div>
+                </div>
+              </li>
+            {% endfor %}
+            </ul>
+            {% endif %}
+          </div>
         </li>
         {% endfor %}
       </ul>

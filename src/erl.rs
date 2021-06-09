@@ -154,6 +154,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          ast: _,
                          location: _,
                          type_,
+                         ..
                      }| {
                         label.as_deref().map(|label| (label, type_.clone()))
                     },

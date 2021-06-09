@@ -137,6 +137,13 @@ pub struct RecordConstructorArg<T> {
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
+    pub doc: Option<String>,
+}
+
+impl<T> RecordConstructorArg<T> {
+    pub fn put_doc(&mut self, new_doc: String) {
+        self.doc = Some(new_doc);
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1083,6 +1083,7 @@ fn infer_statement(
                                             ast,
                                             location,
                                             type_: t.clone(),
+                                            doc: None,
                                         }
                                     },
                                 )
