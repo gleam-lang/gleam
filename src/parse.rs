@@ -1533,6 +1533,7 @@ where
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
                                 type_: (),
+                                doc: None,
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1550,6 +1551,7 @@ where
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),
+                                    doc: None,
                                 }))
                             }
                             None => Ok(None),

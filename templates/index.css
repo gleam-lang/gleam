@@ -399,9 +399,34 @@ body.drawer-open .label-closed {
   padding: 0;
 }
 
-.constructor-item {
+.constructor-row {
   align-items: center;
   display: flex;
+}
+
+.constructor-item {
+  margin-bottom: var(--small-gap);
+}
+
+.constructor-argument-item {
+  display: flex;
+}
+
+.constructor-argument-label {
+  flex-shrink: 0;
+}
+
+.constructor-argument-doc {
+  margin-left: var(--gap);
+}
+
+.constructor-argument-list {
+  margin-bottom: var(--small-gap);
+}
+
+.constructor-item-docs {
+  margin-left: var(--large-gap);
+  margin-bottom: var(--gap);
 }
 
 .constructor-item .icon {
