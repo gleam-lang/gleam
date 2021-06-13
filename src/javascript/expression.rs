@@ -41,8 +41,8 @@ impl<'module> Generator<'module> {
         object_equality_used: &'module mut bool,
         mut current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
-        for name in function_arguments.iter().flatten() {
-            let _ = current_scope_vars.insert((*name).to_string(), 0);
+        for &name in function_arguments.iter().flatten() {
+            let _ = current_scope_vars.insert(name.to_string(), 0);
         }
         Self {
             module_name,
@@ -421,7 +421,7 @@ impl<'module> Generator<'module> {
             + clauses.len();
 
         // TODO: handle multiple subjects gracefully
-        for clause in clauses.iter() {
+        for clause in clauses {
             let mut patterns = vec![clause
                 .pattern
                 .get(0)
@@ -429,7 +429,7 @@ impl<'module> Generator<'module> {
 
             patterns.extend(clause.alternative_patterns.iter().flatten());
 
-            for pattern in patterns.iter() {
+            for pattern in patterns {
                 let scope = gen.expression_generator.current_scope_vars.clone();
                 let mut compiled = gen.generate(pattern, clause.guard.as_ref())?;
                 let consequence = gen.expression_generator.expression(&clause.then)?;

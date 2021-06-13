@@ -1000,7 +1000,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
 
     let docs = Itertools::intersperse(
         std::iter::once(pat)
-            .chain(alternative_patterns.iter())
+            .chain(alternative_patterns)
             .map(|patterns| {
                 env.erl_function_scope_vars = erlang_vars.clone();
 

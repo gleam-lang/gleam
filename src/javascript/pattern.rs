@@ -250,7 +250,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
 
             Pattern::List { elements, tail, .. } => {
                 self.push_list_length_check(elements.len(), tail.is_some());
-                for pattern in elements.iter() {
+                for pattern in elements {
                     self.push_int(0);
                     self.traverse_pattern(pattern)?;
                     self.pop();
