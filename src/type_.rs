@@ -923,7 +923,7 @@ fn infer_statement(
                 environment.in_new_scope(|environment| {
                     let args = args
                         .into_iter()
-                        .zip(args_types.iter())
+                        .zip(&args_types)
                         .map(|(a, t)| a.set_type(t.clone()))
                         .collect();
                     let mut expr_typer = ExprTyper::new(environment);
@@ -998,7 +998,7 @@ fn infer_statement(
                 .gleam_expect("Preregistered type for fn was not a fn");
             let args = args
                 .into_iter()
-                .zip(args_types.iter())
+                .zip(&args_types)
                 .map(|(a, t)| a.set_type(t.clone()))
                 .collect();
             Ok(Statement::ExternalFn {
@@ -1067,7 +1067,7 @@ fn infer_statement(
                             preregistered_type.fn_types()
                         {
                             args.into_iter()
-                                .zip(args_types.iter())
+                                .zip(&args_types)
                                 .map(
                                     |(
                                         RecordConstructorArg {

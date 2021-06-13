@@ -285,7 +285,7 @@ impl<'comments> Formatter<'comments> {
             Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
             Constant::List { elements, .. } => {
-                let comma: fn() -> Document<'a> = if elements.iter().all(|e| e.is_simple()) {
+                let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
                     || break_(",", ", ").flex_break()
                 } else {
                     || break_(",", ", ")
@@ -1139,7 +1139,7 @@ impl<'comments> Formatter<'comments> {
         let after_position = clause.location.end;
         let clause_doc = concat(Itertools::intersperse(
             std::iter::once(&clause.pattern)
-                .chain(clause.alternative_patterns.iter())
+                .chain(&clause.alternative_patterns)
                 .map(|p| {
                     concat(Itertools::intersperse(
                         p.iter().map(|p| self.pattern(p)),
@@ -1189,7 +1189,7 @@ impl<'comments> Formatter<'comments> {
         tail: Option<&'a UntypedExpr>,
     ) -> Document<'a> {
         let comma: fn() -> Document<'a> =
-            if tail.is_none() && elements.iter().all(|e| e.is_simple_constant()) {
+            if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
                 || break_(",", ", ").flex_break()
             } else {
                 || break_(",", ", ")
