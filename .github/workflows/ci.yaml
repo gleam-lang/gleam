@@ -13,178 +13,186 @@ jobs:
     strategy:
       matrix:
         toolchain: [stable]
-        build: [linux-amd64, linux-musl-amd64, macos, windows]
+        build: [linux-amd64, macos, windows]
         include:
-        - build: linux-amd64
-          os: ubuntu-latest
-          target: x86_64-unknown-linux-gnu
-          use-cross: false
-        - build: linux-musl-amd64
-          os: ubuntu-latest
-          target: x86_64-unknown-linux-musl
-          use-cross: true
-        - build: macos
-          os: macos-latest
-          target: x86_64-apple-darwin
-          use-cross: false
-        - build: windows
-          os: windows-latest
-          target: x86_64-pc-windows-msvc
-          use-cross: false
+          - build: linux-amd64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: ${{ matrix.toolchain }}
-        target: ${{ matrix.target }}
-        profile: minimal
-        override: true
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
 
-    - name: Build binary
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.use-cross }}
-        command: build
-        args: --release --target ${{ matrix.target }}
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
 
-    - name: Run linter
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.use-cross }}
-        command: clippy
-        args: --workspace --target ${{ matrix.target }} -- -D warnings
+      - name: Run linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace --target ${{ matrix.target }} -- -D warnings
 
-    - name: Run tests
-      uses: actions-rs/cargo@v1
-      with:
-        use-cross: ${{ matrix.use-cross }}
-        command: test
-        args: --workspace --target ${{ matrix.target }}
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace --target ${{ matrix.target }}
 
-    - name: Upload artifact (Ubuntu)
-      if: matrix.build == 'linux-amd64'
-      uses: actions/upload-artifact@v2
-      with:
-        name: gleam
-        path: target/${{ matrix.target }}/release/gleam
+      - name: Upload artifact (Ubuntu)
+        if: matrix.build == 'linux-amd64'
+        uses: actions/upload-artifact@v2
+        with:
+          name: gleam
+          path: target/${{ matrix.target }}/release/gleam
+
+  test-musl:
+    runs-on: ubuntu-latest
+    container: clux/muslrust:stable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Link to predefined musl toolchain
+        run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+
+      - name: Build binary
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --workspace
 
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        profile: minimal
-        components: rustfmt
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: rustfmt
 
-    - name: Check formatting
-      run: cargo fmt --all -- --check
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
   validate-deps:
     name: validate-deps
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-        profile: minimal
-    - run: |
-        set -e
-        curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
-        mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
-        echo `pwd` >> $GITHUB_PATH
-    - run: cargo deny check
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+      - run: |
+          set -e
+          curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
+          mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
+          echo `pwd` >> $GITHUB_PATH
+      - run: cargo deny check
 
   test-projects:
     name: test-projects
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2.0.0
+      - name: Checkout repository
+        uses: actions/checkout@v2.0.0
 
-    - name: Install Erlang
-      uses: gleam-lang/setup-erlang@v1.1.2
-      with:
-        otp-version: 23.2
+      - name: Install Erlang
+        uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: 23.2
 
-    - name: Download Gleam binary from previous job
-      uses: actions/download-artifact@v2
-      with:
-        name: gleam
-        path: ./test
+      - name: Download Gleam binary from previous job
+        uses: actions/download-artifact@v2
+        with:
+          name: gleam
+          path: ./test
 
-    - name: Configure test projects to use Gleam binary
-      run: |
-        echo $PWD/ >> $GITHUB_PATH
-        chmod +x ./gleam
-        sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
-      working-directory: ./test
+      - name: Configure test projects to use Gleam binary
+        run: |
+          echo $PWD/ >> $GITHUB_PATH
+          chmod +x ./gleam
+          sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
+        working-directory: ./test
 
-    - name: test/language Erlang
-      run: make clean erlang
-      working-directory: ./test/language
+      - name: test/language Erlang
+        run: make clean erlang
+        working-directory: ./test/language
 
-    - name: test/language JavaScript
-      run: make clean javascript
-      working-directory: ./test/language
+      - name: test/language JavaScript
+        run: make clean javascript
+        working-directory: ./test/language
 
-    - name: test/build_with_gleam
-      run: gleam eunit
-      working-directory: ./test/build_with_gleam
+      - name: test/build_with_gleam
+        run: gleam eunit
+        working-directory: ./test/build_with_gleam
 
-    - name: test/rebar_project
-      run: rebar3 eunit
-      working-directory: ./test/rebar_project
+      - name: test/rebar_project
+        run: rebar3 eunit
+        working-directory: ./test/rebar_project
 
-    - name: test/compile_package0
-      run: make
-      working-directory: ./test/compile_package0
+      - name: test/compile_package0
+        run: make
+        working-directory: ./test/compile_package0
 
-    - name: test/compile_package1
-      run: make
-      working-directory: ./test/compile_package1
+      - name: test/compile_package1
+        run: make
+        working-directory: ./test/compile_package1
 
-    - name: test/build0
-      run: gleam eunit
-      working-directory: ./test/build0
+      - name: test/build0
+        run: gleam eunit
+        working-directory: ./test/build0
 
-    - name: Test app template
-      run: |
-        gleam new app_project --template=app
-        cd app_project
-        rebar3 eunit
+      - name: Test app template
+        run: |
+          gleam new app_project --template=app
+          cd app_project
+          rebar3 eunit
 
-    - name: Test lib template
-      run: |
-        gleam new lib_project --template=lib
-        cd lib_project
-        rebar3 eunit
+      - name: Test lib template
+        run: |
+          gleam new lib_project --template=lib
+          cd lib_project
+          rebar3 eunit
 
-    - name: Test escript template
-      run: |
-        gleam new escript_project --template=escript
-        cd escript_project
-        rebar3 eunit
-        rebar3 escriptize
-        _build/default/bin/escript_project
+      - name: Test escript template
+        run: |
+          gleam new escript_project --template=escript
+          cd escript_project
+          rebar3 eunit
+          rebar3 escriptize
+          _build/default/bin/escript_project
 
-    - name: Test gleam-lib template
-      run: |
-        gleam new gleam_lib_project --template=gleam-lib
-        cd gleam_lib_project
-        gleam eunit
+      - name: Test gleam-lib template
+        run: |
+          gleam new gleam_lib_project --template=gleam-lib
+          cd gleam_lib_project
+          gleam eunit
