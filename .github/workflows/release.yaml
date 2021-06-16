@@ -2,7 +2,7 @@ name: release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 jobs:
   create-release:
     name: create-release
@@ -26,21 +26,15 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [linux-amd64, macos, windows-64bit]
+        build: [macos, windows-64bit]
         toolchain: [stable]
         include:
-        - build: linux-amd64
-          os: ubuntu-latest
-          target: x86_64-unknown-linux-musl
-          use-cross: true
-        - build: macos
-          os: macos-latest
-          target: x86_64-apple-darwin
-          use-cross: false
-        - build: windows-64bit
-          os: windows-latest
-          target: x86_64-pc-windows-msvc
-          use-cross: false
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+          - build: windows-64bit
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -56,7 +50,6 @@ jobs:
       - name: Build release binary
         uses: actions-rs/cargo@v1
         with:
-          use-cross: ${{ matrix.use-cross }}
           command: build
           args: --release --target ${{ matrix.target }}
 
@@ -76,6 +69,42 @@ jobs:
             tar -czvf "$ARCHIVE" "gleam"
             echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           fi
+
+      - name: Upload release archive
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ env.ASSET }}
+          asset_content_type: application/gzip
+
+  build-release-musl:
+    needs: create-release
+    runs-on: ubuntu-latest
+    container: clux/muslrust:stable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Link to predefined musl toolchain
+        run: |
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Build archive
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/}"
+
+          ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
+          cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
+          tar -czvf "$ARCHIVE" "gleam"
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release archive
         uses: actions/upload-release-asset@v1
