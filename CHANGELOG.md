@@ -9,6 +9,10 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 
+## v0.16.0-rc3 - 2021-06-17
+
+- New projects are generated using `gleam_stdlib` v0.16.0.
+
 ## v0.16.0-rc2 - 2021-06-08
 
 - Gleam now supports alternative patterns in case expressions for the JavaScript target.
