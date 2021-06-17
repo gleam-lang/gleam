@@ -1,5 +1,4 @@
-use crate::ast::BitStringSegmentOption::{self, *};
-use crate::ast::SrcSpan;
+use crate::ast::{BitStringSegmentOption, SrcSpan};
 use crate::type_::Type;
 use std::sync::Arc;
 
@@ -40,6 +39,8 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 
     fn segment_type(&self) -> Arc<Type> {
+        use BitStringSegmentOption::*;
+
         match self.typ {
             Some(Int { .. }) => crate::type_::int(),
             Some(Float { .. }) => crate::type_::float(),
@@ -64,6 +65,8 @@ fn type_options<T>(
     value_mode: bool,
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error> {
+    use BitStringSegmentOption::*;
+
     let mut categories = SegmentOptionCategories::new();
     // Basic category checking
     for option in input_options {
@@ -245,6 +248,8 @@ fn type_options<T>(
 }
 
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
+    use BitStringSegmentOption::*;
+
     matches!(
         opt,
         Utf8 { .. }
