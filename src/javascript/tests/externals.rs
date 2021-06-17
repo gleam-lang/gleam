@@ -64,9 +64,8 @@ fn same_name_global_external() {
         r#"pub external fn fetch(Nil) -> Nil = "" "fetch""#,
         r#""use strict";
 
-let external$fetch = fetch;
 export function fetch(arg0) {
-  return external$fetch(arg0)
+  return globalThis.fetch(arg0)
 }
 "#
     );

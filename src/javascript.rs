@@ -313,15 +313,14 @@ impl<'a> Generator<'a> {
             "function "
         };
         let args = external_fn_args(arguments);
-        let (import, fun) = if name == fun {
-            let import = docvec!["let external$", fun, " = ", fun, ";", line()];
-            (import, docvec!["external$", fun])
+        let fun = if name == fun {
+            docvec!["globalThis.", fun]
         } else {
-            (nil(), fun.to_doc())
+            fun.to_doc()
         };
         let body = docvec!["return ", fun, args.clone()];
         let body = docvec![line(), body].nest(INDENT).group();
-        docvec![import, head, name, args, " {", body, line(), "}"]
+        docvec![head, name, args, " {", body, line(), "}"]
     }
 }
 

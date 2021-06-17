@@ -8,6 +8,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Fixed a bug where if a JavaScript global function was imported as an external
+  function with the same name the generated code would diverge.
 
 ## v0.16.0-rc3 - 2021-06-17
 
