@@ -9,6 +9,8 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 
+## v0.16.0 - 2021-06-17
+
 ## v0.16.0-rc4 - 2021-06-17
 
 - Fixed a bug where if a JavaScript global function was imported as an external
