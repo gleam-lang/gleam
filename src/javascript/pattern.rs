@@ -7,7 +7,7 @@ use crate::type_::{FieldMap, PatternConstructor};
 pub static ASSIGNMENT_VAR: &str = "$";
 
 #[derive(Debug)]
-pub enum Index<'a> {
+enum Index<'a> {
     Int(usize),
     String(&'a str),
 }
@@ -15,10 +15,10 @@ pub enum Index<'a> {
 #[derive(Debug)]
 pub struct Generator<'module, 'expression, 'a> {
     pub expression_generator: &'expression mut expression::Generator<'module>,
-    pub path: Vec<Index<'a>>,
-    pub subject: Document<'a>,
-    pub checks: Vec<Check<'a>>,
-    pub assignments: Vec<Assignment<'a>>,
+    path: Vec<Index<'a>>,
+    subject: Document<'a>,
+    checks: Vec<Check<'a>>,
+    assignments: Vec<Assignment<'a>>,
 }
 
 impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
@@ -49,6 +49,19 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
             subject: subject.clone(),
         };
         Ok((me, assignment))
+    }
+
+    pub fn new_with_document(
+        expression_generator: &'expression mut expression::Generator<'module>,
+        subject: Document<'a>,
+    ) -> Self {
+        Self {
+            path: vec![],
+            checks: vec![],
+            assignments: vec![],
+            expression_generator,
+            subject,
+        }
     }
 
     fn next_local_var(&mut self, name: &'a str) -> Document<'a> {
