@@ -5,6 +5,9 @@ use crate::{
 
 use std::{path::PathBuf, sync::Arc};
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
     BitStringSegmentError {

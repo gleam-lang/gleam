@@ -8,6 +8,9 @@ use super::*;
 #[cfg(test)]
 use std::cell::RefCell;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 const INDENT: isize = 2;
 
 pub struct Printer {

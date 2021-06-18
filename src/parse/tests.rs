@@ -1,6 +1,8 @@
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType, ParseError, ParseErrorType};
 
+use pretty_assertions::assert_eq;
+
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");

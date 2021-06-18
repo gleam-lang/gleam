@@ -12,6 +12,8 @@ use crate::{
 };
 use std::{collections::HashMap, io::BufReader, sync::Arc};
 
+use pretty_assertions::assert_eq;
+
 fn roundtrip(input: &Module) -> Module {
     let buffer = InMemoryFile::new();
     ModuleEncoder::new(input).write(buffer.clone()).unwrap();
