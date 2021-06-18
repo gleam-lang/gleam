@@ -656,7 +656,7 @@ where
             2 => matches!(c, Some('0'..='1')),
             8 => matches!(c, Some('0'..='7')),
             10 => matches!(c, Some('0'..='9')),
-            16 => matches!(c, Some('0'..='9') | Some('a'..='f') | Some('A'..='F')),
+            16 => matches!(c, Some('0'..='9' | 'a'..='f' | 'A'..='F')),
             other => fatal_compiler_bug(&format!("Radix not implemented: {}", other)),
         }
     }

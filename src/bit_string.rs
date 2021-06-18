@@ -150,14 +150,14 @@ fn type_options<T>(
 
     // All but the last segment in a pattern must have an exact size
     if must_have_size {
-        match categories.typ {
-            Some(opt @ BitStringSegmentOption::Binary { .. })
-            | Some(opt @ BitStringSegmentOption::BitString { .. }) => {
-                if categories.size.is_none() {
-                    return err(ErrorType::SegmentMustHaveSize, opt.location());
-                }
+        if let Some(
+            opt
+            @ (BitStringSegmentOption::Binary { .. } | BitStringSegmentOption::BitString { .. }),
+        ) = categories.typ
+        {
+            if categories.size.is_none() {
+                return err(ErrorType::SegmentMustHaveSize, opt.location());
             }
-            _ => {}
         }
     }
 
@@ -165,10 +165,12 @@ fn type_options<T>(
     if let Some(endian) = categories.endian {
         match categories.typ {
             None
-            | Some(BitStringSegmentOption::Int { .. })
-            | Some(BitStringSegmentOption::Utf16 { .. })
-            | Some(BitStringSegmentOption::Utf32 { .. })
-            | Some(BitStringSegmentOption::Float { .. }) => {}
+            | Some(
+                BitStringSegmentOption::Int { .. }
+                | BitStringSegmentOption::Utf16 { .. }
+                | BitStringSegmentOption::Utf32 { .. }
+                | BitStringSegmentOption::Float { .. },
+            ) => {}
 
             _ => return err(ErrorType::InvalidEndianness, endian.location()),
         }

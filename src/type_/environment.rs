@@ -496,9 +496,13 @@ impl<'a, 'b> Environment<'a, 'b> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((EntityKind::ImportedTypeAndConstructor, _, _))
-            | Some((EntityKind::ImportedType, _, _))
-            | Some((EntityKind::PrivateType, _, _)) => {}
+            Some((
+                EntityKind::ImportedTypeAndConstructor
+                | EntityKind::ImportedType
+                | EntityKind::PrivateType,
+                _,
+                _,
+            )) => {}
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
