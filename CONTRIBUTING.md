@@ -24,7 +24,8 @@ please open a ticket and we will work it out together.
 
 ## Contributing code changes
 
-Before working on code it is suggested that you read the [architecture.md](architecture.md) file.
+Before working on code it is suggested that you read the
+[docs/architecture.md](docs/architecture.md) file.
 It outlines fundamental components and design of this project.
 
 Code changes to Gleam are welcomed via the process below.
