@@ -198,6 +198,7 @@ fn function<'a>(
     statement: &'a TypedStatement,
 ) -> Option<Function<'a>> {
     let mut formatter = format::Formatter::new();
+
     match statement {
         Statement::ExternalFn {
             public: true,
@@ -246,6 +247,7 @@ fn render_markdown(text: &str) -> String {
 
 fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
+
     match statement {
         Statement::ExternalType {
             public: true,
@@ -281,6 +283,16 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
                 .map(|constructor| TypeConstructor {
                     definition: print(formatter.record_constructor(constructor)),
                     documentation: markdown_documentation(&constructor.documentation),
+                    arguments: constructor
+                        .arguments
+                        .iter()
+                        .filter_map(|arg| arg.label.as_ref().map(|label| (arg, label)))
+                        .map(|(argument, label)| TypeConstructorArg {
+                            name: label.trim_end().to_string(),
+                            doc: markdown_documentation(&argument.doc),
+                        })
+                        .filter(|arg| !arg.doc.is_empty())
+                        .collect(),
                 })
                 .collect(),
             source_url: source_links.url(location),
@@ -368,6 +380,13 @@ struct Function<'a> {
 struct TypeConstructor {
     definition: String,
     documentation: String,
+    arguments: Vec<TypeConstructorArg>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
+struct TypeConstructorArg {
+    name: String,
+    doc: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]

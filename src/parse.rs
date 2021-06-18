@@ -338,8 +338,7 @@ where
                 }
             }
             // var lower_name and UpName
-            Some((start, Token::Name { name }, end))
-            | Some((start, Token::UpName { name }, end)) => {
+            Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
                 UntypedExpr::Var {
                     location: SrcSpan { start, end },
@@ -360,7 +359,7 @@ where
                     label,
                 }
             }
-            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
+            Some((start, Token::Tuple | Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems =
@@ -753,7 +752,7 @@ where
                     value,
                 }
             }
-            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
+            Some((start, Token::Tuple | Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
@@ -805,8 +804,7 @@ where
                 let (end, rsqb_e) = self.expect_one(&Token::RightSquare)?;
                 let tail = match tail {
                     // There is a tail and it has a Pattern::Var or Pattern::Discard
-                    Some(Some(pat @ Pattern::Var { .. }))
-                    | Some(Some(pat @ Pattern::Discard { .. })) => Some(pat),
+                    Some(Some(pat @ (Pattern::Var { .. } | Pattern::Discard { .. }))) => Some(pat),
                     // There is a tail and but it has no content, implicit discard
                     Some(Some(pat)) => {
                         return parse_error(ParseErrorType::InvalidTailPattern, pat.location())
@@ -1533,6 +1531,7 @@ where
                                 ast: type_ast,
                                 location: SrcSpan { start, end },
                                 type_: (),
+                                doc: None,
                             })),
                             None => {
                                 parse_error(ParseErrorType::ExpectedType, SrcSpan { start, end })
@@ -1550,6 +1549,7 @@ where
                                     ast: type_ast,
                                     location: type_location,
                                     type_: (),
+                                    doc: None,
                                 }))
                             }
                             None => Ok(None),
@@ -1602,7 +1602,7 @@ where
             }
 
             // Tuple
-            Some((start, Token::Tuple, end)) | Some((start, Token::Hash, end)) => {
+            Some((start, Token::Tuple | Token::Hash, end)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = self.parse_types(for_const)?;
@@ -1784,8 +1784,7 @@ where
         loop {
             // parse imports
             match self.tok0.take() {
-                Some((start, Token::Name { name }, end))
-                | Some((start, Token::UpName { name }, end)) => {
+                Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
                     let _ = self.next_tok();
                     let location = SrcSpan { start, end };
                     let mut import = UnqualifiedImport {
@@ -1881,7 +1880,7 @@ where
                 }))
             }
 
-            Some((start, Token::Tuple, _)) | Some((start, Token::Hash, _)) => {
+            Some((start, Token::Tuple | Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elements =

@@ -1,6 +1,7 @@
 use crate::error::{Error, FileIoAction, FileKind, GleamExpect};
 use flate2::{write::GzEncoder, Compression};
 use ignore::DirEntry;
+use lazy_static::lazy_static;
 use std::{
     ffi::OsStr,
     fmt::Debug,

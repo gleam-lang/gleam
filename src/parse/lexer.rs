@@ -653,10 +653,7 @@ where
     // Test if a digit is of a certain radix.
     fn is_digit_of_radix(c: Option<char>, radix: u32) -> bool {
         match radix {
-            2 => matches!(c, Some('0'..='1')),
-            8 => matches!(c, Some('0'..='7')),
-            10 => matches!(c, Some('0'..='9')),
-            16 => matches!(c, Some('0'..='9') | Some('a'..='f') | Some('A'..='F')),
+            2 | 8 | 10 | 16 => c.filter(|c| c.is_digit(radix)).is_some(),
             other => fatal_compiler_bug(&format!("Radix not implemented: {}", other)),
         }
     }

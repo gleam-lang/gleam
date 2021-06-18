@@ -2,6 +2,9 @@ use super::*;
 use crate::ast::TypeAst;
 use std::sync::Arc;
 
+use im::hashmap;
+use im::hashset;
+
 /// The Hydrator takes an AST representing a type (i.e. a type annotation
 /// for a function argument) and returns a Type for that annotation.
 ///
@@ -37,8 +40,8 @@ impl Default for Hydrator {
 impl Hydrator {
     pub fn new() -> Self {
         Self {
-            created_type_variables: im::hashmap![],
-            created_type_variable_ids: im::hashset![],
+            created_type_variables: hashmap![],
+            created_type_variable_ids: hashset![],
             permit_new_type_variables: true,
             permit_holes: false,
         }

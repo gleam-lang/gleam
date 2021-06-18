@@ -9,7 +9,6 @@ license-file = "LICENCE"
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.1.7", features = ["termination"] }
 # Command line interface
-clap = "2.33.3"
 structopt = "0.3.21"
 # Immutable data structures
 im = "15.0.0"
@@ -22,7 +21,6 @@ regex = "1.4.3"
 # Graph data structures
 petgraph = "0.5.1"
 # Pretty error messages
-codespan = "0.11"
 codespan-reporting = "0.11"
 termcolor = "1.1.2" 
 # Initialize complex static values at runtime

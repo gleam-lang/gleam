@@ -78,16 +78,6 @@ mod schema_capnp {
     include!("../generated/schema_capnp.rs");
 }
 
-#[macro_use]
-extern crate im;
-
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-
-#[macro_use]
-extern crate lazy_static;
-
 pub use self::{
     error::{Error, GleamExpect, Result},
     warning::Warning,

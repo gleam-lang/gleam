@@ -66,6 +66,15 @@ impl Analysed {
                         let doc = docs.join("\n");
                         constructor.put_doc(doc);
                     }
+
+                    for argument in constructor.arguments.iter_mut() {
+                        let docs: Vec<&str> =
+                            comments_before(&mut doc_comments, argument.location.start, &self.src);
+                        if !docs.is_empty() {
+                            let doc = docs.join("\n");
+                            argument.put_doc(doc);
+                        }
+                    }
                 }
             }
         }

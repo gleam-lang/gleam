@@ -13,6 +13,8 @@ mod strings;
 mod try_;
 mod tuples;
 
+use pretty_assertions::assert_eq;
+
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
 #[macro_export]

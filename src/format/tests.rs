@@ -1,5 +1,7 @@
 use super::*;
 
+use pretty_assertions::assert_eq;
+
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         // println!("\n\n\n{}", $src);

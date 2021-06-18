@@ -2,6 +2,8 @@ use super::*;
 use crate::{build::Origin, type_, type_::build_prelude};
 use std::collections::HashMap;
 
+use pretty_assertions::assert_eq;
+
 #[test]
 fn record_definition_test() {
     let module_name = vec!["name".to_string()];

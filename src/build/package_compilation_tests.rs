@@ -14,6 +14,8 @@ use crate::{
 };
 use std::{path::PathBuf, sync::Arc};
 
+use pretty_assertions::assert_eq;
+
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let mut modules = HashMap::new();

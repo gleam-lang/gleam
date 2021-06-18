@@ -485,6 +485,8 @@ impl<'a, 'b> Environment<'a, 'b> {
 
     /// Inserts an entity at the current scope for usage tracking.
     pub fn init_usage(&mut self, name: String, kind: EntityKind, location: SrcSpan) {
+        use EntityKind::*;
+
         match self
             .entity_usages
             .last_mut()
@@ -496,15 +498,15 @@ impl<'a, 'b> Environment<'a, 'b> {
             // TODO: Improve this so that we can tell if an imported overriden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((EntityKind::ImportedTypeAndConstructor, _, _))
-            | Some((EntityKind::ImportedType, _, _))
-            | Some((EntityKind::PrivateType, _, _)) => {}
+            Some((ImportedType | ImportedTypeAndConstructor | PrivateType, _, _)) => {}
+
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
                 let _ = unused.insert(name, (kind, location, false));
                 self.handle_unused(unused);
             }
+
             _ => {}
         }
     }

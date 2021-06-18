@@ -73,11 +73,13 @@ jobs:
           ln -s /root/.cargo $HOME/.cargo
           ln -s /root/.rustup $HOME/.rustup
 
-      - name: Build binary
-        run: cargo build --release
-
-      - name: Run tests
-        run: cargo test --workspace
+      # TODO: reenable once clux/muslrust has latest stable Rust
+      # https://github.com/clux/muslrust/issues/78
+      # - name: Build binary
+      #   run: cargo build --release
+      #
+      # - name: Run tests
+      #   run: cargo test --workspace
 
   rustfmt:
     name: rustfmt

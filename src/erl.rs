@@ -20,6 +20,7 @@ use crate::{
 };
 use heck::SnakeCase;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use pattern::pattern;
 use std::char;
 use std::collections::HashMap;
@@ -153,6 +154,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          ast: _,
                          location: _,
                          type_,
+                         ..
                      }| {
                         label.as_deref().map(|label| (label, type_.clone()))
                     },

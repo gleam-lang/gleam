@@ -1,3 +1,4 @@
+use im::hashmap;
 use itertools::Itertools;
 
 ///! Type inference and checking of patterns used in case expressions
