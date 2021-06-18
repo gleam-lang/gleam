@@ -43,13 +43,13 @@ this:
             │   Type checker    │◄─────┘
             └───────────────────┘
                       │
-          ┌───── Typed AST ──────┐
-          ▼                      ▼
+          ┌────── Typed AST ──────┐
+          ▼                       ▼
 ┌────────────────────┐ ┌─────────────────────┐
 │   Code generator   │ │ Metadata serializer │
 └────────────────────┘ └─────────────────────┘
-          │                      │
-          │                      ▼
+          │                       │
+          │                       ▼
  Erlang or JavaScript   .gleam_module binaries
    printing algebra
           ▼
