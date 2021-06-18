@@ -347,7 +347,22 @@ impl<'module> Generator<'module> {
             // method to take a Document as a value and pass the subject
             // document into that also rather than letting the pattern generator
             // determine what it should be.
-            _ => return unsupported("Patterns in try"),
+            // _ => return unsupported("Patterns in try"),
+            pattern => {
+                let value = subject_doc.append("[0]");
+                // let (mut patten_generator, _subject_name) = pattern::Generator::new(self, subject)?;
+                let mut pattern_generator = pattern::Generator{
+                    expression_generator: self,
+                    path: vec![],
+                    checks: vec![],
+                    assignments: vec![],
+                    subject: value.clone(),
+                };
+                let compiled = pattern_generator.generate(pattern, None)?;
+                docs.push(line());
+                docs.push(compiled.into_assignment_doc(&value));
+                docs.push(lines(2));
+            }
         }
 
         // Lastly, whatever comes next
