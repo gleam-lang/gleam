@@ -9,6 +9,8 @@ use crate::ast::{
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
 };
 
+use im::hashmap;
+
 pub struct ExprTyper<'a, 'b, 'c> {
     environment: &'a mut Environment<'b, 'c>,
 

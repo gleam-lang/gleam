@@ -5,6 +5,8 @@ use crate::{
     bit_string,
 };
 
+use pretty_assertions::assert_eq;
+
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
         println!("\n{}\n", $src);

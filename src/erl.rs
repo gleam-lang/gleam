@@ -20,6 +20,7 @@ use crate::{
 };
 use heck::SnakeCase;
 use itertools::Itertools;
+use lazy_static::lazy_static;
 use pattern::pattern;
 use std::char;
 use std::collections::HashMap;

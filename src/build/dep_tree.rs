@@ -3,6 +3,9 @@ use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 #[derive(Debug, Default)]
 pub struct DependencyTree<T> {
     graph: petgraph::Graph<T, ()>,

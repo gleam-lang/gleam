@@ -4,6 +4,8 @@ use crate::{
     GleamExpect,
 };
 
+use lazy_static::lazy_static;
+
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
     Int {

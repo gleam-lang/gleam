@@ -2,6 +2,9 @@ use super::Document::*;
 use super::Mode::*;
 use super::*;
 
+use im::vector;
+use pretty_assertions::assert_eq;
+
 #[test]
 fn fits_test() {
     // Negative limits never fit

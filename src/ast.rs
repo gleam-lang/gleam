@@ -10,6 +10,9 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
+#[cfg(test)]
+use pretty_assertions::assert_eq;
+
 pub const CAPTURE_VARIABLE: &str = "_gleam_capture";
 
 pub trait HasLocation {
