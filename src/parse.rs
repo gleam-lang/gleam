@@ -1784,7 +1784,7 @@ where
         loop {
             // parse imports
             match self.tok0.take() {
-                Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
+                Some((start, Token::Name { name }, end)) => {
                     let _ = self.next_tok();
                     let location = SrcSpan { start, end };
                     let mut import = UnqualifiedImport {
@@ -1794,7 +1794,21 @@ where
                     };
                     if self.maybe_one(&Token::As).is_some() {
                         let (_, as_name, _) = self.expect_name()?;
-                        import.as_name = Some(as_name)
+                        import.as_name = Some(as_name);
+                    }
+                    imports.push(import)
+                }
+                Some((start, Token::UpName { name }, end)) => {
+                    let _ = self.next_tok();
+                    let location = SrcSpan { start, end };
+                    let mut import = UnqualifiedImport {
+                        name,
+                        location,
+                        as_name: None,
+                    };
+                    if self.maybe_one(&Token::As).is_some() {
+                        let (_, as_name, _) = self.expect_upname()?;
+                        import.as_name = Some(as_name);
                     }
                     imports.push(import)
                 }
