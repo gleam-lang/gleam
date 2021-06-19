@@ -183,9 +183,9 @@ checksum = "ee33f13b9419d35f9ae6e0ee2e5ef6bd059a4d0da2fda16a88ddaf57dfe9acca"
 
 [[package]]
 name = "capnpc"
-version = "0.14.2"
+version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "76c50eb1605fb64e5cbf9a22c244ea4136516f1aa38ee8e2c8f94a080370521e"
+checksum = "b47bce811162518b5c38f746ed584bd2922ae7bb560ef64f230d2e4ee0d111fe"
 dependencies = [
  "capnp",
 ]
@@ -483,29 +483,20 @@ dependencies = [
 name = "gleam"
 version = "0.17.0-dev"
 dependencies = [
- "askama",
  "atty",
  "bytes",
- "capnp",
- "capnpc",
- "codespan-reporting",
  "ctrlc",
  "flate2",
  "fs_extra",
- "heck",
+ "gleam-core",
  "hexpm",
  "ignore",
- "im",
  "itertools",
  "lazy_static",
- "petgraph",
  "pretty_assertions",
- "pulldown-cmark",
  "regex",
  "rpassword",
  "serde",
- "serde_derive",
- "strsim 0.10.0",
  "structopt",
  "strum",
  "tar",
@@ -515,6 +506,30 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "walkdir",
+]
+
+[[package]]
+name = "gleam-core"
+version = "0.17.0-dev"
+dependencies = [
+ "askama",
+ "capnp",
+ "capnpc",
+ "codespan-reporting",
+ "heck",
+ "im",
+ "itertools",
+ "lazy_static",
+ "petgraph",
+ "pretty_assertions",
+ "pulldown-cmark",
+ "regex",
+ "serde",
+ "serde_derive",
+ "strsim 0.10.0",
+ "strum",
+ "termcolor",
+ "tracing",
 ]
 
 [[package]]
@@ -632,9 +647,9 @@ checksum = "494b4d60369511e7dea41cf646832512a94e542f68bb9c49e54518e0f468eb47"
 
 [[package]]
 name = "humansize"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6cab2627acfc432780848602f3f558f7e9dd427352224b0d9324025796d2a5e"
+checksum = "02296996cb8796d7c6e3bc2d9211b7802812d36999a51bb754123ead7d37d026"
 
 [[package]]
 name = "hyper"

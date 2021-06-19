@@ -1,0 +1,44 @@
+[package]
+name = "gleam-core"
+version = "0.17.0-dev"
+edition = "2018"
+
+[dependencies]
+# Immutable data structures
+im = "15.0.0"
+# Error message and warning formatting
+codespan-reporting = "0.11"
+termcolor = "1.1.2" 
+# Logging
+tracing = "0.1.22"
+# Extra iter methods
+itertools = "0.10.0"
+# String case conversion
+heck = "0.3.2"
+# Parsing
+regex = "1.4.3"
+# Graph data structures
+petgraph = "0.5.1"
+# Initialize complex static values at runtime
+lazy_static = "1.4.0"
+# Levenshtein string distance for typo suggestions
+strsim = "0.10.0"
+# Data (de)serialisation
+serde = { version = "1.0.119", features = ["derive"] }
+# Cap'n Proto binary format runtime
+capnp = "0.14.0"
+# Enum trait impl macros
+strum = { version = "0.20.0", features = ["derive"] }
+# Template rendering
+askama = "0.10.5"
+# Markdown parsing
+pulldown-cmark = "0.8.0"
+
+[build-dependencies]
+# Data (de)serialisation
+serde_derive = "1.0.119"
+# Cap'n Proto binary format codegen
+capnpc = "0.14.2"
+
+[dev-dependencies]
+pretty_assertions = "0.7"
