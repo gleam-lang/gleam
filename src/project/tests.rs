@@ -695,7 +695,7 @@ make() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "import one.{Empty as e, id as i} fn make() { i(e) }".to_string(),
+                    src: "import one.{Empty as E, id as i} fn make() { i(E) }".to_string(),
                 },
             ],
             expected: Ok(vec![
@@ -1051,7 +1051,7 @@ main() ->
                     origin: ModuleOrigin::Src,
                     path: PathBuf::from("/src/two.gleam"),
                     source_base_path: PathBuf::from("/src"),
-                    src: "import one.{X as e, id as i} fn make() { i(e) }".to_string(),
+                    src: "import one.{X as E, id as i} fn make() { i(E) }".to_string(),
                 },
             ],
             expected: Ok(vec![
