@@ -1248,6 +1248,46 @@ make() ->
         ]),
     );
 
+    // Custom type constructors can be aliased when imported
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type Headers = List(String)".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: r#"import one.{Headers as StringList} fn make_list() -> StringList { ["aliased", "type", "constructor"] }"#.to_string(),
+            },
+        ],
+        Ok(vec![
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
+                text: "-module(one).
+-compile(no_auto_import).
+
+
+"
+                .to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
+                text: r#"-module(two).
+-compile(no_auto_import).
+
+-spec make_list() -> list(binary()).
+make_list() ->
+    [<<"aliased"/utf8>>, <<"type"/utf8>>, <<"constructor"/utf8>>].
+"#
+                .to_string(),
+            },
+        ]),
+    );
+
     // Imported type constructors have the correct arity
     assert_erlang_compile!(
         vec![
