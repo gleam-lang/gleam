@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the high-level architecture of the Gleam transpiler.
+This document describes the high-level architecture of the Gleam compiler.
 
 ## Overview
 
