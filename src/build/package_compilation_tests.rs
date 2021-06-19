@@ -829,7 +829,7 @@ make() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{Empty as e, id as i} fn make() { i(e) }".to_string(),
+                code: "import one.{Empty as E, id as i} fn make() { i(E) }".to_string(),
             },
         ],
         Ok(vec![
@@ -1208,7 +1208,7 @@ main() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{X as e, id as i} fn make() { i(e) }".to_string(),
+                code: "import one.{X as E, id as i} fn make() { i(E) }".to_string(),
             },
         ],
         Ok(vec![
