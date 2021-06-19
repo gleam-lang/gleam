@@ -77,9 +77,9 @@ Types that serve as the Gleam AST, both in its *untyped* and *typed* form.
 Each tree describes a single Gleam module at its root.
 
 Untyped trees contain untyped expressions only.
-This form purely describes a sequence of characters.
 
-Typed trees contain typed expressions together with module metadata.
+Typed trees contain typed expressions together with metadata
+such as the types of expressions and information on how to generate code for each value constructor used.
 Here, code has gained the context necessary to produce final Gleam output.
 
 ### `parse`
@@ -89,9 +89,10 @@ and produces an untyped AST together with `ModuleExtra`
 containing various types of comments plus empty lines.
 
 Currently this means that parsing is tightly coupled with the AST structure.
-This might prove inflexible when creating tools such as a Gleam LSP.
 
 **Architecture Invariant**: parsing may fail, the output is in `Result<T, Error>` form.
+
+**API Boundary**: high-level operations on code, such as formatting, begin here.
 
 ### `erl`
 
