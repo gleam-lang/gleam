@@ -9,6 +9,7 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Patterns can be used with `try` expresssions when compiling to JavaScript.
 
 ## v0.16.0 - 2021-06-17
 
