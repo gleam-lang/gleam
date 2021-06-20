@@ -10,6 +10,8 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 - Patterns can be used with `try` expresssions when compiling to JavaScript.
+- Types and record constructors can now be aliased with an uppercase name when imported.
+  Aliasing them with a lowercase name is no longer permitted.
 
 ## v0.16.0 - 2021-06-17
 
