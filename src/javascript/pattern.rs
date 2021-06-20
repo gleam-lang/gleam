@@ -51,6 +51,19 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
         Ok((me, assignment))
     }
 
+    pub fn new_with_document(
+        expression_generator: &'expression mut expression::Generator<'module>,
+        subject: Document<'a>,
+    ) -> Self {
+        Self {
+            path: vec![],
+            checks: vec![],
+            assignments: vec![],
+            expression_generator,
+            subject,
+        }
+    }
+
     fn next_local_var(&mut self, name: &'a str) -> Document<'a> {
         self.expression_generator.next_local_var(name)
     }
