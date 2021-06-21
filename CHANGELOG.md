@@ -6,6 +6,9 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+
+## v0.16.1 - 2021-06-21
+
 - Values which are being imported more than once in an unqualified fashion now
   cause an error to be reported.
 - Argument docs for custom type constructors are now rendered in the HTML
