@@ -1,7 +1,9 @@
 [package]
 name = "gleam-core"
 version = "0.17.0-dev"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2018"
+license-file = "LICENCE"
 
 [dependencies]
 # Immutable data structures
