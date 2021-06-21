@@ -2,16 +2,19 @@
 
 ## Unreleased
 
-- Argument docs for custom type constructors is now rendered in the HTML documentation.
-- Gleam compiler now is catching values which are being imported more than once 
-  in an unqualified fashion, this will raise a compile time error. 
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- Values which are being imported more than once in an unqualified fashion now
+  cause an error to be reported.
+- Argument docs for custom type constructors are now rendered in the HTML
+  documentation.
 - Patterns can be used with `try` expresssions when compiling to JavaScript.
-- Types and record constructors can now be aliased with an uppercase name when imported.
-  Aliasing them with a lowercase name is no longer permitted.
+- Types and record constructors can now be aliased with an uppercase name when
+  imported.  Aliasing them with a lowercase name is no longer permitted.
+- Fixed a bug where nested import paths could be rendered incorrectly in
+  JavaScript.
 
 ## v0.16.0 - 2021-06-17
 
