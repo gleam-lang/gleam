@@ -765,7 +765,7 @@ impl<'module> Generator<'module> {
             .as_ref()
             .map(|s| s.as_str())
             .unwrap_or_else(|| "This has not yet been implemented");
-        let module_name = Document::String(self.module_name.join("_")); // TODO: This isn't right
+        let module_name = Document::String(self.module_name.join("/"));
         let line = self.line_numbers.line_number(location.start);
 
         docvec![
@@ -781,7 +781,8 @@ impl<'module> Generator<'module> {
                                 "function".to_doc(),
                                 Some(
                                     // TODO switch to use `string(self.function_name)`
-                                    // This will require resolving the difference in lifetimes 'module and 'a.
+                                    // This will require resolving the
+                                    // difference in lifetimes 'module and 'a.
                                     Document::String(
                                         self.function_name.unwrap_or_default().to_string()
                                     )

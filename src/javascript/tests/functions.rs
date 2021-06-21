@@ -373,7 +373,7 @@ pub fn export() {
 "#,
         r#""use strict";
 
-import * as for$ from "./for.js";
+import * as for$ from "../for.js";
 const { class$ } = for$;
 
 export function export$() {
@@ -400,7 +400,7 @@ pub fn export() {
 "#,
         r#""use strict";
 
-import * as function$ from "./for.js";
+import * as function$ from "../for.js";
 const { class$: while$ } = function$;
 
 export function export$() {

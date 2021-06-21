@@ -47,6 +47,10 @@
 )]
 #![allow(clippy::match_single_binding, clippy::inconsistent_struct_constructor)]
 
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
+
 #[macro_use]
 mod pretty;
 

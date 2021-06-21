@@ -30,7 +30,7 @@ macro_rules! assert_js {
         let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
+        ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             &mut 0,
             ast,
@@ -68,7 +68,7 @@ macro_rules! assert_js {
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.join("/"), dep.type_info);
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
+        ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             &mut 0,
             ast,
@@ -98,7 +98,7 @@ fn go() {
 function go() {
   throw Object.assign(
     new Error("This has not yet been implemented"),
-    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
+    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
   )
 }
 "#
@@ -114,7 +114,7 @@ fn go() {
 function go() {
   throw Object.assign(
     new Error("I should do this"),
-    { gleam_error: "todo", module: "the_app", function: "go", line: 3 }
+    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
   )
 }
 "#

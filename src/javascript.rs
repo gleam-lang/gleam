@@ -128,9 +128,11 @@ impl<'a> Generator<'a> {
 
         if package == self.module.type_info.package {
             // Same package uses relative paths
+            // TODO: strip shared prefixed between current module and imported
+            // module to avoid decending and climbing back out again
             let prefix = match self.module.name.len() {
                 1 => "./".to_doc(),
-                _ => Document::String("../".repeat(module.len() - 1)),
+                _ => Document::String("../".repeat(self.module.name.len() - 1)),
             };
             docvec!["\"", prefix, path, ".js\""]
         } else {

@@ -14,7 +14,7 @@ pub fn go() { launch() }
 "#,
         r#""use strict";
 
-import * as rocket_ship from "./rocket_ship.js";
+import * as rocket_ship from "../rocket_ship.js";
 const { launch } = rocket_ship;
 
 export function go() {
@@ -37,7 +37,7 @@ pub fn go() { boom_time() }
 "#,
         r#""use strict";
 
-import * as rocket_ship from "./rocket_ship.js";
+import * as rocket_ship from "../rocket_ship.js";
 const { launch: boom_time } = rocket_ship;
 
 export function go() {
@@ -62,7 +62,7 @@ pub fn go() { a() + bb() }
 "#,
         r#""use strict";
 
-import * as rocket_ship from "./rocket_ship.js";
+import * as rocket_ship from "../rocket_ship.js";
 const { a, b: bb } = rocket_ship;
 
 export function go() {
@@ -86,7 +86,7 @@ pub fn go() { rocket_ship.x }
 "#,
         r#""use strict";
 
-import * as rocket_ship from "./rocket_ship.js";
+import * as rocket_ship from "../rocket_ship.js";
 
 export function go() {
   return rocket_ship.x;
@@ -109,7 +109,7 @@ pub fn go() { boop.x }
 "#,
         r#""use strict";
 
-import * as boop from "./rocket_ship.js";
+import * as boop from "../rocket_ship.js";
 
 export function go() {
   return boop.x;
@@ -132,7 +132,7 @@ pub fn go() { boop.go() }
 "#,
         r#""use strict";
 
-import * as boop from "./rocket_ship.js";
+import * as boop from "../rocket_ship.js";
 
 export function go() {
   return boop.go();
@@ -153,7 +153,7 @@ fn nested_fn_call() {
 pub fn go() { two.go() }"#,
         r#""use strict";
 
-import * as two from "./one/two.js";
+import * as two from "../one/two.js";
 
 export function go() {
   return two.go();
@@ -174,7 +174,7 @@ fn nested_nested_fn_call() {
 pub fn go() { three.go() }"#,
         r#""use strict";
 
-import * as three from "./one/two/three.js";
+import * as three from "../one/two/three.js";
 
 export function go() {
   return three.go();
@@ -200,6 +200,28 @@ import * as one from "other_package/one.js";
 
 export function go() {
   return one.go();
+}
+"#
+    );
+}
+
+#[test]
+fn nested_same_package() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub fn go() { 1 }"#
+        ),
+        r#"import one/two/three
+pub fn go() { three.go() }
+"#,
+        r#""use strict";
+
+import * as three from "../one/two/three.js";
+
+export function go() {
+  return three.go();
 }
 "#
     );
