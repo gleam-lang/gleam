@@ -9,12 +9,6 @@ unmaintained = "warn"
 yanked = "warn"
 notice = "warn"
 ignore = [
-    # https://rustsec.org/advisories/RUSTSEC-2020-0041.html
-    # sized-chunks: Multiple soundness issues in Chunk and InlineArray
-    "RUSTSEC-2020-0041", 
-    # https://rustsec.org/advisories/RUSTSEC-2020-0095.html
-    # difference is unmaintained
-    "RUSTSEC-2020-0095", 
     # https://rustsec.org/advisories/RUSTSEC-2020-0096.html
     # `TreeFocus` that unconditionally implements `Send` and `Sync`
     "RUSTSEC-2020-0096", 
@@ -46,9 +40,6 @@ allow = []
 deny = []
 skip = [
     { name = "ansi_term", version = "=0.11.0" },
-    { name = "cfg-if", version = "=0.1.10" },
-    { name = "pin-project", version = "=0.4.27" },
-    { name = "pin-project-internal", version = "=0.4.27" },
     { name = "rand_core", version = "=0.5.1" },
     { name = "strsim", version = "=0.8.0" },
 ]
