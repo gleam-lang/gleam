@@ -13,7 +13,7 @@ use pretty_assertions::assert_eq;
 
 const INDENT: isize = 2;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Printer {
     names: im::HashMap<usize, String>,
     uid: usize,
@@ -21,10 +21,7 @@ pub struct Printer {
 
 impl Printer {
     pub fn new() -> Self {
-        Self {
-            names: im::HashMap::new(),
-            uid: 0,
-        }
+        Default::default()
     }
 
     /// Render a Type as a well formatted string.

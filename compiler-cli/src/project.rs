@@ -62,7 +62,7 @@ pub fn collect_source(
                 .canonicalize()
                 .gleam_expect("project::collect_source(): path canonicalize"),
             source_base_path: src_dir.clone(),
-            origin: origin.clone(),
+            origin,
             src,
         })
     }

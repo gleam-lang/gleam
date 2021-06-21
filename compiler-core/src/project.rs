@@ -104,7 +104,7 @@ impl ModuleOrigin {
         }
     }
 
-    pub fn to_origin(&self) -> Origin {
+    pub fn to_origin(self) -> Origin {
         match self {
             Self::Test => Origin::Test,
             Self::Src | Self::Dependency => Origin::Src,

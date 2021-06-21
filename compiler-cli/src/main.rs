@@ -290,7 +290,9 @@ fn main() {
             let buffer_writer = cli::stderr_buffer_writer();
             let mut buffer = buffer_writer.buffer();
             error.pretty(&mut buffer);
-            buffer_writer.print(&buffer).unwrap();
+            buffer_writer
+                .print(&buffer)
+                .gleam_expect("Final result error writing");
             std::process::exit(1);
         }
     }
