@@ -17,7 +17,7 @@ impl Reporter {
 
 impl Telemetry for Reporter {
     fn compiling_package(&self, name: &str) {
-        print_compiling(&name);
+        print_compiling(name);
     }
 }
 

@@ -52,7 +52,7 @@ struct Intermediate<'a> {
     empty_lines: &'a [usize],
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
@@ -62,12 +62,7 @@ pub struct Formatter<'a> {
 
 impl<'comments> Formatter<'comments> {
     pub fn new() -> Self {
-        Self {
-            comments: &[],
-            doc_comments: &[],
-            module_comments: &[],
-            empty_lines: &[],
-        }
+        Default::default()
     }
 
     fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {

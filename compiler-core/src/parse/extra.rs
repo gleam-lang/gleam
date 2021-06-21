@@ -1,6 +1,6 @@
 use crate::{ast::SrcSpan, GleamExpect};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
     pub doc_comments: Vec<SrcSpan>,
@@ -10,12 +10,7 @@ pub struct ModuleExtra {
 
 impl ModuleExtra {
     pub fn new() -> Self {
-        ModuleExtra {
-            module_comments: vec![],
-            doc_comments: vec![],
-            comments: vec![],
-            empty_lines: vec![],
-        }
+Default::default()
     }
 }
 
