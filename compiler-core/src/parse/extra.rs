@@ -10,7 +10,7 @@ pub struct ModuleExtra {
 
 impl ModuleExtra {
     pub fn new() -> Self {
-Default::default()
+        Default::default()
     }
 }
 
