@@ -13,17 +13,24 @@ jobs:
     strategy:
       matrix:
         toolchain: [stable]
-        build: [linux-amd64, macos, windows]
+        build: [linux-amd64, linux-musl-amd64, macos, windows]
         include:
           - build: linux-amd64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use-cross: false
+          - build: linux-musl-amd64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
+            use-cross: false
           - build: windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
+            use-cross: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -41,6 +48,7 @@ jobs:
         with:
           command: build
           args: --release --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
 
       - name: Run linter
         uses: actions-rs/cargo@v1
@@ -53,6 +61,7 @@ jobs:
         with:
           command: test
           args: --workspace --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
 
       - name: Upload artifact (Ubuntu)
         if: matrix.build == 'linux-amd64'
@@ -60,24 +69,6 @@ jobs:
         with:
           name: gleam
           path: target/${{ matrix.target }}/release/gleam
-
-  test-musl:
-    runs-on: ubuntu-latest
-    container: clux/muslrust:stable
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Link to predefined musl toolchain
-        run: |
-          ln -s /root/.cargo $HOME/.cargo
-          ln -s /root/.rustup $HOME/.rustup
-
-      - name: Build binary
-        run: cargo build --release
-      
-      - name: Run tests
-        run: cargo test --workspace
 
   rustfmt:
     name: rustfmt
