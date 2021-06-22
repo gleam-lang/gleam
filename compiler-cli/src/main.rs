@@ -83,88 +83,76 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(StructOpt, Debug)]
 #[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
 enum Command {
-    #[structopt(
-        name = "build",
-        about = "Compile a project",
-        setting = AppSettings::Hidden,
-    )]
+    /// Compile a project
+    #[structopt(setting = AppSettings::Hidden)]
     Build {
-        #[structopt(help = "location of the project root", default_value = ".")]
+        /// Location of the project root
+        #[structopt(default_value = ".")]
         project_root: String,
-        #[structopt(
-            help = "Emit compile time warnings as errors",
-            long = "warnings-as-errors"
-        )]
+
+        /// Emit compile time warnings as errors
+        #[structopt(long)]
         warnings_as_errors: bool,
     },
 
-    #[structopt(name = "docs", about = "Render HTML documentation")]
+    /// Render HTML documentation
     Docs(Docs),
 
-    #[structopt(name = "new", about = "Create a new project")]
+    /// Create a new project
     New(NewOptions),
 
-    #[structopt(name = "format", about = "Format source code")]
+    /// Format source code
     Format {
-        #[structopt(help = "files to format", default_value = ".")]
+        /// Files to format
+        #[structopt(default_value = ".")]
         files: Vec<String>,
 
-        #[structopt(help = "read source from standard in", long = "stdin")]
+        /// Read source from STDIN
+        #[structopt(long)]
         stdin: bool,
 
-        #[structopt(
-            help = "check if inputs are formatted without changing them",
-            long = "check"
-        )]
+        /// Check if inputs are formatted without changing them
+        #[structopt(long)]
         check: bool,
     },
 
-    #[structopt(
-        name = "shell",
-        about = "Start an Erlang shell",
-        setting = AppSettings::Hidden,
-    )]
+    /// Start an erlang shell
+    #[structopt(setting = AppSettings::Hidden)]
     Shell {
-        #[structopt(help = "location of the project root", default_value = ".")]
+        /// Location of the project root
+        #[structopt(default_value = ".")]
         project_root: String,
     },
 
-    #[structopt(
-        name = "eunit",
-        about = "Run eunit tests",
-        setting = AppSettings::Hidden,
-    )]
+    /// Run eunit tests
+    #[structopt(setting = AppSettings::Hidden)]
     Eunit {
-        #[structopt(help = "location of the project root", default_value = ".")]
+        /// Location of the project root
+        #[structopt(default_value = ".")]
         project_root: String,
     },
 
-    #[structopt(
-        name = "compile-package",
-        about = "Compile a single Gleam package",
-        setting = AppSettings::Hidden,
-    )]
+    /// Compile a single Gleam package
+    #[structopt(setting = AppSettings::Hidden)]
     CompilePackage(CompilePackage),
 }
 
 #[derive(StructOpt, Debug, Clone)]
 #[structopt(flatten)]
 pub struct NewOptions {
-    #[structopt(help = "location of the project root")]
+    /// Location of the project root
     pub project_root: String,
 
-    #[structopt(long, help = "name of the project")]
+    /// Name of the project
+    #[structopt(long)]
     pub name: Option<String>,
 
-    #[structopt(
-        long = "description",
-        help = "description of the project",
-        default_value = "A Gleam project"
-    )]
+    /// Description of the project
+    #[structopt(long, default_value = "A Gleam project")]
     pub description: String,
 
     #[structopt(
-        long = "template",
+        long,
         possible_values = &new::Template::VARIANTS,
         case_insensitive = true,
         default_value = "lib"
@@ -175,27 +163,28 @@ pub struct NewOptions {
 #[derive(StructOpt, Debug)]
 #[structopt(flatten)]
 pub struct CompilePackage {
-    #[structopt(
-        help = "The compilation target for the generated project",
-        long = "target",
-        case_insensitive = true,
-        default_value = "erlang"
-    )]
+    /// The compilation target for the generated project
+    #[structopt(long, case_insensitive = true, default_value = "erlang")]
     target: Target,
 
-    #[structopt(help = "The name of the package being compiled", long = "name")]
+    /// The name of the package being compiler
+    #[structopt(long = "name")]
     package_name: String,
 
-    #[structopt(help = "A directory of source Gleam code", long = "src")]
+    /// A directory of source Gleam code
+    #[structopt(long = "src")]
     src_directory: PathBuf,
 
-    #[structopt(help = "A directory of test Gleam code", long = "test")]
+    /// A directory of test Gleam code
+    #[structopt(long = "test")]
     test_directory: Option<PathBuf>,
 
-    #[structopt(help = "A directory to write compiled code to", long = "out")]
+    /// A directory to write compiled code to
+    #[structopt(long = "out")]
     output_directory: PathBuf,
 
-    #[structopt(help = "A path to a compiled dependency library", long = "lib")]
+    /// A path to a compiled dependency library
+    #[structopt(long = "lib")]
     libraries: Vec<PathBuf>,
 }
 
@@ -213,33 +202,40 @@ impl CompilePackage {
 
 #[derive(StructOpt, Debug)]
 enum Docs {
-    #[structopt(name = "build", about = "Render HTML docs locally")]
+    /// Render HTML docs locally
     Build {
-        #[structopt(help = "location of the project root", default_value = ".")]
+        /// Location of the project root
+        #[structopt(default_value = ".")]
         project_root: String,
 
-        #[structopt(help = "the directory to write the docs to", long = "to")]
+        /// The directory to write the docs to
+        #[structopt(long)]
         to: Option<String>,
 
-        #[structopt(help = "the version to publish", long = "version")]
+        /// The version to publish
+        #[structopt(long)]
         version: String,
     },
 
-    #[structopt(name = "publish", about = "Publish HTML docs to HexDocs")]
+    /// Publish HTML docs to HexDocs
     Publish {
-        #[structopt(help = "location of the project root", default_value = ".")]
+        /// Location of the project root
+        #[structopt(default_value = ".")]
         project_root: String,
 
-        #[structopt(help = "the version to publish", long = "version")]
+        /// The version to publish
+        #[structopt(long)]
         version: String,
     },
 
-    #[structopt(name = "remove", about = "Remove HTML docs from HexDocs")]
+    /// Remove HTML docs from HexDocs
     Remove {
-        #[structopt(help = "the name of the package", long = "package")]
+        /// The name of the package
+        #[structopt(long)]
         package: String,
 
-        #[structopt(help = "the version of the docs to remove", long = "version")]
+        /// The version of the docs to remove
+        #[structopt(long)]
         version: String,
     },
 }
