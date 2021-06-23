@@ -85,7 +85,7 @@ the code in a way that makes the error impossible. If that cannot be done and
 the error is either common or due to a mistake by the user return an error
 value that will be printed with an appropriate helpful error message. If the
 error _should_ never happen and its occurrence indicates a fatal compiler bug
-the `.gleam_expect` method of the `GleamExpect` trait can be used. This is
+the `.expect` method of the `GleamExpect` trait can be used. This is
 similar to `.expect` but prints a more helpful error message to the user.
 
 The `GLEAM_LOG` environment variable can be used to cause the compiler to

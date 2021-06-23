@@ -432,10 +432,7 @@ impl<'module> Generator<'module> {
 
         // TODO: handle multiple subjects gracefully
         for clause in clauses {
-            let mut patterns = vec![clause
-                .pattern
-                .get(0)
-                .gleam_expect("JS clause pattern indexing")];
+            let mut patterns = vec![clause.pattern.get(0).expect("JS clause pattern indexing")];
 
             patterns.extend(clause.alternative_patterns.iter().flatten());
 

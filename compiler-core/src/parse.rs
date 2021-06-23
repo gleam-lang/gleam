@@ -61,7 +61,6 @@ use crate::ast::{
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     CAPTURE_VARIABLE,
 };
-use crate::error::fatal_compiler_bug;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
@@ -2420,7 +2419,7 @@ fn handle_op<A>(
                     if estack.is_empty() {
                         return Some(fin);
                     } else {
-                        fatal_compiler_bug("Expression not fully reduced.")
+                        panic!("Expression not fully reduced.")
                     }
                 } else {
                     return None;
@@ -2493,7 +2492,7 @@ fn do_reduce_expression(op: Spanned, estack: &mut Vec<UntypedExpr>) {
             let new_e = expr_op_reduction(op, el, er);
             estack.push(new_e);
         }
-        _ => fatal_compiler_bug("Tried to reduce without 2 expressions"),
+        _ => panic!("Tried to reduce without 2 expressions"),
     }
 }
 
@@ -2504,7 +2503,7 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
             let new_e = clause_guard_reduction(op, el, er);
             estack.push(new_e);
         }
-        _ => fatal_compiler_bug("Tried to reduce without 2 guards"),
+        _ => panic!("Tried to reduce without 2 guards"),
     }
 }
 
@@ -2529,7 +2528,7 @@ fn expr_op_reduction((start, token, _): Spanned, l: UntypedExpr, r: UntypedExpr)
             right: Box::new(r),
         }
     } else {
-        fatal_compiler_bug("Token could not be converted to binop.")
+        panic!("Token could not be converted to binop.")
     }
 }
 
@@ -2617,7 +2616,7 @@ fn clause_guard_reduction(
             right,
         },
 
-        _ => fatal_compiler_bug("Token could not be converted to Guard Op."),
+        _ => panic!("Token could not be converted to Guard Op."),
     }
 }
 

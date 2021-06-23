@@ -27,7 +27,6 @@ use crate::{
     },
     bit_string,
     build::Origin,
-    error::GleamExpect,
 };
 
 use std::cell::RefCell;
@@ -728,13 +727,13 @@ fn register_values<'a>(
         } => {
             let mut hydrator = hydrators
                 .remove(name)
-                .gleam_expect("Could not find hydrator for register_values custom type");
+                .expect("Could not find hydrator for register_values custom type");
             hydrator.disallow_new_type_variables();
 
             let typ = environment
                 .module_types
                 .get(name)
-                .gleam_expect("Type for custom type not found in register_values")
+                .expect("Type for custom type not found in register_values")
                 .typ
                 .clone();
 
@@ -846,7 +845,7 @@ fn generalise_statement(
             // Lookup the inferred function information
             let function = environment
                 .get_variable(&name)
-                .gleam_expect("Could not find preregistered type for function");
+                .expect("Could not find preregistered type for function");
             let field_map = function.field_map().cloned();
             let typ = function.type_.clone();
 
@@ -911,12 +910,12 @@ fn infer_statement(
         } => {
             let preregistered_fn = environment
                 .get_variable(&name)
-                .gleam_expect("Could not find preregistered type for function");
+                .expect("Could not find preregistered type for function");
             let field_map = preregistered_fn.field_map().cloned();
             let preregistered_type = preregistered_fn.type_.clone();
             let (args_types, return_type) = preregistered_type
                 .fn_types()
-                .gleam_expect("Preregistered type for fn was not a fn");
+                .expect("Preregistered type for fn was not a fn");
 
             // Infer the type using the preregistered args + return types as a starting point
             let (typ, args, body, safe_to_generalise) =
@@ -929,7 +928,7 @@ fn infer_statement(
                     let mut expr_typer = ExprTyper::new(environment);
                     expr_typer.hydrator = hydrators
                         .remove(&name)
-                        .gleam_expect("Could not find hydrator for fn");
+                        .expect("Could not find hydrator for fn");
                     let (args, body) =
                         expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
                     let args_types = args.iter().map(|a| a.type_.clone()).collect();
@@ -973,7 +972,7 @@ fn infer_statement(
                 return_annotation,
                 return_type: typ
                     .return_type()
-                    .gleam_expect("Could not find return type for fn"),
+                    .expect("Could not find return type for fn"),
                 body,
             })
         }
@@ -991,11 +990,11 @@ fn infer_statement(
         } => {
             let preregistered_fn = environment
                 .get_variable(&name)
-                .gleam_expect("Could not find preregistered type for function");
+                .expect("Could not find preregistered type for function");
             let preregistered_type = preregistered_fn.type_.clone();
             let (args_types, return_type) = preregistered_type
                 .fn_types()
-                .gleam_expect("Preregistered type for fn was not a fn");
+                .expect("Preregistered type for fn was not a fn");
             let args = args
                 .into_iter()
                 .zip(&args_types)
@@ -1025,7 +1024,7 @@ fn infer_statement(
         } => {
             let typ = environment
                 .get_type_constructor(&None, &alias)
-                .gleam_expect("Could not find existing type for type alias")
+                .expect("Could not find existing type for type alias")
                 .typ
                 .clone();
             Ok(Statement::TypeAlias {
@@ -1060,7 +1059,7 @@ fn infer_statement(
                      }| {
                         let preregistered_fn = environment
                             .get_variable(&name)
-                            .gleam_expect("Could not find preregistered type for function");
+                            .expect("Could not find preregistered type for function");
                         let preregistered_type = preregistered_fn.type_.clone();
 
                         let args = if let Some((args_types, _return_type)) =
@@ -1103,7 +1102,7 @@ fn infer_statement(
                 .collect();
             let typed_parameters = environment
                 .get_type_constructor(&None, &name)
-                .gleam_expect("Could not find preregistered type constructor ")
+                .expect("Could not find preregistered type constructor ")
                 .parameters
                 .clone();
 
@@ -1155,7 +1154,7 @@ fn infer_statement(
             let module_info = environment
                 .importable_modules
                 .get(&module.join("/"))
-                .gleam_expect(
+                .expect(
                     "Typer could not find a module being imported during inference.
 Missing modules should be detected prior to type checking",
                 );
@@ -1646,7 +1645,7 @@ pub fn register_import(
             let module_info = environment
                 .importable_modules
                 .get(&module.join("/"))
-                .gleam_expect(
+                .expect(
                     "Typer could not find a module being imported. 
 Missing modules should be detected prior to type checking",
                 );
@@ -1655,7 +1654,7 @@ Missing modules should be detected prior to type checking",
             let module_name = as_name
                 .as_ref()
                 .or_else(|| module.last())
-                .gleam_expect("Typer could not identify module name.")
+                .expect("Typer could not identify module name.")
                 .clone();
 
             // Insert unqualified imports into scope

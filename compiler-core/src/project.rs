@@ -6,7 +6,7 @@ use crate::{
     ast::{self, SrcSpan, Statement, TypedModule},
     build::Origin,
     parse::extra::{Comment, ModuleExtra},
-    type_, Error, GleamExpect, Result, Warning,
+    type_, Error, Result, Warning,
 };
 use source_tree::SourceTree;
 use std::{collections::HashMap, iter::Peekable, path::PathBuf};
@@ -80,7 +80,7 @@ fn comments_before<'a>(
         if start <= &byte {
             let comment = comment_spans
                 .next()
-                .gleam_expect("Comment before accessing next span");
+                .expect("Comment before accessing next span");
             comments.push(Comment::from((comment, src)).content)
         } else {
             break;
@@ -232,7 +232,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>> {
                 origin,
                 type_info: modules_type_infos
                     .remove(&name_string)
-                    .gleam_expect("project::compile(): Merging module type info"),
+                    .expect("project::compile(): Merging module type info"),
                 warnings,
                 module_extra,
             }

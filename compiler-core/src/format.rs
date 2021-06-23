@@ -8,7 +8,7 @@ use crate::{
     parse::extra::Comment,
     pretty::*,
     type_::{self, Type},
-    Error, GleamExpect, Result,
+    Error,  Result,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, sync::Arc};
@@ -100,7 +100,7 @@ impl<'comments> Formatter<'comments> {
         self.empty_lines = self
             .empty_lines
             .get(end..)
-            .gleam_expect("Pop empty lines slicing");
+            .expect("Pop empty lines slicing");
         end != 0
     }
 
@@ -881,9 +881,7 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 ..
             } => (fun, args),
-            _ => crate::error::fatal_compiler_bug(
-                "Function capture found not to have a function call body when formatting",
-            ),
+            _ => panic!("Function capture found not to have a function call body when formatting",),
         };
 
         let hole_in_first_position = matches!(
@@ -919,9 +917,7 @@ impl<'comments> Formatter<'comments> {
                 .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
 
             // The body of a capture being not a fn shouldn't be possible...
-            _ => crate::error::fatal_compiler_bug(
-                "Function capture body found not to be a call in the formatter",
-            ),
+            _ => panic!("Function capture body found not to be a call in the formatter",),
         }
     }
 
@@ -1572,11 +1568,11 @@ pub fn comments_before<'a>(
         .unwrap_or(comments.len());
     let popped = comments
         .get(0..end)
-        .gleam_expect("Comments before slicing popped")
+        .expect("Comments before slicing popped")
         .iter()
         .map(|c| c.content);
     (
         popped,
-        comments.get(end..).gleam_expect("Comments before slicing"),
+        comments.get(end..).expect("Comments before slicing"),
     )
 }

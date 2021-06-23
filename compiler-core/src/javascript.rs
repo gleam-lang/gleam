@@ -3,9 +3,7 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
-use crate::{
-    ast::*, docvec, error::GleamExpect, io::Utf8Writer, line_numbers::LineNumbers, pretty::*,
-};
+use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
 
 const INDENT: isize = 2;
@@ -153,7 +151,7 @@ impl<'a> Generator<'a> {
         let module_name = as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
             module
                 .last()
-                .gleam_expect("JavaScript generator could not identify imported module name.")
+                .expect("JavaScript generator could not identify imported module name.")
         });
         self.register_in_scope(module_name);
         let module_name = maybe_escape_identifier(module_name);

@@ -1,6 +1,6 @@
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
-    error::{Error, FileIoAction, FileKind, GleamExpect},
+    error::{Error, FileIoAction, FileKind},
     io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedWriter},
 };
 use ignore::DirEntry;
@@ -155,14 +155,14 @@ fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
             module = "[a-z][_a-z0-9]*",
             slash = "(/|\\\\)",
         ))
-        .gleam_expect("is_gleam_path() RE regex");
+        .expect("is_gleam_path() RE regex");
     }
 
     RE.is_match(
         path.strip_prefix(dir)
-            .gleam_expect("is_gleam_path(): strip_prefix")
+            .expect("is_gleam_path(): strip_prefix")
             .to_str()
-            .gleam_expect("is_gleam_path(): to_str"),
+            .expect("is_gleam_path(): to_str"),
     )
 }
 

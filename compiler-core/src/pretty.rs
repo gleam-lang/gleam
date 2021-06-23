@@ -16,7 +16,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::{io::Utf8Writer, GleamExpect, Result};
+use crate::{io::Utf8Writer, Result};
 
 #[macro_export]
 macro_rules! docvec {
@@ -300,7 +300,7 @@ impl<'a> Document<'a> {
     pub fn to_pretty_string(self, limit: isize) -> String {
         let mut buffer = String::new();
         self.pretty_print(limit, &mut buffer)
-            .gleam_expect("Writing to string buffer failed");
+            .expect("Writing to string buffer failed");
         buffer
     }
 

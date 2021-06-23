@@ -141,9 +141,9 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &ValueConstructorVariant,
     ) {
         match constructor {
-            ValueConstructorVariant::LocalVariable => crate::error::fatal_compiler_bug(
-                "Unexpected local variable value constructor in module interface",
-            ),
+            ValueConstructorVariant::LocalVariable => {
+                panic!("Unexpected local variable value constructor in module interface",)
+            }
 
             ValueConstructorVariant::ModuleConstant { literal } => {
                 self.build_constant(builder.init_module_constant(), literal)
@@ -331,9 +331,9 @@ impl<'a> ModuleEncoder<'a> {
             Type::Var { type_: typ } => match typ.borrow().deref() {
                 TypeVar::Link { type_: typ } => self.build_type(builder, typ),
                 TypeVar::Generic { id } => self.build_type_var(builder.init_var(), *id),
-                TypeVar::Unbound { .. } => crate::error::fatal_compiler_bug(
-                    "Unexpected unbound var when serialising module metadata",
-                ),
+                TypeVar::Unbound { .. } => {
+                    panic!("Unexpected unbound var when serialising module metadata",)
+                }
             },
         }
     }

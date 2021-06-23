@@ -53,9 +53,7 @@ impl<T> SegmentOptionCategories<'_, T> {
             Some(Utf16Codepoint { .. }) => crate::type_::utf_codepoint(),
             Some(Utf32Codepoint { .. }) => crate::type_::utf_codepoint(),
             None => crate::type_::int(),
-            _ => crate::error::fatal_compiler_bug(
-                "Tried to type a non type kind BitString segment option.",
-            ),
+            _ => panic!("Tried to type a non type kind BitString segment option.",),
         }
     }
 }

@@ -1,7 +1,4 @@
-use gleam_core::{
-    build::project_root::ProjectRoot,
-    error::{Error, GleamExpect},
-};
+use gleam_core::{build::project_root::ProjectRoot, error::Error};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -14,7 +11,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     let _ = super::new_build_main(config, root_path)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
-    ctrlc::set_handler(move || {}).gleam_expect("Error setting Ctrl-C handler");
+    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");

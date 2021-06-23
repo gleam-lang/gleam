@@ -31,7 +31,7 @@ use crate::{
     build::project_root::ProjectRoot,
     config::{self, PackageConfig},
     erl,
-    error::{Error, FileIoAction, FileKind, GleamExpect},
+    error::{Error, FileIoAction, FileKind},
     io::OutputFile,
     type_,
 };

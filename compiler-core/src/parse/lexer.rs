@@ -1,9 +1,6 @@
+use crate::ast::SrcSpan;
+use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
-use crate::{ast::SrcSpan, GleamExpect};
-use crate::{
-    error::fatal_compiler_bug,
-    parse::error::{LexicalError, LexicalErrorType},
-};
 use std::char;
 
 #[derive(Debug)]
@@ -460,13 +457,13 @@ where
         let start_pos = self.get_pos();
 
         while self.is_name_continuation() {
-            name.push(self.next_char().gleam_expect("lex_name continue"))
+            name.push(self.next_char().expect("lex_name continue"))
         }
 
         // Finish lexing the name and return an error if an uppercase letter is used
         if self.is_name_error_continuation() {
             while self.is_name_error_continuation() {
-                name.push(self.next_char().gleam_expect("lex_name error"))
+                name.push(self.next_char().expect("lex_name error"))
             }
             let end_pos = self.get_pos();
             if name.starts_with('_') {
@@ -504,13 +501,13 @@ where
         let start_pos = self.get_pos();
 
         while self.is_upname_continuation() {
-            name.push(self.next_char().gleam_expect("lex_upname upname"));
+            name.push(self.next_char().expect("lex_upname upname"));
         }
 
         // Finish lexing the upname and return an error if an underscore is used
         if self.is_name_error_continuation() {
             while self.is_name_error_continuation() {
-                name.push(self.next_char().gleam_expect("lex_upname name error"))
+                name.push(self.next_char().expect("lex_upname name error"))
             }
             let end_pos = self.get_pos();
             return Err(LexicalError {
@@ -605,14 +602,14 @@ where
         let mut value = String::new();
         // consume negative sign
         if self.chr0 == Some('-') {
-            value.push(self.next_char().gleam_expect("lex_normal_number negative"));
+            value.push(self.next_char().expect("lex_normal_number negative"));
         }
         // consume first run of digits
         value.push_str(&self.radix_run(10));
 
         // If float:
         if self.chr0 == Some('.') {
-            value.push(self.next_char().gleam_expect("lex_normal_number float"));
+            value.push(self.next_char().expect("lex_normal_number float"));
             value.push_str(&self.radix_run(10));
             let end_pos = self.get_pos();
             (start_pos, Token::Float { value }, end_pos)
@@ -646,7 +643,7 @@ where
         let take_char = Lexer::<T>::is_digit_of_radix(self.chr0, radix);
 
         if take_char {
-            Some(self.next_char().gleam_expect("take_number next char"))
+            Some(self.next_char().expect("take_number next char"))
         } else {
             None
         }
@@ -656,7 +653,7 @@ where
     fn is_digit_of_radix(c: Option<char>, radix: u32) -> bool {
         match radix {
             2 | 8 | 10 | 16 => c.filter(|c| c.is_digit(radix)).is_some(),
-            other => fatal_compiler_bug(&format!("Radix not implemented: {}", other)),
+            other => panic!("Radix not implemented: {}", other),
         }
     }
 
@@ -780,7 +777,7 @@ where
     // advance the stream and emit a token
     fn eat_single_char(&mut self, ty: Token) {
         let tok_start = self.get_pos();
-        let _ = self.next_char().gleam_expect("eat_single_char");
+        let _ = self.next_char().expect("eat_single_char");
         let tok_end = self.get_pos();
         self.emit((tok_start, ty, tok_end));
     }

@@ -6,7 +6,6 @@ use crate::{
     ast::{Statement, TypedStatement},
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
-    error::GleamExpect,
     format,
     io::OutputFile,
     pretty,
@@ -82,7 +81,7 @@ pub fn generate_html(
 
         files.push(OutputFile {
             path: output_dir.join(&page.path),
-            text: temp.render().gleam_expect("Page template rendering"),
+            text: temp.render().expect("Page template rendering"),
         });
     }
 
@@ -134,7 +133,7 @@ pub fn generate_html(
             path,
             text: template
                 .render()
-                .gleam_expect("Module documentation template rendering"),
+                .expect("Module documentation template rendering"),
         });
     }
 

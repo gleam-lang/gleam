@@ -34,7 +34,6 @@
 )]
 #![deny(
     clippy::await_holding_lock,
-    clippy::expect_used,
     clippy::if_let_mutex,
     clippy::indexing_slicing,
     clippy::mem_forget,
@@ -71,7 +70,7 @@ pub mod project;
 pub mod type_;
 pub mod warning;
 
-pub use error::{Error, GleamExpect, Result};
+pub use error::{Error, Result};
 pub use warning::Warning;
 
 mod schema_capnp {

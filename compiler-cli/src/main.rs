@@ -34,7 +34,6 @@
 )]
 #![deny(
     clippy::await_holding_lock,
-    clippy::expect_used,
     clippy::if_let_mutex,
     clippy::indexing_slicing,
     clippy::mem_forget,
@@ -59,11 +58,12 @@ mod eunit;
 mod format;
 mod fs;
 mod new;
+mod panic;
 mod project;
 mod shell;
 
 pub use gleam_core::{
-    error::{Error, GleamExpect, Result},
+    error::{Error, Result},
     warning::Warning,
 };
 
@@ -242,6 +242,7 @@ enum Docs {
 
 fn main() {
     initialise_logger();
+    panic::add_handler();
 
     let result = match Command::from_args() {
         Command::Build {
@@ -288,7 +289,7 @@ fn main() {
             error.pretty(&mut buffer);
             buffer_writer
                 .print(&buffer)
-                .gleam_expect("Final result error writing");
+                .expect("Final result error writing");
             std::process::exit(1);
         }
     }

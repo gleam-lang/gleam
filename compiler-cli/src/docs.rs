@@ -2,7 +2,7 @@ use crate::{cli, project};
 use bytes::Bytes;
 use gleam_core::{
     config::{DocsPage, PackageConfig},
-    error::{Error, GleamExpect},
+    error::Error,
     io::OutputFile,
     project::ModuleOrigin,
 };
@@ -14,8 +14,7 @@ static DOCS_DIR_NAME: &str = "docs";
 
 pub fn remove(package: String, version: String) -> Result<(), Error> {
     // Start event loop so we can run async functions to call the Hex API
-    let runtime =
-        tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Get login creds from user
     let username = cli::ask("https://hex.pm username")?;
@@ -85,8 +84,7 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
     let archive = crate::fs::create_tar_archive(outputs)?;
 
     // Start event loop so we can run async functions to call the Hex API
-    let runtime =
-        tokio::runtime::Runtime::new().gleam_expect("Unable to start Tokio async runtime");
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Get login creds from user
     let username = cli::ask("https://hex.pm username")?;
@@ -159,8 +157,8 @@ fn check_app_file_version_matches(
     app_src_path.push("src");
     app_src_path.push(format!("{}.app.src", &project_config.name));
 
-    let re = regex::Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}")
-        .gleam_expect("Could not compile vsn regex");
+    let re =
+        regex::Regex::new("\\{ *vsn *, *\"([^\"]*)\" *\\}").expect("Could not compile vsn regex");
 
     std::fs::read_to_string(&app_src_path)
         // Remove all new lines so we can regex easily across the content

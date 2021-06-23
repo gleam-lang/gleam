@@ -1,6 +1,6 @@
 use gleam_core::{
     erl,
-    error::{Error, FileIoAction, FileKind, GleamExpect, InvalidProjectNameReason},
+    error::{Error, FileIoAction, FileKind,  InvalidProjectNameReason},
     parse, Result,
 };
 use serde::{Deserialize, Serialize};
@@ -613,7 +613,7 @@ fn validate_name(name: &str) -> Result<(), Error> {
             reason: InvalidProjectNameReason::GleamReservedModule,
         })
     } else if !regex::Regex::new("^[a-z][a-z0-9_]*$")
-        .gleam_expect("new name regex could not be compiled")
+        .expect("new name regex could not be compiled")
         .is_match(name)
     {
         Err(Error::InvalidProjectName {
@@ -628,7 +628,7 @@ fn validate_name(name: &str) -> Result<(), Error> {
 fn get_foldername(path: &str) -> Result<String, Error> {
     match path {
         "." => env::current_dir()
-            .gleam_expect("invalid folder")
+            .expect("invalid folder")
             .file_name()
             .and_then(|x| x.to_str())
             .map(ToString::to_string)

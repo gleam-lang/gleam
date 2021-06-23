@@ -59,7 +59,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     ) -> Self {
         let prelude = importable_modules
             .get("gleam")
-            .gleam_expect("Unable to find prelude in importable modules");
+            .expect("Unable to find prelude in importable modules");
         Self {
             uid,
             level: 1,
@@ -108,7 +108,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         let unused = self
             .entity_usages
             .pop()
-            .gleam_expect("There was no top entity scope.");
+            .expect("There was no top entity scope.");
         self.handle_unused(unused);
         self.local_values = data.local_values;
     }
@@ -490,7 +490,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         match self
             .entity_usages
             .last_mut()
-            .gleam_expect("Attempted to access non-existant entity usages scope")
+            .expect("Attempted to access non-existant entity usages scope")
             .insert(name.to_string(), (kind, location, false))
         {
             // Private types can be shadowed by a constructor with the same name
@@ -538,7 +538,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         let unused = self
             .entity_usages
             .pop()
-            .gleam_expect("Expected a bottom level of entity usages.");
+            .expect("Expected a bottom level of entity usages.");
         self.handle_unused(unused);
     }
 

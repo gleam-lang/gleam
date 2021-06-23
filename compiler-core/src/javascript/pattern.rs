@@ -336,7 +336,7 @@ impl<'module, 'expression, 'a> Generator<'module, 'expression, 'a> {
                                 }
                             };
                             let label = fields.iter().find_map(find);
-                            self.push_string(label.gleam_expect("argument present in field map"));
+                            self.push_string(label.expect("argument present in field map"));
                         }
                     }
                     self.traverse_pattern(&arg.value)?;

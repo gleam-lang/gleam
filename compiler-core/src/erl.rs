@@ -8,7 +8,6 @@ mod tests;
 use crate::{
     ast::*,
     docvec,
-    error::GleamExpect,
     io::{OutputFile, Utf8Writer},
     line_numbers::LineNumbers,
     pretty::*,
@@ -47,7 +46,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     {
         let gen_dir = source_base_path
             .parent()
-            .gleam_expect("generate_erlang parent")
+            .expect("generate_erlang parent")
             .join(crate::project::OUTPUT_DIR_NAME)
             .join(origin.dir_name());
         let erl_module_name = name.join("@");
@@ -61,7 +60,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
 
         let mut text = String::new();
         let line_numbers = LineNumbers::new(src);
-        module(ast, &line_numbers, &mut text).gleam_expect("Buffer writing failed");
+        module(ast, &line_numbers, &mut text).expect("Buffer writing failed");
         files.push(OutputFile {
             path: gen_dir.join(format!("{}.erl", erl_module_name)),
             text,
@@ -117,7 +116,7 @@ impl<'env> Env<'env> {
             Some(n) => {
                 use std::fmt::Write;
                 let mut name = variable_name(name);
-                write!(name, "@{}", n).gleam_expect("pushing number suffix to name");
+                write!(name, "@{}", n).expect("pushing number suffix to name");
                 Document::String(name)
             }
         }
@@ -507,7 +506,7 @@ fn atom<'a>(value: String) -> Document<'a> {
 fn escape_atom(value: String) -> String {
     use regex::Regex;
     lazy_static! {
-        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").gleam_expect("atom RE regex");
+        static ref RE: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
     }
 
     if is_erlang_reserved_word(&value) {
@@ -1008,9 +1007,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                 env.erl_function_scope_vars = erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns
-                        .get(0)
-                        .gleam_expect("Single pattern clause printing");
+                    let p = patterns.get(0).expect("Single pattern clause printing");
                     pattern(p, env)
                 } else {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
@@ -1155,7 +1152,7 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
             .get(0)
-            .gleam_expect("erl case printing of single subject");
+            .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
         tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
@@ -1253,7 +1250,7 @@ fn docs_args_call<'a>(
                 }
                 docs_args_call(fun, merged_args, env)
             } else {
-                crate::error::fatal_compiler_bug("Erl printing: Capture was not a call")
+                panic!("Erl printing: Capture was not a call")
             }
         }
 
@@ -1556,18 +1553,16 @@ fn variable_name(name: &str) -> String {
 fn id_to_type_var(id: usize) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
-        name.push(std::char::from_u32((id % 26 + 65) as u32).gleam_expect("id_to_type_var 0"));
+        name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }
     let mut name = vec![];
     let mut last_char = id;
     while last_char >= 26 {
-        name.push(
-            std::char::from_u32((last_char % 26 + 65) as u32).gleam_expect("id_to_type_var 1"),
-        );
+        name.push(std::char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
         last_char /= 26;
     }
-    name.push(std::char::from_u32((last_char % 26 + 64) as u32).gleam_expect("id_to_type_var 2"));
+    name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
     Document::String(name.into_iter().collect::<String>())
 }
@@ -1837,19 +1832,19 @@ impl<'a> TypePrinter<'a> {
             "Float" => "float()".to_doc(),
             "BitString" => "bitstring()".to_doc(),
             "List" => {
-                let arg0 = self.print(args.get(0).gleam_expect("print_prelude_type list"));
+                let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
             "Result" => {
-                let arg_ok = self.print(args.get(0).gleam_expect("print_prelude_type result ok"));
-                let arg_err = self.print(args.get(1).gleam_expect("print_prelude_type result err"));
+                let arg_ok = self.print(args.get(0).expect("print_prelude_type result ok"));
+                let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
                 let ok = tuple(vec!["ok".to_doc(), arg_ok].into_iter());
                 let error = tuple(vec!["error".to_doc(), arg_err].into_iter());
                 docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
             // compiler error
-            name => crate::error::fatal_compiler_bug(&format!("{} is not a built-in type.", name)),
+            name => panic!("{} is not a built-in type.", name),
         }
     }
 

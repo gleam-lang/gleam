@@ -17,61 +17,6 @@ use termcolor::Buffer;
 pub type Src = String;
 pub type Name = String;
 
-// TODO: panic handler
-// pub fn fatal_compiler_bug(msg: &str) -> ! {
-//     panic!(msg)
-//     let buffer_writer = cli::stderr_buffer_writer();
-//     let mut buffer = buffer_writer.buffer();
-//     use std::io::Write;
-//     use termcolor::{Color, ColorSpec, WriteColor};
-//     buffer
-//         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
-//         .unwrap();
-//     write!(buffer, "error").unwrap();
-//     buffer.set_color(ColorSpec::new().set_bold(true)).unwrap();
-//     write!(buffer, ": Fatal compiler bug!\n\n").unwrap();
-//     buffer.set_color(&ColorSpec::new()).unwrap();
-//     writeln!(
-//         buffer,
-//         "This is a bug in the Gleam compiler, sorry!
-
-// Please report this crash to https://github.com/gleam-lang/gleam/issues/new
-// with this information and the code that produces the crash:
-
-// {}",
-//         msg
-//     )
-//     .unwrap();
-//     buffer_writer.print(&buffer).unwrap();
-//     std::process::exit(1);
-// }
-
-pub fn fatal_compiler_bug(msg: &str) -> ! {
-    panic!("{}", msg)
-}
-
-pub trait GleamExpect<T> {
-    fn gleam_expect(self, msg: &str) -> T;
-}
-
-impl<T> GleamExpect<T> for Option<T> {
-    fn gleam_expect(self, msg: &str) -> T {
-        match self {
-            None => fatal_compiler_bug(msg),
-            Some(x) => x,
-        }
-    }
-}
-
-impl<T, E: Debug> GleamExpect<T> for Result<T, E> {
-    fn gleam_expect(self, msg: &str) -> T {
-        match self {
-            Err(e) => fatal_compiler_bug(&format!("{}\n\n{:?}", msg, e)),
-            Ok(x) => x,
-        }
-    }
-}
-
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
 #[derive(Debug, PartialEq)]

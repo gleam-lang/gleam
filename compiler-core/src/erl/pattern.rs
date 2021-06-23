@@ -86,7 +86,7 @@ fn pattern_segment<'a>(
         | Pattern::Float { .. } => to_doc(value, vars, env),
 
         // No other pattern variants are allowed in pattern bit string segments
-        _ => crate::error::fatal_compiler_bug("Pattern segment match not recognised"),
+        _ => panic!("Pattern segment match not recognised"),
     };
 
     let size = |value: &'a TypedPattern, env: &mut Env<'a>| {

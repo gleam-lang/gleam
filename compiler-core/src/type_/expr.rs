@@ -1417,7 +1417,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                                 .map_err(|e| convert_unify_error(e, value.location()))?;
 
                             match field_map.fields.get(label) {
-                                None => crate::error::fatal_compiler_bug(
+                                None => panic!(
                                     "Failed to lookup record field after successfully inferring that field",
                                 ),
                                 Some(p) => Ok(TypedRecordUpdateArg {
@@ -1653,7 +1653,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                             .environment
                             .imported_modules
                             .get(module_name)
-                            .gleam_expect("Failed to find previously located module import")
+                            .expect("Failed to find previously located module import")
                             .name
                             .clone(),
                         typ: constructor.type_.clone(),

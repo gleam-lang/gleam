@@ -6,7 +6,7 @@ use crate::{
     error,
     io::{FileSystemIO, FileSystemReader, FileSystemWriter},
     metadata::ModuleEncoder,
-    type_, Error, GleamExpect, Result, Warning,
+    type_, Error, Result, Warning,
 };
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fmt::write};
@@ -190,7 +190,7 @@ fn type_check(
             package,
         } = parsed_modules
             .remove(&name)
-            .gleam_expect("Getting parsed module for name");
+            .expect("Getting parsed module for name");
 
         tracing::trace!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
@@ -303,7 +303,7 @@ fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // my/module.gleam
     let mut module_path = full_module_path
         .strip_prefix(package_path)
-        .gleam_expect("Stripping package prefix from module path")
+        .expect("Stripping package prefix from module path")
         .to_path_buf();
 
     // my/module
@@ -312,7 +312,7 @@ fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // Stringify
     let name = module_path
         .to_str()
-        .gleam_expect("Module name path to str")
+        .expect("Module name path to str")
         .to_string();
 
     // normalise windows paths

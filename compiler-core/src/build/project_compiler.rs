@@ -8,7 +8,7 @@ use crate::{
     codegen,
     config::PackageConfig,
     io::{FileSystemIO, FileSystemWriter},
-    type_, warning, Error, GleamExpect, Warning,
+    type_, warning, Error, Warning,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -60,10 +60,7 @@ where
 
         // Read and type check deps packages
         for name in sequence {
-            let config = self
-                .configs
-                .remove(&name)
-                .gleam_expect("Missing package config");
+            let config = self.configs.remove(&name).expect("Missing package config");
             self.compile_package(name, config, SourceLocations::Src)?;
         }
 

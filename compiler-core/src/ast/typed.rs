@@ -1,8 +1,5 @@
 use super::*;
-use crate::{
-    type_::{HasType, Type},
-    GleamExpect,
-};
+use crate::type_::{HasType, Type};
 
 use lazy_static::lazy_static;
 
@@ -152,7 +149,7 @@ impl TypedExpr {
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
         lazy_static! {
-            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").gleam_expect("NON_ZERO regex");
+            static ref NON_ZERO: Regex = Regex::new(r"[1-9]").expect("NON_ZERO regex");
         }
 
         matches!(

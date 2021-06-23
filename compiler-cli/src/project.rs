@@ -1,6 +1,6 @@
 use gleam_core::{
     config::PackageConfig,
-    error::{Error, FileIoAction, FileKind, GleamExpect},
+    error::{Error, FileIoAction, FileKind},
     project::{Analysed, Input, ModuleOrigin},
 };
 use std::path::{Path, PathBuf};
@@ -60,7 +60,7 @@ pub fn collect_source(
         srcs.push(Input {
             path: path
                 .canonicalize()
-                .gleam_expect("project::collect_source(): path canonicalize"),
+                .expect("project::collect_source(): path canonicalize"),
             source_base_path: src_dir.clone(),
             origin,
             src,

@@ -1,4 +1,4 @@
-use crate::{ast::SrcSpan, GleamExpect};
+use crate::ast::SrcSpan;
 
 #[derive(Debug, PartialEq, Default)]
 pub struct ModuleExtra {
@@ -27,7 +27,7 @@ impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
             content: src
                 .1
                 .get(src.0.start..src.0.end)
-                .gleam_expect("From span to comment"),
+                .expect("From span to comment"),
         }
     }
 }

@@ -280,7 +280,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Some(args) => {
                     let typ = args
                         .get(0)
-                        .gleam_expect("Failed to get type argument of List")
+                        .expect("Failed to get type argument of List")
                         .clone();
                     let elements = elements
                         .into_iter()
@@ -437,9 +437,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     }
                     ValueConstructorVariant::LocalVariable
                     | ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::ModuleFn { .. } => crate::error::fatal_compiler_bug(
-                        "Unexpected value constructor type for a constructor pattern.",
-                    ),
+                    | ValueConstructorVariant::ModuleFn { .. } => {
+                        panic!("Unexpected value constructor type for a constructor pattern.",)
+                    }
                 };
 
                 let instantiated_constructor_type = self.environment.instantiate(
@@ -514,9 +514,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         }
                     }
 
-                    _ => crate::error::fatal_compiler_bug(
-                        "Unexpected constructor type for a constructor pattern.",
-                    ),
+                    _ => panic!("Unexpected constructor type for a constructor pattern.",),
                 }
             }
         }

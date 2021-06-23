@@ -1,4 +1,3 @@
-use crate::error::GleamExpect;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
@@ -33,7 +32,7 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
     }
 
     for (value, deps) in inputs {
-        let &from_index = indexes.get(&value).gleam_expect("Finding index for value");
+        let &from_index = indexes.get(&value).expect("Finding index for value");
         for &to_index in deps.into_iter().filter_map(|dep| indexes.get(&dep)) {
             let _ = graph.add_edge(from_index, to_index, ());
         }
@@ -44,7 +43,7 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
 
         Ok(seq) => Ok(seq
             .into_iter()
-            .map(|i| values.remove(&i).gleam_expect("Finding value for index"))
+            .map(|i| values.remove(&i).expect("Finding value for index"))
             .rev()
             .collect()),
     }
@@ -63,7 +62,7 @@ fn import_cycle(
         .map(|index| {
             values
                 .remove(index)
-                .gleam_expect("dep_tree::import_cycle(): cannot find values for index")
+                .expect("dep_tree::import_cycle(): cannot find values for index")
         })
         .collect()
 }

@@ -1,4 +1,3 @@
-use crate::GleamExpect;
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
 use codespan_reporting::{diagnostic::Label, files::SimpleFile, term::emit};
 use termcolor::Buffer;
@@ -59,7 +58,7 @@ pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severit
         .with_labels(labels);
 
     let config = codespan_reporting::term::Config::default();
-    emit(&mut buffer, &config, &file, &diagnostic).gleam_expect("write_diagnostic");
+    emit(&mut buffer, &config, &file, &diagnostic).expect("write_diagnostic");
 }
 
 /// Describes an error encountered while compiling the project (eg. a name collision
@@ -76,23 +75,19 @@ pub fn write_title(buffer: &mut Buffer, title: &str) {
     use termcolor::{Color, ColorSpec, WriteColor};
     buffer
         .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
-        .gleam_expect("write_title");
-    write!(buffer, "error").gleam_expect("write_title");
+        .expect("write_title");
+    write!(buffer, "error").expect("write_title");
     buffer
         .set_color(ColorSpec::new().set_bold(true))
-        .gleam_expect("write_title");
-    write!(buffer, ": {}\n\n", title).gleam_expect("write_title");
-    buffer
-        .set_color(&ColorSpec::new())
-        .gleam_expect("write_title");
+        .expect("write_title");
+    write!(buffer, ": {}\n\n", title).expect("write_title");
+    buffer.set_color(&ColorSpec::new()).expect("write_title");
 }
 
 pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
     use std::io::Write;
     use termcolor::{ColorSpec, WriteColor};
     write_title(buffer, &d.title);
-    buffer
-        .set_color(&ColorSpec::new())
-        .gleam_expect("write_project");
-    writeln!(buffer, "{}", d.label).gleam_expect("write_project");
+    buffer.set_color(&ColorSpec::new()).expect("write_project");
+    writeln!(buffer, "{}", d.label).expect("write_project");
 }

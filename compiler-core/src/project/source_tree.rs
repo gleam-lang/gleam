@@ -1,4 +1,4 @@
-use super::{GleamExpect, Input, Module, ModuleOrigin};
+use super::{ Input, Module, ModuleOrigin};
 use crate::error::Error;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};
@@ -27,7 +27,7 @@ impl SourceTree {
             .map(move |i| {
                 self.modules
                     .remove(&i)
-                    .gleam_expect("SourceTree.consume(): Unknown graph index")
+                    .expect("SourceTree.consume(): Unknown graph index")
             });
         Ok(iter)
     }
@@ -41,7 +41,7 @@ impl SourceTree {
             .map(|index| {
                 self.modules
                     .remove(index)
-                    .gleam_expect("SourceTree.import_cycle(): cannot find module for index")
+                    .expect("SourceTree.import_cycle(): cannot find module for index")
                     .module
                     .name
                     .join("/")
@@ -80,12 +80,13 @@ impl SourceTree {
             let src = module.src.clone();
             let path = module.path.clone();
             let deps = module.module.dependencies();
-            let &module_index = self.indexes.get(&module_name).gleam_expect(
+            let &module_index = self.indexes.get(&module_name).expect(
                 "SourceTree.calculate_dependencies(): Unable to find module index for name",
             );
-            let module = self.modules.get(&module_index).gleam_expect(
-                "SourceTree.calculate_dependencies(): Unable to find module for index",
-            );
+            let module = self
+                .modules
+                .get(&module_index)
+                .expect("SourceTree.calculate_dependencies(): Unable to find module for index");
 
             for (dep, location) in deps {
                 if dep == "gleam" {
@@ -108,7 +109,7 @@ impl SourceTree {
                     && self
                         .modules
                         .get(&dep_index)
-                        .gleam_expect("SourceTree.calculate_dependencies(): Unable to find module for dep index")
+                        .expect("SourceTree.calculate_dependencies(): Unable to find module for dep index")
                         .origin
                         == ModuleOrigin::Test
                 {
@@ -132,12 +133,12 @@ impl SourceTree {
         let name = input
             .path
             .strip_prefix(&input.source_base_path)
-            .gleam_expect("Source tree strip prefix")
+            .expect("Source tree strip prefix")
             .parent()
-            .gleam_expect("Source tree parent")
-            .join(input.path.file_stem().gleam_expect("Source tree file stem"))
+            .expect("Source tree parent")
+            .join(input.path.file_stem().expect("Source tree file stem"))
             .to_str()
-            .gleam_expect("Source tree to_str")
+            .expect("Source tree to_str")
             .to_string()
             .replace("\\", "/");
 
