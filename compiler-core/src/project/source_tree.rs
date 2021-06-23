@@ -1,4 +1,4 @@
-use super::{ Input, Module, ModuleOrigin};
+use super::{Input, Module, ModuleOrigin};
 use crate::error::Error;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
 use std::collections::{HashMap, HashSet};

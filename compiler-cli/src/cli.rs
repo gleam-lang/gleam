@@ -1,7 +1,6 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
-    
 };
 use std::io::Write;
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
@@ -63,9 +62,7 @@ pub fn print_green_prefix(prefix: &str, text: &str) {
         .set_color(&ColorSpec::new())
         .expect("print_green_prefix");
     writeln!(buffer, " {}", text).expect("print_green_prefix");
-    buffer_writer
-        .print(&buffer)
-        .expect("print_green_prefix");
+    buffer_writer.print(&buffer).expect("print_green_prefix");
 }
 
 pub fn stderr_buffer_writer() -> BufferWriter {

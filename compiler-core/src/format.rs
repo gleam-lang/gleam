@@ -8,7 +8,7 @@ use crate::{
     parse::extra::Comment,
     pretty::*,
     type_::{self, Type},
-    Error,  Result,
+    Error, Result,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, sync::Arc};

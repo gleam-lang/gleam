@@ -1,6 +1,6 @@
 use gleam_core::{
     erl,
-    error::{Error, FileIoAction, FileKind,  InvalidProjectNameReason},
+    error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
     parse, Result,
 };
 use serde::{Deserialize, Serialize};
