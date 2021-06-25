@@ -2,4 +2,5 @@
 members = [
   "compiler-cli",
   "compiler-core",
+  "compiler-wasm",
 ]

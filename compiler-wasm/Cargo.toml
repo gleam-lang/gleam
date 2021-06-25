@@ -1,0 +1,14 @@
+[package]
+name = "gleam-wasm"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+# This package compiles to wasm
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.2"
