@@ -550,8 +550,9 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.1.0"
+version = "0.17.0-dev"
 dependencies = [
+ "gleam-core",
  "wasm-bindgen",
  "wasm-bindgen-test",
 ]
