@@ -82,6 +82,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Matthew Cheely](https://github.com/MattCheely)
  - [Memo](https://sendmemo.app)
  - [Michael Jones](https://github.com/michaeljones)
+ - [Michael Kumm](https://github.com/mkumm)
  - [Mike Roach](https://github.com/mroach)
  - [Milad](https://github.com/slashmili)
  - [Nick Reynolds](https://github.com/ndreynolds)
