@@ -1,3 +1,5 @@
+pub mod memory;
+
 use crate::error::{Error, FileIoAction, FileKind, Result};
 use std::{
     fmt::Debug,
@@ -60,21 +62,21 @@ pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
 /// Typically we use an implementation that writes to the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
-    fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter<'a>, Error>;
+    fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error>;
 }
 
 // TODO: Remove this when the Rust compiler stops incorrectly suggesting this
 // could be derived. It can't because Write doesn't implement Debug
 #[allow(missing_debug_implementations)]
 /// A wrapper around a Write implementing object that has Gleam's error handling.
-pub struct WrappedWriter<'a> {
-    path: &'a Path,
+pub struct WrappedWriter {
+    path: PathBuf,
     inner: Box<dyn std::io::Write>,
 }
 
-impl Writer for WrappedWriter<'_> {}
+impl Writer for WrappedWriter {}
 
-impl Utf8Writer for WrappedWriter<'_> {
+impl Utf8Writer for WrappedWriter {
     fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<T> {
         result.map_err(|error| Error::FileIo {
             action: FileIoAction::WriteTo,
@@ -85,18 +87,21 @@ impl Utf8Writer for WrappedWriter<'_> {
     }
 }
 
-impl<'a> WrappedWriter<'a> {
-    pub fn new(path: &'a Path, inner: Box<dyn std::io::Write>) -> Self {
-        Self { path, inner }
+impl WrappedWriter {
+    pub fn new(path: &Path, inner: Box<dyn std::io::Write>) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            inner,
+        }
     }
 
-    pub fn write(&'a mut self, bytes: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let result = self.inner.write(bytes);
         self.wrap_result(result)
     }
 }
 
-impl<'a> std::io::Write for WrappedWriter<'a> {
+impl<'a> std::io::Write for WrappedWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.inner.write(buf)
     }
@@ -106,7 +111,7 @@ impl<'a> std::io::Write for WrappedWriter<'a> {
     }
 }
 
-impl<'a> std::fmt::Write for WrappedWriter<'a> {
+impl<'a> std::fmt::Write for WrappedWriter {
     fn write_str(&mut self, s: &str) -> std::fmt::Result {
         self.inner
             .write(s.as_bytes())
@@ -150,7 +155,7 @@ pub mod test {
     }
 
     impl FileSystemWriter for FilesChannel {
-        fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter<'a>, Error> {
+        fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error> {
             let file = InMemoryFile::new();
             let _ = self.0.send((path.to_path_buf(), file.clone()));
             Ok(WrappedWriter::new(path, Box::new(file)))
