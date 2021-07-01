@@ -62,7 +62,7 @@ pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
 /// Typically we use an implementation that writes to the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
-    fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error>;
+    fn open(&self, path: &Path) -> Result<WrappedWriter, Error>;
 }
 
 // TODO: Remove this when the Rust compiler stops incorrectly suggesting this
