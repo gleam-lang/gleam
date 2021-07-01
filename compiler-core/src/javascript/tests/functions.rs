@@ -373,8 +373,8 @@ pub fn export() {
 "#,
         r#""use strict";
 
-import * as for$ from "../for.js";
-const { class$ } = for$;
+import * as For from "../for.js";
+const { class$ } = For;
 
 export function export$() {
   return class$();
@@ -400,11 +400,11 @@ pub fn export() {
 "#,
         r#""use strict";
 
-import * as function$ from "../for.js";
-const { class$: while$ } = function$;
+import * as Function from "../for.js";
+const { class$: while$ } = Function;
 
 export function export$() {
-  let delete$ = function$.class$;
+  let delete$ = Function.class$;
   return while$();
 }
 "#
