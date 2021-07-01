@@ -6,6 +6,8 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
+- JavaScript modules are imported using a camel case variable name to avoid name
+  collisions with variables.
 
 ## v0.16.1 - 2021-06-21
 
