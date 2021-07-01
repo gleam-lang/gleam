@@ -64,7 +64,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two" };
@@ -87,7 +87,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two" };
@@ -107,7 +107,7 @@ export function main() {
 // }"#,
 //         r#""use strict";
 //
-// import * as other from "../other.js";
+// import * as Other from "../other.js";
 // const { Two as Three } = other;
 //
 // export function main() {
@@ -132,7 +132,7 @@ const x = other.Two
 
 const x = { type: "Two" };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -152,7 +152,7 @@ const a = Two
 
 const a = { type: "Two" };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -169,7 +169,7 @@ import * as other from "../other.js";
 
 // const a = { type: "Two" };
 
-// import * as other from "../other.js";
+// import * as Other from "../other.js";
 // const { Two as Three } = other;
 // "#
 //     );
@@ -395,7 +395,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", 0: 1 };
@@ -418,7 +418,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -441,7 +441,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -464,7 +464,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", a: 1, b: 2, c: 3 };
@@ -487,7 +487,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", 0: 1 };
@@ -510,7 +510,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -533,7 +533,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -556,7 +556,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", a: 1, b: 2, c: 3 };
@@ -579,7 +579,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return (var0, var1, var2) => {
@@ -604,7 +604,7 @@ pub fn main() {
 }"#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main() {
   return (var0, var1, var2) => {
@@ -630,7 +630,7 @@ pub const main = other.Two(1)
 
 export const main = { type: "Two", 0: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -650,7 +650,7 @@ pub const main = other.Two(1)
 
 export const main = { type: "Two", field: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -670,7 +670,7 @@ pub const main = other.Two(field: 1)
 
 export const main = { type: "Two", field: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -690,7 +690,7 @@ pub const main = other.Two(b: 2, c: 3, a: 1)
 
 export const main = { type: "Two", a: 1, b: 2, c: 3 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -710,7 +710,7 @@ pub const main = Two(1)
 
 export const main = { type: "Two", 0: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -730,7 +730,7 @@ pub const main = Two(1)
 
 export const main = { type: "Two", field: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -750,7 +750,7 @@ pub const main = Two(field: 1)
 
 export const main = { type: "Two", field: 1 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -770,7 +770,7 @@ pub const main = Two(b: 2, c: 3, a: 1)
 
 export const main = { type: "Two", a: 1, b: 2, c: 3 };
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 "#
     );
 }
@@ -795,7 +795,7 @@ pub fn main(x) {
 "#,
         r#""use strict";
 
-import * as other from "../other.js";
+import * as Other from "../other.js";
 
 export function main(x) {
   if (x.type === "Two" && x.a === 1) {

@@ -4,6 +4,7 @@ mod pattern;
 mod tests;
 
 use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
+use heck::CamelCase;
 use itertools::Itertools;
 
 const INDENT: isize = 2;
@@ -148,16 +149,19 @@ impl<'a> Generator<'a> {
         as_name: &'a Option<String>,
         unqualified: &'a [UnqualifiedImport],
     ) -> Document<'a> {
-        let module_name = as_name.as_ref().map(|n| n.as_str()).unwrap_or_else(|| {
-            module
-                .last()
-                .expect("JavaScript generator could not identify imported module name.")
-        });
-        self.register_in_scope(module_name);
-        let module_name = maybe_escape_identifier(module_name);
+        let module_name = as_name
+            .as_ref()
+            .map(|n| n.as_str())
+            .unwrap_or_else(|| {
+                module
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name.")
+            })
+            .to_camel_case();
+        self.register_in_scope(module_name.as_str());
         let path: Document<'a> = self.import_path(package, module);
-
-        let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
+        let module_name_doc = Document::String(module_name.clone());
+        let import_line = docvec!["import * as ", module_name_doc.clone(), " from ", path, ";"];
         let mut any_unqualified_values = false;
         let matches = unqualified
             .iter()
@@ -188,7 +192,7 @@ impl<'a> Generator<'a> {
                 "const ",
                 matches,
                 " = ",
-                module_name,
+                module_name_doc,
                 ";"
             ]
         } else {
