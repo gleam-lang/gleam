@@ -46,7 +46,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
 }
 
 impl FileSystemWriter for FileSystemAccessor {
-    fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error> {
+    fn open(&self, path: &Path) -> Result<WrappedWriter, Error> {
         tracing::trace!("Writing file {:?}", path);
 
         let dir_path = path.parent().ok_or_else(|| Error::FileIo {
