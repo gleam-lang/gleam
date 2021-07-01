@@ -1,11 +1,6 @@
 use super::*;
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-#[derive(Clone, Default, Debug, PartialEq)]
-pub struct InMemoryFileSystem {
-    files: Rc<RefCell<HashMap<PathBuf, InMemoryFile>>>,
-}
-
 // An in memory sharable collection of pretend files that can be used in place
 // of a real file system. It is a shared reference to a set of buffer than can
 // be cheaply cloned, all resulting copies pointing to the same internal
@@ -19,6 +14,11 @@ pub struct InMemoryFileSystem {
 // Only supports absolute paths. For now. In future we could have a explicit
 // current directory, or say that the current directory is always the root.
 //
+#[derive(Clone, Default, Debug, PartialEq)]
+pub struct InMemoryFileSystem {
+    files: Rc<RefCell<HashMap<PathBuf, InMemoryFile>>>,
+}
+
 impl InMemoryFileSystem {
     pub fn new() -> Self {
         Self::default()
