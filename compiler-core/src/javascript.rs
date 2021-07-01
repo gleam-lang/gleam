@@ -160,8 +160,8 @@ impl<'a> Generator<'a> {
             .to_camel_case();
         self.register_in_scope(module_name.as_str());
         let path: Document<'a> = self.import_path(package, module);
-        let module_name_doc = Document::String(module_name.clone());
-        let import_line = docvec!["import * as ", module_name_doc.clone(), " from ", path, ";"];
+        let module_name = Document::String(module_name);
+        let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
         let mut any_unqualified_values = false;
         let matches = unqualified
             .iter()
@@ -192,7 +192,7 @@ impl<'a> Generator<'a> {
                 "const ",
                 matches,
                 " = ",
-                module_name_doc,
+                module_name,
                 ";"
             ]
         } else {
