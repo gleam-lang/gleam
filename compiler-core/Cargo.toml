@@ -35,6 +35,8 @@ strum = { version = "0.20.0", features = ["derive"] }
 askama = "0.10.5"
 # Markdown parsing
 pulldown-cmark = "0.8.0"
+# Non-empty vectors
+vec1 = "1.8.0"
 
 [build-dependencies]
 # Data (de)serialisation

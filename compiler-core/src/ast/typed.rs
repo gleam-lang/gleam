@@ -2,6 +2,7 @@ use super::*;
 use crate::type_::{HasType, Type};
 
 use lazy_static::lazy_static;
+use vec1::Vec1;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
@@ -63,6 +64,10 @@ pub enum TypedExpr {
         name: BinOp,
         left: Box<Self>,
         right: Box<Self>,
+    },
+
+    Pipeline {
+        expressions: Vec1<Self>,
     },
 
     PipeLast {
@@ -161,6 +166,7 @@ impl TypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Try { then, .. } => then.location(),
+            Self::Pipeline { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
@@ -199,6 +205,7 @@ impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
             Self::Var { constructor, .. } => constructor.type_.clone(),
+            Self::Pipeline { expressions, .. } => expressions.last().type_(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),

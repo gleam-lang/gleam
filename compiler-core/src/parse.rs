@@ -67,6 +67,7 @@ use lexer::{LexResult, Spanned};
 use std::cmp::Ordering;
 use std::str::FromStr;
 use token::Token;
+use vec1::vec1;
 #[cfg(test)]
 mod tests;
 
@@ -2509,14 +2510,13 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
 
 fn expr_op_reduction((start, token, _): Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
     if token == Token::Pipe {
-        UntypedExpr::Pipe {
-            location: SrcSpan {
-                start,
-                end: r.location().end,
-            },
-            left: Box::new(l),
-            right: Box::new(r),
-        }
+        let expressions = if let UntypedExpr::PipeLine { mut expressions } = l {
+            expressions.push(r);
+            expressions
+        } else {
+            vec1![l, r]
+        };
+        UntypedExpr::PipeLine { expressions }
     } else if let Some(bin_op) = tok_to_binop(&token) {
         UntypedExpr::BinOp {
             location: SrcSpan {

@@ -143,6 +143,7 @@ impl<'module> Generator<'module> {
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
             TypedExpr::PipeLast { left, right, .. } => self.pipe(left, right),
+            TypedExpr::Pipeline { .. } => todo!(),
 
             TypedExpr::ModuleSelect {
                 module_alias,
