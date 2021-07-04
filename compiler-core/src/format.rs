@@ -12,6 +12,7 @@ use crate::{
 };
 use itertools::Itertools;
 use std::{path::PathBuf, sync::Arc};
+use vec1::Vec1;
 
 const INDENT: isize = 2;
 
@@ -606,12 +607,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo(\"", l, "\")"],
 
-            UntypedExpr::Pipe {
-                left,
-                right,
-                location,
-                ..
-            } => self.pipe(left, right, location.start),
+            UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 
             UntypedExpr::Int { value, .. } => value.to_doc(),
 
@@ -841,37 +837,59 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pipe<'a>(
-        &mut self,
-        left: &'a UntypedExpr,
-        right: &'a UntypedExpr,
-        location_start: usize,
-    ) -> Document<'a> {
-        let left_precedence = left.binop_precedence();
-        let right_precedence = right.binop_precedence();
-        let left = self.wrap_expr(left);
+    // TODO
+    fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
+        let first = expressions.first();
+        let previous_precedence = first.binop_precedence();
+        let mut docs = Vec::with_capacity(expressions.len() * 3);
 
-        // Get comments before right but after left
-        let comments = self.pop_comments(location_start);
+        docs.push(force_break());
+        let first = self.wrap_expr(first);
+        docs.push(self.operator_side(first, 5, previous_precedence));
 
-        let right = match right {
-            UntypedExpr::Fn {
-                is_capture: true,
-                body,
-                ..
-            } => self.pipe_capture_right_hand_side(body),
+        for expr in expressions.iter().skip(1) {
+            let comments = self.pop_comments(expr.location().start);
+            let expr = match expr {
+                UntypedExpr::Fn {
+                    is_capture: true,
+                    body,
+                    ..
+                } => self.pipe_capture_right_hand_side(body),
 
-            _ => self.wrap_expr(right),
-        };
+                _ => self.wrap_expr(expr),
+            };
+            docs.push(line());
+            docs.push(commented("|>".to_doc(), comments));
+            docs.push(expr);
+        }
 
-        // Wrap sides if required
-        let left = self.operator_side(left, 5, left_precedence);
-        let right = self.operator_side(right, 4, right_precedence);
+        docs.to_doc()
+        // // TODO
+        // let left_precedence = left.binop_precedence();
+        // let right_precedence = right.binop_precedence();
+        // let left = self.wrap_expr(left);
 
-        force_break()
-            .append(left)
-            .append(line())
-            .append(commented("|> ".to_doc().append(right), comments))
+        // // Get comments before right but after left
+        // let comments = self.pop_comments(location_start);
+
+        // let right = match right {
+        //     UntypedExpr::Fn {
+        //         is_capture: true,
+        //         body,
+        //         ..
+        //     } => self.pipe_capture_right_hand_side(body),
+
+        //     _ => self.wrap_expr(right),
+        // };
+
+        // // Wrap sides if required
+        // let left = self.operator_side(left, 5, left_precedence);
+        // let right = self.operator_side(right, 4, right_precedence);
+
+        // force_break()
+        //     .append(left)
+        //     .append(line())
+        //     .append(commented("|> ".to_doc().append(right), comments))
     }
 
     fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {

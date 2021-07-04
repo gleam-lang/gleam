@@ -1,3 +1,5 @@
+use vec1::Vec1;
+
 use super::*;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -54,10 +56,8 @@ pub enum UntypedExpr {
         right: Box<Self>,
     },
 
-    Pipe {
-        location: SrcSpan,
-        left: Box<Self>,
-        right: Box<Self>,
+    PipeLine {
+        expressions: Vec1<Self>,
     },
 
     Assignment {
@@ -121,7 +121,7 @@ impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Try { then, .. } => then.location(),
-            Self::Pipe { right, .. } => right.location(),
+            Self::PipeLine { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
             | Self::Var { location, .. }
             | Self::Int { location, .. }
@@ -175,7 +175,7 @@ impl UntypedExpr {
                 .first()
                 .map(|e| e.start_byte_index())
                 .unwrap_or(location.start),
-            Self::Pipe { left, .. } => left.start_byte_index(),
+            Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
             Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
         }
@@ -184,7 +184,7 @@ impl UntypedExpr {
     pub fn binop_precedence(&self) -> u8 {
         match self {
             Self::BinOp { name, .. } => name.precedence(),
-            Self::Pipe { .. } => 5,
+            Self::PipeLine { .. } => 5,
             _ => std::u8::MAX,
         }
     }

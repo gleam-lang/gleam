@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use vec1::Vec1;
 
 use super::*;
 use crate::ast::{
@@ -103,12 +104,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location, value, ..
             } => Ok(self.infer_string(value, location)),
 
-            UntypedExpr::Pipe {
-                left,
-                right,
-                location,
-            } => self
-                .infer_pipe(*left, *right, location)
+            UntypedExpr::PipeLine { expressions } => self
+                .infer_pipeline(expressions)
                 .map_err(|e| e.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)),
 
             UntypedExpr::Fn {
@@ -194,35 +191,37 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         }
     }
 
-    fn infer_pipe(
-        &mut self,
-        left: UntypedExpr,
-        right: UntypedExpr,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        match right {
-            // left |> right(..args)
-            UntypedExpr::Call {
-                fun,
-                arguments: args,
-                location,
-                ..
-            } => {
-                let fun = self.infer(*fun)?;
-                match fun.type_().fn_arity() {
-                    // Rewrite as right(left, ..args)
-                    Some(arity) if arity == args.len() + 1 => {
-                        self.infer_insert_pipe(fun, args, left, location)
-                    }
+    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> Result<TypedExpr, Error> {
+        let count = expressions.len();
+        let mut untyped = expressions.into_iter();
+        let first = self.infer(untyped.next().expect("Empty pipeline in typer"))?;
+        let mut typed = Vec1::with_capacity(first, count);
 
-                    // Rewrite as right(..args)(left)
-                    _ => self.infer_apply_to_call_pipe(fun, args, left, location),
-                }
-            }
+        // match right {
+        //     // left |> right(..args)
+        //     UntypedExpr::Call {
+        //         fun,
+        //         arguments: args,
+        //         location,
+        //         ..
+        //     } => {
+        //         let fun = self.infer(*fun)?;
+        //         match fun.type_().fn_arity() {
+        //             // Rewrite as right(left, ..args)
+        //             Some(arity) if arity == args.len() + 1 => {
+        //                 self.infer_insert_pipe(fun, args, left, location)
+        //             }
 
-            // right(left)
-            right => self.infer_apply_pipe(left, right, location),
-        }
+        //             // Rewrite as right(..args)(left)
+        //             _ => self.infer_apply_to_call_pipe(fun, args, left, location),
+        //         }
+        //     }
+
+        //     // right(left)
+        //     right => self.infer_apply_pipe(left, right, location),
+        // }
+
+        Ok(TypedExpr::Pipeline { expressions: typed })
     }
 
     /// Attempt to infer a |> b(..c) as b(..c)(a)

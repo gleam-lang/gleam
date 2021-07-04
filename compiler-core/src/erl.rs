@@ -1373,6 +1373,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
         TypedExpr::PipeLast { left, right, .. } => pipe(left, right, env),
 
+        TypedExpr::Pipeline { .. } => todo!(),
+
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 
         TypedExpr::Var {
