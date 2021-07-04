@@ -301,7 +301,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         self.unify(right.type_(), fn_typ)
             .map_err(|e| convert_unify_error(e, location))?;
 
-        Ok(TypedExpr::Pipe {
+        Ok(TypedExpr::PipeLast {
             location,
             typ,
             right,

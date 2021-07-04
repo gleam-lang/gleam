@@ -142,7 +142,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
-            TypedExpr::Pipe { left, right, .. } => self.pipe(left, right),
+            TypedExpr::PipeLast { left, right, .. } => self.pipe(left, right),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -959,7 +959,7 @@ impl TypedExpr {
             TypedExpr::Try { .. }
                 | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
-                | TypedExpr::Pipe { .. }
+                | TypedExpr::PipeLast { .. }
                 | TypedExpr::Sequence { .. }
                 | TypedExpr::Assignment { .. }
         )

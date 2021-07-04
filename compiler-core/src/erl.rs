@@ -1371,7 +1371,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
-        TypedExpr::Pipe { left, right, .. } => pipe(left, right, env),
+        TypedExpr::PipeLast { left, right, .. } => pipe(left, right, env),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 
