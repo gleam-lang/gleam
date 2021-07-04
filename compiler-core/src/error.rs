@@ -1012,7 +1012,7 @@ Private types can only be used within the module that defines them.",
                         location: *location,
                     };
                     write(buf, diagnostic, Severity::Error);
-                    writeln!(buf, "No module has been imported with the name `{}`.", name).unwrap();
+                    writeln!(buf, "No module has been found with the name `{}`.", name).unwrap();
                 }
 
                 TypeError::UnknownModuleType {

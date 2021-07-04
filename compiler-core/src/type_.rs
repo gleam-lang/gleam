@@ -1150,14 +1150,17 @@ fn infer_statement(
             unqualified,
             ..
         } => {
+            let name = module.join("/");
             // Find imported module
-            let module_info = environment
-                .importable_modules
-                .get(&module.join("/"))
-                .expect(
-                    "Typer could not find a module being imported during inference.
-Missing modules should be detected prior to type checking",
-                );
+            let module_info =
+                environment
+                    .importable_modules
+                    .get(&name)
+                    .ok_or_else(|| Error::UnknownModule {
+                        location,
+                        name,
+                        imported_modules: environment.imported_modules.keys().cloned().collect(),
+                    })?;
             Ok(Statement::Import {
                 location,
                 module,
@@ -1639,16 +1642,20 @@ pub fn register_import(
             module,
             as_name,
             unqualified,
+            location,
             ..
         } => {
+            let name = module.join("/");
             // Find imported module
-            let module_info = environment
-                .importable_modules
-                .get(&module.join("/"))
-                .expect(
-                    "Typer could not find a module being imported. 
-Missing modules should be detected prior to type checking",
-                );
+            let module_info =
+                environment
+                    .importable_modules
+                    .get(&name)
+                    .ok_or_else(|| Error::UnknownModule {
+                        location: *location,
+                        name,
+                        imported_modules: environment.imported_modules.keys().cloned().collect(),
+                    })?;
 
             // Determine local alias of imported module
             let module_name = as_name
