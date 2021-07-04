@@ -8,6 +8,8 @@
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 - JavaScript modules are imported using a camel case variable name to avoid name
   collisions with variables.
+- Fixed a bug where the compiler would crash rather than raise an error if a
+  project contained a single module and attempted to import another.
 
 ## v0.16.1 - 2021-06-21
 
