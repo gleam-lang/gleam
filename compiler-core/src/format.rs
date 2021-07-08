@@ -837,19 +837,16 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    // TODO
     fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
+        let mut docs = vec![force_break(); expressions.len() * 3];
         let first = expressions.first();
-        let previous_precedence = first.binop_precedence();
-        let mut docs = Vec::with_capacity(expressions.len() * 3);
-
-        docs.push(force_break());
+        let first_precedence = first.binop_precedence();
         let first = self.wrap_expr(first);
-        docs.push(self.operator_side(first, 5, previous_precedence));
+        docs.push(self.operator_side(first, 5, first_precedence));
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
-            let expr = match expr {
+            let doc = match expr {
                 UntypedExpr::Fn {
                     is_capture: true,
                     body,
@@ -859,37 +856,11 @@ impl<'comments> Formatter<'comments> {
                 _ => self.wrap_expr(expr),
             };
             docs.push(line());
-            docs.push(commented("|>".to_doc(), comments));
-            docs.push(expr);
+            docs.push(commented("|> ".to_doc(), comments));
+            docs.push(self.operator_side(doc, 4, expr.binop_precedence()));
         }
 
         docs.to_doc()
-        // // TODO
-        // let left_precedence = left.binop_precedence();
-        // let right_precedence = right.binop_precedence();
-        // let left = self.wrap_expr(left);
-
-        // // Get comments before right but after left
-        // let comments = self.pop_comments(location_start);
-
-        // let right = match right {
-        //     UntypedExpr::Fn {
-        //         is_capture: true,
-        //         body,
-        //         ..
-        //     } => self.pipe_capture_right_hand_side(body),
-
-        //     _ => self.wrap_expr(right),
-        // };
-
-        // // Wrap sides if required
-        // let left = self.operator_side(left, 5, left_precedence);
-        // let right = self.operator_side(right, 4, right_precedence);
-
-        // force_break()
-        //     .append(left)
-        //     .append(line())
-        //     .append(commented("|> ".to_doc().append(right), comments))
     }
 
     fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {
@@ -899,7 +870,7 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 ..
             } => (fun, args),
-            _ => panic!("Function capture found not to have a function call body when formatting",),
+            _ => panic!("Function capture found not to have a function call body when formatting"),
         };
 
         let hole_in_first_position = matches!(

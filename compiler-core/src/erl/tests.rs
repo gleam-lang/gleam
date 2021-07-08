@@ -202,7 +202,8 @@ fn main(x) {
 
 -spec main(D) -> D.
 main(X) ->
-    (fun(X@1) -> X@1 end)(X).
+    _pipe = X,
+    (fun(X@1) -> X@1 end)(_pipe).
 "#,
     );
 
@@ -369,7 +370,10 @@ inc(X) ->
 
 -spec go() -> integer().
 go() ->
-    inc(inc(inc(1))).
+    _pipe = 1,
+    _pipe@1 = inc(_pipe),
+    _pipe@2 = inc(_pipe@1),
+    inc(_pipe@2).
 "#,
     );
 
@@ -387,7 +391,10 @@ add(X, Y) ->
 
 -spec go() -> integer().
 go() ->
-    add(add(2, add(1, 1)), 3).
+    _pipe = 1,
+    _pipe@1 = add(_pipe, 1),
+    _pipe@2 = add(2, _pipe@1),
+    add(_pipe@2, 3).
 "#,
     );
 
@@ -1737,7 +1744,8 @@ pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 
 -spec apply(fun((A) -> B), A) -> B.
 apply(F, A) ->
-    F(A).
+    _pipe = A,
+    F(_pipe).
 "#,
     );
 
@@ -1753,7 +1761,8 @@ pub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }
 
 -spec apply(fun((A, integer()) -> B), A) -> B.
 apply(F, A) ->
-    F(A, 1).
+    _pipe = A,
+    F(_pipe, 1).
 "#,
     );
 }
@@ -2718,12 +2727,11 @@ id(A) ->
 
 -spec main() -> integer().
 main() ->
-    id(
-        begin
-            X = 1,
-            X
-        end
-    ).
+    _pipe = begin
+        X = 1,
+        X
+    end,
+    id(_pipe).
 "#
     );
 }

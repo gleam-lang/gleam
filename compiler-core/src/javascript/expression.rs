@@ -142,9 +142,6 @@ impl<'module> Generator<'module> {
 
             TypedExpr::BitString { .. } => unsupported("Bitstring"),
 
-            TypedExpr::PipeLast { left, right, .. } => self.pipe(left, right),
-            TypedExpr::Pipeline { .. } => todo!(),
-
             TypedExpr::ModuleSelect {
                 module_alias,
                 label,
@@ -504,11 +501,6 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| {
             array(elements.iter().map(|element| gen.wrap_expression(element)))
         })
-    }
-
-    pub fn pipe<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let argument = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        self.call_with_doc_args(right, vec![argument])
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
@@ -960,7 +952,6 @@ impl TypedExpr {
             TypedExpr::Try { .. }
                 | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
-                | TypedExpr::PipeLast { .. }
                 | TypedExpr::Sequence { .. }
                 | TypedExpr::Assignment { .. }
         )

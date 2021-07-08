@@ -1,3 +1,5 @@
+use crate::ast::PIPE_VARIABLE;
+
 use super::*;
 use std::collections::HashMap;
 
@@ -257,7 +259,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             None => self.local_values.get(name).ok_or_else(|| {
                 GetValueConstructorError::UnknownVariable {
                     name: name.to_string(),
-                    variables: self.local_values.keys().map(|t| t.to_string()).collect(),
+                    variables: self.local_value_names(),
                 }
             }),
 
@@ -577,5 +579,13 @@ impl<'a, 'b> Environment<'a, 'b> {
 
             self.warnings.push(warning);
         }
+    }
+
+    pub fn local_value_names(&self) -> Vec<String> {
+        self.local_values
+            .keys()
+            .filter(|t| PIPE_VARIABLE != t.as_str())
+            .map(|t| t.to_string())
+            .collect()
     }
 }

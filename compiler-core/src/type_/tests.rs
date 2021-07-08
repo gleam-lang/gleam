@@ -1223,7 +1223,7 @@ fn pipe_mismatch_error() {
          }",
         Error::CouldNotUnify {
             situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-            location: SrcSpan { start: 57, end: 70 },
+            location: SrcSpan { start: 60, end: 70 },
             expected: Arc::new(Type::Fn {
                 args: vec![Arc::new(Type::App {
                     public: false,
@@ -3828,7 +3828,7 @@ pub fn parse(input: BitString) -> String {
             situation: Some(UnifyErrorSituation::CaseClauseMismatch),
             location: SrcSpan {
                 start: 124,
-                end: 184,
+                end: 168,
             },
             expected: int(),
             given: string(),

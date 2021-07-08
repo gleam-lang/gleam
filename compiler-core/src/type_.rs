@@ -4,6 +4,7 @@ mod expr;
 mod fields;
 mod hydrator;
 mod pattern;
+mod pipe;
 mod prelude;
 pub mod pretty;
 #[cfg(test)]
@@ -13,7 +14,6 @@ mod tests;
 
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
-pub use expr::*;
 pub use fields::FieldMap;
 pub use prelude::*;
 
@@ -28,11 +28,14 @@ use crate::{
     bit_string,
     build::Origin,
 };
+use expr::*;
 
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    ops::Deref,
+    sync::Arc,
+};
 
 use error::*;
 use hydrator::Hydrator;

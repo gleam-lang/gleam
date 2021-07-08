@@ -233,7 +233,8 @@ function id(x) {
 }
 
 export function main() {
-  return id(1);
+  let _pipe = 1;
+  return id(_pipe);
 }
 "#
     );

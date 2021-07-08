@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use vec1::Vec1;
 
-use super::*;
+use super::{pipe::PipeTyper, *};
 use crate::ast::{
     Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
     ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TypeAst, TypedArg,
@@ -13,16 +13,16 @@ use crate::ast::{
 use im::hashmap;
 
 #[derive(Debug)]
-pub struct ExprTyper<'a, 'b, 'c> {
-    environment: &'a mut Environment<'b, 'c>,
+pub(crate) struct ExprTyper<'a, 'b, 'c> {
+    pub(crate) environment: &'a mut Environment<'b, 'c>,
 
     // Type hydrator for creating types from annotations
-    pub hydrator: Hydrator,
+    pub(crate) hydrator: Hydrator,
 
     // We keep track of whether any ungeneralised functions have been used
     // to determine whether it is safe to generalise this expression after
     // it has been inferred.
-    pub ungeneralised_function_used: bool,
+    pub(crate) ungeneralised_function_used: bool,
 }
 
 impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
@@ -64,7 +64,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             .instantiate(t, ctx_level, ids, &self.hydrator)
     }
 
-    fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
+    pub fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
         self.environment.new_unbound_var(level)
     }
 
@@ -192,120 +192,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> Result<TypedExpr, Error> {
-        let count = expressions.len();
-        let mut untyped = expressions.into_iter();
-        let first = self.infer(untyped.next().expect("Empty pipeline in typer"))?;
-        let mut typed = Vec1::with_capacity(first, count);
-
-        // match right {
-        //     // left |> right(..args)
-        //     UntypedExpr::Call {
-        //         fun,
-        //         arguments: args,
-        //         location,
-        //         ..
-        //     } => {
-        //         let fun = self.infer(*fun)?;
-        //         match fun.type_().fn_arity() {
-        //             // Rewrite as right(left, ..args)
-        //             Some(arity) if arity == args.len() + 1 => {
-        //                 self.infer_insert_pipe(fun, args, left, location)
-        //             }
-
-        //             // Rewrite as right(..args)(left)
-        //             _ => self.infer_apply_to_call_pipe(fun, args, left, location),
-        //         }
-        //     }
-
-        //     // right(left)
-        //     right => self.infer_apply_pipe(left, right, location),
-        // }
-
-        Ok(TypedExpr::Pipeline { expressions: typed })
-    }
-
-    /// Attempt to infer a |> b(..c) as b(..c)(a)
-    fn infer_apply_to_call_pipe(
-        &mut self,
-        fun: TypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
-        left: UntypedExpr,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
-        let fun = TypedExpr::Call {
-            location,
-            typ,
-            args,
-            fun: Box::new(fun),
-        };
-        let args = vec![CallArg {
-            label: None,
-            location: left.location(),
-            value: left,
-        }];
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
-        Ok(TypedExpr::Call {
-            location,
-            typ,
-            args,
-            fun: Box::new(fun),
-        })
-    }
-
-    /// Attempt to infer a |> b(c) as b(a, c)
-    fn infer_insert_pipe(
-        &mut self,
-        fun: TypedExpr,
-        args: Vec<CallArg<UntypedExpr>>,
-        left: UntypedExpr,
-        right_call_location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let location = SrcSpan {
-            start: left.location().start,
-            end: right_call_location.end,
-        };
-        let mut new_args = Vec::with_capacity(args.len() + 1);
-        new_args.push(CallArg {
-            label: None,
-            location,
-            value: left,
-        });
-        new_args.extend(args.iter().cloned());
-
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, new_args, location)?;
-        // TODO: Preserve the fact this is a pipe instead of making it a Call
-        Ok(TypedExpr::Call {
-            location,
-            typ,
-            args,
-            fun: Box::new(fun),
-        })
-    }
-
-    /// Attempt to infer a |> b as b(a)
-    fn infer_apply_pipe(
-        &mut self,
-        left: UntypedExpr,
-        right: UntypedExpr,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let left = Box::new(self.infer(left)?);
-        let right = Box::new(self.infer(right)?);
-        let typ = self.new_unbound_var(self.environment.level);
-        let fn_typ = Arc::new(Type::Fn {
-            args: vec![left.type_()],
-            retrn: typ.clone(),
-        });
-        self.unify(right.type_(), fn_typ)
-            .map_err(|e| convert_unify_error(e, location))?;
-
-        Ok(TypedExpr::PipeLast {
-            location,
-            typ,
-            right,
-            left,
-        })
+        PipeTyper::infer(self, expressions)
     }
 
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
@@ -1474,12 +1361,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         .ok_or_else(|| Error::UnknownVariable {
                             location: *location,
                             name: name.to_string(),
-                            variables: self
-                                .environment
-                                .local_values
-                                .keys()
-                                .map(|t| t.to_string())
-                                .collect(),
+                            variables: self.environment.local_value_names(),
                         }),
                 }?;
 

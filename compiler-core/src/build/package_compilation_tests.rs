@@ -720,7 +720,9 @@ x(P) ->
 
 -spec run() -> integer().
 run() ->
-    one:'div'(2, one:'div'(2, 4)).
+    _pipe = 2,
+    _pipe@1 = one:'div'(_pipe, 4),
+    one:'div'(2, _pipe@1).
 "
                 .to_string(),
             },
