@@ -211,12 +211,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     .ok_or_else(|| Error::UnknownVariable {
                         location,
                         name: name.to_string(),
-                        variables: self
-                            .environment
-                            .local_values
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        variables: self.environment.local_value_names(),
                     })?;
                 self.environment.increment_usage(&name);
                 let typ = self.environment.instantiate(

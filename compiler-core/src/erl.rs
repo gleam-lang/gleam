@@ -786,10 +786,6 @@ fn bin_op<'a>(
     }
 }
 
-fn pipe<'a>(value: &'a TypedExpr, fun: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    docs_args_call(fun, vec![maybe_block_expr(value, env)], env)
-}
-
 fn try_<'a>(
     value: &'a TypedExpr,
     pat: &'a TypedPattern,
@@ -1371,9 +1367,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
-        TypedExpr::PipeLast { left, right, .. } => pipe(left, right, env),
-
-        TypedExpr::Pipeline { .. } => todo!(),
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 

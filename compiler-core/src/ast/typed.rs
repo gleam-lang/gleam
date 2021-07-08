@@ -2,7 +2,6 @@ use super::*;
 use crate::type_::{HasType, Type};
 
 use lazy_static::lazy_static;
-use vec1::Vec1;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum TypedExpr {
@@ -62,17 +61,6 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         name: BinOp,
-        left: Box<Self>,
-        right: Box<Self>,
-    },
-
-    Pipeline {
-        expressions: Vec1<Self>,
-    },
-
-    PipeLast {
-        location: SrcSpan,
-        typ: Arc<Type>,
         left: Box<Self>,
         right: Box<Self>,
     },
@@ -166,14 +154,12 @@ impl TypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Try { then, .. } => then.location(),
-            Self::Pipeline { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
-            | Self::PipeLast { location, .. }
             | Self::List { location, .. }
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
@@ -205,7 +191,6 @@ impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
             Self::Var { constructor, .. } => constructor.type_.clone(),
-            Self::Pipeline { expressions, .. } => expressions.last().type_(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. } => typ.clone(),
             Self::Int { typ, .. } => typ.clone(),
@@ -213,7 +198,6 @@ impl TypedExpr {
             Self::Case { typ, .. } => typ.clone(),
             Self::List { typ, .. } => typ.clone(),
             Self::Call { typ, .. } => typ.clone(),
-            Self::PipeLast { typ, .. } => typ.clone(),
             Self::Float { typ, .. } => typ.clone(),
             Self::BinOp { typ, .. } => typ.clone(),
             Self::Tuple { typ, .. } => typ.clone(),
