@@ -26,7 +26,7 @@ use crate::{
         UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string,
-    build::Origin,
+    build::{Origin, Target},
 };
 use expr::*;
 
@@ -408,6 +408,7 @@ impl ValueConstructor {
 /// returning an error.
 ///
 pub fn infer_module(
+    target: Target,
     uid: &mut usize,
     module: UntypedModule,
     origin: Origin,
@@ -415,7 +416,7 @@ pub fn infer_module(
     modules: &HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
-    let mut environment = Environment::new(uid, &module.name, modules, warnings);
+    let mut environment = Environment::new(uid, target, &module.name, modules, warnings);
     let module_name = &module.name;
     validate_module_name(module_name)?;
 
@@ -1211,7 +1212,48 @@ fn infer_statement(
                 type_,
             })
         }
+
+        Statement::If {
+            target,
+            location,
+            statements,
+        } => infer_statement_if(
+            target,
+            location,
+            statements,
+            module_name,
+            hydrators,
+            environment,
+        ),
     }
+}
+
+fn infer_statement_if(
+    target: Target,
+    location: SrcSpan,
+    statements: Vec<UntypedStatement>,
+    module_name: &[String],
+    hydrators: &mut HashMap<String, Hydrator>,
+    environment: &mut Environment<'_, '_>,
+) -> Result<TypedStatement, Error> {
+    if environment.target == target {
+        return Ok(Statement::If {
+            target,
+            location,
+            statements: vec![],
+        });
+    }
+
+    let statements = statements
+        .into_iter()
+        .map(|s| infer_statement(s, module_name, hydrators, environment))
+        .try_collect()?;
+
+    Ok(Statement::If {
+        target,
+        location,
+        statements,
+    })
 }
 
 fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(

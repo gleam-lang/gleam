@@ -111,6 +111,7 @@ macro_rules! assert_erl {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
         let ast = crate::type_::infer_module(
+            crate::build::Target::Erlang,
             &mut 0,
             ast,
             Origin::Src,

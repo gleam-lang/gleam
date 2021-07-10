@@ -49,6 +49,12 @@ pub enum Target {
     JavaScript,
 }
 
+impl Target {
+    pub fn variant_strings() -> Vec<String> {
+        Self::VARIANTS.iter().map(|s| s.to_string()).collect()
+    }
+}
+
 #[derive(Debug)]
 pub struct Package {
     pub name: String,

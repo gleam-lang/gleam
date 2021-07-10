@@ -3,6 +3,7 @@ mod tests;
 
 use crate::{
     ast::*,
+    build::Target,
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -271,7 +272,26 @@ impl<'comments> Formatter<'comments> {
                 };
                 head.append(" = ").append(self.const_expr(value))
             }
+
+            Statement::If {
+                target, statements, ..
+            } => self.statement_if(*target, statements.as_slice()),
         }
+    }
+
+    fn statement_if<'a>(
+        &mut self,
+        target: Target,
+        statements: &'a [UntypedStatement],
+    ) -> Document<'a> {
+        docvec![
+            "if ",
+            Document::String(target.to_string()),
+            " {",
+            docvec![line(), concat(statements.iter().map(|s| self.statement(s)))].nest(INDENT),
+            line(),
+            "}"
+        ]
     }
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {

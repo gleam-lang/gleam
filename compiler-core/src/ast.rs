@@ -7,6 +7,7 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
+use crate::build::Target;
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
@@ -39,7 +40,6 @@ impl<A, B, C, D, E> Module<A, B, C, D, E> {
         self.name.join("/")
     }
 
-    // TODO: return &str not String once module is a String not a Vector
     pub fn dependencies(&self) -> Vec<(String, SrcSpan)> {
         self.statements
             .iter()
@@ -197,6 +197,21 @@ pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
+    /// An if is a grouping of statements that will only be compiled if
+    /// compiling to the specified target. e.g.
+    ///
+    /// ```gleam
+    /// if erlang {
+    ///   pub external fn display(a) -> Bool = "erlang" "display"
+    /// }
+    /// ```
+    ///
+    If {
+        location: SrcSpan,
+        target: Target,
+        statements: Vec<Self>,
+    },
+
     Fn {
         end_location: usize,
         location: SrcSpan,
@@ -272,8 +287,9 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
 impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn location(&self) -> &SrcSpan {
         match self {
-            Statement::Import { location, .. }
+            Statement::If { location, .. }
             | Statement::Fn { location, .. }
+            | Statement::Import { location, .. }
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
             | Statement::ExternalFn { location, .. }
@@ -284,7 +300,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
 
     pub fn put_doc(&mut self, new_doc: String) {
         match self {
-            Statement::Import { .. } => (),
+            Statement::If { .. } | Statement::Import { .. } => (),
             Statement::Fn { doc, .. }
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }

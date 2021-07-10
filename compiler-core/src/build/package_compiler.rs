@@ -85,6 +85,7 @@ where
         tracing::info!("Type checking modules");
         let modules = type_check(
             &self.options.name,
+            self.options.target,
             sequence,
             parsed_modules,
             existing_modules,
@@ -165,6 +166,7 @@ where
 
 fn type_check(
     package_name: &str,
+    target: Target,
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
     module_types: &mut HashMap<String, type_::Module>,
@@ -195,6 +197,7 @@ fn type_check(
         tracing::trace!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
         let ast = type_::infer_module(
+            target,
             &mut uid,
             ast,
             origin,

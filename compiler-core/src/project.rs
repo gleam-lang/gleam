@@ -4,7 +4,7 @@ mod tests;
 
 use crate::{
     ast::{self, SrcSpan, Statement, TypedModule},
-    build::Origin,
+    build::{Origin, Target},
     parse::extra::{Comment, ModuleExtra},
     type_, Error, Result, Warning,
 };
@@ -172,6 +172,7 @@ pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>> {
 
         let mut warnings = vec![];
         let result = type_::infer_module(
+            Target::Erlang,
             &mut uid,
             module,
             origin.to_origin(),
