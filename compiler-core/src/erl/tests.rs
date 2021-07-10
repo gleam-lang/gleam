@@ -2914,3 +2914,49 @@ x() ->
 "
     );
 }
+
+#[test]
+fn pipe_in_list() {
+    assert_erl!(
+        "pub fn x(f) {
+  [
+    1 |> f
+  ]
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> D)) -> list(D).
+x(F) ->
+    [begin
+         _pipe = 1,
+         F(_pipe)
+     end].
+"
+    );
+}
+
+#[test]
+fn pipe_in_tuple() {
+    assert_erl!(
+        "pub fn x(f) {
+  #(
+    1 |> f
+  )
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> C)) -> {C}.
+x(F) ->
+    {begin
+         _pipe = 1,
+         F(_pipe)
+     end}.
+"
+    );
+}

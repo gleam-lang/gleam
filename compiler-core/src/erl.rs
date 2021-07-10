@@ -877,7 +877,7 @@ fn expr_list<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let elements = concat(Itertools::intersperse(
-        elements.iter().map(|e| expr(e, env)),
+        elements.iter().map(|e| maybe_block_expr(e, env)),
         break_(",", ", "),
     ));
     list(elements, tail.as_ref().map(|e| expr(e, env)))
