@@ -1806,10 +1806,10 @@ fn main() {
 -spec main() -> {ok, integer()} | {error, any()}.
 main() ->
     case {ok, 1} of
-        {error, Gleam@try_error} -> {error, Gleam@try_error};
+        {error, _try} -> {error, _try};
         {ok, A} ->
             case {ok, 2} of
-                {error, Gleam@try_error@1} -> {error, Gleam@try_error@1};
+                {error, _try@1} -> {error, _try@1};
                 {ok, B} ->
                     {ok, A + B}
             end
@@ -2751,10 +2751,10 @@ fn assert() {
 go() ->
     {ok, Y@1} = case {ok, 1} of
         {ok, Y} -> {ok, Y};
-        Gleam@Assert ->
+        _try ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Gleam@Assert,
+                           value => _try,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
@@ -2776,10 +2776,10 @@ go() ->
 go(X) ->
     [1, A@1, B@1, C@1] = case X of
         [1, A, B, C] -> [1, A, B, C];
-        Gleam@Assert ->
+        _try ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Gleam@Assert,
+                           value => _try,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
@@ -2801,10 +2801,10 @@ go(X) ->
 go(X) ->
     [1 = A@1, B@1, C@1] = case X of
         [1 = A, B, C] -> [1 = A, B, C];
-        Gleam@Assert ->
+        _try ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Gleam@Assert,
+                           value => _try,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
@@ -2827,20 +2827,20 @@ go(X) ->
 go() ->
     {ok, Y@1} = case {ok, 1} of
         {ok, Y} -> {ok, Y};
-        Gleam@Assert ->
+        _try ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Gleam@Assert,
+                           value => _try,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 2})
     end,
     {ok, Y@3} = case {ok, 1} of
         {ok, Y@2} -> {ok, Y@2};
-        Gleam@Assert@1 ->
+        _try@1 ->
             erlang:error(#{gleam_error => assert,
                            message => <<"Assertion pattern match failed"/utf8>>,
-                           value => Gleam@Assert@1,
+                           value => _try@1,
                            module => <<"the_app"/utf8>>,
                            function => <<"go"/utf8>>,
                            line => 3})
@@ -2957,6 +2957,58 @@ x(F) ->
          _pipe = 1,
          F(_pipe)
      end}.
+"
+    );
+}
+
+#[test]
+fn pipe_in_case_subject() {
+    assert_erl!(
+        "pub fn x(f) {
+  case 1 |> f {
+    x -> x
+  }
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> D)) -> D.
+x(F) ->
+    case begin
+        _pipe = 1,
+        F(_pipe)
+    end of
+        X ->
+            X
+    end.
+"
+    );
+}
+
+#[test]
+fn try_in_case_subject() {
+    assert_erl!(
+        "pub fn x(f) {
+  try x = 1 |> f
+  Ok(x)
+}",
+        "-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> {ok, D} | {error, G})) -> {ok, D} | {error, G}.
+x(F) ->
+    case begin
+        _pipe = 1,
+        F(_pipe)
+    end of
+        {error, _try} -> {error, _try};
+        {ok, X} ->
+            {ok, X}
+    end.
 "
     );
 }

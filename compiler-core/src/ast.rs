@@ -13,8 +13,10 @@ use std::sync::Arc;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 
-pub const CAPTURE_VARIABLE: &str = "_gleam_capture";
+pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
+pub const ASSERT_VARIABLE: &str = "_try";
+pub const CAPTURE_VARIABLE: &str = "_capture";
 
 pub trait HasLocation {
     fn location(&self) -> SrcSpan;
