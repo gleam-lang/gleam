@@ -436,6 +436,7 @@ pub fn infer_module(
     for s in &module.statements {
         register_types(
             s,
+            target,
             module_name,
             &mut hydrators,
             &mut type_names,
@@ -447,6 +448,7 @@ pub fn infer_module(
     for s in &module.statements {
         register_values(
             s,
+            target,
             module_name,
             &mut hydrators,
             &mut value_names,
@@ -454,6 +456,7 @@ pub fn infer_module(
         )?;
     }
 
+    // TODO: If
     // Infer the types of each statement in the module
     // We first infer all the constants so they can be used in functions defined
     // anywhere in the module.
@@ -474,6 +477,7 @@ pub fn infer_module(
         statements.push(statement);
     }
 
+    // TODO: If
     // Generalise functions now that the entire module has been inferred
     let statements = statements
         .into_iter()
@@ -588,6 +592,7 @@ fn assert_unique_const_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
+    target: Target,
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
@@ -824,7 +829,20 @@ fn register_values<'a>(
             assert_unique_const_name(names, name, location)?;
         }
 
-        _ => (),
+        Statement::If {
+            target: if_target,
+            statements,
+            ..
+        } if *if_target == target => {
+            for s in statements {
+                register_values(s, target, module_name, hydrators, names, environment)?;
+            }
+        }
+
+        Statement::If { .. }
+        | Statement::Import { .. }
+        | Statement::TypeAlias { .. }
+        | Statement::ExternalType { .. } => (),
     }
     Ok(())
 }
@@ -994,7 +1012,7 @@ fn infer_statement(
         } => {
             let preregistered_fn = environment
                 .get_variable(&name)
-                .expect("Could not find preregistered type for function");
+                .expect("Could not find preregistered type value function");
             let preregistered_type = preregistered_fn.type_.clone();
             let (args_types, return_type) = preregistered_type
                 .fn_types()
@@ -1236,7 +1254,7 @@ fn infer_statement_if(
     hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment<'_, '_>,
 ) -> Result<TypedStatement, Error> {
-    if environment.target == target {
+    if environment.target != target {
         return Ok(Statement::If {
             target,
             location,
@@ -1557,6 +1575,7 @@ fn custom_type_accessors<A>(
 /// Iterate over a module, registering any new types created by the module into the typer
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
+    target: Target,
     module: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
@@ -1672,7 +1691,21 @@ pub fn register_types<'a>(
             }
         }
 
-        _ => {}
+        Statement::If {
+            statements,
+            target: if_target,
+            ..
+        } if target == *if_target => {
+            for s in statements {
+                register_types(s, target, module, hydrators, names, environment)?;
+            }
+        }
+
+        Statement::If { .. }
+        | Statement::Fn { .. }
+        | Statement::ExternalFn { .. }
+        | Statement::Import { .. }
+        | Statement::ModuleConstant { .. } => (),
     }
 
     Ok(())
@@ -1809,6 +1842,12 @@ pub fn register_import(
             Ok(())
         }
 
-        _ => Ok(()),
+        Statement::If { .. }
+        | Statement::Fn { .. }
+        | Statement::TypeAlias { .. }
+        | Statement::CustomType { .. }
+        | Statement::ExternalFn { .. }
+        | Statement::ExternalType { .. }
+        | Statement::ModuleConstant { .. } => Ok(()),
     }
 }

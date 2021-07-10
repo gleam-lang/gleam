@@ -1,28 +1,24 @@
-import test.{Functions, Test, assert_equal, example, operator_test, suite}
+import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import gleam
+import ffi
 
-pub fn main(
-  print: fn(String) -> String,
-  to_string: fn(anything) -> String,
-  append: fn(String, String) -> String,
-) -> Int {
-  let fns = Functions(print, to_string, append)
+pub fn main() -> Int {
   let stats =
     [
-      suite("try", try_tests(fns)),
-      suite("ints", int_tests(fns)),
-      suite("pipes", pipes_tests(fns)),
-      suite("floats", float_tests(fns)),
-      suite("prelude", prelude_tests(fns)),
-      suite("strings", strings_tests(fns)),
-      suite("constants", constants_tests(fns)),
-      suite("clause guards", clause_guard_tests(fns)),
-      suite("imported custom types", imported_custom_types_test(fns)),
-      suite("tail call optimisation", tail_call_optimisation_tests(fns)),
-      suite("alternative patterns", alternative_patterns_tests(fns)),
+      suite("try", try_tests()),
+      suite("ints", int_tests()),
+      suite("pipes", pipes_tests()),
+      suite("floats", float_tests()),
+      suite("prelude", prelude_tests()),
+      suite("strings", strings_tests()),
+      suite("constants", constants_tests()),
+      suite("clause guards", clause_guard_tests()),
+      suite("imported custom types", imported_custom_types_test()),
+      suite("tail call optimisation", tail_call_optimisation_tests()),
+      suite("alternative patterns", alternative_patterns_tests()),
     ]
-    |> test.run(fns)
+    |> test.run()
 
   case stats.failures {
     0 -> 0
@@ -30,10 +26,10 @@ pub fn main(
   }
 }
 
-fn int_tests(fns) -> List(Test) {
-  let basic_addition = operator_test("+", fn(a, b) { a + b }, fns)
-  let basic_subtraction = operator_test("-", fn(a, b) { a - b }, fns)
-  let basic_multiplication = operator_test("*", fn(a, b) { a * b }, fns)
+fn int_tests() -> List(Test) {
+  let basic_addition = operator_test("+", fn(a, b) { a + b })
+  let basic_subtraction = operator_test("-", fn(a, b) { a - b })
+  let basic_multiplication = operator_test("*", fn(a, b) { a * b })
   [
     basic_addition(0, 0, 0),
     basic_addition(1, 1, 2),
@@ -58,10 +54,10 @@ fn int_tests(fns) -> List(Test) {
   ]
 }
 
-fn float_tests(fns) -> List(Test) {
-  let basic_addition = operator_test("+.", fn(a, b) { a +. b }, fns)
-  let basic_subtraction = operator_test("-.", fn(a, b) { a -. b }, fns)
-  let basic_multiplication = operator_test("*.", fn(a, b) { a *. b }, fns)
+fn float_tests() -> List(Test) {
+  let basic_addition = operator_test("+.", fn(a, b) { a +. b })
+  let basic_subtraction = operator_test("-.", fn(a, b) { a -. b })
+  let basic_multiplication = operator_test("*.", fn(a, b) { a *. b })
   [
     basic_addition(0., 0., 0.),
     basic_addition(1., 1., 2.),
@@ -88,7 +84,7 @@ fn float_tests(fns) -> List(Test) {
   ]
 }
 
-fn strings_tests(_fns) -> List(Test) {
+fn strings_tests() -> List(Test) {
   [equality_test("Empty", "", ""), equality_test("Newlines", "
 ", "\n")]
 }
@@ -105,7 +101,7 @@ fn triplet(x x, y y, z z) {
   #(x, y, z)
 }
 
-fn pipes_tests(_fns) -> List(Test) {
+fn pipes_tests() -> List(Test) {
   [
     "pipe last"
     |> example(fn() {
@@ -152,7 +148,7 @@ fn pipes_tests(_fns) -> List(Test) {
   ]
 }
 
-fn tail_call_optimisation_tests(_fns) -> List(Test) {
+fn tail_call_optimisation_tests() -> List(Test) {
   [
     "10 million recursions doesn't overflow the stack"
     |> example(fn() { assert_equal(Nil, count_down(from: 10_000_000)) }),
@@ -182,7 +178,7 @@ const const_list_1 = [1]
 
 const const_list_2 = [1, 2]
 
-fn constants_tests(_fns) -> List(Test) {
+fn constants_tests() -> List(Test) {
   [
     equality_test("int", const_int, 5),
     equality_test("float", const_float, 1.0),
@@ -195,7 +191,7 @@ fn constants_tests(_fns) -> List(Test) {
   ]
 }
 
-fn imported_custom_types_test(_fns) -> List(Test) {
+fn imported_custom_types_test() -> List(Test) {
   [
     equality_test(
       "No fields, qualified and unqualified",
@@ -238,7 +234,7 @@ fn try_fn(result) {
   Ok(x + 1)
 }
 
-fn try_tests(_fns) -> List(Test) {
+fn try_tests() -> List(Test) {
   [
     "ok"
     |> example(fn() { assert_equal(Ok(2), try_fn(Ok(1))) }),
@@ -298,7 +294,7 @@ fn make_error(reason) {
 // Constructor functions are used rather than literals to stop the Erlang
 // compiler being clever and complaining about the guards always having the
 // same result
-fn clause_guard_tests(_fns) -> List(Test) {
+fn clause_guard_tests() -> List(Test) {
   // Testing that the name reuse is valid
   let true = true()
   // Testing that the name reuse is valid
@@ -757,7 +753,7 @@ fn clause_guard_tests(_fns) -> List(Test) {
   // nested operators to check precedence
 }
 
-fn prelude_tests(_fns) -> List(Test) {
+fn prelude_tests() -> List(Test) {
   [
     "gleam.Ok"
     |> example(fn() { assert_equal(Ok(1), gleam.Ok(1)) }),
@@ -768,7 +764,7 @@ fn prelude_tests(_fns) -> List(Test) {
   ]
 }
 
-fn alternative_patterns_tests(_fns) -> List(Test) {
+fn alternative_patterns_tests() -> List(Test) {
   let int_one = make_int_zero() + 1
   let int_two = make_int_zero() + 2
 
