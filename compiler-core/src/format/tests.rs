@@ -3240,3 +3240,21 @@ if javascript {
 "
     );
 }
+
+#[test]
+fn statement_if_multiple() {
+    assert_format!(
+        "external type X
+
+if erlang {
+  type Y {
+    Y
+  }
+
+  type Z {
+    Z
+  }
+}
+"
+    );
+}

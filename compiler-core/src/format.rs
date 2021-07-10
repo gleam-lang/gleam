@@ -284,11 +284,15 @@ impl<'comments> Formatter<'comments> {
         target: Target,
         statements: &'a [UntypedStatement],
     ) -> Document<'a> {
+        let statements = Itertools::intersperse(
+            statements.iter().map(|s| self.statement(s).group()),
+            lines(2),
+        );
         docvec![
             "if ",
             Document::String(target.to_string()),
             " {",
-            docvec![line(), concat(statements.iter().map(|s| self.statement(s)))].nest(INDENT),
+            docvec![line(), concat(statements)].nest(INDENT),
             line(),
             "}"
         ]
