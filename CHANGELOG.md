@@ -12,7 +12,8 @@
   order of any side effects.
 - Fixed a bug where the compiler would crash rather than raise an error if a
   project contained a single module and attempted to import another.
-- Fixed a bug where blocks inside lists can render incorrectly in Erlang.
+- Special variable naming has been made more consistent in rendered Erlang and
+  JavaScript.
 
 ## v0.16.1 - 2021-06-21
 
