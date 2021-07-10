@@ -83,34 +83,37 @@ impl<'a> Generator<'a> {
         Ok(statements.to_doc())
     }
 
-    pub fn statement(&mut self, statement: &'a TypedStatement) -> Option<Output<'a>> {
+    pub fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
         match statement {
-            Statement::TypeAlias { .. } => None,
-            Statement::CustomType { .. } => None,
+            Statement::TypeAlias { .. }
+            | Statement::CustomType { .. }
+            | Statement::ExternalType { .. } => vec![],
 
-            Statement::Import { module, .. } if module == &["gleam"] => None,
+            Statement::Import { module, .. } if module == &["gleam"] => vec![],
+
             Statement::Import {
                 module,
                 as_name,
                 unqualified,
                 package,
                 ..
-            } => Some(Ok(self.import(package, module, as_name, unqualified))),
+            } => vec![Ok(self.import(package, module, as_name, unqualified))],
 
-            Statement::ExternalType { .. } => None,
             Statement::ModuleConstant {
                 public,
                 name,
                 value,
                 ..
-            } => Some(self.module_constant(*public, name, value)),
+            } => vec![self.module_constant(*public, name, value)],
+
             Statement::Fn {
                 arguments,
                 name,
                 body,
                 public,
                 ..
-            } => Some(self.module_function(*public, name, arguments, body)),
+            } => vec![self.module_function(*public, name, arguments, body)],
+
             Statement::ExternalFn {
                 public,
                 name,
@@ -118,9 +121,15 @@ impl<'a> Generator<'a> {
                 module,
                 fun,
                 ..
-            } => Some(Ok(
+            } => vec![Ok(
                 self.external_function(*public, name, arguments, module, fun)
-            )),
+            )],
+
+            // We don't need to check the target because non-javascript target
+            // if blocks will be empty
+            Statement::If { statements, .. } => {
+                statements.iter().flat_map(|s| self.statement(s)).collect()
+            }
         }
     }
 

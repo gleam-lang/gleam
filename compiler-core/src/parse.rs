@@ -61,6 +61,7 @@ use crate::ast::{
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     CAPTURE_VARIABLE,
 };
+use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
@@ -89,7 +90,7 @@ pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
     let expr = parser.parse_expression_seq();
-    let expr = parser.ensure_no_errors(expr)?;
+    let expr = parser.ensure_no_errors_or_remaining_input(expr)?;
     if let Some((e, _)) = expr {
         Ok(e)
     } else {
@@ -127,7 +128,7 @@ where
 
     fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
         let statements = Parser::series_of(self, &Parser::parse_statement, None);
-        let statements = self.ensure_no_errors(statements)?;
+        let statements = self.ensure_no_errors_or_remaining_input(statements)?;
         Ok(Module {
             name: vec![],
             documentation: vec![],
@@ -141,25 +142,41 @@ where
     // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
     // 1) LexError, 2) ParseError, 3) More Tokens Left
+    fn ensure_no_errors_or_remaining_input<A>(
+        &mut self,
+        parse_result: Result<A, ParseError>,
+    ) -> Result<A, ParseError> {
+        let parse_result = self.ensure_no_errors(parse_result)?;
+        if let Some((start, _, end)) = self.next_tok() {
+            // there are still more tokens
+            let expected = vec!["An import, const, type, if block, or function.".to_string()];
+            return parse_error(
+                ParseErrorType::UnexpectedToken { expected },
+                SrcSpan { start, end },
+            );
+        }
+        // no errors
+        Ok(parse_result)
+    }
+
+    // The way the parser is currenly implemented, it cannot exit immediately
+    // while advancing the token stream upon seing a LexError. That is to avoid
+    // having to put `?` all over the place and instead we collect LexErrors in
+    // `self.lex_errors` and attempt to continue parsing.
+    // Once parsing has returned we want to surface an error in the order:
+    // 1) LexError, 2) ParseError
     fn ensure_no_errors<A>(
         &mut self,
         parse_result: Result<A, ParseError>,
     ) -> Result<A, ParseError> {
-        self.lex_errors.reverse();
-        if let Some(error) = self.lex_errors.pop() {
+        if let Some(error) = self.lex_errors.first() {
             // Lex errors first
             let location = error.location;
+            let error = error.clone();
             parse_error(ParseErrorType::LexError { error }, location)
         } else if parse_result.is_err() {
             // Then parse errors
             parse_result
-        } else if let Some((start, _, end)) = self.next_tok() {
-            // there are still more tokens
-            let expected = vec!["An import, const, type, or function.".to_string()];
-            parse_error(
-                ParseErrorType::UnexpectedToken { expected },
-                SrcSpan { start, end },
-            )
         } else {
             // no errors
             parse_result
@@ -237,6 +254,12 @@ where
                 self.parse_custom_type(start, true, false)
             }
 
+            // If (conditional compilation)
+            (Some((start, Token::If, _)), _) => {
+                let _ = self.next_tok();
+                self.parse_statement_if(start)
+            }
+
             (t0, _) => {
                 self.tok0 = t0;
                 Ok(None)
@@ -244,6 +267,21 @@ where
         };
         tracing::trace!("Statement Parsed: {:?}", statement);
         statement
+    }
+
+    // examples:
+    //   if { ..statements }
+    fn parse_statement_if(&mut self, start: usize) -> Result<Option<UntypedStatement>, ParseError> {
+        let target = self.expect_target()?;
+        let _ = self.expect_one(&Token::LeftBrace)?;
+        let statements = Parser::series_of(self, &Parser::parse_statement, None);
+        let statements = self.ensure_no_errors(statements)?;
+        let (_, end) = self.expect_one(&Token::RightBrace)?;
+        Ok(Some(Statement::If {
+            target,
+            statements,
+            location: SrcSpan { start, end },
+        }))
     }
 
     //
@@ -2253,6 +2291,23 @@ where
                 }
             }
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
+        }
+    }
+
+    // Expect a target name. e.g. `javascript` or `erlang`
+    fn expect_target(&mut self) -> Result<Target, ParseError> {
+        let (_, t, _) = match self.next_tok() {
+            Some(t) => t,
+            None => {
+                return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
+            }
+        };
+        match t {
+            Token::Name { name } => match Target::from_str(&name) {
+                Ok(target) => Ok(target),
+                Err(_) => self.next_tok_unexpected(Target::variant_strings()),
+            },
+            _ => self.next_tok_unexpected(Target::variant_strings()),
         }
     }
 

@@ -3222,3 +3222,21 @@ fn case_in_call() {
 "
     );
 }
+
+#[test]
+fn statement_if() {
+    assert_format!(
+        "external type X
+
+if erlang {
+  type Y {
+    Y
+  }
+}
+
+if javascript {
+  external type Y
+}
+"
+    );
+}

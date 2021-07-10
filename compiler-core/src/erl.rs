@@ -402,13 +402,14 @@ fn statement<'a>(
     statement: &'a TypedStatement,
     module: &'a [String],
     line_numbers: &'a LineNumbers,
-) -> Option<Document<'a>> {
+) -> Vec<Document<'a>> {
     match statement {
-        Statement::TypeAlias { .. } => None,
-        Statement::CustomType { .. } => None,
-        Statement::Import { .. } => None,
-        Statement::ExternalType { .. } => None,
-        Statement::ModuleConstant { .. } => None,
+        Statement::TypeAlias { .. }
+        | Statement::CustomType { .. }
+        | Statement::Import { .. }
+        | Statement::ExternalType { .. }
+        | Statement::ModuleConstant { .. }
+        | Statement::ExternalFn { public: false, .. } => vec![],
 
         Statement::Fn {
             arguments: args,
@@ -416,9 +417,8 @@ fn statement<'a>(
             body,
             return_type,
             ..
-        } => Some(mod_fun(name, args, body, module, return_type, line_numbers)),
+        } => vec![mod_fun(name, args, body, module, return_type, line_numbers)],
 
-        Statement::ExternalFn { public: false, .. } => None,
         Statement::ExternalFn {
             fun,
             module,
@@ -426,14 +426,21 @@ fn statement<'a>(
             name,
             return_type,
             ..
-        } => Some(external_fun(
+        } => vec![external_fun(
             current_module,
             name,
             module,
             fun,
             args,
             return_type,
-        )),
+        )],
+
+        // We don't need to check the target because non-erlang target
+        // if blocks will be empty
+        Statement::If { statements, .. } => statements
+            .iter()
+            .flat_map(|s| self::statement(current_module, s, module, line_numbers))
+            .collect(),
     }
 }
 

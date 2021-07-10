@@ -11,29 +11,32 @@ pub struct Environment<'a, 'b> {
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
 
-    // Values defined in the current function (or the prelude)
+    /// The target being compiled to
+    pub target: Target,
+
+    /// Values defined in the current function (or the prelude)
     pub local_values: im::HashMap<String, ValueConstructor>,
 
-    // Types defined in the current module (or the prelude)
+    /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<String, TypeConstructor>,
 
-    // Values defined in the current module
+    /// Values defined in the current module
     pub module_values: HashMap<String, ValueConstructor>,
 
-    // Accessors defined in the current module
+    /// Accessors defined in the current module
     pub accessors: HashMap<String, AccessorsMap>,
 
-    // Warnings
+    /// Warnings
     pub warnings: &'a mut Vec<Warning>,
 
-    // Functions that have not yet been inferred then generalised.
-    // We use this to determine whether functions that call this one
-    // can safely be generalised.
+    /// Functions that have not yet been inferred then generalised.
+    /// We use this to determine whether functions that call this one
+    /// can safely be generalised.
     pub ungeneralised_functions: HashSet<String>,
 
-    // entity_usages is a stack of scopes. When an entity is created it is
-    // added to the top scope. When an entity is used we crawl down the scope
-    // stack for an entity with that name and mark it as used.
+    /// entity_usages is a stack of scopes. When an entity is created it is
+    /// added to the top scope. When an entity is used we crawl down the scope
+    /// stack for an entity with that name and mark it as used.
     pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, bool)>>,
 }
 
@@ -55,6 +58,7 @@ pub enum EntityKind {
 impl<'a, 'b> Environment<'a, 'b> {
     pub fn new(
         uid: &'b mut usize,
+        target: Target,
         current_module: &'a [String],
         importable_modules: &'a HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
@@ -65,6 +69,7 @@ impl<'a, 'b> Environment<'a, 'b> {
         Self {
             uid,
             level: 1,
+            target,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_values: HashMap::new(),
