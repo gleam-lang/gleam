@@ -456,28 +456,17 @@ pub fn infer_module(
         )?;
     }
 
-    // TODO: If
     // Infer the types of each statement in the module
     // We first infer all the constants so they can be used in functions defined
     // anywhere in the module.
     let mut statements = Vec::with_capacity(module.statements.len());
-    let mut not_consts = vec![];
-    for statement in module.statements {
-        if matches!(statement, Statement::ModuleConstant { .. }) {
-            let statement =
-                infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
-            statements.push(statement);
-        } else {
-            not_consts.push(statement)
-        }
-    }
+    let (consts, not_consts) = extract_consts(target, module.statements);
 
-    for statement in not_consts {
+    for statement in consts.into_iter().chain(not_consts.into_iter()) {
         let statement = infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
         statements.push(statement);
     }
 
-    // TODO: If
     // Generalise functions now that the entire module has been inferred
     let statements = statements
         .into_iter()
@@ -526,6 +515,46 @@ pub fn infer_module(
             package: package.to_string(),
         },
     })
+}
+
+fn extract_consts(
+    target: Target,
+    statements: Vec<UntypedStatement>,
+) -> (Vec<UntypedStatement>, Vec<UntypedStatement>) {
+    fn extract(
+        target: Target,
+        statements: Vec<UntypedStatement>,
+        consts: &mut Vec<UntypedStatement>,
+        not_consts: &mut Vec<UntypedStatement>,
+    ) {
+        for statement in statements {
+            match statement {
+                Statement::If {
+                    target: if_target,
+                    statements,
+                    ..
+                } => {
+                    if target == if_target {
+                        extract(target, statements, consts, not_consts);
+                    }
+                }
+
+                Statement::Fn { .. }
+                | Statement::TypeAlias { .. }
+                | Statement::CustomType { .. }
+                | Statement::ExternalFn { .. }
+                | Statement::ExternalType { .. }
+                | Statement::Import { .. } => not_consts.push(statement),
+
+                Statement::ModuleConstant { .. } => consts.push(statement),
+            }
+        }
+    }
+
+    let mut consts = vec![];
+    let mut not_consts = vec![];
+    extract(target, statements, &mut consts, &mut not_consts);
+    (consts, not_consts)
 }
 
 fn validate_module_name(name: &[String]) -> Result<(), Error> {

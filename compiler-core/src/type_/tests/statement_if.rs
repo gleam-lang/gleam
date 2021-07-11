@@ -56,3 +56,27 @@ pub const y = 1
         vec![("y", "Int")],
     );
 }
+
+#[test]
+fn included_const_ref_earlier() {
+    assert_module_infer!(
+        "if erlang { 
+  const x = 1
+}
+pub fn main() { x }
+",
+        vec![("main", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn included_const_ref_later() {
+    assert_module_infer!(
+        "pub fn main() { x }
+if erlang { 
+  const x = 1
+}
+",
+        vec![("main", "fn() -> Int")],
+    );
+}
