@@ -481,7 +481,7 @@ pub fn infer_module(
     // Generalise functions now that the entire module has been inferred
     let statements = statements
         .into_iter()
-        .map(|s| generalise_statement(s, module_name, &mut environment))
+        .map(|s| generalise_statement(s, target, module_name, &mut environment))
         .collect();
 
     // Generate warnings for unused items
@@ -849,6 +849,7 @@ fn register_values<'a>(
 
 fn generalise_statement(
     s: TypedStatement,
+    target: Target,
     module_name: &[String],
     environment: &mut Environment<'_, '_>,
 ) -> TypedStatement {
@@ -908,7 +909,29 @@ fn generalise_statement(
             }
         }
 
-        statement => statement,
+        Statement::If {
+            target: if_target,
+            location,
+            statements,
+        } if if_target == target => {
+            let statements = statements
+                .into_iter()
+                .map(|s| generalise_statement(s, target, module_name, environment))
+                .collect();
+            Statement::If {
+                location,
+                target,
+                statements,
+            }
+        }
+
+        statement @ Statement::If { .. }
+        | statement @ Statement::TypeAlias { .. }
+        | statement @ Statement::CustomType { .. }
+        | statement @ Statement::ExternalFn { .. }
+        | statement @ Statement::ExternalType { .. }
+        | statement @ Statement::Import { .. }
+        | statement @ Statement::ModuleConstant { .. } => statement,
     }
 }
 
