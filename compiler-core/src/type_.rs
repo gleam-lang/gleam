@@ -479,7 +479,7 @@ pub fn infer_module(
     // Remove private and imported types and values to create the public interface
     environment
         .module_types
-        .retain(|_, info| info.public && &info.module == &name);
+        .retain(|_, info| info.public && info.module.as_slice() == name.as_slice());
     environment.module_values.retain(|_, info| info.public);
     environment
         .accessors
@@ -818,7 +818,6 @@ fn register_values<'a>(
         }
 
         Statement::Import { .. } | Statement::TypeAlias { .. } | Statement::ExternalType { .. } => {
-            ()
         }
     }
     Ok(())
@@ -885,12 +884,14 @@ fn generalise_statement(
             }
         }
 
-        statement @ Statement::TypeAlias { .. }
-        | statement @ Statement::CustomType { .. }
-        | statement @ Statement::ExternalFn { .. }
-        | statement @ Statement::ExternalType { .. }
-        | statement @ Statement::Import { .. }
-        | statement @ Statement::ModuleConstant { .. } => statement,
+        statement
+        @
+        (Statement::TypeAlias { .. }
+        | Statement::CustomType { .. }
+        | Statement::ExternalFn { .. }
+        | Statement::ExternalType { .. }
+        | Statement::Import { .. }
+        | Statement::ModuleConstant { .. }) => statement,
     }
 }
 
