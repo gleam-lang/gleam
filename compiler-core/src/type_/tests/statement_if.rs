@@ -31,3 +31,28 @@ fn alias_in_block() {
         vec![("x", "Int")],
     );
 }
+
+#[test]
+fn generalising() {
+    assert_module_infer!(
+        "if erlang { 
+  pub fn id(x) { x }
+  pub fn x() { id(1) }
+}
+",
+        vec![("id", "fn(a) -> a"), ("x", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn excluded_generalising() {
+    assert_module_infer!(
+        "if javascript { 
+  pub fn id(x) { x }
+  pub fn x() { id(1) }
+}
+pub const y = 1
+",
+        vec![("y", "Int")],
+    );
+}
