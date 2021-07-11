@@ -3,7 +3,6 @@ mod tests;
 
 use crate::{
     ast::*,
-    build::Target,
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -106,13 +105,13 @@ impl<'comments> Formatter<'comments> {
         end != 0
     }
 
-    fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
+    fn target_group<'a>(&mut self, target_group: &'a TargetGroup) -> Document<'a> {
         let mut has_imports = false;
         let mut has_declarations = false;
         let mut imports = Vec::new();
-        let mut declarations = Vec::with_capacity(module.statements.len());
+        let mut declarations = Vec::with_capacity(target_group.len());
 
-        for statement in &module.statements {
+        for statement in target_group.statements_ref() {
             let start = statement.location().start;
             match statement {
                 Statement::Import { .. } => {
@@ -140,6 +139,25 @@ impl<'comments> Formatter<'comments> {
             nil()
         };
 
+        match target_group {
+            TargetGroup::Any(_) => docvec![imports, sep, declarations],
+            TargetGroup::Only(target, _) => docvec![
+                "if ",
+                Document::String(target.to_string()),
+                " {",
+                docvec![line(), imports, sep, declarations].nest(INDENT),
+                line(),
+                "}"
+            ],
+        }
+    }
+
+    fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
+        let groups = concat(Itertools::intersperse(
+            module.statements.iter().map(|t| self.target_group(t)),
+            lines(2),
+        ));
+
         let doc_comments = concat(self.doc_comments.iter().map(|comment| {
             line()
                 .append("///")
@@ -164,9 +182,7 @@ impl<'comments> Formatter<'comments> {
         };
 
         module_comments
-            .append(imports)
-            .append(sep)
-            .append(declarations)
+            .append(groups)
             .append(doc_comments)
             .append(comments)
             .append(line())
@@ -272,30 +288,7 @@ impl<'comments> Formatter<'comments> {
                 };
                 head.append(" = ").append(self.const_expr(value))
             }
-
-            Statement::If {
-                target, statements, ..
-            } => self.statement_if(*target, statements.as_slice()),
         }
-    }
-
-    fn statement_if<'a>(
-        &mut self,
-        target: Target,
-        statements: &'a [UntypedStatement],
-    ) -> Document<'a> {
-        let statements = Itertools::intersperse(
-            statements.iter().map(|s| self.statement(s).group()),
-            lines(2),
-        );
-        docvec![
-            "if ",
-            Document::String(target.to_string()),
-            " {",
-            docvec![line(), concat(statements)].nest(INDENT),
-            line(),
-            "}"
-        ]
     }
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {

@@ -56,8 +56,8 @@ mod token;
 use crate::ast::{
     Arg, ArgNames, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
     Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TypeAst, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TypeAst,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     CAPTURE_VARIABLE,
 };
@@ -127,7 +127,7 @@ where
     }
 
     fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
-        let statements = Parser::series_of(self, &Parser::parse_statement, None);
+        let statements = Parser::series_of(self, &Parser::parse_target_group, None);
         let statements = self.ensure_no_errors_or_remaining_input(statements)?;
         Ok(Module {
             name: vec![],
@@ -181,6 +181,29 @@ where
             // no errors
             parse_result
         }
+    }
+
+    fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
+        match self.tok0.as_ref() {
+            Some((_, Token::If, _)) => {
+                let _ = self.next_tok();
+                let target = self.expect_target()?;
+                let _ = self.expect_one(&Token::LeftBrace)?;
+                let statements = self.expect_statements()?;
+                let (_, _) = self.expect_one(&Token::RightBrace)?;
+                Ok(Some(TargetGroup::Only(target, statements)))
+            }
+            Some(_) => {
+                let statements = self.expect_statements()?;
+                Ok(Some(TargetGroup::Any(statements)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn expect_statements(&mut self) -> Result<Vec<UntypedStatement>, ParseError> {
+        let statements = Parser::series_of(self, &Parser::parse_statement, None);
+        self.ensure_no_errors(statements)
     }
 
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
@@ -254,12 +277,6 @@ where
                 self.parse_custom_type(start, true, false)
             }
 
-            // If (conditional compilation)
-            (Some((start, Token::If, _)), _) => {
-                let _ = self.next_tok();
-                self.parse_statement_if(start)
-            }
-
             (t0, _) => {
                 self.tok0 = t0;
                 Ok(None)
@@ -267,21 +284,6 @@ where
         };
         tracing::trace!("Statement Parsed: {:?}", statement);
         statement
-    }
-
-    // examples:
-    //   if { ..statements }
-    fn parse_statement_if(&mut self, start: usize) -> Result<Option<UntypedStatement>, ParseError> {
-        let target = self.expect_target()?;
-        let _ = self.expect_one(&Token::LeftBrace)?;
-        let statements = Parser::series_of(self, &Parser::parse_statement, None);
-        let statements = self.ensure_no_errors(statements)?;
-        let (_, end) = self.expect_one(&Token::RightBrace)?;
-        Ok(Some(Statement::If {
-            target,
-            statements,
-            location: SrcSpan { start, end },
-        }))
     }
 
     //

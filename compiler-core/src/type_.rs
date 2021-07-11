@@ -410,15 +410,16 @@ impl ValueConstructor {
 pub fn infer_module(
     target: Target,
     uid: &mut usize,
-    module: UntypedModule,
+    mut module: UntypedModule,
     origin: Origin,
     package: &str,
     modules: &HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
-    let mut environment = Environment::new(uid, target, &module.name, modules, warnings);
-    let module_name = &module.name;
-    validate_module_name(module_name)?;
+    let name = module.name.clone();
+    let documentation = std::mem::take(&mut module.documentation);
+    let mut environment = Environment::new(uid, &name, modules, warnings);
+    validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
@@ -427,50 +428,49 @@ pub fn infer_module(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
-    for s in &module.statements {
+    for s in module.iter_statements(target) {
         register_import(s, &mut environment)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in &module.statements {
-        register_types(
-            s,
-            target,
-            module_name,
-            &mut hydrators,
-            &mut type_names,
-            &mut environment,
-        )?;
+    for s in module.iter_statements(target) {
+        register_types(s, &name, &mut hydrators, &mut type_names, &mut environment)?;
     }
 
     // Register values so they can be used in functions earlier in the module.
-    for s in &module.statements {
-        register_values(
-            s,
-            target,
-            module_name,
-            &mut hydrators,
-            &mut value_names,
-            &mut environment,
-        )?;
+    for s in module.iter_statements(target) {
+        register_values(s, &name, &mut hydrators, &mut value_names, &mut environment)?;
     }
 
     // Infer the types of each statement in the module
     // We first infer all the constants so they can be used in functions defined
     // anywhere in the module.
     let mut statements = Vec::with_capacity(module.statements.len());
-    let (consts, not_consts) = extract_consts(target, module.statements);
+    let mut consts = vec![];
+    let mut not_consts = vec![];
+    for statement in module.into_iter_statements(target) {
+        match statement {
+            Statement::Fn { .. }
+            | Statement::TypeAlias { .. }
+            | Statement::CustomType { .. }
+            | Statement::ExternalFn { .. }
+            | Statement::ExternalType { .. }
+            | Statement::Import { .. } => not_consts.push(statement),
+
+            Statement::ModuleConstant { .. } => consts.push(statement),
+        }
+    }
 
     for statement in consts.into_iter().chain(not_consts.into_iter()) {
-        let statement = infer_statement(statement, module_name, &mut hydrators, &mut environment)?;
+        let statement = infer_statement(statement, &name, &mut hydrators, &mut environment)?;
         statements.push(statement);
     }
 
     // Generalise functions now that the entire module has been inferred
     let statements = statements
         .into_iter()
-        .map(|s| generalise_statement(s, target, module_name, &mut environment))
+        .map(|s| generalise_statement(s, &name, &mut environment))
         .collect();
 
     // Generate warnings for unused items
@@ -479,7 +479,7 @@ pub fn infer_module(
     // Remove private and imported types and values to create the public interface
     environment
         .module_types
-        .retain(|_, info| info.public && &info.module == module_name);
+        .retain(|_, info| info.public && &info.module == &name);
     environment.module_values.retain(|_, info| info.public);
     environment
         .accessors
@@ -503,11 +503,11 @@ pub fn infer_module(
     } = environment;
 
     Ok(ast::Module {
-        documentation: module.documentation,
-        name: module.name.clone(),
+        documentation,
+        name: name.clone(),
         statements,
         type_info: Module {
-            name: module.name,
+            name,
             types,
             values,
             accessors,
@@ -515,46 +515,6 @@ pub fn infer_module(
             package: package.to_string(),
         },
     })
-}
-
-fn extract_consts(
-    target: Target,
-    statements: Vec<UntypedStatement>,
-) -> (Vec<UntypedStatement>, Vec<UntypedStatement>) {
-    fn extract(
-        target: Target,
-        statements: Vec<UntypedStatement>,
-        consts: &mut Vec<UntypedStatement>,
-        not_consts: &mut Vec<UntypedStatement>,
-    ) {
-        for statement in statements {
-            match statement {
-                Statement::If {
-                    target: if_target,
-                    statements,
-                    ..
-                } => {
-                    if target == if_target {
-                        extract(target, statements, consts, not_consts);
-                    }
-                }
-
-                Statement::Fn { .. }
-                | Statement::TypeAlias { .. }
-                | Statement::CustomType { .. }
-                | Statement::ExternalFn { .. }
-                | Statement::ExternalType { .. }
-                | Statement::Import { .. } => not_consts.push(statement),
-
-                Statement::ModuleConstant { .. } => consts.push(statement),
-            }
-        }
-    }
-
-    let mut consts = vec![];
-    let mut not_consts = vec![];
-    extract(target, statements, &mut consts, &mut not_consts);
-    (consts, not_consts)
 }
 
 fn validate_module_name(name: &[String]) -> Result<(), Error> {
@@ -621,7 +581,6 @@ fn assert_unique_const_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
-    target: Target,
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
@@ -858,27 +817,15 @@ fn register_values<'a>(
             assert_unique_const_name(names, name, location)?;
         }
 
-        Statement::If {
-            target: if_target,
-            statements,
-            ..
-        } if *if_target == target => {
-            for s in statements {
-                register_values(s, target, module_name, hydrators, names, environment)?;
-            }
+        Statement::Import { .. } | Statement::TypeAlias { .. } | Statement::ExternalType { .. } => {
+            ()
         }
-
-        Statement::If { .. }
-        | Statement::Import { .. }
-        | Statement::TypeAlias { .. }
-        | Statement::ExternalType { .. } => (),
     }
     Ok(())
 }
 
 fn generalise_statement(
     s: TypedStatement,
-    target: Target,
     module_name: &[String],
     environment: &mut Environment<'_, '_>,
 ) -> TypedStatement {
@@ -938,24 +885,7 @@ fn generalise_statement(
             }
         }
 
-        Statement::If {
-            target: if_target,
-            location,
-            statements,
-        } if if_target == target => {
-            let statements = statements
-                .into_iter()
-                .map(|s| generalise_statement(s, target, module_name, environment))
-                .collect();
-            Statement::If {
-                location,
-                target,
-                statements,
-            }
-        }
-
-        statement @ Statement::If { .. }
-        | statement @ Statement::TypeAlias { .. }
+        statement @ Statement::TypeAlias { .. }
         | statement @ Statement::CustomType { .. }
         | statement @ Statement::ExternalFn { .. }
         | statement @ Statement::ExternalType { .. }
@@ -1282,48 +1212,7 @@ fn infer_statement(
                 type_,
             })
         }
-
-        Statement::If {
-            target,
-            location,
-            statements,
-        } => infer_statement_if(
-            target,
-            location,
-            statements,
-            module_name,
-            hydrators,
-            environment,
-        ),
     }
-}
-
-fn infer_statement_if(
-    target: Target,
-    location: SrcSpan,
-    statements: Vec<UntypedStatement>,
-    module_name: &[String],
-    hydrators: &mut HashMap<String, Hydrator>,
-    environment: &mut Environment<'_, '_>,
-) -> Result<TypedStatement, Error> {
-    if environment.target != target {
-        return Ok(Statement::If {
-            target,
-            location,
-            statements: vec![],
-        });
-    }
-
-    let statements = statements
-        .into_iter()
-        .map(|s| infer_statement(s, module_name, hydrators, environment))
-        .try_collect()?;
-
-    Ok(Statement::If {
-        target,
-        location,
-        statements,
-    })
 }
 
 fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
@@ -1627,7 +1516,6 @@ fn custom_type_accessors<A>(
 /// Iterate over a module, registering any new types created by the module into the typer
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
-    target: Target,
     module: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
@@ -1743,18 +1631,7 @@ pub fn register_types<'a>(
             }
         }
 
-        Statement::If {
-            statements,
-            target: if_target,
-            ..
-        } if target == *if_target => {
-            for s in statements {
-                register_types(s, target, module, hydrators, names, environment)?;
-            }
-        }
-
-        Statement::If { .. }
-        | Statement::Fn { .. }
+        Statement::Fn { .. }
         | Statement::ExternalFn { .. }
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. } => (),
@@ -1894,8 +1771,7 @@ pub fn register_import(
             Ok(())
         }
 
-        Statement::If { .. }
-        | Statement::Fn { .. }
+        Statement::Fn { .. }
         | Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
         | Statement::ExternalFn { .. }

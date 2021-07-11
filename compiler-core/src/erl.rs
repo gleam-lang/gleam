@@ -7,7 +7,6 @@ mod tests;
 
 use crate::{
     ast::*,
-    build::Target,
     docvec,
     io::{OutputFile, Utf8Writer},
     line_numbers::LineNumbers,
@@ -409,18 +408,7 @@ fn register_imports(
             type_defs.push(doc);
         }
 
-        Statement::If {
-            statements,
-            target: Target::Erlang,
-            ..
-        } => {
-            for s in statements {
-                register_imports(s, exports, type_exports, type_defs, module_name);
-            }
-        }
-
-        Statement::If { .. }
-        | Statement::Fn { .. }
+        Statement::Fn { .. }
         | Statement::Import { .. }
         | Statement::TypeAlias { .. }
         | Statement::ExternalFn { .. }
@@ -465,13 +453,6 @@ fn statement<'a>(
             args,
             return_type,
         )],
-
-        // We don't need to check the target because non-erlang target
-        // if blocks will be empty
-        Statement::If { statements, .. } => statements
-            .iter()
-            .flat_map(|s| self::statement(current_module, s, module, line_numbers))
-            .collect(),
     }
 }
 

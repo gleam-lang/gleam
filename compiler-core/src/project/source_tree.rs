@@ -79,7 +79,7 @@ impl SourceTree {
             let module_name = module.module.name_string();
             let src = module.src.clone();
             let path = module.path.clone();
-            let deps = module.module.dependencies();
+            let deps = module.module.dependencies(crate::build::Target::Erlang);
             let &module_index = self.indexes.get(&module_name).expect(
                 "SourceTree.calculate_dependencies(): Unable to find module index for name",
             );
