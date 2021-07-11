@@ -70,13 +70,17 @@ impl TargetGroup {
 
     pub fn statements_ref(&self) -> &[UntypedStatement] {
         match self {
-            Self::Any(s) => &s,
-            Self::Only(_, s) => &s,
+            Self::Any(s) => s,
+            Self::Only(_, s) => s,
         }
     }
 
     pub fn len(&self) -> usize {
         self.statements_ref().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
