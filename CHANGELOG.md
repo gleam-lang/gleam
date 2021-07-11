@@ -14,6 +14,8 @@
   project contained a single module and attempted to import another.
 - Special variable naming has been made more consistent in rendered Erlang and
   JavaScript.
+- Conditional compilation can now be used to have different code within a module
+  when compiling to a specific target.
 
 ## v0.16.1 - 2021-06-21
 
