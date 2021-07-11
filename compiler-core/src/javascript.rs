@@ -124,12 +124,6 @@ impl<'a> Generator<'a> {
             } => vec![Ok(
                 self.external_function(*public, name, arguments, module, fun)
             )],
-
-            // We don't need to check the target because non-javascript target
-            // if blocks will be empty
-            Statement::If { statements, .. } => {
-                statements.iter().flat_map(|s| self.statement(s)).collect()
-            }
         }
     }
 

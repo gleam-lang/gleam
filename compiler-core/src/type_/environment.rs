@@ -11,9 +11,6 @@ pub struct Environment<'a, 'b> {
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
 
-    /// The target being compiled to
-    pub target: Target,
-
     /// Values defined in the current function (or the prelude)
     pub local_values: im::HashMap<String, ValueConstructor>,
 
@@ -58,7 +55,6 @@ pub enum EntityKind {
 impl<'a, 'b> Environment<'a, 'b> {
     pub fn new(
         uid: &'b mut usize,
-        target: Target,
         current_module: &'a [String],
         importable_modules: &'a HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
@@ -69,7 +65,6 @@ impl<'a, 'b> Environment<'a, 'b> {
         Self {
             uid,
             level: 1,
-            target,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_values: HashMap::new(),

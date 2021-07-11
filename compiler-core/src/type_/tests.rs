@@ -21,15 +21,9 @@ macro_rules! assert_infer {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
-        let result = ExprTyper::new(&mut Environment::new(
-            &mut uid,
-            Target::Erlang,
-            &[],
-            &modules,
-            &mut vec![],
-        ))
-        .infer(ast)
-        .expect("should successfully infer");
+        let result = ExprTyper::new(&mut Environment::new(&mut uid, &[], &modules, &mut vec![]))
+            .infer(ast)
+            .expect("should successfully infer");
         assert_eq!(
             ($src, printer.pretty_print(result.type_().as_ref(), 0),),
             ($src, $typ.to_string()),
@@ -96,7 +90,6 @@ macro_rules! assert_error {
         println!("new assert_error test: {}", modules.len());
         let result = ExprTyper::new(&mut Environment::new(
             &mut uid,
-            Target::Erlang,
             &["somemod".to_string()],
             &modules,
             &mut vec![],
