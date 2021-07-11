@@ -1,8 +1,7 @@
 use super::*;
-use crate::{build::Origin, type_, type_::build_prelude};
-use std::collections::HashMap;
+use crate::type_;
 
-use pretty_assertions::assert_eq;
+mod statement_if;
 
 #[test]
 fn record_definition_test() {
@@ -98,9 +97,16 @@ fn record_definition_test() {
     );
 }
 
+#[macro_export]
 macro_rules! assert_erl {
-    ($src:expr, $erl:expr $(,)?) => {
-        // println!("\n\n\n{}\n", $src);
+    ($src:expr, $erl:expr $(,)?) => {{
+        use crate::{
+            build::Origin,
+            erl::module,
+            line_numbers::LineNumbers,
+            type_::{build_prelude, infer_module},
+        };
+        use std::collections::HashMap;
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let mut modules = HashMap::new();
@@ -110,7 +116,7 @@ macro_rules! assert_erl {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
-        let ast = crate::type_::infer_module(
+        let ast = infer_module(
             crate::build::Target::Erlang,
             &mut 0,
             ast,
@@ -124,7 +130,7 @@ macro_rules! assert_erl {
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
-    };
+    }};
 }
 
 #[test]
