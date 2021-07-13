@@ -764,6 +764,7 @@ impl<'module> Generator<'module> {
     }
 
     fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
+        let tail_position = self.tail_position;
         self.tail_position = false;
         let gleam_error = "todo";
         let message = message
@@ -773,7 +774,7 @@ impl<'module> Generator<'module> {
         let module_name = Document::String(self.module_name.join("/"));
         let line = self.line_numbers.line_number(location.start);
 
-        docvec![
+        let doc = docvec![
             "throw Object.assign",
             wrap_args(
                 vec![
@@ -800,8 +801,15 @@ impl<'module> Generator<'module> {
                     )
                 ]
                 .into_iter()
-            )
-        ]
+            ),
+            ";"
+        ];
+
+        // Reset tail position so later values are returned as needed. i.e.
+        // following clauses in a case expression.
+        self.tail_position = tail_position;
+
+        doc
     }
 
     fn module_select<'a>(
@@ -965,6 +973,7 @@ impl TypedExpr {
         matches!(
             self,
             TypedExpr::Try { .. }
+                | TypedExpr::Todo { .. }
                 | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Sequence { .. }

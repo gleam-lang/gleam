@@ -432,6 +432,7 @@ export function export$() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1208
 #[test]
 fn reserved_word_argument() {
     assert_js!(
@@ -448,6 +449,7 @@ export function main(with$) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1186
 #[test]
 fn multiple_discard() {
     assert_js!(

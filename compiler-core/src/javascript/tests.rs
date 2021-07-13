@@ -11,10 +11,9 @@ mod modules;
 mod numbers;
 mod prelude;
 mod strings;
+mod todo;
 mod try_;
 mod tuples;
-
-use pretty_assertions::assert_eq;
 
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
@@ -87,40 +86,4 @@ macro_rules! assert_js {
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
-}
-
-#[test]
-fn todo_throws_error() {
-    assert_js!(
-        r#"
-fn go() {
-    todo
-}
-"#,
-        r#""use strict";
-
-function go() {
-  throw Object.assign(
-    new Error("This has not yet been implemented"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  )
-}
-"#
-    );
-    assert_js!(
-        r#"
-fn go() {
-    todo("I should do this");
-}
-"#,
-        r#""use strict";
-
-function go() {
-  throw Object.assign(
-    new Error("I should do this"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  )
-}
-"#
-    );
 }
