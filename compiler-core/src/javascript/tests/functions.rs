@@ -431,3 +431,19 @@ export function export$() {
 "#
     );
 }
+
+#[test]
+fn keyword_argument() {
+    assert_js!(
+        r#"pub fn main(with) {
+  with
+}
+"#,
+        r#""use strict";
+
+export function main(with$) {
+  return with$;
+}
+"#
+    );
+}
