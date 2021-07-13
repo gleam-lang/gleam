@@ -454,28 +454,43 @@ impl<'module> Generator<'module> {
                     };
                     let assignments = compiled.take_assignments_doc(subject);
 
-                    docvec!(line(), assignments, line(), consequence).nest(INDENT)
+                    docvec!(assignments, line(), consequence)
                 } else {
-                    docvec!(line(), consequence).nest(INDENT)
+                    consequence
                 };
 
                 let is_final_clause = clause_number == total_patterns;
-                doc = if is_final_clause && !compiled.has_checks() && clause.guard.is_none() {
+                let is_first_clause = clause_number == 1;
+                let is_only_clause = is_final_clause && is_first_clause;
+                let is_catch_all = !compiled.has_checks() && clause.guard.is_none();
+
+                if is_catch_all {
+                    possibility_of_no_match = false;
+                }
+
+                doc = if is_only_clause && is_catch_all {
+                    // If this is the only clause and there are no checks then we can
+                    // render just the body as the case does nothing
+                    doc.append(body)
+                } else if is_final_clause && is_catch_all {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
-                    possibility_of_no_match = false;
                     doc.append(" else {")
+                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(line())
+                        .append("}")
                 } else {
-                    doc.append(if clause_number == 1 {
+                    doc.append(if is_first_clause {
                         "if ("
                     } else {
                         " else if ("
                     })
                     .append(compiled.take_checks_doc(true))
                     .append(") {")
+                    .append(docvec!(line(), body).nest(INDENT))
+                    .append(line())
+                    .append("}")
                 };
-
-                doc = doc.append(body).append(line()).append("}");
             }
         }
 
