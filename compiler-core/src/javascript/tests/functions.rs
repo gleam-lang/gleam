@@ -433,7 +433,7 @@ export function export$() {
 }
 
 #[test]
-fn keyword_argument() {
+fn reserved_word_argument() {
     assert_js!(
         r#"pub fn main(with) {
   with
@@ -443,6 +443,22 @@ fn keyword_argument() {
 
 export function main(with$) {
   return with$;
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_discard() {
+    assert_js!(
+        r#"pub fn main(_, _, _) {
+  1
+}
+"#,
+        r#""use strict";
+
+export function main(_, _1, _2) {
+  return 1;
 }
 "#
     );

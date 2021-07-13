@@ -367,8 +367,17 @@ fn unsupported<M: ToString, T>(label: M) -> Result<T, Error> {
 }
 
 fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
+    let mut discards = 0;
     wrap_args(args.iter().map(|a| match &a.names {
-        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
+        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => {
+            let doc = if discards == 0 {
+                "_".to_doc()
+            } else {
+                Document::String(format!("_{}", discards))
+            };
+            discards += 1;
+            doc
+        }
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
             maybe_escape_identifier(name)
         }
