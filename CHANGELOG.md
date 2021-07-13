@@ -16,6 +16,14 @@
   JavaScript.
 - Conditional compilation can now be used to have different code within a module
   when compiling to a specific target.
+- Fixed a bug where `todo` caused values not to be returned in JavaScript.
+- Fixed a bug where multiple discarded function arguments generated invalid
+  JavaScript.
+- Fixed a bug where using JavaScript reserved words as function argument names
+  caused generated invalid JavaScript.
+- Fixed a bug where a case expression of just a catch-all pattern generated
+  invalid JavaScript.
+
 
 ## v0.16.1 - 2021-06-21
 
