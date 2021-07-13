@@ -23,6 +23,8 @@
   caused generated invalid JavaScript.
 - Fixed a bug where a case expression of just a catch-all pattern generated
   invalid JavaScript.
+- Fixed a bug where the formatter would incorrectly render extra newlines below
+  try expressions.
 
 
 ## v0.16.1 - 2021-06-21
