@@ -173,3 +173,20 @@ fn name_tests() {
         }
     );
 }
+
+#[test]
+fn target_group_trailing_brace() {
+    assert_error!(
+        "if erlang {
+}
+//
+}
+",
+        ParseError {
+            error: ParseErrorType::UnexpectedToken {
+                expected: vec!["An import, const, type, if block, or function.".to_string()],
+            },
+            location: SrcSpan { start: 0, end: 2 },
+        }
+    );
+}

@@ -53,6 +53,7 @@ pub mod error;
 pub mod extra;
 pub mod lexer;
 mod token;
+
 use crate::ast::{
     Arg, ArgNames, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
     Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
@@ -195,7 +196,11 @@ where
             }
             Some(_) => {
                 let statements = self.expect_statements()?;
-                Ok(Some(TargetGroup::Any(statements)))
+                if statements.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(TargetGroup::Any(statements)))
+                }
             }
             None => Ok(None),
         }
