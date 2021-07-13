@@ -3258,3 +3258,18 @@ if erlang {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1184
+#[test]
+fn try_empty_line() {
+    assert_format!(
+        "pub fn main(x) {
+  try _ = x
+  try _ = x
+  try _ = x
+
+  let x = x
+}
+"
+    );
+}

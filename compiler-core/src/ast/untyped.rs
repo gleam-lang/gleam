@@ -176,7 +176,7 @@ impl UntypedExpr {
                 .map(|e| e.start_byte_index())
                 .unwrap_or(location.start),
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
-            Self::Assignment { location, .. } => location.start,
+            Self::Try { location, .. } | Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
         }
     }
