@@ -606,10 +606,8 @@ impl<'comments> Formatter<'comments> {
 
         if let Some(then) = then {
             doc.append(if self.pop_empty_lines(then.start_byte_index()) {
-                println!("line");
                 lines(2)
             } else {
-                println!("noline");
                 line()
             })
             .append(self.expr(then))
