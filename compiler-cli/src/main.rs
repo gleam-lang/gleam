@@ -158,6 +158,13 @@ pub struct NewOptions {
         default_value = "lib"
     )]
     pub template: new::Template,
+
+    #[structopt(
+        long,
+        possible_values = &new::Docker::VARIANTS,
+        case_insensitive = true,
+    )]
+    pub docker: Option<Option<new::Docker>>,
 }
 
 #[derive(StructOpt, Debug)]
