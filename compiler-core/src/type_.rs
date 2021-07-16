@@ -286,6 +286,11 @@ impl ValueConstructorVariant {
             Self::LocalVariable { .. } | Self::ModuleFn { .. } => ModuleValueConstructor::Fn,
         }
     }
+
+    /// Returns `true` if the value_constructor_variant is [`LocalVariable`].
+    pub fn is_local_variable(&self) -> bool {
+        matches!(self, Self::LocalVariable)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -383,6 +388,12 @@ pub struct ValueConstructor {
     pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
+}
+
+impl ValueConstructor {
+    pub fn is_local_variable(&self) -> bool {
+        self.variant.is_local_variable()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
