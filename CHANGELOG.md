@@ -25,6 +25,7 @@
   invalid JavaScript.
 - Fixed a bug where the formatter would incorrectly render extra newlines below
   try expressions.
+- Multiple subjects are now supported for case expressions in JavaScript.
 
 
 ## v0.16.1 - 2021-06-21
