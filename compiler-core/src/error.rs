@@ -122,7 +122,11 @@ pub enum Error {
         count: usize,
     },
 
-    JavaScript(crate::javascript::Error),
+    JavaScript {
+        path: PathBuf,
+        src: Src,
+        error: crate::javascript::Error,
+    },
 }
 
 impl From<capnp::Error> for Error {
@@ -1674,13 +1678,16 @@ Fix the warnings and try again!"
                 write_project(buf, diagnostic);
             }
 
-            Error::JavaScript(error) => match error {
-                javascript::Error::Unsupported { feature } => {
-                    let diagnostic = ProjectErrorDiagnostic {
+            Error::JavaScript { src, path, error } => match error {
+                javascript::Error::Unsupported { feature, location } => {
+                    let diagnostic = Diagnostic {
                         title: "Unsupported feature for compilation target".to_string(),
                         label: format!("{} is not supported for JavaScript compilation", feature),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
                     };
-                    write_project(buf, diagnostic)
+                    write(buf, diagnostic, Severity::Error);
                 }
             },
         }

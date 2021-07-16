@@ -21,6 +21,7 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {{
         use crate::javascript::*;
+        use std::path::Path;
         let mut modules = std::collections::HashMap::new();
         let mut uid = 0;
         // DUPE: preludeinsertion
@@ -43,12 +44,13 @@ macro_rules! assert_js {
         .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, &mut output).unwrap();
+        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
         use crate::javascript::*;
+        use std::path::Path;
         let mut modules = std::collections::HashMap::new();
         let mut uid = 0;
         // DUPE: preludeinsertion
@@ -83,7 +85,7 @@ macro_rules! assert_js {
         .expect("should successfully infer");
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, &mut output).unwrap();
+        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
 }

@@ -140,7 +140,10 @@ impl<'module> Generator<'module> {
                 label, location, ..
             } => Ok(self.todo(label, location)),
 
-            TypedExpr::BitString { .. } => unsupported("Bitstring"),
+            TypedExpr::BitString { location, .. } => Err(Error::Unsupported {
+                feature: "Bit string syntax".to_string(),
+                location: *location,
+            }),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -878,7 +881,10 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
                 field_values?.into_iter(),
             ))
         }
-        Constant::BitString { .. } => unsupported("BitString as constant"),
+        Constant::BitString { location, .. } => Err(Error::Unsupported {
+            feature: "Bit string syntax".to_string(),
+            location: *location,
+        }),
     }
 }
 

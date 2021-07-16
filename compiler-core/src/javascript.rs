@@ -3,6 +3,8 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
+use std::path::Path;
+
 use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use heck::CamelCase;
 use itertools::Itertools;
@@ -347,23 +349,23 @@ fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
+    path: &Path,
+    src: &str,
     writer: &mut impl Utf8Writer,
 ) -> Result<(), crate::Error> {
     Generator::new(line_numbers, module)
         .compile()
-        .map_err(crate::Error::JavaScript)?
+        .map_err(|error| crate::Error::JavaScript {
+            path: path.to_path_buf(),
+            src: src.to_string(),
+            error,
+        })?
         .pretty_print(80, writer)
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Error {
-    Unsupported { feature: String },
-}
-
-fn unsupported<M: ToString, T>(label: M) -> Result<T, Error> {
-    Err(Error::Unsupported {
-        feature: label.to_string(),
-    })
+    Unsupported { feature: String, location: SrcSpan },
 }
 
 fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {

@@ -152,7 +152,13 @@ impl<'a> JavaScript<'a> {
         let path = self.output_directory.join(&name);
         let mut file = writer.open(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
-        let res = javascript::module(&module.ast, &line_numbers, &mut file);
+        let res = javascript::module(
+            &module.ast,
+            &line_numbers,
+            module.path.as_path(),
+            module.code.as_str(),
+            &mut file,
+        );
         tracing::trace!(name = ?name, "Generated js module");
         res
     }

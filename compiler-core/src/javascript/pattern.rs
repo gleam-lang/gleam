@@ -330,8 +330,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::VarUsage { .. } | Pattern::BitString { .. } => {
-                unsupported("Bit string matching")
+            Pattern::VarUsage { location, .. } | Pattern::BitString { location, .. } => {
+                Err(Error::Unsupported {
+                    feature: "Bit string matching".to_string(),
+                    location: *location,
+                })
             }
         }
     }
