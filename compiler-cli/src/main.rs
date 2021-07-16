@@ -20,7 +20,8 @@
     clippy::inefficient_to_string,
     clippy::linkedlist,
     clippy::macro_use_imports,
-    clippy::option_option,
+    // Used for optional cli args that take optional values
+    // clippy::option_option,
     clippy::verbose_file_reads,
     clippy::unnested_or_patterns,
     rust_2018_idioms,
