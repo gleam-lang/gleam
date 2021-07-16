@@ -47,3 +47,108 @@ function go(x) {
 "#
     )
 }
+
+#[test]
+fn multi_subject_catch_all() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  case x, y {
+    True, True -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go(x, y) {
+  if (x && y) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn multi_subject_or() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  case x, y {
+    True, _ | _, True -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go(x, y) {
+  if (x) {
+    return 1;
+  } else if (y) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn multi_subject_no_catch_all() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  case x, y {
+    True, _ -> 1
+    _, True -> 2
+    False, False -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go(x, y) {
+  if (x) {
+    return 1;
+  } else if (y) {
+    return 2;
+  } else if (!x && !y) {
+    return 0;
+  } else {
+    throw new Error("Bad match");
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn multi_subject_subject_assignments() {
+    assert_js!(
+        r#"
+fn go() {
+  case True, False {
+    True, True -> 1
+    _, _ -> 0
+  }
+}
+"#,
+        r#""use strict";
+
+function go() {
+  let $ = true;
+  let $1 = false;
+  if ($ && $1) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+"#
+    )
+}
