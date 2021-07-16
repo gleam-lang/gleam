@@ -17,6 +17,7 @@ pub fn main() -> Int {
       suite("imported custom types", imported_custom_types_test()),
       suite("tail call optimisation", tail_call_optimisation_tests()),
       suite("alternative patterns", alternative_patterns_tests()),
+      suite("multiple case subjects", multiple_case_subjects()),
     ]
     |> test.run()
 
@@ -826,6 +827,60 @@ fn alternative_patterns_tests() -> List(Test) {
         case [1] {
           [x] | [_, x] if x == int_one -> x
           _ -> 0
+        },
+      )
+    }),
+  ]
+}
+
+fn multiple_case_subjects() -> List(Test) {
+  [
+    "wildcard"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case True, False {
+          _, _ -> 0
+        },
+      )
+    }),
+    "no match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case True, False {
+          False, True -> 1
+          _, _ -> 0
+        },
+      )
+    }),
+    "match"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case True, False {
+          False, True -> 1
+          _, _ -> 0
+        },
+      )
+    }),
+    "alternative"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case True, False {
+          False, True | True, False -> 1
+          _, _ -> 0
+        },
+      )
+    }),
+    "guard"
+    |> example(fn() {
+      assert_equal(
+        1,
+        case True, True {
+          x, y if x == y -> 1
+          _, _ -> 0
         },
       )
     }),
