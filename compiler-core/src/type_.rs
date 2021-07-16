@@ -287,7 +287,7 @@ impl ValueConstructorVariant {
         }
     }
 
-    /// Returns `true` if the value_constructor_variant is [`LocalVariable`].
+    /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
         matches!(self, Self::LocalVariable)
     }
