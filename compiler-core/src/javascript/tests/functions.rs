@@ -477,7 +477,7 @@ fn keyword_in_recursive_function() {
 
 export function main(with$) {
   while (true) {
-    with$ = with$ - 1
+    with$ = with$ - 1;
   }
 }
 "#

@@ -61,9 +61,9 @@ impl<'module> Generator<'module> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
-                maybe_escape_identifier(name)
+                maybe_escape_identifier_doc(name)
             }
-            Some(0) => maybe_escape_identifier(name),
+            Some(0) => maybe_escape_identifier_doc(name),
             Some(n) if name == "$" => Document::String(format!("${}", n)),
             Some(n) => Document::String(format!("{}${}", name, n)),
         }
@@ -593,9 +593,7 @@ impl<'module> Generator<'module> {
                     }
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
-                        // TODO escape here
-                        // docs.push(Document::String(format!("{}!! = ", name)));
-                        docs.push(maybe_escape_identifier(name));
+                        docs.push(Document::String(maybe_escape_identifier_string(name)));
                         docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not
@@ -830,7 +828,7 @@ impl<'module> Generator<'module> {
                 docvec![
                     Document::String(module.to_camel_case()),
                     ".",
-                    maybe_escape_identifier(label)
+                    maybe_escape_identifier_doc(label)
                 ]
             }
 

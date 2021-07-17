@@ -184,9 +184,9 @@ impl<'a> Generator<'a> {
 
                 let alias = i.as_name.as_ref().map(|n| {
                     self.register_in_scope(n);
-                    maybe_escape_identifier(n)
+                    maybe_escape_identifier_doc(n)
                 });
-                (maybe_escape_identifier(&i.name), alias)
+                (maybe_escape_identifier_doc(&i.name), alias)
             });
 
         let matches = wrap_object(matches);
@@ -215,7 +215,7 @@ impl<'a> Generator<'a> {
         self.register_in_scope(name);
         Ok(docvec![
             head,
-            maybe_escape_identifier(name),
+            maybe_escape_identifier_doc(name),
             " = ",
             expression::constant_expression(value)?,
             ";",
@@ -254,7 +254,7 @@ impl<'a> Generator<'a> {
         };
         Ok(docvec![
             head,
-            maybe_escape_identifier(name),
+            maybe_escape_identifier_doc(name),
             fun_args(args),
             " {",
             docvec![line(), generator.function_body(body)?]
@@ -381,7 +381,7 @@ fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
             doc
         }
         ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            maybe_escape_identifier(name)
+            maybe_escape_identifier_doc(name)
         }
     }))
 }
@@ -475,14 +475,22 @@ fn is_valid_js_identifier(word: &str) -> bool {
     )
 }
 
-fn maybe_escape_identifier<'a>(word: &'a str) -> Document<'a> {
+fn maybe_escape_identifier_string(word: &str) -> String {
     if is_valid_js_identifier(word) {
-        word.to_doc()
+        word.to_string()
     } else {
         escape_identifier(word)
     }
 }
 
-fn escape_identifier<'a>(word: &'a str) -> Document<'a> {
-    Document::String(format!("{}$", word))
+fn escape_identifier(word: &str) -> String {
+    format!("{}$", word)
+}
+
+fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
+    if is_valid_js_identifier(word) {
+        word.to_doc()
+    } else {
+        Document::String(escape_identifier(word))
+    }
 }
