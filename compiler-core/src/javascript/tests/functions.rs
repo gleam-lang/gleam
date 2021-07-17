@@ -465,3 +465,21 @@ export function main(_, _1, _2) {
 "#
     );
 }
+
+#[test]
+fn keyword_in_recursive_function() {
+    assert_js!(
+        r#"pub fn main(with: Int) -> Nil {
+  main(with - 1)
+}
+"#,
+        r#""use strict";
+
+export function main(with$) {
+  while (true) {
+    with$ = with$ - 1
+  }
+}
+"#
+    );
+}

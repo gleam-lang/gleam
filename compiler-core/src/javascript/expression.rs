@@ -593,7 +593,10 @@ impl<'module> Generator<'module> {
                     }
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
-                        docs.push(Document::String(format!("{} = ", name)));
+                        // TODO escape here
+                        // docs.push(Document::String(format!("{}!! = ", name)));
+                        docs.push(maybe_escape_identifier(name));
+                        docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not
                     // assigned we still render it because the expression may
