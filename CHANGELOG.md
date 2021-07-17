@@ -25,6 +25,8 @@
   invalid JavaScript.
 - Fixed a bug where the formatter would incorrectly render extra newlines below
   try expressions.
+- Fixed a bug where tail recursive functions with arguments with the same name
+  as JavaScript reserved words generated the wrong JavaScript.
 - Multiple subjects are now supported for case expressions in JavaScript.
 - Fixed a bug where matching using a Bool or Nil literal as the subject for a
   case expression would produce invalid code when compiling to JavaScript.
