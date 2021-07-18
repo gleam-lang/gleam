@@ -12,6 +12,7 @@ pub fn main() -> Int {
       suite("floats", float_tests()),
       suite("prelude", prelude_tests()),
       suite("strings", strings_tests()),
+      suite("equality", equality_tests()),
       suite("constants", constants_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -884,5 +885,38 @@ fn multiple_case_subjects() -> List(Test) {
         },
       )
     }),
+  ]
+}
+
+fn equality_tests() -> List(Test) {
+  [
+    "[] == []"
+    |> example(fn() { assert_equal(True, [] == []) }),
+    "[] == [0]"
+    |> example(fn() { assert_equal(False, [] == [0]) }),
+    "[0] == []"
+    |> example(fn() { assert_equal(False, [0] == []) }),
+    "[0] == [0]"
+    |> example(fn() { assert_equal(True, [0] == [0]) }),
+    "[] != []"
+    |> example(fn() { assert_equal(False, [] != []) }),
+    "[] != [0]"
+    |> example(fn() { assert_equal(True, [] != [0]) }),
+    "[0] != []"
+    |> example(fn() { assert_equal(True, [0] != []) }),
+    "[0] != [0]"
+    |> example(fn() { assert_equal(False, [0] != [0]) }),
+    "0 == 0"
+    |> example(fn() { assert_equal(True, 0 == 0) }),
+    "0 != 0"
+    |> example(fn() { assert_equal(False, 0 != 0) }),
+    "1 == 0"
+    |> example(fn() { assert_equal(False, 1 == 0) }),
+    "1 != 0"
+    |> example(fn() { assert_equal(True, 1 != 0) }),
+    "1 == 1"
+    |> example(fn() { assert_equal(True, 1 == 1) }),
+    "1 != 1"
+    |> example(fn() { assert_equal(False, 1 != 1) }),
   ]
 }
