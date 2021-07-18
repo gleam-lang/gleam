@@ -27,6 +27,7 @@
   try expressions.
 - Fixed a bug where tail recursive functions with arguments with the same name
   as JavaScript reserved words generated the wrong JavaScript.
+- Fixed a bug where list equality would be incorrectly reported in JavaScript.
 - Multiple subjects are now supported for case expressions in JavaScript.
 - Fixed a bug where matching using a Bool or Nil literal as the subject for a
   case expression would produce invalid code when compiling to JavaScript.
