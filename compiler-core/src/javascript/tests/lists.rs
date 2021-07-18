@@ -145,6 +145,7 @@ function $equal(x, y) {
     let b = toCheck.pop();
     if (a === b) return true;
     if (!$is_object(a) || !$is_object(b)) return false;
+    if (a.length !== b.length) return false;
     for (let k of Object.keys(a)) {
       toCheck.push(a[k], b[k]);
     }
