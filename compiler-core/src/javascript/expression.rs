@@ -255,11 +255,9 @@ impl<'module> Generator<'module> {
         } else if arity == 0 {
             let record_type = name.to_doc().surround("\"", "\"");
             let record_head = (RECORD_KEY.to_doc(), Some(record_type));
-            wrap_object(std::iter::once(record_head))
+            wrap_object([record_head])
         } else {
-            let vars = (0..arity)
-                .into_iter()
-                .map(|i| Document::String(format!("var{}", i)));
+            let vars = (0..arity).map(|i| Document::String(format!("var{}", i)));
 
             let body = docvec![
                 "return ",
@@ -505,7 +503,7 @@ impl<'module> Generator<'module> {
         // use in patterns
         let subject_assignments: Vec<_> = subject_assignments
             .into_iter()
-            .zip(subject_values.iter())
+            .zip(subject_values)
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
                 let value = self.not_in_tail_position(|gen| gen.expression(value))?;
@@ -563,12 +561,7 @@ impl<'module> Generator<'module> {
                         ..
                     },
                 ..
-            } => Ok(self.wrap_return(construct_record(
-                name,
-                *arity,
-                field_map,
-                arguments.into_iter(),
-            ))),
+            } => Ok(self.wrap_return(construct_record(name, *arity, field_map, arguments))),
 
             // Tail call optimisation. If we are calling the current function
             // and we are in tail position we can avoid creating a new stack
@@ -667,8 +660,8 @@ impl<'module> Generator<'module> {
                     Ok((label.to_doc(), Some(gen.wrap_expression(value)?)))
                 })
                 .collect::<Result<Vec<_>, _>>()?;
-            let assign_args = vec!["{}".to_doc(), spread, wrap_object(updates.into_iter())];
-            Ok(docvec!["Object.assign", wrap_args(assign_args.into_iter())])
+            let assign_args = ["{}".to_doc(), spread, wrap_object(updates)];
+            Ok(docvec!["Object.assign", wrap_args(assign_args)])
         })
     }
 
@@ -707,19 +700,14 @@ impl<'module> Generator<'module> {
     fn mult_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        use std::iter::once;
-        Ok(docvec!(
-            "Math.imul",
-            wrap_args(once(left).chain(once(right)))
-        ))
+        Ok(docvec!("Math.imul", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        use std::iter::once;
         *self.float_division_used = true;
-        Ok(docvec!("$divide", wrap_args(once(left).chain(once(right)))))
+        Ok(docvec!("$divide", wrap_args([left, right])))
     }
 
     fn equal<'a>(
@@ -751,8 +739,7 @@ impl<'module> Generator<'module> {
         // Record that we need to render the $equal function into the module
         *self.object_equality_used = true;
         // Construct the call
-        use std::iter::once;
-        let args = wrap_args(once(left).chain(once(right)));
+        let args = wrap_args([left, right]);
         let operator = if should_be_equal { "$equal" } else { "!$equal" };
         docvec!(operator, args)
     }
@@ -781,32 +768,24 @@ impl<'module> Generator<'module> {
 
         let doc = docvec![
             "throw Object.assign",
-            wrap_args(
-                vec![
-                    docvec!["new Error", wrap_args(std::iter::once(string(message)))],
-                    wrap_object(
-                        vec![
-                            ("gleam_error".to_doc(), Some(string(gleam_error))),
-                            ("module".to_doc(), Some(module_name.surround("\"", "\""))),
-                            (
-                                "function".to_doc(),
-                                Some(
-                                    // TODO switch to use `string(self.function_name)`
-                                    // This will require resolving the
-                                    // difference in lifetimes 'module and 'a.
-                                    Document::String(
-                                        self.function_name.unwrap_or_default().to_string()
-                                    )
-                                    .surround("\"", "\"")
-                                )
-                            ),
-                            ("line".to_doc(), Some(line.to_doc())),
-                        ]
-                        .into_iter()
-                    )
-                ]
-                .into_iter()
-            ),
+            wrap_args([
+                docvec!["new Error", wrap_args([string(message)])],
+                wrap_object([
+                    ("gleam_error".to_doc(), Some(string(gleam_error))),
+                    ("module".to_doc(), Some(module_name.surround("\"", "\""))),
+                    (
+                        "function".to_doc(),
+                        Some(
+                            // TODO switch to use `string(self.function_name)`
+                            // This will require resolving the
+                            // difference in lifetimes 'module and 'a.
+                            Document::String(self.function_name.unwrap_or_default().to_string())
+                                .surround("\"", "\"")
+                        )
+                    ),
+                    ("line".to_doc(), Some(line.to_doc())),
+                ])
+            ]),
             ";"
         ];
 
@@ -871,16 +850,11 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
             field_map,
             ..
         } => {
-            let field_values: Result<Vec<_>, _> = args
+            let field_values: Vec<_> = args
                 .iter()
                 .map(|arg| constant_expression(&arg.value))
-                .collect();
-            Ok(construct_record(
-                tag,
-                args.len(),
-                field_map,
-                field_values?.into_iter(),
-            ))
+                .try_collect()?;
+            Ok(construct_record(tag, args.len(), field_map, field_values))
         }
         Constant::BitString { location, .. } => Err(Error::Unsupported {
             feature: "Bit string syntax".to_string(),
@@ -897,8 +871,8 @@ pub fn string(value: &str) -> Document<'_> {
     }
 }
 
-pub fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
-    let elements = Itertools::intersperse(elements, Ok(break_(",", ", ")))
+pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+    let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?
         .to_doc();
     Ok(docvec![
@@ -910,11 +884,14 @@ pub fn array<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> O
     .group())
 }
 
-fn list<'a>(
-    elements: impl Iterator<Item = Output<'a>> + DoubleEndedIterator + ExactSizeIterator,
+fn list<'a, I: IntoIterator<Item = Output<'a>>>(
+    elements: I,
     mut tail: Option<Document<'a>>,
-) -> Output<'a> {
-    for (i, element) in elements.enumerate().rev() {
+) -> Output<'a>
+where
+    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
+{
+    for (i, element) in elements.into_iter().enumerate().rev() {
         let mut doc = match tail {
             Some(tail) => docvec![element?.group(), break_(",", ", "), tail],
             None => docvec![element?.group(), break_(",", ", "), "[]"],
@@ -932,8 +909,8 @@ fn list<'a>(
     .group())
 }
 
-fn call_arguments<'a, Elements: Iterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
-    let elements = Itertools::intersperse(elements, Ok(break_(",", ", ")))
+fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+    let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?
         .to_doc();
     Ok(docvec![
@@ -949,7 +926,7 @@ fn construct_record<'a>(
     name: &'a str,
     arity: usize,
     field_map: &'a Option<FieldMap>,
-    values: impl Iterator<Item = Document<'a>>,
+    values: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     let field_names: Vec<Document<'_>> = match field_map {
         Some(FieldMap { fields, .. }) => fields
@@ -958,7 +935,6 @@ fn construct_record<'a>(
             .map(|x| x.0.as_str().to_doc())
             .collect(),
         None => (0..arity)
-            .into_iter()
             .map(|i| Document::String(format!("{}", i)))
             .collect(),
     };

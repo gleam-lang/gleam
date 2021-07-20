@@ -1404,9 +1404,9 @@ impl<'a> Documentable<'a> for &'a BinOp {
 
 pub fn wrap_args<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a>>,
 {
-    let mut args = args.peekable();
+    let mut args = args.into_iter().peekable();
     if args.peek().is_none() {
         return "()".to_doc();
     }
@@ -1419,9 +1419,9 @@ where
 
 pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a>>,
 {
-    let mut args = args.peekable();
+    let mut args = args.into_iter().peekable();
     if args.peek().is_none() {
         return "()".to_doc();
     }
@@ -1436,14 +1436,17 @@ where
         .group()
 }
 
-fn bit_string<'a>(segments: impl Iterator<Item = Document<'a>>, is_simple: bool) -> Document<'a> {
+fn bit_string<'a>(
+    segments: impl IntoIterator<Item = Document<'a>>,
+    is_simple: bool,
+) -> Document<'a> {
     let comma = if is_simple {
         break_(",", ", ").flex_break()
     } else {
         break_(",", ", ")
     };
     break_("<<", "<<")
-        .append(concat(Itertools::intersperse(segments, comma)))
+        .append(concat(Itertools::intersperse(segments.into_iter(), comma)))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(">>")
@@ -1475,9 +1478,9 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
 }
 
 fn printed_comments<'a, 'comments>(
-    comments: impl Iterator<Item = &'comments str>,
+    comments: impl IntoIterator<Item = &'comments str>,
 ) -> Option<Document<'a>> {
-    let mut comments = comments.peekable();
+    let mut comments = comments.into_iter().peekable();
     let _ = comments.peek()?;
     Some(concat(Itertools::intersperse(
         comments.map(|c| "//".to_doc().append(Document::String(c.to_string()))),
@@ -1487,7 +1490,7 @@ fn printed_comments<'a, 'comments>(
 
 fn commented<'a, 'comments>(
     doc: Document<'a>,
-    comments: impl Iterator<Item = &'comments str>,
+    comments: impl IntoIterator<Item = &'comments str>,
 ) -> Document<'a> {
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),

@@ -90,8 +90,8 @@ impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
     }
 }
 
-pub fn concat<'a>(docs: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    Document::Vec(docs.collect())
+pub fn concat<'a>(docs: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    Document::Vec(docs.into_iter().collect())
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

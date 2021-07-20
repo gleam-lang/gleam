@@ -39,7 +39,7 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
 
     fn infer_expressions(
         mut self,
-        expressions: impl Iterator<Item = UntypedExpr>,
+        expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let result = self.infer_each_expression(expressions);
 
@@ -61,9 +61,9 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
 
     fn infer_each_expression(
         &mut self,
-        expressions: impl Iterator<Item = UntypedExpr>,
+        expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<(), Error> {
-        for (i, call) in expressions.enumerate() {
+        for (i, call) in expressions.into_iter().enumerate() {
             let call = match call {
                 // left |> right(..args)
                 UntypedExpr::Call {

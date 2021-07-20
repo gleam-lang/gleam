@@ -389,10 +389,13 @@ fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
 
 fn wrap_args<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .append(concat(Itertools::intersperse(
+            args.into_iter(),
+            break_(",", ", "),
+        )))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -400,9 +403,9 @@ where
 }
 
 fn wrap_object<'a>(
-    items: impl Iterator<Item = (Document<'a>, Option<Document<'a>>)>,
+    items: impl IntoIterator<Item = (Document<'a>, Option<Document<'a>>)>,
 ) -> Document<'a> {
-    let fields = items.map(|(key, value)| match value {
+    let fields = items.into_iter().map(|(key, value)| match value {
         Some(value) => docvec![key, ": ", value,],
         None => key.to_doc(),
     });

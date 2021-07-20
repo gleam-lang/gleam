@@ -473,7 +473,7 @@ pub fn infer_module(
         }
     }
 
-    for statement in consts.into_iter().chain(not_consts.into_iter()) {
+    for statement in consts.into_iter().chain(not_consts) {
         let statement = infer_statement(statement, &name, &mut hydrators, &mut environment)?;
         statements.push(statement);
     }
