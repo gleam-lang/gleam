@@ -26,7 +26,7 @@ pub fn command(root_string: String) -> Result<(), Error> {
     // Build a list of test modules
     let test_modules = packages
         .into_iter()
-        .flat_map(|(_, p)| p.modules.into_iter())
+        .flat_map(|(_, p)| p.modules)
         .filter(|m| m.origin == Origin::Test)
         .map(|m| m.name.replace("/", "@"))
         .join(",");

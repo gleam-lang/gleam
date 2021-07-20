@@ -343,7 +343,7 @@ fn register_imports(
             // Erlang doesn't allow phantom type variables in type definitions but gleam does
             // so we check the type declaratinon against its constroctors and generate a phantom
             // value that uses the unused type variables.
-            let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters.iter());
+            let type_var_usages = collect_type_var_usages(HashMap::new(), typed_parameters);
             let mut constructor_var_usages = HashMap::new();
             for c in constructors {
                 constructor_var_usages = collect_type_var_usages(
@@ -492,10 +492,13 @@ fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
 
 fn wrap_args<'a, I>(args: I) -> Document<'a>
 where
-    I: Iterator<Item = Document<'a>>,
+    I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .append(concat(Itertools::intersperse(
+            args.into_iter(),
+            break_(",", ", "),
+        )))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -504,7 +507,7 @@ where
 
 fn fun_spec<'a>(
     name: &str,
-    args: impl Iterator<Item = Document<'a>>,
+    args: impl IntoIterator<Item = Document<'a>>,
     retrn: Document<'a>,
 ) -> Document<'a> {
     "-spec "
@@ -544,15 +547,15 @@ fn string(value: &str) -> Document<'_> {
     value.to_doc().surround("<<\"", "\"/utf8>>")
 }
 
-fn tuple<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems, break_(",", ", ")))
+fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
         .nest_current()
         .surround("{", "}")
         .group()
 }
 
-fn bit_string<'a>(elems: impl Iterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems, break_(",", ", ")))
+fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
         .nest_current()
         .surround("<<", ">>")
         .group()
@@ -1115,11 +1118,11 @@ fn tuple_index_inline<'a>(
     index: u64,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    use std::iter::once;
     let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = bare_clause_guard(tuple, env);
-    let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    "erlang:element"
+        .to_doc()
+        .append(wrap_args([index_doc, tuple_doc]))
 }
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
@@ -1206,7 +1209,7 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => tuple(std::iter::once(atom(name.to_snake_case())).chain(args.into_iter())),
+        } => tuple(std::iter::once(atom(name.to_snake_case())).chain(args)),
 
         TypedExpr::Var {
             constructor:
@@ -1216,7 +1219,7 @@ fn docs_args_call<'a>(
                 },
             ..
         } => {
-            let args = wrap_args(args.into_iter());
+            let args = wrap_args(args);
             if module == env.module {
                 atom(name.to_string()).append(args)
             } else {
@@ -1233,7 +1236,7 @@ fn docs_args_call<'a>(
             constructor: ModuleValueConstructor::Fn,
             ..
         } => {
-            let args = wrap_args(args.into_iter());
+            let args = wrap_args(args);
             atom(module_name.join("@"))
                 .append(":")
                 .append(atom(label.to_string()))
@@ -1270,12 +1273,12 @@ fn docs_args_call<'a>(
         | TypedExpr::Fn { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::TupleIndex { .. } => {
-            let args = wrap_args(args.into_iter());
+            let args = wrap_args(args);
             expr(fun, env).surround("(", ")").append(args)
         }
 
         other => {
-            let args = wrap_args(args.into_iter());
+            let args = wrap_args(args);
             expr(other, env).append(args)
         }
     }
@@ -1286,19 +1289,15 @@ fn record_update<'a>(
     args: &'a [TypedRecordUpdateArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    use std::iter::once;
-
     args.iter().fold(expr(spread, env), |tuple_doc, arg| {
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
         let index_doc = (arg.index + 2).to_doc();
         let value_doc = expr(&arg.value, env);
 
-        let iter = once(index_doc)
-            .chain(once(tuple_doc))
-            .chain(once(value_doc));
-
-        "erlang:setelement".to_doc().append(wrap_args(iter))
+        "erlang:setelement"
+            .to_doc()
+            .append(wrap_args([index_doc, tuple_doc, value_doc]))
     })
 }
 
@@ -1370,7 +1369,7 @@ fn erlang_error<'a>(
         .to_doc()
         .append(fields_doc.group().nest_current())
         .append("}");
-    docvec!["erlang:error", wrap_args(std::iter::once(error.group()))]
+    docvec!["erlang:error", wrap_args([error.group()])]
 }
 
 fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -1473,11 +1472,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
-    use std::iter::once;
     let index_doc = Document::String(format!("{}", (index + 1)));
     let tuple_doc = expr(tuple, env);
-    let iter = once(index_doc).chain(once(tuple_doc));
-    "erlang:element".to_doc().append(wrap_args(iter))
+    "erlang:element"
+        .to_doc()
+        .append(wrap_args([index_doc, tuple_doc]))
 }
 
 fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
@@ -1575,7 +1574,7 @@ fn id_to_type_var(id: usize) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    Document::String(name.into_iter().collect::<String>())
+    Document::String(name.into_iter().collect())
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
@@ -1694,7 +1693,7 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
 //     fn(a) -> a            // `a` is a type var
 fn collect_type_var_usages<'a>(
     mut ids: HashMap<usize, usize>,
-    types: impl Iterator<Item = &'a Arc<Type>>,
+    types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<usize, usize> {
     for typ in types {
         type_var_ids(typ, &mut ids);
@@ -1849,8 +1848,8 @@ impl<'a> TypePrinter<'a> {
             "Result" => {
                 let arg_ok = self.print(args.get(0).expect("print_prelude_type result ok"));
                 let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
-                let ok = tuple(vec!["ok".to_doc(), arg_ok].into_iter());
-                let error = tuple(vec!["error".to_doc(), arg_err].into_iter());
+                let ok = tuple(["ok".to_doc(), arg_ok]);
+                let error = tuple(["error".to_doc(), arg_err]);
                 docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
