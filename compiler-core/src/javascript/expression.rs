@@ -417,7 +417,7 @@ impl<'module> Generator<'module> {
                 .unzip();
         let mut gen = pattern::Generator::new(self);
 
-        let mut doc = force_break();
+        let mut doc = nil();
 
         // We wish to be able to know whether this is the first or clause being
         // processed, so record the index number. We use this instead of
@@ -429,11 +429,12 @@ impl<'module> Generator<'module> {
             .sum::<usize>()
             + clauses.len();
 
-        // TODO: handle multiple subjects gracefully
+        // A case has many clauses `pattern -> consequence`
         for clause in clauses {
             let multipattern = std::iter::once(&clause.pattern);
             let multipatterns = multipattern.chain(clause.alternative_patterns.iter());
 
+            // A clause can have many patterns `pattern, pattern ->...`
             for multipatterns in multipatterns {
                 let scope = gen.expression_generator.current_scope_vars.clone();
                 let mut compiled = gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
@@ -511,7 +512,7 @@ impl<'module> Generator<'module> {
             })
             .try_collect()?;
 
-        Ok(subject_assignments.to_doc().append(doc))
+        Ok(docvec![force_break(), subject_assignments, doc])
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {

@@ -152,3 +152,60 @@ function go() {
 "#
     )
 }
+
+#[test]
+fn assignment() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let y = case x {
+    True -> 1
+    _ -> 0
+  }
+  y
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  let y = (() => {
+    if (x) {
+      return 1;
+    } else {
+      return 0;
+    }
+  })();
+  return y;
+}
+"#
+    )
+}
+
+#[test]
+fn preassign_assignment() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let y = case x() {
+    True -> 1
+    _ -> 0
+  }
+  y
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  let y = (() => {
+    let $ = x();
+    if ($) {
+      return 1;
+    } else {
+      return 0;
+    }
+  })();
+  return y;
+}
+"#
+    )
+}
