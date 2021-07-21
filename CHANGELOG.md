@@ -33,6 +33,7 @@
   case expression would produce invalid code when compiling to JavaScript.
 - Unsupported feature error messages now include file path and line numbers for
   debugging.
+- The format of generated JavaScript has been improved.
 
 
 ## v0.16.1 - 2021-06-21
