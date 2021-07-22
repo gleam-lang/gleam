@@ -490,7 +490,7 @@ pub fn infer_module(
     // Remove private and imported types and values to create the public interface
     environment
         .module_types
-        .retain(|_, info| info.public && info.module.as_slice() == name.as_slice());
+        .retain(|_, info| info.public && info.module == name);
     environment.module_values.retain(|_, info| info.public);
     environment
         .accessors

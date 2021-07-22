@@ -282,9 +282,11 @@ impl<'module> Generator<'module> {
         for (i, expression) in expressions.iter().enumerate() {
             if i + 1 < count {
                 documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
-                match expression {
-                    TypedExpr::Assignment { .. } | TypedExpr::Case { .. } => (),
-                    _ => documents.push(";".to_doc()),
+                if !matches!(
+                    expression,
+                    TypedExpr::Assignment { .. } | TypedExpr::Case { .. }
+                ) {
+                    documents.push(";".to_doc());
                 }
                 documents.push(line());
             } else {
@@ -432,7 +434,7 @@ impl<'module> Generator<'module> {
         // A case has many clauses `pattern -> consequence`
         for clause in clauses {
             let multipattern = std::iter::once(&clause.pattern);
-            let multipatterns = multipattern.chain(clause.alternative_patterns.iter());
+            let multipatterns = multipattern.chain(&clause.alternative_patterns);
 
             // A clause can have many patterns `pattern, pattern ->...`
             for multipatterns in multipatterns {
@@ -527,7 +529,7 @@ impl<'module> Generator<'module> {
         let arguments = arguments
             .iter()
             .map(|element| self.wrap_expression(&element.value))
-            .collect::<Result<Vec<_>, _>>()?;
+            .try_collect()?;
         self.tail_position = tail;
         self.call_with_doc_args(fun, arguments)
     }
@@ -568,7 +570,7 @@ impl<'module> Generator<'module> {
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if self.function_name == Some(name.as_str())
+                if self.function_name == Some(name)
                     && self.tail_position
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
@@ -761,9 +763,8 @@ impl<'module> Generator<'module> {
         self.tail_position = false;
         let gleam_error = "todo";
         let message = message
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or_else(|| "This has not yet been implemented");
+            .as_deref()
+            .unwrap_or("This has not yet been implemented");
         let module_name = Document::String(self.module_name.join("/"));
         let line = self.line_numbers.line_number(location.start);
 
@@ -835,7 +836,7 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
-        Constant::String { value, .. } => Ok(string(value.as_str())),
+        Constant::String { value, .. } => Ok(string(value)),
         Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(e))),
         Constant::List { elements, .. } => list(elements.iter().map(constant_expression), None),
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
@@ -933,7 +934,7 @@ fn construct_record<'a>(
         Some(FieldMap { fields, .. }) => fields
             .iter()
             .sorted_by_key(|(_, &v)| v)
-            .map(|x| x.0.as_str().to_doc())
+            .map(|(s, _)| s.to_doc())
             .collect(),
         None => (0..arity)
             .map(|i| Document::String(format!("{}", i)))

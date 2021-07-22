@@ -982,7 +982,7 @@ impl<'comments> Formatter<'comments> {
                 name.to_doc()
             } else {
                 name.to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.as_str().to_doc())))
+                    .append(wrap_args(args.iter().map(|e| e.to_doc())))
                     .group()
             })
             .append(" {")
@@ -1341,7 +1341,7 @@ impl<'comments> Formatter<'comments> {
 impl<'a> Documentable<'a> for &'a ArgNames {
     fn to_doc(self) -> Document<'a> {
         match self {
-            ArgNames::Named { name } | ArgNames::Discard { name } => name.as_str().to_doc(),
+            ArgNames::Named { name } | ArgNames::Discard { name } => name.to_doc(),
             ArgNames::LabelledDiscard { label, name } | ArgNames::NamedLabelled { label, name } => {
                 docvec![label, " ", name]
             }

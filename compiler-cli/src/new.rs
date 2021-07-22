@@ -534,8 +534,8 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     } else {
         get_foldername(&options.project_root)?
     };
-    validate_name(name.as_str())?;
-    validate_root_folder(name.as_str())?;
+    validate_name(&name)?;
+    validate_root_folder(&name)?;
     let creator = Creator::new(options.clone(), name, version);
 
     creator.run()?;

@@ -1474,7 +1474,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name, field_map, ..
-                    } => (name.clone(), field_map.as_ref().cloned()),
+                    } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {
@@ -1510,7 +1510,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 let (tag, field_map) = match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name, field_map, ..
-                    } => (name.clone(), field_map.as_ref().cloned()),
+                    } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable => {

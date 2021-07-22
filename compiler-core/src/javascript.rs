@@ -70,8 +70,8 @@ impl<'a> Generator<'a> {
         );
 
         // Two lines between each statement
-        let statements = Itertools::intersperse(statements, Ok(lines(2)));
-        let mut statements = statements.collect::<Result<Vec<_>, _>>()?;
+        let mut statements: Vec<_> =
+            Itertools::intersperse(statements, Ok(lines(2))).try_collect()?;
 
         // If float division has been used render an appropriate function
         if self.float_division_used {
@@ -157,14 +157,13 @@ impl<'a> Generator<'a> {
     ) -> Document<'a> {
         let module_name = as_name
             .as_ref()
-            .map(|n| n.as_str())
             .unwrap_or_else(|| {
                 module
                     .last()
                     .expect("JavaScript generator could not identify imported module name.")
             })
             .to_camel_case();
-        self.register_in_scope(module_name.as_str());
+        self.register_in_scope(&module_name);
         let path: Document<'a> = self.import_path(package, module);
         let module_name = Document::String(module_name);
         let import_line = docvec!["import * as ", module_name.clone(), " from ", path, ";"];
@@ -337,14 +336,17 @@ impl<'a> Generator<'a> {
 }
 
 fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
-    wrap_args(arguments.iter().enumerate().map(|a| {
-        match a {
-            (index, ExternalFnArg { label, .. }) => label
-                .as_ref()
-                .map(|l| l.as_str().to_doc())
-                .unwrap_or_else(|| Document::String(format!("arg{}", index))),
-        }
-    }))
+    wrap_args(
+        arguments
+            .iter()
+            .enumerate()
+            .map(|(index, ExternalFnArg { label, .. })| {
+                label
+                    .as_ref()
+                    .map(|l| l.to_doc())
+                    .unwrap_or_else(|| Document::String(format!("arg{}", index)))
+            }),
+    )
 }
 
 pub fn module(

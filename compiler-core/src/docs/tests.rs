@@ -98,7 +98,7 @@ pub fn complicated_fun(
 impl OutputFile {
     fn should_contain(&self, text: &str) {
         assert!(
-            self.text.contains(&text.to_string()),
+            self.text.contains(text),
             "Generated docs page did not contain: `{}`",
             text
         );
@@ -106,7 +106,7 @@ impl OutputFile {
 
     fn should_not_contain(&self, text: &str) {
         assert!(
-            !self.text.contains(&text.to_string()),
+            !self.text.contains(text),
             "Generated docs page was not supposed to contain: `{}`",
             text
         );
