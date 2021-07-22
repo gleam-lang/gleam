@@ -83,7 +83,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         patterns: &'a [TypedPattern],
         guard: Option<&'a TypedClauseGuard>,
     ) -> Result<CompiledPattern<'a>, Error> {
-        for (subject, pattern) in subjects.iter().zip_eq(patterns.iter()) {
+        for (subject, pattern) in subjects.iter().zip_eq(patterns) {
             let _ = self.traverse_pattern(subject, pattern)?;
         }
         if let Some(guard) = guard {

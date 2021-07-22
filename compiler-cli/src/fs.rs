@@ -32,7 +32,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
                 .into_iter()
                 .filter_map(Result::ok)
                 .filter(|e| e.file_type().is_file())
-                .map(|d| d.path().to_path_buf())
+                .map(|d| d.into_path())
                 .filter(move |d| is_gleam_path(d, dir.clone()))
         })
     }
@@ -195,7 +195,7 @@ pub fn gleam_files(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file())
-        .map(|d| d.path().to_path_buf())
+        .map(|d| d.into_path())
         .filter(move |d| is_gleam_path(d, dir))
 }
 

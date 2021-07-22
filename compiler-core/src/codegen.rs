@@ -155,8 +155,8 @@ impl<'a> JavaScript<'a> {
         let res = javascript::module(
             &module.ast,
             &line_numbers,
-            module.path.as_path(),
-            module.code.as_str(),
+            &module.path,
+            &module.code,
             &mut file,
         );
         tracing::trace!(name = ?name, "Generated js module");

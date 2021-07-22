@@ -35,7 +35,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
-        module.set_package(self.data.package.as_str());
+        module.set_package(&self.data.package);
 
         let result = capnp::serialize_packed::write_message(&mut writer, &message);
         writer.convert_err(result)
