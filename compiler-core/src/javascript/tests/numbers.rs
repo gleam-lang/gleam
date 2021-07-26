@@ -30,6 +30,7 @@ function go() {
 "#
     );
 }
+
 #[test]
 fn float_literals() {
     assert_js!(
