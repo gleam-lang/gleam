@@ -1,4 +1,5 @@
 mod assignments;
+mod bit_strings;
 mod blocks;
 mod bools;
 mod case;

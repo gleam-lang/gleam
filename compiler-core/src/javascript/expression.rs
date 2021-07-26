@@ -11,6 +11,7 @@ use crate::{
 };
 
 static RECORD_KEY: &str = "type";
+static BIT_STRING_VAR: &str = "_bits";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -140,10 +141,7 @@ impl<'module> Generator<'module> {
                 label, location, ..
             } => Ok(self.todo(label, location)),
 
-            TypedExpr::BitString { location, .. } => Err(Error::Unsupported {
-                feature: "Bit string syntax".to_string(),
-                location: *location,
-            }),
+            TypedExpr::BitString { segments, .. } => self.bit_string(segments),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -157,6 +155,42 @@ impl<'module> Generator<'module> {
         } else {
             self.wrap_return(document)
         })
+    }
+
+    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
+        if segments.is_empty() {
+            return Ok("new ArrayBuffer(0)".to_doc());
+        }
+
+        let mut docs = Vec::with_capacity(7 + segments.len() * 5 + 3);
+        let var = self.next_local_var(BIT_STRING_VAR);
+        docs.push(force_break());
+        docs.push("let ".to_doc());
+        docs.push(var.clone());
+        docs.push(" = new DataView(new ArrayBuffer(".to_doc());
+        docs.push(segments.len().to_doc());
+        docs.push("));".to_doc());
+        docs.push(line());
+
+        for (i, segment) in segments.iter().enumerate() {
+            if !segment.options.is_empty() {
+                return Err(Error::Unsupported {
+                    feature: "Bit string segment option syntax".to_string(),
+                    location: segment.location,
+                });
+            }
+            let value = self.not_in_tail_position(|gen| gen.expression(&segment.value))?;
+            docs.push(var.clone());
+            docs.push(".setInt8".to_doc());
+            docs.push(wrap_args([i.to_doc(), value]));
+            docs.push(";".to_doc());
+            docs.push(line());
+        }
+
+        docs.push("return ".to_doc());
+        docs.push(var);
+        docs.push(".buffer;".to_doc());
+        Ok(self.immediately_involked_function_expression_document(docs.to_doc()))
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
@@ -217,12 +251,20 @@ impl<'module> Generator<'module> {
         let result = self.expression(expression);
         self.tail_position = tail;
         self.current_scope_vars = current_scope_vars;
-        Ok(docvec!(
-            docvec!("(() => {", break_("", " "), result?).nest(INDENT),
+        Ok(self.immediately_involked_function_expression_document(result?))
+    }
+
+    /// Wrap a document in an immediately involked function expression
+    fn immediately_involked_function_expression_document<'a>(
+        &mut self,
+        document: Document<'a>,
+    ) -> Document<'a> {
+        docvec!(
+            docvec!("(() => {", break_("", " "), document).nest(INDENT),
             break_("", " "),
             "})()",
         )
-        .group())
+        .group()
     }
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
