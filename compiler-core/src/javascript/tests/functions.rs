@@ -483,3 +483,19 @@ export function main(with$) {
 "#
     );
 }
+
+#[test]
+fn reserved_word_in_function_arguments() {
+    assert_js!(
+        r#"pub fn main(arguments, eval) {
+  #(arguments, eval)
+}
+"#,
+        r#""use strict";
+
+export function main(arguments$, eval$) {
+  return [arguments$, eval$];
+}
+"#
+    );
+}

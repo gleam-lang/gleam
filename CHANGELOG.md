@@ -36,6 +36,7 @@
 - The format of generated JavaScript has been improved.
 - Fixed a bug where rendered JavaScript incorrectly incremented variables when
   reassigned in patterns.
+- Added `eval` and `arguments` to JavaScript reserved words.
 
 ## v0.16.1 - 2021-06-21
 

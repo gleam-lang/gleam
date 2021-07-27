@@ -432,6 +432,7 @@ fn is_valid_js_identifier(word: &str) -> bool {
     !matches!(
         word,
         "await"
+            | "arguments"
             | "break"
             | "case"
             | "catch"
@@ -446,6 +447,7 @@ fn is_valid_js_identifier(word: &str) -> bool {
             | "enum"
             | "export"
             | "extends"
+            | "eval"
             | "false"
             | "finally"
             | "for"
