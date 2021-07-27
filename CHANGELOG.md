@@ -34,7 +34,8 @@
 - Unsupported feature error messages now include file path and line numbers for
   debugging.
 - The format of generated JavaScript has been improved.
-
+- Fixed a bug where rendered JavaScript incorrectly incremented variables when
+  reassigned in patterns.
 
 ## v0.16.1 - 2021-06-21
 
@@ -44,7 +45,7 @@
   documentation.
 - Patterns can be used with `try` expresssions when compiling to JavaScript.
 - Types and record constructors can now be aliased with an uppercase name when
-  imported.  Aliasing them with a lowercase name is no longer permitted.
+  imported. Aliasing them with a lowercase name is no longer permitted.
 - Fixed a bug where nested import paths could be rendered incorrectly in
   JavaScript.
 
@@ -81,7 +82,7 @@
   incorrectly results in a compile error.
 - Fixed a bug where assert statements return the wrong value.
 - The `gleam new` command requires a root folder param, project name is
-  optional and if not provided the project name will be inferred from 
+  optional and if not provided the project name will be inferred from
   the folder name.
 - Generated Erlang record header files now contain Erlang type information.
 - New OTP application projects depend on `gleam_otp` v0.1.5.

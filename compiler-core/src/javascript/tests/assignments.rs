@@ -230,3 +230,22 @@ export function main(x) {
 "#
     );
 }
+
+#[test]
+fn variable_used_in_pattern_and_assignment() {
+    assert_js!(
+        r#"pub fn main(x) {
+  let #(x) = #(x)
+  x
+}
+"#,
+        r#""use strict";
+
+export function main(x) {
+  let $ = [x];
+  let x$1 = $[0];
+  return x$1;
+}
+"#
+    );
+}
