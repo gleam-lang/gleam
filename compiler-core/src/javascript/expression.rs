@@ -377,11 +377,11 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (subject, subject_assignment) = pattern::assign_subject(self, value);
+        // Value needs to be rendered before traversing pattern to have correctly incremented variables.
+        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
         let mut pattern_generator = pattern::Generator::new(self);
         pattern_generator.traverse_pattern(&subject, pattern)?;
         let compiled = pattern_generator.take_compiled();
-
-        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
 
         // If we are in tail position we can return value being assigned
         let afterwards = if self.tail_position {
