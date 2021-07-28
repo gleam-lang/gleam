@@ -19,11 +19,24 @@ function $equal(x, y) {
     let a = toCheck.pop();
     let b = toCheck.pop();
     if (a === b) return true;
+    if (a instanceof ArrayBuffer && b instanceof ArrayBuffer) {
+      return $bits_equal(a, b)
+    }
     if (!$is_object(a) || !$is_object(b)) return false;
     if (a.length !== b.length) return false;
     for (let k of Object.keys(a)) {
       toCheck.push(a[k], b[k]);
     }
+  }
+  return true;
+}
+
+function $bits_equal(x, y) {
+  let a = new DataView(x);
+  let b = new DataView(y);
+  if (a.byteLength !== b.byteLength) return false;
+  for (let i=0; i < a.byteLength; i++) {
+    if (a.getUint8(i) !== b.getUint8(i)) return false;
   }
   return true;
 }

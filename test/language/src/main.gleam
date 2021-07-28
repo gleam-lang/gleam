@@ -918,5 +918,17 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, 1 == 1) }),
     "1 != 1"
     |> example(fn() { assert_equal(False, 1 != 1) }),
+    "<<>> == <<>>"
+    |> example(fn() { assert_equal(True, <<>> == <<>>) }),
+    "<<>> != <<>>"
+    |> example(fn() { assert_equal(False, <<>> != <<>>) }),
+    "<<1, 2>> == <<1, 2>>"
+    |> example(fn() { assert_equal(True, <<1, 2>> == <<1, 2>>) }),
+    "<<1, 2>> != <<1, 2>>"
+    |> example(fn() { assert_equal(False, <<1, 2>> != <<1, 2>>) }),
+    "<<1, 2>> == <<2>>"
+    |> example(fn() { assert_equal(False, <<1, 2>> == <<2>>) }),
+    "<<1, 2>> != <<2>>"
+    |> example(fn() { assert_equal(True, <<1, 2>> != <<2>>) }),
   ]
 }
