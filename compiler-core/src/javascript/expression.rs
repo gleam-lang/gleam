@@ -12,6 +12,8 @@ use crate::{
 
 static RECORD_KEY: &str = "type";
 static BIT_STRING_VAR: &str = "_bits";
+static BIT_STRING_SEGMENTS_VAR: &str = "_segments";
+static BIT_STRING_CURSOR_VAR: &str = "_cursor";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -158,39 +160,110 @@ impl<'module> Generator<'module> {
     }
 
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
+        use BitStringSegmentOption as Opt;
         if segments.is_empty() {
             return Ok("new ArrayBuffer(0)".to_doc());
         }
 
-        let mut docs = Vec::with_capacity(7 + segments.len() * 5 + 3);
-        let var = self.next_local_var(BIT_STRING_VAR);
-        docs.push(force_break());
-        docs.push("let ".to_doc());
-        docs.push(var.clone());
-        docs.push(" = new DataView(new ArrayBuffer(".to_doc());
-        docs.push(segments.len().to_doc());
-        docs.push("));".to_doc());
-        docs.push(line());
+        // Collect all the values used in segments.
+        let segments_array = array(segments.iter().map(|segment| {
+            let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
+            match segment.options.as_slice() {
+                // Ints
+                [] => Ok(value),
 
-        for (i, segment) in segments.iter().enumerate() {
-            if !segment.options.is_empty() {
-                return Err(Error::Unsupported {
-                    feature: "Bit string segment option syntax".to_string(),
+                // UTF8 strings
+                [Opt::Utf8 { .. } | Opt::Utf8Codepoint { .. }] => {
+                    Ok(docvec!["new TextEncoder().encode(", value, ")"])
+                }
+
+                // Anything else
+                _ => Err(Error::Unsupported {
+                    feature: "This bit string segment option".to_string(),
                     location: segment.location,
-                });
+                }),
             }
-            let value = self.not_in_tail_position(|gen| gen.expression(&segment.value))?;
-            docs.push(var.clone());
-            docs.push(".setInt8".to_doc());
-            docs.push(wrap_args([i.to_doc(), value]));
-            docs.push(";".to_doc());
-            docs.push(line());
-        }
+        }))?;
 
-        docs.push("return ".to_doc());
-        docs.push(var);
-        docs.push(".buffer;".to_doc());
-        Ok(self.immediately_involked_function_expression_document(docs.to_doc()))
+        let bits_var = self.next_local_var(BIT_STRING_VAR);
+        let cursor_var = self.next_local_var(BIT_STRING_CURSOR_VAR);
+        let segments_var = self.next_local_var(BIT_STRING_SEGMENTS_VAR);
+        let segments_assignment = docvec!["let ", segments_var.clone(), " = ", segments_array, ";"];
+        let cursor_assignment = docvec!["let ", cursor_var.clone(), " = 0;"];
+        let buffer_assignment = docvec![
+            "let ",
+            bits_var.clone(),
+            " = new DataView(new ArrayBuffer(",
+            segments_var.clone(),
+            ".reduce((size, segment) =>",
+            docvec![
+                line(),
+                "size + (segment instanceof Uint8Array ? segment.byteLength : 1),"
+            ]
+            .nest(INDENT),
+            line(),
+            "0)));"
+        ];
+
+        let write_buffer = docvec![
+            line(),
+            "new Uint8Array(",
+            bits_var.clone(),
+            ".buffer).set(segment, ",
+            cursor_var.clone(),
+            ");",
+            line(),
+            cursor_var.clone(),
+            " += segment.byteLength;"
+        ];
+
+        let write_int = docvec![
+            line(),
+            bits_var.clone(),
+            ".setInt8(",
+            cursor_var.clone(),
+            ", segment);",
+            line(),
+            cursor_var.clone(),
+            "++;"
+        ];
+
+        let write_segment = docvec![
+            line(),
+            "if (segment instanceof Uint8Array) {",
+            write_buffer.nest(INDENT),
+            line(),
+            "} else {",
+            write_int.nest(INDENT),
+            line(),
+            "}"
+        ];
+
+        let write_loop = docvec![
+            "for (let segment of ",
+            segments_var.clone(),
+            ") {",
+            write_segment.nest(INDENT),
+            line(),
+            "}"
+        ];
+
+        Ok(
+            self.immediately_involked_function_expression_document(docvec![
+                force_break(),
+                segments_assignment,
+                line(),
+                buffer_assignment,
+                line(),
+                cursor_assignment,
+                line(),
+                write_loop,
+                line(),
+                "return ",
+                bits_var,
+                ".buffer;"
+            ]),
+        )
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
