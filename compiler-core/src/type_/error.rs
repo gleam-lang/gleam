@@ -289,18 +289,18 @@ impl Warning {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum GetValueConstructorError {
-    UnknownVariable {
+pub enum UnknownValueConstructorError {
+    Variable {
         name: String,
         variables: Vec<String>,
     },
 
-    UnknownModule {
+    Module {
         name: String,
         imported_modules: Vec<String>,
     },
 
-    UnknownModuleValue {
+    ModuleValue {
         name: String,
         module_name: Vec<String>,
         value_constructors: Vec<String>,
@@ -308,17 +308,17 @@ pub enum GetValueConstructorError {
 }
 
 pub fn convert_get_value_constructor_error(
-    e: GetValueConstructorError,
+    e: UnknownValueConstructorError,
     location: SrcSpan,
 ) -> Error {
     match e {
-        GetValueConstructorError::UnknownVariable { name, variables } => Error::UnknownVariable {
+        UnknownValueConstructorError::Variable { name, variables } => Error::UnknownVariable {
             location,
             name,
             variables,
         },
 
-        GetValueConstructorError::UnknownModule {
+        UnknownValueConstructorError::Module {
             name,
             imported_modules,
         } => Error::UnknownModule {
@@ -327,7 +327,7 @@ pub fn convert_get_value_constructor_error(
             imported_modules,
         },
 
-        GetValueConstructorError::UnknownModuleValue {
+        UnknownValueConstructorError::ModuleValue {
             name,
             module_name,
             value_constructors,
@@ -341,27 +341,30 @@ pub fn convert_get_value_constructor_error(
 }
 
 #[derive(Debug, PartialEq)]
-pub enum GetTypeConstructorError {
-    UnknownType {
+pub enum UnknownTypeConstructorError {
+    Type {
         name: String,
         type_constructors: Vec<String>,
     },
 
-    UnknownModule {
+    Module {
         name: String,
         imported_modules: Vec<String>,
     },
 
-    UnknownModuleType {
+    ModuleType {
         name: String,
         module_name: Vec<String>,
         type_constructors: Vec<String>,
     },
 }
 
-pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: &SrcSpan) -> Error {
+pub fn convert_get_type_constructor_error(
+    e: UnknownTypeConstructorError,
+    location: &SrcSpan,
+) -> Error {
     match e {
-        GetTypeConstructorError::UnknownType {
+        UnknownTypeConstructorError::Type {
             name,
             type_constructors,
         } => Error::UnknownType {
@@ -370,7 +373,7 @@ pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: 
             types: type_constructors,
         },
 
-        GetTypeConstructorError::UnknownModule {
+        UnknownTypeConstructorError::Module {
             name,
             imported_modules,
         } => Error::UnknownModule {
@@ -379,7 +382,7 @@ pub fn convert_get_type_constructor_error(e: GetTypeConstructorError, location: 
             imported_modules,
         },
 
-        GetTypeConstructorError::UnknownModuleType {
+        UnknownTypeConstructorError::ModuleType {
             name,
             module_name,
             type_constructors,

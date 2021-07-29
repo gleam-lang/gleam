@@ -1652,7 +1652,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     fn get_field_map(
         &mut self,
         constructor: &TypedExpr,
-    ) -> Result<Option<&FieldMap>, GetValueConstructorError> {
+    ) -> Result<Option<&FieldMap>, UnknownValueConstructorError> {
         let (module, name) = match constructor {
             TypedExpr::ModuleSelect {
                 module_alias,

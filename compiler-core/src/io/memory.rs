@@ -38,6 +38,7 @@ impl FileSystemWriter for InMemoryFileSystem {
 
 impl FileSystemReader for InMemoryFileSystem {
     fn gleam_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+        #[allow(clippy::needless_collect)] // to make borrow work. FIXME.
         let files: Vec<PathBuf> = (*self.files)
             .borrow()
             .iter()

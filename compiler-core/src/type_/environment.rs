@@ -210,24 +210,19 @@ impl<'a, 'b> Environment<'a, 'b> {
         &self,
         module_alias: &Option<String>,
         name: &str,
-    ) -> Result<&TypeConstructor, GetTypeConstructorError> {
+    ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
-            None => {
-                self.module_types
-                    .get(name)
-                    .ok_or_else(|| GetTypeConstructorError::UnknownType {
-                        name: name.to_string(),
-                        type_constructors: self
-                            .module_types
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
-                    })
-            }
+            None => self
+                .module_types
+                .get(name)
+                .ok_or_else(|| UnknownTypeConstructorError::Type {
+                    name: name.to_string(),
+                    type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
+                }),
 
             Some(m) => {
                 let module = self.imported_modules.get(m).ok_or_else(|| {
-                    GetTypeConstructorError::UnknownModule {
+                    UnknownTypeConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
                             .importable_modules
@@ -239,7 +234,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                 module
                     .types
                     .get(name)
-                    .ok_or_else(|| GetTypeConstructorError::UnknownModuleType {
+                    .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
                         name: name.to_string(),
                         module_name: module.name.clone(),
                         type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
@@ -254,18 +249,20 @@ impl<'a, 'b> Environment<'a, 'b> {
         &self,
         module: Option<&String>,
         name: &str,
-    ) -> Result<&ValueConstructor, GetValueConstructorError> {
+    ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self.local_values.get(name).ok_or_else(|| {
-                GetValueConstructorError::UnknownVariable {
-                    name: name.to_string(),
-                    variables: self.local_value_names(),
-                }
-            }),
+            None => {
+                self.local_values
+                    .get(name)
+                    .ok_or_else(|| UnknownValueConstructorError::Variable {
+                        name: name.to_string(),
+                        variables: self.local_value_names(),
+                    })
+            }
 
             Some(module) => {
                 let module = self.imported_modules.get(module).ok_or_else(|| {
-                    GetValueConstructorError::UnknownModule {
+                    UnknownValueConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
                             .importable_modules
@@ -274,13 +271,14 @@ impl<'a, 'b> Environment<'a, 'b> {
                             .collect(),
                     }
                 })?;
-                module.values.get(name).ok_or_else(|| {
-                    GetValueConstructorError::UnknownModuleValue {
+                module
+                    .values
+                    .get(name)
+                    .ok_or_else(|| UnknownValueConstructorError::ModuleValue {
                         name: name.to_string(),
                         module_name: module.name.clone(),
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
-                    }
-                })
+                    })
             }
         }
     }

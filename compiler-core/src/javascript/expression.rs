@@ -32,6 +32,7 @@ pub struct Generator<'module> {
 }
 
 impl<'module> Generator<'module> {
+    #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: &'module [String],
         line_numbers: &'module LineNumbers,
