@@ -11,9 +11,6 @@ use crate::{
 };
 
 static RECORD_KEY: &str = "type";
-static BIT_STRING_VAR: &str = "_bits";
-static BIT_STRING_SEGMENTS_VAR: &str = "_segments";
-static BIT_STRING_CURSOR_VAR: &str = "_cursor";
 
 #[derive(Debug)]
 pub struct Generator<'module> {
@@ -23,11 +20,11 @@ pub struct Generator<'module> {
     function_arguments: Vec<Option<&'module str>>,
     current_scope_vars: im::HashMap<String, usize>,
     pub tail_position: bool,
-    // We register whether float division or object equality are used within an
-    // expression so that the module generator can output a suitable function if
-    // it is needed.
+    // We register whether these features are used within an expression so that
+    // the module generator can output a suitable function if it is needed.
     float_division_used: &'module mut bool,
     object_equality_used: &'module mut bool,
+    bit_string_literal_used: &'module mut bool,
     // We track whether tail call recusion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
@@ -42,6 +39,7 @@ impl<'module> Generator<'module> {
         function_arguments: Vec<Option<&'module str>>,
         float_division_used: &'module mut bool,
         object_equality_used: &'module mut bool,
+        bit_string_literal_used: &'module mut bool,
         mut current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
         for &name in function_arguments.iter().flatten() {
@@ -57,6 +55,7 @@ impl<'module> Generator<'module> {
             tail_position: true,
             float_division_used,
             object_equality_used,
+            bit_string_literal_used,
         }
     }
 
@@ -165,6 +164,8 @@ impl<'module> Generator<'module> {
             return Ok("new ArrayBuffer(0)".to_doc());
         }
 
+        *self.bit_string_literal_used = true;
+
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
@@ -185,85 +186,7 @@ impl<'module> Generator<'module> {
             }
         }))?;
 
-        let bits_var = self.next_local_var(BIT_STRING_VAR);
-        let cursor_var = self.next_local_var(BIT_STRING_CURSOR_VAR);
-        let segments_var = self.next_local_var(BIT_STRING_SEGMENTS_VAR);
-        let segments_assignment = docvec!["let ", segments_var.clone(), " = ", segments_array, ";"];
-        let cursor_assignment = docvec!["let ", cursor_var.clone(), " = 0;"];
-        let buffer_assignment = docvec![
-            "let ",
-            bits_var.clone(),
-            " = new DataView(new ArrayBuffer(",
-            segments_var.clone(),
-            ".reduce((size, segment) =>",
-            docvec![
-                line(),
-                "size + (segment instanceof Uint8Array ? segment.byteLength : 1),"
-            ]
-            .nest(INDENT),
-            line(),
-            "0)));"
-        ];
-
-        let write_buffer = docvec![
-            line(),
-            "new Uint8Array(",
-            bits_var.clone(),
-            ".buffer).set(segment, ",
-            cursor_var.clone(),
-            ");",
-            line(),
-            cursor_var.clone(),
-            " += segment.byteLength;"
-        ];
-
-        let write_int = docvec![
-            line(),
-            bits_var.clone(),
-            ".setInt8(",
-            cursor_var.clone(),
-            ", segment);",
-            line(),
-            cursor_var.clone(),
-            "++;"
-        ];
-
-        let write_segment = docvec![
-            line(),
-            "if (segment instanceof Uint8Array) {",
-            write_buffer.nest(INDENT),
-            line(),
-            "} else {",
-            write_int.nest(INDENT),
-            line(),
-            "}"
-        ];
-
-        let write_loop = docvec![
-            "for (let segment of ",
-            segments_var.clone(),
-            ") {",
-            write_segment.nest(INDENT),
-            line(),
-            "}"
-        ];
-
-        Ok(
-            self.immediately_involked_function_expression_document(docvec![
-                force_break(),
-                segments_assignment,
-                line(),
-                buffer_assignment,
-                line(),
-                cursor_assignment,
-                line(),
-                write_loop,
-                line(),
-                "return ",
-                bits_var,
-                ".buffer;"
-            ]),
-        )
+        Ok(docvec!["$bit_string(", segments_array, ")"])
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {

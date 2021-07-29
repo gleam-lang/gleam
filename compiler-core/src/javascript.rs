@@ -52,6 +52,25 @@ function $divide(a, b) {
   return a / b;
 }";
 
+const FUNCTION_BIT_STRING: &str = "
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
+    }
+  }
+  return bits.buffer;
+}";
+
 pub type Output<'a> = Result<Document<'a>, Error>;
 
 #[derive(Debug)]
@@ -60,6 +79,7 @@ pub struct Generator<'a> {
     module: &'a TypedModule,
     float_division_used: bool,
     object_equality_used: bool,
+    bit_string_literal_used: bool,
     module_scope: im::HashMap<String, usize>,
 }
 
@@ -70,6 +90,7 @@ impl<'a> Generator<'a> {
             module,
             float_division_used: false,
             object_equality_used: false,
+            bit_string_literal_used: false,
             module_scope: Default::default(),
         }
     }
@@ -91,8 +112,14 @@ impl<'a> Generator<'a> {
             statements.push(FUNCTION_DIVIDE.to_doc());
         };
 
+        // If structural equality is used render an appropriate function
         if self.object_equality_used {
             statements.push(DEEP_EQUAL.to_doc());
+        };
+
+        // If bit string literals have been used render an appropriate function
+        if self.bit_string_literal_used {
+            statements.push(FUNCTION_BIT_STRING.to_doc());
         };
 
         statements.push(line());
@@ -258,6 +285,7 @@ impl<'a> Generator<'a> {
             argument_names,
             &mut self.float_division_used,
             &mut self.object_equality_used,
+            &mut self.bit_string_literal_used,
             self.module_scope.clone(),
         );
         let head = if public {

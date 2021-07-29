@@ -28,23 +28,24 @@ fn go() {
         r#""use strict";
 
 function go() {
-  return (() => {
-    let _segments = [256];
-    let _bits = new DataView(new ArrayBuffer(_segments.reduce((size, segment) =>
-      size + (segment instanceof Uint8Array ? segment.byteLength : 1),
-    0)));
-    let _cursor = 0;
-    for (let segment of _segments) {
-      if (segment instanceof Uint8Array) {
-        new Uint8Array(_bits.buffer).set(segment, _cursor);
-        _cursor += segment.byteLength;
-      } else {
-        _bits.setInt8(_cursor, segment);
-        _cursor++;
-      }
+  return $bit_string([256]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
     }
-    return _bits.buffer;
-  })();
+  }
+  return bits.buffer;
 }
 "#
     );
@@ -61,23 +62,24 @@ fn go() {
         r#""use strict";
 
 function go() {
-  return (() => {
-    let _segments = [256, 4];
-    let _bits = new DataView(new ArrayBuffer(_segments.reduce((size, segment) =>
-      size + (segment instanceof Uint8Array ? segment.byteLength : 1),
-    0)));
-    let _cursor = 0;
-    for (let segment of _segments) {
-      if (segment instanceof Uint8Array) {
-        new Uint8Array(_bits.buffer).set(segment, _cursor);
-        _cursor += segment.byteLength;
-      } else {
-        _bits.setInt8(_cursor, segment);
-        _cursor++;
-      }
+  return $bit_string([256, 4]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
     }
-    return _bits.buffer;
-  })();
+  }
+  return bits.buffer;
 }
 "#
     );
@@ -94,23 +96,24 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  return (() => {
-    let _segments = [256, 4, x];
-    let _bits = new DataView(new ArrayBuffer(_segments.reduce((size, segment) =>
-      size + (segment instanceof Uint8Array ? segment.byteLength : 1),
-    0)));
-    let _cursor = 0;
-    for (let segment of _segments) {
-      if (segment instanceof Uint8Array) {
-        new Uint8Array(_bits.buffer).set(segment, _cursor);
-        _cursor += segment.byteLength;
-      } else {
-        _bits.setInt8(_cursor, segment);
-        _cursor++;
-      }
+  return $bit_string([256, 4, x]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
     }
-    return _bits.buffer;
-  })();
+  }
+  return bits.buffer;
 }
 "#
     );
@@ -127,23 +130,24 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  return (() => {
-    let _segments = [256, 4, x, new TextEncoder().encode("Gleam")];
-    let _bits = new DataView(new ArrayBuffer(_segments.reduce((size, segment) =>
-      size + (segment instanceof Uint8Array ? segment.byteLength : 1),
-    0)));
-    let _cursor = 0;
-    for (let segment of _segments) {
-      if (segment instanceof Uint8Array) {
-        new Uint8Array(_bits.buffer).set(segment, _cursor);
-        _cursor += segment.byteLength;
-      } else {
-        _bits.setInt8(_cursor, segment);
-        _cursor++;
-      }
+  return $bit_string([256, 4, x, new TextEncoder().encode("Gleam")]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
     }
-    return _bits.buffer;
-  })();
+  }
+  return bits.buffer;
 }
 "#
     );
@@ -160,26 +164,27 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  return (() => {
-    let _segments = [
-      new TextEncoder().encode(x),
-      new TextEncoder().encode("Gleam"),
-    ];
-    let _bits = new DataView(new ArrayBuffer(_segments.reduce((size, segment) =>
-      size + (segment instanceof Uint8Array ? segment.byteLength : 1),
-    0)));
-    let _cursor = 0;
-    for (let segment of _segments) {
-      if (segment instanceof Uint8Array) {
-        new Uint8Array(_bits.buffer).set(segment, _cursor);
-        _cursor += segment.byteLength;
-      } else {
-        _bits.setInt8(_cursor, segment);
-        _cursor++;
-      }
+  return $bit_string([
+    new TextEncoder().encode(x),
+    new TextEncoder().encode("Gleam"),
+  ]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
     }
-    return _bits.buffer;
-  })();
+  }
+  return bits.buffer;
 }
 "#
     );
