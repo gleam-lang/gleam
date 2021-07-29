@@ -922,6 +922,7 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<>> == <<>>) }),
     "<<>> != <<>>"
     |> example(fn() { assert_equal(False, <<>> != <<>>) }),
+    // Int bit strings
     "<<1, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<1, 2>> == <<1, 2>>) }),
     "<<1, 2>> != <<1, 2>>"
@@ -930,5 +931,28 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(False, <<1, 2>> == <<2>>) }),
     "<<1, 2>> != <<2>>"
     |> example(fn() { assert_equal(True, <<1, 2>> != <<2>>) }),
+    // UTF8 bit strings
+    "<<\"Gleam\":utf8, \"👍\":utf8>> == <<\"Gleam\":utf8, \"👍\":utf8>>"
+    |> example(fn() {
+      assert_equal(
+        True,
+        <<"Gleam":utf8, "👍":utf8>> == <<"Gleam":utf8, "👍":utf8>>,
+      )
+    }),
+    "<<\"Gleam\":utf8, \"👍\":utf8>> != <<\"Gleam\":utf8, \"👍\":utf8>>"
+    |> example(fn() {
+      assert_equal(
+        False,
+        <<"Gleam":utf8, "👍":utf8>> != <<"Gleam":utf8, "👍":utf8>>,
+      )
+    }),
+    "<<\"Gleam\":utf8, \"👍\":utf8>> == <<\"👍\":utf8>>"
+    |> example(fn() {
+      assert_equal(False, <<"Gleam":utf8, "👍":utf8>> == <<"👍":utf8>>)
+    }),
+    "<<\"Gleam\":utf8, \"👍\":utf8>> != <<\"👍\":utf8>>"
+    |> example(fn() {
+      assert_equal(True, <<"Gleam":utf8, "👍":utf8>> != <<"👍":utf8>>)
+    }),
   ]
 }
