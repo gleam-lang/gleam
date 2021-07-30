@@ -189,3 +189,37 @@ function $bit_string(segments) {
 "#
     );
 }
+
+#[test]
+fn bit_string() {
+    assert_js!(
+        r#"
+fn go(x) {
+  <<x:bit_string, "Gleam":utf8>>
+}
+"#,
+        r#""use strict";
+
+function go(x) {
+  return $bit_string([new Uint8Array(x), new TextEncoder().encode("Gleam")]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let bits = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(bits.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      bits.setInt8(cursor, segment);
+      cursor++;
+    }
+  }
+  return bits.buffer;
+}
+"#
+    );
+}

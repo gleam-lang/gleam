@@ -179,6 +179,9 @@ impl<'module> Generator<'module> {
                     Ok(docvec!["new TextEncoder().encode(", value, ")"])
                 }
 
+                // Bit strings
+                [Opt::BitString { .. }] => Ok(docvec!["new Uint8Array(", value, ")"]),
+
                 // Anything else
                 _ => Err(Error::Unsupported {
                     feature: "This bit string segment option".to_string(),

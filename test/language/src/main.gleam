@@ -14,6 +14,7 @@ pub fn main() -> Int {
       suite("strings", strings_tests()),
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
+      suite("bit strings", bit_string_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
       suite("tail call optimisation", tail_call_optimisation_tests()),
@@ -922,7 +923,7 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<>> == <<>>) }),
     "<<>> != <<>>"
     |> example(fn() { assert_equal(False, <<>> != <<>>) }),
-    // Int bit strings
+    // Bit strings
     "<<1, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<1, 2>> == <<1, 2>>) }),
     "<<1, 2>> != <<1, 2>>"
@@ -931,7 +932,11 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(False, <<1, 2>> == <<2>>) }),
     "<<1, 2>> != <<2>>"
     |> example(fn() { assert_equal(True, <<1, 2>> != <<2>>) }),
-    // UTF8 bit strings
+  ]
+}
+
+fn bit_string_tests() -> List(Test) {
+  [
     "<<\"Gleam\":utf8, \"👍\":utf8>> == <<\"Gleam\":utf8, \"👍\":utf8>>"
     |> example(fn() {
       assert_equal(
@@ -939,20 +944,13 @@ fn equality_tests() -> List(Test) {
         <<"Gleam":utf8, "👍":utf8>> == <<"Gleam":utf8, "👍":utf8>>,
       )
     }),
-    "<<\"Gleam\":utf8, \"👍\":utf8>> != <<\"Gleam\":utf8, \"👍\":utf8>>"
-    |> example(fn() {
-      assert_equal(
-        False,
-        <<"Gleam":utf8, "👍":utf8>> != <<"Gleam":utf8, "👍":utf8>>,
-      )
-    }),
     "<<\"Gleam\":utf8, \"👍\":utf8>> == <<\"👍\":utf8>>"
     |> example(fn() {
       assert_equal(False, <<"Gleam":utf8, "👍":utf8>> == <<"👍":utf8>>)
     }),
-    "<<\"Gleam\":utf8, \"👍\":utf8>> != <<\"👍\":utf8>>"
-    |> example(fn() {
-      assert_equal(True, <<"Gleam":utf8, "👍":utf8>> != <<"👍":utf8>>)
-    }),
+    "<<\"abc\":utf8>> == <<97, 98, 99>>"
+    |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
+    "<<<<1>>:bit_string, 2>> == <<1, 2>>"
+    |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
   ]
 }
