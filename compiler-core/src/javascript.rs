@@ -19,24 +19,14 @@ function $equal(x, y) {
     let a = toCheck.pop();
     let b = toCheck.pop();
     if (a === b) return true;
-    if (a instanceof ArrayBuffer && b instanceof ArrayBuffer) {
-      return $bits_equal(a, b)
+    if (a instanceof Uint8Array && b instanceof Uint8Array) {
+      return a.byteLength === b.byteLength && a.every((x, i) => x === b[i]);
     }
     if (!$is_object(a) || !$is_object(b)) return false;
     if (a.length !== b.length) return false;
     for (let k of Object.keys(a)) {
       toCheck.push(a[k], b[k]);
     }
-  }
-  return true;
-}
-
-function $bits_equal(x, y) {
-  let a = new DataView(x);
-  let b = new DataView(y);
-  if (a.byteLength !== b.byteLength) return false;
-  for (let i=0; i < a.byteLength; i++) {
-    if (a.getUint8(i) !== b.getUint8(i)) return false;
   }
   return true;
 }
@@ -57,18 +47,18 @@ const FUNCTION_BIT_STRING: &str = "
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }";
 
 pub type Output<'a> = Result<Document<'a>, Error>;

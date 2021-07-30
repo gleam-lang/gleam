@@ -162,7 +162,7 @@ impl<'module> Generator<'module> {
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
         use BitStringSegmentOption as Opt;
         if segments.is_empty() {
-            return Ok("new ArrayBuffer(0)".to_doc());
+            return Ok("new Uint8Array()".to_doc());
         }
 
         *self.bit_string_literal_used = true;
@@ -180,7 +180,7 @@ impl<'module> Generator<'module> {
                 }
 
                 // Bit strings
-                [Opt::BitString { .. }] => Ok(docvec!["new Uint8Array(", value, ")"]),
+                [Opt::BitString { .. }] => Ok(value),
 
                 // Anything else
                 _ => Err(Error::Unsupported {

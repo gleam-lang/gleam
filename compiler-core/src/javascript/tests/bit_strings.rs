@@ -11,7 +11,7 @@ fn go() {
         r#""use strict";
 
 function go() {
-  return new ArrayBuffer(0);
+  return new Uint8Array();
 }
 "#
     );
@@ -34,18 +34,18 @@ function go() {
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
@@ -68,18 +68,18 @@ function go() {
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
@@ -102,18 +102,18 @@ function go(x) {
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
@@ -136,18 +136,18 @@ function go(x) {
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
@@ -173,18 +173,18 @@ function go(x) {
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
@@ -201,24 +201,24 @@ fn go(x) {
         r#""use strict";
 
 function go(x) {
-  return $bit_string([new Uint8Array(x), new TextEncoder().encode("Gleam")]);
+  return $bit_string([x, new TextEncoder().encode("Gleam")]);
 }
 
 function $bit_string(segments) {
   let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let bits = new DataView(new ArrayBuffer(bytes));
+  let view = new DataView(new ArrayBuffer(bytes));
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(bits.buffer).set(segment, cursor);
+      new Uint8Array(view.buffer).set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      bits.setInt8(cursor, segment);
+      view.setInt8(cursor, segment);
       cursor++;
     }
   }
-  return bits.buffer;
+  return new Uint8Array(view.buffer);
 }
 "#
     );
