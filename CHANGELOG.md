@@ -33,8 +33,8 @@
   case expression would produce invalid code when compiling to JavaScript.
 - Unsupported feature error messages now include file path and line numbers for
   debugging.
-- Bit string literals with no segment options or just `:utf8` or
-  `:utf8_codepoint` can be constructed when compiling to JavaScript.
+- Bit string literals with no segment options or just the `bit_string`, `:utf8`
+  or `:utf8_codepoint` options can be constructed when compiling to JavaScript.
 - The format of generated JavaScript has been improved.
 - Fixed a bug where rendered JavaScript incorrectly incremented variables when
   reassigned in patterns.
