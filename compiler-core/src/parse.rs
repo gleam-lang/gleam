@@ -405,7 +405,7 @@ where
                     label,
                 }
             }
-            Some((start, Token::Tuple | Token::Hash, _)) => {
+            Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems =
@@ -798,7 +798,7 @@ where
                     value,
                 }
             }
-            Some((start, Token::Tuple | Token::Hash, _)) => {
+            Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
@@ -1619,7 +1619,7 @@ where
     //   :a
     //   :Int
     //   :Result(a, _)
-    //   :Result(Result(a, e), tuple(_, String))
+    //   :Result(Result(a, e), #(_, String))
     fn parse_type_annotation(
         &mut self,
         start_tok: &Token,
@@ -1648,7 +1648,7 @@ where
             }
 
             // Tuple
-            Some((start, Token::Tuple | Token::Hash, end)) => {
+            Some((start, Token::Hash, end)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elems = self.parse_types(for_const)?;
@@ -1940,7 +1940,7 @@ where
                 }))
             }
 
-            Some((start, Token::Tuple | Token::Hash, _)) => {
+            Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
                 let elements =
@@ -2762,7 +2762,6 @@ fn is_reserved_word(tok: Token) -> bool {
             | Token::Pub
             | Token::Todo
             | Token::Try
-            | Token::Tuple
             | Token::Type
     ]
 }

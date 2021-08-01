@@ -37,7 +37,7 @@ pub enum ParseErrorType {
     ExpectedValue,           // no value after "="
     ExprLparStart,           // it seems "(" was used to start an expression
     ExprThenlessTry,         // a try in the tail position of an expression sequence
-    ExtraSeparator,          // tuple(1,,) <- the 2nd comma is an extra separator
+    ExtraSeparator,          // #(1,,) <- the 2nd comma is an extra separator
     IncorrectName,           // UpName or DiscardName used when Name was expected
     IncorrectUpName,         // Name or DiscardName used when UpName was expected
     InvalidBitStringSegment, // <<7:hello>> `hello` is an invalid bitstring segment
