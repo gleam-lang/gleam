@@ -39,6 +39,8 @@
 - Fixed a bug where rendered JavaScript incorrectly incremented variables when
   reassigned in patterns.
 - Added `eval` and `arguments` to JavaScript reserved words.
+- Support for the deprecated `tuple(x, y, ...)` syntax has been removed in favor
+  of the more concise (`#(x, y, ...)`). Use `gleam format` to auto-migrate.
 
 ## v0.16.1 - 2021-06-21
 

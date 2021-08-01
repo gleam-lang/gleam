@@ -78,7 +78,7 @@ type StringHaver {
 
 pub fn non_literal_strings_test() {
   let v = "x"
-  let t = tuple("y")
+  let t = #("y")
   let c = StringHaver(value: "z")
   let f = fn() { "ß" }
 

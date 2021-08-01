@@ -404,22 +404,22 @@ fn let_() {
     assert_infer!("let x = 2.0 x", "Float");
     assert_infer!("let x = 2 let y = x y", "Int");
     assert_infer!(
-        "let tuple(tuple(_, _) as x, _) = tuple(tuple(0, 1.0), []) x",
+        "let #(#(_, _) as x, _) = #(#(0, 1.0), []) x",
         "#(Int, Float)"
     );
     assert_infer!("let x: String = \"\" x", "String");
-    assert_infer!("let x: tuple(Int, Int) = tuple(5, 5) x", "#(Int, Int)",);
+    assert_infer!("let x: #(Int, Int) = #(5, 5) x", "#(Int, Int)",);
     assert_infer!(
-        "let x: tuple(Int, Float) = tuple(5, 5.0) x",
+        "let x: #(Int, Float) = #(5, 5.0) x",
         "#(Int, Float)",
     );
     assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
     assert_infer!(
-        "let tuple(5, [..x]): tuple(Int, List(Int)) = tuple(5, [1,2,3]) x",
+        "let #(5, [..x]): #(Int, List(Int)) = #(5, [1,2,3]) x",
         "List(Int)",
     );
     assert_infer!(
-        "let tuple(5.0, [..x]): tuple(Float, List(Int)) = tuple(5.0, [1,2,3]) x",
+        "let #(5.0, [..x]): #(Float, List(Int)) = #(5.0, [1,2,3]) x",
         "List(Int)",
     );
     assert_infer!("let x: List(_) = [] x", "List(a)");
@@ -434,8 +434,8 @@ fn let_() {
     assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("let _x = 1 2.0", "Float");
     assert_infer!("let _ = 1 2.0", "Float");
-    assert_infer!("let tuple(tag, x) = tuple(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { let tuple(a, b) = x a }", "fn(#(a, b)) -> a");
+    assert_infer!("let #(tag, x) = #(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { let #(a, b) = x a }", "fn(#(a, b)) -> a");
 
     // assert
     assert_infer!("assert [] = [] 1", "Int");
@@ -447,8 +447,8 @@ fn let_() {
     assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
     assert_infer!("assert _x = 1 2.0", "Float");
     assert_infer!("assert _ = 1 2.0", "Float");
-    assert_infer!("assert tuple(tag, x) = tuple(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { assert tuple(a, b) = x a }", "fn(#(a, b)) -> a");
+    assert_infer!("assert #(tag, x) = #(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { assert #(a, b) = x a }", "fn(#(a, b)) -> a");
     assert_infer!("assert 5: Int = 5 5", "Int");
 
     // try
@@ -491,15 +491,15 @@ fn lists() {
     assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
 
     assert_infer!("let f = fn(x) { x } [f, f]", "List(fn(a) -> a)");
-    assert_infer!("[tuple([], [])]", "List(#(List(a), List(b)))");
+    assert_infer!("[#([], [])]", "List(#(List(a), List(b)))");
 }
 
 #[test]
 fn tuples() {
-    assert_infer!("tuple(1)", "#(Int)");
-    assert_infer!("tuple(1, 2.0)", "#(Int, Float)");
-    assert_infer!("tuple(1, 2.0, 3)", "#(Int, Float, Int)");
-    assert_infer!("tuple(1, 2.0, tuple(1, 1))", "#(Int, Float, #(Int, Int))",);
+    assert_infer!("#(1)", "#(Int)");
+    assert_infer!("#(1, 2.0)", "#(Int, Float)");
+    assert_infer!("#(1, 2.0, 3)", "#(Int, Float, Int)");
+    assert_infer!("#(1, 2.0, #(1, 1))", "#(Int, Float, #(Int, Int))",);
 
     // new syntax
     assert_infer!("#(1)", "#(Int)");
@@ -559,9 +559,9 @@ fn expr_fn() {
     );
 
     assert_infer!("let add = fn(x, y) { x + y } add(_, 2)", "fn(Int) -> Int");
-    assert_infer!("fn(x) { tuple(1, x) }", "fn(a) -> #(Int, a)");
-    assert_infer!("fn(x, y) { tuple(x, y) }", "fn(a, b) -> #(a, b)");
-    assert_infer!("fn(x) { tuple(x, x) }", "fn(a) -> #(a, a)");
+    assert_infer!("fn(x) { #(1, x) }", "fn(a) -> #(Int, a)");
+    assert_infer!("fn(x, y) { #(x, y) }", "fn(a, b) -> #(a, b)");
+    assert_infer!("fn(x) { #(x, x) }", "fn(a) -> #(a, a)");
     assert_infer!("fn(x) -> Int { x }", "fn(Int) -> Int");
     assert_infer!("fn(x) -> a { x }", "fn(a) -> a");
     assert_infer!("fn() -> Int { 2 }", "fn() -> Int");
@@ -584,8 +584,8 @@ fn case() {
 
 #[test]
 fn tuple_index() {
-    assert_infer!("tuple(1, 2.0).0", "Int");
-    assert_infer!("tuple(1, 2.0).1", "Float");
+    assert_infer!("#(1, 2.0).0", "Int");
+    assert_infer!("#(1, 2.0).1", "Float");
 }
 
 #[test]
@@ -1266,10 +1266,10 @@ fn pipe_mismatch_error() {
 #[test]
 fn the_rest() {
     assert_error!(
-        "case tuple(1, 2, 3) { x if x == tuple(1, 1.0) -> 1 }",
+        "case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 27, end: 45 },
+            location: SrcSpan { start: 23, end: 37 },
             expected: tuple(vec![int(), int(), int()]),
             given: tuple(vec![int(), float()]),
         },
@@ -1286,20 +1286,20 @@ fn the_rest() {
     );
 
     assert_error!(
-        "case tuple(1, 2) { x if x == tuple(1, 1.0) -> 1 }",
+        "case #(1, 2) { x if x == #(1, 1.0) -> 1 }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 24, end: 42 },
+            location: SrcSpan { start: 20, end: 34 },
             expected: tuple(vec![int(), int()]),
             given: tuple(vec![int(), float()]),
         },
     );
 
     assert_error!(
-        "case 1 { x if x == tuple() -> 1 }",
+        "case 1 { x if x == #() -> 1 }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 14, end: 26 },
+            location: SrcSpan { start: 14, end: 22 },
             expected: int(),
             given: tuple(vec![]),
         },
@@ -1352,30 +1352,30 @@ fn the_rest() {
     );
 
     assert_error!(
-        "tuple(1, 2) == tuple(1, 2, 3)",
+        "#(1, 2) == #(1, 2, 3)",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 15, end: 29 },
+            location: SrcSpan { start: 11, end: 21 },
             expected: tuple(vec![int(), int()]),
             given: tuple(vec![int(), int(), int()])
         },
     );
 
     assert_error!(
-        "tuple(1.0, 2, 3) == tuple(1, 2, 3)",
+        "#(1.0, 2, 3) == #(1, 2, 3)",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 20, end: 34 },
+            location: SrcSpan { start: 16, end: 26 },
             expected: tuple(vec![float(), int(), int()]),
             given: tuple(vec![int(), int(), int()]),
         },
     );
 
     assert_error!(
-        "let tuple(a, b) = 1 a",
+        "let #(a, b) = 1 a",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 4, end: 15 },
+            location: SrcSpan { start: 4, end: 11 },
             expected: int(),
             given: tuple(vec![
                 Arc::new(Type::Var {
@@ -1433,10 +1433,10 @@ fn the_rest() {
     );
 
     assert_error!(
-        "case tuple(1, 1.0) { tuple(x, _) | tuple(_, x) -> 1 }",
+        "case #(1, 1.0) { #(x, _) | #(_, x) -> 1 }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 44, end: 45 },
+            location: SrcSpan { start: 32, end: 33 },
             expected: int(),
             given: float(),
         },
@@ -1641,35 +1641,27 @@ fn the_rest() {
     );
 
     assert_error!(
-        "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
+        "case #(1, 2) { #(1, y) | #(x, y) -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            location: SrcSpan { start: 39, end: 40 },
+            location: SrcSpan { start: 27, end: 28 },
             name: "x".to_string()
         },
     );
 
     assert_error!(
-        "case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
+        "let x = 1 case #(1, 2) { #(1, y) | #(x, y) -> 1 }",
         Error::ExtraVarInAlternativePattern {
-            location: SrcSpan { start: 39, end: 40 },
-            name: "x".to_string()
-        },
-    );
-
-    assert_error!(
-        "let x = 1 case tuple(1, 2) { tuple(1, y) | tuple(x, y) -> 1 }",
-        Error::ExtraVarInAlternativePattern {
-            location: SrcSpan { start: 49, end: 50 },
+            location: SrcSpan { start: 37, end: 38 },
             name: "x".to_string()
         },
     );
 
     // https://github.com/gleam-lang/gleam/issues/714
     assert_error!(
-        "case tuple(1, 2) { tuple(1, _, _, _) -> 1 }",
+        "case #(1, 2) { #(1, _, _, _) -> 1 }",
         Error::IncorrectArity {
             labels: vec![],
-            location: SrcSpan { start: 19, end: 36 },
+            location: SrcSpan { start: 15, end: 28 },
             expected: 2,
             given: 4,
         },
@@ -1678,9 +1670,9 @@ fn the_rest() {
     // Duplicate vars
 
     assert_error!(
-        "case tuple(1, 2) { tuple(x, x) -> 1 }",
+        "case #(1, 2) { #(x, x) -> 1 }",
         Error::DuplicateVarInPattern {
-            location: SrcSpan { start: 28, end: 29 },
+            location: SrcSpan { start: 20, end: 21 },
             name: "x".to_string()
         },
     );
@@ -1704,9 +1696,9 @@ fn the_rest() {
     // Tuple indexing
 
     assert_error!(
-        "tuple(0, 1).2",
+        "#(0, 1).2",
         Error::OutOfBoundsTupleIndex {
-            location: SrcSpan { start: 11, end: 13 },
+            location: SrcSpan { start: 7, end: 9 },
             index: 2,
             size: 2
         },
@@ -2075,17 +2067,17 @@ fn infer_module_test() {
 
     // Anon structs
     assert_module_infer!(
-        "pub fn ok(x) { tuple(1, x) }",
+        "pub fn ok(x) { #(1, x) }",
         vec![("ok", "fn(a) -> #(Int, a)")],
     );
 
     assert_module_infer!(
-        "pub external fn ok(Int) -> tuple(Int, Int) = \"\" \"\"",
+        "pub external fn ok(Int) -> #(Int, Int) = \"\" \"\"",
         vec![("ok", "fn(Int) -> #(Int, Int)")],
     );
 
     assert_module_infer!(
-        "pub external fn go(tuple(a, c)) -> c = \"\" \"\"",
+        "pub external fn go(#(a, c)) -> c = \"\" \"\"",
         vec![("go", "fn(#(a, b)) -> b")],
     );
 
@@ -2482,10 +2474,10 @@ fn demo() {
     );
 
     assert_module_error!(
-        "fn main() { let x: tuple(x, x) = tuple(5, 5.0) x }",
+        "fn main() { let x: #(x, x) = #(5, 5.0) x }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 33, end: 46 },
+            location: SrcSpan { start: 29, end: 38 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 }))
@@ -2510,12 +2502,12 @@ fn demo() {
 
     assert_module_error!(
         "fn main() {
-            let tuple(y, [..x]): tuple(x, List(x)) = tuple(\"foo\", [1,2,3])
+            let #(y, [..x]): #(x, List(x)) = #(\"foo\", [1,2,3])
             x
         }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 65, end: 86 },
+            location: SrcSpan { start: 57, end: 74 },
             expected: tuple(vec![
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Generic { id: 9 }))
@@ -3081,21 +3073,21 @@ fn module_constants() {
     );
 
     assert_module_error!(
-        "pub const pair: tuple(Int, Float) = tuple(4.1, 1)",
+        "pub const pair: #(Int, Float) = #(4.1, 1)",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 36, end: 49 },
+            location: SrcSpan { start: 32, end: 41 },
             expected: tuple(vec![int(), float()]),
             given: tuple(vec![float(), int()]),
         }
     );
 
     assert_module_error!(
-        "const pair = tuple(1, 2.0)
+        "const pair = #(1, 2.0)
          fn main() { 1 == pair }",
         Error::CouldNotUnify {
             situation: None,
-            location: SrcSpan { start: 53, end: 57 },
+            location: SrcSpan { start: 49, end: 53 },
             expected: int(),
             given: tuple(vec![int(), float()]),
         },
@@ -3121,7 +3113,7 @@ fn module_constants() {
     pub const test_float: Float = 4.2
     pub const test_string = \"hey!\"
     pub const test_list = [1,2,3]
-    pub const test_tuple = tuple(\"yes!\", 42)",
+    pub const test_tuple = #(\"yes!\", 42)",
         vec![
             ("test_float", "Float"),
             ("test_int1", "Int"),
@@ -3488,10 +3480,10 @@ fn unused_literal_warning_test() {
     assert_warning!(
         "
     fn main() { 
-        tuple(1.0, \"Hello world\"); 2 
+        #(1.0, \"Hello world\"); 2
     }",
         Warning::UnusedLiteral {
-            location: SrcSpan { start: 26, end: 51 }
+            location: SrcSpan { start: 26, end: 47 }
         }
     );
     // Test list
@@ -3664,14 +3656,14 @@ fn unused_variable_warnings_test() {
 
     // Destructure
     assert_warning!(
-        "pub fn a(b) { case b { tuple(c, _) -> 5 } }",
+        "pub fn a(b) { case b { #(c, _) -> 5 } }",
         Warning::UnusedVariable {
             name: "c".to_string(),
-            location: SrcSpan { start: 29, end: 30 },
+            location: SrcSpan { start: 25, end: 26 },
         }
     );
 
-    assert_no_warnings!("pub fn a(b) { case b { tuple(c, _) -> c } }");
+    assert_no_warnings!("pub fn a(b) { case b { #(c, _) -> c } }");
 }
 
 #[test]

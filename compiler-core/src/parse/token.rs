@@ -70,7 +70,6 @@ pub enum Token {
     Pub,
     Todo,
     Try,
-    Tuple,
     Type,
 }
 
@@ -162,7 +161,6 @@ impl fmt::Display for Token {
             Token::Pub => "pub",
             Token::Todo => "todo",
             Token::Try => "try",
-            Token::Tuple => "tuple",
             Token::Type => "type",
         };
         write!(f, "\"{}\"", s)

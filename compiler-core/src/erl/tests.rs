@@ -237,7 +237,7 @@ go() ->
 fn integration_test() {
     assert_erl!(
         r#"fn go() {
-let x = tuple(100000000000000000, tuple(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
+let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
   x
 }"#,
         r#"-module(the_app).
@@ -1289,9 +1289,9 @@ main() ->
     assert_erl!(
         r#"
 pub fn main() {
-  let x = tuple(1, 2, 3)
+  let x = #(1, 2, 3)
   case x {
-    _ if x == tuple(1, 2, 3) -> 1
+    _ if x == #(1, 2, 3) -> 1
     _ -> 0
   }
 }
@@ -1317,10 +1317,10 @@ main() ->
     assert_erl!(
         r#"
 pub fn main() {
-  let x = tuple(1, 2, 3)
+  let x = #(1, 2, 3)
   case x {
-    _ if x == tuple(1, 2, 3) -> 1
-    _ if x == tuple(2, 3, 4) -> 2
+    _ if x == #(1, 2, 3) -> 1
+    _ if x == #(2, 3, 4) -> 2
     _ -> 0
   }
 }
@@ -1856,7 +1856,7 @@ main() ->
     assert_erl!(
         r#"
 fn main() {
-    let t = tuple(fn(x) { x })
+    let t = #(fn(x) { x })
 
     t.0(5)
 }
@@ -2042,7 +2042,7 @@ main(Arg) ->
 
     assert_erl!(
         r#"
-pub const constant = tuple(1, 2.0)
+pub const constant = #(1, 2.0)
 
 pub fn main(arg) {
   case arg {
@@ -2101,13 +2101,13 @@ main(Arg) ->
 pub const string_value = "constant value"
 pub const float_value = 3.14
 pub const int_value = 42
-pub const tuple_value = tuple(1, 2.0, "3")
+pub const tuple_value = #(1, 2.0, "3")
 pub const list_value = [1, 2, 3]
 
 pub fn main(arg) {
   let _ = list_value
   case arg {
-    tuple(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1
+    #(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1
     _ -> 0
   }
 }
@@ -2479,7 +2479,7 @@ fn tuple_access_in_guard() {
         r#"
 fn main() {
     let key = 10
-    let x = [tuple(10, 2), tuple(1, 2)]
+    let x = [#(10, 2), #(1, 2)]
     case x {
         [first, ..rest] if first.0 == key -> "ok"
         _ -> "ko"

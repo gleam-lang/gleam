@@ -1280,8 +1280,8 @@ pub const int_value = 42
                     source_base_path: PathBuf::from("/src"),
                     src: "import one.{string_value, float_value, int_value}
 pub fn main(arg1, arg2, arg3) {
-  case tuple(arg1, arg2, arg3) {
-    tuple(x, y, z,) if x == string_value && y >. float_value && z == int_value -> 1
+  case #(arg1, arg2, arg3) {
+    #(x, y, z,) if x == string_value && y >. float_value && z == int_value -> 1
     _ -> 0
   }
 }"
