@@ -409,10 +409,7 @@ fn let_() {
     );
     assert_infer!("let x: String = \"\" x", "String");
     assert_infer!("let x: #(Int, Int) = #(5, 5) x", "#(Int, Int)",);
-    assert_infer!(
-        "let x: #(Int, Float) = #(5, 5.0) x",
-        "#(Int, Float)",
-    );
+    assert_infer!("let x: #(Int, Float) = #(5, 5.0) x", "#(Int, Float)",);
     assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
     assert_infer!(
         "let #(5, [..x]): #(Int, List(Int)) = #(5, [1,2,3]) x",
