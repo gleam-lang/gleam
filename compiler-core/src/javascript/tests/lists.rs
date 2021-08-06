@@ -139,19 +139,20 @@ function go() {
 }
 
 function $equal(x, y) {
-  let toCheck = [x, y];
-  while (toCheck) {
-    let a = toCheck.pop();
-    let b = toCheck.pop();
-    if (a === b) return true;
-    if (a instanceof Uint8Array && b instanceof Uint8Array) {
-      return a.byteLength === b.byteLength && a.every((x, i) => x === b[i]);
-    }
-    if (!$is_object(a) || !$is_object(b)) return false;
-    if (a.length !== b.length) return false;
-    for (let k of Object.keys(a)) {
-      toCheck.push(a[k], b[k]);
-    }
+  let values = [x, y];
+  while (values.length !== 0) {
+    let a = values.pop();
+    let b = values.pop();
+    if (
+      a === b ||
+      (a instanceof Uint8Array &&
+        b instanceof Uint8Array &&
+        a.byteLength === b.byteLength &&
+        a.every((x, i) => x === b[i]))
+    )
+      continue;
+    if (!$is_object(a) || !$is_object(b) || a.length !== b.length) return false;
+    for (let k of Object.keys(a)) values.push(a[k], b[k]);
   }
   return true;
 }

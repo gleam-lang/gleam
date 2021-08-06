@@ -932,6 +932,23 @@ fn equality_tests() -> List(Test) {
     |> example(fn() { assert_equal(False, <<1, 2>> == <<2>>) }),
     "<<1, 2>> != <<2>>"
     |> example(fn() { assert_equal(True, <<1, 2>> != <<2>>) }),
+    // Records
+    "Ok(1) == Ok(1)"
+    |> example(fn() { assert_equal(True, Ok(1) == Ok(1)) }),
+    "Ok(1) != Ok(1)"
+    |> example(fn() { assert_equal(False, Ok(1) != Ok(1)) }),
+    "Ok(2) == Ok(1)"
+    |> example(fn() { assert_equal(False, Ok(2) == Ok(1)) }),
+    "Ok(2) != Ok(1)"
+    |> example(fn() { assert_equal(True, Ok(2) != Ok(1)) }),
+    "Error(1) == Error(1)"
+    |> example(fn() { assert_equal(True, Error(1) == Error(1)) }),
+    "Error(1) != Error(1)"
+    |> example(fn() { assert_equal(False, Error(1) != Error(1)) }),
+    "Error(2) == Error(1)"
+    |> example(fn() { assert_equal(False, Error(2) == Error(1)) }),
+    "Error(2) != Error(1)"
+    |> example(fn() { assert_equal(True, Error(2) != Error(1)) }),
   ]
 }
 
