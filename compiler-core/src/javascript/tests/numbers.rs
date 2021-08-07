@@ -15,9 +15,7 @@ fn go() {
     1_000
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1;
   2;
   -3;
@@ -42,9 +40,7 @@ fn go() {
     1.
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1.5;
   2.0;
   -0.1;
@@ -70,9 +66,7 @@ fn go() {
     2 <= 1 // => False
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1 + 1;
   5 - 1;
   5 / 2 | 0;
@@ -102,9 +96,7 @@ fn go() {
     2.0 <=. 1.0 // => False
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1.0 + 1.4;
   5.0 - 1.5;
   $divide(5.0, 2.0);
@@ -128,9 +120,7 @@ fn go() {
   111111111111111111111111111111. /. 22222222222222222222222222222222222.
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return $divide(
     111111111111111111111111111111.,
     22222222222222222222222222222222222.
@@ -153,9 +143,7 @@ fn go(x) {
   let 4 = x
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x !== 4) throw new Error("Bad match");
   return x;
 }
@@ -172,9 +160,7 @@ fn go() {
   1 == 2
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1 !== 2;
   return 1 === 2;
 }
@@ -188,9 +174,7 @@ fn go(y) {
   x == y
 }
 "#,
-        r#""use strict";
-
-function go(y) {
+        r#"function go(y) {
   let x = 1;
   return x === y;
 }
@@ -207,9 +191,7 @@ fn go() {
   1.0 == 2.0
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   1.0 !== 2.0;
   return 1.0 === 2.0;
 }
@@ -223,9 +205,7 @@ fn go(y) {
   x == y
 }
 "#,
-        r#""use strict";
-
-function go(y) {
+        r#"function go(y) {
   let x = 1.0;
   return x === y;
 }
@@ -241,9 +221,7 @@ fn go() {
   2.4 *. { 3.5 +. 6.0 }
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return 2.4 * (3.5 + 6.0);
 }
 "#

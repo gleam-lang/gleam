@@ -87,12 +87,11 @@ impl<'a> Generator<'a> {
     }
 
     pub fn compile(&mut self) -> Output<'a> {
-        let statements = std::iter::once(Ok(r#""use strict";"#.to_doc())).chain(
-            self.module
-                .statements
-                .iter()
-                .flat_map(|s| self.statement(s)),
-        );
+        let statements = self
+            .module
+            .statements
+            .iter()
+            .flat_map(|s| self.statement(s));
 
         // Two lines between each statement
         let mut statements: Vec<_> =

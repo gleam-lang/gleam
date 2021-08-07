@@ -8,9 +8,7 @@ fn go() {
   <<>>
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return new Uint8Array();
 }
 "#
@@ -25,9 +23,7 @@ fn go() {
   <<256>>
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return $bit_string([256]);
 }
 
@@ -59,9 +55,7 @@ fn go() {
   <<256, 4>>
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return $bit_string([256, 4]);
 }
 
@@ -93,9 +87,7 @@ fn go(x) {
   <<256, 4, x>>
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return $bit_string([256, 4, x]);
 }
 
@@ -127,9 +119,7 @@ fn go(x) {
   <<256, 4, x, "Gleam":utf8>>
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return $bit_string([256, 4, x, new TextEncoder().encode("Gleam")]);
 }
 
@@ -161,9 +151,7 @@ fn go(x) {
   <<x:utf8_codepoint, "Gleam":utf8>>
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return $bit_string([
     new TextEncoder().encode(x),
     new TextEncoder().encode("Gleam"),
@@ -198,9 +186,7 @@ fn go(x) {
   <<x:bit_string, "Gleam":utf8>>
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return $bit_string([x, new TextEncoder().encode("Gleam")]);
 }
 

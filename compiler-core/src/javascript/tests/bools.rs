@@ -10,9 +10,7 @@ fn go() {
     Nil
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   true;
   false;
   return undefined;
@@ -29,9 +27,7 @@ const a = True
 const b = False
 const c = Nil
 "#,
-        r#""use strict";
-
-const a = true;
+        r#"const a = true;
 
 const b = false;
 
@@ -49,9 +45,7 @@ fn go() {
     False || False
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   true && true;
   return false || false;
 }
@@ -69,9 +63,7 @@ fn go(x, y) {
   assert Nil = y
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (!x) throw new Error("Bad match");
   if (x) throw new Error("Bad match");
   if (y) throw new Error("Bad match");
@@ -94,9 +86,7 @@ fn go(x, y) {
   let Nil = y
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (x.type !== "True") throw new Error("Bad match");
   if (x.type !== "False") throw new Error("Bad match");
   if (y.type !== "Nil") throw new Error("Bad match");
@@ -122,9 +112,7 @@ fn go(a, b) {
   b == b
 }
 "#,
-        r#""use strict";
-
-function go(a, b) {
+        r#"function go(a, b) {
   a === true;
   a !== true;
   a === false;
@@ -150,9 +138,7 @@ fn go(a) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(a) {
+        r#"function go(a) {
   if (a) {
     return 1;
   } else if (!a) {
@@ -175,9 +161,7 @@ fn go(a) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(a) {
+        r#"function go(a) {
   if (!a) {
     return 0;
   } else {

@@ -11,9 +11,7 @@ fn go(x) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return x;
 }
 "#
@@ -32,9 +30,7 @@ fn go(x) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x) {
     throw Object.assign(
       new Error("This has not yet been implemented"),
@@ -59,9 +55,7 @@ fn go(x, y) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (x && y) {
     return 1;
   } else {
@@ -83,9 +77,7 @@ fn go(x, y) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (x) {
     return 1;
   } else if (y) {
@@ -110,9 +102,7 @@ fn go(x, y) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (x) {
     return 1;
   } else if (y) {
@@ -138,9 +128,7 @@ fn go() {
   }
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   let $ = true;
   let $1 = false;
   if ($ && $1) {
@@ -165,9 +153,7 @@ fn go(x) {
   y
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   let y = (() => {
     if (x) {
       return 1;
@@ -193,9 +179,7 @@ fn go(x) {
   y
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   let y = (() => {
     let $ = x();
     if ($) {

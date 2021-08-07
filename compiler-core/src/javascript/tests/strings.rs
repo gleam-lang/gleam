@@ -8,9 +8,7 @@ fn go() {
   "Hello, Gleam!"
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return "Hello, Gleam!";
 }
 "#
@@ -25,9 +23,7 @@ fn go(x) {
   let "Hello" = x
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x !== "Hello") throw new Error("Bad match");
   return x;
 }
@@ -45,9 +41,7 @@ fn go(a) {
   a == a
 }
 "#,
-        r#""use strict";
-
-function go(a) {
+        r#"function go(a) {
   a === "ok";
   a !== "ok";
   return a === a;
@@ -69,9 +63,7 @@ fn go(a) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(a) {
+        r#"function go(a) {
   if (a === "") {
     return 0;
   } else if (a === "one") {

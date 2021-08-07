@@ -12,9 +12,7 @@ fn go() {
   x
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   let x = (() => {
     1;
     return 2;
@@ -35,9 +33,7 @@ fn go() {
   "three"
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   "one";
   "two";
   return "three";
@@ -57,9 +53,7 @@ fn go() {
   }
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return 1 === (() => {
     1;
     return 2;
@@ -80,9 +74,7 @@ fn go() {
   } == 1
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return (() => {
     1;
     return 2;

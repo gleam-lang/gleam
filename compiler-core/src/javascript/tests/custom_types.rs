@@ -15,9 +15,7 @@ fn go() {
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   { type: "This" };
   return {
     type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
@@ -39,9 +37,7 @@ type Mine {
 const this = This;
 const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
 "#,
-        r#""use strict";
-
-const this$ = { type: "This" };
+        r#"const this$ = { type: "This" };
 
 const that = {
   type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
@@ -62,9 +58,7 @@ fn zero_arity_imported() {
 pub fn main() {
   other.Two
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two" };
@@ -85,9 +79,7 @@ fn zero_arity_imported_unqualified() {
 pub fn main() {
   Two
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two" };
@@ -105,9 +97,7 @@ export function main() {
 // pub fn main() {
 //   Three
 // }"#,
-//         r#""use strict";
-//
-// import * as Other from "../other.js";
+//         r#"import * as Other from "../other.js";
 // const { Two as Three } = other;
 //
 // export function main() {
@@ -128,9 +118,7 @@ fn const_zero_arity_imported() {
         r#"import other
 const x = other.Two
 "#,
-        r#""use strict";
-
-const x = { type: "Two" };
+        r#"const x = { type: "Two" };
 
 import * as Other from "../other.js";
 "#
@@ -148,9 +136,7 @@ fn const_zero_arity_imported_unqualified() {
         r#"import other.{Two}
 const a = Two
 "#,
-        r#""use strict";
-
-const a = { type: "Two" };
+        r#"const a = { type: "Two" };
 
 import * as Other from "../other.js";
 "#
@@ -165,9 +151,7 @@ import * as Other from "../other.js";
 //         r#"import other.{Two as Three}
 // const a = Three
 // "#,
-//         r#""use strict";
-
-// const a = { type: "Two" };
+//         r#"// const a = { type: "Two" };
 
 // import * as Other from "../other.js";
 // const { Two as Three } = other;
@@ -186,9 +170,7 @@ type Mine {
 const labels = Mine(b: 2, a: 1)
 const no_labels = Mine(3, 4)
 "#,
-        r#""use strict";
-
-const labels = { type: "Mine", a: 1, b: 2 };
+        r#"const labels = { type: "Mine", a: 1, b: 2 };
 
 const no_labels = { type: "Mine", a: 3, b: 4 };
 "#
@@ -219,9 +201,7 @@ fn destructure(x) {
   raw
 }
 "#,
-        r#""use strict";
-
-const local = { type: "Ip", 0: "0.0.0.0" };
+        r#"const local = { type: "Ip", 0: "0.0.0.0" };
 
 function build(x) {
   return x("1.2.3.4");
@@ -251,9 +231,7 @@ fn go() {
   TypeWithALongNameAndSeveralArguments
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return (var0, var1, var2, var3, var4) => {
     return {
       type: "TypeWithALongNameAndSeveralArguments",
@@ -295,9 +273,7 @@ fn access(cat: Cat) {
   cat.cuteness
 }
 "#,
-        r#""use strict";
-
-const felix = { type: "Cat", name: "Felix", cuteness: 12 };
+        r#"const felix = { type: "Cat", name: "Felix", cuteness: 12 };
 
 const tom = { type: "Cat", name: "Tom", cuteness: 1 };
 
@@ -339,9 +315,7 @@ fn go(cat) {
 }
 
 "#,
-        r#""use strict";
-
-function go(cat) {
+        r#"function go(cat) {
   if (cat.type !== "Cat") throw new Error("Bad match");
   let x = cat.name;
   let y = cat.cuteness;
@@ -366,9 +340,7 @@ fn go(x) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x.type === "Box" && x.b.type === "Box") {
     let a = x.b.a;
     let b = x.b.b;
@@ -393,9 +365,7 @@ fn imported_no_label() {
 pub fn main() {
   other.Two(1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", 0: 1 };
@@ -416,9 +386,7 @@ fn imported_ignoring_label() {
 pub fn main() {
   other.Two(1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -439,9 +407,7 @@ fn imported_using_label() {
 pub fn main() {
   other.Two(field: 1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -462,9 +428,7 @@ fn imported_multiple_fields() {
 pub fn main() {
   other.Two(b: 2, c: 3, a: 1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", a: 1, b: 2, c: 3 };
@@ -485,9 +449,7 @@ fn unqualified_imported_no_label() {
 pub fn main() {
   Two(1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", 0: 1 };
@@ -508,9 +470,7 @@ fn unqualified_imported_ignoring_label() {
 pub fn main() {
   Two(1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -531,9 +491,7 @@ fn unqualified_imported_using_label() {
 pub fn main() {
   Two(field: 1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", field: 1 };
@@ -554,9 +512,7 @@ fn unqualified_imported_multiple_fields() {
 pub fn main() {
   Two(b: 2, c: 3, a: 1)
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return { type: "Two", a: 1, b: 2, c: 3 };
@@ -577,9 +533,7 @@ fn constructor_as_value() {
 pub fn main() {
   other.Two
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return (var0, var1, var2) => {
@@ -602,9 +556,7 @@ fn unqualified_constructor_as_value() {
 pub fn main() {
   Two
 }"#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main() {
   return (var0, var1, var2) => {
@@ -626,9 +578,7 @@ fn const_imported_no_label() {
         r#"import other
 pub const main = other.Two(1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", 0: 1 };
+        r#"export const main = { type: "Two", 0: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -646,9 +596,7 @@ fn const_imported_ignoring_label() {
         r#"import other
 pub const main = other.Two(1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", field: 1 };
+        r#"export const main = { type: "Two", field: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -666,9 +614,7 @@ fn const_imported_using_label() {
         r#"import other
 pub const main = other.Two(field: 1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", field: 1 };
+        r#"export const main = { type: "Two", field: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -686,9 +632,7 @@ fn const_imported_multiple_fields() {
         r#"import other
 pub const main = other.Two(b: 2, c: 3, a: 1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", a: 1, b: 2, c: 3 };
+        r#"export const main = { type: "Two", a: 1, b: 2, c: 3 };
 
 import * as Other from "../other.js";
 "#
@@ -706,9 +650,7 @@ fn const_unqualified_imported_no_label() {
         r#"import other.{Two}
 pub const main = Two(1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", 0: 1 };
+        r#"export const main = { type: "Two", 0: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -726,9 +668,7 @@ fn const_unqualified_imported_ignoring_label() {
         r#"import other.{Two}
 pub const main = Two(1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", field: 1 };
+        r#"export const main = { type: "Two", field: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -746,9 +686,7 @@ fn const_unqualified_imported_using_label() {
         r#"import other.{Two}
 pub const main = Two(field: 1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", field: 1 };
+        r#"export const main = { type: "Two", field: 1 };
 
 import * as Other from "../other.js";
 "#
@@ -766,9 +704,7 @@ fn const_unqualified_imported_multiple_fields() {
         r#"import other.{Two}
 pub const main = Two(b: 2, c: 3, a: 1)
 "#,
-        r#""use strict";
-
-export const main = { type: "Two", a: 1, b: 2, c: 3 };
+        r#"export const main = { type: "Two", a: 1, b: 2, c: 3 };
 
 import * as Other from "../other.js";
 "#
@@ -793,9 +729,7 @@ pub fn main(x) {
   }
 }
 "#,
-        r#""use strict";
-
-import * as Other from "../other.js";
+        r#"import * as Other from "../other.js";
 
 export function main(x) {
   if (x.type === "Two" && x.a === 1) {

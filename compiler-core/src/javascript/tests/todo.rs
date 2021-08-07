@@ -8,9 +8,7 @@ fn go() {
     todo
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   throw Object.assign(
     new Error("This has not yet been implemented"),
     { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
@@ -28,9 +26,7 @@ fn go() {
     todo("I should do this");
 };
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   throw Object.assign(
     new Error("I should do this"),
     { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }

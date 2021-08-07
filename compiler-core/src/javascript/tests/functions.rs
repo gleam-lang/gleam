@@ -9,9 +9,7 @@ fn exported_functions() {
 pub fn add(x, y) {
     x + y
 }"#,
-        r#""use strict";
-
-export function add(x, y) {
+        r#"export function add(x, y) {
   return x + y;
 }
 "#
@@ -36,9 +34,7 @@ pub fn take_two(x: Int) -> Int {
     twice(fn(y) {y - 1}, x)
 }
 "#,
-        r#""use strict";
-
-export function twice(f, x) {
+        r#"export function twice(f, x) {
   return f(f(x));
 }
 
@@ -64,9 +60,7 @@ fn function_formatting() {
 pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {
   the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
 }"#,
-        r#""use strict";
-
-export function add(
+        r#"export function add(
   the_first_variable_that_should_be_added,
   the_second_variable_that_should_be_added
 ) {
@@ -80,9 +74,7 @@ export function add(
 pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
 x + y
 }"#,
-        r#""use strict";
-
-export function this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(
+        r#"export function this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(
   x,
   y
 ) {
@@ -100,9 +92,7 @@ x + y
 pub fn long() {
   add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1)))))))))))))))
 }"#,
-        r#""use strict";
-
-export function add(x, y) {
+        r#"export function add(x, y) {
   return x + y;
 }
 
@@ -145,9 +135,7 @@ pub fn math(x, y) {
     2 * x
   }
 }"#,
-        r#""use strict";
-
-export function math(x, y) {
+        r#"export function math(x, y) {
   return () => {
     x + y;
     x - y;
@@ -169,9 +157,7 @@ pub fn count(xs, n) {
   }
 }
 "#,
-        r#""use strict";
-
-export function count(xs, n) {
+        r#"export function count(xs, n) {
   while (true) {
     if (xs?.length === 0) {
       return n;
@@ -199,9 +185,7 @@ pub fn loop(indentation) {
   }
 }
 "#,
-        r#""use strict";
-
-export function loop(indentation) {
+        r#"export function loop(indentation) {
   while (true) {
     let $ = indentation > 0;
     if ($) {
@@ -226,9 +210,7 @@ pub fn main() {
   |> id
 }
 "#,
-        r#""use strict";
-
-function id(x) {
+        r#"function id(x) {
   return x;
 }
 
@@ -247,9 +229,7 @@ fn calling_fn_literal() {
   fn(x) { x }(1)
 }
 "#,
-        r#""use strict";
-
-export function main() {
+        r#"export function main() {
   return ((x) => { return x; })(1);
 }
 "#
@@ -266,9 +246,7 @@ fn shadowing_current() {
   main()
 }
 "#,
-        r#""use strict";
-
-export function main() {
+        r#"export function main() {
   let main$1 = () => { return 0; };
   return main$1();
 }
@@ -284,9 +262,7 @@ fn recursion_with_discards() {
   main(f, 1)
 }
 "#,
-        r#""use strict";
-
-export function main(f, _) {
+        r#"export function main(f, _) {
   while (true) {
     f();
     f = f;
@@ -305,9 +281,7 @@ fn no_recur_in_anon_fn() {
   1
 }
 "#,
-        r#""use strict";
-
-export function main() {
+        r#"export function main() {
   () => { return main(); };
   return 1;
 }
@@ -325,9 +299,7 @@ fn case_in_call() {
   })
 }
 "#,
-        r#""use strict";
-
-export function main(f, x) {
+        r#"export function main(f, x) {
   return f(
     (() => {
       if (x === 1) {
@@ -349,9 +321,7 @@ fn reserved_word_fn() {
   Nil
 }
 "#,
-        r#""use strict";
-
-export function class$() {
+        r#"export function class$() {
   return undefined;
 }
 "#
@@ -372,9 +342,7 @@ pub fn export() {
   class()
 }
 "#,
-        r#""use strict";
-
-import * as For from "../for.js";
+        r#"import * as For from "../for.js";
 const { class$ } = For;
 
 export function export$() {
@@ -399,9 +367,7 @@ pub fn export() {
   while()
 }
 "#,
-        r#""use strict";
-
-import * as Function from "../for.js";
+        r#"import * as Function from "../for.js";
 const { class$: while$ } = Function;
 
 export function export$() {
@@ -421,9 +387,7 @@ pub fn export() {
   in
 }
 "#,
-        r#""use strict";
-
-const in$ = 1;
+        r#"const in$ = 1;
 
 export function export$() {
   return in$;
@@ -440,9 +404,7 @@ fn reserved_word_argument() {
   with
 }
 "#,
-        r#""use strict";
-
-export function main(with$) {
+        r#"export function main(with$) {
   return with$;
 }
 "#
@@ -457,9 +419,7 @@ fn multiple_discard() {
   1
 }
 "#,
-        r#""use strict";
-
-export function main(_, _1, _2) {
+        r#"export function main(_, _1, _2) {
   return 1;
 }
 "#
@@ -473,9 +433,7 @@ fn keyword_in_recursive_function() {
   main(with - 1)
 }
 "#,
-        r#""use strict";
-
-export function main(with$) {
+        r#"export function main(with$) {
   while (true) {
     with$ = with$ - 1;
   }
@@ -491,9 +449,7 @@ fn reserved_word_in_function_arguments() {
   #(arguments, eval)
 }
 "#,
-        r#""use strict";
-
-export function main(arguments$, eval$) {
+        r#"export function main(arguments$, eval$) {
   return [arguments$, eval$];
 }
 "#
