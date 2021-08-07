@@ -11,9 +11,7 @@ fn go(x) {
     [1, 2, ..x]
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   [];
   [1, []];
   [1, [2, []]];
@@ -32,9 +30,7 @@ fn go() {
   [11111111111111111111111111111111111111111111, 1111111111111111111111111111111111111111111]
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   [111111111111111111111111111111111111111111111111111111111111111111111111, []];
   return [
     11111111111111111111111111111111111111111111,
@@ -54,9 +50,7 @@ fn go(x) {
     [{True; 1}]
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   return [
     (() => {
       true;
@@ -76,9 +70,7 @@ fn list_constants() {
 const a = []
 const b = [1, 2, 3]
 "#,
-        r#""use strict";
-
-const a = [];
+        r#"const a = [];
 
 const b = [1, [2, [3, []]]];
 "#
@@ -97,9 +89,7 @@ fn go(x, y) {
   let [head, ..tail] = y
 }
 "#,
-        r#""use strict";
-
-function go(x, y) {
+        r#"function go(x, y) {
   if (x?.length !== 0) throw new Error("Bad match");
   if (x?.[1]?.length !== 0) throw new Error("Bad match");
   let a = x[0];
@@ -131,9 +121,7 @@ fn go() {
   [] != [1]
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   $equal([], [1, []]);
   return !$equal([], [1, []]);
 }
@@ -177,9 +165,7 @@ fn go(xs) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(xs) {
+        r#"function go(xs) {
   if (xs?.length === 0) {
     return 0;
   } else if (xs?.[1]?.length === 0) {

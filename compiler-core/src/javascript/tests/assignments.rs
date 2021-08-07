@@ -8,9 +8,7 @@ fn go(x) {
   let #(1, 2) = x
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
   return x;
 }
@@ -22,9 +20,7 @@ function go(x) {
 fn assert() {
     assert_js!(
         r#"fn go(x) { assert 1 = x }"#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x !== 1) throw new Error("Bad match");
   return x;
 }
@@ -33,9 +29,7 @@ function go(x) {
 
     assert_js!(
         r#"fn go(x) { assert #(1, 2) = x }"#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
   return x;
 }
@@ -51,9 +45,7 @@ fn go(x) {
   let #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x[1][2] !== 2 || x[3] !== 1) throw new Error("Bad match");
   let a = x[0];
   let t = x[1];
@@ -88,9 +80,7 @@ fn go(x, foo) {
   x
 }
 "#,
-        r#""use strict";
-
-function go(x, foo) {
+        r#"function go(x, foo) {
   let a = 1;
   foo(a);
   let a$1 = 2;
@@ -128,9 +118,7 @@ fn second() {
   a + 20
 }
 "#,
-        r#""use strict";
-
-const a = true;
+        r#"const a = true;
 
 function go() {
   a;
@@ -150,9 +138,7 @@ function second() {
 fn returning_literal_subject() {
     assert_js!(
         r#"fn go(x) { assert 1 = x + 1 }"#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   let $ = x + 1;
   if ($ !== 1) throw new Error("Bad match");
   return $;
@@ -169,9 +155,7 @@ fn rebound_argument() {
   x
 }
 "#,
-        r#""use strict";
-
-export function main(x) {
+        r#"export function main(x) {
   let x$1 = false;
   return x$1;
 }
@@ -191,9 +175,7 @@ pub fn main() {
   x
 }
 "#,
-        r#""use strict";
-
-export function x() {
+        r#"export function x() {
   return undefined;
 }
 
@@ -217,9 +199,7 @@ pub fn main(x) {
   x
 }
 "#,
-        r#""use strict";
-
-export function x() {
+        r#"export function x() {
   return undefined;
 }
 
@@ -239,9 +219,7 @@ fn variable_used_in_pattern_and_assignment() {
   x
 }
 "#,
-        r#""use strict";
-
-export function main(x) {
+        r#"export function main(x) {
   let $ = [x];
   let x$1 = $[0];
   return x$1;

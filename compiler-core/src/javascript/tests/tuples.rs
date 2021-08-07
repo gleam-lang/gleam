@@ -8,9 +8,7 @@ fn go() {
   #("1", "2", "3")
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return ["1", "2", "3"];
 }
 "#
@@ -26,9 +24,7 @@ fn go() {
   )
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return [
     "1111111111111111111111111111111",
     ["1111111111111111111111111111111", "2", "3"],
@@ -47,9 +43,7 @@ fn go() {
   #(1, 2).0
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return [1, 2][0];
 }
 "#
@@ -70,9 +64,7 @@ fn go() {
   )
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return [
     "1",
     (() => {
@@ -94,9 +86,7 @@ fn go() {
   )
 }
 "#,
-        r#""use strict";
-
-function go() {
+        r#"function go() {
   return [
     "1111111111111111111111111111111",
     ["1111111111111111111111111111111", "2", "3"],
@@ -116,9 +106,7 @@ const b = 1;
 const c = 2.0;
 const e = #("bob", "dug")
         "#,
-        r#""use strict";
-
-const a = "Hello";
+        r#"const a = "Hello";
 
 const b = 1;
 
@@ -135,9 +123,7 @@ const e = #(
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
 )
         "#,
-        r#""use strict";
-
-const e = [
+        r#"const e = [
   "loooooooooooooong",
   "loooooooooooong",
   "loooooooooooooong",
@@ -161,9 +147,7 @@ fn go(a) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(a) {
+        r#"function go(a) {
   if (a[0] === 2) {
     let a$1 = a[1];
     return a$1;
@@ -190,9 +174,7 @@ fn go(x) {
   }
 }
 "#,
-        r#""use strict";
-
-function go(x) {
+        r#"function go(x) {
   if (x[0] === 2) {
     let a = x[1][0];
     let b = x[1][1];

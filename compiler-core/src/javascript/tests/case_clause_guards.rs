@@ -10,9 +10,7 @@ fn guards_cause_badmatch_to_render() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(x, y) {
+        r#"export function main(x, y) {
   if (x === 1) {
     return 1;
   } else if (y) {
@@ -35,9 +33,7 @@ fn referencing_pattern_var() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs[0]) {
     let x = xs[0];
     return 1;
@@ -61,9 +57,7 @@ fn rebound_var() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main() {
+        r#"export function main() {
   let x = false;
   let x$1 = true;
   if (x$1) {
@@ -86,9 +80,7 @@ fn operator_wrapping_right() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y, z) {
+        r#"export function main(xs, y, z) {
   if (xs[0] === (y === z)) {
     let x = xs[0];
     return 1;
@@ -110,9 +102,7 @@ fn operator_wrapping_left() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y, z) {
+        r#"export function main(xs, y, z) {
   if ((xs[0] === y) === z) {
     let x = xs[0];
     return 1;
@@ -134,9 +124,7 @@ fn eq_scalar() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y) {
+        r#"export function main(xs, y) {
   if (xs[0] === y) {
     let x = xs[0];
     return 1;
@@ -158,9 +146,7 @@ fn not_eq_scalar() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y) {
+        r#"export function main(xs, y) {
   if (xs[0] !== y) {
     let x = xs[0];
     return 1;
@@ -182,9 +168,7 @@ fn tuple_index() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(x, xs) {
+        r#"export function main(x, xs) {
   if (xs[2]) {
     return 1;
   } else {
@@ -205,9 +189,7 @@ fn not_eq_complex() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y) {
+        r#"export function main(xs, y) {
   if (!$equal(xs, y)) {
     let x = xs[0];
     return x;
@@ -252,9 +234,7 @@ fn eq_complex() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs, y) {
+        r#"export function main(xs, y) {
   if ($equal(xs, y)) {
     let x = xs[0];
     return x;
@@ -299,9 +279,7 @@ fn constant() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs[0] === 1) {
     let x = xs[0];
     return x;
@@ -323,9 +301,7 @@ fn alternative_patterns() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs === 1) {
     return 0;
   } else if (xs === 2) {
@@ -348,9 +324,7 @@ fn alternative_patterns_list() {
   }
 }
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs?.[1]?.length === 0 && xs[0] === 1) {
     return 0;
   } else if (xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
@@ -373,9 +347,7 @@ fn alternative_patterns_assignment() {
   }
 }  
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs?.[1]?.length === 0) {
     let x = xs[0];
     return x;
@@ -400,9 +372,7 @@ fn alternative_patterns_guard() {
   }
 }   
 "#,
-        r#""use strict";
-
-export function main(xs) {
+        r#"export function main(xs) {
   if (xs?.[1]?.length === 0 && xs[0] === 1) {
     let x = xs[0];
     return x;

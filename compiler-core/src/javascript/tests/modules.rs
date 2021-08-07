@@ -12,9 +12,7 @@ fn unqualified_fn_call() {
         r#"import rocket_ship.{launch}
 pub fn go() { launch() }
 "#,
-        r#""use strict";
-
-import * as RocketShip from "../rocket_ship.js";
+        r#"import * as RocketShip from "../rocket_ship.js";
 const { launch } = RocketShip;
 
 export function go() {
@@ -35,9 +33,7 @@ fn aliased_unqualified_fn_call() {
         r#"import rocket_ship.{launch as boom_time}
 pub fn go() { boom_time() }
 "#,
-        r#""use strict";
-
-import * as RocketShip from "../rocket_ship.js";
+        r#"import * as RocketShip from "../rocket_ship.js";
 const { launch: boom_time } = RocketShip;
 
 export function go() {
@@ -60,9 +56,7 @@ pub fn b() { 2 }"#
         r#"import rocket_ship.{a,b as bb}
 pub fn go() { a() + bb() }
 "#,
-        r#""use strict";
-
-import * as RocketShip from "../rocket_ship.js";
+        r#"import * as RocketShip from "../rocket_ship.js";
 const { a, b: bb } = RocketShip;
 
 export function go() {
@@ -84,9 +78,7 @@ fn constant() {
 import rocket_ship
 pub fn go() { rocket_ship.x }
 "#,
-        r#""use strict";
-
-import * as RocketShip from "../rocket_ship.js";
+        r#"import * as RocketShip from "../rocket_ship.js";
 
 export function go() {
   return RocketShip.x;
@@ -107,9 +99,7 @@ fn alias_constant() {
 import rocket_ship as boop
 pub fn go() { boop.x }
 "#,
-        r#""use strict";
-
-import * as Boop from "../rocket_ship.js";
+        r#"import * as Boop from "../rocket_ship.js";
 
 export function go() {
   return Boop.x;
@@ -130,9 +120,7 @@ fn alias_fn_call() {
 import rocket_ship as boop
 pub fn go() { boop.go() }
 "#,
-        r#""use strict";
-
-import * as Boop from "../rocket_ship.js";
+        r#"import * as Boop from "../rocket_ship.js";
 
 export function go() {
   return Boop.go();
@@ -151,9 +139,7 @@ fn nested_fn_call() {
         ),
         r#"import one/two
 pub fn go() { two.go() }"#,
-        r#""use strict";
-
-import * as Two from "../one/two.js";
+        r#"import * as Two from "../one/two.js";
 
 export function go() {
   return Two.go();
@@ -172,9 +158,7 @@ fn nested_nested_fn_call() {
         ),
         r#"import one/two/three
 pub fn go() { three.go() }"#,
-        r#""use strict";
-
-import * as Three from "../one/two/three.js";
+        r#"import * as Three from "../one/two/three.js";
 
 export function go() {
   return Three.go();
@@ -194,9 +178,7 @@ fn different_package_import() {
         r#"import one
 pub fn go() { one.go() }
 "#,
-        r#""use strict";
-
-import * as One from "other_package/one.js";
+        r#"import * as One from "other_package/one.js";
 
 export function go() {
   return One.go();
@@ -216,9 +198,7 @@ fn nested_same_package() {
         r#"import one/two/three
 pub fn go() { three.go() }
 "#,
-        r#""use strict";
-
-import * as Three from "../one/two/three.js";
+        r#"import * as Three from "../one/two/three.js";
 
 export function go() {
   return Three.go();
