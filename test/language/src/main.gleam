@@ -15,6 +15,7 @@ pub fn main() -> Int {
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
       suite("bit strings", bit_string_tests()),
+      suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
       suite("tail call optimisation", tail_call_optimisation_tests()),
@@ -969,5 +970,18 @@ fn bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
     "<<<<1>>:bit_string, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
+  ]
+}
+
+fn list_spread_tests() -> List(Test) {
+  [
+    "[1, ..[]]"
+    |> example(fn() { assert_equal(True, [1, ..[]] == [1]) }),
+    "[1, 2, ..[]]"
+    |> example(fn() { assert_equal(True, [1, 2, ..[]] == [1, 2]) }),
+    "[1, 2, ..[3]]"
+    |> example(fn() { assert_equal(True, [1, 2, ..[3]] == [1, 2, 3]) }),
+    "[1, 2, ..[3, 4]]"
+    |> example(fn() { assert_equal(True, [1, 2, ..[3, 4]] == [1, 2, 3, 4]) }),
   ]
 }
