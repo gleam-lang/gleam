@@ -174,19 +174,14 @@ fn name_tests() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1231
 #[test]
-fn target_group_trailing_brace() {
+fn pointless_spread() {
     assert_error!(
-        "if erlang {
-}
-//
-}
-",
+        "let xs = [] [..xs]",
         ParseError {
-            error: ParseErrorType::UnexpectedToken {
-                expected: vec!["An import, const, type, if block, or function.".to_string()],
-            },
-            location: SrcSpan { start: 0, end: 2 },
+            error: ParseErrorType::ListSpreadWithoutElements,
+            location: SrcSpan { start: 12, end: 18 },
         }
     );
 }

@@ -416,6 +416,7 @@ where
                     elems,
                 }
             }
+
             // list
             Some((start, Token::LeftSquare, _)) => {
                 let _ = self.next_tok();
@@ -428,12 +429,20 @@ where
                 }
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
+                if tail.is_some() && elements.is_empty() {
+                    return parse_error(
+                        ParseErrorType::ListSpreadWithoutElements,
+                        SrcSpan { start, end },
+                    );
+                }
+
                 UntypedExpr::List {
                     location: SrcSpan { start, end },
                     elements,
                     tail,
                 }
             }
+
             // Bitstring
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();

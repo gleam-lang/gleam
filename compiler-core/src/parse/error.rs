@@ -45,15 +45,16 @@ pub enum ParseErrorType {
     InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
     InvalidTupleAccess,      // only positive int literals for tuple access
     LexError { error: LexicalError },
-    NestedBitStringPattern, // <<<<1>>, 2>>, <<1>> is not allowed in there
-    NoConstructors,         // A type "A {}" must have at least one constructor
-    NoCaseClause,           // a case with no claueses
+    NestedBitStringPattern,    // <<<<1>>, 2>>, <<1>> is not allowed in there
+    NoConstructors,            // A type "A {}" must have at least one constructor
+    NoCaseClause,              // a case with no claueses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoValueAfterEqual, // = <something other than a value>
     NotConstType, // :fn(), name, _  are not valid const types
     OpNakedRight, // Operator with no value to the right
     OpaqueTypeAlias, // Type aliases cannot be opaque
     TooManyArgHoles, // a function call can have at most 1 arg hole
+    ListSpreadWithoutElements, // Pointless spread: `[..xs]`
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken { expected: Vec<String> },

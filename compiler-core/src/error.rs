@@ -275,6 +275,7 @@ numbers and underscores.",
                 };
                 write_project(buf, diagnostic);
             }
+
             Error::ProjectRootAlreadyExist { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Project folder already exists".to_string(),
@@ -282,6 +283,7 @@ numbers and underscores.",
                 };
                 write_project(buf, diagnostic);
             }
+
             Error::UnableToFindProjectRoot { path } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid project root".to_string(),
@@ -289,14 +291,19 @@ numbers and underscores.",
                 };
                 write_project(buf, diagnostic);
             }
+
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Version does not match".to_string(),
-                    label:
-                        format!("The version in gleam.toml \"{}\" does not match the version in your app.src file \"{}\"", toml_ver, app_ver),
+                    label: format!(
+                        "The version in gleam.toml \"{}\" does not match the version 
+in your app.src file \"{}\"",
+                        toml_ver, app_ver
+                    ),
                 };
                 write_project(buf, diagnostic);
             }
+
             Error::ShellCommand { command, err: None } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Shell command failure".to_string(),
@@ -1490,7 +1497,7 @@ Try a different name for this module.",
                     ),
                     ParseErrorType::InvalidTupleAccess => (
                         "This integer is not valid for tuple access.",
-                        vec!["Hint: Only non negative integer literals like 0, or 1_000 can be used.".to_string()]
+                    vec!["Hint: Only non negative integer literals like 0, or 1_000 can be used.".to_string()]
                     ),
                     ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
                     ParseErrorType::NestedBitStringPattern => (
@@ -1534,6 +1541,12 @@ Try a different name for this module.",
                     ParseErrorType::UnexpectedEof => (
                         "The module ended unexpectedly.",
                         vec![]
+                    ),
+                    ParseErrorType::ListSpreadWithoutElements   => (
+                        "This spread does nothing",
+                        vec!["Hint: Try prepending some elements [1, 2, ..list].".to_string(),
+"See: https://gleam.run/book/tour/lists.html".to_string()
+                        ]
                     ),
                     ParseErrorType::UnexpectedReservedWord => (
                         "This is a reserved word.",
