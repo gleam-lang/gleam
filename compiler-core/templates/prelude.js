@@ -1,5 +1,3 @@
-// TODO: bit string
-
 class Record {
   inspect() {
     let field = (label) => {
@@ -32,6 +30,16 @@ class List {
     }
     return array;
   }
+
+  atLeastLength(desired) {
+    let current = this;
+    while (current instanceof NonEmpty) {
+      if (desired <= 0) return true;
+      desired--;
+      current = current.tail;
+    }
+    return desired <= 0;
+  }
 }
 
 class Empty extends List {}
@@ -50,12 +58,19 @@ class BitString {
   }
 
   inspect() {
-    let segments = Array.from(this.buffer).join(", ");
-    return `<<${segments}>>`;
+    return `<<${Array.from(this.buffer).join(", ")}>>`;
+  }
+
+  size() {
+    return this.buffer.length;
   }
 }
 
-class Result extends Record {}
+class Result extends Record {
+  isOk() {
+    return this instanceof Ok;
+  }
+}
 
 class Ok extends Result {
   constructor(value) {
@@ -80,18 +95,22 @@ class Thing extends Record {
   }
 }
 
-function inspect(value) {
-  let t = typeof value;
-  if (value === true) return "True";
-  if (value === false) return "False";
-  if (value === undefined) return "Nil";
-  if (t === "string") return JSON.stringify(value);
-  if (t === "bigint" || t === "number") return value.toString();
-  if (Array.isArray(value)) return `#(${value.map(inspect).join(", ")})`;
+function inspect(v) {
+  let t = typeof v;
+  if (v === true) return "True";
+  if (v === false) return "False";
+  if (v === null) return "//js(null)";
+  if (v === undefined) return "Nil";
+  if (t === "string") return JSON.stringify(v);
+  if (t === "bigint" || t === "number") return v.toString();
+  if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
+  if (v instanceof globalThis.Error)
+    return `//js(new ${v.constructor.name}(${inspect(v.message)}))`;
   try {
-    if (typeof value.inspect === "function") return value.inspect();
+    if (typeof v.inspect === "function") return v.inspect();
   } catch (error) {}
-  return `//js${JSON.stringify(value)}`;
+  let properties = Object.entries(v).map(([k, v]) => `${k}: ${inspect(v)}`);
+  return `//js({${properties.join(", ")}})`;
 }
 
 function equal(x, y) {
@@ -101,7 +120,7 @@ function equal(x, y) {
     let b = values.pop();
     if (a === b || uintArrayEqual(a, b)) continue;
     if (objectType(a) !== objectType(b)) return false;
-    for (let k of Object.getOwnPropertyNames(a)) values.push(a[k], b[k]);
+    for (let k of Object.keys(a)) values.push(a[k], b[k]);
   }
   return true;
 }
@@ -143,6 +162,15 @@ let thing = new Thing([1, 2, "hello"], "ok", { a: 1 });
 console.log(thing.inspect());
 
 console.log(List.fromArray([]).inspect());
-console.log(List.fromArray([1, 2, new Ok([1])]).inspect());
+console.log(
+  List.fromArray([
+    1,
+    2,
+    new Ok([1]),
+    null,
+    new globalThis.Error("stuff"),
+    { gl: new Ok(123) },
+  ]).inspect()
+);
 
 console.log(inspect(new BitString(new Uint8Array([1, 2, 3]))));
