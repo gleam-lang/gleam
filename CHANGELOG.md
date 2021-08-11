@@ -48,6 +48,8 @@
   as an expression in the generated code.
 - An error is now emitted if the list spread syntax is used with no prepended
   elements `[..xs]`.
+- Fixed a bug where type errors inside piped expressions would be incorrectly be
+  reported as being an incorrect usage of the pipe operator.
 
 ## v0.16.1 - 2021-06-21
 
