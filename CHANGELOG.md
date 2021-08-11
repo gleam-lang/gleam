@@ -46,6 +46,8 @@
   records when compiling to JavaScript.
 - Fixed a bug where `todo` could sometimes render invalid JavaScript when used
   as an expression in the generated code.
+- An error is now emitted if the list spread syntax is used with no prepended
+  elements `[..xs]`.
 
 ## v0.16.1 - 2021-06-21
 
