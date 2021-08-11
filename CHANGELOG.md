@@ -51,6 +51,8 @@
   elements `[..xs]`.
 - Fixed a bug where type errors inside piped expressions would be incorrectly be
   reported as being an incorrect usage of the pipe operator.
+- Gleam modules with no public exports no longer render private members in
+  Erlang.
 
 ## v0.16.1 - 2021-06-21
 
