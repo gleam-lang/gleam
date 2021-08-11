@@ -216,7 +216,8 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Case { .. }
+            TypedExpr::Todo { .. }
+            | TypedExpr::Case { .. }
             | TypedExpr::Sequence { .. }
             | TypedExpr::Assignment { .. }
             | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),

@@ -44,6 +44,8 @@
 - New OTP projects are generated using `gleam_otp` v0.1.6.
 - Fixed a bug where the equality operators could return the incorrect value for
   records when compiling to JavaScript.
+- Fixed a bug where `todo` could sometimes render invalid JavaScript when used
+  as an expression in the generated code.
 
 ## v0.16.1 - 2021-06-21
 
