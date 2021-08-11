@@ -40,7 +40,8 @@
   reassigned in patterns.
 - Added `eval` and `arguments` to JavaScript reserved words.
 - Support for the deprecated `tuple(x, y, ...)` syntax has been removed in favor
-  of the more concise (`#(x, y, ...)`). Use `gleam format` to auto-migrate.
+  of the more concise (`#(x, y, ...)`). Use `gleam format` with the previous
+  version of the compiler to auto-migrate.
 - New OTP projects are generated using `gleam_otp` v0.1.6.
 - Fixed a bug where the equality operators could return the incorrect value for
   records when compiling to JavaScript.
