@@ -104,9 +104,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 location, value, ..
             } => Ok(self.infer_string(value, location)),
 
-            UntypedExpr::PipeLine { expressions } => self
-                .infer_pipeline(expressions)
-                .map_err(|e| e.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)),
+            UntypedExpr::PipeLine { expressions } => self.infer_pipeline(expressions),
 
             UntypedExpr::Fn {
                 location,

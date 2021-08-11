@@ -187,6 +187,11 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
             fun: Box::new(function),
         };
         let args = vec![self.untyped_left_hand_value_variable_call_argument()];
+        // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
+        // This will require the typing of the arguments to be lifted up out of
+        // the function below. If it is not we don't know if the error comes
+        // from incorrect usage of the pipe or if it originates from the
+        // argument expressions.
         let (function, args, typ) = self
             .expr_typer
             .do_infer_call_with_known_fun(function, args, location)?;
@@ -206,6 +211,11 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         arguments.insert(0, self.untyped_left_hand_value_variable_call_argument());
+        // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
+        // This will require the typing of the arguments to be lifted up out of
+        // the function below. If it is not we don't know if the error comes
+        // from incorrect usage of the pipe or if it originates from the
+        // argument expressions.
         let (fun, args, typ) = self
             .expr_typer
             .do_infer_call_with_known_fun(function, arguments, location)?;
@@ -230,7 +240,10 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
                 function.type_(),
                 fn_(vec![self.argument_type.clone()], return_type.clone()),
             )
-            .map_err(|e| convert_unify_error(e, function.location()))?;
+            .map_err(|e| {
+                convert_unify_error(e, function.location())
+                    .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+            })?;
 
         Ok(TypedExpr::Call {
             location: function.location(),

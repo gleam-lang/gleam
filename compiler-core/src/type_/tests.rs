@@ -1206,17 +1206,6 @@ fn annotated_functions_unification_error() {
 #[test]
 fn pipe_mismatch_error() {
     assert_module_error!(
-        "fn fun(x: Int) -> Int { x }
-         fn main() { 42.0 |> fun() }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-            location: SrcSpan { start: 49, end: 53 },
-            expected: int(),
-            given: float(),
-        },
-    );
-
-    assert_module_error!(
         "pub fn main() -> String {
             Orange
             |> eat_veggie
@@ -1231,31 +1220,24 @@ fn pipe_mismatch_error() {
         Error::CouldNotUnify {
             situation: Some(UnifyErrorSituation::PipeTypeMismatch),
             location: SrcSpan { start: 60, end: 70 },
-            expected: Arc::new(Type::Fn {
-                args: vec![Arc::new(Type::App {
+            expected: fn_(
+                vec![Arc::new(Type::App {
                     public: false,
                     module: vec!["my_module".to_string(),],
                     name: "Veg".to_string(),
                     args: vec![],
-                }),],
-                retrn: Arc::new(Type::App {
-                    public: true,
-                    module: vec![],
-                    name: "String".to_string(),
-                    args: vec![],
-                }),
-            }),
-            given: Arc::new(Type::Fn {
-                args: vec![Arc::new(Type::App {
+                })],
+                string(),
+            ),
+            given: fn_(
+                vec![Arc::new(Type::App {
                     public: false,
-                    module: vec!["my_module".to_string(),],
+                    module: vec!["my_module".to_string()],
                     name: "Fruit".to_string(),
                     args: vec![],
-                }),],
-                retrn: Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 3 })),
-                })
-            })
+                })],
+                unbound_var(7, 3)
+            )
         },
     );
 }
