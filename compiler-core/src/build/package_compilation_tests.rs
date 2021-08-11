@@ -74,12 +74,7 @@ fn package_compiler_test() {
             origin: Origin::Src,
         }],
         Ok(vec![OutputFile {
-            text: "-module(one).
--compile(no_auto_import).
-
-
-"
-            .to_string(),
+            text: "-module(one).\n".to_string(),
             path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
         },])
     );
@@ -101,21 +96,11 @@ fn package_compiler_test() {
         ],
         Ok(vec![
             OutputFile {
-                text: "-module(one).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(one).\n".to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
             },
             OutputFile {
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
             },
         ])
@@ -130,12 +115,7 @@ fn package_compiler_test() {
         }],
         Ok(vec![OutputFile {
             path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-            text: "-module(one).
--compile(no_auto_import).
-
-
-"
-            .to_string(),
+            text: "-module(one).\n".to_string(),
         },]),
     );
 
@@ -183,21 +163,11 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(one).\n".to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
             },
         ]),
     );
@@ -220,21 +190,11 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(one).\n".to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
             },
         ]),
     );
@@ -634,8 +594,8 @@ call_thing() ->
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
                 code: "import one
-                        fn make() { one.Point(1, 4) }
-                        fn x(p) { let one.Point(x, _) = p x }"
+pub fn make() { one.Point(1, 4) }
+pub fn x(p) { let one.Point(x, _) = p x }"
                     .to_string(),
             },
         ],
@@ -663,6 +623,8 @@ call_thing() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([make/0, x/1]).
 
 -spec make() -> one:point().
 make() ->
@@ -692,7 +654,7 @@ x(P) ->
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
                 code: "import one.{div}
-                    fn run() { 2 |> div(top: _, bottom: 4) |> div(2, bottom: _) }"
+                       pub fn run() { 2 |> div(top: _, bottom: 4) |> div(2, bottom: _) }"
                     .to_string(),
             },
         ],
@@ -718,6 +680,8 @@ x(P) ->
                 text: "-module(two).
 -compile(no_auto_import).
 
+-export([run/0]).
+
 -spec run() -> integer().
 run() ->
     _pipe = 2,
@@ -742,7 +706,7 @@ run() ->
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
                 code: "import one
-                        fn make() { one.Empty }"
+pub fn make() { one.Empty }"
                     .to_string(),
             },
         ],
@@ -752,7 +716,9 @@ run() ->
                 text: "-module(one).
 -compile(no_auto_import).
 
--export_type([empty/0]).\n\n-type empty() :: empty.
+-export_type([empty/0]).
+
+-type empty() :: empty.
 
 
 "
@@ -762,6 +728,8 @@ run() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([make/0]).
 
 -spec make() -> one:empty().
 make() ->
@@ -784,7 +752,7 @@ make() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{Empty, id} fn make() { id(Empty) }".to_string(),
+                code: "import one.{Empty, id} pub fn make() { id(Empty) }".to_string(),
             },
         ],
         Ok(vec![
@@ -808,6 +776,8 @@ id(X) ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([make/0]).
 
 -spec make() -> one:empty().
 make() ->
@@ -831,7 +801,7 @@ make() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{Empty as E, id as i} fn make() { i(E) }".to_string(),
+                code: "import one.{Empty as E, id as i} pub fn make() { i(E) }".to_string(),
             },
         ],
         Ok(vec![
@@ -856,6 +826,8 @@ id(X) ->
                 text: "-module(two).
 -compile(no_auto_import).
 
+-export([make/0]).
+
 -spec make() -> one:empty().
 make() ->
     one:id(empty).
@@ -877,7 +849,7 @@ make() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one fn funky() { one.receive }".to_string(),
+                code: "import one pub fn funky() { one.receive }".to_string(),
             },
         ],
         Ok(vec![
@@ -898,6 +870,8 @@ make() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([funky/0]).
 
 -spec funky() -> fun(() -> integer()).
 funky() ->
@@ -920,7 +894,7 @@ funky() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{receive} fn funky() { receive }".to_string(),
+                code: "import one.{receive} pub fn funky() { receive }".to_string(),
             },
         ],
         Ok(vec![
@@ -941,6 +915,8 @@ funky() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([funky/0]).
 
 -spec funky() -> fun(() -> integer()).
 funky() ->
@@ -964,7 +940,7 @@ funky() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one fn funky() { one.receive(1) }".to_string(),
+                code: "import one pub fn funky() { one.receive(1) }".to_string(),
             },
         ],
         Ok(vec![
@@ -985,6 +961,8 @@ funky() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([funky/0]).
 
 -spec funky() -> integer().
 funky() ->
@@ -1093,12 +1071,7 @@ get_name(Person) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
             },
         ]),
     );
@@ -1139,12 +1112,7 @@ get_name(Person) ->
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
             },
         ]),
     );
@@ -1162,7 +1130,7 @@ get_name(Person) ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{C} fn main() { C }".to_string(),
+                code: "import one.{C} pub fn main() { C }".to_string(),
             },
         ],
         Ok(vec![
@@ -1188,6 +1156,8 @@ get_name(Person) ->
                 text: "-module(two).
 -compile(no_auto_import).
 
+-export([main/0]).
+
 -spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
     fun(A, B) -> {c, A, B} end.
@@ -1210,7 +1180,7 @@ main() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one.{X as E, id as i} fn make() { i(E) }".to_string(),
+                code: "import one.{X as E, id as i} pub fn make() { i(E) }".to_string(),
             },
         ],
         Ok(vec![
@@ -1241,6 +1211,8 @@ id(X) ->
                 text: "-module(two).
 -compile(no_auto_import).
 
+-export([make/0]).
+
 -spec make() -> fun((integer()) -> one:t()).
 make() ->
     one:id(fun(A) -> {x, A} end).
@@ -1263,23 +1235,21 @@ make() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: r#"import one.{Headers as StringList} fn make_list() -> StringList { ["aliased", "type", "constructor"] }"#.to_string(),
+                code: r#"import one.{Headers as StringList} pub fn make_list() -> StringList { ["aliased", "type", "constructor"] }"#.to_string(),
             },
         ],
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one.erl"),
-                text: "-module(one).
--compile(no_auto_import).
-
-
-"
+                text: "-module(one).\n"
                 .to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: r#"-module(two).
 -compile(no_auto_import).
+
+-export([make_list/0]).
 
 -spec make_list() -> list(binary()).
 make_list() ->
@@ -1303,7 +1273,7 @@ make_list() ->
                 origin: Origin::Src,
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
-                code: "import one fn main() { one.C }".to_string(),
+                code: "import one pub fn main() { one.C }".to_string(),
             },
         ],
         Ok(vec![
@@ -1330,6 +1300,8 @@ make_list() ->
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> fun((integer(), integer()) -> one:t(any())).
 main() ->
@@ -1562,7 +1534,7 @@ fn imported_module_consts() {
                 name: "two".to_string(),
                 code: "import one
 pub const test = one.A
-fn x() { test }"
+pub fn x() { test }"
                     .to_string(),
             },
         ],
@@ -1584,6 +1556,8 @@ fn x() { test }"
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> one:test().
 x() ->
@@ -1608,7 +1582,7 @@ x() ->
                 name: "two".to_string(),
                 code: "import one
 pub const test = one.B(one.A)
-fn x() { test }"
+pub fn x() { test }"
                     .to_string(),
             },
         ],
@@ -1632,6 +1606,8 @@ fn x() { test }"
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> one:b().
 x() ->
@@ -1691,7 +1667,7 @@ fn imported_type_constructor_used_as_function() {
                 path: PathBuf::from("/src/two.gleam"),
                 name: "two".to_string(),
                 code: "import one
-fn x() { one.A }"
+pub fn x() { one.A }"
                     .to_string(),
             },
         ],
@@ -1713,6 +1689,8 @@ fn x() { one.A }"
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> fun((binary()) -> one:a()).
 x() ->
@@ -1947,12 +1925,7 @@ const x = two.A"#
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
-                text: "-module(two).
--compile(no_auto_import).
-
-
-"
-                .to_string(),
+                text: "-module(two).\n".to_string(),
             }
         ]),
     );

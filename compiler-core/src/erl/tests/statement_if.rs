@@ -6,11 +6,7 @@ fn excluded() {
         "if javascript {
   pub fn main() { 1 }
 }",
-        "-module(the_app).
--compile(no_auto_import).
-
-
-"
+        "-module(the_app).\n"
     );
 }
 

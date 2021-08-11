@@ -138,7 +138,7 @@ fn variable_rewrite() {
     // https://github.com/gleam-lang/gleam/issues/333
     assert_erl!(
         r#"
-fn go(a) {
+pub fn go(a) {
   case a {
     99 -> {
       let a = a
@@ -151,6 +151,8 @@ fn go(a) {
                     "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/1]).
 
 -spec go(integer()) -> integer().
 go(A) ->
@@ -167,12 +169,14 @@ go(A) ->
 
     // https://github.com/gleam-lang/gleam/issues/772
     assert_erl!(
-        "fn main(board) {
-  fn(board) { board }
+        "pub fn main(board) {
+fn(board) { board }
   board
 }",
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/1]).
 
 -spec main(A) -> A.
 main(Board) ->
@@ -184,12 +188,14 @@ main(Board) ->
     // https://github.com/gleam-lang/gleam/issues/762
     assert_erl!(
         r#"
-fn main(x) {
+pub fn main(x) {
   fn(x) { x }(x)
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/1]).
 
 -spec main(A) -> A.
 main(X) ->
@@ -199,13 +205,15 @@ main(X) ->
 
     assert_erl!(
         r#"
-fn main(x) {
+pub fn main(x) {
   x
   |> fn(x) { x }
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/1]).
 
 -spec main(D) -> D.
 main(X) ->
@@ -216,13 +224,15 @@ main(X) ->
 
     // https://github.com/gleam-lang/gleam/issues/788
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
   let _r = 1
   let _r = 2
   Nil
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> nil.
 go() ->
@@ -236,12 +246,14 @@ go() ->
 #[test]
 fn integration_test() {
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
 let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)
   x
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> {integer(),
                {integer(), integer(), integer()},
@@ -257,13 +269,15 @@ go() ->
     );
 
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
   let y = 1
   let y = 2
   y
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> integer().
 go() ->
@@ -275,7 +289,7 @@ go() ->
 
     // hex, octal, and binary literals
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
     let fifteen = 0xF
     let nine = 0o11
     let ten = 0b1010
@@ -283,6 +297,8 @@ go() ->
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> integer().
 go() ->
@@ -294,13 +310,15 @@ go() ->
     );
 
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
   let y = 1
   let y = 2
   y
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> integer().
 go() ->
@@ -340,9 +358,11 @@ pound(X) ->
     );
 
     assert_erl!(
-        r#"fn loop() { loop() }"#,
+        r#"pub fn loop() { loop() }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([loop/0]).
 
 -spec loop() -> any().
 loop() ->
@@ -406,13 +426,15 @@ go() ->
     );
 
     assert_erl!(
-        r#"fn and(x, y) { x && y }
-fn or(x, y) { x || y }
-fn modulo(x, y) { x % y }
-fn fdiv(x, y) { x /. y }
+        r#"pub fn and(x, y) { x && y }
+pub fn or(x, y) { x || y }
+pub fn modulo(x, y) { x % y }
+pub fn fdiv(x, y) { x /. y }
             "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export(['and'/2, 'or'/2, modulo/2, fdiv/2]).
 
 -spec 'and'(boolean(), boolean()) -> boolean().
 'and'(X, Y) ->
@@ -439,11 +461,13 @@ fdiv(X, Y) ->
     );
 
     assert_erl!(
-        r#"fn second(list) { case list { [x, y] -> y z -> 1 } }
-                    fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
+        r#"pub fn second(list) { case list { [x, y] -> y z -> 1 } }
+pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
             "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([second/1, tail/1]).
 
 -spec second(list(integer())) -> integer().
 second(List) ->
@@ -468,9 +492,11 @@ tail(List) ->
     );
 
     assert_erl!(
-        "fn tail(list) { case list { [x, ..] -> x } }",
+        "pub fn tail(list) { case list { [x, ..] -> x } }",
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([tail/1]).
 
 -spec tail(list(D)) -> D.
 tail(List) ->
@@ -482,9 +508,11 @@ tail(List) ->
     );
 
     assert_erl!(
-        r#"fn x() { let x = 1 let x = x + 1 x }"#,
+        r#"pub fn x() { let x = 1 let x = x + 1 x }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> integer().
 x() ->
@@ -514,9 +542,11 @@ x() ->
 
     // Translation of Float-specific BinOp into variable-type Erlang term comparison.
     assert_erl!(
-        r#"fn x() { 1. <. 2.3 }"#,
+        r#"pub fn x() { 1. <. 2.3 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> boolean().
 x() ->
@@ -526,10 +556,11 @@ x() ->
 
     // Custom type creation
     assert_erl!(
-        r#"type Pair(x, y) { Pair(x: x, y: y) } fn x() { Pair(1, 2) Pair(3., 4.) }"#,
+        r#"pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
 
+-export([x/0]).
 -export_type([pair/2]).
 
 -type pair(A, B) :: {pair, A, B}.
@@ -631,9 +662,11 @@ main() ->
     // Private external function calls are simply inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
-                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> integer().
 x() ->
@@ -666,9 +699,11 @@ x() ->
     // Private external function references are inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
-                    fn x() { go }"#,
+pub fn x() { go }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> fun((integer(), integer()) -> integer()).
 x() ->
@@ -678,9 +713,11 @@ x() ->
 
     assert_erl!(
         r#"fn go(x xx, y yy) { xx }
-                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
+pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec go(A, any()) -> A.
 go(Xx, Yy) ->
@@ -713,9 +750,11 @@ create_user(User_id) ->
     );
 
     assert_erl!(
-        r#"fn run() { case 1, 2 { a, b -> a } }"#,
+        r#"pub fn run() { case 1, 2 { a, b -> a } }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([run/0]).
 
 -spec run() -> integer().
 run() ->
@@ -745,7 +784,7 @@ x() ->
 
     assert_erl!(
         r#"
-fn go(a) {
+pub fn go(a) {
   let a = a + 1
   a
 }
@@ -753,6 +792,8 @@ fn go(a) {
                     "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/1]).
 
 -spec go(integer()) -> integer().
 go(A) ->
@@ -763,7 +804,7 @@ go(A) ->
 
     assert_erl!(
         r#"
-fn go(a) {
+pub fn go(a) {
   let a = 1
   a
 }
@@ -771,6 +812,8 @@ fn go(a) {
                     "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/1]).
 
 -spec go(any()) -> integer().
 go(A) ->
@@ -1779,7 +1822,7 @@ fn binop_parens() {
     // Parentheses are added for binop subexpressions
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
     let a = 2 * {3 + 1} / 2
     let b = 5 + 3 / 3 * 2 - 6 * 4
     b
@@ -1787,6 +1830,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -1801,7 +1846,7 @@ main() ->
 fn try_expr() {
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
     try a = Ok(1)
     try b = Ok(2)
     Ok(a + b)
@@ -1809,6 +1854,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> {ok, integer()} | {error, any()}.
 main() ->
@@ -1855,7 +1902,7 @@ main() ->
     // Parentheses are added when calling functions returned by tuple access
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
     let t = #(fn(x) { x })
 
     t.0(5)
@@ -1863,6 +1910,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -1875,7 +1924,7 @@ main() ->
 #[test]
 fn bit_strings() {
     assert_erl!(
-        r#"fn main() {
+        r#"pub fn main() {
   let a = 1
   let simple = <<1, a>>
   let complex = <<4:int-big, 5.0:little-float, 6:native-int>>
@@ -1887,6 +1936,8 @@ fn bit_strings() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> bitstring().
 main() ->
@@ -1900,7 +1951,7 @@ main() ->
     );
 
     assert_erl!(
-        r#"fn x() { 2 }
+        r#"pub fn x() { 2 }
 fn main() {
   let a = -1
   let b = <<a:unit(2)-size(a * 2), a:size(3 + x())-unit(1)>>
@@ -1910,6 +1961,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([x/0]).
 
 -spec x() -> integer().
 x() ->
@@ -1925,7 +1978,7 @@ main() ->
     );
 
     assert_erl!(
-        r#"fn main() {
+        r#"pub fn main() {
   let a = 1
   let <<b, 1>> = <<1, a>>
   b
@@ -1933,6 +1986,8 @@ main() ->
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -1943,7 +1998,7 @@ main() ->
     );
 
     assert_erl!(
-        r#"fn main() {
+        r#"pub fn main() {
   let a = <<"test":utf8>>
   let <<b:utf8_codepoint, "st":utf8>> = a
   b
@@ -1951,6 +2006,8 @@ main() ->
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -1962,13 +2019,15 @@ main() ->
 
     assert_erl!(
         r#"fn x() { 1 }
-fn main() {
+pub fn main() {
   let a = <<x():int>>
   a
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec x() -> integer().
 x() ->
@@ -2363,13 +2422,15 @@ main() ->
 fn numbers_with_underscores() {
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
   100_000
   100_000.00101
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> float().
 main() ->
@@ -2382,13 +2443,15 @@ main() ->
         r#"
 const i = 100_000
 const f = 100_000.00101
-fn main() {
+pub fn main() {
   i
   f
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> float().
 main() ->
@@ -2399,7 +2462,7 @@ main() ->
 
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
   let 100_000 = 1
   let 100_000.00101 = 1.
   1
@@ -2407,6 +2470,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -2422,7 +2487,7 @@ main() ->
 fn block_assignment() {
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
   let x = {
     1
     2
@@ -2432,6 +2497,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> integer().
 main() ->
@@ -2455,12 +2522,14 @@ fn id(x) {
   x
 }
 
-fn main() {
+pub fn main() {
   id(id)
 }
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec id(A) -> A.
 id(X) ->
@@ -2477,7 +2546,7 @@ main() ->
 fn tuple_access_in_guard() {
     assert_erl!(
         r#"
-fn main() {
+pub fn main() {
     let key = 10
     let x = [#(10, 2), #(1, 2)]
     case x {
@@ -2488,6 +2557,8 @@ fn main() {
 "#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec main() -> binary().
 main() ->
@@ -2696,9 +2767,11 @@ pub type Xor { TestXor }"#,
 #[test]
 fn allowed_string_escapes() {
     assert_erl!(
-        r#"fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#,
+        r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([a/0]).
 
 -spec a() -> binary().
 a() ->
@@ -2718,7 +2791,7 @@ a() ->
 fn block_expr_into_pipe() {
     assert_erl!(
         r#"fn id(a) { a }
-fn main() {
+pub fn main() {
   {
     let x = 1
     x
@@ -2727,6 +2800,8 @@ fn main() {
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([main/0]).
 
 -spec id(A) -> A.
 id(A) ->
@@ -2747,12 +2822,14 @@ main() ->
 fn assert() {
     // One var
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
   assert Ok(y) = Ok(1)
   y
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> integer().
 go() ->
@@ -2772,12 +2849,14 @@ go() ->
 
     // More vars
     assert_erl!(
-        r#"fn go(x) {
+        r#"pub fn go(x) {
   assert [1, a, b, c] = x
   [a, b, c]
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/1]).
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
@@ -2797,12 +2876,14 @@ go(X) ->
 
     // Pattern::Let
     assert_erl!(
-        r#"fn go(x) {
+        r#"pub fn go(x) {
   assert [1 as a, b, c] = x
   [a, b, c]
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/1]).
 
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
@@ -2822,13 +2903,15 @@ go(X) ->
 
     // Following asserts use appropriate variable rewrites
     assert_erl!(
-        r#"fn go() {
+        r#"pub fn go() {
   assert Ok(y) = Ok(1)
   assert Ok(y) = Ok(1)
   y
 }"#,
         r#"-module(the_app).
 -compile(no_auto_import).
+
+-export([go/0]).
 
 -spec go() -> integer().
 go() ->

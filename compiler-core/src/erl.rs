@@ -189,14 +189,28 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module(
-    module: &TypedModule,
-    line_numbers: &LineNumbers,
+pub fn module<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
     writer: &mut impl Utf8Writer,
 ) -> Result<()> {
+    module_document(module, line_numbers)?.pretty_print(MAX_COLUMNS, writer)
+}
+
+fn module_document<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
+) -> Result<Document<'a>> {
     let mut exports = vec![];
     let mut type_defs = vec![];
     let mut type_exports = vec![];
+
+    let header = "-module("
+        .to_doc()
+        .append(module_name_join(&module.name))
+        .append(").")
+        .append(line());
+
     for s in &module.statements {
         register_imports(
             s,
@@ -208,7 +222,7 @@ pub fn module(
     }
 
     let exports = match (!exports.is_empty(), !type_exports.is_empty()) {
-        (false, false) => nil(),
+        (false, false) => return Ok(header),
         (true, false) => "-export(["
             .to_doc()
             .append(concat(Itertools::intersperse(
@@ -259,18 +273,13 @@ pub fn module(
         lines(2),
     ));
 
-    "-module("
-        .to_doc()
-        .append(module_name_join(&module.name))
-        .append(").")
-        .append(line())
+    Ok(header
         .append("-compile(no_auto_import).")
         .append(lines(2))
         .append(exports)
         .append(type_defs)
         .append(statements)
-        .append(line())
-        .pretty_print(MAX_COLUMNS, writer)
+        .append(line()))
 }
 
 fn register_imports(
