@@ -11,7 +11,7 @@ class Record {
   }
 }
 
-class List extends Record {
+class List {
   inspect() {
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
@@ -44,6 +44,17 @@ class NonEmpty extends List {
   }
 }
 
+class BitString {
+  constructor(buffer) {
+    this.buffer = buffer;
+  }
+
+  inspect() {
+    let segments = Array.from(this.buffer).join(", ");
+    return `<<${segments}>>`;
+  }
+}
+
 class Result extends Record {}
 
 class Ok extends Result {
@@ -70,16 +81,17 @@ class Thing extends Record {
 }
 
 function inspect(value) {
+  let t = typeof value;
   if (value === true) return "True";
   if (value === false) return "False";
   if (value === undefined) return "Nil";
+  if (t === "string") return JSON.stringify(value);
+  if (t === "bigint" || t === "number") return value.toString();
+  if (Array.isArray(value)) return `#(${value.map(inspect).join(", ")})`;
   try {
     if (typeof value.inspect === "function") return value.inspect();
   } catch (error) {}
-  if (Array.isArray(value)) return `#(${value.map(inspect).join(", ")})`;
-  // TODO: different syntax for js stuff
-  // TODO: bigints
-  return JSON.stringify(value);
+  return `//js${JSON.stringify(value)}`;
 }
 
 function equal(x, y) {
@@ -132,3 +144,5 @@ console.log(thing.inspect());
 
 console.log(List.fromArray([]).inspect());
 console.log(List.fromArray([1, 2, new Ok([1])]).inspect());
+
+console.log(inspect(new BitString(new Uint8Array([1, 2, 3]))));
