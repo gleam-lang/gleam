@@ -23,11 +23,7 @@ use heck::SnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
-use std::collections::HashMap;
-use std::ops::Deref;
-use std::str::FromStr;
-use std::sync::Arc;
-use std::{char, iter::FromIterator};
+use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
@@ -96,7 +92,7 @@ impl<'env> Env<'env> {
         function: &'env str,
         line_numbers: &'env LineNumbers,
     ) -> Self {
-        let vars = im::HashMap::from_iter(std::iter::once(("_".to_string(), 0)));
+        let vars: im::HashMap<_, _> = std::iter::once(("_".to_string(), 0)).collect();
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
