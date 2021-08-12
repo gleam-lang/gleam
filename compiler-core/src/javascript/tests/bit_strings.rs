@@ -153,7 +153,7 @@ fn go(x) {
 "#,
         r#"function go(x) {
   return $bit_string([
-    new TextEncoder().encode(String.fromCodePoint(x)),
+    new TextEncoder().encode(globalThis.String.fromCodePoint(x)),
     new TextEncoder().encode("Gleam"),
   ]);
 }

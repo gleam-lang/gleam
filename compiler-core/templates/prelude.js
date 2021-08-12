@@ -66,6 +66,20 @@ class BitString {
   }
 }
 
+class UtfCodepoint {
+  constructor(value) {
+    this.value = value;
+  }
+
+  toBuffer() {
+    return new Uint8Array(String.fromCodePoint(this.value));
+  }
+
+  inspect() {
+    return `//utf8codepoint(${String.fromCodePoint(this.value)})`;
+  }
+}
+
 class Result extends Record {
   isOk() {
     return this instanceof Ok;
@@ -174,3 +188,5 @@ console.log(
 );
 
 console.log(inspect(new BitString(new Uint8Array([1, 2, 3]))));
+
+console.log(inspect(new UtfCodepoint(128013)));

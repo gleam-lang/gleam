@@ -179,7 +179,7 @@ impl<'module> Generator<'module> {
 
                 // UTF8 codepoints (which are ints at runtime)
                 [Opt::Utf8Codepoint { .. }] => Ok(docvec![
-                    "new TextEncoder().encode(String.fromCodePoint(",
+                    "new TextEncoder().encode(globalThis.String.fromCodePoint(",
                     value,
                     "))"
                 ]),
