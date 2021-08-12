@@ -53,6 +53,8 @@
   reported as being an incorrect usage of the pipe operator.
 - Gleam modules with no public exports no longer render private members in
   Erlang.
+- Fixed a bug where discard variables used in assert assignments would generate
+  invalid Erlang code.
 
 ## v0.16.1 - 2021-06-21
 
