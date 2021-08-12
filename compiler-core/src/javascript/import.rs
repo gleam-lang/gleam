@@ -163,6 +163,14 @@ fn into_doc() {
                 name: "two".to_doc(),
                 alias: Some("twoo".to_doc()),
             },
+        ]
+        .into_iter(),
+    );
+
+    imports.register_module(
+        "./other".to_string(),
+        std::iter::empty(),
+        vec![
             Member {
                 name: "three".to_doc(),
                 alias: None,
