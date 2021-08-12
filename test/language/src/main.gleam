@@ -9,6 +9,7 @@ pub fn main() -> Int {
       suite("try", try_tests()),
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
+      suite("assert", assert_tests()),
       suite("floats", float_tests()),
       suite("prelude", prelude_tests()),
       suite("strings", strings_tests()),
@@ -148,6 +149,30 @@ fn pipes_tests() -> List(Test) {
         3
         |> triplet(y: 2, x: 1)
       assert_equal(#(1, 2, 3), result)
+    }),
+  ]
+}
+
+fn assert_tests() -> List(Test) {
+  [
+    "assert Ok(_)"
+    |> example(fn() {
+      assert_equal(
+        Ok(1),
+        {
+          assert Ok(_) = Ok(1)
+        },
+      )
+    }),
+    "assert Ok(x)"
+    |> example(fn() {
+      assert_equal(
+        1,
+        {
+          assert Ok(x) = Ok(1)
+          x
+        },
+      )
     }),
   ]
 }
