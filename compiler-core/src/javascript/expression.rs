@@ -175,9 +175,14 @@ impl<'module> Generator<'module> {
                 [] => Ok(value),
 
                 // UTF8 strings
-                [Opt::Utf8 { .. } | Opt::Utf8Codepoint { .. }] => {
-                    Ok(docvec!["new TextEncoder().encode(", value, ")"])
-                }
+                [Opt::Utf8 { .. }] => Ok(docvec!["new TextEncoder().encode(", value, ")"]),
+
+                // UTF8 codepoints (which are ints at runtime)
+                [Opt::Utf8Codepoint { .. }] => Ok(docvec![
+                    "new TextEncoder().encode(String.fromCodePoint(",
+                    value,
+                    "))"
+                ]),
 
                 // Bit strings
                 [Opt::BitString { .. }] => Ok(value),
