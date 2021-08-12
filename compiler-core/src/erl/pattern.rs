@@ -22,7 +22,7 @@ pub(super) fn to_doc<'a>(
 
         Pattern::List { elements, tail, .. } => pattern_list(elements, tail.as_deref(), vars, env),
 
-        Pattern::Discard { .. } => "_".to_doc(),
+        Pattern::Discard { .. } => env.next_local_var_name("_"),
 
         Pattern::VarUsage { name, .. } => env.local_var_name(name),
 

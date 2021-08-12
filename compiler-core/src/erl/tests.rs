@@ -161,7 +161,7 @@ go(A) ->
             A@1 = A,
             1;
 
-        _ ->
+        _@1 ->
             A
     end.
 "#,
@@ -236,8 +236,8 @@ main(X) ->
 
 -spec go() -> nil.
 go() ->
-    _ = 1,
-    _ = 2,
+    _@1 = 1,
+    _@2 = 2,
     nil.
 "#,
     );
@@ -501,7 +501,7 @@ tail(List) ->
 -spec tail(list(D)) -> D.
 tail(List) ->
     case List of
-        [X | _] ->
+        [X | _@1] ->
             X
     end.
 "#,
@@ -877,7 +877,7 @@ pub fn main(args) {
 -spec main(any()) -> integer().
 main(Args) ->
     case Args of
-        _ ->
+        _@1 ->
             A = 1,
             A
     end,
@@ -908,10 +908,10 @@ pub fn bitstring_discard(x) -> Bool {
 -spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
     case X of
-        <<_/utf8, Rest/binary>> ->
+        <<_@1/utf8, Rest/binary>> ->
             true;
 
-        _ ->
+        _@2 ->
             false
     end.
 "#,
@@ -934,10 +934,10 @@ pub fn bitstring_discard(x) -> Bool {
 -spec bitstring_discard(bitstring()) -> boolean().
 bitstring_discard(X) ->
     case X of
-        <<_/utf8, Rest/binary>> ->
+        <<_@1/utf8, Rest/binary>> ->
             true;
 
-        _ ->
+        _@2 ->
             false
     end.
 "#,
@@ -987,7 +987,7 @@ main(Args) ->
         X when X =:= Args ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "#,
@@ -1013,7 +1013,7 @@ main(Args) ->
         X when (X =/= X) =:= (Args =:= Args) ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "#,
@@ -1039,7 +1039,7 @@ main(Args) ->
         X when (X andalso X) orelse ((X =:= X) andalso X) ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "#,
@@ -1065,7 +1065,7 @@ main() ->
         {X, Y} when X > Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1091,7 +1091,7 @@ main() ->
         {X, Y} when X >= Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1117,7 +1117,7 @@ main() ->
         {X, Y} when X < Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1143,7 +1143,7 @@ main() ->
         {X, Y} when X =< Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1169,7 +1169,7 @@ main() ->
         {X, Y} when X > Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1195,7 +1195,7 @@ main() ->
         {X, Y} when X >= Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1223,7 +1223,7 @@ main() ->
         99.9854 ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "#,
@@ -1247,7 +1247,7 @@ pub fn main() {
 main() ->
     X = 0.123,
     case X of
-        _ when X =:= 3.14 ->
+        _@1 when X =:= 3.14 ->
             1
     end.
 "#,
@@ -1271,7 +1271,7 @@ pub fn main() {
 main() ->
     X = 0.123,
     case X of
-        _ when 0.123 < X ->
+        _@1 when 0.123 < X ->
             1
     end.
 "#,
@@ -1293,7 +1293,7 @@ pub fn main(x) {
 -spec main(list(integer())) -> integer().
 main(X) ->
     case X of
-        _ when X =:= [1, 2, 3] ->
+        _@1 when X =:= [1, 2, 3] ->
             1
     end.
 "#,
@@ -1321,7 +1321,7 @@ main() ->
         0 ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "#,
@@ -1348,10 +1348,10 @@ pub fn main() {
 main() ->
     X = {1, 2, 3},
     case X of
-        _ when X =:= {1, 2, 3} ->
+        _@1 when X =:= {1, 2, 3} ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -1377,13 +1377,13 @@ pub fn main() {
 main() ->
     X = {1, 2, 3},
     case X of
-        _ when X =:= {1, 2, 3} ->
+        _@1 when X =:= {1, 2, 3} ->
             1;
 
-        _ when X =:= {2, 3, 4} ->
+        _@2 when X =:= {2, 3, 4} ->
             2;
 
-        _ ->
+        _@3 ->
             0
     end.
 "#,
@@ -1409,7 +1409,7 @@ pub fn main() {
 main() ->
     X = 0,
     case X of
-        _ when X =:= 0 ->
+        _@1 when X =:= 0 ->
             1
     end.
 "#,
@@ -1433,7 +1433,7 @@ pub fn main() {
 main() ->
     X = 0,
     case X of
-        _ when 0 < X ->
+        _@1 when 0 < X ->
             1
     end.
 "#,
@@ -1490,16 +1490,16 @@ main() ->
 main() ->
     X = {test, 1, 3.0},
     case X of
-        _ when X =:= {test, 1, 1.0} ->
+        _@1 when X =:= {test, 1, 1.0} ->
             1;
 
-        _ when X =:= {test, 2, 2.0} ->
+        _@2 when X =:= {test, 2, 2.0} ->
             2;
 
-        _ when X =/= {test, 2, 3.0} ->
+        _@3 when X =/= {test, 2, 3.0} ->
             2;
 
-        _ ->
+        _@4 ->
             0
     end.
 "#,
@@ -1527,7 +1527,7 @@ main() ->
         {X, Y} when X < Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1553,7 +1553,7 @@ main() ->
         {X, Y} when X =< Y ->
             1;
 
-        {_, _} ->
+        {_@1, _@2} ->
             0
     end.
 "#,
@@ -1579,10 +1579,10 @@ main(Args) ->
         [X] when X ->
             1;
 
-        [X, _] when X ->
+        [X, _@1] when X ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -1687,7 +1687,7 @@ fn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, The_a, _, _} = Triple,
+    {triple, The_a, _@1, _@2} = Triple,
     The_a.
 "#,
     );
@@ -1715,7 +1715,7 @@ fn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, _, The_b, _} = Triple,
+    {triple, _@1, The_b, _@2} = Triple,
     The_b.
 "#,
     );
@@ -1743,7 +1743,7 @@ fn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, The_a, _, The_c} = Triple,
+    {triple, The_a, _@1, The_c} = Triple,
     The_c.
 "#,
     );
@@ -1773,7 +1773,7 @@ fn main() {
 main() ->
     Triple = {triple, 1, 2, 3},
     case Triple of
-        {triple, _, The_b, _} ->
+        {triple, _@1, The_b, _@2} ->
             The_b
     end.
 "#,
@@ -2042,7 +2042,7 @@ main() ->
 }
 
 #[test]
-fn constants_in_guards() {
+fn only_guards() {
     assert_erl!(
         r#"
 pub const string_value = "constant value"
@@ -2062,10 +2062,10 @@ pub fn main(arg) {
 -spec main(binary()) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg =:= <<"constant value"/utf8>> ->
+        _@1 when Arg =:= <<"constant value"/utf8>> ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -2090,10 +2090,10 @@ pub fn main(arg) {
 -spec main(bitstring()) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
+        _@1 when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -2118,10 +2118,10 @@ pub fn main(arg) {
 -spec main({integer(), float()}) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg =:= {1, 2.0} ->
+        _@1 when Arg =:= {1, 2.0} ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -2146,15 +2146,18 @@ pub fn main(arg) {
 -spec main(float()) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg > 3.14 ->
+        _@1 when Arg > 3.14 ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
     );
+}
 
+#[test]
+fn constants_in_guards() {
     assert_erl!(
         r#"
 pub const string_value = "constant value"
@@ -2178,12 +2181,12 @@ pub fn main(arg) {
 
 -spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->
-    _ = [1, 2, 3],
+    _@1 = [1, 2, 3],
     case Arg of
         {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -2208,10 +2211,10 @@ pub fn main(arg) {
 -spec main(list(integer())) -> integer().
 main(Arg) ->
     case Arg of
-        _ when Arg =:= [1, 2, 3] ->
+        _@1 when Arg =:= [1, 2, 3] ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 "#,
@@ -2325,12 +2328,12 @@ pub fn main(arg) {
 
 -spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->
-    _ = {ok, 1},
+    _@1 = {ok, 1},
     case Arg of
-        _ when Arg =:= {ok, 1} ->
+        _@2 when Arg =:= {ok, 1} ->
             1;
 
-        _ ->
+        _@3 ->
             0
     end.
 "#,
@@ -2568,7 +2571,7 @@ main() ->
         [First | Rest] when erlang:element(1, First) =:= Key ->
             <<"ok"/utf8>>;
 
-        _ ->
+        _@1 ->
             <<"ko"/utf8>>
     end.
 "#,
@@ -2642,7 +2645,7 @@ a(X) ->
         {ok, 1 = Y} ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 "
@@ -3100,5 +3103,34 @@ x(F) ->
             {ok, X}
     end.
 "
+    );
+}
+
+#[test]
+fn discard_in_assert() {
+    assert_erl!(
+        "pub fn x(y) {
+  assert Ok(_) = y
+  1
+}",
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x({ok, any()} | {error, any()}) -> integer().
+x(Y) ->
+    {ok, _@2} = case Y of
+        {ok, _@1} -> {ok, _@1};
+        _try ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => _try,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"x"/utf8>>,
+                           line => 2})
+    end,
+    1.
+"#
     );
 }

@@ -544,7 +544,7 @@ make() ->
 
 -spec x(one:point()) -> integer().
 x(P) ->
-    {point, X, _} = P,
+    {point, X, _@1} = P,
     X.
 ".to_string(),
                 },
@@ -1331,7 +1331,7 @@ main(Arg1, Arg2, Arg3) ->
         {X, Y, Z} when ((X =:= <<\"constant value\"/utf8>>) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 ".to_string(),

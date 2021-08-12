@@ -632,7 +632,7 @@ make() ->
 
 -spec x(one:point()) -> integer().
 x(P) ->
-    {point, X, _} = P,
+    {point, X, _@1} = P,
     X.
 "
                 .to_string(),

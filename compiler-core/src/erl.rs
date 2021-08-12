@@ -1,5 +1,6 @@
 // TODO: Refactor this module to be methods on structs rather than free
-// functions with a load of arguments
+// functions with a load of arguments. See the JavaScript code generator and the
+// formatter for examples.
 
 mod pattern;
 #[cfg(test)]
@@ -22,12 +23,11 @@ use heck::SnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
-use std::char;
 use std::collections::HashMap;
-use std::default::Default;
 use std::ops::Deref;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{char, iter::FromIterator};
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
@@ -96,9 +96,10 @@ impl<'env> Env<'env> {
         function: &'env str,
         line_numbers: &'env LineNumbers,
     ) -> Self {
+        let vars = im::HashMap::from_iter(std::iter::once(("_".to_string(), 0)));
         Self {
-            current_scope_vars: Default::default(),
-            erl_function_scope_vars: Default::default(),
+            current_scope_vars: vars.clone(),
+            erl_function_scope_vars: vars,
             line_numbers,
             function,
             module,
