@@ -26,7 +26,7 @@ class List {
   toArray() {
     let current = this;
     let array = [];
-    while (current instanceof NonEmpty) {
+    while (!current.isEmpty()) {
       array.push(current.head);
       current = current.tail;
     }
@@ -35,7 +35,7 @@ class List {
 
   atLeastLength(desired) {
     let current = this;
-    while (current instanceof NonEmpty) {
+    while (!current.isEmpty()) {
       if (desired <= 0) return true;
       desired--;
       current = current.tail;
@@ -44,13 +44,21 @@ class List {
   }
 }
 
-class Empty extends List {}
+class Empty extends List {
+  isEmpty() {
+    return true;
+  }
+}
 
 class NonEmpty extends List {
   constructor(head, tail) {
     super();
     this.head = head;
     this.tail = tail;
+  }
+
+  isEmpty() {
+    return false;
   }
 }
 
@@ -78,20 +86,20 @@ class UtfCodepoint {
   }
 
   inspect() {
-    return `//utf8codepoint(${String.fromCodePoint(this.value)})`;
+    return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
 }
 
-class Result extends Record {
-  isOk() {
-    return this instanceof Ok;
-  }
-}
+class Result extends Record {}
 
 class Ok extends Result {
   constructor(value) {
     super();
     this[0] = value;
+  }
+
+  isOk() {
+    return true;
   }
 }
 
@@ -100,14 +108,9 @@ class Error extends Result {
     super();
     this[0] = detail;
   }
-}
 
-class Thing extends Record {
-  constructor(first, detail, boop) {
-    super();
-    this[0] = first;
-    this.detail = detail;
-    this.boop = boop;
+  isOk() {
+    return false;
   }
 }
 
@@ -125,8 +128,13 @@ function inspect(v) {
   try {
     if (typeof v.inspect === "function") return v.inspect();
   } catch (error) {}
-  let properties = Object.entries(v).map(([k, v]) => `${k}: ${inspect(v)}`);
-  return `//js({${properties.join(", ")}})`;
+  let entries = Object.entries(v);
+  if (entries.length) {
+    let properties = entries.map(([k, v]) => `${k}: ${inspect(v)}`).join(", ");
+    return `//js({ ${properties} })`;
+  } else {
+    return `//js({})`;
+  }
 }
 
 function equal(x, y) {
@@ -180,37 +188,80 @@ function typedArrayEqual(a, b) {
   return a.byteLength === b.byteLength && a.every((n, i) => n === b[i]);
 }
 
-console.log("");
-console.log("");
+// Tests
 
-let x = new Record();
-console.log(x.inspect());
+function assertEqual(a, b) {
+  console.assert(equal(a, b), `\n\t${inspect(a)}\n\t  !=\n\t${inspect(b)}`);
+}
 
-console.log(inspect(true));
-console.log(inspect(false));
-console.log(inspect(undefined));
+class ExampleRecordImpl extends Record {
+  constructor(first, detail, boop) {
+    super();
+    this[0] = first;
+    this.detail = detail;
+    this.boop = boop;
+  }
+}
 
-let ok = new Ok(1);
-console.log(ok.inspect());
+console.log("\nRunning tests...");
 
-let error = new Error("err");
-console.log(error.inspect());
+// inspect tests
 
-let thing = new Thing([1, 2, "hello"], "ok", { a: 1 });
-console.log(thing.inspect());
+assertEqual(inspect(true), "True");
+assertEqual(inspect(false), "False");
+assertEqual(inspect(undefined), "Nil");
 
-console.log(List.fromArray([]).inspect());
-console.log(
-  List.fromArray([
-    1,
-    2,
-    new Ok([1]),
-    null,
-    new globalThis.Error("stuff"),
-    { gl: new Ok(123) },
-  ]).inspect()
+assertEqual(inspect(0), "0");
+assertEqual(inspect(1), "1");
+assertEqual(inspect(2), "2");
+assertEqual(inspect(-1), "-1");
+assertEqual(inspect(-2), "-2");
+
+assertEqual(inspect(0.23), "0.23");
+assertEqual(inspect(1.23), "1.23");
+assertEqual(inspect(2.23), "2.23");
+assertEqual(inspect(-1.23), "-1.23");
+assertEqual(inspect(-2.23), "-2.23");
+
+assertEqual(inspect(new Ok(1)), "Ok(1)");
+assertEqual(inspect(new Ok(true)), "Ok(True)");
+assertEqual(inspect(new Ok(false)), "Ok(False)");
+assertEqual(inspect(new Ok(undefined)), "Ok(Nil)");
+
+assertEqual(inspect(new Error(2)), "Error(2)");
+assertEqual(inspect(new Error(true)), "Error(True)");
+assertEqual(inspect(new Error(false)), "Error(False)");
+assertEqual(inspect(new Error(undefined)), "Error(Nil)");
+
+assertEqual(
+  inspect(new ExampleRecordImpl(undefined, 1, 2.1)),
+  "ExampleRecordImpl(Nil, detail: 1, boop: 2.1)"
+);
+assertEqual(
+  inspect(new ExampleRecordImpl(new Ok(1), 1, 2.1)),
+  "ExampleRecordImpl(Ok(1), detail: 1, boop: 2.1)"
 );
 
-console.log(inspect(new BitString(new Uint8Array([1, 2, 3]))));
+assertEqual(inspect([]), "#()");
+assertEqual(inspect([1, 2, 3]), "#(1, 2, 3)");
+assertEqual(inspect([new Ok(1), new Ok(2)]), "#(Ok(1), Ok(2))");
 
-console.log(inspect(new UtfCodepoint(128013)));
+assertEqual(inspect(List.fromArray([])), "[]");
+assertEqual(inspect(List.fromArray([1, 2, 3])), "[1, 2, 3]");
+assertEqual(inspect(List.fromArray([new Ok(1), new Ok(2)])), "[Ok(1), Ok(2)]");
+
+assertEqual(inspect(new BitString(new Uint8Array([]))), "<<>>");
+assertEqual(inspect(new BitString(new Uint8Array([1, 2, 3]))), "<<1, 2, 3>>");
+
+assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
+
+// Inspecting JS values
+
+assertEqual(inspect(null), "//js(null)");
+assertEqual(inspect({}), "//js({})");
+assertEqual(inspect({ a: 1 }), "//js({ a: 1 })");
+assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
+assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
+assertEqual(inspect(new globalThis.Error("stuff")), '//js(new Error("stuff"))');
+
+console.log("Done.");
