@@ -199,5 +199,5 @@ jobs:
 
       - name: Test JavaScript prelude
         run: |
-          cd tests/javascript_prelude
+          cd test/javascript_prelude
           npm test
