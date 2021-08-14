@@ -196,3 +196,8 @@ jobs:
           gleam new gleam_lib_project --template=gleam-lib
           cd gleam_lib_project
           gleam eunit
+
+      - name: Test JavaScript prelude
+        run: |
+          cd tests/javascript_prelude
+          npm test
