@@ -129,31 +129,52 @@ function inspect(v) {
 
 function equal(x, y) {
   let values = [x, y];
+
   while (values.length !== 0) {
-    let a = values.pop();
-    let b = values.pop();
-    if (a === b || uintArrayEqual(a, b)) continue;
-    if (objectType(a) !== objectType(b)) return false;
-    for (let k of Object.keys(a)) values.push(a[k], b[k]);
+    const a = values.pop();
+    const b = values.pop();
+
+    if (a === b) continue;
+    if (a === null || a === undefined || b === null || b === undefined) return false;
+    if (typeof a === 'object' || typeof b === 'object') {
+      if (a.valueOf() === b.valueOf()) continue;
+      if (a.constructor !== b.constructor) return false;
+      
+      if (a.constructor === Date) {
+        if (dateEqual(a, b)) {
+          continue;
+        } else {
+          return false;
+        }
+      }
+
+      if (a.buffer instanceof ArrayBuffer && a.BYTES_PER_ELEMENT) {
+        if (typedArrayEqual(a, b)) {
+          continue;
+        } else {
+          return false;
+        }
+      }
+
+      for (const k of Object.getOwnPropertyNames(a)) {
+        values.push(a[k], b[k]);
+      }
+
+      continue;
+    }
+
+    return false;
   }
+
   return true;
 }
 
-function uintArrayEqual(a, b) {
-  return (
-    a instanceof Uint8Array &&
-    b instanceof Uint8Array &&
-    a.byteLength === b.byteLength &&
-    a.every((x, i) => x === b[i])
-  );
+function dateEqual(a, b) {
+  return !(a > b || a < b);
 }
 
-function objectType(object) {
-  if (object !== null && typeof object === "object") {
-    return object.constructor.name;
-  } else {
-    return typeof object;
-  }
+function typedArrayEqual(a, b) {
+  return a.length === b.length && a.every((n, i) => n === b[i]);
 }
 
 console.log("");
