@@ -1,4 +1,5 @@
-// TODO: make equality work structurally with non-global Gleam prelude classes
+const variant = globalThis.__gleam_prelude_variant || Symbol("gleam");
+globalThis.__gleam_prelude_variant = variant;
 
 class Record {
   inspect() {
@@ -42,27 +43,29 @@ class List {
     }
     return desired <= 0;
   }
-}
 
-class Empty extends List {
   isEmpty() {
-    return true;
+    return "EmptyList" == this[variant];
   }
 }
 
+class Empty extends List {
+  [variant] = "EmptyList";
+}
+
 class NonEmpty extends List {
+  [variant] = "NonEmptyList";
+
   constructor(head, tail) {
     super();
     this.head = head;
     this.tail = tail;
   }
-
-  isEmpty() {
-    return false;
-  }
 }
 
 class BitString {
+  [variant] = "BitString";
+
   constructor(buffer) {
     this.buffer = buffer;
   }
@@ -77,6 +80,8 @@ class BitString {
 }
 
 class UtfCodepoint {
+  [variant] = "UtfCodepoint";
+
   constructor(value) {
     this.value = value;
   }
@@ -93,6 +98,8 @@ class UtfCodepoint {
 class Result extends Record {}
 
 class Ok extends Result {
+  [variant] = "Ok";
+
   constructor(value) {
     super();
     this[0] = value;
@@ -104,6 +111,8 @@ class Ok extends Result {
 }
 
 class Error extends Result {
+  [variant] = "Error";
+
   constructor(detail) {
     super();
     this[0] = detail;
@@ -149,7 +158,7 @@ function equal(x, y) {
       !sameTypeObjects(a, b) || unequalDates(a, b) || unequalArrayBuffers(a, b);
     if (unequal) return false;
 
-    for (const k of Object.getOwnPropertyNames(a)) {
+    for (const k of Object.keys(a)) {
       values.push(a[k], b[k]);
     }
   }
@@ -175,7 +184,8 @@ function sameTypeObjects(a, b) {
     typeof b === "object" &&
     a !== null &&
     b !== null &&
-    a.constructor === b.constructor
+    (a.constructor === b.constructor ||
+      (a[variant] && a[variant] === b[variant]))
   );
 }
 
@@ -260,6 +270,8 @@ assertNotEqual(
   List.fromArray([1, 2, new Ok(2)])
 );
 assertNotEqual(List.fromArray([1, 2]), List.fromArray([1, 2, new Ok(2)]));
+assertNotEqual(List.fromArray([1]), List.fromArray([]));
+assertNotEqual(List.fromArray([]), List.fromArray([1]));
 
 assertEqual(
   new BitString(new Uint8Array([])),
@@ -316,6 +328,27 @@ assertEqual(new ExampleA(1), new ExampleA(1));
 assertEqual(new ExampleB(1), new ExampleB(1));
 assertNotEqual(new ExampleA(1), new ExampleA(2));
 assertNotEqual(new ExampleA(1), new ExampleB(1));
+
+// Equality between Gleam prelude types from different packages
+//
+// The prelude is not global, each package gets one to fit into the JavaScript
+// module system. We work around this by having a single global
+// `globalThis.__gleam_prelude_variant` symbol and using this in place of the
+// constructor to check if Gleam values are of the same kind.
+//
+// In these tests we simulate a different prelude by creating new version of the
+// prelude types through inheritance.
+
+class AnotherEmpty extends Empty {}
+class AnotherNonEmpty extends NonEmpty {}
+class AnotherBitString extends BitString {}
+class AnotherOk extends Ok {}
+class AnotherError extends Error {}
+class AnotherUtfCodepoint extends UtfCodepoint {}
+
+assertEqual(List.fromArray([]), new AnotherEmpty());
+assertEqual(List.fromArray([1]), new AnotherNonEmpty(1, new AnotherEmpty()));
+assertNotEqual(List.fromArray([1]), new AnotherEmpty());
 
 // Inspecting Gleam values
 
