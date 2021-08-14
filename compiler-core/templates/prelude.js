@@ -145,8 +145,7 @@ function equal(x, y) {
     const b = values.pop();
 
     if (a === b) continue;
-    if (a === null || a === undefined || b === null || b === undefined)
-      return false;
+    if (a === null || b === null) return false;
     if (typeof a === "object" || typeof b === "object") {
       if (a.valueOf() === b.valueOf()) continue;
       if (a.constructor !== b.constructor) return false;
@@ -286,6 +285,29 @@ assertNotEqual(
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
 assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
 
+// Equality of JavaScript values
+
+assertEqual([], []);
+assertEqual([1, 2], [1, 2]);
+assertEqual([new Ok([1, 2])], [new Ok([1, 2])]);
+assertNotEqual([], [[]]);
+
+assertEqual({}, {});
+assertEqual({ a: 1 }, { a: 1 });
+assertEqual({ a: 1, b: 2 }, { b: 2, a: 1 });
+assertEqual({ a: new Ok(1) }, { a: new Ok(1) });
+assertNotEqual({ a: new Ok(2) }, { a: new Ok(1) });
+
+assertEqual(new Date(0), new Date(0));
+assertNotEqual(new Date(1), new Date(0));
+
+assertEqual(new Uint8Array([1, 2]), new Uint8Array([1, 2]));
+assertEqual(new Uint16Array([1, 2]), new Uint16Array([1, 2]));
+assertEqual(new Uint32Array([1, 2]), new Uint32Array([1, 2]));
+assertNotEqual(new Uint8Array([1, 3]), new Uint8Array([1, 2]));
+assertNotEqual(new Uint16Array([1, 3]), new Uint16Array([1, 2]));
+assertNotEqual(new Uint32Array([1, 3]), new Uint32Array([1, 2]));
+
 // Inspecting Gleam values
 
 assertEqual(inspect(true), "True");
@@ -336,7 +358,7 @@ assertEqual(inspect(new BitString(new Uint8Array([1, 2, 3]))), "<<1, 2, 3>>");
 
 assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
 
-// Inspecting JS values
+// Inspecting JavaScript values
 
 assertEqual(inspect(null), "//js(null)");
 assertEqual(inspect({}), "//js({})");
