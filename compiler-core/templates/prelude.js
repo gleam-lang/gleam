@@ -194,6 +194,10 @@ function assertEqual(a, b) {
   console.assert(equal(a, b), `\n\t${inspect(a)}\n\t  !=\n\t${inspect(b)}`);
 }
 
+function assertNotEqual(a, b) {
+  console.assert(!equal(a, b), `\n\t${inspect(a)}\n\t  ==\n\t${inspect(b)}`);
+}
+
 class ExampleRecordImpl extends Record {
   constructor(first, detail, boop) {
     super();
@@ -205,7 +209,81 @@ class ExampleRecordImpl extends Record {
 
 console.log("\nRunning tests...");
 
-// inspect tests
+// Equality of Gleam values
+
+assertEqual(true, true);
+assertEqual(false, false);
+assertEqual(undefined, undefined);
+assertNotEqual(true, false);
+assertNotEqual(false, true);
+assertNotEqual(undefined, false);
+assertNotEqual(undefined, true);
+assertNotEqual(true, undefined);
+assertNotEqual(false, undefined);
+
+assertEqual(1, 1);
+assertNotEqual(1, 2);
+assertEqual(1.1, 1.1);
+assertNotEqual(2.1, 1.1);
+assertEqual(-1, -1);
+assertNotEqual(-1, 1);
+assertEqual(-1.1, -1.1);
+assertNotEqual(-1.1, 1.1);
+
+assertEqual("", "");
+assertEqual("123", "123");
+assertEqual("👽", "👽");
+assertNotEqual("👽", "👾");
+
+assertEqual(new Ok(1), new Ok(1));
+assertEqual(new Ok(2), new Ok(2));
+assertEqual(new Ok(new Ok(2)), new Ok(new Ok(2)));
+assertNotEqual(new Ok(1), new Ok(2));
+assertNotEqual(new Ok(new Ok(2)), new Ok(new Ok(3)));
+
+assertEqual(new Error(1), new Error(1));
+assertEqual(new Error(2), new Error(2));
+assertEqual(new Error(new Error(2)), new Error(new Error(2)));
+assertNotEqual(new Error(2), new Error(3));
+assertNotEqual(new Error(new Error(2)), new Error(new Error(3)));
+
+assertEqual(
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+);
+assertNotEqual(
+  new ExampleRecordImpl(undefined, 1, new Ok("2.1")),
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+);
+
+assertEqual(List.fromArray([]), List.fromArray([]));
+assertEqual(
+  List.fromArray([1, 2, new Ok(1)]),
+  List.fromArray([1, 2, new Ok(1)])
+);
+assertNotEqual(
+  List.fromArray([1, 2, new Ok(1)]),
+  List.fromArray([1, 2, new Ok(2)])
+);
+assertNotEqual(List.fromArray([1, 2]), List.fromArray([1, 2, new Ok(2)]));
+
+assertEqual(
+  new BitString(new Uint8Array([])),
+  new BitString(new Uint8Array([]))
+);
+assertEqual(
+  new BitString(new Uint8Array([1, 2, 3])),
+  new BitString(new Uint8Array([1, 2, 3]))
+);
+assertNotEqual(
+  new BitString(new Uint8Array([1, 2])),
+  new BitString(new Uint8Array([1, 2, 3]))
+);
+
+assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
+assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
+
+// Inspecting Gleam values
 
 assertEqual(inspect(true), "True");
 assertEqual(inspect(false), "False");
