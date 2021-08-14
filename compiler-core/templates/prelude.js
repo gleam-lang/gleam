@@ -1,3 +1,7 @@
+// TODO: test methods to be used by generated code
+// - result.isOk
+// - list.atLeastLength
+
 const variant = globalThis.__gleam_prelude_variant || Symbol("gleam");
 globalThis.__gleam_prelude_variant = variant;
 
@@ -95,7 +99,11 @@ class UtfCodepoint {
   }
 }
 
-class Result extends Record {}
+class Result extends Record {
+  isOk() {
+    return "Ok" === this[variant];
+  }
+}
 
 class Ok extends Result {
   [variant] = "Ok";
@@ -103,10 +111,6 @@ class Ok extends Result {
   constructor(value) {
     super();
     this[0] = value;
-  }
-
-  isOk() {
-    return true;
   }
 }
 
@@ -116,10 +120,6 @@ class Error extends Result {
   constructor(detail) {
     super();
     this[0] = detail;
-  }
-
-  isOk() {
-    return false;
   }
 }
 
