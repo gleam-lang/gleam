@@ -349,6 +349,41 @@ class AnotherUtfCodepoint extends UtfCodepoint {}
 assertEqual(List.fromArray([]), new AnotherEmpty());
 assertEqual(List.fromArray([1]), new AnotherNonEmpty(1, new AnotherEmpty()));
 assertNotEqual(List.fromArray([1]), new AnotherEmpty());
+assertEqual(new AnotherEmpty(), List.fromArray([]));
+assertEqual(new AnotherNonEmpty(1, new AnotherEmpty()), List.fromArray([1]));
+assertNotEqual(new AnotherEmpty(), List.fromArray([1]));
+
+assertEqual(new Ok(1), new AnotherOk(1));
+assertEqual(new AnotherOk(1), new Ok(1));
+assertNotEqual(new Ok(2), new AnotherOk(1));
+assertNotEqual(new AnotherOk(2), new Ok(1));
+
+assertEqual(new Error(1), new AnotherError(1));
+assertEqual(new AnotherError(1), new Error(1));
+assertNotEqual(new Error(2), new AnotherError(1));
+assertNotEqual(new AnotherError(2), new Error(1));
+
+assertEqual(
+  new BitString(new Uint8Array([1, 2])),
+  new AnotherBitString(new Uint8Array([1, 2]))
+);
+assertEqual(
+  new AnotherBitString(new Uint8Array([1, 2])),
+  new BitString(new Uint8Array([1, 2]))
+);
+assertNotEqual(
+  new BitString(new Uint8Array([2, 2])),
+  new AnotherBitString(new Uint8Array([1, 2]))
+);
+assertNotEqual(
+  new AnotherBitString(new Uint8Array([2, 2])),
+  new BitString(new Uint8Array([1, 2]))
+);
+
+assertEqual(new UtfCodepoint(128013), new AnotherUtfCodepoint(128013));
+assertEqual(new AnotherUtfCodepoint(128013), new UtfCodepoint(128013));
+assertNotEqual(new UtfCodepoint(128014), new AnotherUtfCodepoint(128013));
+assertNotEqual(new AnotherUtfCodepoint(128014), new UtfCodepoint(128013));
 
 // Inspecting Gleam values
 
