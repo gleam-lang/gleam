@@ -9,6 +9,7 @@ import {
   UtfCodepoint,
   equal,
   inspect,
+  symbols,
 } from "./prelude.js";
 
 let failures = 0;
@@ -298,6 +299,33 @@ assertEqual(List.fromArray([1]).atLeastLength(0), true);
 assertEqual(List.fromArray([1]).atLeastLength(1), true);
 assertEqual(List.fromArray([1]).atLeastLength(2), false);
 assertEqual(List.fromArray([1]).atLeastLength(-1), true);
+
+// Symbols
+
+assertEqual("variant" in symbols, true);
+assertEqual("inspect" in symbols, true);
+
+// All the symbols are distinct
+assertEqual(new Set(Object.keys(symbols)).length, symbols.length);
+
+assertEqual(symbols.inspect in new Ok(1), true);
+assertEqual(symbols.inspect in new Error(1), true);
+assertEqual(symbols.inspect in new Record(), true);
+assertEqual(symbols.inspect in new Empty(), true);
+assertEqual(symbols.inspect in new NonEmpty(1, new Empty()), true);
+assertEqual(symbols.inspect in new BitString(new Uint8Array([])), true);
+assertEqual(symbols.inspect in new UtfCodepoint(128013), true);
+
+assertEqual(symbols.variant in new Ok(1), true);
+assertEqual(symbols.variant in new Error(1), true);
+assertEqual(symbols.variant in new Empty(), true);
+assertEqual(symbols.variant in new NonEmpty(1, new Empty()), true);
+assertEqual(symbols.variant in new BitString(new Uint8Array([])), true);
+assertEqual(symbols.variant in new UtfCodepoint(128013), true);
+// Unlike the above data types (which are structurally checked for equality)
+// records can only be equal if they share a constructor, so they have no
+// variant property.
+assertEqual(symbols.variant in new Record(), false);
 
 //
 // Summary

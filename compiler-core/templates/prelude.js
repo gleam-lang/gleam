@@ -1,8 +1,13 @@
-const variant = globalThis.__gleam_prelude_variant || Symbol("gleam");
-globalThis.__gleam_prelude_variant = variant;
+function define(object, name, fallback) {
+  return (object[name] = globalThis[name] || fallback);
+}
+
+export const symbols = define(globalThis, "__gleam", {});
+define(symbols, "variant", Symbol("variant"));
+define(symbols, "inspect", Symbol("inspect"));
 
 export class Record {
-  inspect() {
+  [symbols.inspect]() {
     let field = (label) => {
       let value = inspect(this[label]);
       return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
@@ -13,7 +18,7 @@ export class Record {
 }
 
 export class List {
-  inspect() {
+  [symbols.inspect]() {
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
@@ -45,16 +50,16 @@ export class List {
   }
 
   isEmpty() {
-    return "EmptyList" == this[variant];
+    return "EmptyList" == this[symbols.variant];
   }
 }
 
 export class Empty extends List {
-  [variant] = "EmptyList";
+  [symbols.variant] = "EmptyList";
 }
 
 export class NonEmpty extends List {
-  [variant] = "NonEmptyList";
+  [symbols.variant] = "NonEmptyList";
 
   constructor(head, tail) {
     super();
@@ -64,13 +69,13 @@ export class NonEmpty extends List {
 }
 
 export class BitString {
-  [variant] = "BitString";
+  [symbols.variant] = "BitString";
 
   constructor(buffer) {
     this.buffer = buffer;
   }
 
-  inspect() {
+  [symbols.inspect]() {
     return `<<${Array.from(this.buffer).join(", ")}>>`;
   }
 
@@ -80,7 +85,7 @@ export class BitString {
 }
 
 export class UtfCodepoint {
-  [variant] = "UtfCodepoint";
+  [symbols.variant] = "UtfCodepoint";
 
   constructor(value) {
     this.value = value;
@@ -90,19 +95,19 @@ export class UtfCodepoint {
     return new Uint8Array(String.fromCodePoint(this.value));
   }
 
-  inspect() {
+  [symbols.inspect]() {
     return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
 }
 
 export class Result extends Record {
   isOk() {
-    return "Ok" === this[variant];
+    return "Ok" === this[symbols.variant];
   }
 }
 
 export class Ok extends Result {
-  [variant] = "Ok";
+  [symbols.variant] = "Ok";
 
   constructor(value) {
     super();
@@ -111,7 +116,7 @@ export class Ok extends Result {
 }
 
 export class Error extends Result {
-  [variant] = "Error";
+  [symbols.variant] = "Error";
 
   constructor(detail) {
     super();
@@ -130,9 +135,7 @@ export function inspect(v) {
   if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
   if (v instanceof globalThis.Error)
     return `//js(new ${v.constructor.name}(${inspect(v.message)}))`;
-  try {
-    if (typeof v.inspect === "function") return v.inspect();
-  } catch (error) {}
+  if (v[symbols.inspect]) return v[symbols.inspect]();
   let entries = Object.entries(v);
   if (entries.length) {
     let properties = entries.map(([k, v]) => `${k}: ${inspect(v)}`).join(", ");
@@ -181,6 +184,6 @@ function sameTypeObjects(a, b) {
     a !== null &&
     b !== null &&
     (a.constructor === b.constructor ||
-      (a[variant] && a[variant] === b[variant]))
+      (a[symbols.variant] && a[symbols.variant] === b[symbols.variant]))
   );
 }
