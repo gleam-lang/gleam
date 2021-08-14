@@ -1,3 +1,5 @@
+// TODO: make equality work structurally with non-global Gleam prelude classes
+
 class Record {
   inspect() {
     let field = (label) => {
@@ -135,11 +137,12 @@ function equal(x, y) {
     const b = values.pop();
 
     if (a === b) continue;
-    if (a === null || a === undefined || b === null || b === undefined) return false;
-    if (typeof a === 'object' || typeof b === 'object') {
+    if (a === null || a === undefined || b === null || b === undefined)
+      return false;
+    if (typeof a === "object" || typeof b === "object") {
       if (a.valueOf() === b.valueOf()) continue;
       if (a.constructor !== b.constructor) return false;
-      
+
       if (a.constructor === Date) {
         if (dateEqual(a, b)) {
           continue;
