@@ -11,10 +11,6 @@ import {
   inspect,
 } from "./prelude.js";
 
-// TODO: test methods to be used by generated code
-// - result.isOk
-// - list.atLeastLength
-
 let failures = 0;
 let passes = 0;
 
@@ -287,6 +283,25 @@ assertEqual(inspect({ a: 1 }), "//js({ a: 1 })");
 assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
 assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
 assertEqual(inspect(new globalThis.Error("stuff")), '//js(new Error("stuff"))');
+
+// Result.isOk
+
+assertEqual(new Ok(1).isOk(), true);
+assertEqual(new Error(1).isOk(), false);
+
+// List.atLeastLength
+
+assertEqual(List.fromArray([]).atLeastLength(0), true);
+assertEqual(List.fromArray([]).atLeastLength(1), false);
+assertEqual(List.fromArray([]).atLeastLength(-1), true);
+assertEqual(List.fromArray([1]).atLeastLength(0), true);
+assertEqual(List.fromArray([1]).atLeastLength(1), true);
+assertEqual(List.fromArray([1]).atLeastLength(2), false);
+assertEqual(List.fromArray([1]).atLeastLength(-1), true);
+
+//
+// Summary
+//
 
 console.log(`
 
