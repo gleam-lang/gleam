@@ -140,51 +140,43 @@ function inspect(v) {
 function equal(x, y) {
   let values = [x, y];
 
-  while (values.length !== 0) {
-    const a = values.pop();
-    const b = values.pop();
-
+  while (values.length) {
+    let a = values.pop();
+    let b = values.pop();
     if (a === b) continue;
-    if (a === null || b === null) return false;
-    if (typeof a === "object" || typeof b === "object") {
-      if (a.valueOf() === b.valueOf()) continue;
-      if (a.constructor !== b.constructor) return false;
 
-      if (a.constructor === Date) {
-        if (dateEqual(a, b)) {
-          continue;
-        } else {
-          return false;
-        }
-      }
+    let unequal =
+      !sameTypeObjects(a, b) || unequalDates(a, b) || unequalArrayBuffers(a, b);
+    if (unequal) return false;
 
-      if (a.buffer instanceof ArrayBuffer && a.BYTES_PER_ELEMENT) {
-        if (typedArrayEqual(a, b)) {
-          continue;
-        } else {
-          return false;
-        }
-      }
-
-      for (const k of Object.getOwnPropertyNames(a)) {
-        values.push(a[k], b[k]);
-      }
-
-      continue;
+    for (const k of Object.getOwnPropertyNames(a)) {
+      values.push(a[k], b[k]);
     }
-
-    return false;
   }
 
   return true;
 }
 
-function dateEqual(a, b) {
-  return !(a > b || a < b);
+function unequalDates(a, b) {
+  return a instanceof Date && (a > b || a < b);
 }
 
-function typedArrayEqual(a, b) {
-  return a.byteLength === b.byteLength && a.every((n, i) => n === b[i]);
+function unequalArrayBuffers(a, b) {
+  return (
+    a.buffer instanceof ArrayBuffer &&
+    a.BYTES_PER_ELEMENT &&
+    !(a.byteLength === b.byteLength && a.every((n, i) => n === b[i]))
+  );
+}
+
+function sameTypeObjects(a, b) {
+  return (
+    typeof a === "object" &&
+    typeof b === "object" &&
+    a !== null &&
+    b !== null &&
+    a.constructor === b.constructor
+  );
 }
 
 // Tests
@@ -307,6 +299,23 @@ assertEqual(new Uint32Array([1, 2]), new Uint32Array([1, 2]));
 assertNotEqual(new Uint8Array([1, 3]), new Uint8Array([1, 2]));
 assertNotEqual(new Uint16Array([1, 3]), new Uint16Array([1, 2]));
 assertNotEqual(new Uint32Array([1, 3]), new Uint32Array([1, 2]));
+
+class ExampleA {
+  constructor(x) {
+    this.x = x;
+  }
+}
+
+class ExampleB {
+  constructor(x) {
+    this.x = x;
+  }
+}
+
+assertEqual(new ExampleA(1), new ExampleA(1));
+assertEqual(new ExampleB(1), new ExampleB(1));
+assertNotEqual(new ExampleA(1), new ExampleA(2));
+assertNotEqual(new ExampleA(1), new ExampleB(1));
 
 // Inspecting Gleam values
 
