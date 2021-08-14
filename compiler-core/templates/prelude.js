@@ -174,7 +174,7 @@ function dateEqual(a, b) {
 }
 
 function typedArrayEqual(a, b) {
-  return a.length === b.length && a.every((n, i) => n === b[i]);
+  return a.byteLength === b.byteLength && a.every((n, i) => n === b[i]);
 }
 
 console.log("");
