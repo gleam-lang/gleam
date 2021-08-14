@@ -191,10 +191,12 @@ function typedArrayEqual(a, b) {
 // Tests
 
 function assertEqual(a, b) {
+  process.stdout.write(".");
   console.assert(equal(a, b), `\n\t${inspect(a)}\n\t  !=\n\t${inspect(b)}`);
 }
 
 function assertNotEqual(a, b) {
+  process.stdout.write(".");
   console.assert(!equal(a, b), `\n\t${inspect(a)}\n\t  ==\n\t${inspect(b)}`);
 }
 
@@ -207,7 +209,8 @@ class ExampleRecordImpl extends Record {
   }
 }
 
-console.log("\nRunning tests...");
+let fmt = new Intl.DateTimeFormat("en-GB", { timeStyle: "medium" });
+console.log(`\nRunning tests at ${fmt.format(new Date())}`);
 
 // Equality of Gleam values
 
@@ -342,4 +345,4 @@ assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
 assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
 assertEqual(inspect(new globalThis.Error("stuff")), '//js(new Error("stuff"))');
 
-console.log("Done.");
+console.log("\nDone.");
