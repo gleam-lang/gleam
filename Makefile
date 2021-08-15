@@ -17,17 +17,23 @@ install: ## Build the Gleam compiler and place it on PATH
 .PHONY: test
 test: ## Run the compiler unit tests
 	cargo test
+	cd test/language && make
+	cd test/javascript_prelude && npm test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
 	cd test/language && make
+
+.PHONY: language-test-watch
+language-test-watch: ## Run the language integration tests for all targets when files change
+	watchexec "cd test/language && make"
 
 .PHONY: javascript-prelude-test
 javascript-prelude-test: ## Run the JavaScript prelude core tests
 	cd test/javascript_prelude && npm test
 
 .PHONY: javascript-prelude-test-watch
-javascript-prelude-test-watch: ## Run the JavaScript prelude core tests
+javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when files change
 	watchexec "cd test/javascript_prelude && npm test"
 
 .PHONY: test-watch

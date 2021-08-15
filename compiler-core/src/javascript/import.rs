@@ -14,11 +14,16 @@ use crate::{
 #[derive(Debug, Default)]
 pub(crate) struct Imports<'a> {
     imports: HashMap<String, Import<'a>>,
+    exports: HashSet<String>,
 }
 
 impl<'a> Imports<'a> {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn register_export(&mut self, export: String) {
+        let _ = self.exports.insert(export);
     }
 
     pub fn register_module(
@@ -36,16 +41,36 @@ impl<'a> Imports<'a> {
     }
 
     pub fn into_doc(self) -> Document<'a> {
-        concat(
+        let imports = concat(
             self.imports
                 .into_values()
                 .sorted_by(|a, b| a.path.cmp(&b.path))
                 .map(Import::into_doc),
-        )
+        );
+
+        if self.exports.is_empty() {
+            imports
+        } else {
+            let names = concat(Itertools::intersperse(
+                self.exports.into_iter().sorted().map(Document::String),
+                break_(",", ", "),
+            ));
+            let names = docvec![
+                docvec![break_("", " "), names].nest(INDENT),
+                break_(",", " ")
+            ]
+            .group();
+            imports
+                .append(line())
+                .append("export {")
+                .append(names)
+                .append("};")
+                .append(line())
+        }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.imports.is_empty()
+        self.imports.is_empty() && self.exports.is_empty()
     }
 }
 
