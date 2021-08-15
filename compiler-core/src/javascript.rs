@@ -162,10 +162,6 @@ impl<'a> Generator<'a> {
                 self.global_external_function(*public, name, arguments, fun)
             )],
 
-            Statement::ExternalFn { public, name, .. } if *public => {
-                vec![Ok(self.imported_external_function(name))]
-            }
-
             Statement::ExternalFn { .. } => vec![],
         }
     }
@@ -181,10 +177,15 @@ impl<'a> Generator<'a> {
                 | Statement::ExternalType { .. }
                 | Statement::ModuleConstant { .. } => (),
                 Statement::ExternalFn { module, .. } if module.is_empty() => (),
+                Statement::Import { module, .. } if module == &["gleam"] => (),
 
                 Statement::ExternalFn {
-                    name, module, fun, ..
-                } => self.register_external_function(&mut imports, name, module, fun),
+                    public,
+                    name,
+                    module,
+                    fun,
+                    ..
+                } => self.register_external_function(&mut imports, *public, name, module, fun),
 
                 Statement::Import {
                     module,
@@ -264,6 +265,7 @@ impl<'a> Generator<'a> {
     fn register_external_function(
         &mut self,
         imports: &mut Imports<'a>,
+        public: bool,
         name: &'a str,
         module: &'a str,
         fun: &'a str,
@@ -276,6 +278,9 @@ impl<'a> Generator<'a> {
                 Some(maybe_escape_identifier_doc(name))
             },
         };
+        if public {
+            imports.register_export(maybe_escape_identifier_string(name))
+        }
         imports.register_module(module.to_string(), iter::empty(), iter::once(member));
     }
 
@@ -338,12 +343,6 @@ impl<'a> Generator<'a> {
             line(),
             "}",
         ])
-    }
-
-    fn imported_external_function(&mut self, name: &'a str) -> Document<'a> {
-        let name = maybe_escape_identifier_doc(name);
-        // TODO: move to imports
-        "export { ".to_doc().append(name).append(" };")
     }
 
     fn global_external_function<T>(

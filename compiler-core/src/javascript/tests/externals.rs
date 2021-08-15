@@ -70,9 +70,7 @@ pub external fn two() -> Nil = "./the/module.js" "two"
 "#,
         r#"import { one, two } from "./the/module.js";
 
-export { one };
-
-export { two };
+export { one, two };
 "#
     );
 }
@@ -85,9 +83,7 @@ pub external fn two() -> Nil = "./the/module.js" "dup"
 "#,
         r#"import { dup as one, dup as two } from "./the/module.js";
 
-export { one };
-
-export { two };
+export { one, two };
 "#
     );
 }
