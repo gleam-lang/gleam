@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\nfn go() {\n  \"Hello, Gleam!\"\n}\n"
+
+---
+function go() {
+  return "Hello, Gleam!";
+}
+

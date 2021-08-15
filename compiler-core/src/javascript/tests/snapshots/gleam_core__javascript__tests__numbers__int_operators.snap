@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go() {\n    1 + 1 // => 2\n    5 - 1 // => 4\n    5 / 2 // => 2\n    3 * 3 // => 9\n    5 % 2 // => 1\n    2 > 1  // => True\n    2 < 1  // => False\n    2 >= 1 // => True\n    2 <= 1 // => False\n}\n"
+
+---
+function go() {
+  1 + 1;
+  5 - 1;
+  5 / 2 | 0;
+  Math.imul(3, 3);
+  5 % 2;
+  2 > 1;
+  2 < 1;
+  2 >= 1;
+  return 2 <= 1;
+}
+

@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/try_.rs
+expression: "pub fn main(x, y) {\n  try _ = x\n  try _ = y\n  x\n}"
+
+---
+export function main(x, y) {
+  if (x.type === "Error") return x;
+  if (y.type === "Error") return y;
+  return x;
+}
+

@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/prelude.rs
+expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
+
+---
+export function go() {
+  return { type: "Ok", 0: 1 };
+}
+

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go() {\n    1.5\n    2.0\n    -0.1\n    1.\n}\n"
+
+---
+function go() {
+  1.5;
+  2.0;
+  -0.1;
+  return 1.;
+}
+

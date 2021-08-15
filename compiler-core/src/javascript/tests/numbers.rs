@@ -15,17 +15,6 @@ fn go() {
     1_000
 }
 "#,
-        r#"function go() {
-  1;
-  2;
-  -3;
-  4001;
-  0b00001111;
-  0o17;
-  0xF;
-  return 1_000;
-}
-"#
     );
 }
 
@@ -40,13 +29,6 @@ fn go() {
     1.
 }
 "#,
-        r#"function go() {
-  1.5;
-  2.0;
-  -0.1;
-  return 1.;
-}
-"#
     );
 }
 
@@ -66,18 +48,6 @@ fn go() {
     2 <= 1 // => False
 }
 "#,
-        r#"function go() {
-  1 + 1;
-  5 - 1;
-  5 / 2 | 0;
-  Math.imul(3, 3);
-  5 % 2;
-  2 > 1;
-  2 < 1;
-  2 >= 1;
-  return 2 <= 1;
-}
-"#
     );
 }
 #[test]
@@ -96,22 +66,6 @@ fn go() {
     2.0 <=. 1.0 // => False
 }
 "#,
-        r#"function go() {
-  1.0 + 1.4;
-  5.0 - 1.5;
-  $divide(5.0, 2.0);
-  3.0 * 3.1;
-  2.0 > 1.0;
-  2.0 < 1.0;
-  2.0 >= 1.0;
-  return 2.0 <= 1.0;
-}
-
-function $divide(a, b) {
-  if (b === 0) return 0;
-  return a / b;
-}
-"#
     );
 
     assert_js!(
@@ -120,18 +74,6 @@ fn go() {
   111111111111111111111111111111. /. 22222222222222222222222222222222222.
 }
 "#,
-        r#"function go() {
-  return $divide(
-    111111111111111111111111111111.,
-    22222222222222222222222222222222222.
-  );
-}
-
-function $divide(a, b) {
-  if (b === 0) return 0;
-  return a / b;
-}
-"#
     );
 }
 
@@ -143,11 +85,6 @@ fn go(x) {
   let 4 = x
 }
 "#,
-        r#"function go(x) {
-  if (x !== 4) throw new Error("Bad match");
-  return x;
-}
-"#
     );
 }
 
@@ -160,11 +97,6 @@ fn go() {
   1 == 2
 }
 "#,
-        r#"function go() {
-  1 !== 2;
-  return 1 === 2;
-}
-"#
     );
 
     assert_js!(
@@ -174,11 +106,6 @@ fn go(y) {
   x == y
 }
 "#,
-        r#"function go(y) {
-  let x = 1;
-  return x === y;
-}
-"#
     );
 }
 
@@ -191,11 +118,6 @@ fn go() {
   1.0 == 2.0
 }
 "#,
-        r#"function go() {
-  1.0 !== 2.0;
-  return 1.0 === 2.0;
-}
-"#
     );
 
     assert_js!(
@@ -205,11 +127,6 @@ fn go(y) {
   x == y
 }
 "#,
-        r#"function go(y) {
-  let x = 1.0;
-  return x === y;
-}
-"#
     );
 }
 
@@ -221,9 +138,5 @@ fn go() {
   2.4 *. { 3.5 +. 6.0 }
 }
 "#,
-        r#"function go() {
-  return 2.4 * (3.5 + 6.0);
-}
-"#
     )
 }

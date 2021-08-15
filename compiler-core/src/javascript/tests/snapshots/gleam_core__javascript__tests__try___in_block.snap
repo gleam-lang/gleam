@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/try_.rs
+expression: "pub fn main(x) {\n  let y = {\n    try z = x\n    Ok(z + 1)\n  }\n  y\n}"
+
+---
+export function main(x) {
+  let y = (() => {
+    if (x.type === "Error") return x;
+    let z = x[0];
+
+    return { type: "Ok", 0: z + 1 };
+  })();
+  return y;
+}
+

@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/todo.rs
+expression: "\nfn go(f) {\n  let boop = todo(\"I should do this\")\n  f(todo(\"Boom\"))\n};\n"
+
+---
+function go(f) {
+  let boop = (() => {
+    throw Object.assign(
+      new Error("I should do this"),
+      { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
+    );
+  })();
+  return f(
+    (() => {
+      throw Object.assign(
+        new Error("Boom"),
+        { gleam_error: "todo", module: "my/mod", function: "go", line: 4 }
+      );
+    })(),
+  );
+}
+

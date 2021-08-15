@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/prelude.rs
+expression: "import gleam\npub fn go() { gleam.Nil }\n"
+
+---
+export function go() {
+  return undefined;
+}
+
