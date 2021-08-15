@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\nconst a = True\n\nfn go() {\n  a\n  let a = 10\n  a + 20\n}\n\nfn second() {\n  let a = 10\n  a + 20\n}\n"
+
+---
+const a = true;
+
+function go() {
+  a;
+  let a$1 = 10;
+  return a$1 + 20;
+}
+
+function second() {
+  let a$1 = 10;
+  return a$1 + 20;
+}
+

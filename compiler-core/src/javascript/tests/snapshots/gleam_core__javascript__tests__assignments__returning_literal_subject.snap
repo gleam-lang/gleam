@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "fn go(x) { assert 1 = x + 1 }"
+
+---
+function go(x) {
+  let $ = x + 1;
+  if ($ !== 1) throw new Error("Bad match");
+  return $;
+}
+

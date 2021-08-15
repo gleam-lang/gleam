@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "pub fn main(x) {\n  let x = False\n  x\n}\n"
+
+---
+export function main(x) {
+  let x$1 = false;
+  return x$1;
+}
+
