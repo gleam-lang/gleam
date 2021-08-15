@@ -11,10 +11,6 @@ fn go(x) {
   }
 }
 "#,
-        r#"function go(x) {
-  return x;
-}
-"#
     )
 }
 
@@ -30,17 +26,6 @@ fn go(x) {
   }
 }
 "#,
-        r#"function go(x) {
-  if (x) {
-    throw Object.assign(
-      new Error("This has not yet been implemented"),
-      { gleam_error: "todo", module: "my/mod", function: "go", line: 4 }
-    );
-  } else {
-    return 1;
-  }
-}
-"#
     )
 }
 
@@ -55,14 +40,6 @@ fn go(x, y) {
   }
 }
 "#,
-        r#"function go(x, y) {
-  if (x && y) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     )
 }
 
@@ -77,16 +54,6 @@ fn go(x, y) {
   }
 }
 "#,
-        r#"function go(x, y) {
-  if (x) {
-    return 1;
-  } else if (y) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     )
 }
 
@@ -102,18 +69,6 @@ fn go(x, y) {
   }
 }
 "#,
-        r#"function go(x, y) {
-  if (x) {
-    return 1;
-  } else if (y) {
-    return 2;
-  } else if (!x && !y) {
-    return 0;
-  } else {
-    throw new Error("Bad match");
-  }
-}
-"#
     )
 }
 
@@ -128,16 +83,6 @@ fn go() {
   }
 }
 "#,
-        r#"function go() {
-  let $ = true;
-  let $1 = false;
-  if ($ && $1) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     )
 }
 
@@ -153,17 +98,6 @@ fn go(x) {
   y
 }
 "#,
-        r#"function go(x) {
-  let y = (() => {
-    if (x) {
-      return 1;
-    } else {
-      return 0;
-    }
-  })();
-  return y;
-}
-"#
     )
 }
 
@@ -179,17 +113,5 @@ fn go(x) {
   y
 }
 "#,
-        r#"function go(x) {
-  let y = (() => {
-    let $ = x();
-    if ($) {
-      return 1;
-    } else {
-      return 0;
-    }
-  })();
-  return y;
-}
-"#
     )
 }

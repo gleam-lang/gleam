@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x) {\n  let y = case x() {\n    True -> 1\n    _ -> 0\n  }\n  y\n}\n"
+
+---
+function go(x) {
+  let y = (() => {
+    let $ = x();
+    if ($) {
+      return 1;
+    } else {
+      return 0;
+    }
+  })();
+  return y;
+}
+

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x, y) {\n  case x, y {\n    True, True -> 1\n    _, _ -> 0\n  }\n}\n"
+
+---
+function go(x, y) {
+  if (x && y) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+

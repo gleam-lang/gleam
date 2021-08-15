@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\ntype TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\nfn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
+
+---
+function go() {
+  return (var0, var1, var2, var3, var4) => {
+    return {
+      type: "TypeWithALongNameAndSeveralArguments",
+      0: var0,
+      1: var1,
+      2: var2,
+      3: var3,
+      4: var4
+    };
+  };
+}
+
