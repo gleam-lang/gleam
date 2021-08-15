@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/bit_strings.rs
 expression: "\nfn go(x) {\n  <<x:bit_string, \"Gleam\":utf8>>\n}\n"
 
 ---
-import { toBitString } from "../gleam.js";
+import { toBitString, stringBits } from "../gleam.js";
 
 function go(x) {
-  return toBitString([x.buffer, new globalThis.TextEncoder().encode("Gleam")]);
+  return toBitString([x.buffer, stringBits("Gleam")]);
 }
 

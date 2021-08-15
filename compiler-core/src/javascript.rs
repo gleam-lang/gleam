@@ -66,6 +66,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toBitString");
         };
 
+        if self.tracker.string_bit_string_segment_used {
+            self.register_prelude_usage(&mut imports, "stringBits");
+        };
+
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {

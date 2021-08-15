@@ -166,13 +166,12 @@ impl<'module> Generator<'module> {
                 [] => Ok(value),
 
                 // UTF8 strings
-                // TODO: move encoding into prelude BitString
                 [Opt::Utf8 { .. }] => {
-                    Ok(docvec!["new globalThis.TextEncoder().encode(", value, ")"])
+                    self.tracker.string_bit_string_segment_used = true;
+                    Ok(docvec!["stringBits(", value, ")"])
                 }
 
                 // UTF8 codepoints (which are ints at runtime)
-                // TODO: move encoding into prelude BitString
                 [Opt::Utf8Codepoint { .. }] => Ok(docvec![
                     "new globalThis.TextEncoder().encode(globalThis.String.fromCodePoint(",
                     value,
