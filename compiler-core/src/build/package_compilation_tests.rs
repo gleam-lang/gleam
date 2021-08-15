@@ -10,7 +10,7 @@ use crate::{
     config::{BuildTool, Docs, PackageConfig, Repository},
     erl,
     io::test::FilesChannel,
-    type_,
+    javascript, type_,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -21,6 +21,31 @@ macro_rules! assert_erlang_compile {
         let mut modules = HashMap::new();
         let options = Options {
             target: Target::Erlang,
+            name: "the_package".to_string(),
+            src_path: PathBuf::from("_build/default/lib/the_package/src"),
+            out_path: PathBuf::from("_build/default/lib/the_package/src"),
+            test_path: None,
+        };
+        let (file_writer, file_receiver) = FilesChannel::new();
+        let mut compiler = PackageCompiler::new(options, file_writer);
+        compiler.sources = $sources;
+        let outputs = compiler
+            .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
+            .map(|_| {
+                let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
+                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+                outputs
+            })
+            .map_err(|e| normalise_error(e));
+        assert_eq!($expected_output, outputs);
+    };
+}
+
+macro_rules! assert_javascript_compile {
+    ($sources:expr, $expected_output:expr  $(,)?) => {
+        let mut modules = HashMap::new();
+        let options = Options {
+            target: Target::JavaScript,
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
             out_path: PathBuf::from("_build/default/lib/the_package/src"),
@@ -1926,6 +1951,46 @@ const x = two.A"#
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.erl"),
                 text: "-module(two).\n".to_string(),
+            }
+        ]),
+    );
+}
+
+#[test]
+fn javascript_package() {
+    assert_javascript_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one/two.gleam"),
+                name: "one/two".to_string(),
+                code: "pub type A { A }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: r#"import one/two
+const x = two.A"#
+                    .to_string(),
+            },
+        ],
+        Ok(vec![
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/gleam.js"),
+                text: javascript::PRELUDE.to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/one/two.js"),
+                text: "export {};\n".to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/src/two.js"),
+                text: r#"import * as Two from "./one/two.js";
+
+const x = { type: "A" };
+"#
+                .to_string(),
             }
         ]),
     );

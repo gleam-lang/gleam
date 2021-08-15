@@ -14,6 +14,8 @@ use self::import::{Imports, Member};
 
 const INDENT: isize = 2;
 
+pub const PRELUDE: &str = include_str!("../templates/prelude.js");
+
 const DEEP_EQUAL: &str = "
 
 function $equal(x, y) {

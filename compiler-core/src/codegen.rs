@@ -1,6 +1,11 @@
 use crate::{
-    build::Module, config::PackageConfig, erl, io::FileSystemWriter, javascript,
-    line_numbers::LineNumbers, Result,
+    build::Module,
+    config::PackageConfig,
+    erl,
+    io::{FileSystemWriter, Utf8Writer},
+    javascript,
+    line_numbers::LineNumbers,
+    Result,
 };
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
@@ -139,6 +144,15 @@ impl<'a> JavaScript<'a> {
             let js_name = module.name.clone();
             self.js_module(writer, module, &js_name)?
         }
+        self.write_prelude(writer)?;
+        Ok(())
+    }
+
+    fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
+        tracing::trace!("Generated js prelude");
+        writer
+            .open(&self.output_directory.join("gleam.js"))?
+            .str_write(javascript::PRELUDE)?;
         Ok(())
     }
 
@@ -159,7 +173,7 @@ impl<'a> JavaScript<'a> {
             &module.code,
             &mut file,
         );
-        tracing::trace!(name = ?name, "Generated js module");
+        tracing::trace!(name = ?js_name, "Generated js module");
         res
     }
 }
