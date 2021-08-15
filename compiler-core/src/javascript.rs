@@ -50,6 +50,10 @@ impl<'a> Generator<'a> {
 
         // Import any prelude functions that have been used
 
+        if self.tracker.list_used {
+            self.register_prelude_usage(&mut imports, "toList");
+        };
+
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
@@ -265,7 +269,7 @@ impl<'a> Generator<'a> {
             head,
             maybe_escape_identifier_doc(name),
             " = ",
-            expression::constant_expression(value)?,
+            expression::constant_expression(&mut self.tracker, value)?,
             ";",
         ])
     }
@@ -506,6 +510,7 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
 
 #[derive(Debug, Default)]
 pub(crate) struct UsageTracker {
+    pub list_used: bool,
     pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,

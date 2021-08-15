@@ -22,11 +22,9 @@ export class List {
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
-  static fromArray(array) {
-    return array.reduceRight(
-      (list, element) => new NonEmpty(element, list),
-      new Empty()
-    );
+  static fromArray(array, tail) {
+    let t = tail || new Empty();
+    return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
   }
 
   toArray() {
@@ -49,9 +47,23 @@ export class List {
     return desired <= 0;
   }
 
+  hasLength(desired) {
+    let current = this;
+    while (!current.isEmpty()) {
+      if (desired <= 0) return false;
+      desired--;
+      current = current.tail;
+    }
+    return desired == 0;
+  }
+
   isEmpty() {
     return "EmptyList" == this[symbols.variant];
   }
+}
+
+export function toList(elements, tail) {
+  return List.fromArray(elements, tail);
 }
 
 export class Empty extends List {
@@ -66,10 +78,6 @@ export class NonEmpty extends List {
     this.head = head;
     this.tail = tail;
   }
-}
-
-export function toList(array) {
-  return List.fromArray(array);
 }
 
 export class BitString {

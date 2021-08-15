@@ -5,10 +5,10 @@ expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] ->
 ---
 export function count(xs, n) {
   while (true) {
-    if (xs?.length === 0) {
+    if (xs.hasLength(0)) {
       return n;
-    } else if (xs?.[1]?.length !== undefined) {
-      let xs$1 = xs[1];
+    } else if (xs.atLeastLength(1)) {
+      let xs$1 = xs.tail;
       xs = xs$1;
       n = n + 1;
     } else {

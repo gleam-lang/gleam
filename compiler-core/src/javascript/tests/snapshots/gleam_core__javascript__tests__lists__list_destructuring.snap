@@ -4,22 +4,19 @@ expression: "\nfn go(x, y) {\n  let [] = x\n  let [a] = x\n  let [1, 2] = x\n  l
 
 ---
 function go(x, y) {
-  if (x?.length !== 0) throw new Error("Bad match");
-  if (x?.[1]?.length !== 0) throw new Error("Bad match");
-  let a = x[0];
+  if (!x.hasLength(0)) throw new Error("Bad match");
+  if (!x.hasLength(1)) throw new Error("Bad match");
+  let a = x.head;
   if (
-    x?.[1]?.[1]?.length !== 0 ||
-    x[0] !== 1 ||
-    x[1][0] !== 2
+    !x.hasLength(2) ||
+    x.head !== 1 ||
+    x.tail.head !== 2
   ) throw new Error("Bad match");
-  if (
-    y?.[1]?.[1]?.length !== 0 ||
-    y[1][0][0] !== 3
-  ) throw new Error("Bad match");
-  let b = y[1][0][1];
-  if (y?.[1]?.length === undefined) throw new Error("Bad match");
-  let head = y[0];
-  let tail = y[1];
+  if (!y.hasLength(2) || y.tail.head[0] !== 3) throw new Error("Bad match");
+  let b = y.tail.head[1];
+  if (!y.atLeastLength(1)) throw new Error("Bad match");
+  let head = y.head;
+  let tail = y.tail;
   return y;
 }
 

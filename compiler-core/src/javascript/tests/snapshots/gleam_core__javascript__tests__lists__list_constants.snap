@@ -3,7 +3,9 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nconst a = []\nconst b = [1, 2, 3]\n"
 
 ---
-const a = [];
+import { toList } from "../gleam.js";
 
-const b = [1, [2, [3, []]]];
+const a = toList([]);
+
+const b = toList([1, 2, 3]);
 

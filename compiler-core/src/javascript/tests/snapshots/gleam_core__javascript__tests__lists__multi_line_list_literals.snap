@@ -3,13 +3,14 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go(x) {\n    [{True; 1}]\n}\n"
 
 ---
+import { toList } from "../gleam.js";
+
 function go(x) {
-  return [
+  return toList([
     (() => {
       true;
       return 1;
     })(),
-    [],
-  ];
+  ]);
 }
 

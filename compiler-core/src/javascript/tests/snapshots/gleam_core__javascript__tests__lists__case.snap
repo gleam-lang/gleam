@@ -4,11 +4,11 @@ expression: "\nfn go(xs) {\n  case xs {\n    [] -> 0\n    [_] -> 1\n    [_, _] -
 
 ---
 function go(xs) {
-  if (xs?.length === 0) {
+  if (xs.hasLength(0)) {
     return 0;
-  } else if (xs?.[1]?.length === 0) {
+  } else if (xs.hasLength(1)) {
     return 1;
-  } else if (xs?.[1]?.[1]?.length === 0) {
+  } else if (xs.hasLength(2)) {
     return 2;
   } else {
     return 9999;
