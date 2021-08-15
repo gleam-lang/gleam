@@ -1,11 +1,10 @@
 import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import gleam
-import ffi
 
 pub fn main() -> Int {
   let stats =
-    [
+    test.run([
       suite("try", try_tests()),
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
@@ -22,8 +21,7 @@ pub fn main() -> Int {
       suite("tail call optimisation", tail_call_optimisation_tests()),
       suite("alternative patterns", alternative_patterns_tests()),
       suite("multiple case subjects", multiple_case_subjects()),
-    ]
-    |> test.run()
+    ])
 
   case stats.failures {
     0 -> 0
