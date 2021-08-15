@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "pub fn x() { \n  Nil\n}\n        \npub fn main() {\n  let x = False\n  x\n}\n"
+
+---
+export function x() {
+  return undefined;
+}
+
+export function main() {
+  let x$1 = false;
+  return x$1;
+}
+

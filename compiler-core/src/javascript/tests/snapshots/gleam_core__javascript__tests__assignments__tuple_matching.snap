@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\nfn go(x) {\n  let #(1, 2) = x\n}\n"
+
+---
+function go(x) {
+  if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
+  return x;
+}
+

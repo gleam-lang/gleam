@@ -8,33 +8,14 @@ fn go(x) {
   let #(1, 2) = x
 }
 "#,
-        r#"function go(x) {
-  if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
-  return x;
-}
-"#
     )
 }
 
 #[test]
 fn assert() {
-    assert_js!(
-        r#"fn go(x) { assert 1 = x }"#,
-        r#"function go(x) {
-  if (x !== 1) throw new Error("Bad match");
-  return x;
-}
-"#
-    );
+    assert_js!(r#"fn go(x) { assert 1 = x }"#,);
 
-    assert_js!(
-        r#"fn go(x) { assert #(1, 2) = x }"#,
-        r#"function go(x) {
-  if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
-  return x;
-}
-"#
-    );
+    assert_js!(r#"fn go(x) { assert #(1, 2) = x }"#,);
 }
 
 #[test]
@@ -45,15 +26,6 @@ fn go(x) {
   let #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
-        r#"function go(x) {
-  if (x[1][2] !== 2 || x[3] !== 1) throw new Error("Bad match");
-  let a = x[0];
-  let t = x[1];
-  let b = x[1][0];
-  let c = x[1][1];
-  return x;
-}
-"#
     )
 }
 
@@ -80,24 +52,6 @@ fn go(x, foo) {
   x
 }
 "#,
-        r#"function go(x, foo) {
-  let a = 1;
-  foo(a);
-  let a$1 = 2;
-  foo(a$1);
-  if (x[1] !== 3) throw new Error("Bad match");
-  let a$2 = x[0];
-  let b = a$2;
-  foo(b);
-  let c = (() => {
-    let a$3 = a$2;
-    return [a$3, b];
-  })();
-  foo(a$2);
-  let x$1 = c;
-  return x$1;
-}
-"#
     )
 }
 
@@ -118,33 +72,12 @@ fn second() {
   a + 20
 }
 "#,
-        r#"const a = true;
-
-function go() {
-  a;
-  let a$1 = 10;
-  return a$1 + 20;
-}
-
-function second() {
-  let a$1 = 10;
-  return a$1 + 20;
-}
-"#
     );
 }
 
 #[test]
 fn returning_literal_subject() {
-    assert_js!(
-        r#"fn go(x) { assert 1 = x + 1 }"#,
-        r#"function go(x) {
-  let $ = x + 1;
-  if ($ !== 1) throw new Error("Bad match");
-  return $;
-}
-"#
-    );
+    assert_js!(r#"fn go(x) { assert 1 = x + 1 }"#,);
 }
 
 #[test]
@@ -155,11 +88,6 @@ fn rebound_argument() {
   x
 }
 "#,
-        r#"export function main(x) {
-  let x$1 = false;
-  return x$1;
-}
-"#
     );
 }
 
@@ -175,15 +103,6 @@ pub fn main() {
   x
 }
 "#,
-        r#"export function x() {
-  return undefined;
-}
-
-export function main() {
-  let x$1 = false;
-  return x$1;
-}
-"#
     );
 }
 
@@ -199,15 +118,6 @@ pub fn main(x) {
   x
 }
 "#,
-        r#"export function x() {
-  return undefined;
-}
-
-export function main(x) {
-  let x$1 = false;
-  return x$1;
-}
-"#
     );
 }
 
@@ -219,11 +129,5 @@ fn variable_used_in_pattern_and_assignment() {
   x
 }
 "#,
-        r#"export function main(x) {
-  let $ = [x];
-  let x$1 = $[0];
-  return x$1;
-}
-"#
     );
 }
