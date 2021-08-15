@@ -61,3 +61,45 @@ fn same_name_global_external() {
 "#
     );
 }
+
+#[test]
+fn same_module_multiple_imports() {
+    assert_js!(
+        r#"pub external fn one() -> Nil = "./the/module.js" "one"
+pub external fn two() -> Nil = "./the/module.js" "two"
+"#,
+        r#"import { one, two } from "./the/module.js";
+
+export { one };
+
+export { two };
+"#
+    );
+}
+
+#[test]
+fn duplicate_import() {
+    assert_js!(
+        r#"pub external fn one() -> Nil = "./the/module.js" "dup"
+pub external fn two() -> Nil = "./the/module.js" "dup"
+"#,
+        r#"import { dup as one, dup as two } from "./the/module.js";
+
+export { one };
+
+export { two };
+"#
+    );
+}
+
+#[test]
+fn name_to_escape() {
+    assert_js!(
+        r#"pub external fn class() -> Nil = "./the/module.js" "one"
+"#,
+        r#"import { one as class$ } from "./the/module.js";
+
+export { class$ };
+"#
+    );
+}
