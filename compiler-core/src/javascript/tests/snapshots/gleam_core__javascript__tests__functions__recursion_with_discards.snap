@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main(f, _) {\n  f()\n  main(f, 1)\n}\n"
+
+---
+export function main(f, _) {
+  while (true) {
+    f();
+    f = f;
+    1;
+  }
+}
+

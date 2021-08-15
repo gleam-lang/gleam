@@ -9,10 +9,6 @@ fn exported_functions() {
 pub fn add(x, y) {
     x + y
 }"#,
-        r#"export function add(x, y) {
-  return x + y;
-}
-"#
     );
 }
 
@@ -21,35 +17,19 @@ fn calling_functions() {
     assert_js!(
         r#"
 pub fn twice(f: fn(t) -> t, x: t) -> t {
-    f(f(x))
+  f(f(x))
 }
 pub fn add_one(x: Int) -> Int {
-    x + 1
+  x + 1
 }
 pub fn add_two(x: Int) -> Int {
-    twice(add_one, x)
+  twice(add_one, x)
 }
 
 pub fn take_two(x: Int) -> Int {
-    twice(fn(y) {y - 1}, x)
+  twice(fn(y) {y - 1}, x)
 }
 "#,
-        r#"export function twice(f, x) {
-  return f(f(x));
-}
-
-export function add_one(x) {
-  return x + 1;
-}
-
-export function add_two(x) {
-  return twice(add_one, x);
-}
-
-export function take_two(x) {
-  return twice((y) => { return y - 1; }, x);
-}
-"#
     );
 }
 
@@ -60,13 +40,6 @@ fn function_formatting() {
 pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {
   the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
 }"#,
-        r#"export function add(
-  the_first_variable_that_should_be_added,
-  the_second_variable_that_should_be_added
-) {
-  return the_first_variable_that_should_be_added + the_second_variable_that_should_be_added;
-}
-"#
     );
 
     assert_js!(
@@ -74,13 +47,6 @@ pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_sho
 pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
 x + y
 }"#,
-        r#"export function this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(
-  x,
-  y
-) {
-  return x + y;
-}
-"#
     );
 
     assert_js!(
@@ -92,38 +58,6 @@ x + y
 pub fn long() {
   add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1)))))))))))))))
 }"#,
-        r#"export function add(x, y) {
-  return x + y;
-}
-
-export function long() {
-  return add(
-    1,
-    add(
-      1,
-      add(
-        1,
-        add(
-          1,
-          add(
-            1,
-            add(
-              1,
-              add(
-                1,
-                add(
-                  1,
-                  add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1))))))),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
-}
-"#
     );
 
     assert_js!(
@@ -135,14 +69,6 @@ pub fn math(x, y) {
     2 * x
   }
 }"#,
-        r#"export function math(x, y) {
-  return () => {
-    x + y;
-    x - y;
-    return Math.imul(2, x);
-  };
-}
-"#
     );
 }
 
@@ -157,20 +83,6 @@ pub fn count(xs, n) {
   }
 }
 "#,
-        r#"export function count(xs, n) {
-  while (true) {
-    if (xs?.length === 0) {
-      return n;
-    } else if (xs?.[1]?.length !== undefined) {
-      let xs$1 = xs[1];
-      xs = xs$1;
-      n = n + 1;
-    } else {
-      throw new Error("Bad match");
-    }
-  }
-}
-"#
     );
 }
 
@@ -185,19 +97,6 @@ pub fn loop(indentation) {
   }
 }
 "#,
-        r#"export function loop(indentation) {
-  while (true) {
-    let $ = indentation > 0;
-    if ($) {
-      indentation = indentation - 1;
-    } else if (!$) {
-      return undefined;
-    } else {
-      throw new Error("Bad match");
-    }
-  }
-}
-"#
     );
 }
 
@@ -210,15 +109,6 @@ pub fn main() {
   |> id
 }
 "#,
-        r#"function id(x) {
-  return x;
-}
-
-export function main() {
-  let _pipe = 1;
-  return id(_pipe);
-}
-"#
     );
 }
 
@@ -229,10 +119,6 @@ fn calling_fn_literal() {
   fn(x) { x }(1)
 }
 "#,
-        r#"export function main() {
-  return ((x) => { return x; })(1);
-}
-"#
     );
 }
 
@@ -246,11 +132,6 @@ fn shadowing_current() {
   main()
 }
 "#,
-        r#"export function main() {
-  let main$1 = () => { return 0; };
-  return main$1();
-}
-"#
     );
 }
 
@@ -262,14 +143,6 @@ fn recursion_with_discards() {
   main(f, 1)
 }
 "#,
-        r#"export function main(f, _) {
-  while (true) {
-    f();
-    f = f;
-    1;
-  }
-}
-"#
     );
 }
 
@@ -281,11 +154,6 @@ fn no_recur_in_anon_fn() {
   1
 }
 "#,
-        r#"export function main() {
-  () => { return main(); };
-  return 1;
-}
-"#
     );
 }
 
@@ -299,18 +167,6 @@ fn case_in_call() {
   })
 }
 "#,
-        r#"export function main(f, x) {
-  return f(
-    (() => {
-      if (x === 1) {
-        return 2;
-      } else {
-        return 0;
-      }
-    })(),
-  );
-}
-"#
     );
 }
 
@@ -321,10 +177,6 @@ fn reserved_word_fn() {
   Nil
 }
 "#,
-        r#"export function class$() {
-  return undefined;
-}
-"#
     );
 }
 
@@ -387,12 +239,6 @@ pub fn export() {
   in
 }
 "#,
-        r#"const in$ = 1;
-
-export function export$() {
-  return in$;
-}
-"#
     );
 }
 
@@ -404,10 +250,6 @@ fn reserved_word_argument() {
   with
 }
 "#,
-        r#"export function main(with$) {
-  return with$;
-}
-"#
     );
 }
 
@@ -419,10 +261,6 @@ fn multiple_discard() {
   1
 }
 "#,
-        r#"export function main(_, _1, _2) {
-  return 1;
-}
-"#
     );
 }
 
@@ -433,12 +271,6 @@ fn keyword_in_recursive_function() {
   main(with - 1)
 }
 "#,
-        r#"export function main(with$) {
-  while (true) {
-    with$ = with$ - 1;
-  }
-}
-"#
     );
 }
 
@@ -449,9 +281,5 @@ fn reserved_word_in_function_arguments() {
   #(arguments, eval)
 }
 "#,
-        r#"export function main(arguments$, eval$) {
-  return [arguments$, eval$];
-}
-"#
     );
 }

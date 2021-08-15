@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn add(x, y) {\n    x + y\n}"
+
+---
+export function add(x, y) {
+  return x + y;
+}
+

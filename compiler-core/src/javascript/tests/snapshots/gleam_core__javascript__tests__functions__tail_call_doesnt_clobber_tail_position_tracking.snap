@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
+
+---
+export function loop(indentation) {
+  while (true) {
+    let $ = indentation > 0;
+    if ($) {
+      indentation = indentation - 1;
+    } else if (!$) {
+      return undefined;
+    } else {
+      throw new Error("Bad match");
+    }
+  }
+}
+

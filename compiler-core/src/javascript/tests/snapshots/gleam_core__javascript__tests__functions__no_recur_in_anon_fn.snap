@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main() {\n  fn() { main() }\n  1\n}\n"
+
+---
+export function main() {
+  () => { return main(); };
+  return 1;
+}
+

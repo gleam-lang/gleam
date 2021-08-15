@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main(_, _, _) {\n  1\n}\n"
+
+---
+export function main(_, _1, _2) {
+  return 1;
+}
+

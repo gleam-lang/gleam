@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main(with: Int) -> Nil {\n  main(with - 1)\n}\n"
+
+---
+export function main(with$) {
+  while (true) {
+    with$ = with$ - 1;
+  }
+}
+

@@ -1,3 +1,5 @@
+// TODO: int division
+
 function define(object, name, fallback) {
   return (object[name] = globalThis[name] || fallback);
 }

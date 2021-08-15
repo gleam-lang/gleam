@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {\n  the_first_variable_that_should_be_added + the_second_variable_that_should_be_added\n}"
+
+---
+export function add(
+  the_first_variable_that_should_be_added,
+  the_second_variable_that_should_be_added
+) {
+  return the_first_variable_that_should_be_added + the_second_variable_that_should_be_added;
+}
+
