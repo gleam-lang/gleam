@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "pub fn main(xs) -> Int {\n  case xs {\n    [1] | [1, 2] -> 0\n    _ -> 1\n  }\n}\n"
+
+---
+export function main(xs) {
+  if (xs?.[1]?.length === 0 && xs[0] === 1) {
+    return 0;
+  } else if (xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+

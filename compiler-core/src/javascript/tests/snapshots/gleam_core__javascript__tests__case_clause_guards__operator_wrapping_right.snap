@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "pub fn main(xs, y: Bool, z: Bool) {\n  case xs {\n    #(x) if x == { y == z } -> 1\n    _ -> 0\n  }\n}\n"
+
+---
+export function main(xs, y, z) {
+  if (xs[0] === (y === z)) {
+    let x = xs[0];
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
