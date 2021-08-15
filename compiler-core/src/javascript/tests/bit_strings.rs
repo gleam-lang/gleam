@@ -120,7 +120,7 @@ fn go(x) {
 }
 "#,
         r#"function go(x) {
-  return $bit_string([256, 4, x, new TextEncoder().encode("Gleam")]);
+  return $bit_string([256, 4, x, new globalThis.TextEncoder().encode("Gleam")]);
 }
 
 function $bit_string(segments) {
@@ -153,8 +153,8 @@ fn go(x) {
 "#,
         r#"function go(x) {
   return $bit_string([
-    new TextEncoder().encode(globalThis.String.fromCodePoint(x)),
-    new TextEncoder().encode("Gleam"),
+    new globalThis.TextEncoder().encode(globalThis.String.fromCodePoint(x)),
+    new globalThis.TextEncoder().encode("Gleam"),
   ]);
 }
 
@@ -187,7 +187,7 @@ fn go(x) {
 }
 "#,
         r#"function go(x) {
-  return $bit_string([x, new TextEncoder().encode("Gleam")]);
+  return $bit_string([x, new globalThis.TextEncoder().encode("Gleam")]);
 }
 
 function $bit_string(segments) {

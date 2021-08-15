@@ -25,7 +25,7 @@ impl<'a> Imports<'a> {
     pub fn register_module(
         &mut self,
         js_path: String,
-        aliases: impl Iterator<Item = &'a str>,
+        aliases: impl Iterator<Item = String>,
         unqualified_imports: impl Iterator<Item = Member<'a>>,
     ) {
         let import = self
@@ -44,12 +44,16 @@ impl<'a> Imports<'a> {
                 .map(Import::into_doc),
         )
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.imports.is_empty()
+    }
 }
 
 #[derive(Debug)]
 struct Import<'a> {
     path: String,
-    aliases: Vec<&'a str>,
+    aliases: Vec<String>,
     unqualified: Vec<Member<'a>>,
 }
 
@@ -67,7 +71,7 @@ impl<'a> Import<'a> {
         let alias_imports = concat(self.aliases.into_iter().map(|alias| {
             docvec![
                 "import * as ",
-                alias,
+                Document::String(alias),
                 " from \"",
                 path.clone(),
                 r#"";"#,
@@ -99,18 +103,11 @@ impl<'a> Import<'a> {
 
 #[derive(Debug)]
 pub struct Member<'a> {
-    name: Document<'a>,
-    alias: Option<Document<'a>>,
+    pub name: Document<'a>,
+    pub alias: Option<Document<'a>>,
 }
 
 impl<'a> Member<'a> {
-    fn from_unqualified_import(import: &'a UnqualifiedImport) -> Self {
-        Self {
-            name: import.name.as_str().to_doc(),
-            alias: import.as_name.as_ref().map(|alias| alias.as_str().to_doc()),
-        }
-    }
-
     fn into_doc(self) -> Document<'a> {
         match self.alias {
             None => self.name,
@@ -129,12 +126,12 @@ fn into_doc() {
     );
     imports.register_module(
         "./multiple/times".to_string(),
-        vec!["wibble", "wobble"].into_iter(),
+        vec!["wibble".to_string(), "wobble".to_string()].into_iter(),
         std::iter::empty(),
     );
     imports.register_module(
         "./multiple/times".to_string(),
-        vec!["wubble"].into_iter(),
+        vec!["wubble".to_string()].into_iter(),
         std::iter::empty(),
     );
     imports.register_module(

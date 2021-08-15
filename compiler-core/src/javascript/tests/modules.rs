@@ -2,6 +2,12 @@ use crate::assert_js;
 use crate::javascript::tests::CURRENT_PACKAGE;
 
 #[test]
+fn empty_module() {
+    // Renders an export statement to ensure it's an ESModule
+    assert_js!("", "export {};\n");
+}
+
+#[test]
 fn unqualified_fn_call() {
     assert_js!(
         (
@@ -13,7 +19,7 @@ fn unqualified_fn_call() {
 pub fn go() { launch() }
 "#,
         r#"import * as RocketShip from "../rocket_ship.js";
-const { launch } = RocketShip;
+import { launch } from "../rocket_ship.js";
 
 export function go() {
   return launch();
@@ -34,7 +40,7 @@ fn aliased_unqualified_fn_call() {
 pub fn go() { boom_time() }
 "#,
         r#"import * as RocketShip from "../rocket_ship.js";
-const { launch: boom_time } = RocketShip;
+import { launch as boom_time } from "../rocket_ship.js";
 
 export function go() {
   return boom_time();
@@ -57,7 +63,7 @@ pub fn b() { 2 }"#
 pub fn go() { a() + bb() }
 "#,
         r#"import * as RocketShip from "../rocket_ship.js";
-const { a, b: bb } = RocketShip;
+import { a, b as bb } from "../rocket_ship.js";
 
 export function go() {
   return a() + bb();
