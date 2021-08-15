@@ -12,6 +12,7 @@ import {
   isEqual,
   inspect,
   symbols,
+  toList,
 } from "./prelude.js";
 
 let failures = 0;
@@ -131,6 +132,13 @@ assertNotEqual(
 
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
 assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
+
+// toList
+
+assertEqual(toList([]), List.fromArray([]));
+assertEqual(toList([1, 2, 3]), List.fromArray([1, 2, 3]));
+assertEqual(toList([1, 2], toList([3, 4])), List.fromArray([1, 2, 3, 4]));
+assertEqual(toList([1, 2, 3], toList([4, 5])), List.fromArray([1, 2, 3, 4, 5]));
 
 // Equality of JavaScript values
 
@@ -303,6 +311,18 @@ assertEqual(List.fromArray([1]).atLeastLength(0), true);
 assertEqual(List.fromArray([1]).atLeastLength(1), true);
 assertEqual(List.fromArray([1]).atLeastLength(2), false);
 assertEqual(List.fromArray([1]).atLeastLength(-1), true);
+
+// List.hasLength
+
+assertEqual(toList([]).hasLength(0), true);
+assertEqual(toList([]).hasLength(1), false);
+assertEqual(toList([]).hasLength(-1), false);
+assertEqual(toList([1]).hasLength(0), false);
+assertEqual(toList([1]).hasLength(1), true);
+assertEqual(toList([1]).hasLength(2), false);
+assertEqual(toList([1, 1]).hasLength(1), false);
+assertEqual(toList([1, 1]).hasLength(2), true);
+assertEqual(toList([1, 1]).hasLength(3), false);
 
 // Symbols
 

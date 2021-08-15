@@ -3,10 +3,10 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go() {\n  [] == [1]\n  [] != [1]\n}\n"
 
 ---
-import { isEqual } from "../gleam.js";
+import { toList, isEqual } from "../gleam.js";
 
 function go() {
-  isEqual([], [1, []]);
-  return !isEqual([], [1, []]);
+  isEqual(toList([]), toList([1]));
+  return !isEqual(toList([]), toList([1]));
 }
 

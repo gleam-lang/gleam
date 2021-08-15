@@ -4,11 +4,11 @@ expression: "pub fn main(xs) -> Int {\n  case xs {\n    [x] | [_, x] -> x\n    _
 
 ---
 export function main(xs) {
-  if (xs?.[1]?.length === 0) {
-    let x = xs[0];
+  if (xs.hasLength(1)) {
+    let x = xs.head;
     return x;
-  } else if (xs?.[1]?.[1]?.length === 0) {
-    let x = xs[1][0];
+  } else if (xs.hasLength(2)) {
+    let x = xs.tail.head;
     return x;
   } else {
     return 1;

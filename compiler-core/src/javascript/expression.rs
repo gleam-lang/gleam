@@ -22,7 +22,7 @@ pub(crate) struct Generator<'module> {
     pub tail_position: bool,
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
-    tracker: &'module mut UsageTracker,
+    pub tracker: &'module mut UsageTracker,
     // We track whether tail call recusion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
@@ -93,13 +93,16 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, tail, .. } => self.not_in_tail_position(|gen| {
-                let tail = match tail.as_ref() {
-                    Some(tail) => Some(gen.wrap_expression(tail)?),
-                    None => None,
-                };
-                list(elements.iter().map(|e| gen.wrap_expression(e)), tail)
-            }),
+            TypedExpr::List { elements, tail, .. } => {
+                self.tracker.list_used = true;
+                self.not_in_tail_position(|gen| {
+                    let tail = match tail.as_ref() {
+                        Some(tail) => Some(gen.wrap_expression(tail)?),
+                        None => None,
+                    };
+                    list(elements.iter().map(|e| gen.wrap_expression(e)), tail)
+                })
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -884,13 +887,24 @@ pub fn float(value: &str) -> Document<'_> {
     value.to_doc()
 }
 
-pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
+pub(crate) fn constant_expression<'a>(
+    tracker: &mut UsageTracker,
+    expression: &'a TypedConstant,
+) -> Output<'a> {
     match expression {
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(value)),
-        Constant::Tuple { elements, .. } => array(elements.iter().map(|e| constant_expression(e))),
-        Constant::List { elements, .. } => list(elements.iter().map(constant_expression), None),
+        Constant::Tuple { elements, .. } => {
+            array(elements.iter().map(|e| constant_expression(tracker, e)))
+        }
+        Constant::List { elements, .. } => {
+            tracker.list_used = true;
+            list(
+                elements.iter().map(|e| constant_expression(tracker, e)),
+                None,
+            )
+        }
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -906,7 +920,7 @@ pub fn constant_expression(expression: &'_ TypedConstant) -> Output<'_> {
         } => {
             let field_values: Vec<_> = args
                 .iter()
-                .map(|arg| constant_expression(&arg.value))
+                .map(|arg| constant_expression(tracker, &arg.value))
                 .try_collect()?;
             Ok(construct_record(tag, args.len(), field_map, field_values))
         }
@@ -940,27 +954,18 @@ pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) 
 
 fn list<'a, I: IntoIterator<Item = Output<'a>>>(
     elements: I,
-    mut tail: Option<Document<'a>>,
+    tail: Option<Document<'a>>,
 ) -> Output<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
-    for (i, element) in elements.into_iter().enumerate().rev() {
-        let mut doc = match tail {
-            Some(tail) => docvec![element?.group(), break_(",", ", "), tail],
-            None => docvec![element?.group(), break_(",", ", "), "[]"],
-        };
-        if i != 0 {
-            doc = docvec!("[", doc, "]");
-        }
-        tail = Some(doc);
+    let array = array(elements);
+    if let Some(tail) = tail {
+        let args = iter::once(array).chain(iter::once(Ok(tail)));
+        Ok(docvec!["toList", call_arguments(args)?])
+    } else {
+        Ok(docvec!["toList(", array?, ")"])
     }
-    Ok(docvec![
-        "[",
-        docvec!(docvec!(break_("", ""), tail).nest(INDENT), break_(",", ""),),
-        "]"
-    ]
-    .group())
 }
 
 fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {

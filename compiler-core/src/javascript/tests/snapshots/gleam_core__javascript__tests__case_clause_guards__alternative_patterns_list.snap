@@ -4,9 +4,9 @@ expression: "pub fn main(xs) -> Int {\n  case xs {\n    [1] | [1, 2] -> 0\n    _
 
 ---
 export function main(xs) {
-  if (xs?.[1]?.length === 0 && xs[0] === 1) {
+  if (xs.hasLength(1) && xs.head === 1) {
     return 0;
-  } else if (xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
+  } else if (xs.hasLength(2) && xs.head === 1 && xs.tail.head === 2) {
     return 0;
   } else {
     return 1;
