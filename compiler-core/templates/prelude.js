@@ -68,6 +68,10 @@ export class NonEmpty extends List {
   }
 }
 
+export function toList(array) {
+  return List.fromArray(array);
+}
+
 export class BitString {
   [symbols.variant] = "BitString";
 
@@ -98,6 +102,24 @@ export class UtfCodepoint {
   [symbols.inspect]() {
     return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
+}
+
+export function toBitString(segments) {
+  let size = (segment) =>
+    segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let view = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(view.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      view.setInt8(cursor, segment);
+      cursor++;
+    }
+  }
+  return new BitString(new Uint8Array(view.buffer));
 }
 
 export function stringBits(string) {

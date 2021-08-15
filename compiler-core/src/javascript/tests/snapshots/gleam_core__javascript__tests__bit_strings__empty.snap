@@ -3,7 +3,9 @@ source: compiler-core/src/javascript/tests/bit_strings.rs
 expression: "\nfn go() {\n  <<>>\n}\n"
 
 ---
+import { toBitString } from "../gleam.js";
+
 function go() {
-  return new Uint8Array();
+  return toBitString([]);
 }
 

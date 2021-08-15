@@ -16,25 +16,6 @@ const INDENT: isize = 2;
 
 pub const PRELUDE: &str = include_str!("../templates/prelude.js");
 
-const FUNCTION_BIT_STRING: &str = "
-
-function $bit_string(segments) {
-  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
-  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let view = new DataView(new ArrayBuffer(bytes));
-  let cursor = 0;
-  for (let segment of segments) {
-    if (segment instanceof Uint8Array) {
-      new Uint8Array(view.buffer).set(segment, cursor);
-      cursor += segment.byteLength;
-    } else {
-      view.setInt8(cursor, segment);
-      cursor++;
-    }
-  }
-  return new Uint8Array(view.buffer);
-}";
-
 pub type Output<'a> = Result<Document<'a>, Error>;
 
 #[derive(Debug)]
@@ -67,25 +48,25 @@ impl<'a> Generator<'a> {
         let mut statements: Vec<_> =
             Itertools::intersperse(statements, Ok(lines(2))).try_collect()?;
 
-        // If float division has been import an appropriate function
+        // Import any prelude functions that have been used
+
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
 
-        // If int division has been import an appropriate function
         if self.tracker.int_division_used {
             self.register_prelude_usage(&mut imports, "divideInt");
         };
 
-        // If structural equality is used import an appropriate function
         if self.tracker.object_equality_used {
             self.register_prelude_usage(&mut imports, "isEqual");
         };
 
-        // If bit string literals have been used import an appropriate function
         if self.tracker.bit_string_literal_used {
-            statements.push(FUNCTION_BIT_STRING.to_doc());
+            self.register_prelude_usage(&mut imports, "toBitString");
         };
+
+        // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
             Ok(docvec!("export {};", line()))
