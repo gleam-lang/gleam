@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go() {\n  <<>>\n}\n"
+
+---
+function go() {
+  return new Uint8Array();
+}
+

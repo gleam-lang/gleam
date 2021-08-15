@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go() {\n  <<256, 4>>\n}\n"
+
+---
+function go() {
+  return $bit_string([256, 4]);
+}
+
+function $bit_string(segments) {
+  let size = segment => segment instanceof Uint8Array ? segment.byteLength : 1;
+  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
+  let view = new DataView(new ArrayBuffer(bytes));
+  let cursor = 0;
+  for (let segment of segments) {
+    if (segment instanceof Uint8Array) {
+      new Uint8Array(view.buffer).set(segment, cursor);
+      cursor += segment.byteLength;
+    } else {
+      view.setInt8(cursor, segment);
+      cursor++;
+    }
+  }
+  return new Uint8Array(view.buffer);
+}
+
