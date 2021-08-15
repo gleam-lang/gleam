@@ -171,12 +171,11 @@ impl<'module> Generator<'module> {
                     Ok(docvec!["stringBits(", value, ")"])
                 }
 
-                // UTF8 codepoints (which are ints at runtime)
-                [Opt::Utf8Codepoint { .. }] => Ok(docvec![
-                    "new globalThis.TextEncoder().encode(globalThis.String.fromCodePoint(",
-                    value,
-                    "))"
-                ]),
+                // UTF8 codepoints
+                [Opt::Utf8Codepoint { .. }] => {
+                    self.tracker.codepoint_bit_string_segment_used = true;
+                    Ok(docvec!["codepointBits(", value, ")"])
+                }
 
                 // Bit strings
                 [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
