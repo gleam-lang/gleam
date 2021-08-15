@@ -154,12 +154,9 @@ impl<'module> Generator<'module> {
     }
 
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
-        use BitStringSegmentOption as Opt;
-        if segments.is_empty() {
-            return Ok("new Uint8Array()".to_doc());
-        }
-
         self.tracker.bit_string_literal_used = true;
+
+        use BitStringSegmentOption as Opt;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
@@ -183,7 +180,7 @@ impl<'module> Generator<'module> {
                 ]),
 
                 // Bit strings
-                [Opt::BitString { .. }] => Ok(value),
+                [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
 
                 // Anything else
                 _ => Err(Error::Unsupported {
@@ -193,7 +190,7 @@ impl<'module> Generator<'module> {
             }
         }))?;
 
-        Ok(docvec!["$bit_string(", segments_array, ")"])
+        Ok(docvec!["toBitString(", segments_array, ")"])
     }
 
     pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
