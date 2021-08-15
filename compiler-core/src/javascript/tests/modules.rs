@@ -212,3 +212,26 @@ export function go() {
 "#
     );
 }
+
+#[test]
+fn same_import_multiple_times() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub fn one() { 1 } pub fn two() { 2 }"#
+        ),
+        r#"import one/two/three.{one}
+import one/two/three.{two}
+
+pub fn go() { one() + two() }
+"#,
+        r#"import * as Three from "../one/two/three.js";
+import { one, two } from "../one/two/three.js";
+
+export function go() {
+  return one() + two();
+}
+"#
+    );
+}
