@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\nfn go() {\n  1 == {\n    1\n    2\n  }\n}\n"
+
+---
+function go() {
+  return 1 === (() => {
+    1;
+    return 2;
+  })();
+}
+
