@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] -> count(xs, n + 1)\n  }\n}\n"
+
+---
+export function count(xs, n) {
+  while (true) {
+    if (xs?.length === 0) {
+      return n;
+    } else if (xs?.[1]?.length !== undefined) {
+      let xs$1 = xs[1];
+      xs = xs$1;
+      n = n + 1;
+    } else {
+      throw new Error("Bad match");
+    }
+  }
+}
+

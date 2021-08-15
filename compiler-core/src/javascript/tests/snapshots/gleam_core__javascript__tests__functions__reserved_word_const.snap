@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "const in = 1\n\npub fn export() {\n  in\n}\n"
+
+---
+const in$ = 1;
+
+export function export$() {
+  return in$;
+}
+

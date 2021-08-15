@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn twice(f: fn(t) -> t, x: t) -> t {\n  f(f(x))\n}\npub fn add_one(x: Int) -> Int {\n  x + 1\n}\npub fn add_two(x: Int) -> Int {\n  twice(add_one, x)\n}\n\npub fn take_two(x: Int) -> Int {\n  twice(fn(y) {y - 1}, x)\n}\n"
+
+---
+export function twice(f, x) {
+  return f(f(x));
+}
+
+export function add_one(x) {
+  return x + 1;
+}
+
+export function add_two(x) {
+  return twice(add_one, x);
+}
+
+export function take_two(x) {
+  return twice((y) => { return y - 1; }, x);
+}
+

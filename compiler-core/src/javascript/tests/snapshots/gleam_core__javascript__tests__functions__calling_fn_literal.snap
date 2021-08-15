@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main() {\n  fn(x) { x }(1)\n}\n"
+
+---
+export function main() {
+  return ((x) => { return x; })(1);
+}
+
