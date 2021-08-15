@@ -3,31 +3,10 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go() {\n  [] == [1]\n  [] != [1]\n}\n"
 
 ---
+import { isEqual } from "../gleam.js";
+
 function go() {
-  $equal([], [1, []]);
-  return !$equal([], [1, []]);
-}
-
-function $equal(x, y) {
-  let values = [x, y];
-  while (values.length !== 0) {
-    let a = values.pop();
-    let b = values.pop();
-    if (
-      a === b ||
-      (a instanceof Uint8Array &&
-        b instanceof Uint8Array &&
-        a.byteLength === b.byteLength &&
-        a.every((x, i) => x === b[i]))
-    )
-      continue;
-    if (!$is_object(a) || !$is_object(b) || a.length !== b.length) return false;
-    for (let k of Object.keys(a)) values.push(a[k], b[k]);
-  }
-  return true;
-}
-
-function $is_object(object) {
-  return object !== null && typeof object === 'object';
+  isEqual([], [1, []]);
+  return !isEqual([], [1, []]);
 }
 

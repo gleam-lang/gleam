@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    iter,
-};
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
@@ -27,17 +24,6 @@ impl<'a> Imports<'a> {
 
     pub fn register_export(&mut self, export: String) {
         let _ = self.exports.insert(export);
-    }
-
-    pub fn register_prelude(&mut self, name: &'static str) {
-        self.register_module(
-            "gleam".to_string(),
-            iter::empty(),
-            iter::once(Member {
-                name: name.to_doc(),
-                alias: None,
-            }),
-        )
     }
 
     pub fn register_module(

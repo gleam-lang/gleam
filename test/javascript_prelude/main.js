@@ -9,7 +9,7 @@ import {
   UtfCodepoint,
   divideFloat,
   divideInt,
-  equal,
+  isEqual,
   inspect,
   symbols,
 } from "./prelude.js";
@@ -29,7 +29,7 @@ function fail(message) {
 }
 
 function assertEqual(a, b) {
-  if (equal(a, b)) {
+  if (isEqual(a, b)) {
     pass();
   } else {
     fail(`\n\t${inspect(a)}\n\t!=\n\t${inspect(b)}`);
@@ -37,7 +37,7 @@ function assertEqual(a, b) {
 }
 
 function assertNotEqual(a, b) {
-  if (equal(a, b)) {
+  if (isEqual(a, b)) {
     fail(`\n\t${inspect(a)}\n\t==\n\t${inspect(b)}`);
   } else {
     pass();
