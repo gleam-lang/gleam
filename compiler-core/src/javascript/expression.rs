@@ -746,6 +746,7 @@ impl<'module> Generator<'module> {
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt => self.mult_int(left, right),
             BinOp::MultFloat => self.print_bin_op(left, right, "*"),
+            // TODO: handle div by 0
             BinOp::DivInt => Ok(self.print_bin_op(left, right, "/")?.append(" | 0")),
             BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
             BinOp::DivFloat => self.div_float(left, right),

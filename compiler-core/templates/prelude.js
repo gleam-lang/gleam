@@ -1,5 +1,3 @@
-// TODO: int division
-
 function define(object, name, fallback) {
   return (object[name] = globalThis[name] || fallback);
 }
@@ -188,4 +186,20 @@ function sameTypeObjects(a, b) {
     (a.constructor === b.constructor ||
       (a[symbols.variant] && a[symbols.variant] === b[symbols.variant]))
   );
+}
+
+export function divideInt(a, b) {
+  if (b === 0) {
+    return 0 | 0;
+  } else {
+    return (a / b) | 0;
+  }
+}
+
+export function divideFloat(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a / b;
+  }
 }

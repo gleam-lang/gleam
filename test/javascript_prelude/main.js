@@ -7,6 +7,8 @@ import {
   Ok,
   Record,
   UtfCodepoint,
+  divideFloat,
+  divideInt,
   equal,
   inspect,
   symbols,
@@ -326,6 +328,42 @@ assertEqual(symbols.variant in new UtfCodepoint(128013), true);
 // records can only be equal if they share a constructor, so they have no
 // variant property.
 assertEqual(symbols.variant in new Record(), false);
+
+//
+// Division
+//
+
+assertEqual(divideInt(1, 0), 0);
+assertEqual(divideInt(1, 1), 1);
+assertEqual(divideInt(1, 2), 0);
+assertEqual(divideInt(3, 2), 1);
+assertEqual(divideInt(11, 3), 3);
+assertEqual(divideInt(-1, 0), 0);
+assertEqual(divideInt(-1, 1), -1);
+assertEqual(divideInt(-1, 2), -0);
+assertEqual(divideInt(-3, 2), -1);
+assertEqual(divideInt(-11, 3), -3);
+assertEqual(divideInt(1, -1), -1);
+assertEqual(divideInt(1, -2), 0);
+assertEqual(divideInt(3, -2), -1);
+assertEqual(divideInt(11, -3), -3);
+assertEqual(divideInt(-1, -1), 1);
+assertEqual(divideInt(-1, -2), 0);
+assertEqual(divideInt(-3, -2), 1);
+assertEqual(divideInt(-11, -3), 3);
+
+assertEqual(divideFloat(1.5, 0.0), 0.0);
+assertEqual(divideFloat(1.5, 2.0), 0.75);
+assertEqual(divideFloat(1.5, 2.5), 0.6);
+assertEqual(divideFloat(-1.5, 0.0), -0.0);
+assertEqual(divideFloat(-1.5, 2.0), -0.75);
+assertEqual(divideFloat(-1.5, 2.5), -0.6);
+assertEqual(divideFloat(1.5, -0.0), -0.0);
+assertEqual(divideFloat(1.5, -2.0), -0.75);
+assertEqual(divideFloat(1.5, -2.5), -0.6);
+assertEqual(divideFloat(-1.5, -0.0), 0.0);
+assertEqual(divideFloat(-1.5, -2.0), 0.75);
+assertEqual(divideFloat(-1.5, -2.5), 0.6);
 
 //
 // Summary
