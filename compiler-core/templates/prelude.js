@@ -145,7 +145,7 @@ export function inspect(v) {
   }
 }
 
-export function equal(x, y) {
+export function isEqual(x, y) {
   let values = [x, y];
 
   while (values.length) {

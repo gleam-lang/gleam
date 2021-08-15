@@ -144,14 +144,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 let left = self.guard(left)?;
                 let right = self.guard(right)?;
                 self.expression_generator
-                    .dollar_equal_call(true, left, right)
+                    .prelude_equal_call(true, left, right)
             }
 
             ClauseGuard::NotEquals { left, right, .. } => {
                 let left = self.guard(left)?;
                 let right = self.guard(right)?;
                 self.expression_generator
-                    .dollar_equal_call(false, left, right)
+                    .prelude_equal_call(false, left, right)
             }
 
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {

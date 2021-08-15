@@ -783,20 +783,24 @@ impl<'module> Generator<'module> {
         // Other types must be compared using structural equality
         let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
-        Ok(self.dollar_equal_call(should_be_equal, left, right))
+        Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
-    pub(super) fn dollar_equal_call<'a>(
+    pub(super) fn prelude_equal_call<'a>(
         &mut self,
         should_be_equal: bool,
         left: Document<'a>,
         right: Document<'a>,
     ) -> Document<'a> {
-        // Record that we need to render the $equal function into the module
+        // Record that we need to import the prelude's isEqual function into the module
         *self.object_equality_used = true;
         // Construct the call
         let args = wrap_args([left, right]);
-        let operator = if should_be_equal { "$equal" } else { "!$equal" };
+        let operator = if should_be_equal {
+            "isEqual"
+        } else {
+            "!isEqual"
+        };
         docvec!(operator, args)
     }
 

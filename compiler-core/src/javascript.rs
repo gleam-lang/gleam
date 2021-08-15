@@ -16,31 +16,6 @@ const INDENT: isize = 2;
 
 pub const PRELUDE: &str = include_str!("../templates/prelude.js");
 
-const DEEP_EQUAL: &str = "
-
-function $equal(x, y) {
-  let values = [x, y];
-  while (values.length !== 0) {
-    let a = values.pop();
-    let b = values.pop();
-    if (
-      a === b ||
-      (a instanceof Uint8Array &&
-        b instanceof Uint8Array &&
-        a.byteLength === b.byteLength &&
-        a.every((x, i) => x === b[i]))
-    )
-      continue;
-    if (!$is_object(a) || !$is_object(b) || a.length !== b.length) return false;
-    for (let k of Object.keys(a)) values.push(a[k], b[k]);
-  }
-  return true;
-}
-
-function $is_object(object) {
-  return object !== null && typeof object === 'object';
-}";
-
 const FUNCTION_BIT_STRING: &str = "
 
 function $bit_string(segments) {
@@ -98,12 +73,12 @@ impl<'a> Generator<'a> {
 
         // If float division has been used render an appropriate function
         if self.float_division_used {
-            imports.register_prelude("divideFloat");
+            self.register_prelude_usage(&mut imports, "divideFloat");
         };
 
         // If structural equality is used render an appropriate function
         if self.object_equality_used {
-            statements.push(DEEP_EQUAL.to_doc());
+            self.register_prelude_usage(&mut imports, "isEqual");
         };
 
         // If bit string literals have been used render an appropriate function
@@ -121,6 +96,15 @@ impl<'a> Generator<'a> {
         } else {
             Ok(docvec![imports.into_doc(), line(), statements, line()])
         }
+    }
+
+    fn register_prelude_usage(&self, imports: &mut Imports<'a>, name: &'static str) {
+        let path = self.import_path(&self.module.type_info.package, &["gleam".to_string()]);
+        let member = Member {
+            name: name.to_doc(),
+            alias: None,
+        };
+        imports.register_module(path, iter::empty(), iter::once(member));
     }
 
     pub fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
@@ -197,7 +181,7 @@ impl<'a> Generator<'a> {
         imports
     }
 
-    fn import_path(&mut self, package: &'a str, module: &'a [String]) -> String {
+    fn import_path(&self, package: &'a str, module: &'a [String]) -> String {
         let path = module.join("/");
 
         if package == self.module.type_info.package || package.is_empty() {
