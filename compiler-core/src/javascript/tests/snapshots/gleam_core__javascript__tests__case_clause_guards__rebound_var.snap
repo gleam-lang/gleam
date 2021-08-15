@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "pub fn main() {\n  let x = False\n  let x = True\n  case x {\n    _ if x -> 1\n    _ -> 0\n  }\n}\n"
+
+---
+export function main() {
+  let x = false;
+  let x$1 = true;
+  if (x$1) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+

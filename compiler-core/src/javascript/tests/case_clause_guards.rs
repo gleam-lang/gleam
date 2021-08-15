@@ -10,16 +10,6 @@ fn guards_cause_badmatch_to_render() {
   }
 }
 "#,
-        r#"export function main(x, y) {
-  if (x === 1) {
-    return 1;
-  } else if (y) {
-    return 0;
-  } else {
-    throw new Error("Bad match");
-  }
-}
-"#
     );
 }
 
@@ -33,15 +23,6 @@ fn referencing_pattern_var() {
   }
 }
 "#,
-        r#"export function main(xs) {
-  if (xs[0]) {
-    let x = xs[0];
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -57,16 +38,6 @@ fn rebound_var() {
   }
 }
 "#,
-        r#"export function main() {
-  let x = false;
-  let x$1 = true;
-  if (x$1) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -80,15 +51,6 @@ fn operator_wrapping_right() {
   }
 }
 "#,
-        r#"export function main(xs, y, z) {
-  if (xs[0] === (y === z)) {
-    let x = xs[0];
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -102,15 +64,6 @@ fn operator_wrapping_left() {
   }
 }
 "#,
-        r#"export function main(xs, y, z) {
-  if ((xs[0] === y) === z) {
-    let x = xs[0];
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -124,15 +77,6 @@ fn eq_scalar() {
   }
 }
 "#,
-        r#"export function main(xs, y) {
-  if (xs[0] === y) {
-    let x = xs[0];
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -146,15 +90,6 @@ fn not_eq_scalar() {
   }
 }
 "#,
-        r#"export function main(xs, y) {
-  if (xs[0] !== y) {
-    let x = xs[0];
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -168,14 +103,6 @@ fn tuple_index() {
   }
 }
 "#,
-        r#"export function main(x, xs) {
-  if (xs[2]) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -189,38 +116,6 @@ fn not_eq_complex() {
   }
 }
 "#,
-        r#"export function main(xs, y) {
-  if (!$equal(xs, y)) {
-    let x = xs[0];
-    return x;
-  } else {
-    return 0;
-  }
-}
-
-function $equal(x, y) {
-  let values = [x, y];
-  while (values.length !== 0) {
-    let a = values.pop();
-    let b = values.pop();
-    if (
-      a === b ||
-      (a instanceof Uint8Array &&
-        b instanceof Uint8Array &&
-        a.byteLength === b.byteLength &&
-        a.every((x, i) => x === b[i]))
-    )
-      continue;
-    if (!$is_object(a) || !$is_object(b) || a.length !== b.length) return false;
-    for (let k of Object.keys(a)) values.push(a[k], b[k]);
-  }
-  return true;
-}
-
-function $is_object(object) {
-  return object !== null && typeof object === 'object';
-}
-"#
     );
 }
 
@@ -234,38 +129,6 @@ fn eq_complex() {
   }
 }
 "#,
-        r#"export function main(xs, y) {
-  if ($equal(xs, y)) {
-    let x = xs[0];
-    return x;
-  } else {
-    return 0;
-  }
-}
-
-function $equal(x, y) {
-  let values = [x, y];
-  while (values.length !== 0) {
-    let a = values.pop();
-    let b = values.pop();
-    if (
-      a === b ||
-      (a instanceof Uint8Array &&
-        b instanceof Uint8Array &&
-        a.byteLength === b.byteLength &&
-        a.every((x, i) => x === b[i]))
-    )
-      continue;
-    if (!$is_object(a) || !$is_object(b) || a.length !== b.length) return false;
-    for (let k of Object.keys(a)) values.push(a[k], b[k]);
-  }
-  return true;
-}
-
-function $is_object(object) {
-  return object !== null && typeof object === 'object';
-}
-"#
     );
 }
 
@@ -279,15 +142,6 @@ fn constant() {
   }
 }
 "#,
-        r#"export function main(xs) {
-  if (xs[0] === 1) {
-    let x = xs[0];
-    return x;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
 
@@ -301,16 +155,6 @@ fn alternative_patterns() {
   }
 }
 "#,
-        r#"export function main(xs) {
-  if (xs === 1) {
-    return 0;
-  } else if (xs === 2) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
-"#
     );
 }
 
@@ -324,16 +168,6 @@ fn alternative_patterns_list() {
   }
 }
 "#,
-        r#"export function main(xs) {
-  if (xs?.[1]?.length === 0 && xs[0] === 1) {
-    return 0;
-  } else if (xs?.[1]?.[1]?.length === 0 && xs[0] === 1 && xs[1][0] === 2) {
-    return 0;
-  } else {
-    return 1;
-  }
-}
-"#
     );
 }
 
@@ -347,18 +181,6 @@ fn alternative_patterns_assignment() {
   }
 }  
 "#,
-        r#"export function main(xs) {
-  if (xs?.[1]?.length === 0) {
-    let x = xs[0];
-    return x;
-  } else if (xs?.[1]?.[1]?.length === 0) {
-    let x = xs[1][0];
-    return x;
-  } else {
-    return 1;
-  }
-}
-"#
     );
 }
 
@@ -372,17 +194,5 @@ fn alternative_patterns_guard() {
   }
 }   
 "#,
-        r#"export function main(xs) {
-  if (xs?.[1]?.length === 0 && xs[0] === 1) {
-    let x = xs[0];
-    return x;
-  } else if (xs?.[1]?.[1]?.length === 0 && xs[1][0] === 1) {
-    let x = xs[1][0];
-    return x;
-  } else {
-    return 0;
-  }
-}
-"#
     );
 }
