@@ -13,7 +13,7 @@ use crate::{
 static RECORD_KEY: &str = "type";
 
 #[derive(Debug)]
-pub struct Generator<'module> {
+pub(crate) struct Generator<'module> {
     module_name: &'module [String],
     line_numbers: &'module LineNumbers,
     function_name: Option<&'module str>,
@@ -22,9 +22,7 @@ pub struct Generator<'module> {
     pub tail_position: bool,
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
-    float_division_used: &'module mut bool,
-    object_equality_used: &'module mut bool,
-    bit_string_literal_used: &'module mut bool,
+    tracker: &'module mut UsageTracker,
     // We track whether tail call recusion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
@@ -38,15 +36,14 @@ impl<'module> Generator<'module> {
         line_numbers: &'module LineNumbers,
         function_name: &'module str,
         function_arguments: Vec<Option<&'module str>>,
-        float_division_used: &'module mut bool,
-        object_equality_used: &'module mut bool,
-        bit_string_literal_used: &'module mut bool,
+        tracker: &'module mut UsageTracker,
         mut current_scope_vars: im::HashMap<String, usize>,
     ) -> Self {
         for &name in function_arguments.iter().flatten() {
             let _ = current_scope_vars.insert(name.to_string(), 0);
         }
         Self {
+            tracker,
             module_name,
             line_numbers,
             function_name: Some(function_name),
@@ -54,9 +51,6 @@ impl<'module> Generator<'module> {
             tail_recursion_used: false,
             current_scope_vars,
             tail_position: true,
-            float_division_used,
-            object_equality_used,
-            bit_string_literal_used,
         }
     }
 
@@ -165,7 +159,7 @@ impl<'module> Generator<'module> {
             return Ok("new Uint8Array()".to_doc());
         }
 
-        *self.bit_string_literal_used = true;
+        self.tracker.bit_string_literal_used = true;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
@@ -762,7 +756,7 @@ impl<'module> Generator<'module> {
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        *self.float_division_used = true;
+        self.tracker.float_division_used = true;
         Ok(docvec!("divideFloat", wrap_args([left, right])))
     }
 
@@ -793,7 +787,7 @@ impl<'module> Generator<'module> {
         right: Document<'a>,
     ) -> Document<'a> {
         // Record that we need to import the prelude's isEqual function into the module
-        *self.object_equality_used = true;
+        self.tracker.object_equality_used = true;
         // Construct the call
         let args = wrap_args([left, right]);
         let operator = if should_be_equal {

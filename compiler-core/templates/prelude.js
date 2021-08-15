@@ -100,6 +100,14 @@ export class UtfCodepoint {
   }
 }
 
+export function stringBits(string) {
+  return new TextEncoder().encode(string);
+}
+
+export function codepointBits(codepoint) {
+  return utf8Bits(String.fromCodePoint(codepoint));
+}
+
 export class Result extends Record {
   isOk() {
     return "Ok" === this[symbols.variant];

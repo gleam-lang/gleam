@@ -19,7 +19,7 @@ pub struct Subjects<'a> {
 }
 
 #[derive(Debug)]
-pub struct Generator<'module_ctx, 'expression_gen, 'a> {
+pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
     pub expression_generator: &'expression_gen mut expression::Generator<'module_ctx>,
     path: Vec<Index<'a>>,
     checks: Vec<Check<'a>>,
@@ -545,7 +545,7 @@ impl<'a> Check<'a> {
     }
 }
 
-pub fn assign_subject<'a>(
+pub(crate) fn assign_subject<'a>(
     expression_generator: &mut expression::Generator<'_>,
     subject: &'a TypedExpr,
 ) -> (Document<'a>, Option<Document<'a>>) {
@@ -565,7 +565,7 @@ pub fn assign_subject<'a>(
     }
 }
 
-pub fn assign_subjects<'a>(
+pub(crate) fn assign_subjects<'a>(
     expression_generator: &mut expression::Generator<'_>,
     subjects: &'a [TypedExpr],
 ) -> Vec<(Document<'a>, Option<Document<'a>>)> {
