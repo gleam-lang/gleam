@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go(y) {\n  let x = 1\n  x == y\n}\n"
+
+---
+function go(y) {
+  let x = 1;
+  return x === y;
+}
+

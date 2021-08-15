@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
+
+---
+function go(x) {
+  [];
+  [1, []];
+  [1, [2, []]];
+  return [1, [2, x]];
+}
+

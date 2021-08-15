@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\nfn go(xs) {\n  case xs {\n    [] -> 0\n    [_] -> 1\n    [_, _] -> 2\n    _ -> 9999\n  }\n}\n"
+
+---
+function go(xs) {
+  if (xs?.length === 0) {
+    return 0;
+  } else if (xs?.[1]?.length === 0) {
+    return 1;
+  } else if (xs?.[1]?.[1]?.length === 0) {
+    return 2;
+  } else {
+    return 9999;
+  }
+}
+

@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/lists.rs
+expression: "\nfn go(x) {\n    [{True; 1}]\n}\n"
+
+---
+function go(x) {
+  return [
+    (() => {
+      true;
+      return 1;
+    })(),
+    [],
+  ];
+}
+
