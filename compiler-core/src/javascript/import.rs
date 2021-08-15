@@ -1,9 +1,8 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use itertools::Itertools;
 
 use crate::{
-    ast::UnqualifiedImport,
     docvec,
     javascript::INDENT,
     pretty::{break_, concat, line, Document, Documentable},
@@ -53,7 +52,7 @@ impl<'a> Imports<'a> {
 #[derive(Debug)]
 struct Import<'a> {
     path: String,
-    aliases: Vec<String>,
+    aliases: HashSet<String>,
     unqualified: Vec<Member<'a>>,
 }
 
@@ -68,7 +67,7 @@ impl<'a> Import<'a> {
 
     pub fn into_doc(self) -> Document<'a> {
         let path = Document::String(self.path.clone());
-        let alias_imports = concat(self.aliases.into_iter().map(|alias| {
+        let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
             docvec![
                 "import * as ",
                 Document::String(alias),
