@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn math(x, y) {\n  fn() {\n    x + y\n    x - y\n    2 * x\n  }\n}"
+
+---
+export function math(x, y) {
+  return () => {
+    x + y;
+    x - y;
+    return Math.imul(2, x);
+  };
+}
+

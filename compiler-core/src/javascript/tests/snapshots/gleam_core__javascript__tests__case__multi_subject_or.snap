@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x, y) {\n  case x, y {\n    True, _ | _, True -> 1\n    _, _ -> 0\n  }\n}\n"
+
+---
+function go(x, y) {
+  if (x) {
+    return 1;
+  } else if (y) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
+
+---
+function go(x) {
+  if (x) {
+    throw Object.assign(
+      new Error("This has not yet been implemented"),
+      { gleam_error: "todo", module: "my/mod", function: "go", line: 4 }
+    );
+  } else {
+    return 1;
+  }
+}
+
