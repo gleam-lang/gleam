@@ -138,6 +138,8 @@ assertEqual([], []);
 assertEqual([1, 2], [1, 2]);
 assertEqual([new Ok([1, 2])], [new Ok([1, 2])]);
 assertNotEqual([], [[]]);
+assertNotEqual([], [1, []]);
+assertNotEqual([1, []], []);
 
 assertEqual({}, {});
 assertEqual({ a: 1 }, { a: 1 });
