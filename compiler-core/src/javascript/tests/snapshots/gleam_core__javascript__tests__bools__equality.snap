@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\nfn go(a, b) {\n  a == True\n  a != True\n  a == False\n  a != False\n  a == a\n  a != a\n  b == Nil\n  b != Nil\n  b == b\n}\n"
+
+---
+function go(a, b) {
+  a === true;
+  a !== true;
+  a === false;
+  a !== false;
+  a === a;
+  a !== a;
+  b === undefined;
+  b !== undefined;
+  return b === b;
+}
+

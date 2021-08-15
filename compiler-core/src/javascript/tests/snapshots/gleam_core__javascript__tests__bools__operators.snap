@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\nfn go() {\n    True && True\n    False || False\n}\n"
+
+---
+function go() {
+  true && true;
+  return false || false;
+}
+

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\nfn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
+
+---
+function go(x, y) {
+  if (!x) throw new Error("Bad match");
+  if (x) throw new Error("Bad match");
+  if (y) throw new Error("Bad match");
+  return y;
+}
+
