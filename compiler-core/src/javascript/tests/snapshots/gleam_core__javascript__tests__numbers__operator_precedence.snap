@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go() {\n  2.4 *. { 3.5 +. 6.0 }\n}\n"
+
+---
+function go() {
+  return 2.4 * (3.5 + 6.0);
+}
+

@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\nfn go(x) {\n  let \"Hello\" = x\n}\n"
+
+---
+function go(x) {
+  if (x !== "Hello") throw new Error("Bad match");
+  return x;
+}
+

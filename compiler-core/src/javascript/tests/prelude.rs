@@ -6,10 +6,6 @@ fn qualified_ok() {
         r#"import gleam
 pub fn go() { gleam.Ok(1) }
 "#,
-        r#"export function go() {
-  return { type: "Ok", 0: 1 };
-}
-"#
     );
 }
 
@@ -19,10 +15,6 @@ fn qualified_error() {
         r#"import gleam
 pub fn go() { gleam.Error(1) }
 "#,
-        r#"export function go() {
-  return { type: "Error", 0: 1 };
-}
-"#
     );
 }
 
@@ -32,9 +24,5 @@ fn qualified_nil() {
         r#"import gleam
 pub fn go() { gleam.Nil }
 "#,
-        r#"export function go() {
-  return undefined;
-}
-"#
     );
 }

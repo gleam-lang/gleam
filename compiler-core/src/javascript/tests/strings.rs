@@ -8,10 +8,6 @@ fn go() {
   "Hello, Gleam!"
 }
 "#,
-        r#"function go() {
-  return "Hello, Gleam!";
-}
-"#
     );
 }
 
@@ -23,11 +19,6 @@ fn go(x) {
   let "Hello" = x
 }
 "#,
-        r#"function go(x) {
-  if (x !== "Hello") throw new Error("Bad match");
-  return x;
-}
-"#
     );
 }
 
@@ -41,12 +32,6 @@ fn go(a) {
   a == a
 }
 "#,
-        r#"function go(a) {
-  a === "ok";
-  a !== "ok";
-  return a === a;
-}
-"#
     );
 }
 
@@ -63,17 +48,5 @@ fn go(a) {
   }
 }
 "#,
-        r#"function go(a) {
-  if (a === "") {
-    return 0;
-  } else if (a === "one") {
-    return 1;
-  } else if (a === "two") {
-    return 2;
-  } else {
-    return 3;
-  }
-}
-"#
     );
 }

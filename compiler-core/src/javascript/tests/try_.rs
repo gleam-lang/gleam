@@ -8,16 +8,6 @@ fn top() {
   try z = y
   Ok(z)
 }"#,
-        r#"export function main(x) {
-  if (x.type === "Error") return x;
-  let y = x[0];
-
-  if (y.type === "Error") return y;
-  let z = y[0];
-
-  return { type: "Ok", 0: z };
-}
-"#
     )
 }
 
@@ -29,16 +19,6 @@ fn rebinding() {
   try x = x
   Ok(x)
 }"#,
-        r#"export function main(x) {
-  if (x.type === "Error") return x;
-  let x$1 = x[0];
-
-  if (x$1.type === "Error") return x$1;
-  let x$2 = x$1[0];
-
-  return { type: "Ok", 0: x$2 };
-}
-"#
     )
 }
 
@@ -50,12 +30,6 @@ fn discard() {
   try _ = y
   x
 }"#,
-        r#"export function main(x, y) {
-  if (x.type === "Error") return x;
-  if (y.type === "Error") return y;
-  return x;
-}
-"#
     )
 }
 
@@ -68,22 +42,6 @@ fn with_subpattern() {
   try #(a, 2) = Ok(#(1, 2))
   Ok(x)
 }"#,
-        r#"export function main(x) {
-  if (x.type === "Error") return x;
-  let a = x[0][0];
-  let b = x[0][1];
-
-  if (x.type === "Error") return x;
-  if (x[0][0] !== 1 || x[0][1] !== 2) throw new Error("Bad match");
-
-  let $ = { type: "Ok", 0: [1, 2] };
-  if ($.type === "Error") return $;
-  if ($[0][1] !== 2) throw new Error("Bad match");
-  let a$1 = $[0][0];
-
-  return { type: "Ok", 0: x };
-}
-"#
     )
 }
 
@@ -97,16 +55,6 @@ fn in_block() {
   }
   y
 }"#,
-        r#"export function main(x) {
-  let y = (() => {
-    if (x.type === "Error") return x;
-    let z = x[0];
-
-    return { type: "Ok", 0: z + 1 };
-  })();
-  return y;
-}
-"#
     )
 }
 
@@ -120,17 +68,5 @@ fn assert_in_block() {
   }
   y
 }"#,
-        r#"export function main(x) {
-  let $ = (() => {
-    if (x.type === "Error") return x;
-    let z = x[0];
-
-    return { type: "Ok", 0: z + 1 };
-  })();
-  if ($.type !== "Ok") throw new Error("Bad match");
-  let y = $[0];
-  return y;
-}
-"#
     )
 }

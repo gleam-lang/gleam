@@ -8,13 +8,6 @@ fn go() {
     todo
 }
 "#,
-        r#"function go() {
-  throw Object.assign(
-    new Error("This has not yet been implemented"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  );
-}
-"#
     );
 }
 
@@ -26,13 +19,6 @@ fn go() {
   todo("I should do this")
 };
 "#,
-        r#"function go() {
-  throw Object.assign(
-    new Error("I should do this"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  );
-}
-"#
     );
 }
 
@@ -46,22 +32,5 @@ fn go(f) {
   f(todo("Boom"))
 };
 "#,
-        r#"function go(f) {
-  let boop = (() => {
-    throw Object.assign(
-      new Error("I should do this"),
-      { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-    );
-  })();
-  return f(
-    (() => {
-      throw Object.assign(
-        new Error("Boom"),
-        { gleam_error: "todo", module: "my/mod", function: "go", line: 4 }
-      );
-    })(),
-  );
-}
-"#
     );
 }
