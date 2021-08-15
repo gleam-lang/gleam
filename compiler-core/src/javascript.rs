@@ -41,9 +41,7 @@ pub type Output<'a> = Result<Document<'a>, Error>;
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
-    float_division_used: bool,
-    object_equality_used: bool,
-    bit_string_literal_used: bool,
+    tracker: UsageTracker,
     module_scope: im::HashMap<String, usize>,
 }
 
@@ -52,9 +50,7 @@ impl<'a> Generator<'a> {
         Self {
             line_numbers,
             module,
-            float_division_used: false,
-            object_equality_used: false,
-            bit_string_literal_used: false,
+            tracker: UsageTracker::default(),
             module_scope: Default::default(),
         }
     }
@@ -72,17 +68,17 @@ impl<'a> Generator<'a> {
             Itertools::intersperse(statements, Ok(lines(2))).try_collect()?;
 
         // If float division has been used render an appropriate function
-        if self.float_division_used {
+        if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
 
         // If structural equality is used render an appropriate function
-        if self.object_equality_used {
+        if self.tracker.object_equality_used {
             self.register_prelude_usage(&mut imports, "isEqual");
         };
 
         // If bit string literals have been used render an appropriate function
-        if self.bit_string_literal_used {
+        if self.tracker.bit_string_literal_used {
             statements.push(FUNCTION_BIT_STRING.to_doc());
         };
 
@@ -301,9 +297,7 @@ impl<'a> Generator<'a> {
             self.line_numbers,
             name,
             argument_names,
-            &mut self.float_division_used,
-            &mut self.object_equality_used,
-            &mut self.bit_string_literal_used,
+            &mut self.tracker,
             self.module_scope.clone(),
         );
         let head = if public {
@@ -514,4 +508,14 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
     } else {
         Document::String(escape_identifier(word))
     }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct UsageTracker {
+    pub float_division_used: bool,
+    pub object_equality_used: bool,
+    pub bit_string_literal_used: bool,
+    pub int_bit_string_segment_used: bool,
+    pub string_bit_string_segment_used: bool,
+    pub utfcodepoint_bit_string_segment_used: bool,
 }
