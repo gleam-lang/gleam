@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go() {\n  111111111111111111111111111111. /. 22222222222222222222222222222222222.\n}\n"
+
+---
+function go() {
+  return $divide(
+    111111111111111111111111111111.,
+    22222222222222222222222222222222222.
+  );
+}
+
+function $divide(a, b) {
+  if (b === 0) return 0;
+  return a / b;
+}
+
