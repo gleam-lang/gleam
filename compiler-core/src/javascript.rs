@@ -162,13 +162,9 @@ impl<'a> Generator<'a> {
                 self.global_external_function(*public, name, arguments, fun)
             )],
 
-            Statement::ExternalFn {
-                public,
-                name,
-                module,
-                fun,
-                ..
-            } if *public => vec![Ok(self.imported_external_function(name, module, fun))],
+            Statement::ExternalFn { public, name, .. } if *public => {
+                vec![Ok(self.imported_external_function(name))]
+            }
 
             Statement::ExternalFn { .. } => vec![],
         }
@@ -277,7 +273,7 @@ impl<'a> Generator<'a> {
             alias: if name == fun {
                 None
             } else {
-                Some(name.to_doc())
+                Some(maybe_escape_identifier_doc(name))
             },
         };
         imports.register_module(module.to_string(), iter::empty(), iter::once(member));
@@ -344,12 +340,8 @@ impl<'a> Generator<'a> {
         ])
     }
 
-    fn imported_external_function(
-        &mut self,
-        name: &'a str,
-        module: &'a str,
-        fun: &'a str,
-    ) -> Document<'a> {
+    fn imported_external_function(&mut self, name: &'a str) -> Document<'a> {
+        let name = maybe_escape_identifier_doc(name);
         // TODO: move to imports
         "export { ".to_doc().append(name).append(" };")
     }
