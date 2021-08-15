@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\ntype Ip{\n    Ip(String)\n}\n\nconst local = Ip(\"0.0.0.0\")\n\nfn build(x) {\n    x(\"1.2.3.4\")\n}\n\nfn go() {\n    build(Ip)\n    Ip(\"5.6.7.8\")\n}\n\nfn destructure(x) {\n  let Ip(raw) = x\n  raw\n}\n"
+
+---
+const local = { type: "Ip", 0: "0.0.0.0" };
+
+function build(x) {
+  return x("1.2.3.4");
+}
+
+function go() {
+  build((var0) => { return { type: "Ip", 0: var0 }; });
+  return { type: "Ip", 0: "5.6.7.8" };
+}
+
+function destructure(x) {
+  if (x.type !== "Ip") throw new Error("Bad match");
+  let raw = x[0];
+  return raw;
+}
+

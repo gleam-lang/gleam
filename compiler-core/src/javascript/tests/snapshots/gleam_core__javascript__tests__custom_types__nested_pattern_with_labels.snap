@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "pub type Box(x) { Box(a: Int, b: x) }\nfn go(x) {\n  case x {\n    Box(a: _, b: Box(a: a, b: b)) -> a + b\n    _ -> 1\n  }\n}\n"
+
+---
+function go(x) {
+  if (x.type === "Box" && x.b.type === "Box") {
+    let a = x.b.a;
+    let b = x.b.b;
+    return a + b;
+  } else {
+    return 1;
+  }
+}
+

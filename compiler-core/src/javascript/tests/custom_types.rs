@@ -1,3 +1,5 @@
+// TODO: snapshots for tests that use another module
+
 use crate::assert_js;
 use crate::javascript::tests::CURRENT_PACKAGE;
 
@@ -15,13 +17,6 @@ fn go() {
     ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
 }
 "#,
-        r#"function go() {
-  { type: "This" };
-  return {
-    type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
-  };
-}
-"#
     );
 }
 
@@ -37,12 +32,6 @@ type Mine {
 const this = This;
 const that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;
 "#,
-        r#"const this$ = { type: "This" };
-
-const that = {
-  type: "ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant"
-};
-"#
     );
 }
 
@@ -170,10 +159,6 @@ type Mine {
 const labels = Mine(b: 2, a: 1)
 const no_labels = Mine(3, 4)
 "#,
-        r#"const labels = { type: "Mine", a: 1, b: 2 };
-
-const no_labels = { type: "Mine", a: 3, b: 4 };
-"#
     );
 }
 
@@ -201,23 +186,6 @@ fn destructure(x) {
   raw
 }
 "#,
-        r#"const local = { type: "Ip", 0: "0.0.0.0" };
-
-function build(x) {
-  return x("1.2.3.4");
-}
-
-function go() {
-  build((var0) => { return { type: "Ip", 0: var0 }; });
-  return { type: "Ip", 0: "5.6.7.8" };
-}
-
-function destructure(x) {
-  if (x.type !== "Ip") throw new Error("Bad match");
-  let raw = x[0];
-  return raw;
-}
-"#
     );
 
     assert_js!(
@@ -231,19 +199,6 @@ fn go() {
   TypeWithALongNameAndSeveralArguments
 }
 "#,
-        r#"function go() {
-  return (var0, var1, var2, var3, var4) => {
-    return {
-      type: "TypeWithALongNameAndSeveralArguments",
-      0: var0,
-      1: var1,
-      2: var2,
-      3: var3,
-      4: var4
-    };
-  };
-}
-"#
     );
 }
 
@@ -273,29 +228,6 @@ fn access(cat: Cat) {
   cat.cuteness
 }
 "#,
-        r#"const felix = { type: "Cat", name: "Felix", cuteness: 12 };
-
-const tom = { type: "Cat", name: "Tom", cuteness: 1 };
-
-function go() {
-  { type: "Cat", name: "Nubi", cuteness: 1 };
-  { type: "Cat", name: "Nubi", cuteness: 2 };
-  return { type: "Cat", name: "Nubi", cuteness: 3 };
-}
-
-function update(cat) {
-  Object.assign({}, cat, { name: "Sid" });
-  return Object.assign(
-    {},
-    cat,
-    { name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!" }
-  );
-}
-
-function access(cat) {
-  return cat.cuteness;
-}
-"#
     );
 }
 
@@ -315,17 +247,6 @@ fn go(cat) {
 }
 
 "#,
-        r#"function go(cat) {
-  if (cat.type !== "Cat") throw new Error("Bad match");
-  let x = cat.name;
-  let y = cat.cuteness;
-  if (cat.type !== "Cat") throw new Error("Bad match");
-  let x$1 = cat.name;
-  if (cat.type !== "Cat" || cat.cuteness !== 4) throw new Error("Bad match");
-  let x$2 = cat.name;
-  return x$2;
-}
-"#
     )
 }
 
@@ -340,16 +261,6 @@ fn go(x) {
   }
 }
 "#,
-        r#"function go(x) {
-  if (x.type === "Box" && x.b.type === "Box") {
-    let a = x.b.a;
-    let b = x.b.b;
-    return a + b;
-  } else {
-    return 1;
-  }
-}
-"#
     );
 }
 
