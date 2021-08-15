@@ -8,10 +8,6 @@ fn go() {
   #("1", "2", "3")
 }
 "#,
-        r#"function go() {
-  return ["1", "2", "3"];
-}
-"#
     );
 
     assert_js!(
@@ -24,14 +20,6 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
-  return [
-    "1111111111111111111111111111111",
-    ["1111111111111111111111111111111", "2", "3"],
-    "3",
-  ];
-}
-"#
     );
 }
 
@@ -43,10 +31,6 @@ fn go() {
   #(1, 2).0
 }
 "#,
-        r#"function go() {
-  return [1, 2][0];
-}
-"#
     )
 }
 
@@ -64,16 +48,6 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
-  return [
-    "1",
-    (() => {
-      "2";
-      return "3";
-    })(),
-  ];
-}
-"#
     );
 
     assert_js!(
@@ -86,14 +60,6 @@ fn go() {
   )
 }
 "#,
-        r#"function go() {
-  return [
-    "1111111111111111111111111111111",
-    ["1111111111111111111111111111111", "2", "3"],
-    "3",
-  ];
-}
-"#
     );
 }
 
@@ -106,14 +72,6 @@ const b = 1;
 const c = 2.0;
 const e = #("bob", "dug")
         "#,
-        r#"const a = "Hello";
-
-const b = 1;
-
-const c = 2.0;
-
-const e = ["bob", "dug"];
-"#
     );
 
     assert_js!(
@@ -122,15 +80,6 @@ const e = #(
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
 )
-        "#,
-        r#"const e = [
-  "loooooooooooooong",
-  "loooooooooooong",
-  "loooooooooooooong",
-  "loooooooooooooong",
-  "loooooooooooong",
-  "loooooooooooooong",
-];
 "#
     );
 }

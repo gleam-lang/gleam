@@ -52,4 +52,5 @@ tracing = "0.1.22"
 tracing-subscriber = "0.2.15"
 
 [dev-dependencies]
+# Test assertion errors with diffs
 pretty_assertions = "0.7"

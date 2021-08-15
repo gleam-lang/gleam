@@ -9,12 +9,6 @@ fn go() {
     False
     Nil
 }
-"#,
-        r#"function go() {
-  true;
-  false;
-  return undefined;
-}
 "#
     );
 }
@@ -27,12 +21,6 @@ const a = True
 const b = False
 const c = Nil
 "#,
-        r#"const a = true;
-
-const b = false;
-
-const c = undefined;
-"#
     );
 }
 
@@ -45,11 +33,6 @@ fn go() {
     False || False
 }
 "#,
-        r#"function go() {
-  true && true;
-  return false || false;
-}
-"#
     );
 }
 
@@ -63,13 +46,6 @@ fn go(x, y) {
   assert Nil = y
 }
 "#,
-        r#"function go(x, y) {
-  if (!x) throw new Error("Bad match");
-  if (x) throw new Error("Bad match");
-  if (y) throw new Error("Bad match");
-  return y;
-}
-"#
     );
 }
 
@@ -86,13 +62,6 @@ fn go(x, y) {
   let Nil = y
 }
 "#,
-        r#"function go(x, y) {
-  if (x.type !== "True") throw new Error("Bad match");
-  if (x.type !== "False") throw new Error("Bad match");
-  if (y.type !== "Nil") throw new Error("Bad match");
-  return y;
-}
-"#
     );
 }
 
@@ -112,18 +81,6 @@ fn go(a, b) {
   b == b
 }
 "#,
-        r#"function go(a, b) {
-  a === true;
-  a !== true;
-  a === false;
-  a !== false;
-  a === a;
-  a !== a;
-  b === undefined;
-  b !== undefined;
-  return b === b;
-}
-"#
     );
 }
 
@@ -138,16 +95,6 @@ fn go(a) {
   }
 }
 "#,
-        r#"function go(a) {
-  if (a) {
-    return 1;
-  } else if (!a) {
-    return 0;
-  } else {
-    throw new Error("Bad match");
-  }
-}
-"#
     );
 }
 
@@ -161,13 +108,5 @@ fn go(a) {
   }
 }
 "#,
-        r#"function go(a) {
-  if (!a) {
-    return 0;
-  } else {
-    throw new Error("Bad match");
-  }
-}
-"#
     );
 }

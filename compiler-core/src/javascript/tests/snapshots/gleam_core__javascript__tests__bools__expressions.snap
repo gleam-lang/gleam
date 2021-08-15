@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\nfn go() {\n    True\n    False\n    Nil\n}\n"
+
+---
+function go() {
+  true;
+  false;
+  return undefined;
+}
+

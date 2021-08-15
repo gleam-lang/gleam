@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/tuples.rs
+expression: "\nconst e = #(\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n)\n"
+
+---
+const e = [
+  "loooooooooooooong",
+  "loooooooooooong",
+  "loooooooooooooong",
+  "loooooooooooooong",
+  "loooooooooooong",
+  "loooooooooooooong",
+];
+

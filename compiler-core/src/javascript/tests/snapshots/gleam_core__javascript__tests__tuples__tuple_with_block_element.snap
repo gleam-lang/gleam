@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/tuples.rs
+expression: "\nfn go() {\n  #(\n    \"1\", \n    {\n      \"2\"\n      \"3\"\n    },\n  )\n}\n"
+
+---
+function go() {
+  return [
+    "1",
+    (() => {
+      "2";
+      return "3";
+    })(),
+  ];
+}
+
