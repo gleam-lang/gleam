@@ -4,7 +4,7 @@ use crate::assert_js;
 fn type_() {
     assert_js!(
         r#"pub external type Thing"#,
-        r#"
+        r#"export {};
 "#
     );
 }
@@ -23,6 +23,7 @@ fn pub_module_fn() {
     assert_js!(
         r#"pub external fn show(anything) -> Nil = "utils" "inspect""#,
         r#"import { inspect as show } from "utils";
+
 export { show };
 "#
     );

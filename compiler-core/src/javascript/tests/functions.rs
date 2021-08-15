@@ -343,7 +343,7 @@ pub fn export() {
 }
 "#,
         r#"import * as For from "../for.js";
-const { class$ } = For;
+import { class$ } from "../for.js";
 
 export function export$() {
   return class$();
@@ -368,7 +368,7 @@ pub fn export() {
 }
 "#,
         r#"import * as Function from "../for.js";
-const { class$: while$ } = Function;
+import { class$ as while$ } from "../for.js";
 
 export function export$() {
   let delete$ = Function.class$;

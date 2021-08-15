@@ -175,11 +175,15 @@ impl<'module> Generator<'module> {
                 [] => Ok(value),
 
                 // UTF8 strings
-                [Opt::Utf8 { .. }] => Ok(docvec!["new TextEncoder().encode(", value, ")"]),
+                // TODO: move encoding into prelude BitString
+                [Opt::Utf8 { .. }] => {
+                    Ok(docvec!["new globalThis.TextEncoder().encode(", value, ")"])
+                }
 
                 // UTF8 codepoints (which are ints at runtime)
+                // TODO: move encoding into prelude BitString
                 [Opt::Utf8Codepoint { .. }] => Ok(docvec![
-                    "new TextEncoder().encode(globalThis.String.fromCodePoint(",
+                    "new globalThis.TextEncoder().encode(globalThis.String.fromCodePoint(",
                     value,
                     "))"
                 ]),
