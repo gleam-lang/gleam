@@ -154,7 +154,10 @@ export function isEqual(x, y) {
     if (a === b) continue;
 
     let unequal =
-      !sameTypeObjects(a, b) || unequalDates(a, b) || unequalArrayBuffers(a, b);
+      !sameTypeObjects(a, b) ||
+      unequalDates(a, b) ||
+      unequalArrayBuffers(a, b) ||
+      unequalArrays(a, b);
     if (unequal) return false;
 
     for (const k of Object.keys(a)) {
@@ -175,6 +178,10 @@ function unequalArrayBuffers(a, b) {
     a.BYTES_PER_ELEMENT &&
     !(a.byteLength === b.byteLength && a.every((n, i) => n === b[i]))
   );
+}
+
+function unequalArrays(a, b) {
+  return Array.isArray(a) && a.length !== b.length;
 }
 
 function sameTypeObjects(a, b) {
