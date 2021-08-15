@@ -12,14 +12,6 @@ fn go() {
   x
 }
 "#,
-        r#"function go() {
-  let x = (() => {
-    1;
-    return 2;
-  })();
-  return x;
-}
-"#
     );
 }
 
@@ -33,12 +25,6 @@ fn go() {
   "three"
 }
 "#,
-        r#"function go() {
-  "one";
-  "two";
-  return "three";
-}
-"#
     );
 }
 
@@ -53,13 +39,6 @@ fn go() {
   }
 }
 "#,
-        r#"function go() {
-  return 1 === (() => {
-    1;
-    return 2;
-  })();
-}
-"#
     );
 }
 
@@ -74,12 +53,5 @@ fn go() {
   } == 1
 }
 "#,
-        r#"function go() {
-  return (() => {
-    1;
-    return 2;
-  })() === 1;
-}
-"#
     );
 }
