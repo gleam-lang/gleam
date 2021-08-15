@@ -41,13 +41,6 @@ function $is_object(object) {
   return object !== null && typeof object === 'object';
 }";
 
-const FUNCTION_DIVIDE: &str = "
-
-function $divide(a, b) {
-  if (b === 0) return 0;
-  return a / b;
-}";
-
 const FUNCTION_BIT_STRING: &str = "
 
 function $bit_string(segments) {
@@ -92,7 +85,7 @@ impl<'a> Generator<'a> {
     }
 
     pub fn compile(&mut self) -> Output<'a> {
-        let imports = self.collect_imports();
+        let mut imports = self.collect_imports();
         let statements = self
             .module
             .statements
@@ -105,7 +98,7 @@ impl<'a> Generator<'a> {
 
         // If float division has been used render an appropriate function
         if self.float_division_used {
-            statements.push(FUNCTION_DIVIDE.to_doc());
+            imports.register_prelude("divideFloat");
         };
 
         // If structural equality is used render an appropriate function

@@ -763,7 +763,7 @@ impl<'module> Generator<'module> {
         let left = self.not_in_tail_position(|gen| gen.expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
         *self.float_division_used = true;
-        Ok(docvec!("$divide", wrap_args([left, right])))
+        Ok(docvec!("divideFloat", wrap_args([left, right])))
     }
 
     fn equal<'a>(

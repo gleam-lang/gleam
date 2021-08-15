@@ -67,7 +67,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn wide_float_div() {
     assert_js!(
         r#"
 fn go() {
