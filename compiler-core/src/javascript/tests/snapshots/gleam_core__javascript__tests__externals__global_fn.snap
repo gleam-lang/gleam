@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "external fn down(Float) -> Float = \"\" \"Math.floor\""
+
+---
+function down(arg0) {
+  return Math.floor(arg0)
+}
+

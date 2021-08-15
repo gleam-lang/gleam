@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "pub external fn class() -> Nil = \"./the/module.js\" \"one\"\n"
+
+---
+import { one as class$ } from "./the/module.js";
+
+export { class$ };
+

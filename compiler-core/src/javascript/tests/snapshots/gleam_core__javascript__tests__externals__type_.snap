@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: pub external type Thing
+
+---
+export {};
+

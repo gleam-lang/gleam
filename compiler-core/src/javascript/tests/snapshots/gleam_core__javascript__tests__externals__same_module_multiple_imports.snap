@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "pub external fn one() -> Nil = \"./the/module.js\" \"one\"\npub external fn two() -> Nil = \"./the/module.js\" \"two\"\n"
+
+---
+import { one, two } from "./the/module.js";
+
+export { one, two };
+

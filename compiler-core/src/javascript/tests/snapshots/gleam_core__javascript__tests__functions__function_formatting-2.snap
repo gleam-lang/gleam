@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {\nx + y\n}"
+
+---
+export function this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(
+  x,
+  y
+) {
+  return x + y;
+}
+

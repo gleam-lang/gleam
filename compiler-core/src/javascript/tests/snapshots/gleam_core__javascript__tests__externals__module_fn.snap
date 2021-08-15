@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "external fn show(anything) -> Nil = \"utils\" \"inspect\""
+
+---
+import { inspect as show } from "utils";
+
