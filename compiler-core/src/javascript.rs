@@ -67,17 +67,22 @@ impl<'a> Generator<'a> {
         let mut statements: Vec<_> =
             Itertools::intersperse(statements, Ok(lines(2))).try_collect()?;
 
-        // If float division has been used render an appropriate function
+        // If float division has been import an appropriate function
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
 
-        // If structural equality is used render an appropriate function
+        // If int division has been import an appropriate function
+        if self.tracker.int_division_used {
+            self.register_prelude_usage(&mut imports, "divideInt");
+        };
+
+        // If structural equality is used import an appropriate function
         if self.tracker.object_equality_used {
             self.register_prelude_usage(&mut imports, "isEqual");
         };
 
-        // If bit string literals have been used render an appropriate function
+        // If bit string literals have been used import an appropriate function
         if self.tracker.bit_string_literal_used {
             statements.push(FUNCTION_BIT_STRING.to_doc());
         };
@@ -512,6 +517,7 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
 
 #[derive(Debug, Default)]
 pub(crate) struct UsageTracker {
+    pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,
     pub bit_string_literal_used: bool,
