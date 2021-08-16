@@ -115,3 +115,17 @@ fn go(x) {
 "#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1237
+#[test]
+fn pipe() {
+    assert_js!(
+        r#"
+fn go(x, f) {
+  case x |> f {
+    0 -> Nil
+  }
+}
+"#,
+    )
+}

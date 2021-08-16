@@ -553,7 +553,7 @@ impl<'module> Generator<'module> {
             .zip(subject_values)
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
-                let value = self.not_in_tail_position(|gen| gen.expression(value))?;
+                let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
                 Ok(docvec!("let ", name, " = ", value, ";", line()))
             })
             .try_collect()?;
