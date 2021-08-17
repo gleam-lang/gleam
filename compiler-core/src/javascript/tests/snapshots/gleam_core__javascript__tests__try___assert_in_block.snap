@@ -8,7 +8,7 @@ export function main(x) {
     if (x.type === "Error") return x;
     let z = x[0];
 
-    return { type: "Ok", 0: z + 1 };
+    return new Ok(z + 1);
   })();
   if ($.type !== "Ok") throw new Error("Bad match");
   let y = $[0];

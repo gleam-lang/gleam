@@ -11,11 +11,11 @@ export function main(x) {
   if (x.type === "Error") return x;
   if (x[0][0] !== 1 || x[0][1] !== 2) throw new Error("Bad match");
 
-  let $ = { type: "Ok", 0: [1, 2] };
+  let $ = new Ok([1, 2]);
   if ($.type === "Error") return $;
   if ($[0][1] !== 2) throw new Error("Bad match");
   let a$1 = $[0][0];
 
-  return { type: "Ok", 0: x };
+  return new Ok(x);
 }
 

@@ -53,6 +53,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList");
         };
 
+        if self.tracker.ok_used {
+            self.register_prelude_usage(&mut imports, "ok");
+        };
+
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
@@ -506,7 +510,9 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
 
 #[derive(Debug, Default)]
 pub(crate) struct UsageTracker {
+    pub ok_used: bool,
     pub list_used: bool,
+    pub error_used: bool,
     pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,

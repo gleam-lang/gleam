@@ -894,6 +894,7 @@ pub(crate) fn constant_expression<'a>(
         Constant::Tuple { elements, .. } => {
             array(elements.iter().map(|e| constant_expression(tracker, e)))
         }
+
         Constant::List { elements, .. } => {
             tracker.list_used = true;
             list(
@@ -901,6 +902,7 @@ pub(crate) fn constant_expression<'a>(
                 None,
             )
         }
+
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
@@ -908,18 +910,28 @@ pub(crate) fn constant_expression<'a>(
             Ok("false".to_doc())
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+
         Constant::Record {
             tag,
+            typ,
             args,
             field_map,
             ..
         } => {
+            if typ.is_result() {
+                if tag == "Ok" {
+                    tracker.ok_used = true;
+                } else {
+                    tracker.error_used = true;
+                }
+            }
             let field_values: Vec<_> = args
                 .iter()
                 .map(|arg| constant_expression(tracker, &arg.value))
                 .try_collect()?;
             Ok(construct_record(tag, args.len(), field_map, field_values))
         }
+
         Constant::BitString { location, .. } => Err(Error::Unsupported {
             feature: "Bit string syntax".to_string(),
             location: *location,
@@ -981,30 +993,44 @@ fn construct_record<'a>(
     name: &'a str,
     arity: usize,
     field_map: &'a Option<FieldMap>,
-    values: impl IntoIterator<Item = Document<'a>>,
+    arguments: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
-    let field_names: Vec<Document<'_>> = match field_map {
-        Some(FieldMap { fields, .. }) => fields
-            .iter()
-            .sorted_by_key(|(_, &v)| v)
-            .map(|(s, _)| s.to_doc())
-            .collect(),
-        None => (0..arity)
-            .map(|i| Document::String(format!("{}", i)))
-            .collect(),
-    };
+    let mut any_arguments = false;
+    let arguments = concat(Itertools::intersperse(
+        arguments.into_iter().map(|a| {
+            any_arguments = true;
+            a
+        }),
+        break_(",", ", "),
+    ));
+    let arguments = docvec![break_("", ""), arguments].nest(INDENT);
+    if any_arguments {
+        docvec!["new ", name, "(", arguments, break_(",", ""), ")"].group()
+    } else {
+        docvec!["new ", name, "()"]
+    }
+    // let field_names: Vec<Document<'_>> = match field_map {
+    //     Some(FieldMap { fields, .. }) => fields
+    //         .iter()
+    //         .sorted_by_key(|(_, &v)| v)
+    //         .map(|(s, _)| s.to_doc())
+    //         .collect(),
+    //     None => (0..arity)
+    //         .map(|i| Document::String(format!("{}", i)))
+    //         .collect(),
+    // };
 
-    let record_head = (
-        RECORD_KEY.to_doc(),
-        Some(name.to_doc().surround("\"", "\"")),
-    );
+    // let record_head = (
+    //     RECORD_KEY.to_doc(),
+    //     Some(name.to_doc().surround("\"", "\"")),
+    // );
 
-    let record_values = field_names
-        .into_iter()
-        .zip(values)
-        .map(|(name, value)| (name, Some(value)));
+    // let record_values = field_names
+    //     .into_iter()
+    //     .zip(values)
+    //     .map(|(name, value)| (name, Some(value)));
 
-    wrap_object(std::iter::once(record_head).chain(record_values))
+    // wrap_object(std::iter::once(record_head).chain(record_values))
 }
 
 impl TypedExpr {

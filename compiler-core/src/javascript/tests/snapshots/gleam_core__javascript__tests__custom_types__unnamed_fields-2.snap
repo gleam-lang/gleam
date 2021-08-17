@@ -5,14 +5,13 @@ expression: "\ntype TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAn
 ---
 function go() {
   return (var0, var1, var2, var3, var4) => {
-    return {
-      type: "TypeWithALongNameAndSeveralArguments",
-      0: var0,
-      1: var1,
-      2: var2,
-      3: var3,
-      4: var4
-    };
+    return new TypeWithALongNameAndSeveralArguments(
+      var0,
+      var1,
+      var2,
+      var3,
+      var4,
+    );
   };
 }
 
