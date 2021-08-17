@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import one/two/three.{External}\n\npub fn go() { 1 }\n"
+
+---
+import * as $three from "../one/two/three.js";
+
+export function go() {
+  return 1;
+}
+

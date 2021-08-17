@@ -19,11 +19,11 @@ pub use prelude::*;
 
 use crate::{
     ast::{
-        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Pattern,
-        RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst, TypedConstant,
-        TypedExpr, TypedModule, TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg,
-        TypedStatement, UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
-        UntypedRecordUpdateArg, UntypedStatement,
+        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Layer,
+        Pattern, RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst,
+        TypedConstant, TypedExpr, TypedModule, TypedPattern, TypedPatternBitStringSegment,
+        TypedRecordUpdateArg, TypedStatement, UnqualifiedImport, UntypedModule,
+        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string,
     build::{Origin, Target},
@@ -1163,7 +1163,7 @@ fn infer_statement(
             location,
             module,
             as_name,
-            unqualified,
+            mut unqualified,
             ..
         } => {
             let name = module.join("/");
@@ -1177,6 +1177,16 @@ fn infer_statement(
                         name,
                         imported_modules: environment.imported_modules.keys().cloned().collect(),
                     })?;
+            // Record any imports that are types only as this information is
+            // needed to prevent types being imported in generated JavaScript
+            for import in unqualified.iter_mut() {
+                if !environment
+                    .local_values
+                    .contains_key(import.variable_name())
+                {
+                    import.layer = Layer::Type;
+                }
+            }
             Ok(Statement::Import {
                 location,
                 module,
@@ -1688,6 +1698,7 @@ pub fn register_import(
                 name,
                 location,
                 as_name,
+                ..
             } in unqualified
             {
                 let mut type_imported = false;

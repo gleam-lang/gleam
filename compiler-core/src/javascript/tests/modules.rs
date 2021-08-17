@@ -167,3 +167,33 @@ pub fn go() { one() + two() }
 "#,
     );
 }
+
+#[test]
+fn imported_external_types_dont_get_rendered() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub external type External"#
+        ),
+        r#"import one/two/three.{External}
+
+pub fn go() { 1 }
+"#,
+    );
+}
+
+#[test]
+fn imported_custom_types_dont_get_rendered() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub type Custom { One Two }"#
+        ),
+        r#"import one/two/three.{Custom, One, Two}
+
+pub fn go() -> List(Custom) { [One, Two] }
+"#,
+    );
+}
