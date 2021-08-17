@@ -49,9 +49,10 @@ impl<'a> Generator<'a> {
 
         // Import any prelude functions that have been used
 
-        if self.tracker.list_used {
-            self.register_prelude_usage(&mut imports, "toList");
-        };
+        // TODO: import Record
+        // TODO: handle Ok being shadowed
+        // TODO: handle Error being shadowed
+        // TODO: handle Record being shadowed
 
         if self.tracker.ok_used {
             self.register_prelude_usage(&mut imports, "Ok");
@@ -59,6 +60,10 @@ impl<'a> Generator<'a> {
 
         if self.tracker.error_used {
             self.register_prelude_usage(&mut imports, "Error");
+        };
+
+        if self.tracker.list_used {
+            self.register_prelude_usage(&mut imports, "toList");
         };
 
         if self.tracker.float_division_used {
