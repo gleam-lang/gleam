@@ -1988,7 +1988,7 @@ const x = two.A"#
                 path: PathBuf::from("_build/default/lib/the_package/src/two.js"),
                 text: r#"import * as $two from "./one/two.js";
 
-const x = { type: "A" };
+const x = new A();
 "#
                 .to_string(),
             }

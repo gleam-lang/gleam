@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Mine {\n  Mine(a: Int, b: Int)\n}\n\nconst labels = Mine(b: 2, a: 1)\nconst no_labels = Mine(3, 4)\n"
 
 ---
-const labels = { type: "Mine", a: 1, b: 2 };
+const labels = new Mine(1, 2);
 
-const no_labels = { type: "Mine", a: 3, b: 4 };
+const no_labels = new Mine(3, 4);
 

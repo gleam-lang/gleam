@@ -10,6 +10,6 @@ export function main(x) {
   if (x$1.type === "Error") return x$1;
   let x$2 = x$1[0];
 
-  return { type: "Ok", 0: x$2 };
+  return new Ok(x$2);
 }
 

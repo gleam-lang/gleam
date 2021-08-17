@@ -5,5 +5,5 @@ expression: "import other.{Two}\nconst a = Two\n"
 ---
 import * as $other from "../other.js";
 
-const a = { type: "Two" };
+const a = new Two();
 

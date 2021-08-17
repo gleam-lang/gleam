@@ -4,6 +4,6 @@ expression: "import gleam\npub fn go() { gleam.Error(1) }\n"
 
 ---
 export function go() {
-  return { type: "Error", 0: 1 };
+  return new Error(1);
 }
 

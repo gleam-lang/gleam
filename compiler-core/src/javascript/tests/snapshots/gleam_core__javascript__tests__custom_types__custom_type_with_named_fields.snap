@@ -3,14 +3,14 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nconst felix = Cat(\"Felix\", 12)\nconst tom = Cat(cuteness: 1, name: \"Tom\")\n\nfn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\nfn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n}\n\nfn access(cat: Cat) {\n  cat.cuteness\n}\n"
 
 ---
-const felix = { type: "Cat", name: "Felix", cuteness: 12 };
+const felix = new Cat("Felix", 12);
 
-const tom = { type: "Cat", name: "Tom", cuteness: 1 };
+const tom = new Cat("Tom", 1);
 
 function go() {
-  { type: "Cat", name: "Nubi", cuteness: 1 };
-  { type: "Cat", name: "Nubi", cuteness: 2 };
-  return { type: "Cat", name: "Nubi", cuteness: 3 };
+  new Cat("Nubi", 1);
+  new Cat("Nubi", 2);
+  return new Cat("Nubi", 3);
 }
 
 function update(cat) {

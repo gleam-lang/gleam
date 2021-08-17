@@ -6,6 +6,6 @@ expression: "import other.{Two}\npub fn main() {\n  Two(b: 2, c: 3, a: 1)\n}"
 import * as $other from "../other.js";
 
 export function main() {
-  return { type: "Two", a: 1, b: 2, c: 3 };
+  return new Two(1, 2, 3);
 }
 
