@@ -5,9 +5,7 @@ use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{
-        FieldMap, HasType, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
-    },
+    type_::{HasType, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
 };
 
 static RECORD_KEY: &str = "type";
@@ -271,12 +269,9 @@ impl<'module> Generator<'module> {
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::Record {
-                name,
-                arity,
-                field_map,
-                ..
-            } => self.record_constructor(constructor.type_.clone(), name, *arity, field_map),
+            ValueConstructorVariant::Record { name, arity, .. } => {
+                self.record_constructor(constructor.type_.clone(), name, *arity)
+            }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalVariable => self.local_var(name),
@@ -288,7 +283,6 @@ impl<'module> Generator<'module> {
         type_: Arc<Type>,
         name: &'a str,
         arity: usize,
-        field_map: &'a Option<FieldMap>,
     ) -> Document<'a> {
         if type_.is_bool() && name == "True" {
             "true".to_doc()
@@ -302,12 +296,7 @@ impl<'module> Generator<'module> {
             wrap_object([record_head])
         } else {
             let vars = (0..arity).map(|i| Document::String(format!("var{}", i)));
-
-            let body = docvec![
-                "return ",
-                construct_record(name, arity, field_map, vars.clone()),
-                ";"
-            ];
+            let body = docvec!["return ", construct_record(name, vars.clone()), ";"];
 
             docvec!(
                 docvec!(wrap_args(vars), " => {", break_("", " "), body)
@@ -586,29 +575,17 @@ impl<'module> Generator<'module> {
         match fun {
             // Record construction
             TypedExpr::ModuleSelect {
-                constructor:
-                    ModuleValueConstructor::Record {
-                        name,
-                        arity,
-                        field_map,
-                        ..
-                    },
+                constructor: ModuleValueConstructor::Record { name, .. },
                 ..
             }
             | TypedExpr::Var {
                 constructor:
                     ValueConstructor {
-                        variant:
-                            ValueConstructorVariant::Record {
-                                name,
-                                arity,
-                                field_map,
-                                ..
-                            },
+                        variant: ValueConstructorVariant::Record { name, .. },
                         ..
                     },
                 ..
-            } => Ok(self.wrap_return(construct_record(name, *arity, field_map, arguments))),
+            } => Ok(self.wrap_return(construct_record(name, arguments))),
 
             // Tail call optimisation. If we are calling the current function
             // and we are in tail position we can avoid creating a new stack
@@ -865,12 +842,8 @@ impl<'module> Generator<'module> {
             }
 
             ModuleValueConstructor::Record {
-                name,
-                arity,
-                field_map,
-                type_,
-                ..
-            } => self.record_constructor(type_.clone(), name, *arity, field_map),
+                name, arity, type_, ..
+            } => self.record_constructor(type_.clone(), name, *arity),
         }
     }
 }
@@ -911,13 +884,7 @@ pub(crate) fn constant_expression<'a>(
         }
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
 
-        Constant::Record {
-            tag,
-            typ,
-            args,
-            field_map,
-            ..
-        } => {
+        Constant::Record { tag, typ, args, .. } => {
             if typ.is_result() {
                 if tag == "Ok" {
                     tracker.ok_used = true;
@@ -929,7 +896,7 @@ pub(crate) fn constant_expression<'a>(
                 .iter()
                 .map(|arg| constant_expression(tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(tag, args.len(), field_map, field_values))
+            Ok(construct_record(tag, field_values))
         }
 
         Constant::BitString { location, .. } => Err(Error::Unsupported {
@@ -991,8 +958,6 @@ fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Eleme
 
 fn construct_record<'a>(
     name: &'a str,
-    arity: usize,
-    field_map: &'a Option<FieldMap>,
     arguments: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     let mut any_arguments = false;
@@ -1009,28 +974,6 @@ fn construct_record<'a>(
     } else {
         docvec!["new ", name, "()"]
     }
-    // let field_names: Vec<Document<'_>> = match field_map {
-    //     Some(FieldMap { fields, .. }) => fields
-    //         .iter()
-    //         .sorted_by_key(|(_, &v)| v)
-    //         .map(|(s, _)| s.to_doc())
-    //         .collect(),
-    //     None => (0..arity)
-    //         .map(|i| Document::String(format!("{}", i)))
-    //         .collect(),
-    // };
-
-    // let record_head = (
-    //     RECORD_KEY.to_doc(),
-    //     Some(name.to_doc().surround("\"", "\"")),
-    // );
-
-    // let record_values = field_names
-    //     .into_iter()
-    //     .zip(values)
-    //     .map(|(name, value)| (name, Some(value)));
-
-    // wrap_object(std::iter::once(record_head).chain(record_values))
 }
 
 impl TypedExpr {
