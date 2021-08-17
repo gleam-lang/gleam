@@ -53,6 +53,7 @@ impl<'a> Generator<'a> {
         // TODO: handle Ok being shadowed
         // TODO: handle Error being shadowed
         // TODO: handle Record being shadowed
+        // TODO: Check that qualified record usage is working
 
         if self.tracker.ok_used {
             self.register_prelude_usage(&mut imports, "Ok");
