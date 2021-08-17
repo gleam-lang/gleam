@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import one/two/three.{one}\nimport one/two/three.{two}\n\npub fn go() { one() + two() }\n"
+
+---
+import * as $three from "../one/two/three.js";
+import { one, two } from "../one/two/three.js";
+
+export function go() {
+  return one() + two();
+}
+

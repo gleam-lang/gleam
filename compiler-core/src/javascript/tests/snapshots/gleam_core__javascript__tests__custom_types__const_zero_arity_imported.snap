@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other\nconst x = other.Two\n"
+
+---
+import * as $other from "../other.js";
+
+const x = { type: "Two" };
+

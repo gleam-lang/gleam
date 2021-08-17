@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import one/two\npub fn go() { two.go() }"
+
+---
+import * as $two from "../one/two.js";
+
+export function go() {
+  return $two.go();
+}
+

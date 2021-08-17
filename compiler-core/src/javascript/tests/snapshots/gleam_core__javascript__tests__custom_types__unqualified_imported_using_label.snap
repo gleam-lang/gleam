@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other.{Two}\npub fn main() {\n  Two(field: 1)\n}"
+
+---
+import * as $other from "../other.js";
+
+export function main() {
+  return { type: "Two", field: 1 };
+}
+

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other.{Two}\n\npub fn main(x) {\n  case x {\n    Two(a: 1, ..) -> 1\n    other.Two(b: 2, c: c, ..) -> c\n    _ -> 3\n  }\n}\n"
+
+---
+import * as $other from "../other.js";
+
+export function main(x) {
+  if (x.type === "Two" && x.a === 1) {
+    return 1;
+  } else if (x.type === "Two" && x.b === 2) {
+    let c = x.c;
+    return c;
+  } else {
+    return 3;
+  }
+}
+

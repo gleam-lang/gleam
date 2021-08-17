@@ -194,13 +194,6 @@ pub fn export() {
   class()
 }
 "#,
-        r#"import * as For from "../for.js";
-import { class$ } from "../for.js";
-
-export function export$() {
-  return class$();
-}
-"#
     );
 }
 
@@ -219,14 +212,6 @@ pub fn export() {
   while()
 }
 "#,
-        r#"import * as Function from "../for.js";
-import { class$ as while$ } from "../for.js";
-
-export function export$() {
-  let delete$ = Function.class$;
-  return while$();
-}
-"#
     );
 }
 

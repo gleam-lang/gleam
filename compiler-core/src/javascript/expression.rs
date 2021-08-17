@@ -861,11 +861,7 @@ impl<'module> Generator<'module> {
     ) -> Document<'a> {
         match constructor {
             ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
-                docvec![
-                    Document::String(module.to_camel_case()),
-                    ".",
-                    maybe_escape_identifier_doc(label)
-                ]
+                docvec!["$", module, ".", maybe_escape_identifier_doc(label)]
             }
 
             ModuleValueConstructor::Record {

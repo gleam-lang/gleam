@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "import for.{class as while} as function\n\npub fn export() {\n  let delete = function.class\n  while()\n}\n"
+
+---
+import * as $function from "../for.js";
+import { class$ as while$ } from "../for.js";
+
+export function export$() {
+  let delete$ = $function.class$;
+  return while$();
+}
+

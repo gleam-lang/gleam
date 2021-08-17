@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import rocket_ship.{a,b as bb}\npub fn go() { a() + bb() }\n"
+
+---
+import * as $rocket_ship from "../rocket_ship.js";
+import { a, b as bb } from "../rocket_ship.js";
+
+export function go() {
+  return a() + bb();
+}
+

@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other.{Two}\npub const main = Two(1)\n"
+
+---
+import * as $other from "../other.js";
+
+export const main = { type: "Two", 0: 1 };
+

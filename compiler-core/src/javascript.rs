@@ -7,7 +7,6 @@ mod tests;
 use std::{iter, path::Path};
 
 use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
-use heck::CamelCase;
 use itertools::Itertools;
 
 use self::import::{Imports, Member};
@@ -203,15 +202,12 @@ impl<'a> Generator<'a> {
         as_name: &'a Option<String>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name
-            .as_ref()
-            .unwrap_or_else(|| {
-                module
-                    .last()
-                    .expect("JavaScript generator could not identify imported module name.")
-            })
-            .to_camel_case();
-        self.register_in_scope(&module_name);
+        let module_name = as_name.as_ref().unwrap_or_else(|| {
+            module
+                .last()
+                .expect("JavaScript generator could not identify imported module name.")
+        });
+        let module_name = format!("${}", module_name);
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
             .iter()
