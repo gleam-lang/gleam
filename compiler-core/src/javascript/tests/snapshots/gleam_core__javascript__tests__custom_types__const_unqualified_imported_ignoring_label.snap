@@ -4,6 +4,7 @@ expression: "import other.{Two}\npub const main = Two(1)\n"
 
 ---
 import * as $other from "../other.js";
+import { Two } from "../other.js";
 
 export const main = new Two(1);
 

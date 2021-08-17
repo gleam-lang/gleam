@@ -4,6 +4,7 @@ expression: "import other.{Two}\npub fn main() {\n  Two\n}"
 
 ---
 import * as $other from "../other.js";
+import { Two } from "../other.js";
 
 export function main() {
   return (var0, var1, var2) => { return new Two(var0, var1, var2); };

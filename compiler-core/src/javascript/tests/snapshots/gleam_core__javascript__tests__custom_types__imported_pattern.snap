@@ -4,6 +4,7 @@ expression: "import other.{Two}\n\npub fn main(x) {\n  case x {\n    Two(a: 1, .
 
 ---
 import * as $other from "../other.js";
+import { Two } from "../other.js";
 
 export function main(x) {
   if (x.type === "Two" && x.a === 1) {
