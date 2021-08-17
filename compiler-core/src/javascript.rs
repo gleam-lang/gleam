@@ -215,16 +215,8 @@ impl<'a> Generator<'a> {
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
             .iter()
-            // .filter(|i| {
-            //     // TODO: filter out types
-            //     // We do not create a JS import for uppercase names are they are
-            //     // type or record constructors, both of which are not used at runtime
-            //     i.name
-            //         .chars()
-            //         .next()
-            //         .map(char::is_lowercase)
-            //         .unwrap_or(false)
-            // })
+            // We do not create a JS import for types as they are not used at runtime
+            .filter(|import| import.is_value())
             .map(|i| {
                 let alias = i.as_name.as_ref().map(|n| {
                     self.register_in_scope(n);

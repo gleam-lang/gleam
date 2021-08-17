@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import one/two/three.{Custom, One, Two}\n\npub fn go() -> List(Custom) { [One, Two] }\n"
+
+---
+import { toList } from "../gleam.js";
+import * as $three from "../one/two/three.js";
+import { One, Two } from "../one/two/three.js";
+
+export function go() {
+  return toList([new One(), new Two()]);
+}
+
