@@ -216,6 +216,7 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified
             .iter()
             .filter(|i| {
+                // TODO: filter out types
                 // We do not create a JS import for uppercase names are they are
                 // type or record constructors, both of which are not used at runtime
                 i.name
