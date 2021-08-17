@@ -3,6 +3,13 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 
 ---
+class Cat extends Record {
+  constructor(name, cuteness) {
+    this.name = name;
+    this.cuteness = cuteness;
+  }
+}
+
 function go(cat) {
   if (cat.type !== "Cat") throw new Error("Bad match");
   let x = cat.name;
