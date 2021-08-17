@@ -6,7 +6,7 @@ use crate::javascript::tests::CURRENT_PACKAGE;
 #[test]
 fn empty_module() {
     // Renders an export statement to ensure it's an ESModule
-    assert_js!("", "export {};\n");
+    assert_js!("", "export {}\n");
 }
 
 #[test]
