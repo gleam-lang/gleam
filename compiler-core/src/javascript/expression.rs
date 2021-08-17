@@ -8,8 +8,6 @@ use crate::{
     type_::{HasType, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
 };
 
-static RECORD_KEY: &str = "type";
-
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: &'module [String],
@@ -291,13 +289,10 @@ impl<'module> Generator<'module> {
         } else if type_.is_nil() {
             "undefined".to_doc()
         } else if arity == 0 {
-            let record_type = name.to_doc().surround("\"", "\"");
-            let record_head = (RECORD_KEY.to_doc(), Some(record_type));
-            wrap_object([record_head])
+            docvec!["new ", name, "()"]
         } else {
             let vars = (0..arity).map(|i| Document::String(format!("var{}", i)));
             let body = docvec!["return ", construct_record(name, vars.clone()), ";"];
-
             docvec!(
                 docvec!(wrap_args(vars), " => {", break_("", " "), body)
                     .nest(INDENT)
