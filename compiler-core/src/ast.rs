@@ -195,6 +195,8 @@ impl ArgNames {
     }
 }
 
+pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
@@ -208,6 +210,8 @@ impl<A> RecordConstructor<A> {
         self.documentation = Some(new_doc);
     }
 }
+
+pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructorArg<T> {

@@ -7,6 +7,13 @@ const felix = new Cat("Felix", 12);
 
 const tom = new Cat("Tom", 1);
 
+class Cat extends Record {
+  constructor(name, cuteness) {
+    this.name = name;
+    this.cuteness = cuteness;
+  }
+}
+
 function go() {
   new Cat("Nubi", 1);
   new Cat("Nubi", 2);

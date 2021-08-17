@@ -54,7 +54,11 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.ok_used {
-            self.register_prelude_usage(&mut imports, "ok");
+            self.register_prelude_usage(&mut imports, "Ok");
+        };
+
+        if self.tracker.error_used {
+            self.register_prelude_usage(&mut imports, "Error");
         };
 
         if self.tracker.float_division_used {
@@ -106,11 +110,16 @@ impl<'a> Generator<'a> {
 
     pub fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
         match statement {
-            Statement::TypeAlias { .. }
-            | Statement::CustomType { .. }
-            | Statement::ExternalType { .. } => vec![],
+            Statement::TypeAlias { .. } | Statement::ExternalType { .. } => vec![],
 
             Statement::Import { .. } => vec![],
+
+            Statement::CustomType {
+                public,
+                constructors,
+                opaque,
+                ..
+            } => self.custom_type_definition(&constructors, *public, *opaque),
 
             Statement::ModuleConstant {
                 public,
@@ -140,6 +149,72 @@ impl<'a> Generator<'a> {
 
             Statement::ExternalFn { .. } => vec![],
         }
+    }
+
+    fn custom_type_definition(
+        &self,
+        constructors: &'a [TypedRecordConstructor],
+        public: bool,
+        opaque: bool,
+    ) -> Vec<Output<'a>> {
+        constructors
+            .iter()
+            .map(|constructor| Ok(self.record_definition(constructor, public, opaque)))
+            .collect()
+    }
+
+    fn record_definition(
+        &self,
+        constructor: &'a TypedRecordConstructor,
+        public: bool,
+        opaque: bool,
+    ) -> Document<'a> {
+        fn parameter<'a>((i, arg): (usize, &'a TypedRecordConstructorArg)) -> Document<'a> {
+            arg.label
+                .as_ref()
+                .map(|s| s.to_doc())
+                .unwrap_or_else(|| Document::String(format!("x{}", i)))
+        }
+
+        let head = if public && !opaque {
+            "export class "
+        } else {
+            "class "
+        };
+        let head = docvec![head, &constructor.name, " extends Record {"];
+
+        if constructor.arguments.is_empty() {
+            return head.append("}");
+        };
+
+        let parameters = concat(Itertools::intersperse(
+            constructor.arguments.iter().enumerate().map(parameter),
+            break_(",", ", "),
+        ));
+
+        let constructor_body = concat(Itertools::intersperse(
+            constructor.arguments.iter().enumerate().map(|(i, arg)| {
+                let var = parameter((i, arg));
+                match &arg.label {
+                    None => docvec!["this[", i, "] = ", var, ";"],
+                    Some(name) => docvec!["this.", name, " = ", var, ";"],
+                }
+            }),
+            line(),
+        ));
+
+        let class_body = docvec![
+            line(),
+            "constructor(",
+            parameters,
+            ") {",
+            docvec![line(), constructor_body].nest(INDENT),
+            line(),
+            "}",
+        ]
+        .nest(INDENT);
+
+        docvec![head, class_body, line(), "}"]
     }
 
     fn collect_imports(&mut self) -> Imports<'a> {
