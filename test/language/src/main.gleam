@@ -21,6 +21,7 @@ pub fn main() -> Int {
       suite("tail call optimisation", tail_call_optimisation_tests()),
       suite("alternative patterns", alternative_patterns_tests()),
       suite("multiple case subjects", multiple_case_subjects()),
+      suite("precedence", precedence_tests()),
     ])
 
   case stats.failures {
@@ -1006,5 +1007,26 @@ fn list_spread_tests() -> List(Test) {
     |> example(fn() { assert_equal([1, 2, ..[3]], [1, 2, 3]) }),
     "[1, 2, ..[3, 4]]"
     |> example(fn() { assert_equal([1, 2, ..[3, 4]], [1, 2, 3, 4]) }),
+  ]
+}
+
+fn precedence_tests() -> List(Test) {
+  [
+    "1 + 2 * 3"
+    |> example(fn() { assert_equal(7, 1 + 2 * 3) }),
+    "3 * 1 + 2"
+    |> example(fn() { assert_equal(5, 3 * 1 + 2) }),
+    "{ 1 + 2 } * 3"
+    |> example(fn() { assert_equal(9, { 1 + 2 } * 3) }),
+    "3 * { 1 + 2 }"
+    |> example(fn() { assert_equal(9, 3 * { 1 + 2 }) }),
+    "1 + 2 * 3 + 4"
+    |> example(fn() { assert_equal(11, 1 + 2 * 3 + 4) }),
+    "2 * 3 + 4 * 5"
+    |> example(fn() { assert_equal(26, 2 * 3 + 4 * 5) }),
+    "2 * { 3 + 1 } / 2"
+    |> example(fn() { assert_equal(4, 2 * { 3 + 1 } / 2) }),
+    "5 + 3 / 3 * 2 - 6 * 4"
+    |> example(fn() { assert_equal(-17, 5 + 3 / 3 * 2 - 6 * 4) }),
   ]
 }
