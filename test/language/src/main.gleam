@@ -1,6 +1,7 @@
 import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import mod_with_numbers_0123456789
+import record_update
 import gleam
 
 pub fn main() -> Int {
@@ -27,6 +28,7 @@ pub fn main() -> Int {
       suite("floats", floats_tests()),
       suite("ints", ints_tests()),
       suite("mod with numbers", mod_with_numbers_tests()),
+      suite("record update", record_update_tests()),
     ])
 
   case stats.failures {
@@ -1099,6 +1101,27 @@ fn mod_with_numbers_tests() -> List(Test) {
     "mod_with_numbers_0123456789.hello()"
     |> example(fn() {
       assert_equal("world", mod_with_numbers_0123456789.hello())
+    }),
+  ]
+}
+
+type Person {
+  Person(name: String, age: Int, country: String)
+}
+
+fn record_update_tests() {
+  [
+    "this module"
+    |> example(fn() {
+      let past = Person("Quinn", 27, "Canada")
+      let present = Person(..past, country: "USA", age: past.age + 1)
+      assert_equal(Person("Quinn", 28, "USA"), present)
+    }),
+    "that module"
+    |> example(fn() {
+      let module_box = record_update.Box("a", 5)
+      let updated = record_update.Box(..module_box, value: 6)
+      assert_equal(record_update.Box("a", 6), updated)
     }),
   ]
 }
