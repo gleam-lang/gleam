@@ -31,6 +31,7 @@ pub fn main() -> Int {
       suite("mod with numbers", mod_with_numbers_tests()),
       suite("record update", record_update_tests()),
       suite("shadowed module", shadowed_module_tests()),
+      suite("unicode overflow", unicode_overflow_tests()),
     ])
 
   case stats.failures {
@@ -1136,5 +1137,16 @@ fn shadowed_module_tests() {
       let shadowed_module = shadowed_module.celebrate_birthday(shadowed_module)
       assert_equal(19, shadowed_module.age)
     }),
+  ]
+}
+
+fn unicode_overflow_tests() {
+  // In erlang, literally creating binaries can cause entries to overflow.
+  // For example `<<"🌵">> == <<"5">>` evaluates to true.
+  // This checks that we are not doing that.
+  // See: https://github.com/gleam-lang/gleam/issues/457
+  [
+    "🌵 vs 5"
+    |> example(fn() { assert_equal(False, "🌵" == "5") }),
   ]
 }
