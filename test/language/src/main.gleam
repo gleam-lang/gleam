@@ -23,6 +23,7 @@ pub fn main() -> Int {
       suite("multiple case subjects", multiple_case_subjects()),
       suite("precedence", precedence_tests()),
       suite("call returned function", call_returned_function_tests()),
+      suite("floats", floats_tests()),
     ])
 
   case stats.failures {
@@ -1048,5 +1049,14 @@ fn call_returned_function_tests() -> List(Test) {
       let t = #(fn(x) { x })
       assert_equal(5, t.0(5))
     }),
+  ]
+}
+
+fn floats_tests() -> List(Test) {
+  [
+    "2.0 /. 2.0"
+    |> example(fn() { assert_equal(1.0, 2.0 /. 2.0) }),
+    "2.0 /. 0.0"
+    |> example(fn() { assert_equal(0.0, 2.0 /. 0.0) }),
   ]
 }
