@@ -24,6 +24,7 @@ pub fn main() -> Int {
       suite("precedence", precedence_tests()),
       suite("call returned function", call_returned_function_tests()),
       suite("floats", floats_tests()),
+      suite("ints", ints_tests()),
     ])
 
   case stats.failures {
@@ -1058,5 +1059,35 @@ fn floats_tests() -> List(Test) {
     |> example(fn() { assert_equal(1.0, 2.0 /. 2.0) }),
     "2.0 /. 0.0"
     |> example(fn() { assert_equal(0.0, 2.0 /. 0.0) }),
+  ]
+}
+
+fn ints_tests() -> List(Test) {
+  [
+    "hex int"
+    |> example(fn() { assert_equal(15, 0xF) }),
+    "octal int"
+    |> example(fn() { assert_equal(15, 0o17) }),
+    "binary int"
+    |> example(fn() { assert_equal(15, 0b00001111) }),
+    "1-1 should lex as 1 - 1"
+    |> example(fn() { assert_equal(0, 1-1) }),
+    "a-1 should lex as a - 1"
+    |> example(fn() {
+      let a = 1
+      assert_equal(0, a-1)
+    }),
+    "1- 1 should lex as 1 - 1"
+    |> example(fn() {
+      assert_equal(0, 1- 1)
+    }),
+    "1 / 1"
+    |> example(fn() { assert_equal(1, 1 / 1) }),
+    "1 / 0"
+    |> example(fn() { assert_equal(0, 1 / 0) }),
+    "3 / 2"
+    |> example(fn() { assert_equal(1, 3 / 2) }),
+    "3 / 0"
+    |> example(fn() { assert_equal(0, 3 / 0) }),
   ]
 }
