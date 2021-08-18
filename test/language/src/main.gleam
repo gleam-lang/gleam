@@ -2,6 +2,7 @@ import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import mod_with_numbers_0123456789
 import record_update
+import shadowed_module.{ShadowPerson}
 import gleam
 
 pub fn main() -> Int {
@@ -29,6 +30,7 @@ pub fn main() -> Int {
       suite("ints", ints_tests()),
       suite("mod with numbers", mod_with_numbers_tests()),
       suite("record update", record_update_tests()),
+      suite("shadowed module", shadowed_module_tests()),
     ])
 
   case stats.failures {
@@ -1122,6 +1124,17 @@ fn record_update_tests() {
       let module_box = record_update.Box("a", 5)
       let updated = record_update.Box(..module_box, value: 6)
       assert_equal(record_update.Box("a", 6), updated)
+    }),
+  ]
+}
+
+fn shadowed_module_tests() {
+  [
+    "this module"
+    |> example(fn() {
+      let shadowed_module = ShadowPerson(18)
+      let shadowed_module = shadowed_module.celebrate_birthday(shadowed_module)
+      assert_equal(19, shadowed_module.age)
     }),
   ]
 }
