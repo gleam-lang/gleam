@@ -22,6 +22,7 @@ pub fn main() -> Int {
       suite("alternative patterns", alternative_patterns_tests()),
       suite("multiple case subjects", multiple_case_subjects()),
       suite("precedence", precedence_tests()),
+      suite("call returned function", call_returned_function_tests()),
     ])
 
   case stats.failures {
@@ -1028,5 +1029,24 @@ fn precedence_tests() -> List(Test) {
     |> example(fn() { assert_equal(4, 2 * { 3 + 1 } / 2) }),
     "5 + 3 / 3 * 2 - 6 * 4"
     |> example(fn() { assert_equal(-17, 5 + 3 / 3 * 2 - 6 * 4) }),
+  ]
+}
+
+type FnBox {
+  FnBox(f: fn(Int) -> Int)
+}
+
+fn call_returned_function_tests() -> List(Test) {
+  [
+    "call record access"
+    |> example(fn() {
+      let b = FnBox(f: fn(x) { x })
+      assert_equal(5, b.f(5))
+    }),
+    "call tuple access"
+    |> example(fn() {
+      let t = #(fn(x) { x })
+      assert_equal(5, t.0(5))
+    }),
   ]
 }
