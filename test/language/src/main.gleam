@@ -1,5 +1,6 @@
 import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
+import mod_with_numbers_0123456789
 import gleam
 
 pub fn main() -> Int {
@@ -25,6 +26,7 @@ pub fn main() -> Int {
       suite("call returned function", call_returned_function_tests()),
       suite("floats", floats_tests()),
       suite("ints", ints_tests()),
+      suite("mod with numbers", mod_with_numbers_tests()),
     ])
 
   case stats.failures {
@@ -1089,5 +1091,14 @@ fn ints_tests() -> List(Test) {
     |> example(fn() { assert_equal(1, 3 / 2) }),
     "3 / 0"
     |> example(fn() { assert_equal(0, 3 / 0) }),
+  ]
+}
+
+fn mod_with_numbers_tests() -> List(Test) {
+  [
+    "mod_with_numbers_0123456789.hello()"
+    |> example(fn() {
+      assert_equal("world", mod_with_numbers_0123456789.hello())
+    }),
   ]
 }
