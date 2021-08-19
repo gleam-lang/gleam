@@ -32,7 +32,7 @@ pub fn assert_equal(expected: a, got: a) -> Outcome {
   case expected == got {
     True -> pass()
     // TODO: print diff on failure
-    False -> Error(Fail)
+    _ -> Error(Fail)
   }
 }
 
@@ -136,6 +136,6 @@ fn print_indentation(indentation) {
       ffi.print("  ")
       print_indentation(indentation - 1)
     }
-    False -> Nil
+    _ -> Nil
   }
 }
