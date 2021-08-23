@@ -6,10 +6,10 @@ expression: "pub fn main(x) {\n  try y = x\n  try z = y\n  Ok(z)\n}"
 import { Ok } from "../gleam.js";
 
 export function main(x) {
-  if (x.type === "Error") return x;
+  if (!x.isOk()) return x;
   let y = x[0];
 
-  if (y.type === "Error") return y;
+  if (!y.isOk()) return y;
   let z = y[0];
 
   return new Ok(z);
