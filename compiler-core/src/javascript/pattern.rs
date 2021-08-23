@@ -302,12 +302,22 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             Pattern::Constructor {
-                constructor: PatternConstructor::Record { field_map, .. },
+                constructor:
+                    PatternConstructor::Record {
+                        field_map,
+                        name: record_name,
+                        ..
+                    },
                 arguments,
                 name,
+                type_,
                 ..
             } => {
-                self.push_variant_check(subject.clone(), name.to_doc());
+                if type_.is_result_constructor() {
+                    self.push_result_check(subject.clone(), record_name == "Ok");
+                } else {
+                    self.push_variant_check(subject.clone(), name.to_doc());
+                }
 
                 for (index, arg) in arguments.iter().enumerate() {
                     match field_map {
@@ -369,6 +379,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     fn push_variant_check(&mut self, subject: Document<'a>, kind: Document<'a>) {
         self.checks.push(Check::Variant {
             kind,
+            subject,
+            path: self.path_document(),
+        })
+    }
+
+    fn push_result_check(&mut self, subject: Document<'a>, is_ok: bool) {
+        self.checks.push(Check::Result {
+            is_ok,
             subject,
             path: self.path_document(),
         })
@@ -478,6 +496,11 @@ pub struct Assignment<'a> {
 
 #[derive(Debug)]
 pub enum Check<'a> {
+    Result {
+        subject: Document<'a>,
+        path: Document<'a>,
+        is_ok: bool,
+    },
     Variant {
         subject: Document<'a>,
         path: Document<'a>,
@@ -536,6 +559,18 @@ impl<'a> Check<'a> {
                     docvec![subject, path, " instanceof ", kind]
                 } else {
                     docvec!["!", subject, path, " instanceof ", kind]
+                }
+            }
+
+            Check::Result {
+                subject,
+                path,
+                is_ok,
+            } => {
+                if match_desired == is_ok {
+                    docvec![subject, path, ".isOk()"]
+                } else {
+                    docvec!["!", subject, path, ".isOk()"]
                 }
             }
 

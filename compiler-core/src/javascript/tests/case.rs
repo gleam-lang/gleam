@@ -129,3 +129,16 @@ fn go(x, f) {
 "#,
     )
 }
+
+#[test]
+fn result() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    Ok(_) -> 1
+    Error(_) -> 0
+}
+"#,
+    )
+}
