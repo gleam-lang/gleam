@@ -3,8 +3,11 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\nfn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
 
 ---
+import { CustomType } from "../gleam.js";
+
 class TypeWithALongNameAndSeveralArguments extends CustomType {
   constructor(x0, x1, x2, x3, x4) {
+    super();
     this[0] = x0;
     this[1] = x1;
     this[2] = x2;
