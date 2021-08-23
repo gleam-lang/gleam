@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/results.rs
+expression: "pub fn main() { Ok }"
+
+---
+import { Ok } from "../gleam.js";
+
+export function main() {
+  return (var0) => { return new Ok(var0); };
+}
+

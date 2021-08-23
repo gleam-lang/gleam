@@ -49,11 +49,8 @@ impl<'a> Generator<'a> {
 
         // Import any prelude functions that have been used
 
-        // TODO: import Record
-        // TODO: handle Ok being shadowed
-        // TODO: handle Error being shadowed
-        // TODO: handle Record being shadowed
         // TODO: Check that qualified record usage is working
+        // TODO: Check that aliased record usage is working
 
         if self.tracker.ok_used {
             self.register_prelude_usage(&mut imports, "Ok");

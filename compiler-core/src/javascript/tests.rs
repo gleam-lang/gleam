@@ -11,6 +11,7 @@ mod lists;
 mod modules;
 mod numbers;
 mod prelude;
+mod results;
 mod strings;
 mod todo;
 mod try_;
