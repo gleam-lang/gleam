@@ -236,7 +236,6 @@ impl<'a> Generator<'a> {
                 | Statement::ExternalType { .. }
                 | Statement::ModuleConstant { .. } => (),
                 Statement::ExternalFn { module, .. } if module.is_empty() => (),
-                Statement::Import { module, .. } if module == &["gleam"] => (),
 
                 Statement::ExternalFn {
                     public,

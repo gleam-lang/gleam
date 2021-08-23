@@ -5,5 +5,5 @@ expression: "import other\nconst x = other.Two\n"
 ---
 import * as $other from "../other.js";
 
-const x = new Two();
+const x = new $other.Two();
 
