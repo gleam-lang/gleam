@@ -355,9 +355,9 @@ impl<'module> Generator<'module> {
         };
 
         // We return early if the subject is an error
-        docs.push("if (".to_doc());
+        docs.push("if (!".to_doc());
         docs.push(subject_doc.clone());
-        docs.push(r#".type === "Error") return "#.to_doc());
+        docs.push(r#".isOk()) return "#.to_doc());
         docs.push(subject_doc.clone());
         docs.push(";".to_doc());
 
