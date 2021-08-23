@@ -7,7 +7,7 @@ function go(a) {
   if (!a) {
     return 0;
   } else {
-    throw new Error("Bad match");
+    throw new globalThis.Error("Bad match");
   }
 }
 

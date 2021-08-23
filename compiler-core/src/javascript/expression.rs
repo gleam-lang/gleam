@@ -282,6 +282,11 @@ impl<'module> Generator<'module> {
         name: &'a str,
         arity: usize,
     ) -> Document<'a> {
+        if type_.is_result_constructor() && name == "Ok" {
+            self.tracker.ok_used = true;
+        } else if type_.is_result_constructor() && name == "Error" {
+            self.tracker.error_used = true;
+        }
         if type_.is_bool() && name == "True" {
             "true".to_doc()
         } else if type_.is_bool() {
@@ -525,7 +530,7 @@ impl<'module> Generator<'module> {
             // We can remove this when we get exhaustiveness checking.
             doc = doc
                 .append(" else {")
-                .append(docvec!(line(), r#"throw new Error("Bad match");"#).nest(INDENT))
+                .append(docvec!(line(), r#"throw new globalThis.Error("Bad match");"#).nest(INDENT))
                 .append(line())
                 .append("}")
         }
@@ -572,15 +577,26 @@ impl<'module> Generator<'module> {
             TypedExpr::ModuleSelect {
                 constructor: ModuleValueConstructor::Record { name, .. },
                 ..
-            }
-            | TypedExpr::Var {
+            } => Ok(self.wrap_return(construct_record(name, arguments))),
+
+            TypedExpr::Var {
                 constructor:
                     ValueConstructor {
                         variant: ValueConstructorVariant::Record { name, .. },
+                        type_,
                         ..
                     },
                 ..
-            } => Ok(self.wrap_return(construct_record(name, arguments))),
+            } => {
+                if type_.is_result_constructor() {
+                    if name == "Ok" {
+                        self.tracker.ok_used = true;
+                    } else if name == "Error" {
+                        self.tracker.error_used = true;
+                    }
+                }
+                Ok(self.wrap_return(construct_record(name, arguments)))
+            }
 
             // Tail call optimisation. If we are calling the current function
             // and we are in tail position we can avoid creating a new stack
@@ -798,7 +814,7 @@ impl<'module> Generator<'module> {
         let doc = docvec![
             "throw Object.assign",
             wrap_args([
-                docvec!["new Error", wrap_args([string(message)])],
+                docvec!["new globalThis.Error", wrap_args([string(message)])],
                 wrap_object([
                     ("gleam_error".to_doc(), Some(string(gleam_error))),
                     ("module".to_doc(), Some(module_name.surround("\"", "\""))),

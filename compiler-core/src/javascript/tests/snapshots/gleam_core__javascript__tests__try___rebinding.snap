@@ -3,6 +3,8 @@ source: compiler-core/src/javascript/tests/try_.rs
 expression: "pub fn main(x) {\n  try x = x\n  try x = x\n  Ok(x)\n}"
 
 ---
+import { Ok } from "../gleam.js";
+
 export function main(x) {
   if (x.type === "Error") return x;
   let x$1 = x[0];

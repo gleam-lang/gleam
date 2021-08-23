@@ -11,7 +11,7 @@ function go(x, y) {
   } else if (!x && !y) {
     return 0;
   } else {
-    throw new Error("Bad match");
+    throw new globalThis.Error("Bad match");
   }
 }
 

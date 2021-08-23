@@ -11,7 +11,7 @@ export function loop(indentation) {
     } else if (!$) {
       return undefined;
     } else {
-      throw new Error("Bad match");
+      throw new globalThis.Error("Bad match");
     }
   }
 }

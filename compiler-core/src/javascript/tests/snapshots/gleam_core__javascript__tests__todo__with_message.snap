@@ -5,7 +5,7 @@ expression: "\nfn go() {\n  todo(\"I should do this\")\n};\n"
 ---
 function go() {
   throw Object.assign(
-    new Error("I should do this"),
+    new globalThis.Error("I should do this"),
     { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
   );
 }

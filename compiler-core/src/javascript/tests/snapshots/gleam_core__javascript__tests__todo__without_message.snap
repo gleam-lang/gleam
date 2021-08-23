@@ -5,7 +5,7 @@ expression: "\nfn go() {\n    todo\n}\n"
 ---
 function go() {
   throw Object.assign(
-    new Error("This has not yet been implemented"),
+    new globalThis.Error("This has not yet been implemented"),
     { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
   );
 }

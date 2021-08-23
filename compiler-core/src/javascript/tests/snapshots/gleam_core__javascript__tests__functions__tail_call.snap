@@ -12,7 +12,7 @@ export function count(xs, n) {
       xs = xs$1;
       n = n + 1;
     } else {
-      throw new Error("Bad match");
+      throw new globalThis.Error("Bad match");
     }
   }
 }

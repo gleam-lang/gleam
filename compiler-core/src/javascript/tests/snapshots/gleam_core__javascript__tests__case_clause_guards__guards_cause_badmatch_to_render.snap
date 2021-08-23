@@ -9,7 +9,7 @@ export function main(x, y) {
   } else if (y) {
     return 0;
   } else {
-    throw new Error("Bad match");
+    throw new globalThis.Error("Bad match");
   }
 }
 
