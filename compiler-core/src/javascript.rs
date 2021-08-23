@@ -187,7 +187,7 @@ impl<'a> Generator<'a> {
         } else {
             "class "
         };
-        let head = docvec![head, &constructor.name, " extends Record {"];
+        let head = docvec![head, &constructor.name, " extends CustomType {"];
 
         if constructor.arguments.is_empty() {
             return head.append("}");

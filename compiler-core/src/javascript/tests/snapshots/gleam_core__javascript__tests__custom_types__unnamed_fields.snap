@@ -5,7 +5,7 @@ expression: "\ntype Ip{\n    Ip(String)\n}\n\nconst local = Ip(\"0.0.0.0\")\n\nf
 ---
 const local = new Ip("0.0.0.0");
 
-class Ip extends Record {
+class Ip extends CustomType {
   constructor(x0) {
     this[0] = x0;
   }

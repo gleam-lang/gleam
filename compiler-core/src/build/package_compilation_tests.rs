@@ -1982,7 +1982,7 @@ const x = two.A"#
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/one/two.js"),
-                text: "export class A extends Record {}\n".to_string(),
+                text: "export class A extends CustomType {}\n".to_string(),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/src/two.js"),

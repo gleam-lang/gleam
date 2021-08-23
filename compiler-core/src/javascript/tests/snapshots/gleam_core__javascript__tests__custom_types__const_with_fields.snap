@@ -7,7 +7,7 @@ const labels = new Mine(1, 2);
 
 const no_labels = new Mine(3, 4);
 
-class Mine extends Record {
+class Mine extends CustomType {
   constructor(a, b) {
     this.a = a;
     this.b = b;

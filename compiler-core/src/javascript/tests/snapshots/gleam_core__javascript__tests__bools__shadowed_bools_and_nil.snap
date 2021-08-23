@@ -3,11 +3,11 @@ source: compiler-core/src/javascript/tests/bools.rs
 expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  let True = x\n  let False = x\n  let Nil = y\n}\n"
 
 ---
-export class True extends Record {}
+export class True extends CustomType {}
 
-export class False extends Record {}
+export class False extends CustomType {}
 
-export class Nil extends Record {}
+export class Nil extends CustomType {}
 
 function go(x, y) {
   if (x.type !== "True") throw new Error("Bad match");
