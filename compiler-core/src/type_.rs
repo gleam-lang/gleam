@@ -69,6 +69,13 @@ pub enum Type {
 }
 
 impl Type {
+    pub fn is_result_constructor(&self) -> bool {
+        match self {
+            Type::Fn { retrn, .. } => retrn.is_result(),
+            _ => false,
+        }
+    }
+
     pub fn is_result(&self) -> bool {
         matches!(self, Self::App { name, module, .. } if "Result" == name && module.is_empty())
     }

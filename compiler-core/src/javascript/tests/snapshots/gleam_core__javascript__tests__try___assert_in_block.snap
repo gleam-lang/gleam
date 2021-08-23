@@ -10,7 +10,7 @@ export function main(x) {
 
     return new Ok(z + 1);
   })();
-  if (!$ instanceof Ok) throw new Error("Bad match");
+  if (!$.isOk()) throw new Error("Bad match");
   let y = $[0];
   return y;
 }
