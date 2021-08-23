@@ -7,7 +7,7 @@ const this$ = new This();
 
 const that = new ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant();
 
-class This extends Record {}
+class This extends CustomType {}
 
-class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends Record {}
+class ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant extends CustomType {}
 

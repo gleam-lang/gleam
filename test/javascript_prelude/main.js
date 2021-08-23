@@ -1,11 +1,11 @@
 import {
   BitString,
+  CustomType,
   Empty,
   Error,
   List,
   NonEmpty,
   Ok,
-  Record,
   UtfCodepoint,
   divideFloat,
   divideInt,
@@ -45,7 +45,7 @@ function assertNotEqual(a, b) {
   }
 }
 
-class ExampleRecordImpl extends Record {
+class ExampleRecordImpl extends CustomType {
   constructor(first, detail, boop) {
     super();
     this[0] = first;
@@ -334,7 +334,7 @@ assertEqual(new Set(Object.keys(symbols)).length, symbols.length);
 
 assertEqual(symbols.inspect in new Ok(1), true);
 assertEqual(symbols.inspect in new Error(1), true);
-assertEqual(symbols.inspect in new Record(), true);
+assertEqual(symbols.inspect in new CustomType(), true);
 assertEqual(symbols.inspect in new Empty(), true);
 assertEqual(symbols.inspect in new NonEmpty(1, new Empty()), true);
 assertEqual(symbols.inspect in new BitString(new Uint8Array([])), true);
@@ -349,7 +349,7 @@ assertEqual(symbols.variant in new UtfCodepoint(128013), true);
 // Unlike the above data types (which are structurally checked for equality)
 // records can only be equal if they share a constructor, so they have no
 // variant property.
-assertEqual(symbols.variant in new Record(), false);
+assertEqual(symbols.variant in new CustomType(), false);
 
 //
 // Division

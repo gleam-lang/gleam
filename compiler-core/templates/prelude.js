@@ -6,7 +6,7 @@ export const symbols = define(globalThis, "__gleam", {});
 define(symbols, "variant", Symbol("variant"));
 define(symbols, "inspect", Symbol("inspect"));
 
-export class Record {
+export class CustomType {
   [symbols.inspect]() {
     let field = (label) => {
       let value = inspect(this[label]);
@@ -138,7 +138,7 @@ export function codepointBits(codepoint) {
   return utf8Bits(String.fromCodePoint(codepoint));
 }
 
-export class Result extends Record {
+export class Result extends CustomType {
   isOk() {
     return "Ok" === this[symbols.variant];
   }

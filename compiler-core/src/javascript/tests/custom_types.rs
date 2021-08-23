@@ -167,7 +167,10 @@ fn destructure(x) {
 }
 "#,
     );
+}
 
+#[test]
+fn long_name_variant_without_labels() {
     assert_js!(
         r#"
 type TypeWithALongNameAndSeveralArguments{
