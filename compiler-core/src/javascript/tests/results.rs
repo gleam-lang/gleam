@@ -51,3 +51,35 @@ fn qualified_error_fn() {
 pub fn main() { gleam.Error }"#
     );
 }
+
+#[test]
+fn aliased_ok() {
+    assert_js!(
+        r#"import gleam.{Ok as Thing}
+pub fn main() { Thing(1) }"#
+    );
+}
+
+#[test]
+fn aliased_error() {
+    assert_js!(
+        r#"import gleam.{Error as Thing}
+pub fn main() { Thing(1) }"#
+    );
+}
+
+#[test]
+fn aliased_ok_fn() {
+    assert_js!(
+        r#"import gleam.{Ok as Thing}
+pub fn main() { Thing }"#
+    );
+}
+
+#[test]
+fn aliased_error_fn() {
+    assert_js!(
+        r#"import gleam.{Error as Thing}
+pub fn main() { Thing }"#
+    );
+}

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/results.rs
+expression: "import gleam.{Ok as Thing}\npub fn main() { Thing }"
+
+---
+import * as $gleam from "../gleam.js";
+import { Ok as Thing } from "../gleam.js";
+
+export function main() {
+  return (var0) => { return new Thing(var0); };
+}
+

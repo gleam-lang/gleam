@@ -267,7 +267,7 @@ impl<'module> Generator<'module> {
 
     fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
         match &constructor.variant {
-            ValueConstructorVariant::Record { name, arity, .. } => {
+            ValueConstructorVariant::Record { arity, .. } => {
                 self.record_constructor(constructor.type_.clone(), None, name, *arity)
             }
             ValueConstructorVariant::ModuleFn { .. }
@@ -595,10 +595,11 @@ impl<'module> Generator<'module> {
             TypedExpr::Var {
                 constructor:
                     ValueConstructor {
-                        variant: ValueConstructorVariant::Record { name, .. },
+                        variant: ValueConstructorVariant::Record { .. },
                         type_,
                         ..
                     },
+                name,
                 ..
             } => {
                 if type_.is_result_constructor() {

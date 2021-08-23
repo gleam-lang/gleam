@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/results.rs
+expression: "import gleam.{Error as Thing}\npub fn main() { Thing(1) }"
+
+---
+import * as $gleam from "../gleam.js";
+import { Error as Thing } from "../gleam.js";
+
+export function main() {
+  return new Thing(1);
+}
+
