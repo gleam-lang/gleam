@@ -67,6 +67,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList");
         };
 
+        if self.tracker.custom_type_used {
+            self.register_prelude_usage(&mut imports, "CustomType");
+        };
+
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
@@ -158,11 +162,12 @@ impl<'a> Generator<'a> {
     }
 
     fn custom_type_definition(
-        &self,
+        &mut self,
         constructors: &'a [TypedRecordConstructor],
         public: bool,
         opaque: bool,
     ) -> Vec<Output<'a>> {
+        self.tracker.custom_type_used = true;
         constructors
             .iter()
             .map(|constructor| Ok(self.record_definition(constructor, public, opaque)))
@@ -214,7 +219,7 @@ impl<'a> Generator<'a> {
             "constructor(",
             parameters,
             ") {",
-            docvec![line(), constructor_body].nest(INDENT),
+            docvec![line(), "super();", line(), constructor_body].nest(INDENT),
             line(),
             "}",
         ]
@@ -587,6 +592,7 @@ pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
     pub error_used: bool,
+    pub custom_type_used: bool,
     pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,

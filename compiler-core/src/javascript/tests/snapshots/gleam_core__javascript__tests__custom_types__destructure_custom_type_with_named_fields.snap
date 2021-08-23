@@ -3,8 +3,11 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 
 ---
+import { CustomType } from "../gleam.js";
+
 class Cat extends CustomType {
   constructor(name, cuteness) {
+    super();
     this.name = name;
     this.cuteness = cuteness;
   }
