@@ -14,7 +14,7 @@ export class Box extends CustomType {
 }
 
 function go(x) {
-  if (x.type === "Box" && x.b.type === "Box") {
+  if (x instanceof Box && x.b instanceof Box) {
     let a = x.b.a;
     let b = x.b.b;
     return a + b;

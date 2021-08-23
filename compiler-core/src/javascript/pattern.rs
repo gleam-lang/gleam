@@ -302,13 +302,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             Pattern::Constructor {
-                constructor: PatternConstructor::Record { name, field_map },
+                constructor: PatternConstructor::Record { field_map, .. },
                 arguments,
+                name,
                 ..
             } => {
-                self.push_string("type");
-                self.push_equality_check(subject.clone(), expression::string(name));
-                self.pop();
+                self.push_variant_check(subject.clone(), name.to_doc());
 
                 for (index, arg) in arguments.iter().enumerate() {
                     match field_map {
@@ -362,6 +361,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     fn push_equality_check(&mut self, subject: Document<'a>, to: Document<'a>) {
         self.checks.push(Check::Equal {
             to,
+            subject,
+            path: self.path_document(),
+        })
+    }
+
+    fn push_variant_check(&mut self, subject: Document<'a>, kind: Document<'a>) {
+        self.checks.push(Check::Variant {
+            kind,
             subject,
             path: self.path_document(),
         })
@@ -471,6 +478,11 @@ pub struct Assignment<'a> {
 
 #[derive(Debug)]
 pub enum Check<'a> {
+    Variant {
+        subject: Document<'a>,
+        path: Document<'a>,
+        kind: Document<'a>,
+    },
     Equal {
         subject: Document<'a>,
         path: Document<'a>,
@@ -512,6 +524,18 @@ impl<'a> Check<'a> {
                     docvec![subject, path]
                 } else {
                     docvec!["!", subject, path]
+                }
+            }
+
+            Check::Variant {
+                subject,
+                path,
+                kind,
+            } => {
+                if match_desired {
+                    docvec![subject, path, " instanceof ", kind]
+                } else {
+                    docvec!["!", subject, path, " instanceof ", kind]
                 }
             }
 
