@@ -24,7 +24,7 @@ function go() {
 }
 
 function destructure(x) {
-  if (x.type !== "Ip") throw new Error("Bad match");
+  if (!x instanceof Ip) throw new Error("Bad match");
   let raw = x[0];
   return raw;
 }
