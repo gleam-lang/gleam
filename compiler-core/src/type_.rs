@@ -1715,7 +1715,7 @@ pub fn register_import(
                 let imported_name = as_name.as_ref().unwrap_or(name);
 
                 // Check if value already was imported
-                if let Some(value) = environment.local_values.get(name) {
+                if let Some(value) = environment.local_values.get(imported_name) {
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: value.origin,
