@@ -11,7 +11,7 @@ function go(x, f) {
   if ($ === 0) {
     return undefined;
   } else {
-    throw new Error("Bad match");
+    throw new globalThis.Error("Bad match");
   }
 }
 
