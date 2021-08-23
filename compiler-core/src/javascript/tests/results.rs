@@ -19,3 +19,35 @@ fn ok_fn() {
 fn error_fn() {
     assert_js!(r#"pub fn main() { Error }"#);
 }
+
+#[test]
+fn qualified_ok() {
+    assert_js!(
+        r#"import gleam
+pub fn main() { gleam.Ok(1) }"#
+    );
+}
+
+#[test]
+fn qualified_error() {
+    assert_js!(
+        r#"import gleam
+pub fn main() { gleam.Error(1) }"#
+    );
+}
+
+#[test]
+fn qualified_ok_fn() {
+    assert_js!(
+        r#"import gleam
+pub fn main() { gleam.Ok }"#
+    );
+}
+
+#[test]
+fn qualified_error_fn() {
+    assert_js!(
+        r#"import gleam
+pub fn main() { gleam.Error }"#
+    );
+}

@@ -5,5 +5,5 @@ expression: "import other\npub const main = other.Two(1)\n"
 ---
 import * as $other from "../other.js";
 
-export const main = new Two(1);
+export const main = new $other.Two(1);
 

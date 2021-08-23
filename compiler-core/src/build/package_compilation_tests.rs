@@ -1991,7 +1991,7 @@ export class A extends CustomType {}\n"
                 path: PathBuf::from("_build/default/lib/the_package/src/two.js"),
                 text: r#"import * as $two from "./one/two.js";
 
-const x = new A();
+const x = new $two.A();
 "#
                 .to_string(),
             }
