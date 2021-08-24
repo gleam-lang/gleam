@@ -16,9 +16,9 @@ export class CustomType {
     return props ? `${this.constructor.name}(${props})` : this.constructor.name;
   }
 
-  update(values) {
+  withFields(fields) {
     let properties = Object.keys(this).map((label) =>
-      label in values ? values[label] : this[label]
+      label in fields ? fields[label] : this[label]
     );
     return new this.constructor(...properties);
   }

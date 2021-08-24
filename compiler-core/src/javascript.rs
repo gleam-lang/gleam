@@ -502,6 +502,21 @@ fn wrap_object<'a>(
     ]
 }
 
+fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>)>) -> Output<'a> {
+    let fields = items
+        .into_iter()
+        .map(|(key, value)| Ok(docvec![key, ": ", value?]));
+    let fields: Vec<_> = Itertools::intersperse(fields, Ok(break_(",", ", "))).try_collect()?;
+
+    Ok(docvec![
+        docvec!["{", break_("", " "), fields]
+            .nest(INDENT)
+            .append(break_("", " "))
+            .group(),
+        "}"
+    ])
+}
+
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
 // And we add `undefined` to avoid any unintentional overriding which could
 // cause bugs.
