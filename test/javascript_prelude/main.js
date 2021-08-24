@@ -389,19 +389,19 @@ assertEqual(divideFloat(-1.5, -2.5), 0.6);
 
 // Record updates
 
-assertEqual(new Ok(1).update({ 0: 2 }), new Ok(2));
-assertEqual(new Error(1).update({ 0: 2 }), new Error(2));
+assertEqual(new Ok(1).withFields({ 0: 2 }), new Ok(2));
+assertEqual(new Error(1).withFields({ 0: 2 }), new Error(2));
 
 assertEqual(
-  new ExampleRecordImpl(1, 2, 3).update({}),
+  new ExampleRecordImpl(1, 2, 3).withFields({}),
   new ExampleRecordImpl(1, 2, 3)
 );
 assertEqual(
-  new ExampleRecordImpl(1, 2, 3).update({ boop: 6, 0: 40 }),
+  new ExampleRecordImpl(1, 2, 3).withFields({ boop: 6, 0: 40 }),
   new ExampleRecordImpl(40, 2, 6)
 );
 assertEqual(
-  new ExampleRecordImpl(1, 2, 3).update({ boop: 4, detail: 5, 0: 6 }),
+  new ExampleRecordImpl(1, 2, 3).withFields({ boop: 4, detail: 5, 0: 6 }),
   new ExampleRecordImpl(6, 5, 4)
 );
 

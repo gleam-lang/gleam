@@ -24,12 +24,10 @@ function go() {
 }
 
 function update(cat) {
-  Object.assign({}, cat, { name: "Sid" });
-  return Object.assign(
-    {},
-    cat,
-    { name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!" }
-  );
+  cat.withFields({ name: "Sid" });
+  return cat.withFields({
+    name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!"
+  });
 }
 
 function access(cat) {

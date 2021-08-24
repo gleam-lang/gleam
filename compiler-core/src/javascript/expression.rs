@@ -698,19 +698,18 @@ impl<'module> Generator<'module> {
 
     fn record_update<'a>(
         &mut self,
-        spread: &'a TypedExpr,
+        record: &'a TypedExpr,
         updates: &'a [TypedRecordUpdateArg],
     ) -> Output<'a> {
         self.not_in_tail_position(|gen| {
-            let spread = gen.wrap_expression(spread)?;
-            let updates: Vec<(Document<'a>, Option<Document<'a>>)> = updates
+            let record = gen.wrap_expression(record)?;
+            let fields = updates
                 .iter()
                 .map(|TypedRecordUpdateArg { label, value, .. }| {
-                    Ok((label.to_doc(), Some(gen.wrap_expression(value)?)))
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            let assign_args = ["{}".to_doc(), spread, wrap_object(updates)];
-            Ok(docvec!["Object.assign", wrap_args(assign_args)])
+                    (label.to_doc(), gen.wrap_expression(value))
+                });
+            let object = try_wrap_object(fields)?;
+            Ok(docvec![record, ".withFields(", object, ")"])
         })
     }
 
