@@ -125,7 +125,7 @@ impl<'a> Generator<'a> {
                 constructors,
                 opaque,
                 ..
-            } => self.custom_type_definition(&constructors, *public, *opaque),
+            } => self.custom_type_definition(constructors, *public, *opaque),
 
             Statement::ModuleConstant {
                 public,
@@ -176,7 +176,7 @@ impl<'a> Generator<'a> {
         public: bool,
         opaque: bool,
     ) -> Document<'a> {
-        fn parameter<'a>((i, arg): (usize, &'a TypedRecordConstructorArg)) -> Document<'a> {
+        fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
                 .map(|s| s.to_doc())
