@@ -12,8 +12,15 @@ export class CustomType {
       let value = inspect(this[label]);
       return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
     };
-    let props = Object.getOwnPropertyNames(this).map(field).join(", ");
+    let props = Object.keys(this).map(field).join(", ");
     return props ? `${this.constructor.name}(${props})` : this.constructor.name;
+  }
+
+  update(values) {
+    let properties = Object.keys(this).map((label) =>
+      label in values ? values[label] : this[label]
+    );
+    return new this.constructor(...properties);
   }
 }
 
