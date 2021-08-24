@@ -49,8 +49,6 @@ impl<'a> Generator<'a> {
 
         // Import any prelude functions that have been used
 
-        // TODO: Check that aliased record usage is working
-
         if self.tracker.ok_used {
             self.register_prelude_usage(&mut imports, "Ok");
         };

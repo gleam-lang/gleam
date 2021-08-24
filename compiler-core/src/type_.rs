@@ -1187,10 +1187,7 @@ fn infer_statement(
             // Record any imports that are types only as this information is
             // needed to prevent types being imported in generated JavaScript
             for import in unqualified.iter_mut() {
-                if !environment
-                    .local_values
-                    .contains_key(import.variable_name())
-                {
+                if environment.imported_types.contains(import.variable_name()) {
                     import.layer = Layer::Type;
                 }
             }
@@ -1755,6 +1752,7 @@ pub fn register_import(
                         *location,
                     );
                 } else if type_imported {
+                    let _ = environment.imported_types.insert(imported_name.to_string());
                     let _ = environment.init_usage(
                         imported_name.to_string(),
                         EntityKind::ImportedType,

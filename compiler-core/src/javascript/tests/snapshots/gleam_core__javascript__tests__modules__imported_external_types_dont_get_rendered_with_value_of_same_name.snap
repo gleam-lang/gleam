@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "import one/two/three.{Thingy}\n\ntype Dup { Thingy }\n\npub fn go(x: Thingy) -> List(Thingy) { [x, x] }\n"
+
+---
+import { toList, CustomType } from "../gleam.js";
+import * as $three from "../one/two/three.js";
+
+class Thingy extends CustomType {}
+
+export function go(x) {
+  return toList([x, x]);
+}
+
