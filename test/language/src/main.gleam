@@ -1,9 +1,13 @@
+//// Here are some things that have been previously been incorrectly reported as
+//// unused.
+
 import test.{Test, assert_equal, example, operator_test, suite}
 import importable.{NoFields}
 import mod_with_numbers_0123456789
 import record_update
 import shadowed_module.{ShadowPerson}
 import gleam
+import port.{Port}
 
 pub fn main() -> Int {
   let stats =
@@ -1078,16 +1082,14 @@ fn ints_tests() -> List(Test) {
     "binary int"
     |> example(fn() { assert_equal(15, 0b00001111) }),
     "1-1 should lex as 1 - 1"
-    |> example(fn() { assert_equal(0, 1-1) }),
+    |> example(fn() { assert_equal(0, 1 - 1) }),
     "a-1 should lex as a - 1"
     |> example(fn() {
       let a = 1
-      assert_equal(0, a-1)
+      assert_equal(0, a - 1)
     }),
     "1- 1 should lex as 1 - 1"
-    |> example(fn() {
-      assert_equal(0, 1- 1)
-    }),
+    |> example(fn() { assert_equal(0, 1 - 1) }),
     "1 / 1"
     |> example(fn() { assert_equal(1, 1 / 1) }),
     "1 / 0"
@@ -1114,13 +1116,13 @@ type Person {
 
 fn record_update_tests() {
   [
-    "this module"
+    "unqualified record update"
     |> example(fn() {
       let past = Person("Quinn", 27, "Canada")
       let present = Person(..past, country: "USA", age: past.age + 1)
       assert_equal(Person("Quinn", 28, "USA"), present)
     }),
-    "that module"
+    "qualified record update"
     |> example(fn() {
       let module_box = record_update.Box("a", 5)
       let updated = record_update.Box(..module_box, value: 6)
@@ -1150,11 +1152,6 @@ fn unicode_overflow_tests() {
     |> example(fn() { assert_equal(False, "🌵" == "5") }),
   ]
 }
-
-//// Here are some things that have been previously been incorrectly reported as
-//// unused.
-
-import port.{Port}
 
 type PortMonitorFlag {
   Port

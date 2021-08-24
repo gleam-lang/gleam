@@ -1,5 +1,3 @@
-// TODO: convert to snapshots
-
 use crate::assert_js;
 use crate::javascript::tests::CURRENT_PACKAGE;
 
@@ -194,6 +192,23 @@ fn imported_custom_types_dont_get_rendered() {
         r#"import one/two/three.{Custom, One, Two}
 
 pub fn go() -> List(Custom) { [One, Two] }
+"#,
+    );
+}
+
+#[test]
+fn imported_external_types_dont_get_rendered_with_value_of_same_name() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub external type Thingy"#
+        ),
+        r#"import one/two/three.{Thingy}
+
+type Dup { Thingy }
+
+pub fn go(x: Thingy) -> List(Thingy) { [x, x] }
 "#,
     );
 }

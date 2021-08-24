@@ -10,6 +10,7 @@ pub struct Environment<'a, 'b> {
     pub level: usize,
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
+    pub imported_types: HashSet<String>,
 
     /// Values defined in the current function (or the prelude)
     pub local_values: im::HashMap<String, ValueConstructor>,
@@ -38,7 +39,7 @@ pub struct Environment<'a, 'b> {
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum EntityKind {
     PrivateConstant,
     // String here is the type constructor's type name
@@ -72,6 +73,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             accessors: prelude.accessors.clone(),
             local_values: prelude.values.clone().into(),
             importable_modules,
+            imported_types: HashSet::new(),
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
