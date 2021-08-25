@@ -140,7 +140,7 @@ jobs:
         run: |
           echo $PWD/ >> $GITHUB_PATH
           chmod +x ./gleam
-          sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
+          sed -i 's/cargo run --quiet --/gleam/' */rebar.config */Makefile
         working-directory: ./test
 
       - name: test/language Erlang
