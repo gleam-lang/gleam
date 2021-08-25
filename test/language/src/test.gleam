@@ -2,6 +2,9 @@ import ffi
 
 pub opaque type Test {
   Example(name: String, proc: fn() -> Outcome)
+}
+
+pub opaque type Suite {
   Suite(name: String, tests: List(Test))
 }
 
@@ -60,8 +63,9 @@ pub type Stats {
   Stats(passes: Int, failures: Int)
 }
 
-pub fn run(tests: List(Test)) -> Stats {
-  let stats = run_list_of_tests(tests, Stats(0, 0), 0)
+pub fn run(tests: List(Suite)) -> Stats {
+  ffi.print("Running tests\n\n")
+  let stats = run_list_of_suites(tests, Stats(0, 0))
   print_summary(stats)
   stats
 }
@@ -73,49 +77,42 @@ fn print_summary(stats: Stats) {
   ffi.print(ffi.to_string(stats.passes))
   ffi.print(" passes\n")
   ffi.print(ffi.to_string(stats.failures))
-  ffi.print(" failures\n")
+  ffi.print(" failures\n\n")
 }
 
-fn run_test(test: Test, stats: Stats, indentation: Int) -> Stats {
-  case test {
-    Example(name: name, proc: proc) ->
-      run_single_test(name, proc, stats, indentation)
-    Suite(name: name, tests: tests) ->
-      run_suite(name, tests, stats, indentation)
-  }
-}
-
-fn run_suite(name, tests, stats, indentation) {
-  print_indentation(indentation)
-  ffi.print("\n")
-  ffi.print(name)
-  ffi.print(" ")
-  run_list_of_tests(tests, stats, indentation + 1)
-}
-
-fn run_list_of_tests(tests, stats, indentation) -> Stats {
-  case tests {
+fn run_list_of_suites(suites, stats) -> Stats {
+  case suites {
     [] -> stats
-    [test, ..tests] -> {
-      let stats = run_test(test, stats, indentation)
-      run_list_of_tests(tests, stats, indentation)
+    [suite, ..suites] -> {
+      let stats = run_list_of_tests(suite.name, suite.tests, stats)
+      run_list_of_suites(suites, stats)
     }
   }
 }
 
-fn run_single_test(name, proc, stats, indentation) {
-  case proc() {
+fn run_list_of_tests(suite_name, tests, stats) -> Stats {
+  case tests {
+    [] -> stats
+    [test, ..tests] -> {
+      let stats = run_test(test, suite_name, stats)
+      run_list_of_tests(suite_name, tests, stats)
+    }
+  }
+}
+
+fn run_test(test: Test, suite_name: String, stats) {
+  case test.proc() {
     Ok(Pass) -> {
       ffi.print(ffi.ansi_green("."))
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail) -> {
       ffi.print("\n")
-      print_indentation(indentation)
       ffi.print("❌ ")
-      ffi.print(name)
+      ffi.print(suite_name)
+      ffi.print(":")
+      ffi.print(test.name)
       ffi.print(" failed!\n")
-      print_indentation(indentation)
       // print_indentation(indentation)
       // ffi.print("expected: ")
       // ffi.print(ffi.to_string(expected))
@@ -126,15 +123,5 @@ fn run_single_test(name, proc, stats, indentation) {
       // ffi.print("\n")
       Stats(..stats, failures: stats.failures + 1)
     }
-  }
-}
-
-fn print_indentation(indentation) {
-  case indentation > 0 {
-    True -> {
-      ffi.print("  ")
-      print_indentation(indentation - 1)
-    }
-    _ -> Nil
   }
 }

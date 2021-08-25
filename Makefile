@@ -16,9 +16,9 @@ install: ## Build the Gleam compiler and place it on PATH
 
 .PHONY: test
 test: ## Run the compiler unit tests
-	cargo test
-	cd test/language && make
-	cd test/javascript_prelude && npm test
+	@cargo test --quiet
+	@cd test/language && make
+	@cd test/javascript_prelude && make test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
@@ -38,7 +38,7 @@ javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when fil
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
-	watchexec -e rs,html,capnp "cargo test"
+	watchexec -e rs,html,capnp "cargo test --quiet"
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)

@@ -58,7 +58,7 @@ class ExampleRecordImpl extends CustomType {
 }
 
 let fmt = new Intl.DateTimeFormat("en-GB", { timeStyle: "medium" });
-console.log(`\nRunning tests at ${fmt.format(new Date())}\n`);
+console.log(`Running tests at ${fmt.format(new Date())}\n`);
 
 // Equality of Gleam values
 
