@@ -110,10 +110,6 @@ export class UtfCodepoint {
     this.value = value;
   }
 
-  toBuffer() {
-    return new Uint8Array(String.fromCodePoint(this.value));
-  }
-
   [symbols.inspect]() {
     return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
@@ -142,7 +138,7 @@ export function stringBits(string) {
 }
 
 export function codepointBits(codepoint) {
-  return utf8Bits(String.fromCodePoint(codepoint));
+  return stringBits(String.fromCodePoint(codepoint.value));
 }
 
 export class Result extends CustomType {

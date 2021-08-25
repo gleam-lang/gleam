@@ -7,11 +7,14 @@ import {
   NonEmpty,
   Ok,
   UtfCodepoint,
+  codepointBits,
   divideFloat,
   divideInt,
-  isEqual,
   inspect,
+  isEqual,
+  stringBits,
   symbols,
+  toBitString,
   toList,
 } from "./prelude.js";
 
@@ -132,6 +135,25 @@ assertNotEqual(
 
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
 assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
+
+// toBitString
+
+assertEqual(new BitString(new Uint8Array([])), toBitString([]));
+
+assertEqual(
+  new BitString(new Uint8Array([97, 98, 99])),
+  toBitString([stringBits("abc")])
+);
+
+assertEqual(
+  new BitString(new Uint8Array([97])),
+  toBitString([codepointBits(new UtfCodepoint(97))])
+);
+
+assertEqual(
+  new BitString(new Uint8Array([240, 159, 144, 141])),
+  toBitString([codepointBits(new UtfCodepoint(128013))])
+);
 
 // toList
 
