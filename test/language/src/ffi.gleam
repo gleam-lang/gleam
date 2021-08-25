@@ -7,6 +7,9 @@ if javascript {
 
   pub external fn to_string(anything) -> String =
     "./ffi_javascript.js" "toString"
+
+  pub external fn ansi_green(String) -> String =
+    "./ffi_javascript.js" "ansi_green"
 }
 
 if erlang {
@@ -18,4 +21,7 @@ if erlang {
 
   pub external fn to_string(anything) -> String =
     "ffi_erlang" "to_string"
+
+  pub external fn ansi_green(String) -> String =
+    "ffi_erlang" "ansi_green"
 }

@@ -89,8 +89,7 @@ fn run_suite(name, tests, stats, indentation) {
   print_indentation(indentation)
   ffi.print("\n")
   ffi.print(name)
-  ffi.print("\n")
-  print_indentation(indentation + 1)
+  ffi.print(" ")
   run_list_of_tests(tests, stats, indentation + 1)
 }
 
@@ -107,7 +106,7 @@ fn run_list_of_tests(tests, stats, indentation) -> Stats {
 fn run_single_test(name, proc, stats, indentation) {
   case proc() {
     Ok(Pass) -> {
-      ffi.print("✨")
+      ffi.print(ffi.ansi_green("."))
       Stats(..stats, passes: stats.passes + 1)
     }
     Error(Fail) -> {

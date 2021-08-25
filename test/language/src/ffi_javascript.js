@@ -15,3 +15,7 @@ export function toString(a) {
     return "//<unprintable-cyclical-data>";
   }
 }
+
+export function ansi_green(string) {
+  return `\u001b[32m${string}\u001b[0m`;
+}
