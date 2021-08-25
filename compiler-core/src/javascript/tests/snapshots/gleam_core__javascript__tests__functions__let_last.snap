@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main() {\n  let x = 1\n}\n"
+
+---
+export function main() {
+  let x = 1;
+  return x;
+}
+

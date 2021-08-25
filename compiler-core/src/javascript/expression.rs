@@ -412,7 +412,22 @@ impl<'module> Generator<'module> {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let name = self.next_local_var(name);
-            return Ok(docvec!(force_break(), "let ", name, " = ", subject, ";"));
+            return Ok(if self.tail_position {
+                docvec![
+                    force_break(),
+                    "let ",
+                    name.clone(),
+                    " = ",
+                    subject,
+                    ";",
+                    line(),
+                    "return ",
+                    name,
+                    ";"
+                ]
+            } else {
+                docvec![force_break(), "let ", name, " = ", subject, ";"]
+            });
         }
 
         // Otherwise we need to compile the patterns

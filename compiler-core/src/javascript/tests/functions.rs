@@ -268,3 +268,23 @@ fn reserved_word_in_function_arguments() {
 "#,
     );
 }
+
+#[test]
+fn let_last() {
+    assert_js!(
+        r#"pub fn main() {
+  let x = 1
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_last() {
+    assert_js!(
+        r#"pub fn main() {
+  assert x = 1
+}
+"#,
+    );
+}
