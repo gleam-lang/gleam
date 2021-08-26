@@ -985,7 +985,7 @@ where
 {
     let array = array(elements);
     if let Some(tail) = tail {
-        let args = iter::once(array).chain(iter::once(Ok(tail)));
+        let args = [array, Ok(tail)];
         Ok(docvec!["toList", call_arguments(args)?])
     } else {
         Ok(docvec!["toList(", array?, ")"])

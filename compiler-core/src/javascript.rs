@@ -4,7 +4,7 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
-use std::{iter, path::Path};
+use std::path::Path;
 
 use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
@@ -109,7 +109,7 @@ impl<'a> Generator<'a> {
             name: name.to_doc(),
             alias: None,
         };
-        imports.register_module(path, iter::empty(), iter::once(member));
+        imports.register_module(path, [], [member]);
     }
 
     pub fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
@@ -304,7 +304,7 @@ impl<'a> Generator<'a> {
                 let name = maybe_escape_identifier_doc(&i.name);
                 Member { name, alias }
             });
-        imports.register_module(path, iter::once(module_name), unqualified_imports);
+        imports.register_module(path, [module_name], unqualified_imports);
     }
 
     fn register_external_function(
@@ -326,7 +326,7 @@ impl<'a> Generator<'a> {
         if public {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(module.to_string(), iter::empty(), iter::once(member));
+        imports.register_module(module.to_string(), [], [member]);
     }
 
     fn module_constant(

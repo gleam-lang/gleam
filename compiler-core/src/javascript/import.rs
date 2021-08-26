@@ -29,8 +29,8 @@ impl<'a> Imports<'a> {
     pub fn register_module(
         &mut self,
         js_path: String,
-        aliases: impl Iterator<Item = String>,
-        unqualified_imports: impl Iterator<Item = Member<'a>>,
+        aliases: impl IntoIterator<Item = String>,
+        unqualified_imports: impl IntoIterator<Item = Member<'a>>,
     ) {
         let import = self
             .imports
@@ -143,35 +143,26 @@ impl<'a> Member<'a> {
 #[test]
 fn into_doc() {
     let mut imports = Imports::new();
-    imports.register_module(
-        "./gleam/empty".to_string(),
-        std::iter::empty(),
-        std::iter::empty(),
-    );
+    imports.register_module("./gleam/empty".to_string(), [], []);
     imports.register_module(
         "./multiple/times".to_string(),
-        vec!["wibble".to_string(), "wobble".to_string()].into_iter(),
-        std::iter::empty(),
+        ["wibble".to_string(), "wobble".to_string()],
+        [],
     );
+    imports.register_module("./multiple/times".to_string(), ["wubble".to_string()], []);
     imports.register_module(
         "./multiple/times".to_string(),
-        vec!["wubble".to_string()].into_iter(),
-        std::iter::empty(),
-    );
-    imports.register_module(
-        "./multiple/times".to_string(),
-        std::iter::empty(),
-        vec![Member {
+        [],
+        [Member {
             name: "one".to_doc(),
             alias: None,
-        }]
-        .into_iter(),
+        }],
     );
 
     imports.register_module(
         "./other".to_string(),
-        std::iter::empty(),
-        vec![
+        [],
+        [
             Member {
                 name: "one".to_doc(),
                 alias: None,
@@ -184,14 +175,13 @@ fn into_doc() {
                 name: "two".to_doc(),
                 alias: Some("twoo".to_doc()),
             },
-        ]
-        .into_iter(),
+        ],
     );
 
     imports.register_module(
         "./other".to_string(),
-        std::iter::empty(),
-        vec![
+        [],
+        [
             Member {
                 name: "three".to_doc(),
                 alias: None,
@@ -200,14 +190,13 @@ fn into_doc() {
                 name: "four".to_doc(),
                 alias: None,
             },
-        ]
-        .into_iter(),
+        ],
     );
 
     imports.register_module(
         "./zzz".to_string(),
-        std::iter::empty(),
-        vec![
+        [],
+        [
             Member {
                 name: "one".to_doc(),
                 alias: None,
@@ -216,8 +205,7 @@ fn into_doc() {
                 name: "two".to_doc(),
                 alias: None,
             },
-        ]
-        .into_iter(),
+        ],
     );
 
     assert_eq!(
