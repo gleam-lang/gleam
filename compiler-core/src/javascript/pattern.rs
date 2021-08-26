@@ -311,12 +311,15 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 arguments,
                 name,
                 type_,
+                module,
                 ..
             } => {
-                if type_.is_result_constructor() {
-                    self.push_result_check(subject.clone(), record_name == "Ok");
-                } else {
-                    self.push_variant_check(subject.clone(), name.to_doc());
+                match module {
+                    _ if type_.is_result_constructor() => {
+                        self.push_result_check(subject.clone(), record_name == "Ok")
+                    }
+                    Some(m) => self.push_variant_check(subject.clone(), docvec!["$", m, ".", name]),
+                    None => self.push_variant_check(subject.clone(), name.to_doc()),
                 }
 
                 for (index, arg) in arguments.iter().enumerate() {
