@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "pub type Thing {\n  Thing(in: Int, class: Nil)\n}\n"
+
+---
+import { CustomType } from "../gleam.js";
+
+export class Thing extends CustomType {
+  constructor(in$, class$) {
+    super();
+    this.in = in$;
+    this.class = class$;
+  }
+}
+

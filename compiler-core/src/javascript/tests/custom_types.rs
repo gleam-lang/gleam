@@ -529,3 +529,13 @@ pub fn main(x) {
 "#,
     );
 }
+
+#[test]
+fn keyword_label_name() {
+    assert_js!(
+        r#"pub type Thing {
+  Thing(in: Int, class: Nil)
+}
+"#,
+    );
+}

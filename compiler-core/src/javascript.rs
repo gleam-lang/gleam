@@ -177,7 +177,7 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|s| s.to_doc())
+                .map(|s| maybe_escape_identifier_doc(s))
                 .unwrap_or_else(|| Document::String(format!("x{}", i)))
         }
 
