@@ -6,6 +6,6 @@ expression: "import other\n\npub fn main() {\n  other.One\n}\n"
 import * as $other from "../other.js";
 
 export function main() {
-  return new other.One();
+  return new $other.One();
 }
 

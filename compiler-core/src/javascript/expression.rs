@@ -298,7 +298,7 @@ impl<'module> Generator<'module> {
             "undefined".to_doc()
         } else if arity == 0 {
             match qualifier {
-                Some(module) => docvec!["new ", module, ".", name, "()"],
+                Some(module) => docvec!["new $", module, ".", name, "()"],
                 None => docvec!["new ", name, "()"],
             }
         } else {
