@@ -539,3 +539,20 @@ fn keyword_label_name() {
 "#,
     );
 }
+
+#[test]
+fn qualified() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { One }"#
+        ),
+        r#"import other
+
+pub fn main() {
+  other.One
+}
+"#,
+    );
+}

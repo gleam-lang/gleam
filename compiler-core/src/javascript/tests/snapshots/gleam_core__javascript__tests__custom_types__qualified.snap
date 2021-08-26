@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "import other\npub fn main() {\n  other.Two\n}"
+expression: "import other\n\npub fn main() {\n  other.One\n}\n"
 
 ---
 import * as $other from "../other.js";
 
 export function main() {
-  return new other.Two();
+  return new other.One();
 }
 
