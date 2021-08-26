@@ -318,6 +318,7 @@ assertEqual(inspect({ a: 1 }), "//js({ a: 1 })");
 assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
 assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
 assertEqual(inspect(new globalThis.Error("stuff")), '//js(new Error("stuff"))');
+assertEqual(inspect(/1[23]/g), "//js(/1[23]/g)");
 
 // Result.isOk
 

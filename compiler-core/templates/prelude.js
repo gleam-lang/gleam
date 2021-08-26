@@ -176,6 +176,7 @@ export function inspect(v) {
   if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
   if (v instanceof globalThis.Error)
     return `//js(new ${v.constructor.name}(${inspect(v.message)}))`;
+  if (v instanceof RegExp) return `//js(${v})`;
   if (v[symbols.inspect]) return v[symbols.inspect]();
   let entries = Object.entries(v);
   if (entries.length) {

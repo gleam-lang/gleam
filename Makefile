@@ -30,11 +30,11 @@ language-test-watch: ## Run the language integration tests for all targets when 
 
 .PHONY: javascript-prelude-test
 javascript-prelude-test: ## Run the JavaScript prelude core tests
-	cd test/javascript_prelude && npm test
+	cd test/javascript_prelude && make test
 
 .PHONY: javascript-prelude-test-watch
 javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when files change
-	watchexec "cd test/javascript_prelude && npm test"
+	watchexec "cd test/javascript_prelude && make test"
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
