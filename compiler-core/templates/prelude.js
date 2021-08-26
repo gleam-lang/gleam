@@ -98,7 +98,7 @@ export class BitString {
     return `<<${Array.from(this.buffer).join(", ")}>>`;
   }
 
-  size() {
+  get length() {
     return this.buffer.length;
   }
 }

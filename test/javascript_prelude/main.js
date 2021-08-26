@@ -347,6 +347,12 @@ assertEqual(toList([1, 1]).hasLength(1), false);
 assertEqual(toList([1, 1]).hasLength(2), true);
 assertEqual(toList([1, 1]).hasLength(3), false);
 
+// BitString.length
+
+assertEqual(new BitString(new Uint8Array([])).length, 0);
+assertEqual(new BitString(new Uint8Array([1, 2])).length, 2);
+assertEqual(new BitString(new Uint8Array([1, 2, 3, 4])).length, 4);
+
 // Symbols
 
 assertEqual("variant" in symbols, true);
