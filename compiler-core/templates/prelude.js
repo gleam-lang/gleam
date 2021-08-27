@@ -249,7 +249,7 @@ function structurallyCompatibleObjects(a, b) {
   if (typeof a !== "object" && typeof b !== "object" && (!a || !b))
     return false;
 
-  const nonstructural = [Promise, Set, Map, WeakSet, WeakMap];
+  let nonstructural = [Promise, Set, Map, WeakSet, WeakMap];
   if (nonstructural.some((c) => a instanceof c)) return false;
 
   return (
