@@ -74,24 +74,30 @@ export function toList(elements, tail) {
 }
 
 export class Empty extends List {
-  [symbols.variant] = "EmptyList";
+  get [symbols.variant]() {
+    return "EmptyList";
+  }
 }
 
 export class NonEmpty extends List {
-  [symbols.variant] = "NonEmptyList";
-
   constructor(head, tail) {
     super();
     this.head = head;
     this.tail = tail;
   }
+
+  get [symbols.variant]() {
+    return "NonEmptyList";
+  }
 }
 
 export class BitString {
-  [symbols.variant] = "BitString";
-
   constructor(buffer) {
     this.buffer = buffer;
+  }
+
+  get [symbols.variant]() {
+    return "BitString";
   }
 
   [symbols.inspect]() {
@@ -104,10 +110,12 @@ export class BitString {
 }
 
 export class UtfCodepoint {
-  [symbols.variant] = "UtfCodepoint";
-
   constructor(value) {
     this.value = value;
+  }
+
+  get [symbols.variant]() {
+    return "UtfCodepoint";
   }
 
   [symbols.inspect]() {
@@ -148,20 +156,24 @@ export class Result extends CustomType {
 }
 
 export class Ok extends Result {
-  [symbols.variant] = "Ok";
-
   constructor(value) {
     super();
     this[0] = value;
   }
+
+  get [symbols.variant]() {
+    return "Ok";
+  }
 }
 
 export class Error extends Result {
-  [symbols.variant] = "Error";
-
   constructor(detail) {
     super();
     this[0] = detail;
+  }
+
+  get [symbols.variant]() {
+    return "Error";
   }
 }
 
@@ -177,6 +189,10 @@ export function inspect(v) {
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
   if (v[symbols.inspect]) return v[symbols.inspect]();
+  return inspectObject(v);
+}
+
+function inspectObject(v) {
   let property = (k) => `${k}: ${inspect(v[k])}`;
   let name = v.constructor.name;
   let names = Object.getOwnPropertyNames(v);
