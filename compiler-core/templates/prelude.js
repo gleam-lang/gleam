@@ -174,17 +174,15 @@ export function inspect(v) {
   if (t === "string") return JSON.stringify(v);
   if (t === "bigint" || t === "number") return v.toString();
   if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
-  if (v instanceof globalThis.Error)
-    return `//js(new ${v.constructor.name}(${inspect(v.message)}))`;
   if (v instanceof RegExp) return `//js(${v})`;
+  if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
   if (v[symbols.inspect]) return v[symbols.inspect]();
-  let entries = Object.entries(v);
-  if (entries.length) {
-    let properties = entries.map(([k, v]) => `${k}: ${inspect(v)}`).join(", ");
-    return `//js({ ${properties} })`;
-  } else {
-    return `//js({})`;
-  }
+  let property = (k) => `${k}: ${inspect(v[k])}`;
+  let name = v.constructor.name;
+  let names = Object.getOwnPropertyNames(v);
+  let props = names.length ? " " + names.map(property).join(", ") + " " : "";
+  let head = name === "Object" ? "" : name + " ";
+  return `//js(${head}{${props}})`;
 }
 
 export function isEqual(x, y) {

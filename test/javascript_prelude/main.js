@@ -317,7 +317,17 @@ assertEqual(inspect({}), "//js({})");
 assertEqual(inspect({ a: 1 }), "//js({ a: 1 })");
 assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
 assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
-assertEqual(inspect(new globalThis.Error("stuff")), '//js(new Error("stuff"))');
+
+// Generic JS objects
+assertEqual(inspect(Promise.resolve(1)), "//js(Promise {})");
+assertEqual(inspect(new Set([1, 2, 3])), "//js(Set {})");
+assertEqual(inspect(new Map([["a", 1]])), "//js(Map {})");
+
+// Special cases for Date and RegExp
+assertEqual(
+  inspect(new Date("1991-01-05")),
+  '//js(Date("1991-01-05T00:00:00.000Z"))'
+);
 assertEqual(inspect(/1[23]/g), "//js(/1[23]/g)");
 
 // Result.isOk
@@ -359,7 +369,7 @@ assertEqual("variant" in symbols, true);
 assertEqual("inspect" in symbols, true);
 
 // All the symbols are distinct
-assertEqual(new Set(Object.keys(symbols)).length, symbols.length);
+assertEqual(new Set(Object.values(symbols)).length, symbols.length);
 
 assertEqual(symbols.inspect in new Ok(1), true);
 assertEqual(symbols.inspect in new Error(1), true);
