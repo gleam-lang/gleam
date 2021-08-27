@@ -209,10 +209,11 @@ export function isEqual(x, y) {
     let b = values.pop();
     if (a === b) continue;
 
+    if (!isObject(a) || !isObject(b)) return false;
     let unequal =
-      !sameTypeObjects(a, b) ||
+      !structurallyCompatibleObjects(a, b) ||
       unequalDates(a, b) ||
-      unequalArrayBuffers(a, b) ||
+      unequalBuffers(a, b) ||
       unequalArrays(a, b);
     if (unequal) return false;
 
@@ -228,7 +229,7 @@ function unequalDates(a, b) {
   return a instanceof Date && (a > b || a < b);
 }
 
-function unequalArrayBuffers(a, b) {
+function unequalBuffers(a, b) {
   return (
     a.buffer instanceof ArrayBuffer &&
     a.BYTES_PER_ELEMENT &&
@@ -240,14 +241,20 @@ function unequalArrays(a, b) {
   return Array.isArray(a) && a.length !== b.length;
 }
 
-function sameTypeObjects(a, b) {
+function isObject(a) {
+  return typeof a === "object" && a !== null;
+}
+
+function structurallyCompatibleObjects(a, b) {
+  if (typeof a !== "object" && typeof b !== "object" && (!a || !b))
+    return false;
+
+  const nonstructural = [Promise, Set, Map, WeakSet, WeakMap];
+  if (nonstructural.some((c) => a instanceof c)) return false;
+
   return (
-    typeof a === "object" &&
-    typeof b === "object" &&
-    a !== null &&
-    b !== null &&
-    (a.constructor === b.constructor ||
-      (a[symbols.variant] && a[symbols.variant] === b[symbols.variant]))
+    a.constructor === b.constructor ||
+    (a[symbols.variant] && a[symbols.variant] === b[symbols.variant])
   );
 }
 

@@ -187,6 +187,39 @@ assertNotEqual(new Uint8Array([1, 3]), new Uint8Array([1, 2]));
 assertNotEqual(new Uint16Array([1, 3]), new Uint16Array([1, 2]));
 assertNotEqual(new Uint32Array([1, 3]), new Uint32Array([1, 2]));
 
+// Promises are not equal unless they have reference equality
+let promise = Promise.resolve(1);
+assertEqual(promise, promise);
+assertNotEqual(Promise.resolve(1), Promise.resolve(1));
+
+// Functions are not equal unless they have reference equality
+let fun = () => 1;
+assertEqual(fun, fun);
+assertNotEqual(
+  () => 1,
+  () => 1
+);
+
+// Maps are not equal unless they have reference equality
+let map = new Map([["a", 1]]);
+assertEqual(map, map);
+assertNotEqual(new Map([["a", 1]]), new Map([["a", 1]]));
+
+// Sets are not equal unless they have reference equality
+let set = new Set(["a", 1]);
+assertEqual(set, set);
+assertNotEqual(new Set(["a", 1]), new Set(["a", 1]));
+
+// WeakMaps are not equal unless they have reference equality
+let weak_map = new WeakMap([[map, 1]]);
+assertEqual(weak_map, weak_map);
+assertNotEqual(new WeakMap([[map, 1]]), new WeakMap([[map, 1]]));
+
+// WeakSets are not equal unless they have reference equality
+let weak_set = new WeakSet([map, set]);
+assertEqual(weak_set, weak_set);
+assertNotEqual(new WeakSet([map, set]), new WeakSet([map, set]));
+
 class ExampleA {
   constructor(x) {
     this.x = x;
