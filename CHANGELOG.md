@@ -59,6 +59,9 @@
   JavaScript code.
 - Fixed a bug where some assignments as the final expression in a function would
   not return the correct value in JavaScript.
+- Gleam packages imported in JavaScript now have the path prefix
+  `gleam-packages`. This can be served from your web server or aliased in your
+  `package.json` for NodeJS projects.
 
 ## v0.16.1 - 2021-06-21
 
