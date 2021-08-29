@@ -14,12 +14,12 @@ class Cat extends CustomType {
 }
 
 function go(cat) {
-  if (!cat instanceof Cat) throw new Error("Bad match");
+  if (!(cat instanceof Cat)) throw new Error("Bad match");
   let x = cat.name;
   let y = cat.cuteness;
-  if (!cat instanceof Cat) throw new Error("Bad match");
+  if (!(cat instanceof Cat)) throw new Error("Bad match");
   let x$1 = cat.name;
-  if (!cat instanceof Cat || cat.cuteness !== 4) throw new Error("Bad match");
+  if (!(cat instanceof Cat) || cat.cuteness !== 4) throw new Error("Bad match");
   let x$2 = cat.name;
   return x$2;
 }

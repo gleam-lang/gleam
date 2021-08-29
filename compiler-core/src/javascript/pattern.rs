@@ -561,7 +561,7 @@ impl<'a> Check<'a> {
                 if match_desired {
                     docvec![subject, path, " instanceof ", kind]
                 } else {
-                    docvec!["!", subject, path, " instanceof ", kind]
+                    docvec!["!(", subject, path, " instanceof ", kind, ")"]
                 }
             }
 

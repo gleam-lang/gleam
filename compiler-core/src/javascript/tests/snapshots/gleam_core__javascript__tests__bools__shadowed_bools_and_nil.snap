@@ -12,9 +12,9 @@ export class False extends CustomType {}
 export class Nil extends CustomType {}
 
 function go(x, y) {
-  if (!x instanceof True) throw new Error("Bad match");
-  if (!x instanceof False) throw new Error("Bad match");
-  if (!y instanceof Nil) throw new Error("Bad match");
+  if (!(x instanceof True)) throw new Error("Bad match");
+  if (!(x instanceof False)) throw new Error("Bad match");
+  if (!(y instanceof Nil)) throw new Error("Bad match");
   return y;
 }
 
