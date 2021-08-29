@@ -13,7 +13,6 @@ import {
   inspect,
   isEqual,
   stringBits,
-  symbols,
   toBitString,
   toList,
 } from "./prelude.js";
@@ -395,24 +394,6 @@ assertEqual(toList([1, 1]).hasLength(3), false);
 assertEqual(new BitString(new Uint8Array([])).length, 0);
 assertEqual(new BitString(new Uint8Array([1, 2])).length, 2);
 assertEqual(new BitString(new Uint8Array([1, 2, 3, 4])).length, 4);
-
-// Symbols
-
-assertEqual("variant" in symbols, true);
-
-// All the symbols are distinct
-assertEqual(new Set(Object.values(symbols)).length, symbols.length);
-
-assertEqual(symbols.variant in new Ok(1), true);
-assertEqual(symbols.variant in new Error(1), true);
-assertEqual(symbols.variant in new Empty(), true);
-assertEqual(symbols.variant in new NonEmpty(1, new Empty()), true);
-assertEqual(symbols.variant in new BitString(new Uint8Array([])), true);
-assertEqual(symbols.variant in new UtfCodepoint(128013), true);
-// Unlike the above data types (which are structurally checked for equality)
-// records can only be equal if they share a constructor, so they have no
-// variant property.
-assertEqual(symbols.variant in new CustomType(), false);
 
 //
 // Division

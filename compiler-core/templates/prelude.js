@@ -1,10 +1,3 @@
-function define(object, name, fallback) {
-  return (object[name] = globalThis[name] || fallback);
-}
-
-export const symbols = define(globalThis, "__gleam", {});
-define(symbols, "variant", Symbol("variant"));
-
 export class CustomType {
   inspect() {
     let field = (label) => {
@@ -69,7 +62,7 @@ export function toList(elements, tail) {
 }
 
 export class Empty extends List {
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "EmptyList";
   }
 
@@ -85,7 +78,7 @@ export class NonEmpty extends List {
     this.tail = tail;
   }
 
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "NonEmptyList";
   }
 
@@ -99,7 +92,7 @@ export class BitString {
     this.buffer = buffer;
   }
 
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "BitString";
   }
 
@@ -117,7 +110,7 @@ export class UtfCodepoint {
     this.value = value;
   }
 
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "UtfCodepoint";
   }
 
@@ -152,11 +145,7 @@ export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
-export class Result extends CustomType {
-  isOk() {
-    return "Ok" === this[symbols.variant];
-  }
-}
+export class Result extends CustomType {}
 
 export class Ok extends Result {
   constructor(value) {
@@ -164,8 +153,12 @@ export class Ok extends Result {
     this[0] = value;
   }
 
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "Ok";
+  }
+
+  isOk() {
+    return true;
   }
 }
 
@@ -175,8 +168,12 @@ export class Error extends Result {
     this[0] = detail;
   }
 
-  get [symbols.variant]() {
+  get __gleam_prelude_variant__() {
     return "Error";
+  }
+
+  isOk() {
+    return false;
   }
 }
 
@@ -260,7 +257,8 @@ function structurallyCompatibleObjects(a, b) {
 
   return (
     a.constructor === b.constructor ||
-    (a[symbols.variant] && a[symbols.variant] === b[symbols.variant])
+    (a.__gleam_prelude_variant__ &&
+      a.__gleam_prelude_variant__ === b.__gleam_prelude_variant__)
   );
 }
 
