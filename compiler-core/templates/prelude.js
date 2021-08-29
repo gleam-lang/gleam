@@ -63,10 +63,6 @@ export class List {
     }
     return desired == 0;
   }
-
-  isEmpty() {
-    return "EmptyList" == this[symbols.variant];
-  }
 }
 
 export function toList(elements, tail) {
@@ -76,6 +72,10 @@ export function toList(elements, tail) {
 export class Empty extends List {
   get [symbols.variant]() {
     return "EmptyList";
+  }
+
+  isEmpty() {
+    return true;
   }
 }
 
@@ -88,6 +88,10 @@ export class NonEmpty extends List {
 
   get [symbols.variant]() {
     return "NonEmptyList";
+  }
+
+  isEmpty() {
+    return false;
   }
 }
 
