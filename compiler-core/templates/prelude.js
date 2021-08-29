@@ -26,39 +26,57 @@ export class List {
     return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
   }
 
+  [Symbol.iterator]() {
+    return new ListIterator(this);
+  }
+
   toArray() {
-    let current = this;
-    let array = [];
-    while (!current.isEmpty()) {
-      array.push(current.head);
-      current = current.tail;
-    }
-    return array;
+    return [...this];
   }
 
   atLeastLength(desired) {
-    let current = this;
-    while (!current.isEmpty()) {
+    for (let _ of this) {
       if (desired <= 0) return true;
       desired--;
-      current = current.tail;
     }
     return desired <= 0;
   }
 
   hasLength(desired) {
-    let current = this;
-    while (!current.isEmpty()) {
+    for (let _ of this) {
       if (desired <= 0) return false;
       desired--;
-      current = current.tail;
     }
     return desired == 0;
+  }
+
+  countLength() {
+    let length = 0;
+    for (let _ of this) length++;
+    return length;
   }
 }
 
 export function toList(elements, tail) {
   return List.fromArray(elements, tail);
+}
+
+class ListIterator {
+  #current;
+
+  constructor(current) {
+    this.#current = current;
+  }
+
+  next() {
+    if (this.#current.isEmpty()) {
+      return { done: true };
+    } else {
+      let { head, tail } = this.#current;
+      this.#current = tail;
+      return { value: head, done: false };
+    }
+  }
 }
 
 export class Empty extends List {

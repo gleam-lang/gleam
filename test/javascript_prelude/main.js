@@ -389,6 +389,11 @@ assertEqual(toList([1, 1]).hasLength(1), false);
 assertEqual(toList([1, 1]).hasLength(2), true);
 assertEqual(toList([1, 1]).hasLength(3), false);
 
+// List iterable interface
+
+assertEqual([...toList([])], []);
+assertEqual([...toList([1, 2, 3])], [1, 2, 3]);
+
 // BitString.length
 
 assertEqual(new BitString(new Uint8Array([])).length, 0);

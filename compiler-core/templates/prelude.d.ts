@@ -1,29 +1,29 @@
-export interface Inspect {
-  inspect(): string;
-}
-
 export interface ListStatic {
   fromArray<T>(array: Array<T>): List<T>;
 }
 
-export interface List<T> extends Inspect {
+export interface List<T> extends Iterable<T> {
   get __gleam_prelude_variant__(): "EmptyList" | "NonEmptyList";
   head?: T;
   tail?: List<T>;
+  inspect(): string;
   toArray(): Array<T>;
   atLeastLength(desired: number): boolean;
   hasLength(desired: number): boolean;
+  countLength(): number;
 }
 
 export function toList<T>(array: Array<T>): List<T>;
 
-export interface BitString extends Inspect {
+export interface BitString {
   get __gleam_prelude_variant__(): "BitString";
   get length(): number;
+  inspect(): string;
 }
 
-export interface Utf8Codepoint extends Inspect {
+export interface Utf8Codepoint {
   get __gleam_prelude_variant__(): "UtfCodepoint";
+  inspect(): string;
 }
 
 export function toBitString(segments: Array<number | Uint8Array>): BitString;
@@ -32,9 +32,10 @@ export function stringBits(string: string): Uint8Array;
 
 export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
 
-export interface Result<T, E> extends Inspect {
+export interface Result<T, E> {
   get __gleam_prelude_variant__(): "Ok" | "Error";
   isOk(): boolean;
+  inspect(): string;
 }
 
 export interface OkStatic {
