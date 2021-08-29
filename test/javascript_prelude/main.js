@@ -399,18 +399,9 @@ assertEqual(new BitString(new Uint8Array([1, 2, 3, 4])).length, 4);
 // Symbols
 
 assertEqual("variant" in symbols, true);
-assertEqual("inspect" in symbols, true);
 
 // All the symbols are distinct
 assertEqual(new Set(Object.values(symbols)).length, symbols.length);
-
-assertEqual(symbols.inspect in new Ok(1), true);
-assertEqual(symbols.inspect in new Error(1), true);
-assertEqual(symbols.inspect in new CustomType(), true);
-assertEqual(symbols.inspect in new Empty(), true);
-assertEqual(symbols.inspect in new NonEmpty(1, new Empty()), true);
-assertEqual(symbols.inspect in new BitString(new Uint8Array([])), true);
-assertEqual(symbols.inspect in new UtfCodepoint(128013), true);
 
 assertEqual(symbols.variant in new Ok(1), true);
 assertEqual(symbols.variant in new Error(1), true);

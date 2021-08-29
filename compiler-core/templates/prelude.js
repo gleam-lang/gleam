@@ -4,10 +4,9 @@ function define(object, name, fallback) {
 
 export const symbols = define(globalThis, "__gleam", {});
 define(symbols, "variant", Symbol("variant"));
-define(symbols, "inspect", Symbol("inspect"));
 
 export class CustomType {
-  [symbols.inspect]() {
+  inspect() {
     let field = (label) => {
       let value = inspect(this[label]);
       return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
@@ -25,7 +24,7 @@ export class CustomType {
 }
 
 export class List {
-  [symbols.inspect]() {
+  inspect() {
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
@@ -104,7 +103,7 @@ export class BitString {
     return "BitString";
   }
 
-  [symbols.inspect]() {
+  inspect() {
     return `<<${Array.from(this.buffer).join(", ")}>>`;
   }
 
@@ -122,7 +121,7 @@ export class UtfCodepoint {
     return "UtfCodepoint";
   }
 
-  [symbols.inspect]() {
+  inspect() {
     return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
   }
 }
@@ -192,8 +191,11 @@ export function inspect(v) {
   if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-  if (v[symbols.inspect]) return v[symbols.inspect]();
-  return inspectObject(v);
+  try {
+    return v.inspect();
+  } catch (_) {
+    return inspectObject(v);
+  }
 }
 
 function inspectObject(v) {
