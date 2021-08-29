@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "import one\npub fn go() { one.go() }\n"
 
 ---
-import * as $one from "other_package/one.js";
+import * as $one from "gleam-packages/other_package/one.js";
 
 export function go() {
   return $one.go();

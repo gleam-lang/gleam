@@ -273,7 +273,7 @@ impl<'a> Generator<'a> {
             }
         } else {
             // Different packages uses absolute imports
-            format!("{}/{}.js", package, path)
+            format!("gleam-packages/{}/{}.js", package, path)
         }
     }
 
