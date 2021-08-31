@@ -236,7 +236,8 @@ export function isEqual(x, y) {
       unequalDates(a, b) ||
       unequalBuffers(a, b) ||
       unequalArrays(a, b) ||
-      unequalMaps(a, b);
+      unequalMaps(a, b) ||
+      unequalSets(a, b);
     if (unequal) return false;
 
     for (const k of Object.keys(a)) {
@@ -274,6 +275,12 @@ function unequalMaps(a, b) {
   return a instanceof Map && a.size !== b.size;
 }
 
+function unequalSets(a, b) {
+  return a instanceof Set && (
+    a.size != b.size || [...a].some(e => !b.has(e))
+  )
+}
+
 function isObject(a) {
   return typeof a === "object" && a !== null;
 }
@@ -282,7 +289,7 @@ function structurallyCompatibleObjects(a, b) {
   if (typeof a !== "object" && typeof b !== "object" && (!a || !b))
     return false;
 
-  let nonstructural = [Promise, Set, WeakSet, WeakMap];
+  let nonstructural = [Promise, WeakSet, WeakMap];
   if (nonstructural.some((c) => a instanceof c)) return false;
 
   return (
