@@ -199,15 +199,21 @@ assertNotEqual(
   () => 1
 );
 
-// Maps are not equal unless they have reference equality
+// Maps are compared structurally
 let map = new Map([["a", 1]]);
 assertEqual(map, map);
-assertNotEqual(new Map([["a", 1]]), new Map([["a", 1]]));
+assertEqual(new Map([["a", 1]]), new Map([["a", 1]]));
+assertNotEqual(new Map([["a", 1], ["b", 2]]), new Map([["a", 1]]));
+assertNotEqual(new Map([["a", 1]]), new Map([["a", 1], ["b", 2]]));
+assertNotEqual(new Map([["a", 1]]), new Map([["b", 1]]));
 
-// Sets are not equal unless they have reference equality
+// Sets are compared structurally
 let set = new Set(["a", 1]);
 assertEqual(set, set);
-assertNotEqual(new Set(["a", 1]), new Set(["a", 1]));
+assertEqual(new Set(["a", 1]), new Set(["a", 1]));
+assertNotEqual(new Set(["a", 1]), new Set(["b", 1]));
+assertNotEqual(new Set(["a", 1, "b"]), new Set(["a", 1]));
+assertNotEqual(new Set(["a", 1]), new Set(["a", 1, "b"]));
 
 // WeakMaps are not equal unless they have reference equality
 let weak_map = new WeakMap([[map, 1]]);
