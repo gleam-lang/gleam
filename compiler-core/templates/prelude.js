@@ -30,10 +30,6 @@ export class List {
     return `[${this.toArray().map(inspect).join(", ")}]`;
   }
 
-  prepend(head) {
-    return new NonEmpty(head, this);
-  }
-
   toArray() {
     return [...this];
   }

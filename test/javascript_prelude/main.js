@@ -432,11 +432,6 @@ assertEqual(toList([1, 1]).hasLength(1), false);
 assertEqual(toList([1, 1]).hasLength(2), true);
 assertEqual(toList([1, 1]).hasLength(3), false);
 
-// List.prepend
-
-assertEqual(toList([]).prepend(3), toList([3]));
-assertEqual(toList([1, 2]).prepend(3), toList([3, 1, 2]));
-
 // List iterable interface
 
 assertEqual([...toList([])], []);
