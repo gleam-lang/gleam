@@ -203,9 +203,25 @@ assertNotEqual(
 let map = new Map([["a", 1]]);
 assertEqual(map, map);
 assertEqual(new Map([["a", 1]]), new Map([["a", 1]]));
-assertNotEqual(new Map([["a", 1], ["b", 2]]), new Map([["a", 1]]));
-assertNotEqual(new Map([["a", 1]]), new Map([["a", 1], ["b", 2]]));
+assertNotEqual(
+  new Map([
+    ["a", 1],
+    ["b", 2],
+  ]),
+  new Map([["a", 1]])
+);
+assertNotEqual(
+  new Map([["a", 1]]),
+  new Map([
+    ["a", 1],
+    ["b", 2],
+  ])
+);
 assertNotEqual(new Map([["a", 1]]), new Map([["b", 1]]));
+assertEqual(
+  new Map([["a", new Map([["a", []]])]]),
+  new Map([["a", new Map([["a", []]])]])
+);
 
 // Sets are compared structurally
 let set = new Set(["a", 1]);
@@ -214,6 +230,10 @@ assertEqual(new Set(["a", 1]), new Set(["a", 1]));
 assertNotEqual(new Set(["a", 1]), new Set(["b", 1]));
 assertNotEqual(new Set(["a", 1, "b"]), new Set(["a", 1]));
 assertNotEqual(new Set(["a", 1]), new Set(["a", 1, "b"]));
+assertNotEqual(
+  new Set(["a", new Map([["a", []]])]),
+  new Set(["a", new Map([["a", []]])])
+);
 
 // WeakMaps are not equal unless they have reference equality
 let weak_map = new WeakMap([[map, 1]]);
@@ -352,21 +372,38 @@ assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
 
 assertEqual(inspect(null), "//js(null)");
 assertEqual(inspect({}), "//js({})");
-assertEqual(inspect({ a: 1 }), "//js({ a: 1 })");
-assertEqual(inspect({ a: 1, b: 2 }), "//js({ a: 1, b: 2 })");
-assertEqual(inspect({ a: 1, b: new Ok(1) }), "//js({ a: 1, b: Ok(1) })");
+assertEqual(inspect({ a: 1 }), '//js({ "a": 1 })');
+assertEqual(inspect({ a: 1, b: 2 }), '//js({ "a": 1, "b": 2 })');
+assertEqual(inspect({ a: 1, b: new Ok(1) }), '//js({ "a": 1, "b": Ok(1) })');
 
 // Generic JS objects
 assertEqual(inspect(Promise.resolve(1)), "//js(Promise {})");
-assertEqual(inspect(new Set([1, 2, 3])), "//js(Set {})");
-assertEqual(inspect(new Map([["a", 1]])), "//js(Map {})");
 
-// Special cases for Date and RegExp
+// Inspecting Dates
 assertEqual(
   inspect(new Date("1991-01-05")),
   '//js(Date("1991-01-05T00:00:00.000Z"))'
 );
+
+// Inspecting RegExps
 assertEqual(inspect(/1[23]/g), "//js(/1[23]/g)");
+
+// Inspecting Maps
+assertEqual(
+  inspect(
+    new Map([
+      [1, 2],
+      [3, new Ok([1, 2])],
+    ])
+  ),
+  "//js(Map { 1: 2, 3: Ok(#(1, 2)) })"
+);
+
+// Inspecting Sets
+assertEqual(
+  inspect(new Set([1, 2, new Ok([1, 2])])),
+  "//js(Set(1, 2, Ok(#(1, 2))))"
+);
 
 // Result.isOk
 
