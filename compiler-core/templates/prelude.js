@@ -17,10 +17,6 @@ export class CustomType {
 }
 
 export class List {
-  inspect() {
-    return `[${this.toArray().map(inspect).join(", ")}]`;
-  }
-
   static fromArray(array, tail) {
     let t = tail || new Empty();
     return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
@@ -28,6 +24,14 @@ export class List {
 
   [Symbol.iterator]() {
     return new ListIterator(this);
+  }
+
+  inspect() {
+    return `[${this.toArray().map(inspect).join(", ")}]`;
+  }
+
+  prepend(head) {
+    return new NonEmpty(head, this);
   }
 
   toArray() {
