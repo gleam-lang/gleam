@@ -196,9 +196,6 @@ export class Error extends Result {
 }
 
 export function inspect(v) {
-  try {
-    return v.inspect();
-  } catch (_) {}
   let t = typeof v;
   if (v === true) return "True";
   if (v === false) return "False";
@@ -210,7 +207,11 @@ export function inspect(v) {
   if (v instanceof Set) return `//js(Set(${[...v].map(inspect).join(", ")}))`;
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-  return inspectObject(v);
+  try {
+    return v.inspect();
+  } catch (_) {
+    return inspectObject(v);
+  }
 }
 
 function inspectObject(v) {
