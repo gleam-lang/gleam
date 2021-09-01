@@ -6,6 +6,7 @@ export interface List<T> extends Iterable<T> {
   get __gleam_prelude_variant__(): "EmptyList" | "NonEmptyList";
   head?: T;
   tail?: List<T>;
+  prepend(head: T): List<T>;
   inspect(): string;
   toArray(): Array<T>;
   atLeastLength(desired: number): boolean;
