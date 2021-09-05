@@ -821,7 +821,6 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         let token = self.inner_next();
-        tracing::trace!("Lex token {:?}", token,);
 
         match token {
             Ok((_, Token::EndOfFile, _)) => None,

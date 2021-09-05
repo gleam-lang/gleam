@@ -212,7 +212,7 @@ where
     }
 
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
-        let statement = match (self.tok0.take(), self.tok1.as_ref()) {
+        match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
             (Some((_, Token::Import, _)), _) => {
                 let _ = self.next_tok();
@@ -286,9 +286,7 @@ where
                 self.tok0 = t0;
                 Ok(None)
             }
-        };
-        tracing::trace!("Statement Parsed: {:?}", statement);
-        statement
+        }
     }
 
     //

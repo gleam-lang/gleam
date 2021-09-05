@@ -867,8 +867,7 @@ fn generalise_statement(
 
             // Generalise the function if not already done so
             let typ = if environment.ungeneralised_functions.remove(&name) {
-                let level = 1;
-                generalise(typ, level)
+                generalise(typ, 0)
             } else {
                 typ
             };
