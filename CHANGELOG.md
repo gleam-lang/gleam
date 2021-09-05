@@ -62,6 +62,8 @@
 - Gleam packages imported in JavaScript now have the path prefix
   `gleam-packages`. This can be served from your web server or aliased in your
   `package.json` for NodeJS projects.
+- Fixed a bug where the type checker would fail to generalise some type
+  variables, causing module metadata writing to fail.
 
 ## v0.16.1 - 2021-06-21
 
