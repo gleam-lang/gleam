@@ -515,11 +515,9 @@ pub fn hello_world_test() {{
             self.test.join(format!("{}_test.gleam", self.project_name)),
             &format!(
                 r#"import {name}
-import gleam/should
 
 pub fn hello_world_test() {{
-  {name}.hello_world()
-  |> should.equal("Hello, from {name}!")
+  assert "Hello, from {name}!" = {name}.hello_world()
 }}
 "#,
                 name = self.project_name
