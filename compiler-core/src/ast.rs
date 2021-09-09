@@ -165,6 +165,10 @@ impl<A> Arg<A> {
             annotation: self.annotation,
         }
     }
+
+    pub fn get_variable_name(&self) -> Option<&str> {
+        self.names.get_variable_name()
+    }
 }
 
 impl<A> ExternalFnArg<A> {

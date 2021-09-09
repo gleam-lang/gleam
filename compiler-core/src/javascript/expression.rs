@@ -22,7 +22,7 @@ pub(crate) struct Generator<'module> {
     // We track whether tail call recusion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
-    tail_recursion_used: bool,
+    pub tail_recursion_used: bool,
 }
 
 impl<'module> Generator<'module> {
@@ -68,18 +68,31 @@ impl<'module> Generator<'module> {
         self.local_var(name)
     }
 
-    pub fn function_body<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub fn function_body<'a>(
+        &mut self,
+        expression: &'a TypedExpr,
+        args: &'a [TypedArg],
+    ) -> Output<'a> {
         let body = self.expression(expression)?;
         if self.tail_recursion_used {
-            Ok(docvec!(
-                "while (true) {",
-                docvec!(line(), body).nest(INDENT),
-                line(),
-                "}"
-            ))
+            self.tail_call_loop(body, args)
         } else {
             Ok(body)
         }
+    }
+
+    fn tail_call_loop<'a>(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Output<'a> {
+        let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
+            let var = maybe_escape_identifier_doc(&name);
+            docvec!["let ", var, " = loop$", name, ";", line()]
+        }));
+        Ok(docvec!(
+            loop_assignments,
+            "while (true) {",
+            docvec!(line(), body).nest(INDENT),
+            line(),
+            "}"
+        ))
     }
 
     pub fn expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
@@ -699,10 +712,15 @@ impl<'module> Generator<'module> {
         std::mem::swap(&mut self.function_name, &mut name);
 
         Ok(docvec!(
-            docvec!(fun_args(arguments), " => {", break_("", " "), result?)
-                .nest(INDENT)
-                .append(break_("", " "))
-                .group(),
+            docvec!(
+                fun_args(arguments, false),
+                " => {",
+                break_("", " "),
+                result?
+            )
+            .nest(INDENT)
+            .append(break_("", " "))
+            .group(),
             "}",
         ))
     }

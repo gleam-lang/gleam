@@ -375,14 +375,13 @@ impl<'a> Generator<'a> {
         } else {
             "function "
         };
+        let body = generator.function_body(body, args)?;
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
-            fun_args(args),
+            fun_args(args, generator.tail_recursion_used),
             " {",
-            docvec![line(), generator.function_body(body)?]
-                .nest(INDENT)
-                .group(),
+            docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
         ])
@@ -448,10 +447,10 @@ pub enum Error {
     Unsupported { feature: String, location: SrcSpan },
 }
 
-fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
+fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
     let mut discards = 0;
-    wrap_args(args.iter().map(|a| match &a.names {
-        ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => {
+    wrap_args(args.iter().map(|a| match a.get_variable_name() {
+        None => {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
@@ -460,9 +459,8 @@ fn fun_args(args: &'_ [TypedArg]) -> Document<'_> {
             discards += 1;
             doc
         }
-        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-            maybe_escape_identifier_doc(name)
-        }
+        Some(name) if tail_recursion_used => Document::String(format!("loop${}", name)),
+        Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
 

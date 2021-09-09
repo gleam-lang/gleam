@@ -3,7 +3,8 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
 
 ---
-export function loop(indentation) {
+export function loop(loop$indentation) {
+  let indentation = loop$indentation;
   while (true) {
     let $ = indentation > 0;
     if ($) {

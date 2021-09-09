@@ -3,7 +3,8 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "pub fn main(f, _) {\n  f()\n  main(f, 1)\n}\n"
 
 ---
-export function main(f, _) {
+export function main(loop$f, _) {
+  let f = loop$f;
   while (true) {
     f();
     f = f;
