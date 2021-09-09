@@ -64,6 +64,8 @@
   `package.json` for NodeJS projects.
 - Fixed a bug where the type checker would fail to generalise some type
   variables, causing module metadata writing to fail.
+- Fixed a bug where tail call optimisation when compiling to JavaScript could
+  result in incorrect code.
 
 ## v0.16.1 - 2021-06-21
 
