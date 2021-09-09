@@ -22,6 +22,11 @@ export class List {
     return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
   }
 
+  static isList(data) {
+    let variant = data?.__gleam_prelude_variant__;
+    return variant === "EmptyList" || variant === "NonEmptyList";
+  }
+
   [Symbol.iterator]() {
     return new ListIterator(this);
   }
