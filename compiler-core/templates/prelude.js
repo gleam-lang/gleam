@@ -111,6 +111,10 @@ export class NonEmpty extends List {
 }
 
 export class BitString {
+  static isBitString(data) {
+    return data?.__gleam_prelude_variant__ === "BitString";
+  }
+
   constructor(buffer) {
     this.buffer = buffer;
   }
