@@ -172,7 +172,12 @@ export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
-export class Result extends CustomType {}
+export class Result extends CustomType {
+  static isResult(data) {
+    let variant = data?.__gleam_prelude_variant__;
+    return variant === "Ok" || variant === "Error";
+  }
+}
 
 export class Ok extends Result {
   constructor(value) {
