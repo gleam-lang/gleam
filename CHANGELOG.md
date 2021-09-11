@@ -67,6 +67,8 @@
 - Fixed a bug where tail call optimisation when compiling to JavaScript could
   result in incorrect code.
 - Fixed a bug where variable names could be rendered incorrectly in closures.
+- An error is now emitted if alternative patterns fail to define all the
+  variables defined by the first pattern.
 
 ## v0.16.1 - 2021-06-21
 
