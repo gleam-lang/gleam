@@ -6,6 +6,9 @@
 
 ## v0.17.0-rc1 - 2021-09-11
 
+- Redesigned the Gleam prelude to be a module of core classes when compiling to
+  JavaScript. This improves the resulting generated code and makes debugging and
+  interop easier.
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 - JavaScript modules are imported using a camel case variable name to avoid name
   collisions with variables.
