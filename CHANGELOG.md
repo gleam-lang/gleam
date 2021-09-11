@@ -70,6 +70,7 @@
 - An error is now emitted if alternative patterns fail to define all the
   variables defined by the first pattern.
 - New projects are generated using `gleam_stdlib` v0.17.0.
+- New projects are generated using `gleam_otp` v0.2.0.
 
 ## v0.16.1 - 2021-06-21
 
