@@ -698,6 +698,11 @@ impl<'module> Generator<'module> {
         // New function, this is now the tail position
         let tail = self.tail_position;
         self.tail_position = true;
+        // And there's a new scope
+        let scope = self.current_scope_vars.clone();
+        for name in arguments.iter().flat_map(Arg::get_variable_name) {
+            let _ = self.current_scope_vars.remove(name);
+        }
 
         // This is a new function so unset the recorded name so that we don't
         // mistakenly trigger tail call optimisation
@@ -707,8 +712,9 @@ impl<'module> Generator<'module> {
         // Generate the function body
         let result = self.expression(body);
 
-        // Reset function name and tail position tracking
+        // Reset function name, scope, and tail position tracking
         self.tail_position = tail;
+        self.current_scope_vars = scope;
         std::mem::swap(&mut self.function_name, &mut name);
 
         Ok(docvec!(
