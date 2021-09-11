@@ -66,6 +66,7 @@
   variables, causing module metadata writing to fail.
 - Fixed a bug where tail call optimisation when compiling to JavaScript could
   result in incorrect code.
+- Fixed a bug where variable names could be rendered incorrectly in closures.
 
 ## v0.16.1 - 2021-06-21
 
