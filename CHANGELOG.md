@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.17.0-rc1 - 2021-09-11
 
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
