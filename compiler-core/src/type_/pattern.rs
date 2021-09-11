@@ -104,7 +104,13 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 }
                 Err(Error::MissingVarInAlternativePattern {
                     location: *location,
-                    name: self.initial_pattern_vars.iter().next().unwrap().clone(),
+                    // It is safe to use expect here as we checked the length above
+                    name: self
+                        .initial_pattern_vars
+                        .iter()
+                        .next()
+                        .expect("Getting undefined pattern variable")
+                        .clone(),
                 })
             }
             PatternMode::Alternative(_) => Ok(typed_multi),
