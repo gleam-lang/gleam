@@ -1,10 +1,11 @@
 # Changelog
 
-## v0.17.0-rc1 - 2021-09-11
-
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+
+## v0.17.0-rc1 - 2021-09-11
+
 - Projects without rebar3 can be generated using the `gleam-lib` template.
 - JavaScript modules are imported using a camel case variable name to avoid name
   collisions with variables.
