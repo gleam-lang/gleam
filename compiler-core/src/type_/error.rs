@@ -166,6 +166,11 @@ pub enum Error {
         name: String,
     },
 
+    MissingVarInAlternativePattern {
+        location: SrcSpan,
+        name: String,
+    },
+
     DuplicateVarInPattern {
         location: SrcSpan,
         name: String,
@@ -530,6 +535,10 @@ pub enum UnifyError {
         name: String,
     },
 
+    MissingVarInAlternativePattern {
+        name: String,
+    },
+
     DuplicateVarInPattern {
         name: String,
     },
@@ -578,6 +587,10 @@ impl UnifyError {
 
             Self::ExtraVarInAlternativePattern { name } => {
                 Error::ExtraVarInAlternativePattern { location, name }
+            }
+
+            Self::MissingVarInAlternativePattern { name } => {
+                Error::MissingVarInAlternativePattern { location, name }
             }
 
             Self::DuplicateVarInPattern { name } => Error::DuplicateVarInPattern { location, name },

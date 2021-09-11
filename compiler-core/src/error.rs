@@ -1159,6 +1159,24 @@ pattern. This variable `{}` has not been previously defined.",
                     .unwrap();
                 }
 
+                TypeError::MissingVarInAlternativePattern { location, name } => {
+                    let diagnostic = Diagnostic {
+                        title: "Missing alternative pattern variable".to_string(),
+                        label: "does not define all required variables".to_string(),
+                        file: path.to_str().unwrap().to_string(),
+                        src: src.to_string(),
+                        location: *location,
+                    };
+                    write(buf, diagnostic, Severity::Error);
+                    writeln!(
+                        buf,
+                        "All alternative patterns must define the same variables as the initial
+pattern, but the `{}` variable is missing.",
+                        name
+                    )
+                    .unwrap();
+                }
+
                 TypeError::DuplicateVarInPattern { location, name } => {
                     let diagnostic = Diagnostic {
                         title: "Duplicate variable in pattern".to_string(),

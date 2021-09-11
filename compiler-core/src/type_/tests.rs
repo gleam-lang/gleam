@@ -3930,3 +3930,15 @@ fn module_name_validation() {
 
     assert!(validate_module_name(&["ok".to_string(), "pub".to_string()]).is_err());
 }
+
+// https://github.com/gleam-lang/gleam/issues/1263
+#[test]
+fn missing_variable_in_alternative_pattern() {
+    assert_error!(
+        "case [] { [x] | [] -> x _ -> 0 }",
+        Error::MissingVarInAlternativePattern {
+            location: SrcSpan { start: 10, end: 23 },
+            name: "x".to_string()
+        },
+    );
+}

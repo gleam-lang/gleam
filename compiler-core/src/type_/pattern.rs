@@ -18,7 +18,7 @@ pub struct PatternTyper<'a, 'b, 'c> {
 
 enum PatternMode {
     Initial,
-    Alternative,
+    Alternative(Vec<String>),
 }
 
 impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
@@ -42,7 +42,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        match self.mode {
+        match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
                 self.environment
@@ -68,18 +68,21 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 Ok(())
             }
 
-            PatternMode::Alternative => match self.environment.local_values.get(name) {
-                // This variable was defined in the Initial multi-pattern
-                Some(initial) if self.initial_pattern_vars.contains(name) => {
-                    let initial_typ = initial.type_.clone();
-                    self.environment.unify(initial_typ, typ)
-                }
+            PatternMode::Alternative(assigned) => {
+                match self.environment.local_values.get(name) {
+                    // This variable was defined in the Initial multi-pattern
+                    Some(initial) if self.initial_pattern_vars.contains(name) => {
+                        assigned.push(name.to_string());
+                        let initial_typ = initial.type_.clone();
+                        self.environment.unify(initial_typ, typ)
+                    }
 
-                // This variable was not defined in the Initial multi-pattern
-                _ => Err(UnifyError::ExtraVarInAlternativePattern {
-                    name: name.to_string(),
-                }),
-            },
+                    // This variable was not defined in the Initial multi-pattern
+                    _ => Err(UnifyError::ExtraVarInAlternativePattern {
+                        name: name.to_string(),
+                    }),
+                }
+            }
         }
     }
 
@@ -89,9 +92,23 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<Vec<TypedPattern>, Error> {
-        self.mode = PatternMode::Alternative;
+        self.mode = PatternMode::Alternative(vec![]);
         let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, location)?;
-        Ok(typed_multi)
+        match &self.mode {
+            PatternMode::Initial => panic!("Pattern mode switched from Alternative to Initial"),
+            PatternMode::Alternative(assigned)
+                if assigned.len() != self.initial_pattern_vars.len() =>
+            {
+                for name in assigned {
+                    let _ = self.initial_pattern_vars.remove(name);
+                }
+                Err(Error::MissingVarInAlternativePattern {
+                    location: *location,
+                    name: self.initial_pattern_vars.iter().next().unwrap().clone(),
+                })
+            }
+            PatternMode::Alternative(_) => Ok(typed_multi),
+        }
     }
 
     pub fn infer_multi_pattern(
