@@ -1,5 +1,6 @@
 export interface ListStatic {
   fromArray<T>(array: Array<T>): List<T>;
+  isList(value: unknown): boolean;
 }
 
 export interface List<T> extends Iterable<T> {
@@ -14,6 +15,10 @@ export interface List<T> extends Iterable<T> {
 }
 
 export function toList<T>(array: Array<T>): List<T>;
+
+export interface BitStringStatic {
+  isBitString(value: unknown): boolean;
+}
 
 export interface BitString {
   get __gleam_prelude_variant__(): "BitString";
@@ -38,11 +43,15 @@ export interface Result<T, E> {
   inspect(): string;
 }
 
-export interface OkStatic {
+export interface ResultStatic {
+  isResult(value: unknown): boolean;
+}
+
+export interface OkStatic extends ResultStatic {
   new <T, E>(value: T): Result<T, E>;
 }
 
-export interface ErrorStatic {
+export interface ErrorStatic extends ResultStatic {
   new <T, E>(value: E): Result<T, E>;
 }
 
