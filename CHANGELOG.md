@@ -69,6 +69,7 @@
 - Fixed a bug where variable names could be rendered incorrectly in closures.
 - An error is now emitted if alternative patterns fail to define all the
   variables defined by the first pattern.
+- New projects are generated using `gleam_stdlib` v0.17.0.
 
 ## v0.16.1 - 2021-06-21
 
