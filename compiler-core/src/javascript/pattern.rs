@@ -478,6 +478,7 @@ impl<'a> CompiledPattern<'a> {
     }
 
     pub fn checks_or_throw_doc(checks: Vec<Check<'a>>) -> Document<'a> {
+        // TODO: Use self.badmatch here instead
         let checks = Self::checks_doc(checks, false);
         docvec![
             "if (",

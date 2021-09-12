@@ -331,3 +331,13 @@ export function divideFloat(a, b) {
     return a / b;
   }
 }
+
+export function throwError(variant, module, line, fn, message, extra) {
+  let error = new globalThis.Error(message);
+  error.gleam_error = variant;
+  error.module = module;
+  error.line = line;
+  error.fn = fn;
+  for (let k in extra) error[k] = extra[k];
+  throw error;
+}

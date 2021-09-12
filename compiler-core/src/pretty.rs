@@ -36,6 +36,12 @@ pub trait Documentable<'a> {
     fn to_doc(self) -> Document<'a>;
 }
 
+impl<'a> Documentable<'a> for char {
+    fn to_doc(self) -> Document<'a> {
+        Document::String(format!("{}", self))
+    }
+}
+
 impl<'a> Documentable<'a> for &'a str {
     fn to_doc(self) -> Document<'a> {
         Document::Str(self)

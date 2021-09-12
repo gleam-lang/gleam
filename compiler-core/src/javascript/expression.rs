@@ -117,8 +117,11 @@ impl<'module> Generator<'module> {
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(subjects, clauses),
+                location,
+                subjects,
+                clauses,
+                ..
+            } => self.case(*location, subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
@@ -479,6 +482,7 @@ impl<'module> Generator<'module> {
 
     fn case<'a>(
         &mut self,
+        location: SrcSpan,
         subject_values: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) -> Output<'a> {
@@ -566,9 +570,11 @@ impl<'module> Generator<'module> {
         if possibility_of_no_match {
             // Lastly append an error if no clause matches.
             // We can remove this when we get exhaustiveness checking.
+            let error = self.badmatch(location, subjects.into_iter());
+
             doc = doc
                 .append(" else {")
-                .append(docvec!(line(), r#"throw new globalThis.Error("Bad match");"#).nest(INDENT))
+                .append(docvec!(line(), error).nest(INDENT))
                 .append(line())
                 .append("}")
         }
@@ -586,6 +592,18 @@ impl<'module> Generator<'module> {
             .try_collect()?;
 
         Ok(docvec![force_break(), subject_assignments, doc])
+    }
+
+    fn badmatch<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
+    where
+        Subjects: IntoIterator<Item = Document<'a>>,
+    {
+        Ok(self.throw_error(
+            "badmatch",
+            "Pattern did not match",
+            location,
+            vec![("values", array(subjects.into_iter().map(Ok))?)],
+        ))
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -859,41 +877,50 @@ impl<'module> Generator<'module> {
     fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
         let tail_position = self.tail_position;
         self.tail_position = false;
-        let gleam_error = "todo";
+
         let message = message
             .as_deref()
             .unwrap_or("This has not yet been implemented");
-        let module_name = Document::String(self.module_name.join("/"));
-        let line = self.line_numbers.line_number(location.start);
-
-        let doc = docvec![
-            "throw Object.assign",
-            wrap_args([
-                docvec!["new globalThis.Error", wrap_args([string(message)])],
-                wrap_object([
-                    ("gleam_error".to_doc(), Some(string(gleam_error))),
-                    ("module".to_doc(), Some(module_name.surround("\"", "\""))),
-                    (
-                        "function".to_doc(),
-                        Some(
-                            // TODO switch to use `string(self.function_name)`
-                            // This will require resolving the
-                            // difference in lifetimes 'module and 'a.
-                            Document::String(self.function_name.unwrap_or_default().to_string())
-                                .surround("\"", "\"")
-                        )
-                    ),
-                    ("line".to_doc(), Some(line.to_doc())),
-                ])
-            ]),
-            ";"
-        ];
+        let doc = self.throw_error("todo", message, *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.
         self.tail_position = tail_position;
 
         doc
+    }
+
+    fn throw_error<'a, Fields>(
+        &mut self,
+        error_name: &'a str,
+        message: &'a str,
+        location: SrcSpan,
+        fields: Fields,
+    ) -> Document<'a>
+    where
+        Fields: IntoIterator<Item = (&'a str, Document<'a>)>,
+    {
+        self.tracker.throw_error_used = true;
+        let module = Document::String(self.module_name.join("/")).surround('"', '"');
+        // TODO switch to use `string(self.function_name)`
+        // This will require resolving the
+        // difference in lifetimes 'module and 'a.
+        let function = Document::String(self.function_name.unwrap_or_default().to_string())
+            .surround("\"", "\"");
+        let line = self.line_numbers.line_number(location.start).to_doc();
+        let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
+        docvec![
+            "throwError",
+            wrap_args([
+                string(error_name),
+                module,
+                line,
+                function,
+                string(message),
+                fields
+            ]),
+            ";"
+        ]
     }
 
     fn module_select<'a>(

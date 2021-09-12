@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> Nil\n  }\n}\n"
+
+---
+import { throwError } from "../gleam.js";
+
+function go(x, f) {
+  let $ = (() => {
+    let _pipe = x;
+    return f(_pipe);
+  })();
+  if ($ === 0) {
+    return undefined;
+  } else {
+    throwError(
+      "badmatch",
+      "my/mod",
+      3,
+      "go",
+      "Pattern did not match",
+      { values: [$] }
+    );
+  }
+}
+
