@@ -271,7 +271,8 @@ function getters(object) {
   if (object instanceof Map) {
     return [(x) => x.keys(), (x, y) => x.get(y)];
   } else {
-    return [(x) => Object.keys(x), (x, y) => x[y]];
+    let extra = object instanceof globalThis.Error ? ["message"] : [];
+    return [(x) => [...extra, ...Object.keys(x)], (x, y) => x[y]];
   }
 }
 

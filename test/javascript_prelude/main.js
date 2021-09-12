@@ -375,6 +375,20 @@ assertEqual(inspect({}), "//js({})");
 assertEqual(inspect({ a: 1 }), '//js({ "a": 1 })');
 assertEqual(inspect({ a: 1, b: 2 }), '//js({ "a": 1, "b": 2 })');
 assertEqual(inspect({ a: 1, b: new Ok(1) }), '//js({ "a": 1, "b": Ok(1) })');
+assertEqual(
+  inspect(new globalThis.Error("Oh no")),
+  '//js(Error { "message": "Oh no" })'
+);
+assertEqual(
+  inspect(
+    (() => {
+      let error = new globalThis.Error("Oh no");
+      error.other = new Ok(1);
+      return error;
+    })()
+  ),
+  '//js(Error { "message": "Oh no", "other": Ok(1) })'
+);
 
 // Generic JS objects
 assertEqual(inspect(Promise.resolve(1)), "//js(Promise {})");
