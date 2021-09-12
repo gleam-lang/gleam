@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\nfn go(a) {\n  case a {\n    True -> 1\n    False -> 0\n  }\n}\n"
+
+---
+import { throwError } from "../gleam.js";
+
+function go(a) {
+  if (a) {
+    return 1;
+  } else if (!a) {
+    return 0;
+  } else {
+    throwError(
+      "badmatch",
+      "my/mod",
+      3,
+      "go",
+      "Pattern did not match",
+      { values: [a] }
+    );
+  }
+}
+

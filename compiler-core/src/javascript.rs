@@ -65,6 +65,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "CustomType");
         };
 
+        if self.tracker.throw_error_used {
+            self.register_prelude_usage(&mut imports, "throwError");
+        };
+
         if self.tracker.float_division_used {
             self.register_prelude_usage(&mut imports, "divideFloat");
         };
@@ -482,22 +486,27 @@ where
 fn wrap_object<'a>(
     items: impl IntoIterator<Item = (Document<'a>, Option<Document<'a>>)>,
 ) -> Document<'a> {
-    let fields = items.into_iter().map(|(key, value)| match value {
-        Some(value) => docvec![key, ": ", value,],
-        None => key.to_doc(),
+    let mut empty = true;
+    let fields = items.into_iter().map(|(key, value)| {
+        empty = false;
+        match value {
+            Some(value) => docvec![key, ": ", value],
+            None => key.to_doc(),
+        }
     });
+    let fields = concat(Itertools::intersperse(fields, break_(",", ", ")));
 
-    docvec![
+    if empty {
+        "{}".to_doc()
+    } else {
         docvec![
-            "{",
-            break_("", " "),
-            concat(Itertools::intersperse(fields, break_(",", ", ")))
+            docvec!["{", break_("", " "), fields]
+                .nest(INDENT)
+                .append(break_("", " "))
+                .group(),
+            "}"
         ]
-        .nest(INDENT)
-        .append(break_("", " "))
-        .group(),
-        "}"
-    ]
+    }
 }
 
 fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>)>) -> Output<'a> {
@@ -598,6 +607,7 @@ pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
     pub error_used: bool,
+    pub throw_error_used: bool,
     pub custom_type_used: bool,
     pub int_division_used: bool,
     pub float_division_used: bool,
