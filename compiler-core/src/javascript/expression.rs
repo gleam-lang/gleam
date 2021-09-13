@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use super::*;
+use super::{pattern::CompiledPattern, *};
 use crate::{
     ast::*,
     line_numbers::LineNumbers,
@@ -413,7 +413,7 @@ impl<'module> Generator<'module> {
                 pattern_generator.traverse_pattern(&subject, pattern)?;
                 let compiled = pattern_generator.take_compiled();
                 docs.push(line());
-                docs.push(compiled.into_assignment_doc());
+                docs.push(self.pattern_into_assignment_doc(compiled));
                 docs.push(lines(2));
             }
         }
@@ -471,10 +471,10 @@ impl<'module> Generator<'module> {
         // use in patterns
         let doc = match subject_assignment {
             Some(name) => {
-                let compiled = compiled.into_assignment_doc();
+                let compiled = self.pattern_into_assignment_doc(compiled);
                 docvec!("let ", name, " = ", value, ";", line(), compiled)
             }
-            None => compiled.into_assignment_doc(),
+            None => self.pattern_into_assignment_doc(compiled),
         };
 
         Ok(docvec!(force_break(), doc.append(afterwards)))
@@ -526,7 +526,9 @@ impl<'module> Generator<'module> {
 
                 // If the pattern assigns any variables we need to render assignments
                 let body = if compiled.has_assignments() {
-                    let assignments = compiled.take_assignments_doc();
+                    let assignments = gen
+                        .expression_generator
+                        .pattern_take_assignments_doc(&mut compiled);
                     docvec!(assignments, line(), consequence)
                 } else {
                     consequence
@@ -558,7 +560,10 @@ impl<'module> Generator<'module> {
                     } else {
                         " else if ("
                     })
-                    .append(compiled.take_checks_doc(true))
+                    .append(
+                        gen.expression_generator
+                            .pattern_take_checks_doc(&mut compiled, true),
+                    )
                     .append(") {")
                     .append(docvec!(line(), body).nest(INDENT))
                     .append(line())
@@ -570,11 +575,12 @@ impl<'module> Generator<'module> {
         if possibility_of_no_match {
             // Lastly append an error if no clause matches.
             // We can remove this when we get exhaustiveness checking.
-            let error = self.badmatch(location, subjects.into_iter());
-
             doc = doc
                 .append(" else {")
-                .append(docvec!(line(), error).nest(INDENT))
+                .append(
+                    docvec!(line(), self.case_no_match(location, subjects.into_iter())?)
+                        .nest(INDENT),
+                )
                 .append(line())
                 .append("}")
         }
@@ -594,13 +600,13 @@ impl<'module> Generator<'module> {
         Ok(docvec![force_break(), subject_assignments, doc])
     }
 
-    fn badmatch<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
+    fn case_no_match<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
     where
         Subjects: IntoIterator<Item = Document<'a>>,
     {
         Ok(self.throw_error(
-            "badmatch",
-            "Pattern did not match",
+            "case_no_match",
+            "No case clause matched",
             location,
             vec![("values", array(subjects.into_iter().map(Ok))?)],
         ))
@@ -938,6 +944,80 @@ impl<'module> Generator<'module> {
                 name, arity, type_, ..
             } => self.record_constructor(type_.clone(), Some(module), name, *arity),
         }
+    }
+
+    fn pattern_into_assignment_doc<'a>(
+        &self,
+        compiled_pattern: CompiledPattern<'a>,
+    ) -> Document<'a> {
+        if compiled_pattern.checks.is_empty() {
+            return Self::pattern_assignments_doc(compiled_pattern.assignments);
+        }
+        if compiled_pattern.assignments.is_empty() {
+            return self.pattern_checks_or_throw_doc(compiled_pattern.checks);
+        }
+
+        docvec![
+            self.pattern_checks_or_throw_doc(compiled_pattern.checks),
+            line(),
+            Self::pattern_assignments_doc(compiled_pattern.assignments)
+        ]
+    }
+
+    fn pattern_checks_or_throw_doc<'a>(&self, checks: Vec<pattern::Check<'a>>) -> Document<'a> {
+        // TODO: Use self.badmatch here instead
+        let checks = self.pattern_checks_doc(checks, false);
+        docvec![
+            "if (",
+            docvec![break_("", ""), checks].nest(INDENT),
+            break_("", ""),
+            ") throw new Error(\"Bad match\");",
+        ]
+        .group()
+    }
+
+    fn pattern_assignments_doc<'a>(assignments: Vec<pattern::Assignment<'a>>) -> Document<'a> {
+        let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
+        concat(Itertools::intersperse(assignments, line()))
+    }
+
+    fn pattern_take_assignments_doc<'a>(
+        &self,
+        compiled_pattern: &mut CompiledPattern<'a>,
+    ) -> Document<'a> {
+        let assignments = std::mem::take(&mut compiled_pattern.assignments);
+        Self::pattern_assignments_doc(assignments)
+    }
+
+    fn pattern_take_checks_doc<'a>(
+        &self,
+        compiled_pattern: &mut CompiledPattern<'a>,
+        match_desired: bool,
+    ) -> Document<'a> {
+        let checks = std::mem::take(&mut compiled_pattern.checks);
+        self.pattern_checks_doc(checks, match_desired)
+    }
+
+    fn pattern_checks_doc<'a>(
+        &self,
+        checks: Vec<pattern::Check<'a>>,
+        match_desired: bool,
+    ) -> Document<'a> {
+        if checks.is_empty() {
+            return "true".to_doc();
+        };
+        let operator = if match_desired {
+            break_(" &&", " && ")
+        } else {
+            break_(" ||", " || ")
+        };
+
+        concat(Itertools::intersperse(
+            checks
+                .into_iter()
+                .map(|check| check.into_doc(match_desired)),
+            operator,
+        ))
     }
 }
 

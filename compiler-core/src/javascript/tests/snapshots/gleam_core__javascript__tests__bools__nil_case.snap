@@ -3,11 +3,20 @@ source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nfn go(a) {\n  case a {\n    Nil -> 0\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(a) {
   if (!a) {
     return 0;
   } else {
-    throw new globalThis.Error("Bad match");
+    throwError(
+      "case_no_match",
+      "my/mod",
+      3,
+      "go",
+      "No case clause matched",
+      { values: [a] }
+    );
   }
 }
 

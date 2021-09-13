@@ -3,6 +3,8 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 export function loop(loop$indentation) {
   let indentation = loop$indentation;
   while (true) {
@@ -12,7 +14,14 @@ export function loop(loop$indentation) {
     } else if (!$) {
       return undefined;
     } else {
-      throw new globalThis.Error("Bad match");
+      throwError(
+        "case_no_match",
+        "my/mod",
+        3,
+        "loop",
+        "No case clause matched",
+        { values: [$] }
+      );
     }
   }
 }

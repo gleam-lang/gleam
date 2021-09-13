@@ -3,6 +3,8 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] -> count(xs, n + 1)\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 export function count(loop$xs, loop$n) {
   let xs = loop$xs;
   let n = loop$n;
@@ -14,7 +16,14 @@ export function count(loop$xs, loop$n) {
       xs = xs$1;
       n = n + 1;
     } else {
-      throw new globalThis.Error("Bad match");
+      throwError(
+        "case_no_match",
+        "my/mod",
+        3,
+        "count",
+        "No case clause matched",
+        { values: [xs] }
+      );
     }
   }
 }
