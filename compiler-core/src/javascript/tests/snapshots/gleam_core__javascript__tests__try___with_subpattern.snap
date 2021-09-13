@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/try_.rs
 expression: "pub fn main(x) {\n  try #(a, b) = x\n  try #(1, 2) = x\n  try #(a, 2) = Ok(#(1, 2))\n  Ok(x)\n}"
 
 ---
-import { Ok } from "../gleam.js";
+import { Ok, throwError } from "../gleam.js";
 
 export function main(x) {
   if (!x.isOk()) return x;
@@ -11,11 +11,29 @@ export function main(x) {
   let b = x[0][1];
 
   if (!x.isOk()) return x;
-  if (x[0][0] !== 1 || x[0][1] !== 2) throw new Error("Bad match");
+  if (x[0][0] !== 1 || x[0][1] !== 2) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "main",
+      "Assignment pattern did not much",
+      { value: x[0] }
+    );
+  }
 
   let $ = new Ok([1, 2]);
   if (!$.isOk()) return $;
-  if ($[0][1] !== 2) throw new Error("Bad match");
+  if ($[0][1] !== 2) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      4,
+      "main",
+      "Assignment pattern did not much",
+      { value: $[0] }
+    );
+  }
   let a$1 = $[0][0];
 
   return new Ok(x);

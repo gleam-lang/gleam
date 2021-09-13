@@ -413,7 +413,11 @@ impl<'module> Generator<'module> {
                 pattern_generator.traverse_pattern(&subject, pattern)?;
                 let compiled = pattern_generator.take_compiled();
                 docs.push(line());
-                docs.push(self.pattern_into_assignment_doc(compiled));
+                docs.push(self.pattern_into_assignment_doc(
+                    compiled,
+                    subject,
+                    pattern.location(),
+                )?);
                 docs.push(lines(2));
             }
         }
@@ -471,10 +475,11 @@ impl<'module> Generator<'module> {
         // use in patterns
         let doc = match subject_assignment {
             Some(name) => {
-                let compiled = self.pattern_into_assignment_doc(compiled);
+                let compiled =
+                    self.pattern_into_assignment_doc(compiled, subject, pattern.location())?;
                 docvec!("let ", name, " = ", value, ";", line(), compiled)
             }
-            None => self.pattern_into_assignment_doc(compiled),
+            None => self.pattern_into_assignment_doc(compiled, subject, pattern.location())?,
         };
 
         Ok(docvec!(force_break(), doc.append(afterwards)))
@@ -609,6 +614,15 @@ impl<'module> Generator<'module> {
             "No case clause matched",
             location,
             vec![("values", array(subjects.into_iter().map(Ok))?)],
+        ))
+    }
+
+    fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
+        Ok(self.throw_error(
+            "assignment_no_match",
+            "Assignment pattern did not much",
+            location,
+            vec![("value", subject)],
         ))
     }
 
@@ -947,33 +961,42 @@ impl<'module> Generator<'module> {
     }
 
     fn pattern_into_assignment_doc<'a>(
-        &self,
+        &mut self,
         compiled_pattern: CompiledPattern<'a>,
-    ) -> Document<'a> {
+        subject: Document<'a>,
+        location: SrcSpan,
+    ) -> Output<'a> {
         if compiled_pattern.checks.is_empty() {
-            return Self::pattern_assignments_doc(compiled_pattern.assignments);
+            return Ok(Self::pattern_assignments_doc(compiled_pattern.assignments));
         }
         if compiled_pattern.assignments.is_empty() {
-            return self.pattern_checks_or_throw_doc(compiled_pattern.checks);
+            return self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location);
         }
 
-        docvec![
-            self.pattern_checks_or_throw_doc(compiled_pattern.checks),
+        Ok(docvec![
+            self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?,
             line(),
             Self::pattern_assignments_doc(compiled_pattern.assignments)
-        ]
+        ])
     }
 
-    fn pattern_checks_or_throw_doc<'a>(&self, checks: Vec<pattern::Check<'a>>) -> Document<'a> {
-        // TODO: Use self.badmatch here instead
+    fn pattern_checks_or_throw_doc<'a>(
+        &mut self,
+        checks: Vec<pattern::Check<'a>>,
+        subject: Document<'a>,
+        location: SrcSpan,
+    ) -> Output<'a> {
         let checks = self.pattern_checks_doc(checks, false);
-        docvec![
+        Ok(docvec![
             "if (",
             docvec![break_("", ""), checks].nest(INDENT),
             break_("", ""),
-            ") throw new Error(\"Bad match\");",
+            ") {",
+            docvec![line(), self.assignment_no_match(location, subject)?].nest(INDENT),
+            line(),
+            "}",
         ]
-        .group()
+        .group())
     }
 
     fn pattern_assignments_doc<'a>(assignments: Vec<pattern::Assignment<'a>>) -> Document<'a> {

@@ -3,9 +3,20 @@ source: compiler-core/src/javascript/tests/assignments.rs
 expression: "fn go(x) { assert 1 = x + 1 }"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
   let $ = x + 1;
-  if ($ !== 1) throw new Error("Bad match");
+  if ($ !== 1) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      1,
+      "go",
+      "Assignment pattern did not much",
+      { value: $ }
+    );
+  }
   return $;
 }
 

@@ -3,18 +3,61 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go(x, y) {\n  let [] = x\n  let [a] = x\n  let [1, 2] = x\n  let [_, #(3, b)] = y\n  let [head, ..tail] = y\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x, y) {
-  if (!x.hasLength(0)) throw new Error("Bad match");
-  if (!x.hasLength(1)) throw new Error("Bad match");
+  if (!x.hasLength(0)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
+  if (!x.hasLength(1)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      4,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
   let a = x.head;
-  if (
-    !x.hasLength(2) ||
-    x.head !== 1 ||
-    x.tail.head !== 2
-  ) throw new Error("Bad match");
-  if (!y.hasLength(2) || y.tail.head[0] !== 3) throw new Error("Bad match");
+  if (!x.hasLength(2) || x.head !== 1 || x.tail.head !== 2) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      5,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
+  if (!y.hasLength(2) || y.tail.head[0] !== 3) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      6,
+      "go",
+      "Assignment pattern did not much",
+      { value: y }
+    );
+  }
   let b = y.tail.head[1];
-  if (!y.atLeastLength(1)) throw new Error("Bad match");
+  if (!y.atLeastLength(1)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      7,
+      "go",
+      "Assignment pattern did not much",
+      { value: y }
+    );
+  }
   let head = y.head;
   let tail = y.tail;
   return y;

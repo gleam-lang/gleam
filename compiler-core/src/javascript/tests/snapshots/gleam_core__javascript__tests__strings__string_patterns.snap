@@ -3,8 +3,19 @@ source: compiler-core/src/javascript/tests/strings.rs
 expression: "\nfn go(x) {\n  let \"Hello\" = x\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
-  if (x !== "Hello") throw new Error("Bad match");
+  if (x !== "Hello") {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
   return x;
 }
 

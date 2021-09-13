@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/try_.rs
 expression: "pub fn main(x) {\n  assert Ok(y) = {\n    try z = x\n    Ok(z + 1)\n  }\n  y\n}"
 
 ---
-import { Ok } from "../gleam.js";
+import { Ok, throwError } from "../gleam.js";
 
 export function main(x) {
   let $ = (() => {
@@ -12,7 +12,16 @@ export function main(x) {
 
     return new Ok(z + 1);
   })();
-  if (!$.isOk()) throw new Error("Bad match");
+  if (!$.isOk()) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      2,
+      "main",
+      "Assignment pattern did not much",
+      { value: $ }
+    );
+  }
   let y = $[0];
   return y;
 }
