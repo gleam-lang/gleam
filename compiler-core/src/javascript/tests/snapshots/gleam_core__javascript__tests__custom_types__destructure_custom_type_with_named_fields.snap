@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 
 ---
-import { CustomType } from "../gleam.js";
+import { CustomType, throwError } from "../gleam.js";
 
 class Cat extends CustomType {
   constructor(name, cuteness) {
@@ -14,12 +14,39 @@ class Cat extends CustomType {
 }
 
 function go(cat) {
-  if (!(cat instanceof Cat)) throw new Error("Bad match");
+  if (!(cat instanceof Cat)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      7,
+      "go",
+      "Assignment pattern did not much",
+      { value: cat }
+    );
+  }
   let x = cat.name;
   let y = cat.cuteness;
-  if (!(cat instanceof Cat)) throw new Error("Bad match");
+  if (!(cat instanceof Cat)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      8,
+      "go",
+      "Assignment pattern did not much",
+      { value: cat }
+    );
+  }
   let x$1 = cat.name;
-  if (!(cat instanceof Cat) || cat.cuteness !== 4) throw new Error("Bad match");
+  if (!(cat instanceof Cat) || cat.cuteness !== 4) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      9,
+      "go",
+      "Assignment pattern did not much",
+      { value: cat }
+    );
+  }
   let x$2 = cat.name;
   return x$2;
 }

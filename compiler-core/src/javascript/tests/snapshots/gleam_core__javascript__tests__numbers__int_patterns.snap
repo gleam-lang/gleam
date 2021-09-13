@@ -3,8 +3,19 @@ source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nfn go(x) {\n  let 4 = x\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
-  if (x !== 4) throw new Error("Bad match");
+  if (x !== 4) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
   return x;
 }
 
