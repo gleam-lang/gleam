@@ -4,6 +4,11 @@
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
+## Unreleased
+
+- Errors thrown when no case clause or assignment pattern matches the subject
+  value now include more debugging information when targetting JavaScript.
+
 ## v0.17.0-rc1 - 2021-09-11
 
 - Redesigned the Gleam prelude to be a module of core classes when compiling to
