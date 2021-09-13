@@ -3,8 +3,19 @@ source: compiler-core/src/javascript/tests/assignments.rs
 expression: "fn go(x) { assert #(1, 2) = x }"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
-  if (x[0] !== 1 || x[1] !== 2) throw new Error("Bad match");
+  if (x[0] !== 1 || x[1] !== 2) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      1,
+      "go",
+      "Assignment pattern did not much",
+      { value: x }
+    );
+  }
   return x;
 }
 
