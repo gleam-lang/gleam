@@ -999,7 +999,7 @@ impl<'module> Generator<'module> {
         .group())
     }
 
-    fn pattern_assignments_doc<'a>(assignments: Vec<pattern::Assignment<'a>>) -> Document<'a> {
+    fn pattern_assignments_doc(assignments: Vec<pattern::Assignment<'_>>) -> Document<'_> {
         let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
         concat(Itertools::intersperse(assignments, line()))
     }
