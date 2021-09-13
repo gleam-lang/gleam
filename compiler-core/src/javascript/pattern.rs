@@ -412,81 +412,17 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
 #[derive(Debug)]
 pub struct CompiledPattern<'a> {
-    checks: Vec<Check<'a>>,
-    assignments: Vec<Assignment<'a>>,
+    pub checks: Vec<Check<'a>>,
+    pub assignments: Vec<Assignment<'a>>,
 }
 
 impl<'a> CompiledPattern<'a> {
-    pub fn into_assignment_doc(self) -> Document<'a> {
-        if self.checks.is_empty() {
-            return Self::assignments_doc(self.assignments);
-        }
-        if self.assignments.is_empty() {
-            return Self::checks_or_throw_doc(self.checks);
-        }
-
-        docvec![
-            Self::checks_or_throw_doc(self.checks),
-            line(),
-            Self::assignments_doc(self.assignments)
-        ]
-    }
-
     pub fn has_assignments(&self) -> bool {
         !self.assignments.is_empty()
     }
 
     pub fn has_checks(&self) -> bool {
         !self.checks.is_empty()
-    }
-
-    pub fn take_assignments_doc(&mut self) -> Document<'a> {
-        let assignments = std::mem::take(&mut self.assignments);
-        Self::assignments_doc(assignments)
-    }
-
-    pub fn assignments_doc(assignments: Vec<Assignment<'a>>) -> Document<'a> {
-        let assignments = assignments.into_iter().map(
-            |Assignment {
-                 var, path, subject, ..
-             }| { docvec!["let ", var, " = ", subject, path, ";"] },
-        );
-        concat(Itertools::intersperse(assignments, line()))
-    }
-
-    pub fn take_checks_doc(&mut self, match_desired: bool) -> Document<'a> {
-        let checks = std::mem::take(&mut self.checks);
-        Self::checks_doc(checks, match_desired)
-    }
-
-    pub fn checks_doc(checks: Vec<Check<'a>>, match_desired: bool) -> Document<'a> {
-        if checks.is_empty() {
-            return "true".to_doc();
-        };
-        let operator = if match_desired {
-            break_(" &&", " && ")
-        } else {
-            break_(" ||", " || ")
-        };
-
-        concat(Itertools::intersperse(
-            checks
-                .into_iter()
-                .map(|check| check.into_doc(match_desired)),
-            operator,
-        ))
-    }
-
-    pub fn checks_or_throw_doc(checks: Vec<Check<'a>>) -> Document<'a> {
-        // TODO: Use self.badmatch here instead
-        let checks = Self::checks_doc(checks, false);
-        docvec![
-            "if (",
-            docvec![break_("", ""), checks].nest(INDENT),
-            break_("", ""),
-            ") throw new Error(\"Bad match\");",
-        ]
-        .group()
     }
 }
 
@@ -496,6 +432,12 @@ pub struct Assignment<'a> {
     var: Document<'a>,
     subject: Document<'a>,
     path: Document<'a>,
+}
+
+impl<'a> Assignment<'a> {
+    pub fn into_doc(self) -> Document<'a> {
+        docvec!["let ", self.var, " = ", self.subject, self.path, ";"]
+    }
 }
 
 #[derive(Debug)]

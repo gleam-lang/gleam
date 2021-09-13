@@ -3,10 +3,9 @@ source: compiler-core/src/javascript/tests/todo.rs
 expression: "\nfn go() {\n    todo\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go() {
-  throw Object.assign(
-    new globalThis.Error("This has not yet been implemented"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  );
+  throwError("todo", "my/mod", 3, "go", "This has not yet been implemented", {});
 }
 

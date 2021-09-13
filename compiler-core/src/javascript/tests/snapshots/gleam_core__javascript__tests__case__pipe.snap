@@ -3,6 +3,8 @@ source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> Nil\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x, f) {
   let $ = (() => {
     let _pipe = x;
@@ -11,7 +13,14 @@ function go(x, f) {
   if ($ === 0) {
     return undefined;
   } else {
-    throw new globalThis.Error("Bad match");
+    throwError(
+      "case_no_match",
+      "my/mod",
+      3,
+      "go",
+      "No case clause matched",
+      { values: [$] }
+    );
   }
 }
 

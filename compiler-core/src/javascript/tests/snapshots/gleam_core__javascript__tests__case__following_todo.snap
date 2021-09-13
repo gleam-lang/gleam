@@ -3,11 +3,17 @@ source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
   if (x) {
-    throw Object.assign(
-      new globalThis.Error("This has not yet been implemented"),
-      { gleam_error: "todo", module: "my/mod", function: "go", line: 4 }
+    throwError(
+      "todo",
+      "my/mod",
+      4,
+      "go",
+      "This has not yet been implemented",
+      {}
     );
   } else {
     return 1;

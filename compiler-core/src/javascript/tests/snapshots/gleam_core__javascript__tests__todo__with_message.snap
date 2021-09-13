@@ -3,10 +3,9 @@ source: compiler-core/src/javascript/tests/todo.rs
 expression: "\nfn go() {\n  todo(\"I should do this\")\n};\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go() {
-  throw Object.assign(
-    new globalThis.Error("I should do this"),
-    { gleam_error: "todo", module: "my/mod", function: "go", line: 3 }
-  );
+  throwError("todo", "my/mod", 3, "go", "I should do this", {});
 }
 

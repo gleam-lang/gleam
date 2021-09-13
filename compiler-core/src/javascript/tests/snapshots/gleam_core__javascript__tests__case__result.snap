@@ -3,13 +3,22 @@ source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
 
 ---
+import { throwError } from "../gleam.js";
+
 function go(x) {
   if (x.isOk()) {
     return 1;
   } else if (!x.isOk()) {
     return 0;
   } else {
-    throw new globalThis.Error("Bad match");
+    throwError(
+      "case_no_match",
+      "my/mod",
+      3,
+      "go",
+      "No case clause matched",
+      { values: [x] }
+    );
   }
 }
 
