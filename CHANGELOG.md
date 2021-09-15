@@ -8,6 +8,7 @@
 
 - Errors thrown when no case clause or assignment pattern matches the subject
   value now include more debugging information when targetting JavaScript.
+- New projects are generated using `gleam_stdlib` v0.17.1.
 
 ## v0.17.0-rc1 - 2021-09-11
 
