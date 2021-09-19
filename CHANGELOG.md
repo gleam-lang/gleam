@@ -1,10 +1,12 @@
 # Changelog
 
+## Unreleased
+
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
 
-## Unreleased
+## v0.17.0-rc2 - 2021-09-19
 
 - Errors thrown when no case clause or assignment pattern matches the subject
   value now include more debugging information when targetting JavaScript.
