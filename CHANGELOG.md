@@ -5,6 +5,7 @@
 - Gleam can now compile Gleam projects without an external build tool.
 - Gleam can now run eunit without an external build tool.
 - Gleam can now run an Erlang shell without an external build tool.
+- Functions now get special handling when being printed from JavaScript.
 
 ## v0.17.0-rc2 - 2021-09-19
 
