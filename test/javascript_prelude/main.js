@@ -368,6 +368,26 @@ assertEqual(inspect(new BitString(new Uint8Array([1, 2, 3]))), "<<1, 2, 3>>");
 
 assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
 
+assertEqual(
+  inspect(() => undefined),
+  "//fn() { ... }"
+);
+
+assertEqual(
+  inspect((a) => undefined),
+  "//fn(a) { ... }"
+);
+
+assertEqual(
+  inspect((x, y) => undefined),
+  "//fn(a, b) { ... }"
+);
+
+assertEqual(
+  inspect((x, y, z) => undefined),
+  "//fn(a, b, c) { ... }"
+);
+
 // Inspecting JavaScript values
 
 assertEqual(inspect(null), "//js(null)");

@@ -221,6 +221,12 @@ export function inspect(v) {
   if (v instanceof Set) return `//js(Set(${[...v].map(inspect).join(", ")}))`;
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    let args = [];
+    for (let i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
   try {
     return v.inspect();
   } catch (_) {
