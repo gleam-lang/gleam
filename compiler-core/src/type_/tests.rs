@@ -362,8 +362,10 @@ fn let_() {
     assert_infer!("let _ = 1 2.0", "Float");
     assert_infer!("let #(tag, x) = #(1.0, 1) x", "Int");
     assert_infer!("fn(x) { let #(a, b) = x a }", "fn(#(a, b)) -> a");
+}
 
-    // assert
+#[test]
+fn assert() {
     assert_infer!("assert [] = [] 1", "Int");
     assert_infer!("assert [a] = [1] a", "Int");
     assert_infer!("assert [a, 2] = [1] a", "Int");
@@ -376,8 +378,10 @@ fn let_() {
     assert_infer!("assert #(tag, x) = #(1.0, 1) x", "Int");
     assert_infer!("fn(x) { assert #(a, b) = x a }", "fn(#(a, b)) -> a");
     assert_infer!("assert 5: Int = 5 5", "Int");
+}
 
-    // try
+#[test]
+fn try_() {
     assert_infer!("try x = Ok(1) Ok(x)", "Result(Int, a)");
     assert_infer!("try x = Ok(1) try y = Ok(1) Ok(x + y)", "Result(Int, a)");
     assert_infer!(
@@ -411,8 +415,10 @@ fn lists() {
     assert_infer!("[1, ..[2, ..[]]]", "List(Int)");
     assert_infer!("[fn(x) { x }, ..[]]", "List(fn(a) -> a)");
     assert_infer!("let x = [1, ..[]] [2, ..x]", "List(Int)");
+}
 
-    // Trailing commas
+#[test]
+fn trailing_comma_lists() {
     assert_infer!("[1, ..[2, ..[],]]", "List(Int)");
     assert_infer!("[fn(x) { x },..[]]", "List(fn(a) -> a)");
 
@@ -422,12 +428,6 @@ fn lists() {
 
 #[test]
 fn tuples() {
-    assert_infer!("#(1)", "#(Int)");
-    assert_infer!("#(1, 2.0)", "#(Int, Float)");
-    assert_infer!("#(1, 2.0, 3)", "#(Int, Float, Int)");
-    assert_infer!("#(1, 2.0, #(1, 1))", "#(Int, Float, #(Int, Int))",);
-
-    // new syntax
     assert_infer!("#(1)", "#(Int)");
     assert_infer!("#(1, 2.0)", "#(Int, Float)");
     assert_infer!("#(1, 2.0, 3)", "#(Int, Float, Int)");
@@ -501,8 +501,10 @@ fn case() {
     assert_infer!("case 1 { 1 -> 10 2 -> 20 x -> x * 10 }", "Int");
     assert_infer!("case 2.0 { 2.0 -> 1 x -> 0 }", "Int");
     assert_infer!(r#"case "ok" { "ko" -> 1 x -> 0 }"#, "Int");
+}
 
-    // Multiple subject case
+#[test]
+fn multiple_subject_case() {
     assert_infer!("case 1, 2.0 { a, b -> a }", "Int");
     assert_infer!("case 1, 2.0 { a, b -> b }", "Float");
     assert_infer!("case 1, 2.0, 3 { a, b, c -> a + c }", "Int");
@@ -573,11 +575,6 @@ fn infer_module_test() {
         vec![("repeat", "fn(Int, a) -> List(a)")],
     );
 
-    assert_module_infer!(
-        "type Html = String
-         pub fn go() { 1 }",
-        vec![("go", "fn() -> Int")],
-    );
     assert_module_infer!(
         "pub fn length(list) {
            case list {
@@ -788,22 +785,35 @@ fn infer_module_test() {
         "pub type I { I(Num) } pub external type Num",
         vec![("I", "fn(Num) -> I")]
     );
+}
 
-    // We can create an aliases
+#[test]
+fn type_alias() {
+    assert_module_infer!(
+        "type Html = String
+         pub fn go() { 1 }",
+        vec![("go", "fn() -> Int")],
+    );
     assert_module_infer!(
         "type IntString = Result(Int, String)
          pub fn ok_one() -> IntString { Ok(1) }",
         vec![("ok_one", "fn() -> Result(Int, String)")]
     );
+}
 
+#[test]
+fn build_in_type_alias_shadow() {
     // We can create an alias with the same name as a built in type
     assert_module_infer!(
         "type Int = Float
          pub fn ok_one() -> Int { 1.0 }",
         vec![("ok_one", "fn() -> Float")]
     );
+}
 
-    // We can access fields on custom types with only one record
+#[test]
+fn accessor() {
+    // We can access fields on custom types with only one variant
     assert_module_infer!(
         "
 pub type Person { Person(name: String, age: Int) }
@@ -816,7 +826,7 @@ pub fn get_name(person: Person) { person.name }",
         ]
     );
 
-    // We can access fields on custom types with only one record
+    // We can access fields on custom types with only one variant
     assert_module_infer!(
         "
 pub type One { One(name: String) }
@@ -828,7 +838,10 @@ pub fn get(x: Two) { x.one.name }",
             ("get", "fn(Two) -> String"),
         ]
     );
+}
 
+#[test]
+fn generic_accessor() {
     // Field access correctly handles type parameters
     assert_module_infer!(
         "
@@ -848,7 +861,10 @@ pub fn get_string(x: Box(String)) { x.inner }
             ("get_string", "fn(Box(String)) -> String"),
         ]
     );
+}
 
+#[test]
+fn generic_accessor_later_defined() {
     // Field access works before type is defined
     assert_module_infer!(
         "
@@ -861,7 +877,10 @@ pub opaque type Cat {
 }",
         vec![("name", "fn(Cat) -> String"),]
     );
+}
 
+#[test]
+fn custom_type_annotation() {
     // We can annotate let with custom types
     assert_module_infer!(
         "
@@ -900,7 +919,10 @@ pub opaque type Cat {
             ("create_int_box", "fn(Int) -> Box(Int)"),
         ]
     );
+}
 
+#[test]
+fn opaque_accessors() {
     // Opaque type constructors are available in the module where they are defined
     // but are not exported
     assert_module_infer!(
@@ -909,8 +931,12 @@ pub opaque type One { One(name: String) }
 pub fn get(x: One) { x.name }",
         vec![("get", "fn(One) -> String"),]
     );
+}
 
-    // Type variables are shared between function annotations and function annotations within their body
+#[test]
+fn fn_annotation_reused() {
+    // Type variables are shared between function annotations and function
+    // annotations within their body
     assert_module_infer!(
         "
         pub type Box(a) {
@@ -940,7 +966,10 @@ pub fn get(x: One) { x.name }",
             ("go", "fn(Box(a)) -> fn(Box(a)) -> Bool")
         ]
     );
+}
 
+#[test]
+fn box_record() {
     assert_module_infer!(
         "
 pub type Box {
@@ -955,7 +984,10 @@ pub fn main() {
             ("main", "fn() -> Box"),
         ],
     );
+}
 
+#[test]
+fn record_update_no_fields() {
     // No arguments given to a record update
     assert_module_infer!(
         "
@@ -970,7 +1002,10 @@ pub fn main() {
             ("identity", "fn(Person) -> Person")
         ]
     );
+}
 
+#[test]
+fn record_update() {
     // Some arguments given to a record update
     assert_module_infer!(
         "
@@ -985,7 +1020,10 @@ pub fn main() {
             ("update_name", "fn(Person, String) -> Person")
         ]
     );
+}
 
+#[test]
+fn record_update_all_fields() {
     // All arguments given in order to a record update
     assert_module_infer!(
         "
@@ -1000,7 +1038,10 @@ pub fn main() {
             ("update_person", "fn(Person, String, Int) -> Person")
         ]
     );
+}
 
+#[test]
+fn record_update_out_of_order() {
     // All arguments given out of order to a record update
     assert_module_infer!(
         "
@@ -1015,7 +1056,10 @@ pub fn main() {
             ("update_person", "fn(Person, String, Int) -> Person")
         ]
     );
+}
 
+#[test]
+fn record_update_generic() {
     // A record update with polymorphic types
     assert_module_infer!(
         "
@@ -1034,7 +1078,10 @@ pub fn main() {
             )
         ]
     );
+}
 
+#[test]
+fn record_update_generic_unannotated() {
     // A record update with unannotated polymorphic types
     assert_module_infer!(
         "
@@ -1132,22 +1179,27 @@ pub fn main() { let _ = foo(); 5 }",
 }
 
 #[test]
-fn unused_literal_warning_test() {
-    // Test int
+fn unused_int() {
     assert_warning!(
         "fn main() { 1; 2 }",
         Warning::UnusedLiteral {
             location: SrcSpan { start: 12, end: 13 }
         }
     );
-    // Test float
+}
+
+#[test]
+fn unused_float() {
     assert_warning!(
         "fn main() { 1.0; 2 }",
         Warning::UnusedLiteral {
             location: SrcSpan { start: 12, end: 15 }
         }
     );
-    // Test string
+}
+
+#[test]
+fn unused_string() {
     assert_warning!(
         "
     fn main() { 
@@ -1157,7 +1209,10 @@ fn unused_literal_warning_test() {
             location: SrcSpan { start: 26, end: 29 }
         }
     );
-    // Test bit string
+}
+
+#[test]
+fn unused_bit_string() {
     assert_warning!(
         "
     fn main() { 
@@ -1167,7 +1222,10 @@ fn unused_literal_warning_test() {
             location: SrcSpan { start: 26, end: 31 }
         }
     );
-    // Test tuple
+}
+
+#[test]
+fn unused_tuple() {
     assert_warning!(
         "
     fn main() { 
@@ -1177,7 +1235,10 @@ fn unused_literal_warning_test() {
             location: SrcSpan { start: 26, end: 47 }
         }
     );
-    // Test list
+}
+
+#[test]
+fn unused_list() {
     assert_warning!(
         "
     fn main() { 
@@ -1433,8 +1494,6 @@ fn mutual_recursion() {
 
 #[test]
 fn type_annotations() {
-    // OK!
-
     assert_module_infer!(
         "pub type Box(x) { Box(label: String, contents: x) }
          pub fn id(x: Box(y)) { x }",
