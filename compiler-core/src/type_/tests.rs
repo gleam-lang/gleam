@@ -1236,7 +1236,7 @@ fn pipe_mismatch_error() {
                     name: "Fruit".to_string(),
                     args: vec![],
                 })],
-                unbound_var(7, 3)
+                unbound_var(7)
             )
         },
     );
@@ -1358,10 +1358,10 @@ fn the_rest() {
             expected: int(),
             given: tuple(vec![
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7 })),
                 }),
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 })),
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 })),
                 })
             ]),
         },
@@ -1728,7 +1728,7 @@ fn the_rest() {
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link {
                         type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 }))
                         })
                     })),
                 }),
@@ -1740,7 +1740,7 @@ fn the_rest() {
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link {
                         type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8, level: 1 }))
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 }))
                         })
                     })),
                 }),
@@ -1760,7 +1760,7 @@ fn the_rest() {
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link {
                         type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12 }))
                         })
                     })),
                 }),
@@ -1770,7 +1770,7 @@ fn the_rest() {
             ),
             given: result(
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12 }))
                 }),
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
@@ -1786,7 +1786,7 @@ fn the_rest() {
             location: SrcSpan { start: 17, end: 18 },
             expected: result(
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 11, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 11 }))
                 }),
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
@@ -1829,7 +1829,7 @@ fn the_rest() {
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link {
                         type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14 }))
                         })
                     }))
                 }),
@@ -1839,7 +1839,7 @@ fn the_rest() {
             ),
             given: result(
                 Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14, level: 1 }))
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14 }))
                 }),
                 Arc::new(Type::Var {
                     type_: Arc::new(RefCell::new(TypeVar::Link { type_: string() })),

@@ -7,7 +7,6 @@ use std::collections::HashMap;
 pub struct Environment<'a, 'b> {
     pub current_module: &'a [String],
     pub uid: &'b mut usize,
-    pub level: usize,
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
     pub imported_types: HashSet<String>,
@@ -65,7 +64,6 @@ impl<'a, 'b> Environment<'a, 'b> {
             .expect("Unable to find prelude in importable modules");
         Self {
             uid,
-            level: 1,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_values: HashMap::new(),
@@ -103,12 +101,10 @@ impl<'a, 'b> Environment<'a, 'b> {
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.local_values.clone();
         self.entity_usages.push(HashMap::new());
-        self.level += 1;
         ScopeResetData { local_values }
     }
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
-        self.level -= 1;
         let unused = self
             .entity_usages
             .pop()
@@ -130,8 +126,8 @@ impl<'a, 'b> Environment<'a, 'b> {
     /// Create a new unbound type that is a specific type, we just don't
     /// know which one yet.
     ///
-    pub fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        unbound_var(self.next_uid(), level)
+    pub fn new_unbound_var(&mut self) -> Arc<Type> {
+        unbound_var(self.next_uid())
     }
 
     /// Create a new generic type that can stand in for any type.
@@ -294,7 +290,6 @@ impl<'a, 'b> Environment<'a, 'b> {
     pub fn instantiate(
         &mut self,
         t: Arc<Type>,
-        ctx_level: usize,
         ids: &mut im::HashMap<usize, Arc<Type>>,
         hydrator: &Hydrator,
     ) -> Arc<Type> {
@@ -307,7 +302,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             } => {
                 let args = args
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect();
                 Arc::new(Type::App {
                     public: *public,
@@ -320,7 +315,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             Type::Var { type_: typ } => {
                 match typ.borrow().deref() {
                     TypeVar::Link { type_: typ } => {
-                        return self.instantiate(typ.clone(), ctx_level, ids, hydrator)
+                        return self.instantiate(typ.clone(), ids, hydrator)
                     }
 
                     TypeVar::Unbound { .. } => return Arc::new(Type::Var { type_: typ.clone() }),
@@ -330,7 +325,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                         None => {
                             if !hydrator.is_created_generic_type(id) {
                                 // Check this in the hydrator, i.e. is it a created type
-                                let v = self.new_unbound_var(ctx_level);
+                                let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());
                                 return v;
                             }
@@ -342,15 +337,15 @@ impl<'a, 'b> Environment<'a, 'b> {
 
             Type::Fn { args, retrn, .. } => fn_(
                 args.iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect(),
-                self.instantiate(retrn.clone(), ctx_level, ids, hydrator),
+                self.instantiate(retrn.clone(), ids, hydrator),
             ),
 
             Type::Tuple { elems } => tuple(
                 elems
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ctx_level, ids, hydrator))
+                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect(),
             ),
         }
@@ -383,8 +378,8 @@ impl<'a, 'b> Environment<'a, 'b> {
             let action = match typ.borrow().deref() {
                 TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
 
-                TypeVar::Unbound { id, level } => {
-                    update_levels(t2.clone(), *level, *id)?;
+                TypeVar::Unbound { id } => {
+                    unify_unbound_type(t2.clone(), *id)?;
                     Action::Link
                 }
 

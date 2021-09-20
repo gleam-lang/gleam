@@ -291,17 +291,17 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::Var {
-            type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2231 })),
+            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 2231 })),
         },
         "a",
     );
     assert_string!(
         fn_(
             vec![Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 78 })),
+                type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 78 })),
             })],
             Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Unbound { level: 1, id: 2 })),
+                type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 2 })),
             }),
         ),
         "fn(a) -> b",

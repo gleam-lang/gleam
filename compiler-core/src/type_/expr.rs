@@ -54,18 +54,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         self.hydrator.type_from_ast(ast, self.environment)
     }
 
-    fn instantiate(
-        &mut self,
-        t: Arc<Type>,
-        ctx_level: usize,
-        ids: &mut im::HashMap<usize, Arc<Type>>,
-    ) -> Arc<Type> {
-        self.environment
-            .instantiate(t, ctx_level, ids, &self.hydrator)
+    fn instantiate(&mut self, t: Arc<Type>, ids: &mut im::HashMap<usize, Arc<Type>>) -> Arc<Type> {
+        self.environment.instantiate(t, ids, &self.hydrator)
     }
 
-    pub fn new_unbound_var(&mut self, level: usize) -> Arc<Type> {
-        self.environment.new_unbound_var(level)
+    pub fn new_unbound_var(&mut self) -> Arc<Type> {
+        self.environment.new_unbound_var()
     }
 
     fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
@@ -194,7 +188,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     }
 
     fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
-        let typ = self.new_unbound_var(self.environment.level);
+        let typ = self.new_unbound_var();
         self.environment.warnings.push(Warning::Todo {
             location,
             typ: typ.clone(),
@@ -303,7 +297,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let typ = annotation
             .clone()
             .map(|t| self.type_from_ast(&t))
-            .unwrap_or_else(|| Ok(self.new_unbound_var(self.environment.level)))?;
+            .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
         Ok(Arg {
             names,
             location,
@@ -333,7 +327,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let typ = self.new_unbound_var(self.environment.level);
+        let typ = self.new_unbound_var();
         // Type check each elements
         let elements = elements
             .into_iter()
@@ -605,15 +599,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
-        let pattern =
-            pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level)
-                .unify(pattern, value_typ.clone())?;
+        let pattern = pattern::PatternTyper::new(self.environment, &self.hydrator)
+            .unify(pattern, value_typ.clone())?;
 
         // Check that any type annotation is accurate.
         if let Some(ann) = annotation {
             let ann_typ = self
                 .type_from_ast(ann)
-                .map(|t| self.instantiate(t, self.environment.level, &mut hashmap![]))?;
+                .map(|t| self.instantiate(t, &mut hashmap![]))?;
             self.unify(ann_typ, value_typ)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
         }
@@ -637,8 +630,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
     ) -> Result<TypedExpr, Error> {
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
-        let value_type = self.new_unbound_var(self.environment.level);
-        let try_error_type = self.new_unbound_var(self.environment.level);
+        let value_type = self.new_unbound_var();
+        let try_error_type = self.new_unbound_var();
 
         // Ensure that the value is a result
         {
@@ -649,9 +642,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         };
 
         // Ensure the pattern matches the type of the value
-        let pattern =
-            pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level)
-                .unify(pattern, value_type.clone())?;
+        let pattern = pattern::PatternTyper::new(self.environment, &self.hydrator)
+            .unify(pattern, value_type.clone())?;
 
         // Check the type of the following code
         let then = self.infer(then)?;
@@ -659,7 +651,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
 
         // Ensure that a Result with the right error type is returned for `try`
         {
-            let t = self.new_unbound_var(self.environment.level);
+            let t = self.new_unbound_var();
             self.unify(result(t, try_error_type), typ.clone())
                 .map_err(|e| convert_unify_error(e, then.location()))?;
         }
@@ -668,7 +660,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         if let Some(ann) = annotation {
             let ann_typ = self
                 .type_from_ast(ann)
-                .map(|t| self.instantiate(t, self.environment.level, &mut hashmap![]))?;
+                .map(|t| self.instantiate(t, &mut hashmap![]))?;
             self.unify(ann_typ, value_type)
                 .map_err(|e| convert_unify_error(e, value.location()))?;
         }
@@ -693,7 +685,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let mut subject_types = Vec::with_capacity(subjects_count);
         let mut typed_clauses = Vec::with_capacity(clauses.len());
 
-        let return_type = self.new_unbound_var(self.environment.level);
+        let return_type = self.new_unbound_var();
 
         for subject in subjects {
             let subject = self.in_new_scope(|subject_typer| {
@@ -764,8 +756,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer =
-            pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level);
+        let mut pattern_typer = pattern::PatternTyper::new(self.environment, &self.hydrator);
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -1129,7 +1120,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             (module.name.clone(), constructor.clone())
         };
 
-        let type_ = self.instantiate(constructor.type_, self.environment.level, &mut hashmap![]);
+        let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
         Ok(TypedExpr::ModuleSelect {
             label,
             typ: type_.clone(),
@@ -1214,8 +1205,8 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // types for this instance of the record.
         let accessor_record_type = accessors.type_.clone();
         let mut type_vars = hashmap![];
-        let accessor_record_type = self.instantiate(accessor_record_type, 0, &mut type_vars);
-        let typ = self.instantiate(typ, 0, &mut type_vars);
+        let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
+        let typ = self.instantiate(typ, &mut type_vars);
         self.unify(accessor_record_type, record.type_())
             .map_err(|e| convert_unify_error(e, record.location()))?;
 
@@ -1268,8 +1259,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         {
             if let Type::Fn { retrn, .. } = value_constructor.type_.as_ref() {
                 let spread = self.infer_var(spread.name, spread.location)?;
-                let return_type =
-                    self.instantiate(retrn.clone(), self.environment.level, &mut hashmap![]);
+                let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
 
                 // Check that the spread variable unifies with the return type of the constructor
                 self.unify(return_type, spread.type_())
@@ -1415,7 +1405,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         } = constructor;
 
         // Instantiate generic variables into unbound variables for this usage
-        let typ = self.instantiate(typ, self.environment.level, &mut hashmap![]);
+        let typ = self.instantiate(typ, &mut hashmap![]);
         Ok(ValueConstructor {
             public,
             variant,
@@ -1627,7 +1617,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
     ) -> Result<TypedConstant, Error> {
-        let typ = self.new_unbound_var(0);
+        let typ = self.new_unbound_var();
         let mut elements = Vec::with_capacity(untyped_elements.len());
 
         for element in untyped_elements {

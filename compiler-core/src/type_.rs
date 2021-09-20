@@ -169,9 +169,9 @@ impl Type {
                         return typ.get_app_args(public, module, name, arity, environment);
                     }
 
-                    TypeVar::Unbound { level, .. } => (0..arity)
-                        .map(|_| environment.new_unbound_var(*level))
-                        .collect(),
+                    TypeVar::Unbound { .. } => {
+                        (0..arity).map(|_| environment.new_unbound_var()).collect()
+                    }
 
                     TypeVar::Generic { .. } => return None,
                 };
@@ -334,7 +334,7 @@ pub enum PatternConstructor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
-    Unbound { id: usize, level: usize },
+    Unbound { id: usize },
     Link { type_: Arc<Type> },
     Generic { id: usize },
 }
@@ -1326,27 +1326,18 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 /// doesn't occur within the type it is being unified with. This
 /// prevents the algorithm from inferring recursive types, which
 /// could cause naively-implemented type checking to diverge.
-/// While traversing the type tree, this function also takes care
-/// of updating the levels of the type variables appearing within
-/// the type, thus ensuring the type will be correctly generalized.
+/// While traversing the type tree.
 ///
-fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), UnifyError> {
+fn unify_unbound_type(typ: Arc<Type>, own_id: usize) -> Result<(), UnifyError> {
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
-            TypeVar::Link { type_: typ, .. } => {
-                return update_levels(typ.clone(), own_level, own_id)
-            }
+            TypeVar::Link { type_: typ, .. } => return unify_unbound_type(typ.clone(), own_id),
 
-            TypeVar::Unbound { id, level } => {
+            TypeVar::Unbound { id } => {
                 if id == &own_id {
                     return Err(UnifyError::RecursiveType);
-                } else if *level > own_level {
-                    Some(TypeVar::Unbound {
-                        id: *id,
-                        level: own_level,
-                    })
                 } else {
-                    return Ok(());
+                    Some(TypeVar::Unbound { id: *id })
                 }
             }
 
@@ -1362,21 +1353,21 @@ fn update_levels(typ: Arc<Type>, own_level: usize, own_id: usize) -> Result<(), 
     match typ.deref() {
         Type::App { args, .. } => {
             for arg in args {
-                update_levels(arg.clone(), own_level, own_id)?
+                unify_unbound_type(arg.clone(), own_id)?
             }
             Ok(())
         }
 
         Type::Fn { args, retrn } => {
             for arg in args {
-                update_levels(arg.clone(), own_level, own_id)?;
+                unify_unbound_type(arg.clone(), own_id)?;
             }
-            update_levels(retrn.clone(), own_level, own_id)
+            unify_unbound_type(retrn.clone(), own_id)
         }
 
         Type::Tuple { elems, .. } => {
             for elem in elems {
-                update_levels(elem.clone(), own_level, own_id)?
+                unify_unbound_type(elem.clone(), own_id)?
             }
             Ok(())
         }
@@ -1396,11 +1387,9 @@ fn match_fun_type(
                 return match_fun_type(typ.clone(), arity, environment)
             }
 
-            TypeVar::Unbound { level, .. } => {
-                let args: Vec<_> = (0..arity)
-                    .map(|_| environment.new_unbound_var(*level))
-                    .collect();
-                let retrn = environment.new_unbound_var(*level);
+            TypeVar::Unbound { .. } => {
+                let args: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
+                let retrn = environment.new_unbound_var();
                 Some((args, retrn))
             }
 
@@ -1434,29 +1423,18 @@ fn match_fun_type(
 ///
 fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
     match t.deref() {
-        Type::Var { type_: typ } => {
-            let new_var = match typ.borrow().deref() {
-                TypeVar::Unbound { id, level } => {
-                    let id = *id;
-                    if *level > ctx_level {
-                        return Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Generic { id })),
-                        });
-                    } else {
-                        Some(TypeVar::Unbound { id, level: *level })
-                    }
-                }
-
-                TypeVar::Link { type_: typ } => return generalise(typ.clone(), ctx_level),
-
-                TypeVar::Generic { .. } => None,
-            };
-
-            if let Some(v) = new_var {
-                *typ.borrow_mut() = v;
+        Type::Var { type_: typ } => match typ.borrow().deref() {
+            TypeVar::Unbound { id } => {
+                let id = *id;
+                return Arc::new(Type::Var {
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id })),
+                });
             }
-            Arc::new(Type::Var { type_: typ.clone() })
-        }
+
+            TypeVar::Link { type_: typ } => generalise(typ.clone(), ctx_level),
+
+            TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
+        },
 
         Type::App {
             public,
