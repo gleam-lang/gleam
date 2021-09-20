@@ -522,7 +522,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.17.0"
+version = "0.18.0-dev"
 dependencies = [
  "atty",
  "bytes",
@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.17.0"
+version = "0.18.0-dev"
 dependencies = [
  "askama",
  "capnp",
@@ -577,7 +577,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.17.0"
+version = "0.18.0-dev"
 dependencies = [
  "gleam-core",
  "wasm-bindgen",
