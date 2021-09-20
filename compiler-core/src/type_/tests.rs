@@ -1597,7 +1597,7 @@ fn the_rest() {
             situation: None,
             location: SrcSpan { start: 17, end: 18 },
             expected: int(),
-            given: list(int()),
+            given: list(link(int())),
         },
     );
 
@@ -1607,7 +1607,7 @@ fn the_rest() {
             situation: None,
             location: SrcSpan { start: 17, end: 18 },
             expected: int(),
-            given: list(int()),
+            given: list(link(int())),
         },
     );
 
