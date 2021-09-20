@@ -1,0 +1,20 @@
+{
+  // Don't show these files in search
+  "files.exclude": {
+    // Version control
+    "**/.git": true,
+
+    // OSX detritus
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+
+    // Test snapshots
+    "**/*.snap": true,
+
+    // Generated code
+    "compiler-core/generated/**": true,
+
+    // Images
+    "images/**": true,
+  }
+}
