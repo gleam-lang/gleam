@@ -80,7 +80,7 @@ impl Hydrator {
     ) -> Result<Arc<Type>, Error> {
         match ast {
             Some(ast) => self.type_from_ast(ast, environment),
-            None => Ok(environment.new_unbound_var(environment.level)),
+            None => Ok(environment.new_unbound_var()),
         }
     }
 
@@ -137,10 +137,10 @@ impl Hydrator {
                 #[allow(clippy::needless_collect)] // Not needless, used for size effects
                 let parameter_types: Vec<_> = parameters
                     .into_iter()
-                    .map(|typ| environment.instantiate(typ, 0, &mut type_vars, self))
+                    .map(|typ| environment.instantiate(typ, &mut type_vars, self))
                     .collect();
 
-                let return_type = environment.instantiate(return_type, 0, &mut type_vars, self);
+                let return_type = environment.instantiate(return_type, &mut type_vars, self);
 
                 // Unify argument types with instantiated parameter types so that the correct types
                 // are inserted into the return type
@@ -200,9 +200,7 @@ impl Hydrator {
                 }),
             },
 
-            TypeAst::Hole { .. } if self.permit_holes => {
-                Ok(environment.new_unbound_var(environment.level))
-            }
+            TypeAst::Hole { .. } if self.permit_holes => Ok(environment.new_unbound_var()),
 
             TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
                 location: *location,

@@ -230,9 +230,7 @@ impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
     /// Attempt to infer a |> b as b(a)
     fn infer_apply_pipe(&mut self, function: UntypedExpr) -> Result<TypedExpr, Error> {
         let function = Box::new(self.expr_typer.infer(function)?);
-        let return_type = self
-            .expr_typer
-            .new_unbound_var(self.expr_typer.environment.level);
+        let return_type = self.expr_typer.new_unbound_var();
         // Ensure that the function accepts one argument of the correct type
         self.expr_typer
             .environment

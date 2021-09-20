@@ -37,7 +37,7 @@ fn record_definition_test() {
             "PetCat",
             &[
                 ("name", type_::generic_var(1)),
-                ("is_cute", type_::unbound_var(1, 1)),
+                ("is_cute", type_::unbound_var(1)),
                 ("linked", type_::link(type_::int()))
             ]
         ),
@@ -67,7 +67,7 @@ fn record_definition_test() {
             "PetCat",
             &[
                 ("name", type_::generic_var(1)),
-                ("is_cute", type_::unbound_var(1, 1)),
+                ("is_cute", type_::unbound_var(1)),
                 ("linked", type_::link(type_::int())),
                 (
                     "whatever",

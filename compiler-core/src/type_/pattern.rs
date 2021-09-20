@@ -11,7 +11,6 @@ use std::sync::Arc;
 pub struct PatternTyper<'a, 'b, 'c> {
     environment: &'a mut Environment<'b, 'c>,
     hydrator: &'a Hydrator,
-    level: usize,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
 }
@@ -22,15 +21,10 @@ enum PatternMode {
 }
 
 impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(
-        environment: &'a mut Environment<'b, 'c>,
-        hydrator: &'a Hydrator,
-        level: usize,
-    ) -> Self {
+    pub fn new(environment: &'a mut Environment<'b, 'c>, hydrator: &'a Hydrator) -> Self {
         Self {
             environment,
             hydrator,
-            level,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
         }
@@ -237,12 +231,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                         variables: self.environment.local_value_names(),
                     })?;
                 self.environment.increment_usage(&name);
-                let typ = self.environment.instantiate(
-                    typ,
-                    self.environment.level,
-                    &mut hashmap![],
-                    self.hydrator,
-                );
+                let typ = self
+                    .environment
+                    .instantiate(typ, &mut hashmap![], self.hydrator);
                 self.environment
                     .unify(int(), typ.clone())
                     .map_err(|e| convert_unify_error(e, location))?;
@@ -318,7 +309,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 }
 
                 None => Err(Error::CouldNotUnify {
-                    given: list(self.environment.new_unbound_var(self.level)),
+                    given: list(self.environment.new_unbound_var()),
                     expected: type_.clone(),
                     situation: None,
                     location,
@@ -346,7 +337,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                 Type::Var { .. } => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.environment.new_unbound_var(self.level))
+                        .map(|_| self.environment.new_unbound_var())
                         .collect();
                     self.environment
                         .unify(tuple(elems_types), type_.clone())
@@ -356,7 +347,7 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
 
                 _ => {
                     let elems_types = (0..(elems.len()))
-                        .map(|_| self.environment.new_unbound_var(self.level))
+                        .map(|_| self.environment.new_unbound_var())
                         .collect();
 
                     Err(Error::CouldNotUnify {
@@ -460,12 +451,9 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                     }
                 };
 
-                let instantiated_constructor_type = self.environment.instantiate(
-                    constructor_typ,
-                    self.level,
-                    &mut hashmap![],
-                    self.hydrator,
-                );
+                let instantiated_constructor_type =
+                    self.environment
+                        .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
                     Type::Fn { args, retrn } => {
                         if args.len() == pattern_args.len() {

@@ -98,9 +98,9 @@ pub fn generic_var(id: usize) -> Arc<Type> {
     })
 }
 
-pub fn unbound_var(id: usize, level: usize) -> Arc<Type> {
+pub fn unbound_var(id: usize) -> Arc<Type> {
     Arc::new(Type::Var {
-        type_: Arc::new(RefCell::new(TypeVar::Unbound { id, level })),
+        type_: Arc::new(RefCell::new(TypeVar::Unbound { id })),
     })
 }
 
