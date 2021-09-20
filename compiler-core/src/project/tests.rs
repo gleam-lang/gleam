@@ -1218,7 +1218,7 @@ fn test(t: one.T) { t.a }"
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
                 error: crate::type_::Error::UnknownRecordField {
                     location: SrcSpan {
-                        start: 32,
+                        start: 31,
                         end: 34,
                     },
                     typ: Arc::new(crate::type_::Type::App {

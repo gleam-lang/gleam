@@ -1161,10 +1161,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         // Error constructor helper function
         let unknown_field = |fields| Error::UnknownRecordField {
             typ: record.type_(),
-            location: SrcSpan {
-                start: record.location().end,
-                end: location.end,
-            },
+            location,
             label: label.clone(),
             fields,
         };

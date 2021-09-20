@@ -766,7 +766,7 @@ also be labelled.",
                         writeln!(buf, "It does not have any fields.",).unwrap();
                     } else {
                         write!(buf, "It has these fields:\n\n").unwrap();
-                        for field in fields {
+                        for field in fields.iter().sorted() {
                             writeln!(buf, "    .{}", field).unwrap();
                         }
                     }

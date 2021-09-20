@@ -713,7 +713,7 @@ fn the_rest() {
     assert_error!(
         "let x = 1 x.whatever",
         Error::UnknownRecordField {
-            location: SrcSpan { start: 11, end: 20 },
+            location: SrcSpan { start: 10, end: 20 },
             typ: int(),
             label: "whatever".to_string(),
             fields: vec![],
@@ -1115,7 +1115,7 @@ fn unknown_field() {
     assert_error!(
         "fn(a: a) { a.field }",
         Error::UnknownRecordField {
-            location: SrcSpan { start: 12, end: 18 },
+            location: SrcSpan { start: 11, end: 18 },
             label: "field".to_string(),
             fields: vec![],
             typ: Arc::new(Type::Var {
@@ -1298,8 +1298,8 @@ fn bar() -> Int {
     5
 }
 
-fn run(foo: fn() -> String) {
-    foo()
+fn run(one: fn() -> String) {
+    one()
 }
 
 fn demo() {
@@ -1325,8 +1325,8 @@ fn bar(x: Int) -> Int {
     x * 5
 }
 
-fn run(foo: fn(String) -> Int) {
-    foo(\"Foo.\")
+fn run(one: fn(String) -> Int) {
+    one(\"one.\")
 }
 
 fn demo() {
@@ -1398,7 +1398,7 @@ fn demo() {
 
     assert_module_error!(
         "fn main() {
-            let #(y, [..x]): #(x, List(x)) = #(\"foo\", [1,2,3])
+            let #(y, [..x]): #(x, List(x)) = #(\"one\", [1,2,3])
             x
         }",
         Error::CouldNotUnify {
@@ -1642,7 +1642,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
 ",
         Error::UnknownRecordField {
-            location: SrcSpan { start: 67, end: 75 },
+            location: SrcSpan { start: 64, end: 75 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::App {
@@ -1661,7 +1661,7 @@ pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Box(Int))) { box.inner.unknown }
     ",
         Error::UnknownRecordField {
-            location: SrcSpan { start: 78, end: 86 },
+            location: SrcSpan { start: 69, end: 86 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
             typ: Arc::new(Type::Var {
@@ -2069,7 +2069,21 @@ fn unknown_field_update() {
             Person(name: String)
         };
         pub fn update_person(person: Person) {
-            Person(..person, foo: 5)
+            Person(..person, one: 5)
+        }"
+    );
+}
+
+#[test]
+fn unknown_field_update2() {
+    // An unknown field given to a record update
+    assert_module_error!(
+        "
+        pub type Person {
+            Person(name: String, age: Int, size: Int)
+        };
+        pub fn update_person(person: Person) {
+            Person(..person, size: 66, one: 5, age: 3)
         }"
     );
 }
