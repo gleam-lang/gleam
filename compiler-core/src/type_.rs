@@ -1,6 +1,6 @@
 mod environment;
 mod error;
-mod expr;
+mod expression;
 mod fields;
 mod hydrator;
 mod pattern;
@@ -28,7 +28,7 @@ use crate::{
     bit_string,
     build::{Origin, Target},
 };
-use expr::*;
+use expression::*;
 
 use std::{
     cell::RefCell,
