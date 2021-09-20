@@ -851,7 +851,10 @@ fn the_rest() {
             given: float(),
         },
     );
+}
 
+#[test]
+fn case() {
     assert_error!(
         "case #(1, 1.0) { #(x, _) | #(_, x) -> 1 }",
         Error::CouldNotUnify {
@@ -1051,7 +1054,10 @@ fn the_rest() {
             given: list(link(int())),
         },
     );
+}
 
+#[test]
+fn extra_var_inalternative() {
     assert_error!(
         "case [1] { [x] | [x, y] -> 1 }",
         Error::ExtraVarInAlternativePattern {
@@ -1075,7 +1081,10 @@ fn the_rest() {
             name: "x".to_string()
         },
     );
+}
 
+#[test]
+fn tuple_arity() {
     // https://github.com/gleam-lang/gleam/issues/714
     assert_error!(
         "case #(1, 2) { #(1, _, _, _) -> 1 }",
@@ -1086,9 +1095,10 @@ fn the_rest() {
             given: 4,
         },
     );
+}
 
-    // Duplicate vars
-
+#[test]
+fn duplicate_vars() {
     assert_error!(
         "case #(1, 2) { #(x, x) -> 1 }",
         Error::DuplicateVarInPattern {
@@ -1112,9 +1122,10 @@ fn the_rest() {
             name: "x".to_string()
         },
     );
+}
 
-    // Tuple indexing
-
+#[test]
+fn tuple_index() {
     assert_error!(
         "#(0, 1).2",
         Error::OutOfBoundsTupleIndex {
@@ -1138,16 +1149,20 @@ fn the_rest() {
             location: SrcSpan { start: 8, end: 9 },
         },
     );
+}
 
-    // Record field access
-
+#[test]
+fn unknown_accessed_type() {
     assert_error!(
         "fn(a) { a.field }",
         Error::RecordAccessUnknownType {
             location: SrcSpan { start: 8, end: 9 },
         },
     );
+}
 
+#[test]
+fn unknown_field() {
     assert_error!(
         "fn(a: a) { a.field }",
         Error::UnknownField {
@@ -1159,7 +1174,10 @@ fn the_rest() {
             }),
         },
     );
+}
 
+#[test]
+fn inconsistent_try_error() {
     assert_error!(
         "try x = Error(1) try y = Error(1.) Ok(x)",
         Error::CouldNotUnify {
