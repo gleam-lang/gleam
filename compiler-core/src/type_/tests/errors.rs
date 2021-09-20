@@ -712,7 +712,7 @@ fn the_rest() {
 
     assert_error!(
         "let x = 1 x.whatever",
-        Error::UnknownField {
+        Error::UnknownRecordField {
             location: SrcSpan { start: 11, end: 20 },
             typ: int(),
             label: "whatever".to_string(),
@@ -1114,7 +1114,7 @@ fn unknown_accessed_type() {
 fn unknown_field() {
     assert_error!(
         "fn(a: a) { a.field }",
-        Error::UnknownField {
+        Error::UnknownRecordField {
             location: SrcSpan { start: 12, end: 18 },
             label: "field".to_string(),
             fields: vec![],
@@ -1641,7 +1641,7 @@ fn module_non_local_gaurd_var() {
 pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
 ",
-        Error::UnknownField {
+        Error::UnknownRecordField {
             location: SrcSpan { start: 67, end: 75 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
@@ -1660,7 +1660,7 @@ pub fn main(box: Box(Int)) { box.unknown }
 pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Box(Int))) { box.inner.unknown }
     ",
-        Error::UnknownField {
+        Error::UnknownRecordField {
             location: SrcSpan { start: 78, end: 86 },
             label: "unknown".to_string(),
             fields: vec!["inner".to_string()],
@@ -2030,7 +2030,7 @@ fn x() {
 }
 
 #[test]
-fn module_update() {
+fn wrong_type_update() {
     // A variable of the wrong type given to a record update
     assert_module_error!(
         "
@@ -2042,30 +2042,12 @@ fn module_update() {
         };
         pub fn update_person(person: Person, box: Box(a)) {
             Person(..box)
-        }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 216,
-                end: 221
-            },
-            expected: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Person".to_string(),
-                args: vec![]
-            }),
-            given: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
-                })]
-            }),
-        },
+        }"
     );
+}
 
+#[test]
+fn unknown_variable_update() {
     // An undefined variable given to a record update
     assert_module_error!(
         "
@@ -2074,17 +2056,12 @@ fn module_update() {
         };
         pub fn update_person() {
             Person(..person)
-        }",
-        Error::UnknownVariable {
-            location: SrcSpan {
-                start: 133,
-                end: 141
-            },
-            name: "person".to_string(),
-            variables: env_vars_with(&["Person", "update_person"]),
-        },
+        }"
     );
+}
 
+#[test]
+fn unknown_field_update() {
     // An unknown field given to a record update
     assert_module_error!(
         "
@@ -2093,23 +2070,12 @@ fn module_update() {
         };
         pub fn update_person(person: Person) {
             Person(..person, foo: 5)
-        }",
-        Error::UnknownField {
-            location: SrcSpan {
-                start: 145,
-                end: 153
-            },
-            label: "foo".to_string(),
-            fields: vec!["name".to_string()],
-            typ: Arc::new(Type::App {
-                args: vec![],
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Person".to_string(),
-            })
-        },
+        }"
     );
+}
 
+#[test]
+fn unknown_constructor_update() {
     // An unknown record constructor being used in a record update
     assert_module_error!(
         "
@@ -2118,17 +2084,12 @@ fn module_update() {
         };
         pub fn update_person(person: Person) {
             NotAPerson(..person)
-        }",
-        Error::UnknownVariable {
-            location: SrcSpan {
-                start: 140,
-                end: 150
-            },
-            name: "NotAPerson".to_string(),
-            variables: env_vars_with(&["Person", "update_person", "person"]),
-        },
+        }"
     );
+}
 
+#[test]
+fn not_a_constructor_update() {
     // Something other than a record constructor being used in a record update
     assert_module_error!(
         "
@@ -2138,15 +2099,12 @@ fn module_update() {
         pub fn identity(a) { a }
         pub fn update_person(person: Person) {
             identity(..person)
-        }",
-        Error::RecordUpdateInvalidConstructor {
-            location: SrcSpan {
-                start: 173,
-                end: 181,
-            },
-        },
+        }"
     );
+}
 
+#[test]
+fn expression_constructor_update() {
     // A record update with a constructor returned from an expression
     assert_module_error!(
         "
@@ -2156,15 +2114,12 @@ fn module_update() {
         pub fn update_person(person: Person) {
             let constructor = Person
             constructor(..person)
-        }",
-        Error::RecordUpdateInvalidConstructor {
-            location: SrcSpan {
-                start: 177,
-                end: 188,
-            },
-        },
+        }"
     );
+}
 
+#[test]
+fn generic_record_update1() {
     // A record update on polymorphic types with a field of the wrong type
     assert_module_error!(
         "
@@ -2173,28 +2128,12 @@ fn module_update() {
         };
         pub fn update_box(box: Box(Int), value: String) {
             Box(..box, value: value)
-        };",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 160,
-                end: 165,
-            },
-            expected: Arc::new(Type::App {
-                args: vec![],
-                public: true,
-                module: vec![],
-                name: "Int".to_string(),
-            }),
-            given: Arc::new(Type::App {
-                args: vec![],
-                public: true,
-                module: vec![],
-                name: "String".to_string(),
-            })
-        },
+        };"
     );
+}
 
+#[test]
+fn generic_record_update2() {
     // A record update on polymorphic types with generic fields of the wrong type
     assert_module_error!(
         "
@@ -2203,20 +2142,7 @@ fn module_update() {
         };
         pub fn update_box(box: Box(a), value: b) {
             Box(..box, value: value)
-        };",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 153,
-                end: 158,
-            },
-            expected: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
-            }),
-            given: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
-            }),
-        },
+        };"
     );
 }
 
@@ -2225,12 +2151,7 @@ fn type_vars_must_be_declared() {
     // https://github.com/gleam-lang/gleam/issues/734
     assert_module_error!(
         r#"type A(a) { A };
-           type B = a"#,
-        sort_options(Error::UnknownType {
-            location: SrcSpan { start: 37, end: 38 },
-            name: "a".to_string(),
-            types: env_types_with(&["A"]),
-        })
+           type B = a"#
     );
 }
 

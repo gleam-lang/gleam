@@ -736,14 +736,14 @@ also be labelled.",
                     .unwrap();
                 }
 
-                TypeError::UnknownField {
+                TypeError::UnknownRecordField {
                     location,
                     typ,
                     label,
                     fields,
                 } => {
                     let diagnostic = Diagnostic {
-                        title: "Unknown field".to_string(),
+                        title: "Unknown record field".to_string(),
                         label: did_you_mean(label, fields, "This field does not exist"),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -754,7 +754,7 @@ also be labelled.",
 
                     writeln!(
                         buf,
-                        "The value has this type:
+                        "The record being updated has this type:
 
 {}
 ",
@@ -1406,7 +1406,7 @@ and try again.
 
                     writeln!(
                         buf,
-                        "You are attempting to update a record using a value that is not a record constructor",
+                        "Only record constructors can be used with the update syntax.",
                     )
                     .unwrap();
                 }

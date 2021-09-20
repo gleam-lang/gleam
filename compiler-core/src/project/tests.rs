@@ -1216,7 +1216,7 @@ fn test(t: one.T) { t.a }"
             expected: Err(Error::Type {
                 path: PathBuf::from("/src/two.gleam"),
                 src: "import one\nfn test(t: one.T) { t.a }".to_string(),
-                error: crate::type_::Error::UnknownField {
+                error: crate::type_::Error::UnknownRecordField {
                     location: SrcSpan {
                         start: 32,
                         end: 34,

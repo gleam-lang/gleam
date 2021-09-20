@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        };\n        pub fn update_person(person: Person) {\n            NotAPerson(..person)\n        }"
+
+---
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:13
+  │
+6 │             NotAPerson(..person)
+  │             ^^^^^^^^^^ did you mean `Person`?
+
+The name `NotAPerson` is not in scope here.
+

@@ -65,7 +65,7 @@ pub enum Error {
         typ: Arc<Type>,
     },
 
-    UnknownField {
+    UnknownRecordField {
         location: SrcSpan,
         typ: Arc<Type>,
         label: String,
