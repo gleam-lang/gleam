@@ -1,7 +1,7 @@
 use crate::{
     build::Module,
     config::PackageConfig,
-    erl,
+    erlang,
     io::{FileSystemWriter, Utf8Writer},
     javascript,
     line_numbers::LineNumbers,
@@ -45,7 +45,7 @@ impl<'a> Erlang<'a> {
         let path = self.output_directory.join(&name);
         let mut file = writer.open(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
-        let res = erl::module(&module.ast, &line_numbers, &mut file);
+        let res = erlang::module(&module.ast, &line_numbers, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
         res
     }
@@ -56,7 +56,7 @@ impl<'a> Erlang<'a> {
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
-        for (name, text) in erl::records(&module.ast) {
+        for (name, text) in erlang::records(&module.ast) {
             let name = format!("{}_{}.hrl", erl_name, name);
             tracing::trace!(name = ?name, "Generated Erlang header");
             writer

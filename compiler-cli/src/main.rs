@@ -308,7 +308,7 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let (_config, analysed) = project::read_and_analyse(&root)?;
 
     // Generate Erlang code
-    let output_files = gleam_core::erl::generate_erlang(&analysed);
+    let output_files = gleam_core::erlang::generate_erlang(&analysed);
 
     // Print warnings
     let warning_count = print_warnings(&analysed);

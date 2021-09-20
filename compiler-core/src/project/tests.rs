@@ -1391,7 +1391,7 @@ main(Arg1, Arg2, Arg3) ->
     ];
 
     for Case { input, expected } in cases {
-        let actual = analysed(input).map(|analysed| crate::erl::generate_erlang(&analysed));
+        let actual = analysed(input).map(|analysed| crate::erlang::generate_erlang(&analysed));
         assert_eq!(expected, actual);
     }
 }

@@ -102,7 +102,7 @@ macro_rules! assert_erl {
     ($src:expr, $erl:expr $(,)?) => {{
         use crate::{
             build::Origin,
-            erl::module,
+            erlang::module,
             line_numbers::LineNumbers,
             type_::{build_prelude, infer_module},
         };

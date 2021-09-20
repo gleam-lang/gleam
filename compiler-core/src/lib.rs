@@ -57,7 +57,7 @@ pub mod codegen;
 pub mod config;
 pub mod diagnostic;
 pub mod docs;
-pub mod erl;
+pub mod erlang;
 pub mod error;
 pub mod format;
 pub mod io;

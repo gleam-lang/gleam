@@ -1,5 +1,5 @@
 use gleam_core::{
-    erl,
+    erlang,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
     parse, Result,
 };
@@ -590,12 +590,12 @@ fn validate_root_folder(name: &str) -> Result<(), Error> {
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
-    if erl::is_erlang_reserved_word(name) {
+    if erlang::is_erlang_reserved_word(name) {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
             reason: InvalidProjectNameReason::ErlangReservedWord,
         })
-    } else if erl::is_erlang_standard_library_module(name) {
+    } else if erlang::is_erlang_standard_library_module(name) {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
             reason: InvalidProjectNameReason::ErlangStandardLibraryModule,

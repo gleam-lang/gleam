@@ -30,7 +30,7 @@ use crate::{
     ast::TypedModule,
     build::project_root::ProjectRoot,
     config::{self, PackageConfig},
-    erl,
+    erlang,
     error::{Error, FileIoAction, FileKind},
     io::OutputFile,
     type_,

@@ -8,7 +8,7 @@ use crate::{
     },
     codegen,
     config::{BuildTool, Docs, PackageConfig, Repository},
-    erl,
+    erlang,
     io::test::FilesChannel,
     javascript, type_,
 };
