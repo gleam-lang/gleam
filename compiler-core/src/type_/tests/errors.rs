@@ -50,7 +50,7 @@ macro_rules! assert_module_error {
             path: PathBuf::from("/src/one/two.gleam"),
             error,
         };
-        let output = error.to_string();
+        let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -101,7 +101,7 @@ macro_rules! assert_error {
             path: PathBuf::from("/src/one/two.gleam"),
             error,
         };
-        let output = error.to_string();
+        let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

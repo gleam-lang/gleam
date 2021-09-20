@@ -220,7 +220,7 @@ fn did_you_mean(name: &str, options: &[String], alt: &'static str) -> String {
 }
 
 impl Error {
-    pub fn to_string(&self) -> String {
+    pub fn pretty_string(&self) -> String {
         let mut nocolor = Buffer::no_color();
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
