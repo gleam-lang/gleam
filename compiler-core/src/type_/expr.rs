@@ -648,8 +648,6 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .map_err(|e| convert_unify_error(e, value.location()))?;
         };
 
-        let value_type = generalise(value_type, self.environment.level + 1);
-
         // Ensure the pattern matches the type of the value
         let pattern =
             pattern::PatternTyper::new(self.environment, &self.hydrator, self.environment.level)
@@ -698,15 +696,14 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         let return_type = self.new_unbound_var(self.environment.level);
 
         for subject in subjects {
-            let (subject, subject_type) = self.in_new_scope(|subject_typer| {
+            let subject = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
-                let subject_type = generalise(subject.type_(), subject_typer.environment.level);
 
-                Ok((subject, subject_type))
+                Ok(subject)
             })?;
 
+            subject_types.push(subject.type_());
             typed_subjects.push(subject);
-            subject_types.push(subject_type);
         }
 
         for clause in clauses {
