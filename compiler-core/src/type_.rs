@@ -1424,15 +1424,8 @@ fn match_fun_type(
 fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
     match t.deref() {
         Type::Var { type_: typ } => match typ.borrow().deref() {
-            TypeVar::Unbound { id } => {
-                let id = *id;
-                return Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id })),
-                });
-            }
-
+            TypeVar::Unbound { id } => generic_var(*id),
             TypeVar::Link { type_: typ } => generalise(typ.clone(), ctx_level),
-
             TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
         },
 
