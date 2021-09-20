@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let <<x:utf32>> = <<1>> x"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:7
+  │
+1 │ let <<x:utf32>> = <<1>> x
+  │       ^^^^^^^ this cannot be a variable
+
+Hint: in patterns utf8, utf16, and utf32  must be an exact string.
+See: https://gleam.run/book/tour/bit-strings.html
+

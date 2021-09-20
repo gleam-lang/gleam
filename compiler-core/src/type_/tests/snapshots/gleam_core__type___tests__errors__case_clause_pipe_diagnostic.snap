@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn change(x: String) -> String {\n    \"\"\n}\n\npub fn parse(input: BitString) -> String {\n  case input {\n    <<>> -> 1\n    <<\"(\":utf8, b:binary>> ->\n      parse(input)\n      |> change\n  }\n}"
+
+---
+
+error: Type mismatch
+   ┌─ /src/one/two.gleam:9:5
+   │  
+ 9 │ ╭     <<"(":utf8, b:binary>> ->
+10 │ │       parse(input)
+   │ ╰──────────────────^
+
+This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    String
+
+

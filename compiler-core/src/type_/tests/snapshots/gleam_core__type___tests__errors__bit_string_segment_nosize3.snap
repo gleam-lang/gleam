@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case <<1>> { <<_:binary, _:bit_string>> -> 1 }"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:18
+  │
+1 │ case <<1>> { <<_:binary, _:bit_string>> -> 1 }
+  │                  ^^^^^^ This segment has no size
+
+Hint: Bit string segments without a size are only allowed at the end of a bin pattern.
+See: https://gleam.run/book/tour/bit-strings.html
+

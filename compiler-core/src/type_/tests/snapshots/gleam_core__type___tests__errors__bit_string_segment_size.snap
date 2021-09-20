@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let x = <<1:8-size(5)>> x"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ let x = <<1:8-size(5)>> x
+  │               ^^^^^^^ This is an extra size specifier.
+
+Hint: This segment already has a size.
+See: https://gleam.run/book/tour/bit-strings.html
+

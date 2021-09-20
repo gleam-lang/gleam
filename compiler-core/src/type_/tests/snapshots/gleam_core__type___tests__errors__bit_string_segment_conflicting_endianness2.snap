@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case <<1>> { <<1:native-big>> -> 1 }"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:25
+  │
+1 │ case <<1>> { <<1:native-big>> -> 1 }
+  │                         ^^^ This is an extra endianness specifier.
+
+Hint: This segment already has an endianness of native.
+See: https://gleam.run/book/tour/bit-strings.html
+

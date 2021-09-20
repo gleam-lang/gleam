@@ -26,6 +26,7 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
+        use std::path::PathBuf;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         let mut modules = HashMap::new();
         let mut uid = 0;
@@ -34,7 +35,7 @@ macro_rules! assert_module_error {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
-        let _ = infer_module(
+        let error = infer_module(
             Target::Erlang,
             &mut uid,
             ast,
@@ -44,6 +45,13 @@ macro_rules! assert_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
+        let error = crate::error::Error::Type {
+            src: $src.to_string(),
+            path: PathBuf::from("/src/one/two.gleam"),
+            error,
+        };
+        let output = error.to_string();
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
@@ -68,6 +76,34 @@ macro_rules! assert_error {
         .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
+
+    ($src:expr) => {
+        use std::path::PathBuf;
+        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let mut uid = 0;
+        let mut modules = HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        println!("new assert_error test: {}", modules.len());
+        let error = ExprTyper::new(&mut Environment::new(
+            &mut uid,
+            &["somemod".to_string()],
+            &modules,
+            &mut vec![],
+        ))
+        .infer(ast)
+        .expect_err("should infer an error");
+        let error = crate::error::Error::Type {
+            src: $src.to_string(),
+            path: PathBuf::from("/src/one/two.gleam"),
+            error,
+        };
+        let output = error.to_string();
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
 }
 
 #[test]
@@ -86,198 +122,111 @@ fn main() {
             situation: None,
         },
     );
-
-    assert_error!(
-        "let <<x:utf8>> = <<1>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
-            location: SrcSpan { start: 6, end: 12 },
-        }
-    );
-
-    assert_error!(
-        "let <<x:utf16>> = <<1>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
-            location: SrcSpan { start: 6, end: 13 },
-        }
-    );
-
-    assert_error!(
-        "let <<x:utf32>> = <<1>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::VariableUtfSegmentInPattern,
-            location: SrcSpan { start: 6, end: 13 },
-        }
-    );
 }
 
 #[test]
-fn infer_bit_string_error_test() {
-    assert_error!(
-        "case <<1>> { <<2.0, a>> -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 15, end: 18 },
-            expected: int(),
-            given: float(),
-        },
-    );
+fn bit_strings2() {
+    assert_error!("let <<x:utf8>> = <<1>> x");
+}
 
-    assert_error!(
-        "case <<1>> { <<a:float>> if a > 1 -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 28, end: 29 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn bit_strings3() {
+    assert_error!("let <<x:utf16>> = <<1>> x");
+}
 
-    assert_error!(
-        "case <<1>> { <<a:binary>> if a > 1 -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 29, end: 30 },
-            expected: int(),
-            given: bit_string(),
-        },
-    );
+#[test]
+fn bit_strings4() {
+    assert_error!("let <<x:utf32>> = <<1>> x");
+}
 
-    assert_error!(
-        "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 38, end: 49 },
-            expected: utf_codepoint(),
-            given: string(),
-        },
-    );
+#[test]
+fn bit_string() {
+    assert_error!("case <<1>> { <<2.0, a>> -> 1 }");
+}
 
-    // Segments
+#[test]
+fn bit_string_float() {
+    assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<_:binary, _:binary>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::SegmentMustHaveSize,
-            location: SrcSpan { start: 17, end: 23 },
-        },
-    );
+#[test]
+fn bit_string_binary() {
+    assert_error!("case <<1>> { <<a:binary>> if a > 1 -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<_:bit_string, _:binary>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::SegmentMustHaveSize,
-            location: SrcSpan { start: 17, end: 27 },
-        },
-    );
+#[test]
+fn bit_string_guard() {
+    assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<_:binary, _:bit_string>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::SegmentMustHaveSize,
-            location: SrcSpan { start: 17, end: 23 },
-        },
-    );
+#[test]
+fn bit_string_segment_nosize() {
+    assert_error!("case <<1>> { <<_:binary, _:binary>> -> 1 }");
+}
 
-    // Options
+#[test]
+fn bit_string_segment_nosize2() {
+    assert_error!("case <<1>> { <<_:bit_string, _:binary>> -> 1 }");
+}
 
-    assert_error!(
-        "let x = <<1:int-binary>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingTypeOptions {
-                existing_type: "int".to_string(),
-            },
-            location: SrcSpan { start: 16, end: 22 },
-        },
-    );
+#[test]
+fn bit_string_segment_nosize3() {
+    assert_error!("case <<1>> { <<_:binary, _:bit_string>> -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<1:bit_string-binary>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingTypeOptions {
-                existing_type: "bit_string".to_string(),
-            },
-            location: SrcSpan { start: 28, end: 34 },
-        },
-    );
+#[test]
+fn bit_string_segment_conflicting_options_int() {
+    assert_error!("let x = <<1:int-binary>> x");
+}
 
-    assert_error!(
-        "let x = <<1:signed-unsigned>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingSignednessOptions {
-                existing_signed: "signed".to_string(),
-            },
-            location: SrcSpan { start: 19, end: 27 },
-        }
-    );
+#[test]
+fn bit_string_segment_conflicting_options_bit_string() {
+    assert_error!("case <<1>> { <<1:bit_string-binary>> -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<1:unsigned-signed>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingSignednessOptions {
-                existing_signed: "unsigned".to_string(),
-            },
-            location: SrcSpan { start: 26, end: 32 },
-        }
-    );
+#[test]
+fn bit_string_segment_conflicting_signedness1() {
+    assert_error!("let x = <<1:signed-unsigned>> x");
+}
 
-    assert_error!(
-        "let x = <<1:big-little>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingEndiannessOptions {
-                existing_endianness: "big".to_string(),
-            },
-            location: SrcSpan { start: 16, end: 22 },
-        }
-    );
+#[test]
+fn bit_string_segment_conflicting_signedness2() {
+    assert_error!("case <<1>> { <<1:unsigned-signed>> -> 1 }");
+}
 
-    assert_error!(
-        "case <<1>> { <<1:native-big>> -> 1 }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingEndiannessOptions {
-                existing_endianness: "native".to_string(),
-            },
-            location: SrcSpan { start: 24, end: 27 },
-        }
-    );
+#[test]
+fn bit_string_segment_conflicting_endianness1() {
+    assert_error!("let x = <<1:big-little>> x");
+}
 
-    // Size and unit options
+#[test]
+fn bit_string_segment_conflicting_endianness2() {
+    assert_error!("case <<1>> { <<1:native-big>> -> 1 }");
+}
 
-    assert_error!(
-        "let x = <<1:8-size(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingSizeOptions,
-            location: SrcSpan { start: 14, end: 21 },
-        }
-    );
+#[test]
+fn bit_string_segment_size() {
+    assert_error!("let x = <<1:8-size(5)>> x");
+}
 
-    assert_error!(
-        "case <<1>> { <<1:size(2)-size(8)>> -> a }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingSizeOptions,
-            location: SrcSpan { start: 25, end: 32 },
-        }
-    );
+#[test]
+fn bit_string_segment_size2() {
+    assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> a }");
+}
 
-    assert_error!(
-        "let x = <<1:unit(2)-unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::ConflictingUnitOptions,
-            location: SrcSpan { start: 20, end: 27 },
-        }
-    );
+#[test]
+fn bit_string_segment_unit() {
+    assert_error!("let x = <<1:unit(2)-unit(5)>> x");
+}
 
-    assert_error!(
-        "let x = <<1:utf8_codepoint-unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf8_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 26 },
-        }
-    );
+#[test]
+fn bit_string_segment_codepoint_unit() {
+    assert_error!("let x = <<1:utf8_codepoint-unit(5)>> x");
+}
 
+// TODO
+#[test]
+fn bit_string_segment_etc() {
     assert_error!(
         "let x = <<1:utf16_codepoint-unit(5)>> x",
         Error::BitStringSegmentError {
@@ -2286,47 +2235,33 @@ fn type_vars_must_be_declared() {
 }
 
 #[test]
-fn type_holes() {
+fn type_holes1() {
     // Type holes cannot be used when decaring types or external functions
-    assert_module_error!(
-        r#"type A { A(_) };"#,
-        Error::UnexpectedTypeHole {
-            location: SrcSpan { start: 11, end: 12 },
-        },
-    );
+    assert_module_error!(r#"type A { A(_) };"#);
+}
 
-    assert_module_error!(
-        r#"external fn main() -> List(_) = "" """#,
-        Error::UnexpectedTypeHole {
-            location: SrcSpan { start: 27, end: 28 },
-        },
-    );
+#[test]
+fn type_holes2() {
+    // Type holes cannot be used when decaring types or external functions
+    assert_module_error!(r#"external fn main() -> List(_) = "" """#);
+}
 
-    assert_module_error!(
-        r#"external fn main(List(_)) -> Nil = "" """#,
-        Error::UnexpectedTypeHole {
-            location: SrcSpan { start: 22, end: 23 },
-        },
-    );
+#[test]
+fn type_holes3() {
+    // Type holes cannot be used when decaring types or external functions
+    assert_module_error!(r#"external fn main(List(_)) -> Nil = "" """#);
+}
 
-    assert_module_error!(
-        r#"type X = List(_)"#,
-        Error::UnexpectedTypeHole {
-            location: SrcSpan { start: 14, end: 15 },
-        },
-    );
+#[test]
+fn type_holes4() {
+    // Type holes cannot be used when decaring types or external functions
+    assert_module_error!(r#"type X = List(_)"#);
 }
 
 // https://github.com/gleam-lang/gleam/issues/1263
 #[test]
 fn missing_variable_in_alternative_pattern() {
-    assert_error!(
-        "case [] { [x] | [] -> x _ -> 0 }",
-        Error::MissingVarInAlternativePattern {
-            location: SrcSpan { start: 10, end: 23 },
-            name: "x".to_string()
-        },
-    );
+    assert_error!("case [] { [x] | [] -> x _ -> 0 }");
 }
 
 #[test]
@@ -2350,15 +2285,6 @@ pub fn parse(input: BitString) -> String {
       parse(input)
       |> change
   }
-}"#,
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
-            location: SrcSpan {
-                start: 124,
-                end: 168,
-            },
-            expected: int(),
-            given: string(),
-        }
+}"#
     );
 }

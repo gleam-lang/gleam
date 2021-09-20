@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let x = <<1:int-binary>> x"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:17
+  │
+1 │ let x = <<1:int-binary>> x
+  │                 ^^^^^^ This is an extra type specifier.
+
+Hint: This segment already has the type int.
+See: https://gleam.run/book/tour/bit-strings.html
+

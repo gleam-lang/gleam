@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case <<1>> { <<1:unsigned-signed>> -> 1 }"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:27
+  │
+1 │ case <<1>> { <<1:unsigned-signed>> -> 1 }
+  │                           ^^^^^^ This is an extra signedness specifier.
+
+Hint: This segment already has a signedness of unsigned.
+See: https://gleam.run/book/tour/bit-strings.html
+

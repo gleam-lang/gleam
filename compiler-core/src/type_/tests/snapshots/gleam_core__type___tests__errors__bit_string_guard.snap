@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:39
+  │
+1 │ case <<1>> { <<a:utf16_codepoint>> if a == "test" -> 1 }
+  │                                       ^^^^^^^^^^^
+
+Expected type:
+
+    UtfCodepoint
+
+Found type:
+
+    String
+
+

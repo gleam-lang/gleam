@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type A { A(_) };"
+
+---
+
+error: Unexpected type hole
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ type A { A(_) };
+  │            ^
+
+We need to know the exact type here so type holes are not permitted.
+
