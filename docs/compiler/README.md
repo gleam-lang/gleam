@@ -10,7 +10,17 @@ tests][language-tests] for information on the language itself.
 [language-tour]: https://gleam.run/book/tour/index.html
 [language-tests]: https://github.com/gleam-lang/gleam/tree/main/test/language
 
-## Project structure
+<!-- vscode-markdown-toc -->
+* [Project structure](#Projectstructure)
+* [Compilation flow](#Compilationflow)
+
+<!-- vscode-markdown-toc-config
+	numbering=false
+	autoSave=true
+	/vscode-markdown-toc-config -->
+<!-- /vscode-markdown-toc -->
+
+## <a name='Projectstructure'></a>Project structure
 
 The project is made up of several Rust crates (projects):
 
@@ -36,7 +46,7 @@ In addition to the Rust code there are these components:
   and release new versions of the project.
 - `docs`: You're looking at it pal.
 
-## Compilation flow
+## <a name='Compilationflow'></a>Compilation flow
 
 The process for compiling Gleam modules within the compiler looks roughly like
 this:
