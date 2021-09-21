@@ -23,29 +23,6 @@ pub fn env_types() -> Vec<String> {
         .collect()
 }
 
-pub fn env_vars_with(things: &[&str]) -> Vec<String> {
-    let mut types: Vec<_> = env_vars();
-    for &thing in things {
-        types.push(thing.to_string());
-    }
-    types
-}
-
-pub fn env_vars() -> Vec<String> {
-    let mut modules = HashMap::new();
-    let mut uid = 0;
-    // DUPE: preludeinsertion
-    // TODO: Currently we do this here and also in the tests. It would be better
-    // to have one place where we create all this required state for use in each
-    // place.
-    let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
-    Environment::new(&mut 0, &[], &modules, &mut vec![])
-        .local_values
-        .keys()
-        .map(|s| s.to_string())
-        .collect()
-}
-
 pub fn sort_options(e: Error) -> Error {
     match e {
         Error::UnknownType {

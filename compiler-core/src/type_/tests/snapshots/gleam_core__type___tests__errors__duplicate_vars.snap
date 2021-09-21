@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case #(1, 2) { #(x, x) -> 1 }"
+
+---
+
+error: Duplicate variable in pattern
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ case #(1, 2) { #(x, x) -> 1 }
+  │                     ^ has already been used
+
+Variables can only be used once per pattern. This variable x appears multiple times.
+If you used the same variable twice deliberately in order to check for equality
+please use a guard clause instead e.g. (x, y) if x == y -> ...
+

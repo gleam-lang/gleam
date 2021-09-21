@@ -300,129 +300,59 @@ fn bit_string_binary_option_in_value() {
     assert_error!("let x = <<<<1:1>>:binary>> x");
 }
 
-// TODO
 #[test]
-fn binop_unification_errors() {
-    assert_error!(
-        "1 + 1.0",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
-            location: SrcSpan { start: 4, end: 7 },
-            expected: int(),
-            given: float(),
-        },
-    );
+fn add_int_float() {
+    assert_error!("1 + 1.0");
+}
 
-    assert_error!(
-        "1 +. 1.0",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::Operator(BinOp::AddFloat)),
-            location: SrcSpan { start: 0, end: 1 },
-            expected: float(),
-            given: int(),
-        },
-    );
+#[test]
+fn add_f_int_float() {
+    assert_error!("1 +. 1.0");
+}
 
-    assert_error!(
-        "1 == 1.0",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 5, end: 8 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn int_eq_float() {
+    assert_error!("1 == 1.0");
+}
 
-    assert_error!(
-        "1 > 1.0",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::Operator(BinOp::GtInt)),
-            location: SrcSpan { start: 4, end: 7 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn int_gt_float() {
+    assert_error!("1 > 1.0");
+}
 
-    assert_error!(
-        "1.0 >. 1",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::Operator(BinOp::GtFloat)),
-            location: SrcSpan { start: 7, end: 8 },
-            expected: float(),
-            given: int(),
-        },
-    );
+#[test]
+fn float_gtf_int() {
+    assert_error!("1.0 >. 1");
+}
 
-    assert_error!(
-        "fn() { 1 } == fn(x) { x + 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 14, end: 29 },
-            expected: Arc::new(Type::Fn {
-                args: vec![],
-                retrn: int(),
-            }),
-            given: Arc::new(Type::Fn {
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                })],
-                retrn: int(),
-            }),
-        },
-    );
+#[test]
+fn fn0_eq_fn1() {
+    assert_error!("fn() { 1 } == fn(x) { x + 1 }");
 }
 
 #[test]
 fn unknown_variable() {
-    assert_error!(
-        "x",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 0, end: 1 },
-            name: "x".to_string(),
-            variables: env_vars(),
-        },
-    );
+    assert_error!("x");
+}
 
-    assert_error!(
-        "case 1 { x -> 1 1 -> x }",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 21, end: 22 },
-            name: "x".to_string(),
-            variables: env_vars(),
-        },
-    );
+#[test]
+fn unknown_variable_2() {
+    assert_error!("case 1 { x -> 1 1 -> x }");
+}
 
-    assert_error!(
-        "let add = fn(x, y) { x + y } 1 |> add(unknown)",
-        Error::UnknownVariable {
-            location: SrcSpan { start: 38, end: 45 },
-            name: "unknown".to_string(),
-            variables: env_vars_with(&["add"]),
-        },
-    );
+#[test]
+fn unknown_variable_3() {
+    assert_error!("let add = fn(x, y) { x + y } 1 |> add(unknown)");
 }
 
 #[test]
 fn incorrect_arity_error() {
-    assert_error!(
-        "let id = fn(x) { x } id()",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 21, end: 25 },
-            expected: 1,
-            given: 0,
-        },
-    );
+    assert_error!("let id = fn(x) { x } id()");
+}
 
-    assert_error!(
-        "let id = fn(x) { x } id(1, 2)",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 21, end: 29 },
-            expected: 1,
-            given: 2,
-        },
-    );
+#[test]
+fn incorrect_arity_error_2() {
+    assert_error!("let id = fn(x) { x } id(1, 2)");
 }
 
 #[test]
@@ -953,94 +883,47 @@ fn extra_var_inalternative() {
 #[test]
 fn tuple_arity() {
     // https://github.com/gleam-lang/gleam/issues/714
-    assert_error!(
-        "case #(1, 2) { #(1, _, _, _) -> 1 }",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 15, end: 28 },
-            expected: 2,
-            given: 4,
-        },
-    );
+    assert_error!("case #(1, 2) { #(1, _, _, _) -> 1 }");
 }
 
 #[test]
 fn duplicate_vars() {
-    assert_error!(
-        "case #(1, 2) { #(x, x) -> 1 }",
-        Error::DuplicateVarInPattern {
-            location: SrcSpan { start: 20, end: 21 },
-            name: "x".to_string()
-        },
-    );
-
-    assert_error!(
-        "case [3.33], 1 { x, x if x > x -> 1 }",
-        Error::DuplicateVarInPattern {
-            location: SrcSpan { start: 20, end: 21 },
-            name: "x".to_string()
-        },
-    );
-
-    assert_error!(
-        "case [1, 2, 3] { [x, x, y] -> 1 }",
-        Error::DuplicateVarInPattern {
-            location: SrcSpan { start: 21, end: 22 },
-            name: "x".to_string()
-        },
-    );
+    assert_error!("case #(1, 2) { #(x, x) -> 1 }");
 }
 
 #[test]
-fn tuple_index() {
-    assert_error!(
-        "#(0, 1).2",
-        Error::OutOfBoundsTupleIndex {
-            location: SrcSpan { start: 7, end: 9 },
-            index: 2,
-            size: 2
-        },
-    );
+fn duplicate_vars_2() {
+    assert_error!("case [3.33], 1 { x, x if x > x -> 1 }");
+}
 
-    assert_error!(
-        "Nil.2",
-        Error::NotATuple {
-            location: SrcSpan { start: 0, end: 3 },
-            given: nil(),
-        },
-    );
+#[test]
+fn duplicate_vars_3() {
+    assert_error!("case [1, 2, 3] { [x, x, y] -> 1 }");
+}
 
-    assert_error!(
-        "fn(a) { a.2 }",
-        Error::NotATupleUnbound {
-            location: SrcSpan { start: 8, end: 9 },
-        },
-    );
+#[test]
+fn tuple_index_out_of_bounds() {
+    assert_error!("#(0, 1).2");
+}
+
+#[test]
+fn tuple_index_not_a_tuple() {
+    assert_error!("Nil.2");
+}
+
+#[test]
+fn tuple_index_not_a_tuple_unbound() {
+    assert_error!("fn(a) { a.2 }");
 }
 
 #[test]
 fn unknown_accessed_type() {
-    assert_error!(
-        "fn(a) { a.field }",
-        Error::RecordAccessUnknownType {
-            location: SrcSpan { start: 8, end: 9 },
-        },
-    );
+    assert_error!("fn(a) { a.field }");
 }
 
 #[test]
 fn unknown_field() {
-    assert_error!(
-        "fn(a: a) { a.field }",
-        Error::UnknownRecordField {
-            location: SrcSpan { start: 11, end: 18 },
-            label: "field".to_string(),
-            fields: vec![],
-            typ: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 7 })),
-            }),
-        },
-    );
+    assert_error!("fn(a: a) { a.field }");
 }
 
 #[test]
@@ -1389,15 +1272,7 @@ fn demo() {
 
 #[test]
 fn module_arity_error() {
-    assert_module_error!(
-        "external fn go(List(a, b)) -> a = \"\" \"\"",
-        Error::IncorrectTypeArity {
-            location: SrcSpan { start: 15, end: 25 },
-            name: "List".to_string(),
-            expected: 1,
-            given: 2,
-        }
-    );
+    assert_module_error!("external fn go(List(a, b)) -> a = \"\" \"\"");
 }
 
 #[test]
@@ -1482,21 +1357,15 @@ fn module_private_type_leak() {
 }
 
 #[test]
-fn module_label_errors() {
-    assert_module_error!(
-        r#"fn id(x) { x } fn y() { id(x: 4) }"#,
-        Error::UnexpectedLabelledArg {
-            label: "x".to_string(),
-            location: SrcSpan { start: 27, end: 31 },
-        }
-    );
+fn unexpected_labelled_arg() {
+    assert_module_error!(r#"fn id(x) { x } fn y() { id(x: 4) }"#);
+}
 
+#[test]
+fn positional_argument_after_labelled() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
-                    fn x() { X(b: 1, a: 1, 1) }"#,
-        Error::PositionalArgumentAfterLabelled {
-            location: SrcSpan { start: 80, end: 81 },
-        }
+                    fn x() { X(b: 1, a: 1, 1) }"#
     );
 }
 
@@ -1826,12 +1695,7 @@ fn duplicate_const_names() {
     // We cannot declare two const with the same name in a module
     assert_module_error!(
         "const duplicate = 1;
-         pub const duplicate = 1",
-        Error::DuplicateConstName {
-            location: SrcSpan { start: 40, end: 49 },
-            previous_location: SrcSpan { start: 6, end: 15 },
-            name: "duplicate".to_string(),
-        }
+         pub const duplicate = 1"
     );
 }
 
@@ -1840,13 +1704,7 @@ fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
     assert_module_error!(
         "fn x(x, y) { x }
-         fn main() { 1 |> x() }",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 43, end: 46 },
-            expected: 2,
-            given: 0,
-        },
+         fn main() { 1 |> x() }"
     );
 }
 
@@ -1922,12 +1780,7 @@ fn module_constants() {
 fn custom_type_module_constants() {
     assert_module_error!(
         r#"type X { X }
-        const x = unknown.X"#,
-        sort_options(Error::UnknownModule {
-            location: SrcSpan { start: 31, end: 40 },
-            name: "unknown".to_string(),
-            imported_modules: vec![],
-        })
+        const x = unknown.X"#
     );
 }
 
@@ -1938,12 +1791,7 @@ fn unknown_label() {
 fn x() {
     let x = X(a: 1, c: 2.0)
     x
-}"#,
-        sort_options(Error::UnknownLabels {
-            unknown: vec![("c".to_string(), SrcSpan { start: 60, end: 66 })],
-            valid: vec!["a".to_string(), "b".to_string()],
-            supplied: vec!["a".to_string()],
-        })
+}"#
     );
 }
 

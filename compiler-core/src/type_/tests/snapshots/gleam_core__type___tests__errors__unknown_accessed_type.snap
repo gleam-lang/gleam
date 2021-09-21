@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn(a) { a.field }"
+
+---
+
+error: Unknown type for record access
+  ┌─ /src/one/two.gleam:1:9
+  │
+1 │ fn(a) { a.field }
+  │         ^ I don't know what type this is
+
+In order to access a record field we need to know what type it is, but
+I can't tell the type here. Try adding type annotations to your function
+and try again.
+
+

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn(a: a) { a.field }"
+
+---
+
+error: Unknown record field
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ fn(a: a) { a.field }
+  │            ^^^^^^^ This field does not exist
+
+The record being updated has this type:
+
+    a
+
+It does not have any fields.
+

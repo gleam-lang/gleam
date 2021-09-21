@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: 1.0 >. 1
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:8
+  │
+1 │ 1.0 >. 1
+  │        ^
+
+The >. operator expects arguments of this type:
+
+    Float
+
+But this argument has this type:
+
+    Int
+
+Hint: the >. operator can be used with Ints
+
+
+

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: Nil.2
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ Nil.2
+  │ ^^^ is not a tuple
+
+To index into this value it needs to be a tuple, however it has this type:
+
+    Nil
+

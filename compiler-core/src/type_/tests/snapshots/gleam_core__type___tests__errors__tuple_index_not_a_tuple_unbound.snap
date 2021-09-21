@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn(a) { a.2 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:9
+  │
+1 │ fn(a) { a.2 }
+  │         ^ what type is this?
+
+To index into a tuple we need to know it size, but we don't know anything
+about this type yet. Please add some type annotations so we can continue.
+

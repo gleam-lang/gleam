@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "external fn go(List(a, b)) -> a = \"\" \"\""
+
+---
+
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:1:16
+  │
+1 │ external fn go(List(a, b)) -> a = "" ""
+  │                ^^^^^^^^^^ expected 1 arguments, got 2
+
+

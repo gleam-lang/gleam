@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn() { 1 } == fn(x) { x + 1 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:15
+  │
+1 │ fn() { 1 } == fn(x) { x + 1 }
+  │               ^^^^^^^^^^^^^^^
+
+Expected type:
+
+    fn() -> Int
+
+Found type:
+
+    fn(Int) -> Int
+
+

@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type X { X(a: Int, b: Int, c: Int) }\n                    fn x() { X(b: 1, a: 1, 1) }"
+
+---
+
+error: Unexpected positional argument
+  ┌─ /src/one/two.gleam:2:44
+  │
+2 │                     fn x() { X(b: 1, a: 1, 1) }
+  │                                            ^
+
+This unlablled argument has been supplied after a labelled argument.
+Once a labelled argument has been supplied all following arguments must
+also be labelled.
+

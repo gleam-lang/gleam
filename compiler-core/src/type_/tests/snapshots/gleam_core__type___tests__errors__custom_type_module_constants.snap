@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type X { X }\n        const x = unknown.X"
+
+---
+
+error: Unknown module
+  ┌─ /src/one/two.gleam:2:19
+  │
+2 │         const x = unknown.X
+  │                   ^^^^^^^^^
+
+No module has been found with the name `unknown`.
+

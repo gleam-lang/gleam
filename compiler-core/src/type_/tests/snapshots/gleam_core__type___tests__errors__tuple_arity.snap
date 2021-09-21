@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case #(1, 2) { #(1, _, _, _) -> 1 }"
+
+---
+
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:1:16
+  │
+1 │ case #(1, 2) { #(1, _, _, _) -> 1 }
+  │                ^^^^^^^^^^^^^ expected 2 arguments, got 4
+
+
