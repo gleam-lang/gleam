@@ -1,21 +1,40 @@
-# Architecture
+# Compiler documentation
 
-This document describes the high-level architecture of the Gleam compiler.
+Hello! Welcome to the documentation for the Gleam compiler. I hope you have fun
+with the project!
 
-## Overview
-
-On the highest level, a `gleam` binary receives Gleam source code as input
-and produces one of its available backend formats:
-
-- Erlang source code.
-- JavaScript source code.
-
-There is currently no formal specification of Gleam source, apart from the
+There is currently no formal specification of Gleam. See the the
 programmer-oriented [Language tour][language-tour] and the [language integration
-tests][language-tests].
+tests][language-tests] for information on the language itself.
 
 [language-tour]: https://gleam.run/book/tour/index.html
 [language-tests]: https://github.com/gleam-lang/gleam/tree/main/test/language
+
+## Project structure
+
+The project is made up of several Rust crates (projects):
+
+- `compiler-core`: This project parses, analyses, and compiles Gleam projects.
+  It is entirely pure and has no IO so that is provided by the other Rust crates
+  that wrap this one.
+- `compiler-cli`: A command line interface that wraps the core compiler and
+  provides IO to files and to the console.
+- `compiler-wasm`: A JavaScript interface to the core compiler via web assembly.
+  Suitable for running in a web browser.
+
+In addition to the Rust code there are these components:
+
+- `Makefile`: A makefile that defines shortcut commands for common tasks when
+  working in the Gleam codebase. Run `make help` to view them.
+- `test`: A collection of Gleam projects that serve as integration tests for the
+  compiler.
+- `deny.toml`: Configuration for the `cargo-deny` tool which is used to ensure
+  that the Rust libraries the compiler depends on adhere to our expectations.
+- `containers`: A collection of docker-files used to produce OCI containers for
+  each Gleam release.
+- `.github/workflows`: GitHub Actions workflow definitions, used to build, test,
+  and release new versions of the project.
+- `docs`: You're looking at it pal.
 
 ## Compilation flow
 
@@ -61,43 +80,3 @@ this:
  Erlang or JavaScript 
      source code
 ```
-
-## Code map
-
-This section describes various modules comprising Gleam's core structure.
-
-Pay attention especially to the following sections:
-
-- **Architecture Invariant**: important note about crucial assumptions about the code/behavior
-- **API Boundary**: an exposed interface that requires careful design, e.g. because it has internal users to support
-
-### `ast`
-
-Types that serve as the Gleam AST, both in its *untyped* and *typed* form.
-Each tree describes a single Gleam module at its root.
-
-Untyped trees contain untyped expressions only.
-
-Typed trees contain typed expressions together with metadata
-such as the types of expressions and information on how to generate code for each value constructor used.
-Here, code has gained the context necessary to produce final Gleam output.
-
-### `parse`
-
-The parser receives source code for a single Gleam module (as `&str`, as opposed to a stream)
-and produces an untyped AST together with `ModuleExtra`
-containing various types of comments plus empty lines.
-
-Currently this means that parsing is tightly coupled with the AST structure.
-
-**Architecture Invariant**: parsing may fail, the output is in `Result<T, Error>` form.
-
-**API Boundary**: high-level operations on code, such as formatting, begin here.
-
-### `erl`
-
-TODO
-
-### `javascript`
-
-TODO

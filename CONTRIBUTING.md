@@ -79,15 +79,6 @@ docker run -v $(pwd):/opt/app -it -w /opt/app rust:latest bash
 
 Here are some tips and guidelines for writing Rust code in the Gleam compiler:
 
-Never write code that can cause the compiler to panic (`panic!`, `unwrap`,
-`expect`) as a compiler panic is confusing to the user. When possible rewrite
-the code in a way that makes the error impossible. If that cannot be done and
-the error is either common or due to a mistake by the user return an error
-value that will be printed with an appropriate helpful error message. If the
-error _should_ never happen and its occurrence indicates a fatal compiler bug
-the `.expect` method of the `GleamExpect` trait can be used. This is
-similar to `.expect` but prints a more helpful error message to the user.
-
 The `GLEAM_LOG` environment variable can be used to cause the compiler to
 print more information for debugging and introspection. i.e.
 `GLEAM_LOG=trace`.
