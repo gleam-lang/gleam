@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "external type PrivateType\npub external fn go(PrivateType) -> Int = \"\" \"\""
+
+---
+
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:2:1
+  │
+2 │ pub external fn go(PrivateType) -> Int = "" ""
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    PrivateType
+
+Private types can only be used within the module that defines them.
+

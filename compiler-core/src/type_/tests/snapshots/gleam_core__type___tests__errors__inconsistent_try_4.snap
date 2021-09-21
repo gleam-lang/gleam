@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: try y = Error(1) try z = Error(1.) Ok(1)
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:36
+  │
+1 │ try y = Error(1) try z = Error(1.) Ok(1)
+  │                                    ^^^^^
+
+Expected type:
+
+    Result(Int, Int)
+
+Found type:
+
+    Result(Int, Float)
+
+

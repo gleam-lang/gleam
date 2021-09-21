@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
+
+---
+
+error: Invalid guard variable
+  ┌─ /src/one/two.gleam:2:27
+  │
+2 │ fn main() { case 1 { _ if one -> 1 } }
+  │                           ^^^ is not locally defined
+
+Variables used in guards must be either defined in the function, or be an
+argument to the function. The variable `one` is not defined locally.
+

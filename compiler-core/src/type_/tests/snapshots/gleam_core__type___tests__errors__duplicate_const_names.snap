@@ -1,15 +1,15 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "const duplicate = 1;\n         pub const duplicate = 1"
+expression: "const duplicate = 1;\npub const duplicate = 1"
 
 ---
 
 error: Duplicate const definition with name `duplicate`
-  ┌─ /src/one/two.gleam:2:20
+  ┌─ /src/one/two.gleam:2:11
   │
 1 │ const duplicate = 1;
   │       --------- previously defined here
-2 │          pub const duplicate = 1
-  │                    ^^^^^^^^^ redefined here
+2 │ pub const duplicate = 1
+  │           ^^^^^^^^^ redefined here
 
 

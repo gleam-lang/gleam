@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n        pub type Box(a) {\n            Box(value: a, i: Int)\n        };\n        pub fn update_box(box: Box(Int), value: String) {\n            Box(..box, value: value)\n        };"
+expression: "\npub type Box(a) {\n  Box(value: a, i: Int)\n};\npub fn update_box(box: Box(Int), value: String) {\n  Box(..box, value: value)\n};"
 
 ---
 
 error: Type mismatch
-  ┌─ /src/one/two.gleam:6:31
+  ┌─ /src/one/two.gleam:6:21
   │
-6 │             Box(..box, value: value)
-  │                               ^^^^^
+6 │   Box(..box, value: value)
+  │                     ^^^^^
 
 Expected type:
 

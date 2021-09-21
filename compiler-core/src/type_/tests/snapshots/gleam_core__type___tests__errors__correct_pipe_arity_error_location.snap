@@ -1,13 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "fn x(x, y) { x }\n         fn main() { 1 |> x() }"
+expression: "fn x(x, y) { x }\nfn main() { 1 |> x() }"
 
 ---
 
 error: Incorrect arity
-  ┌─ /src/one/two.gleam:2:27
+  ┌─ /src/one/two.gleam:2:18
   │
-2 │          fn main() { 1 |> x() }
-  │                           ^^^ expected 2 arguments, got 0
+2 │ fn main() { 1 |> x() }
+  │                  ^^^ expected 2 arguments, got 0
 
 

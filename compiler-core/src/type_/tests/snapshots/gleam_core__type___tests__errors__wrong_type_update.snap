@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        };\n        pub type Box(a) {\n            Box(a)\n        };\n        pub fn update_person(person: Person, box: Box(a)) {\n            Person(..box)\n        }"
+expression: "\n pub type Person {\n   Person(name: String, age: Int)\n };\n pub type Box(a) {\n   Box(a)\n };\n pub fn update_person(person: Person, box: Box(a)) {\n   Person(..box)\n }"
 
 ---
 
 error: Type mismatch
-  ┌─ /src/one/two.gleam:9:20
+  ┌─ /src/one/two.gleam:9:11
   │
-9 │             Person(..box)
-  │                    ^^^^^
+9 │    Person(..box)
+  │           ^^^^^
 
 Expected type:
 

@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "type X { X(a: Int, b: Float) }\nfn x() {\n    let x = X(a: 1, c: 2.0)\n    x\n}"
+expression: "type X { X(a: Int, b: Float) }\nfn x() {\n  let x = X(a: 1, c: 2.0)\n  x\n}"
 
 ---
 
 error: Unknown label
-  ┌─ /src/one/two.gleam:3:21
+  ┌─ /src/one/two.gleam:3:19
   │
-3 │     let x = X(a: 1, c: 2.0)
-  │                     ^^^^^^ did you mean `b`?
+3 │   let x = X(a: 1, c: 2.0)
+  │                   ^^^^^^ did you mean `b`?
 
 The other labelled arguments that this constructor accepts are `b`.
 

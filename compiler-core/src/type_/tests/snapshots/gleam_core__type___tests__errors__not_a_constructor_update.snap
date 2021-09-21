@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        };\n        pub fn identity(a) { a }\n        pub fn update_person(person: Person) {\n            identity(..person)\n        }"
+expression: "\npub type Person {\n  Person(name: String, age: Int)\n};\npub fn identity(a) { a }\npub fn update_person(person: Person) {\n  identity(..person)\n}"
 
 ---
 
 error: Invalid record constructor
-  ┌─ /src/one/two.gleam:7:13
+  ┌─ /src/one/two.gleam:7:3
   │
-7 │             identity(..person)
-  │             ^^^^^^^^ This is not a record constructor
+7 │   identity(..person)
+  │   ^^^^^^^^ This is not a record constructor
 
 Only record constructors can be used with the update syntax.
 

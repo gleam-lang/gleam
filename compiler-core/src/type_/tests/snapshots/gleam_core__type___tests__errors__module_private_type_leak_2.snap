@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "external type PrivateType\nexternal fn go() -> PrivateType = \"\" \"\"\npub fn leak_type() { go() }"
+
+---
+
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:3:1
+  │
+3 │ pub fn leak_type() { go() }
+  │ ^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    PrivateType
+
+Private types can only be used within the module that defines them.
+

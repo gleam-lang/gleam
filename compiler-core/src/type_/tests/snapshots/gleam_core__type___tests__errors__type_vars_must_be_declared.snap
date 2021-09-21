@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "type A(a) { A };\n           type B = a"
+expression: "type A(a) { A };\ntype B = a"
 
 ---
 
 error: Unknown type
-  ┌─ /src/one/two.gleam:2:21
+  ┌─ /src/one/two.gleam:2:10
   │
-2 │            type B = a
-  │                     ^ did you mean `A`?
+2 │ type B = a
+  │          ^ did you mean `A`?
 
 The type `a` is not defined or imported in this module.
 

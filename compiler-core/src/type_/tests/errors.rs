@@ -859,135 +859,28 @@ fn unknown_field() {
 }
 
 #[test]
-fn inconsistent_try_error() {
-    assert_error!(
-        "try x = Error(1) try y = Error(1.) Ok(x)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 35, end: 40 },
-            expected: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link {
-                        type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 }))
-                        })
-                    })),
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                }),
-            ),
-            given: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link {
-                        type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 }))
-                        })
-                    })),
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
-                }),
-            ),
-        },
-    );
+fn inconsistent_try_1() {
+    assert_error!("try x = Error(1) try y = Error(1.) Ok(x)");
+}
 
-    assert_error!(
-        "try x = Error(1) Error(1.)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 17, end: 26 },
-            expected: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link {
-                        type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12 }))
-                        })
-                    })),
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                }),
-            ),
-            given: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 12 }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
-                }),
-            ),
-        },
-    );
+#[test]
+fn inconsistent_try_2() {
+    assert_error!("try x = Error(1) Error(1.)");
+}
 
-    assert_error!(
-        "try x = Error(1) 1",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 17, end: 18 },
-            expected: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 11 }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                }),
-            ),
-            given: int(),
-        },
-    );
+#[test]
+fn inconsistent_try_3() {
+    assert_error!("try x = Error(1) 1");
+}
 
-    assert_error!(
-        "try y = Error(1) try z = Error(1.) Ok(1)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 35, end: 40 },
-            expected: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                }),
-            ),
-            given: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() })),
-                }),
-            ),
-        },
-    );
+#[test]
+fn inconsistent_try_4() {
+    assert_error!("try y = Error(1) try z = Error(1.) Ok(1)");
+}
 
-    assert_error!(
-        r#"try x = Error(1) Error("Not this one") Error("This one")"#,
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 39, end: 56 },
-            expected: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link {
-                        type_: Arc::new(Type::Var {
-                            type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14 }))
-                        })
-                    }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
-                }),
-            ),
-            given: result(
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 14 }))
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Link { type_: string() })),
-                }),
-            ),
-        },
-    );
+#[test]
+fn inconsistent_try_5() {
+    assert_error!(r#"try x = Error(1) Error("Not this one") Error("This one")"#);
 }
 
 #[test]
@@ -1208,83 +1101,44 @@ fn module_arity_error() {
 }
 
 #[test]
-fn module_private_type_leak() {
+fn module_private_type_leak_1() {
     assert_module_error!(
         r#"external type PrivateType
-           pub external fn leak_type() -> PrivateType = "" """#,
-        Error::PrivateTypeLeak {
-            location: SrcSpan { start: 37, end: 87 },
-            leaked: Type::App {
-                args: vec![],
-                public: false,
-                module: vec!["my_module".to_string()],
-                name: "PrivateType".to_string(),
-            },
-        }
+pub external fn leak_type() -> PrivateType = "" """#
     );
+}
 
+#[test]
+fn module_private_type_leak_2() {
     assert_module_error!(
         r#"external type PrivateType
-           external fn go() -> PrivateType = "" ""
-           pub fn leak_type() { go() }"#,
-        Error::PrivateTypeLeak {
-            location: SrcSpan {
-                start: 88,
-                end: 106,
-            },
-            leaked: Type::App {
-                args: vec![],
-                public: false,
-                module: vec!["my_module".to_string()],
-                name: "PrivateType".to_string(),
-            },
-        }
+external fn go() -> PrivateType = "" ""
+pub fn leak_type() { go() }"#
     );
+}
 
+#[test]
+fn module_private_type_leak_3() {
     assert_module_error!(
         r#"external type PrivateType
-           external fn go() -> PrivateType = "" ""
-           pub fn leak_type() { [go()] }"#,
-        Error::PrivateTypeLeak {
-            location: SrcSpan {
-                start: 88,
-                end: 106,
-            },
-            leaked: Type::App {
-                args: vec![],
-                public: false,
-                module: vec!["my_module".to_string()],
-                name: "PrivateType".to_string(),
-            },
-        }
+external fn go() -> PrivateType = "" ""
+pub fn leak_type() { [go()] }"#
     );
+}
 
+#[test]
+fn module_private_type_leak_4() {
     assert_module_error!(
         r#"external type PrivateType
-                    pub external fn go(PrivateType) -> Int = "" """#,
-        Error::PrivateTypeLeak {
-            location: SrcSpan { start: 46, end: 92 },
-            leaked: Type::App {
-                args: vec![],
-                public: false,
-                module: vec!["my_module".to_string()],
-                name: "PrivateType".to_string(),
-            },
-        }
+pub external fn go(PrivateType) -> Int = "" """#
     );
+}
 
+#[test]
+fn module_private_type_leak_5() {
     assert_module_error!(
         r#"external type PrivateType
-           pub type LeakType { Variant(PrivateType) }"#,
-        Error::PrivateTypeLeak {
-            location: SrcSpan { start: 57, end: 77 },
-            leaked: Type::App {
-                args: vec![],
-                public: false,
-                module: vec!["my_module".to_string()],
-                name: "PrivateType".to_string(),
-            },
-        }
+pub type LeakType { Variant(PrivateType) }"#
     );
 }
 
@@ -1297,7 +1151,7 @@ fn unexpected_labelled_arg() {
 fn positional_argument_after_labelled() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
-                    fn x() { X(b: 1, a: 1, 1) }"#
+fn x() { X(b: 1, a: 1, 1) }"#
     );
 }
 
@@ -1347,75 +1201,49 @@ fn unknown_type() {
 fn module_non_local_gaurd_var() {
     assert_module_error!(
         r#"fn one() { 1 }
-           fn main() { case 1 { _ if one -> 1 } }"#,
-        Error::NonLocalClauseGuardVariable {
-            location: SrcSpan { start: 52, end: 55 },
-            name: "one".to_string(),
-        }
+fn main() { case 1 { _ if one -> 1 } }"#
     );
+}
 
+#[test]
+fn unknown_record_field() {
     // An unknown field should report the possible fields' labels
     assert_module_error!(
         "
 pub type Box(a) { Box(inner: a) }
 pub fn main(box: Box(Int)) { box.unknown }
-",
-        Error::UnknownRecordField {
-            location: SrcSpan { start: 64, end: 75 },
-            label: "unknown".to_string(),
-            fields: vec!["inner".to_string()],
-            typ: Arc::new(Type::App {
-                args: vec![int()],
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-            }),
-        },
+"
     );
+}
 
+#[test]
+fn unknown_record_field_2() {
     // An unknown field should report the possible fields' labels
     assert_module_error!(
         "
 pub type Box(a) { Box(inner: a) }
-pub fn main(box: Box(Box(Int))) { box.inner.unknown }
-    ",
-        Error::UnknownRecordField {
-            location: SrcSpan { start: 69, end: 86 },
-            label: "unknown".to_string(),
-            fields: vec!["inner".to_string()],
-            typ: Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Link {
-                    type_: Arc::new(Type::App {
-                        args: vec![int()],
-                        public: true,
-                        module: vec!["my_module".to_string()],
-                        name: "Box".to_string(),
-                    }),
-                })),
-            }),
-        },
+pub fn main(box: Box(Box(Int))) { box.inner.unknown }"
     );
+}
 
+#[test]
+fn unnecessary_spread_operator() {
     assert_module_error!(
         "
 type Triple {
-    Triple(a: Int, b: Int, c: Int)
+  Triple(a: Int, b: Int, c: Int)
 }
 
 fn main() {
   let triple = Triple(1,2,3)
   let Triple(a, b, c, ..) = triple
   a
-}",
-        Error::UnnecessarySpreadOperator {
-            location: SrcSpan {
-                start: 116,
-                end: 118
-            },
-            arity: 3
-        }
+}"
     );
+}
 
+#[test]
+fn the_rest_again() {
     // Duplicate var in record
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
@@ -1469,41 +1297,21 @@ fn main() {
             }),
         },
     );
+}
 
+#[test]
+fn type_variables_in_body() {
     // Type variables are shared between function annotations and let annotations within their body
     assert_module_error!(
         "
-        pub type Box(a) {
-            Box(value: a)
-        }
-        pub fn go(box1: Box(a), box2: Box(b)) {
-            let _: Box(a) = box2
-            let _: Box(b) = box1
-            5
-        }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan {
-                start: 139,
-                end: 143
-            },
-            expected: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 8 })),
-                })]
-            }),
-            given: Arc::new(Type::App {
-                public: true,
-                module: vec!["my_module".to_string()],
-                name: "Box".to_string(),
-                args: vec![Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 10 })),
-                })]
-            }),
-        },
+pub type Box(a) {
+  Box(value: a)
+}
+pub fn go(box1: Box(a), box2: Box(b)) {
+  let _: Box(a) = box2
+  let _: Box(b) = box1
+  5
+}"
     );
 }
 
@@ -1599,27 +1407,15 @@ fn duplicate_constructors() {
 }
 
 #[test]
-fn duplicate_type_names() {
+fn duplicate_alias_names() {
     // We cannot reuse an alias name in the same module
-    assert_module_error!(
-        "type X = Int type X = Int",
-        Error::DuplicateTypeName {
-            location: SrcSpan { start: 13, end: 25 },
-            previous_location: SrcSpan { start: 0, end: 12 },
-            name: "X".to_string(),
-        }
-    );
+    assert_module_error!("type X = Int type X = Int");
+}
 
+#[test]
+fn duplicate_custom_type_names() {
     // We cannot declare two types with the same name in a module
-    assert_module_error!(
-        "type DupType { A }
-         type DupType { B }",
-        Error::DuplicateTypeName {
-            location: SrcSpan { start: 28, end: 40 },
-            previous_location: SrcSpan { start: 0, end: 12 },
-            name: "DupType".to_string(),
-        }
-    );
+    assert_module_error!("type DupType { A } type DupType { B }");
 }
 
 #[test]
@@ -1627,7 +1423,7 @@ fn duplicate_const_names() {
     // We cannot declare two const with the same name in a module
     assert_module_error!(
         "const duplicate = 1;
-         pub const duplicate = 1"
+pub const duplicate = 1"
     );
 }
 
@@ -1636,7 +1432,7 @@ fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
     assert_module_error!(
         "fn x(x, y) { x }
-         fn main() { 1 |> x() }"
+fn main() { 1 |> x() }"
     );
 }
 
@@ -1712,7 +1508,7 @@ fn module_constants() {
 fn custom_type_module_constants() {
     assert_module_error!(
         r#"type X { X }
-        const x = unknown.X"#
+const x = unknown.X"#
     );
 }
 
@@ -1721,8 +1517,8 @@ fn unknown_label() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
 fn x() {
-    let x = X(a: 1, c: 2.0)
-    x
+  let x = X(a: 1, c: 2.0)
+  x
 }"#
     );
 }
@@ -1732,15 +1528,15 @@ fn wrong_type_update() {
     // A variable of the wrong type given to a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int)
-        };
-        pub type Box(a) {
-            Box(a)
-        };
-        pub fn update_person(person: Person, box: Box(a)) {
-            Person(..box)
-        }"
+ pub type Person {
+   Person(name: String, age: Int)
+ };
+ pub type Box(a) {
+   Box(a)
+ };
+ pub fn update_person(person: Person, box: Box(a)) {
+   Person(..box)
+ }"
     );
 }
 
@@ -1749,12 +1545,12 @@ fn unknown_variable_update() {
     // An undefined variable given to a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int)
-        };
-        pub fn update_person() {
-            Person(..person)
-        }"
+pub type Person {
+  Person(name: String, age: Int)
+};
+pub fn update_person() {
+  Person(..person)
+}"
     );
 }
 
@@ -1763,12 +1559,12 @@ fn unknown_field_update() {
     // An unknown field given to a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String)
-        };
-        pub fn update_person(person: Person) {
-            Person(..person, one: 5)
-        }"
+ pub type Person {
+   Person(name: String)
+ };
+ pub fn update_person(person: Person) {
+   Person(..person, one: 5)
+ }"
     );
 }
 
@@ -1777,12 +1573,12 @@ fn unknown_field_update2() {
     // An unknown field given to a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int, size: Int)
-        };
-        pub fn update_person(person: Person) {
-            Person(..person, size: 66, one: 5, age: 3)
-        }"
+ pub type Person {
+   Person(name: String, age: Int, size: Int)
+ };
+ pub fn update_person(person: Person) {
+   Person(..person, size: 66, one: 5, age: 3)
+ }"
     );
 }
 
@@ -1791,12 +1587,12 @@ fn unknown_constructor_update() {
     // An unknown record constructor being used in a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int)
-        };
-        pub fn update_person(person: Person) {
-            NotAPerson(..person)
-        }"
+pub type Person {
+   Person(name: String, age: Int)
+};
+pub fn update_person(person: Person) {
+   NotAPerson(..person)
+}"
     );
 }
 
@@ -1805,13 +1601,13 @@ fn not_a_constructor_update() {
     // Something other than a record constructor being used in a record update
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int)
-        };
-        pub fn identity(a) { a }
-        pub fn update_person(person: Person) {
-            identity(..person)
-        }"
+pub type Person {
+  Person(name: String, age: Int)
+};
+pub fn identity(a) { a }
+pub fn update_person(person: Person) {
+  identity(..person)
+}"
     );
 }
 
@@ -1820,13 +1616,13 @@ fn expression_constructor_update() {
     // A record update with a constructor returned from an expression
     assert_module_error!(
         "
-        pub type Person {
-            Person(name: String, age: Int)
-        };
-        pub fn update_person(person: Person) {
-            let constructor = Person
-            constructor(..person)
-        }"
+pub type Person {
+  Person(name: String, age: Int)
+};
+pub fn update_person(person: Person) {
+  let constructor = Person
+  constructor(..person)
+}"
     );
 }
 
@@ -1835,12 +1631,12 @@ fn generic_record_update1() {
     // A record update on polymorphic types with a field of the wrong type
     assert_module_error!(
         "
-        pub type Box(a) {
-            Box(value: a, i: Int)
-        };
-        pub fn update_box(box: Box(Int), value: String) {
-            Box(..box, value: value)
-        };"
+pub type Box(a) {
+  Box(value: a, i: Int)
+};
+pub fn update_box(box: Box(Int), value: String) {
+  Box(..box, value: value)
+};"
     );
 }
 
@@ -1849,12 +1645,12 @@ fn generic_record_update2() {
     // A record update on polymorphic types with generic fields of the wrong type
     assert_module_error!(
         "
-        pub type Box(a) {
-            Box(value: a, i: Int)
-        };
-        pub fn update_box(box: Box(a), value: b) {
-            Box(..box, value: value)
-        };"
+pub type Box(a) {
+  Box(value: a, i: Int)
+};
+pub fn update_box(box: Box(a), value: b) {
+  Box(..box, value: value)
+};"
     );
 }
 
@@ -1863,7 +1659,7 @@ fn type_vars_must_be_declared() {
     // https://github.com/gleam-lang/gleam/issues/734
     assert_module_error!(
         r#"type A(a) { A };
-           type B = a"#
+type B = a"#
     );
 }
 
@@ -1908,7 +1704,7 @@ fn case_clause_pipe_diagnostic() {
     assert_module_error!(
         r#"
 pub fn change(x: String) -> String {
-    ""
+  ""
 }
 
 pub fn parse(input: BitString) -> String {

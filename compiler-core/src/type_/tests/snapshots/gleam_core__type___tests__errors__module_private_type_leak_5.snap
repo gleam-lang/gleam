@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "external type PrivateType\npub type LeakType { Variant(PrivateType) }"
+
+---
+
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:2:21
+  │
+2 │ pub type LeakType { Variant(PrivateType) }
+  │                     ^^^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    PrivateType
+
+Private types can only be used within the module that defines them.
+
