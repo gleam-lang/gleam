@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let x = <<<<1:1>>:binary>> x"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ let x = <<<<1:1>>:binary>> x
+  │                   ^^^^^^ This option is only allowed in BitString patterns.
+
+Hint: This option has no effect in BitString values.
+See: https://gleam.run/book/tour/bit-strings.html
+

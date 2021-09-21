@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let x = <<1:utf8-unit(5)>> x"
+
+---
+
+error: BitString Segment Error
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ let x = <<1:utf8-unit(5)>> x
+  │             ^^^^ unit cannot be specified here
+
+Hint: utf8 segments are sized based on their value and cannot have a unit.
+See: https://gleam.run/book/tour/bit-strings.html
+

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:35
+  │
+1 │ let a = 2.0 case <<1>> { <<1:size(a)>> -> a }
+  │                                   ^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+

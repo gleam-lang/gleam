@@ -1,5 +1,5 @@
 use super::*;
-use crate::{ast::BinOp, bit_string};
+use crate::ast::BinOp;
 
 macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
@@ -107,20 +107,14 @@ macro_rules! assert_error {
 }
 
 #[test]
-fn bit_strings() {
+fn bit_string_invalid_type() {
     assert_module_error!(
         "fn x() { \"test\" }
 
 fn main() {
     let a = <<1:size(x())>>
     a
-}",
-        Error::CouldNotUnify {
-            location: SrcSpan { start: 52, end: 55 },
-            expected: int(),
-            given: string(),
-            situation: None,
-        },
+}"
     );
 }
 
@@ -215,174 +209,98 @@ fn bit_string_segment_size2() {
 }
 
 #[test]
-fn bit_string_segment_unit() {
+fn bit_string_segment_unit_unit() {
     assert_error!("let x = <<1:unit(2)-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_codepoint_unit() {
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8() {
     assert_error!("let x = <<1:utf8_codepoint-unit(5)>> x");
 }
 
-// TODO
 #[test]
-fn bit_string_segment_etc() {
-    assert_error!(
-        "let x = <<1:utf16_codepoint-unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf16_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 27 },
-        }
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf32_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 17, end: 32 },
-        }
-    );
-    assert_error!(
-        "let x = <<1:utf8_codepoint-size(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf8_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 26 },
-        }
-    );
-
-    assert_error!(
-        "let x = <<1:utf16_codepoint-size(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf16_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 27 },
-        }
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf32_codepoint".to_string(),
-            },
-            location: SrcSpan { start: 17, end: 32 },
-        }
-    );
-
-    assert_error!(
-        "let x = <<1:utf8-unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf8".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 16 },
-        }
-    );
-
-    assert_error!(
-        "let x = <<1:utf16-unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf16".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 17 },
-        }
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:utf32-unit(2)>> -> a }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowUnit {
-                typ: "utf32".to_string(),
-            },
-            location: SrcSpan { start: 17, end: 22 },
-        }
-    );
-    assert_error!(
-        "let x = <<1:utf8-size(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf8".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 16 },
-        }
-    );
-
-    assert_error!(
-        "let x = <<1:utf16-size(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf16".to_string(),
-            },
-            location: SrcSpan { start: 12, end: 17 },
-        }
-    );
-
-    assert_error!(
-        "case <<1>> { <<1:utf32-size(5)>> -> a }",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::TypeDoesNotAllowSize {
-                typ: "utf32".to_string(),
-            },
-            location: SrcSpan { start: 17, end: 22 },
-        }
-    );
-
-    assert_error!(
-        "let x = <<1:unit(5)>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::UnitMustHaveSize,
-            location: SrcSpan { start: 12, end: 19 },
-        }
-    );
-
-    // Size and unit values
-
-    assert_error!(
-        "let x = <<1:size(\"1\")>> x",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 17, end: 20 },
-            expected: int(),
-            given: string(),
-        },
-    );
-
-    assert_error!(
-        "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 34, end: 35 },
-            expected: int(),
-            given: float(),
-        },
-    );
-
-    // float given size
-    assert_error!(
-        "let x = <<1:8-float>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::FloatWithSize,
-            location: SrcSpan { start: 12, end: 13 },
-        }
-    );
-    // using binary in value
-    assert_error!(
-        "let x = <<<<1:1>>:binary>> x",
-        Error::BitStringSegmentError {
-            error: bit_string::ErrorType::OptionNotAllowedInValue,
-            location: SrcSpan { start: 18, end: 24 },
-        }
-    );
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16() {
+    assert_error!("let x = <<1:utf16_codepoint-unit(5)>> x");
 }
 
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32() {
+    assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8_2() {
+    assert_error!("let x = <<1:utf8_codepoint-size(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16_2() {
+    assert_error!("let x = <<1:utf16_codepoint-size(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32_2() {
+    assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_utf8_2() {
+    assert_error!("let x = <<1:utf8-unit(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_utf16() {
+    assert_error!("let x = <<1:utf16-unit(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_unit_utf32() {
+    assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> a }");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_size_utf8() {
+    assert_error!("let x = <<1:utf8-size(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_size_utf16() {
+    assert_error!("let x = <<1:utf16-size(5)>> x");
+}
+
+#[test]
+fn bit_string_segment_type_does_not_allow_size_utf32() {
+    assert_error!("case <<1>> { <<1:utf32-size(5)>> -> a }");
+}
+
+#[test]
+fn bit_string_segment_unit_no_size() {
+    assert_error!("let x = <<1:unit(5)>> x");
+}
+
+#[test]
+fn bit_string_size_not_int() {
+    assert_error!("let x = <<1:size(\"1\")>> x");
+}
+
+#[test]
+fn bit_string_size_not_int_variable() {
+    assert_error!("let a = 2.0 case <<1>> { <<1:size(a)>> -> a }");
+}
+
+#[test]
+fn bit_string_float_size() {
+    // float given size
+    assert_error!("let x = <<1:8-float>> x");
+}
+
+#[test]
+fn bit_string_binary_option_in_value() {
+    // using binary in value
+    assert_error!("let x = <<<<1:1>>:binary>> x");
+}
+
+// TODO
 #[test]
 fn binop_unification_errors() {
     assert_error!(
