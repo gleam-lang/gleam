@@ -16,9 +16,10 @@ install: ## Build the Gleam compiler and place it on PATH
 
 .PHONY: test
 test: ## Run the compiler unit tests
-	@cargo test --quiet
-	@cd test/language && make
-	@cd test/javascript_prelude && make test
+	cargo test --quiet
+	cargo clippy
+	cd test/language && make
+	cd test/javascript_prelude && make test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
