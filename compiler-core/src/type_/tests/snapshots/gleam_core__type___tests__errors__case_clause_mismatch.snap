@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 1 { a -> 1 b -> 2.0 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:17
+  │
+1 │ case 1 { a -> 1 b -> 2.0 }
+  │                 ^^^^^^^^
+
+This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 1.0 { 1 -> 1 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ case 1.0 { 1 -> 1 }
+  │            ^
+
+Expected type:
+
+    Float
+
+Found type:
+
+    Int
+
+

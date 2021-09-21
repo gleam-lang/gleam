@@ -356,89 +356,43 @@ fn incorrect_arity_error_2() {
 }
 
 #[test]
-fn case_clause_unification_error() {
-    assert_error!(
-        "case 1 { a -> 1 b -> 2.0 }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
-            location: SrcSpan { start: 16, end: 24 },
-            expected: int(),
-            given: float(),
-        },
-    );
-
-    assert_error!(
-        "case 1.0 { 1 -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 11, end: 12 },
-            expected: float(),
-            given: int(),
-        },
-    );
-
-    assert_error!(
-        "case 1 { 1.0 -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 9, end: 12 },
-            expected: int(),
-            given: float(),
-        },
-    );
-
-    assert_error!(
-        "case 1, 2.0 { a, b -> a + b }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::Operator(BinOp::AddInt)),
-            location: SrcSpan { start: 26, end: 27 },
-            expected: int(),
-            given: float(),
-        },
-    );
-
-    assert_error!(
-        "case 1, 2.0 { a, b -> a 1, 2 -> 0 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 27, end: 28 },
-            expected: float(),
-            given: int(),
-        },
-    );
+fn case_clause_mismatch() {
+    assert_error!("case 1 { a -> 1 b -> 2.0 }");
 }
 
 #[test]
-fn annotated_functions_unification_error() {
-    assert_error!(
-        "let f = fn(x: Int) { x } f(1.0)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 27, end: 30 },
-            expected: int(),
-            given: float(),
-        },
-    );
+fn case_subject_pattern_unify() {
+    assert_error!("case 1.0 { 1 -> 1 }");
+}
 
-    assert_error!(
-        "fn() -> Int { 2.0 }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::ReturnAnnotationMismatch),
-            location: SrcSpan { start: 14, end: 17 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn case_subject_pattern_unify_2() {
+    assert_error!("case 1 { 1.0 -> 1 }");
+}
 
-    assert_error!(
-        "fn(x: Int) -> Float { x }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::ReturnAnnotationMismatch),
-            location: SrcSpan { start: 22, end: 23 },
-            expected: float(),
-            given: int(),
-        },
-    );
+#[test]
+fn case_operator_unify_situation() {
+    assert_error!("case 1, 2.0 { a, b -> a + b }");
+}
+
+#[test]
+fn case_could_not_unify() {
+    assert_error!("case 1, 2.0 { a, b -> a 1, 2 -> 0 }");
+}
+
+#[test]
+fn assigned_function_annotation() {
+    assert_error!("let f = fn(x: Int) { x } f(1.0)");
+}
+
+#[test]
+fn function_return_annotation() {
+    assert_error!("fn() -> Int { 2.0 }");
+}
+
+#[test]
+fn function_arg_and_return_annotation() {
+    assert_error!("fn(x: Int) -> Float { x }");
 }
 
 #[test]
@@ -454,29 +408,7 @@ fn pipe_mismatch_error() {
           
          fn eat_veggie(v: Veg) -> String {
             \"Ok\"
-         }",
-        Error::CouldNotUnify {
-            situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-            location: SrcSpan { start: 60, end: 70 },
-            expected: fn_(
-                vec![Arc::new(Type::App {
-                    public: false,
-                    module: vec!["my_module".to_string(),],
-                    name: "Veg".to_string(),
-                    args: vec![],
-                })],
-                string(),
-            ),
-            given: fn_(
-                vec![Arc::new(Type::App {
-                    public: false,
-                    module: vec!["my_module".to_string()],
-                    name: "Fruit".to_string(),
-                    args: vec![],
-                })],
-                unbound_var(7)
-            )
-        },
+         }"
     );
 }
 

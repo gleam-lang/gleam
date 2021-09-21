@@ -214,6 +214,7 @@ fn did_you_mean(name: &str, options: &[String], alt: &'static str) -> String {
     options
         .iter()
         .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
+        .sorted()
         .min_by_key(|option| strsim::levenshtein(option, name))
         .map(|option| format!("did you mean `{}`?", option))
         .unwrap_or_else(|| alt.to_string())
