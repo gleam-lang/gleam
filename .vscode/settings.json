@@ -1,13 +1,6 @@
 {
   // Don't show these files in search
-  "files.exclude": {
-    // Version control
-    "**/.git": true,
-
-    // OSX detritus
-    "**/.DS_Store": true,
-    "**/Thumbs.db": true,
-
+  "search.exclude": {
     // Test snapshots
     "**/*.snap": true,
 
