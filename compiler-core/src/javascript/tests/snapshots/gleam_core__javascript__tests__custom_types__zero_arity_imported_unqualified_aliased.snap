@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
+
+---
+import * as $other from "../other.js";
+import { Two as Three } from "../other.js";
+
+export function main() {
+  return new Three();
+}
+

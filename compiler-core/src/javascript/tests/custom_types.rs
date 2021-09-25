@@ -65,24 +65,20 @@ pub fn main() {
     );
 }
 
-// TODO
-// #[test]
-// fn zero_arity_imported_unqualified_aliased() {
-//     assert_js!(
-//         ( CURRENT_PACKAGE, vec!["other".to_string()], r#"pub type One { Two }"#),
-//         r#"import other.{Two as Three}
-// pub fn main() {
-//   Three
-// }"#,
-//         r#"import * as Other from "../other.js";
-// const { Two as Three } = other;
-//
-// export function main() {
-//   return { type: "Two" };
-// }
-// "#
-//     );
-// }
+#[test]
+fn zero_arity_imported_unqualified_aliased() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { Two }"#
+        ),
+        r#"import other.{Two as Three}
+pub fn main() {
+  Three
+}"#
+    );
+}
 
 #[test]
 fn const_zero_arity_imported() {
