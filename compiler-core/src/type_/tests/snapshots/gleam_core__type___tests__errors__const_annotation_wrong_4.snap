@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub const pair: #(Int, Float) = #(4.1, 1)"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:33
+  │
+1 │ pub const pair: #(Int, Float) = #(4.1, 1)
+  │                                 ^^^^^^^^^
+
+Expected type:
+
+    #(Int, Float)
+
+Found type:
+
+    #(Float, Int)
+
+

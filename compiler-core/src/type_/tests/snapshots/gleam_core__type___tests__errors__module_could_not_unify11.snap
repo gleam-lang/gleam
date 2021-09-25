@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        pub type Box(inner) {\n            Box(inner)\n        }\n\n        pub fn create_int_box(value: Int) {\n            let x: Box(Float) = Box(value)\n            x\n        }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:33
+  │
+7 │             let x: Box(Float) = Box(value)
+  │                                 ^^^^^^^^^^
+
+Expected type:
+
+    Box(Float)
+
+Found type:
+
+    Box(Int)
+
+

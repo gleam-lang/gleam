@@ -8,8 +8,6 @@ mod pipe;
 mod prelude;
 pub mod pretty;
 #[cfg(test)]
-mod test_helpers;
-#[cfg(test)]
 mod tests;
 
 pub use environment::*;

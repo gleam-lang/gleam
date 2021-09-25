@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn main() { let x: #(x, x) = #(5, 5.0) x }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:30
+  │
+1 │ fn main() { let x: #(x, x) = #(5, 5.0) x }
+  │                              ^^^^^^^^^
+
+Expected type:
+
+    #(a, a)
+
+Found type:
+
+    #(Int, Float)
+
+

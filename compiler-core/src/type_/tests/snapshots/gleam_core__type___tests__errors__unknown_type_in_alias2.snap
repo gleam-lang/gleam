@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type IntMap = Map(Inf, Int)"
+
+---
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:1:19
+  │
+1 │ type IntMap = Map(Inf, Int)
+  │                   ^^^ did you mean `Int`?
+
+The type `Inf` is not defined or imported in this module.
+

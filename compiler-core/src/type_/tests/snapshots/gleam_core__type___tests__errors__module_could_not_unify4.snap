@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn bar() -> Int {\n    5\n}\n\nfn run(one: fn() -> String) {\n    one()\n}\n\nfn demo() {\n    run(bar)\n}"
+
+---
+
+error: Type mismatch
+   ┌─ /src/one/two.gleam:11:9
+   │
+11 │     run(bar)
+   │         ^^^
+
+Expected type:
+
+    fn() -> String
+
+Found type:
+
+    fn() -> Int
+
+

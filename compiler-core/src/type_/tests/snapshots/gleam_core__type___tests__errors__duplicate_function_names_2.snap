@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn dupe() { 1 }\nfn dupe() { 2.0 }"
+
+---
+
+error: Duplicate function definition with name `dupe`
+  ┌─ /src/one/two.gleam:2:1
+  │
+1 │ fn dupe() { 1 }
+  │ --------- previously defined here
+2 │ fn dupe() { 2.0 }
+  │ ^^^^^^^^^ redefined here
+
+

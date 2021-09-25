@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let x = 1 case #(1, 2) { #(1, y) | #(x, y) -> 1 }"
+
+---
+
+error: Extra alternative pattern variable
+  ┌─ /src/one/two.gleam:1:38
+  │
+1 │ let x = 1 case #(1, 2) { #(1, y) | #(x, y) -> 1 }
+  │                                      ^ has not been previously defined
+
+All alternative patterns must define the same variables as the initial
+pattern. This variable `x` has not been previously defined.
+

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:45
+  │
+1 │ fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }
+  │                                             ^^^^^^^
+
+Expected type:
+
+    List(String)
+
+Found type:
+
+    List(Int)
+
+

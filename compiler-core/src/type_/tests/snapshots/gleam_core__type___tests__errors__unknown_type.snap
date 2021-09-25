@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Thing { Thing(unknown: x) }"
+
+---
+
+error: Unknown type
+  ┌─ /src/one/two.gleam:1:29
+  │
+1 │ type Thing { Thing(unknown: x) }
+  │                             ^ did you mean `Int`?
+
+The type `x` is not defined or imported in this module.
+

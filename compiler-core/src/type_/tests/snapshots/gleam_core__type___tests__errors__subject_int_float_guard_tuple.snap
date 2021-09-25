@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type X { X(a: Int, b: Float) }\nfn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:39
+  │
+2 │ fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }
+  │                                       ^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+
+

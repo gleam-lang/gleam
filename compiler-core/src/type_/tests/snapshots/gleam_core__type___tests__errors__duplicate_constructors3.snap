@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "type Boxy { Box(Int) Box(Float) }"
+
+---
+
+error: Duplicate function definition with name `Box`
+  ┌─ /src/one/two.gleam:1:22
+  │
+1 │ type Boxy { Box(Int) Box(Float) }
+  │             -------- ^^^^^^^^^^ redefined here
+  │             │         
+  │             previously defined here
+
+

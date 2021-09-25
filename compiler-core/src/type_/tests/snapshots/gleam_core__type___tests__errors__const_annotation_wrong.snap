@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub const group_id: Int = \"42\""
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:27
+  │
+1 │ pub const group_id: Int = "42"
+  │                           ^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    String
+
+
