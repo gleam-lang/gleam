@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:41
+  │
+1 │ case 2.22, 1, "three" { x, _, y if x <. y -> 1 }
+  │                                         ^
+
+Expected type:
+
+    Float
+
+Found type:
+
+    String
+
+

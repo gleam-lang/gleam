@@ -494,205 +494,102 @@ fn guard_if_float() {
 
 #[test]
 fn case() {
-    assert_error!(
-        "case #(1, 1.0) { #(x, _) | #(_, x) -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 32, end: 33 },
-            expected: int(),
-            given: float(),
-        },
-    );
+    assert_error!("case #(1, 1.0) { #(x, _) | #(_, x) -> 1 }");
+}
 
-    assert_error!(
-        "case [3.33], 1 { x, y if x > y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 25, end: 26 },
-            expected: int(),
-            given: list(float())
-        }
-    );
+#[test]
+fn case2() {
+    assert_error!("case [3.33], 1 { x, y if x > y -> 1 }");
+}
 
-    assert_error!(
-        "case 1, 2.22, \"three\" { x, _, y if x > y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 39, end: 40 },
-            expected: int(),
-            given: string()
-        }
-    );
+#[test]
+fn case3() {
+    assert_error!("case 1, 2.22, \"three\" { x, _, y if x > y -> 1 }");
+}
 
-    assert_error!(
-        "case [3.33], 1 { x, y if x >= y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 25, end: 26 },
-            expected: int(),
-            given: list(float())
-        }
-    );
+#[test]
+fn case4() {
+    assert_error!("case [3.33], 1 { x, y if x >= y -> 1 }");
+}
 
-    assert_error!(
-        "case 1, 2.22, \"three\" { x, _, y if x >= y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 40, end: 41 },
-            expected: int(),
-            given: string()
-        }
-    );
+#[test]
+fn case5() {
+    assert_error!("case 1, 2.22, \"three\" { x, _, y if x >= y -> 1 }");
+}
 
-    assert_error!(
-        "case [3.33], 1 { x, y if x < y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 25, end: 26 },
-            expected: int(),
-            given: list(float())
-        }
-    );
+#[test]
+fn case6() {
+    assert_error!("case [3.33], 1 { x, y if x < y -> 1 }");
+}
 
-    assert_error!(
-        "case 1, 2.22, \"three\" { x, _, y if x < y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 39, end: 40 },
-            expected: int(),
-            given: string()
-        }
-    );
+#[test]
+fn case7() {
+    assert_error!("case 1, 2.22, \"three\" { x, _, y if x < y -> 1 }");
+}
 
-    assert_error!(
-        "case [3.33], 1 { x, y if x <= y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 25, end: 26 },
-            expected: int(),
-            given: list(float())
-        }
-    );
+#[test]
+fn case8() {
+    assert_error!("case [3.33], 1 { x, y if x <= y -> 1 }");
+}
 
-    assert_error!(
-        "case 1, 2.22, \"three\" { x, _, y if x <= y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 40, end: 41 },
-            expected: int(),
-            given: string()
-        }
-    );
+#[test]
+fn case9() {
+    assert_error!("case 1, 2.22, \"three\" { x, _, y if x <= y -> 1 }");
+}
 
-    assert_error!(
-        "case [3], 1.1 { x, y if x >. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 24, end: 25 },
-            expected: float(),
-            given: list(int())
-        }
-    );
+#[test]
+fn case10() {
+    assert_error!("case [3], 1.1 { x, y if x >. y -> 1 }");
+}
 
-    assert_error!(
-        "case 2.22, 1, \"three\" { x, _, y if x >. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 40, end: 41 },
-            expected: float(),
-            given: string()
-        }
-    );
+#[test]
+fn case11() {
+    assert_error!("case 2.22, 1, \"three\" { x, _, y if x >. y -> 1 }");
+}
 
-    assert_error!(
-        "case [3], 1.1 { x, y if x >=. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 24, end: 25 },
-            expected: float(),
-            given: list(int())
-        }
-    );
+#[test]
+fn case12() {
+    assert_error!("case [3], 1.1 { x, y if x >=. y -> 1 }");
+}
 
-    assert_error!(
-        "case 2.22, 1, \"three\" { x, _, y if x >=. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 41, end: 42 },
-            expected: float(),
-            given: string()
-        }
-    );
+#[test]
+fn case13() {
+    assert_error!("case 2.22, 1, \"three\" { x, _, y if x >=. y -> 1 }");
+}
 
-    assert_error!(
-        "case [3], 1.1 { x, y if x <. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 24, end: 25 },
-            expected: float(),
-            given: list(int())
-        }
-    );
+#[test]
+fn case14() {
+    assert_error!("case [3], 1.1 { x, y if x <. y -> 1 }");
+}
 
-    assert_error!(
-        "case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 40, end: 41 },
-            expected: float(),
-            given: string()
-        }
-    );
+#[test]
+fn case15() {
+    assert_error!("case 2.22, 1, \"three\" { x, _, y if x <. y -> 1 }");
+}
 
-    assert_error!(
-        "case [3], 1.1 { x, y if x <=. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 24, end: 25 },
-            expected: float(),
-            given: list(int())
-        }
-    );
+#[test]
+fn case16() {
+    assert_error!("case [3], 1.1 { x, y if x <=. y -> 1 }");
+}
 
-    assert_error!(
-        "case 2.22, 1, \"three\" { x, _, y if x <=. y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 41, end: 42 },
-            expected: float(),
-            given: string()
-        }
-    );
+#[test]
+fn case17() {
+    assert_error!("case 2.22, 1, \"three\" { x, _, y if x <=. y -> 1 }");
+}
 
-    assert_error!(
-        "case 1 { x if x == \"x\" -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 14, end: 22 },
-            expected: int(),
-            given: string()
-        }
-    );
+#[test]
+fn case18() {
+    assert_error!("case 1 { x if x == \"x\" -> 1 }");
+}
 
-    assert_error!(
-        "case [1] { [x] | x -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 17, end: 18 },
-            expected: int(),
-            given: list(link(int())),
-        },
-    );
+#[test]
+fn case19() {
+    assert_error!("case [1] { [x] | x -> 1 }");
+}
 
-    assert_error!(
-        "case [1] { [x] | [] as x -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 17, end: 18 },
-            expected: int(),
-            given: list(link(int())),
-        },
-    );
+#[test]
+fn case20() {
+    assert_error!("case [1] { [x] | [] as x -> 1 }");
 }
 
 #[test]
