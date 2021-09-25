@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "[1.0] == [1]"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:10
+  │
+1 │ [1.0] == [1]
+  │          ^^^
+
+Expected type:
+
+    List(Float)
+
+Found type:
+
+    List(Int)
+
+

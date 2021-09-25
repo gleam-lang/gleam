@@ -413,173 +413,83 @@ fn pipe_mismatch_error() {
 }
 
 #[test]
-fn the_rest() {
-    assert_error!(
-        "case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 23, end: 37 },
-            expected: tuple(vec![int(), int(), int()]),
-            given: tuple(vec![int(), float()]),
-        },
-    );
+fn case_tuple_guard() {
+    assert_error!("case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }");
+}
 
-    assert_error!(
-        "case [1] { x if x == [1, 2.0] -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 25, end: 28 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn case_list_guard() {
+    assert_error!("case [1] { x if x == [1, 2.0] -> 1 }");
+}
 
-    assert_error!(
-        "case #(1, 2) { x if x == #(1, 1.0) -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 20, end: 34 },
-            expected: tuple(vec![int(), int()]),
-            given: tuple(vec![int(), float()]),
-        },
-    );
+#[test]
+fn case_tuple_guard_2() {
+    assert_error!("case #(1, 2) { x if x == #(1, 1.0) -> 1 }");
+}
 
-    assert_error!(
-        "case 1 { x if x == #() -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 14, end: 22 },
-            expected: int(),
-            given: tuple(vec![]),
-        },
-    );
+#[test]
+fn case_int_tuple_guard() {
+    assert_error!("case 1 { x if x == #() -> 1 }");
+}
 
-    assert_error!(
-        "case 1 { _, _ -> 1 }",
-        Error::IncorrectNumClausePatterns {
-            location: SrcSpan { start: 9, end: 18 },
-            expected: 1,
-            given: 2,
-        },
-    );
+#[test]
+fn wrong_number_of_subjects() {
+    assert_error!("case 1 { _, _ -> 1 }");
+}
 
-    assert_error!(
-        "let id = fn(x) { x(x) } 1",
-        Error::RecursiveType {
-            location: SrcSpan { start: 19, end: 20 },
-        },
-    );
+#[test]
+fn recursive_var() {
+    assert_error!("let id = fn(x) { x(x) } 1");
+}
 
-    assert_error!(
-        "let True(x) = 1 x",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 4, end: 11 },
-            expected: 0,
-            given: 1,
-        },
-    );
+#[test]
+fn true_fn() {
+    assert_error!("let True(x) = 1 x");
+}
 
-    assert_error!(
-        "let Ok(1, x) = 1 x",
-        Error::IncorrectArity {
-            labels: vec![],
-            location: SrcSpan { start: 4, end: 12 },
-            expected: 1,
-            given: 2,
-        },
-    );
+#[test]
+fn ok_2_args() {
+    assert_error!("let Ok(1, x) = 1 x");
+}
 
-    assert_error!(
-        "let x = 1 x.whatever",
-        Error::UnknownRecordField {
-            location: SrcSpan { start: 10, end: 20 },
-            typ: int(),
-            label: "whatever".to_string(),
-            fields: vec![],
-        },
-    );
+#[test]
+fn access_int() {
+    assert_error!("let x = 1 x.whatever");
+}
 
-    assert_error!(
-        "#(1, 2) == #(1, 2, 3)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 11, end: 21 },
-            expected: tuple(vec![int(), int()]),
-            given: tuple(vec![int(), int(), int()])
-        },
-    );
+#[test]
+fn tuple_2_3() {
+    assert_error!("#(1, 2) == #(1, 2, 3)");
+}
 
-    assert_error!(
-        "#(1.0, 2, 3) == #(1, 2, 3)",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 16, end: 26 },
-            expected: tuple(vec![float(), int(), int()]),
-            given: tuple(vec![int(), int(), int()]),
-        },
-    );
+#[test]
+fn tuple_int_float() {
+    assert_error!("#(1.0, 2, 3) == #(1, 2, 3)");
+}
 
-    assert_error!(
-        "let #(a, b) = 1 a",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 4, end: 11 },
-            expected: int(),
-            given: tuple(vec![
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 7 })),
-                }),
-                Arc::new(Type::Var {
-                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 8 })),
-                })
-            ]),
-        },
-    );
+#[test]
+fn tuple_int() {
+    assert_error!("let #(a, b) = 1 a");
+}
 
-    assert_error!(
-        "[1.0] == [1]",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 9, end: 12 },
-            expected: list(Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Link { type_: float() }))
-            })),
-            given: list(Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() }))
-            }))
-        },
-    );
+#[test]
+fn int_float_list() {
+    assert_error!("[1.0] == [1]");
+}
 
-    assert_error!(
-        "let x = 1 let y = 1.0 case x { _ if x == y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 36, end: 42 },
-            expected: int(),
-            given: float(),
-        },
-    );
+#[test]
+fn guard_int_float_eq_vars() {
+    assert_error!("let x = 1 let y = 1.0 case x { _ if x == y -> 1 }");
+}
 
-    assert_error!(
-        "let x = 1.0 let y = 1 case x { _ if x == y -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 36, end: 42 },
-            expected: float(),
-            given: int(),
-        },
-    );
+#[test]
+fn guard_float_int_eq_vars() {
+    assert_error!("let x = 1.0 let y = 1 case x { _ if x == y -> 1 }");
+}
 
-    assert_error!(
-        "let x = 1.0 case x { _ if x -> 1 }",
-        Error::CouldNotUnify {
-            situation: None,
-            location: SrcSpan { start: 26, end: 27 },
-            expected: bool(),
-            given: float(),
-        },
-    );
+#[test]
+fn guard_if_float() {
+    assert_error!("let x = 1.0 case x { _ if x -> 1 }");
 }
 
 #[test]

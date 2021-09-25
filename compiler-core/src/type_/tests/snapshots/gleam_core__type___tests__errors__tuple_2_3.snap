@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "#(1, 2) == #(1, 2, 3)"
+
+---
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:12
+  │
+1 │ #(1, 2) == #(1, 2, 3)
+  │            ^^^^^^^^^^
+
+Expected type:
+
+    #(Int, Int)
+
+Found type:
+
+    #(Int, Int, Int)
+
+

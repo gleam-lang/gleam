@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: let True(x) = 1 x
+
+---
+
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:1:5
+  │
+1 │ let True(x) = 1 x
+  │     ^^^^^^^ expected 0 arguments, got 1
+
+

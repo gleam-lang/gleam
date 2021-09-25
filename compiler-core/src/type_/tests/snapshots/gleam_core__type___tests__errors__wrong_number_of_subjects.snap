@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "case 1 { _, _ -> 1 }"
+
+---
+
+error: Incorrect number of patterns
+  ┌─ /src/one/two.gleam:1:10
+  │
+1 │ case 1 { _, _ -> 1 }
+  │          ^^^^^^^^^ expected 1 patterns, got 2
+
+This case expression has 1 subjects, but this pattern matches 2.
+Each clause must have a pattern for every subject value.
+
