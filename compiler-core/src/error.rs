@@ -127,6 +127,12 @@ pub enum Error {
         src: Src,
         error: crate::javascript::Error,
     },
+
+    DownloadPackageError {
+        package_name: String,
+        package_version: String,
+        error: String,
+    },
 }
 
 impl From<capnp::Error> for Error {
@@ -1727,6 +1733,28 @@ Fix the warnings and try again!"
                     write(buf, diagnostic, Severity::Error);
                 }
             },
+            Error::DownloadPackageError {
+                package_name,
+                package_version,
+                error,
+            } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Failed to download package".to_string(),
+                    label: format!(
+                        "A problem was encountered when downloading {} {}.",
+                        package_name, package_version
+                    ),
+                };
+                write_project(buf, diagnostic);
+                writeln!(
+                    buf,
+                    "\nThe error from the package manager client was:
+
+    {}",
+                    error
+                )
+                .unwrap();
+            }
         }
     }
 }

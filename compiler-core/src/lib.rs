@@ -60,6 +60,7 @@ pub mod docs;
 pub mod erlang;
 pub mod error;
 pub mod format;
+pub mod hex;
 pub mod io;
 pub mod javascript;
 pub mod line_numbers;

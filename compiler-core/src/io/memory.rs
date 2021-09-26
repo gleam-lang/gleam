@@ -48,11 +48,8 @@ impl FileSystemReader for InMemoryFileSystem {
         Box::new(files.into_iter())
     }
 
-    fn read<P>(&self, path: P) -> Result<String, Error>
-    where
-        P: AsRef<Path> + Debug,
-    {
-        let path = path.as_ref().to_path_buf();
+    fn read(&self, path: &Path) -> Result<String, Error> {
+        let path = path.to_path_buf();
         let files = (*self.files).borrow();
         let file = files.get(&path).ok_or_else(|| Error::FileIo {
             kind: FileKind::File,
@@ -68,6 +65,10 @@ impl FileSystemReader for InMemoryFileSystem {
             err: Some(err.to_string()),
         })?;
         Ok(unicode)
+    }
+
+    fn is_file(&self, path: &Path) -> bool {
+        (*self.files).borrow().contains_key(path)
     }
 }
 

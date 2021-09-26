@@ -37,6 +37,10 @@ askama = "0.10.5"
 pulldown-cmark = "0.8.0"
 # Non-empty vectors
 vec1 = "1.8.0"
+# Client for the Hex package repository API
+hexpm = "1.3.0"
+# XDG directory locations
+dirs = "4.0.0"
 
 [build-dependencies]
 # Data (de)serialisation

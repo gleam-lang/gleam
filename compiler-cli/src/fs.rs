@@ -37,11 +37,12 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
         })
     }
 
-    fn read<P>(&self, path: P) -> gleam_core::Result<String, Error>
-    where
-        P: AsRef<Path> + Debug,
-    {
+    fn read(&self, path: &Path) -> gleam_core::Result<String, Error> {
         read(path)
+    }
+
+    fn is_file(&self, path: &Path) -> bool {
+        path.is_file()
     }
 }
 
