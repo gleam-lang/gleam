@@ -129,11 +129,11 @@ pre,
 code {
   font-family: "Ubuntu Mono", monospace;
   line-height: 1.2;
+  background-color: var(--code-background);
 }
 
 pre {
   margin: var(--gap) 0;
-  background-color: var(--code-background);
   border-radius: 1px;
   overflow: auto;
   box-shadow: var(--shadow);
@@ -147,6 +147,9 @@ code.hljs {
 
 p code {
   margin: 0 2px;
+  border-radius: 3px;
+  padding: 0 0.2em;
+  color: var(--inline-code);
 }
 
 /* Page layout */
@@ -561,6 +564,8 @@ body.theme-dark {
   --object: #99c2eb;
   --punctuation: #4ce7ff;
   --string: #aecc00;
+
+  --inline-code: #ff9d35;
 
   --bg: #292d3e;
   --bg-tint-1: #3e4251; --bg-tint-2: #535664; --bg-tint-3: #696c77; --bg-tint-4: #7e818b;
