@@ -9,6 +9,7 @@ use crate::proto::{signed::Signed, versions::Versions};
 use async_trait::async_trait;
 use bytes::{buf::Buf, Bytes};
 use flate2::read::GzDecoder;
+use http::Method;
 use lazy_static::lazy_static;
 use protobuf::Message;
 use regex::Regex;
@@ -36,19 +37,52 @@ impl Config {
         }
     }
 
-    fn api_uri(&self, path_suffix: &str) -> http::Uri {
-        let mut parts = self.api_base.clone().into_parts();
-        parts.path_and_query = Some(
-            match parts.path_and_query {
-                Some(path) => format!("{}{}", path, path_suffix).try_into(),
-                None => path_suffix.try_into(),
-            }
-            .expect("api_uri path"),
-        );
-        http::Uri::from_parts(parts).expect("api_uri building")
+    fn api_request(
+        &self,
+        method: http::Method,
+        path_suffix: &str,
+        api_token: Option<&str>,
+    ) -> http::request::Builder {
+        make_request(self.api_base.clone(), method, path_suffix, api_token)
+    }
+
+    fn repository_request(
+        &self,
+        method: http::Method,
+        path_suffix: &str,
+        api_token: Option<&str>,
+    ) -> http::request::Builder {
+        make_request(self.repository_base.clone(), method, path_suffix, api_token)
     }
 }
 
+fn make_request(
+    base: http::Uri,
+    method: http::Method,
+    path_suffix: &str,
+    api_token: Option<&str>,
+) -> http::request::Builder {
+    let mut parts = base.into_parts();
+    parts.path_and_query = Some(
+        match parts.path_and_query {
+            Some(path) => format!("{}{}", path, path_suffix).try_into(),
+            None => path_suffix.try_into(),
+        }
+        .expect("api_uri path"),
+    );
+    let uri = http::Uri::from_parts(parts).expect("api_uri building");
+    let mut builder = http::Request::builder()
+        .method(method)
+        .uri(uri)
+        .header("content-type", "application/json")
+        .header("accept", "application/json");
+    if let Some(token) = api_token {
+        builder = builder.header("authorization", token);
+    }
+    builder
+}
+
+/// Create a request that creates a Hex API token.
 pub fn create_api_token_request(
     username: &str,
     password: &str,
@@ -63,14 +97,14 @@ pub fn create_api_token_request(
         }],
     });
     let creds = http_auth_basic::Credentials::new(username, password).as_http_header();
-    http::Request::post(config.api_uri("keys"))
+    config
+        .api_request(Method::POST, "keys", None)
         .header("authorization", creds)
-        .header("content-type", "application/json")
-        .header("accept", "application/json")
         .body(body.to_string())
         .expect("create_api_token_request request")
 }
 
+/// Parses a request that creates a Hex API token.
 pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<String, ApiError> {
     #[derive(Deserialize)]
     struct Resp {
@@ -83,6 +117,59 @@ pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<Stri
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
         status => Err(ApiError::unexpected_response(status, body)),
     }
+}
+
+/// Create a request that get the names and versions of all of the packages on
+/// the package registry.
+///
+pub fn get_repository_versions_request(
+    api_token: Option<&str>,
+    config: &Config,
+) -> http::Request<String> {
+    config
+        .repository_request(Method::GET, "versions", api_token)
+        .body(String::new())
+        .expect("create_api_token_request request")
+}
+
+/// Parse a request that get the names and versions of all of the packages on
+/// the package registry.
+///
+pub fn get_repository_versions_response(
+    response: http::Response<Bytes>,
+    public_key: &[u8],
+) -> Result<HashMap<String, Vec<Version>>, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        status => return Err(ApiError::unexpected_response(status, body)),
+    };
+
+    let mut body = GzDecoder::new(body.reader());
+    let signed = Signed::parse_from_reader(&mut body)?;
+
+    let payload =
+        verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
+
+    let versions = Versions::parse_from_bytes(&payload)?
+        .take_packages()
+        .into_iter()
+        .map(|mut n| {
+            let parse_version = |v: &str| {
+                let err = |_| ApiError::BadVersionFormat(v.to_string());
+                Version::parse(v).map_err(err)
+            };
+            let versions = n
+                .take_versions()
+                .into_iter()
+                .map(|v| parse_version(v.as_str()))
+                .collect::<Result<Vec<Version>, ApiError>>()?;
+            Ok((n.take_name(), versions))
+        })
+        .collect::<Result<HashMap<_, _>, ApiError>>()?;
+
+    Ok(versions)
 }
 
 #[derive(Error, Debug)]
@@ -104,6 +191,15 @@ pub enum ApiError {
 
     #[error("the given package name and version {0} {1} are not valid")]
     BadPackage(String, String),
+
+    #[error("the payload signature does not match the downloaded payload")]
+    IncorrectPayloadSignature,
+
+    #[error(transparent)]
+    InvalidProtobuf(#[from] protobuf::ProtobufError),
+
+    #[error("unexpected version format {0}")]
+    BadVersionFormat(String),
 }
 
 impl ApiError {
@@ -123,56 +219,6 @@ pub trait Client {
             api_base: http::Uri::from_str(self.api_base_url().as_str()).unwrap(),
             repository_base: http::Uri::from_str(self.repository_base_url().as_str()).unwrap(),
         }
-    }
-
-    /// Get the names and versions of all of the packages on the package registry.
-    ///
-    async fn get_repository_versions(
-        &self,
-        public_key: &[u8],
-    ) -> Result<HashMap<String, Vec<Version>>, GetRepositoryVersionsError> {
-        let response = self
-            .http_client()
-            .get(self.repository_base_url().join("versions").unwrap())
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::OK => (),
-            status => {
-                return Err(GetRepositoryVersionsError::UnexpectedResponse(
-                    status,
-                    response.text().await.unwrap_or_default(),
-                ));
-            }
-        };
-
-        let body = response.bytes().await?.reader();
-
-        let mut body = GzDecoder::new(body);
-        let signed = Signed::parse_from_reader(&mut body)?;
-
-        let payload = verify_payload(signed, public_key)
-            .map_err(|_| GetRepositoryVersionsError::IncorrectPayloadSignature)?;
-
-        let versions = Versions::parse_from_bytes(&payload)?
-            .take_packages()
-            .into_iter()
-            .map(|mut n| {
-                let parse_version = |v: &str| {
-                    let err = |_| GetRepositoryVersionsError::BadVersionFormat(v.to_string());
-                    Version::parse(v).map_err(err)
-                };
-                let versions = n
-                    .take_versions()
-                    .into_iter()
-                    .map(|v| parse_version(v.as_str()))
-                    .collect::<Result<Vec<Version>, GetRepositoryVersionsError>>()?;
-                Ok((n.take_name(), versions))
-            })
-            .collect::<Result<HashMap<_, _>, GetRepositoryVersionsError>>()?;
-
-        Ok(versions)
     }
 
     /// Get the information for a package in the repository.

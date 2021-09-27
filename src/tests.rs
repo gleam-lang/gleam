@@ -4,11 +4,12 @@ use mockito::Matcher;
 use serde_json::json;
 
 async fn http_send<Body: Into<reqwest::Body>>(
-    http_client: &reqwest::Client,
     request: http::Request<Body>,
 ) -> Result<http::Response<Bytes>, reqwest::Error> {
     // Make the request
-    let mut response = http_client.execute(request.try_into().unwrap()).await?;
+    let mut response = reqwest::Client::new()
+        .execute(request.try_into().unwrap())
+        .await?;
     // Convert to http::Response
     let mut builder = http::Response::builder()
         .status(response.status())
@@ -52,10 +53,9 @@ async fn authenticate_test_success() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let secret = crate::create_api_token_response(
-        http_send(
-            &reqwest::Client::new(),
-            crate::create_api_token_request(username, password, name, &config),
-        )
+        http_send(crate::create_api_token_request(
+            username, password, name, &config,
+        ))
         .await
         .unwrap(),
     )
@@ -87,10 +87,9 @@ async fn authenticate_test_rate_limted() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::create_api_token_response(
-        http_send(
-            &reqwest::Client::new(),
-            crate::create_api_token_request(username, password, name, &config),
-        )
+        http_send(crate::create_api_token_request(
+            username, password, name, &config,
+        ))
         .await
         .unwrap(),
     )
@@ -132,10 +131,9 @@ async fn authenticate_test_bad_creds() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::create_api_token_response(
-        http_send(
-            &reqwest::Client::new(),
-            crate::create_api_token_request(username, password, name, &config),
-        )
+        http_send(crate::create_api_token_request(
+            username, password, name, &config,
+        ))
         .await
         .unwrap(),
     )
@@ -651,12 +649,15 @@ async fn get_repository_versions_ok_test() {
         .create();
 
     // Test!
-    let mut client = UnauthenticatedClient::new();
-    client.repository_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.repository_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let versions = client
-        .get_repository_versions(std::include_bytes!("../test/public_key"))
-        .await;
+    let versions = crate::get_repository_versions_response(
+        http_send(crate::get_repository_versions_request(None, &config))
+            .await
+            .unwrap(),
+        std::include_bytes!("../test/public_key"),
+    );
 
     assert_eq!(
         &vec![
