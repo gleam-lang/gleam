@@ -615,5 +615,4 @@ pub(crate) struct UsageTracker {
     pub bit_string_literal_used: bool,
     pub string_bit_string_segment_used: bool,
     pub codepoint_bit_string_segment_used: bool,
-    pub utfcodepoint_bit_string_segment_used: bool,
 }
