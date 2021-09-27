@@ -3,6 +3,20 @@ use bytes::Bytes;
 use mockito::Matcher;
 use serde_json::json;
 
+async fn http_send<Body: Into<reqwest::Body>>(
+    http_client: &reqwest::Client,
+    request: http::Request<Body>,
+) -> Result<http::Response<Bytes>, reqwest::Error> {
+    // Make the request
+    let mut response = http_client.execute(request.try_into().unwrap()).await?;
+    // Convert to http::Response
+    let mut builder = http::Response::builder()
+        .status(response.status())
+        .version(response.version());
+    std::mem::swap(builder.headers_mut().unwrap(), response.headers_mut());
+    Ok(builder.body(response.bytes().await.unwrap()).unwrap())
+}
+
 #[tokio::test]
 async fn authenticate_test_success() {
     let username = "me@example.com";
@@ -34,19 +48,20 @@ async fn authenticate_test_success() {
         .with_body(resp_body.to_string())
         .create();
 
-    let mut client = UnauthenticatedClient::new();
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let authed_client = client
-        .authenticate(username, password, name)
+    let secret = crate::create_api_token_response(
+        http_send(
+            &reqwest::Client::new(),
+            crate::create_api_token_request(username, password, name, &config),
+        )
         .await
-        .expect("should be ok");
+        .unwrap(),
+    )
+    .unwrap();
 
-    assert_eq!(expected_secret, authed_client.api_token);
-    assert_eq!(
-        url::Url::parse(&mockito::server_url()).unwrap(),
-        authed_client.api_base
-    );
+    assert_eq!(expected_secret, secret);
     mock.assert();
 }
 
@@ -68,15 +83,22 @@ async fn authenticate_test_rate_limted() {
         .with_status(429)
         .create();
 
-    let mut client = UnauthenticatedClient::new();
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.authenticate(username, password, name).await {
-        Err(AuthenticateError::RateLimited) => (),
-        result => panic!(
-            "expected Err(AuthenticateError::RateLimited), got {:?}",
-            result
-        ),
+    let result = crate::create_api_token_response(
+        http_send(
+            &reqwest::Client::new(),
+            crate::create_api_token_request(username, password, name, &config),
+        )
+        .await
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::RateLimited => (),
+        result => panic!("expected RateLimited, got {:?}", result),
     }
 
     mock.assert();
@@ -106,15 +128,22 @@ async fn authenticate_test_bad_creds() {
         .with_body(resp_body.to_string())
         .create();
 
-    let mut client = UnauthenticatedClient::new();
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.authenticate(username, password, name).await {
-        Err(AuthenticateError::InvalidCredentials) => (),
-        result => panic!(
-            "expected Err(AuthenticateError::InvalidCredentials), got {:?}",
-            result
-        ),
+    let result = crate::create_api_token_response(
+        http_send(
+            &reqwest::Client::new(),
+            crate::create_api_token_request(username, password, name, &config),
+        )
+        .await
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::InvalidCredentials => (),
+        result => panic!("expected InvalidCredentials, got {:?}", result),
     }
 
     mock.assert();

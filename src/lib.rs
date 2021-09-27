@@ -7,7 +7,7 @@ pub mod version;
 
 use crate::proto::{signed::Signed, versions::Versions};
 use async_trait::async_trait;
-use bytes::buf::Buf;
+use bytes::{buf::Buf, Bytes};
 use flate2::read::GzDecoder;
 use lazy_static::lazy_static;
 use protobuf::Message;
@@ -16,9 +16,103 @@ use reqwest::StatusCode;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use std::{collections::HashMap, io::BufReader};
+use std::{collections::HashMap, convert::TryInto, io::BufReader, str::FromStr};
 use thiserror::Error;
 use version::{Range, Version};
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    /// Defaults to https://hex.pm/api/
+    pub api_base: http::Uri,
+    /// Defaults to https://repo.hex.pm/
+    pub repository_base: http::Uri,
+}
+
+impl Config {
+    pub fn new() -> Self {
+        Self {
+            api_base: http::Uri::from_static("https://hex.pm/api/"),
+            repository_base: http::Uri::from_static("https://repo.hex.pm/"),
+        }
+    }
+
+    fn api_uri(&self, path_suffix: &str) -> http::Uri {
+        let mut parts = self.api_base.clone().into_parts();
+        parts.path_and_query = Some(
+            match parts.path_and_query {
+                Some(path) => format!("{}{}", path, path_suffix).try_into(),
+                None => path_suffix.try_into(),
+            }
+            .expect("api_uri path"),
+        );
+        http::Uri::from_parts(parts).expect("api_uri building")
+    }
+}
+
+pub fn create_api_token_request(
+    username: &str,
+    password: &str,
+    token_name: &str,
+    config: &Config,
+) -> http::Request<String> {
+    let body = json!({
+        "name": token_name,
+        "permissions": [{
+            "domain": "api",
+            "resource": "write",
+        }],
+    });
+    let creds = http_auth_basic::Credentials::new(username, password).as_http_header();
+    http::Request::post(config.api_uri("keys"))
+        .header("authorization", creds)
+        .header("content-type", "application/json")
+        .header("accept", "application/json")
+        .body(body.to_string())
+        .expect("create_api_token_request request")
+}
+
+pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<String, ApiError> {
+    #[derive(Deserialize)]
+    struct AuthenticateResponseCreated {
+        secret: String,
+    }
+
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::CREATED => {
+            let body: AuthenticateResponseCreated = serde_json::from_slice(&body)?;
+            Ok(body.secret)
+        }
+
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+
+        status => Err(ApiError::UnexpectedResponse(
+            status,
+            String::from_utf8_lossy(&body).to_string(),
+        )),
+    }
+}
+
+#[derive(Error, Debug)]
+pub enum ApiError {
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+
+    #[error(transparent)]
+    Json(#[from] serde_json::Error),
+
+    #[error("the rate limit for the Hex API has been exceeded for this IP")]
+    RateLimited,
+
+    #[error("invalid username and password combination")]
+    InvalidCredentials,
+
+    #[error("an unexpected response was sent by Hex: {0}: {1}")]
+    UnexpectedResponse(StatusCode, String),
+}
 
 #[async_trait]
 pub trait Client {
@@ -26,49 +120,10 @@ pub trait Client {
     fn api_base_url(&self) -> &url::Url;
     fn repository_base_url(&self) -> &url::Url;
 
-    /// Authenticate with the Hex API using a username and password in order
-    /// to get an API token, enabling accessing of more APIs and raising the
-    /// rate limit.
-    async fn authenticate(
-        &self,
-        username: &str,
-        password: &str,
-        token_name: &str,
-    ) -> Result<AuthenticatedClient, AuthenticateError> {
-        let body = json!({
-            "name": token_name,
-            "permissions": [{
-                "domain": "api",
-                "resource": "write",
-            }],
-        });
-
-        let response = self
-            .http_client()
-            .post(self.api_base_url().join("keys").unwrap())
-            .basic_auth(username, Some(password))
-            .json(&body)
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::CREATED => {
-                let body: AuthenticateResponseCreated = response.json().await?;
-                Ok(AuthenticatedClient {
-                    repository_base: self.repository_base_url().clone(),
-                    api_base: self.api_base_url().clone(),
-                    api_token: body.secret,
-                })
-            }
-
-            StatusCode::TOO_MANY_REQUESTS => Err(AuthenticateError::RateLimited),
-
-            StatusCode::UNAUTHORIZED => Err(AuthenticateError::InvalidCredentials),
-
-            status => Err(AuthenticateError::UnexpectedResponse(
-                status,
-                response.text().await.unwrap_or_default(),
-            )),
+    fn make_config(&self) -> Config {
+        Config {
+            api_base: http::Uri::from_str(self.api_base_url().as_str()).unwrap(),
+            repository_base: http::Uri::from_str(self.repository_base_url().as_str()).unwrap(),
         }
     }
 
@@ -448,26 +503,6 @@ impl UnauthenticatedClient {
             repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
         }
     }
-}
-
-#[derive(Error, Debug)]
-pub enum AuthenticateError {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("the rate limit for the Hex API has been exceeded for this IP")]
-    RateLimited,
-
-    #[error("invalid username and password combination")]
-    InvalidCredentials,
-
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
-    UnexpectedResponse(StatusCode, String),
-}
-
-#[derive(Debug, Deserialize)]
-struct AuthenticateResponseCreated {
-    secret: String,
 }
 
 #[derive(Debug)]

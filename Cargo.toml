@@ -40,6 +40,8 @@ ring = "0.16"
 x509-parser = "0.9"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0.2"
+# Basic auth HTTP helper
+http-auth-basic = "0.3"
 
 [dev-dependencies]
 # HTTP mock server
