@@ -73,26 +73,15 @@ pub fn create_api_token_request(
 
 pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<String, ApiError> {
     #[derive(Deserialize)]
-    struct AuthenticateResponseCreated {
+    struct Resp {
         secret: String,
     }
-
     let (parts, body) = response.into_parts();
-
     match parts.status {
-        StatusCode::CREATED => {
-            let body: AuthenticateResponseCreated = serde_json::from_slice(&body)?;
-            Ok(body.secret)
-        }
-
+        StatusCode::CREATED => Ok(serde_json::from_slice::<Resp>(&body)?.secret),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
-
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
-
-        status => Err(ApiError::UnexpectedResponse(
-            status,
-            String::from_utf8_lossy(&body).to_string(),
-        )),
+        status => Err(ApiError::unexpected_response(status, body)),
     }
 }
 
@@ -112,6 +101,15 @@ pub enum ApiError {
 
     #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
+
+    #[error("the given package name and version {0} {1} are not valid")]
+    BadPackage(String, String),
+}
+
+impl ApiError {
+    fn unexpected_response(status: StatusCode, body: Bytes) -> Self {
+        ApiError::UnexpectedResponse(status, String::from_utf8_lossy(&body).to_string())
+    }
 }
 
 #[async_trait]
