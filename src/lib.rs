@@ -247,7 +247,6 @@ pub fn get_package_tarball_response(
     checksum: &[u8],
 ) -> Result<Vec<u8>, ApiError> {
     let (parts, body) = response.into_parts();
-
     match parts.status {
         StatusCode::OK => (),
         StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
@@ -257,6 +256,37 @@ pub fn get_package_tarball_response(
     };
     let body = read_and_check_body(body.reader(), checksum)?;
     Ok(body)
+}
+
+pub fn remove_docs_request(
+    package_name: &str,
+    version: &str,
+    api_token: &str,
+    config: &Config,
+) -> Result<http::Request<String>, ApiError> {
+    validate_package_and_version(package_name, version)
+        .map_err(|_| ApiError::BadPackage(package_name.to_string(), version.to_string()))?;
+
+    Ok(config
+        .api_request(
+            Method::DELETE,
+            &format!("packages/{}/releases/{}/docs", package_name, version),
+            Some(api_token),
+        )
+        .body(String::new())
+        .expect("get_package_tarball_request request"))
+}
+
+pub fn remove_docs_response(response: http::Response<Bytes>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
 }
 
 #[derive(Error, Debug)]
@@ -299,6 +329,12 @@ pub enum ApiError {
 
     #[error("the downloaded data did not have the expected checksum")]
     IncorrectChecksum,
+
+    #[error("the given API key was not valid")]
+    InvalidApiKey,
+
+    #[error("this account is not authorized for this action")]
+    Forbidden,
 }
 
 impl ApiError {
@@ -503,38 +539,6 @@ impl AuthenticatedClient {
             api_base: url::Url::parse("https://hex.pm/api/").unwrap(),
             repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
             api_token,
-        }
-    }
-
-    pub async fn remove_docs<'a>(
-        &self,
-        package_name: &'a str,
-        version: &'a str,
-    ) -> Result<(), RemoveDocsError<'a>> {
-        validate_package_and_version(package_name, version)
-            .map_err(|_| RemoveDocsError::BadPackage(package_name, version))?;
-
-        let url = self
-            .api_base
-            .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
-            .expect("building remove_docs url");
-
-        let response = self
-            .http_client()
-            .delete(url.to_string().as_str())
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::NO_CONTENT => Ok(()),
-            StatusCode::NOT_FOUND => Err(RemoveDocsError::NotFound(package_name, version)),
-            StatusCode::TOO_MANY_REQUESTS => Err(RemoveDocsError::RateLimited),
-            StatusCode::UNAUTHORIZED => Err(RemoveDocsError::InvalidApiKey),
-            StatusCode::FORBIDDEN => Err(RemoveDocsError::Forbidden),
-            status => Err(RemoveDocsError::UnexpectedResponse(
-                status,
-                response.text().await.unwrap_or_default(),
-            )),
         }
     }
 

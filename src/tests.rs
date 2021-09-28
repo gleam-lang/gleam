@@ -163,14 +163,17 @@ async fn remove_docs_success() {
     .with_status(204)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    client
-        .remove_docs(package, version)
-        .await
-        .expect("should be ok");
+    let result = crate::remove_docs_response(
+        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
 
+    assert_eq!(result, ());
     mock.assert();
 }
 
@@ -190,15 +193,19 @@ async fn remove_docs_unknown_package_version() {
     .with_status(404)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.remove_docs(package, version).await {
-        Err(RemoveDocsError::NotFound(p, v)) if p == package && v == version => (),
-        result => panic!(
-            "expected Err(RemoveDocsError::NotFound(package, version)) got {:?}",
-            result
-        ),
+    let result = crate::remove_docs_response(
+        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::NotFound => (),
+        result => panic!("expected ApiError::NotFound got {:?}", result),
     }
 
     mock.assert();
@@ -220,15 +227,19 @@ async fn remove_docs_rate_limted() {
     .with_status(429)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.remove_docs(package, version).await {
-        Err(RemoveDocsError::RateLimited) => (),
-        result => panic!(
-            "expected Err(RemoveDocsError::RateLimited), got {:?}",
-            result
-        ),
+    let result = crate::remove_docs_response(
+        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::RateLimited => (),
+        result => panic!("expected ApiError::RateLimited got {:?}", result),
     }
 
     mock.assert();
@@ -257,15 +268,19 @@ async fn remove_docs_invalid_token() {
     )
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.remove_docs(package, version).await {
-        Err(RemoveDocsError::InvalidApiKey) => (),
-        result => panic!(
-            "expected Err(RemoveDocsError::InvalidApiKey), got {:?}",
-            result
-        ),
+    let result = crate::remove_docs_response(
+        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::InvalidApiKey => (),
+        result => panic!("expected ApiError::InvalidApiKey got {:?}", result),
     }
 
     mock.assert();
@@ -294,12 +309,19 @@ async fn remove_docs_forbidden() {
     )
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.remove_docs(package, version).await {
-        Err(RemoveDocsError::Forbidden) => (),
-        result => panic!("expected Err(RemoveDocsError::Forbidden), got {:?}", result),
+    let result = crate::remove_docs_response(
+        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    match result {
+        ApiError::Forbidden => (),
+        result => panic!("expected ApiError::Forbidden got {:?}", result),
     }
 
     mock.assert();
@@ -311,15 +333,11 @@ async fn remove_docs_bad_package_name() {
     let package = "not valid";
     let version = "1.2.0";
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let config = Config::new();
 
-    match client.remove_docs(package, version).await {
-        Err(RemoveDocsError::BadPackage(p, v)) if p == package && v == version => (),
-        result => panic!(
-            "expected Err(RemoveDocsError::BadPackage), got {:?}",
-            result
-        ),
+    match crate::remove_docs_request(package, version, token, &config).unwrap_err() {
+        ApiError::BadPackage(p, v) if p == package && v == version => (),
+        result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
     }
 }
 
