@@ -172,6 +172,56 @@ pub fn get_repository_versions_response(
     Ok(versions)
 }
 
+/// Create a request to get the information for a package in the repository.
+///
+pub fn get_package_request(
+    name: &str,
+    api_token: Option<&str>,
+    config: &Config,
+) -> http::Request<String> {
+    config
+        .repository_request(Method::GET, &format!("packages/{}", name), api_token)
+        .body(String::new())
+        .expect("get_package_request request")
+}
+
+/// Parse a response to get the information for a package in the repository.
+///
+pub fn get_package_response(
+    response: http::Response<Bytes>,
+    public_key: &[u8],
+) -> Result<Package, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
+        status => {
+            return Err(ApiError::unexpected_response(status, body));
+        }
+    };
+
+    let mut body = GzDecoder::new(body.reader());
+    let signed = Signed::parse_from_reader(&mut body)?;
+
+    let payload =
+        verify_payload(signed, public_key).map_err(|_| ApiError::IncorrectPayloadSignature)?;
+
+    let mut package = proto::package::Package::parse_from_bytes(&payload)?;
+    let releases = package
+        .take_releases()
+        .into_iter()
+        .map(proto_to_release)
+        .collect::<Result<Vec<_>, _>>()?;
+    let package = Package {
+        name: package.take_name(),
+        repository: package.take_repository(),
+        releases,
+    };
+
+    Ok(package)
+}
+
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error(transparent)]
@@ -200,6 +250,12 @@ pub enum ApiError {
 
     #[error("unexpected version format {0}")]
     BadVersionFormat(String),
+
+    #[error("no resource was found")]
+    NotFound,
+
+    #[error("unexpected version requirement format {0}")]
+    UnexpectedVersionRequirementFormat(String),
 }
 
 impl ApiError {
@@ -219,53 +275,6 @@ pub trait Client {
             api_base: http::Uri::from_str(self.api_base_url().as_str()).unwrap(),
             repository_base: http::Uri::from_str(self.repository_base_url().as_str()).unwrap(),
         }
-    }
-
-    /// Get the information for a package in the repository.
-    ///
-    async fn get_package(&self, name: &str, public_key: &[u8]) -> Result<Package, GetPackageError> {
-        let response = self
-            .http_client()
-            .get(
-                self.repository_base_url()
-                    .join(&format!("packages/{}", name))
-                    .unwrap(),
-            )
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::OK => (),
-            StatusCode::NOT_FOUND => return Err(GetPackageError::NotFound),
-            status => {
-                return Err(GetPackageError::UnexpectedResponse(
-                    status,
-                    response.text().await.unwrap_or_default(),
-                ));
-            }
-        };
-
-        let body = response.bytes().await?.reader();
-
-        let mut body = GzDecoder::new(body);
-        let signed = Signed::parse_from_reader(&mut body)?;
-
-        let payload = verify_payload(signed, public_key)
-            .map_err(|_| GetPackageError::IncorrectPayloadSignature)?;
-
-        let mut package = proto::package::Package::parse_from_bytes(&payload)?;
-        let releases = package
-            .take_releases()
-            .into_iter()
-            .map(proto_to_release)
-            .collect::<Result<Vec<_>, _>>()?;
-        let package = Package {
-            name: package.take_name(),
-            repository: package.take_repository(),
-            releases,
-        };
-
-        Ok(package)
     }
 
     /// Download a version of a package as a tarball
@@ -350,7 +359,7 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
     }
 }
 
-fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, GetPackageError> {
+fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiError> {
     let app = if dep.has_app() {
         Some(dep.take_app())
     } else {
@@ -363,7 +372,7 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, GetPa
     };
     let requirement = dep.take_requirement();
     let requirement = Version::parse_range(&requirement)
-        .map_err(|_| GetPackageError::UnexpectedVersionRequirementFormat(requirement.clone()))?;
+        .map_err(|_| ApiError::UnexpectedVersionRequirementFormat(requirement.clone()))?;
     Ok(Dependency {
         package: dep.take_package(),
         requirement,
@@ -373,7 +382,7 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, GetPa
     })
 }
 
-fn proto_to_release(mut release: proto::package::Release) -> Result<Release, GetPackageError> {
+fn proto_to_release(mut release: proto::package::Release) -> Result<Release, ApiError> {
     let dependencies = release
         .take_dependencies()
         .into_iter()

@@ -525,13 +525,16 @@ async fn get_package_ok_test() {
         .create();
 
     // Test!
-    let mut client = UnauthenticatedClient::new();
-    client.repository_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.repository_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let package = client
-        .get_package("exfmt", std::include_bytes!("../test/public_key"))
-        .await
-        .unwrap();
+    let package = crate::get_package_response(
+        http_send(crate::get_package_request("exfmt", None, &config))
+            .await
+            .unwrap(),
+        std::include_bytes!("../test/public_key"),
+    )
+    .unwrap();
 
     assert_eq!(
         Package {
