@@ -222,6 +222,43 @@ pub fn get_package_response(
     Ok(package)
 }
 
+/// Create a request to download a version of a package as a tarball
+///
+pub fn get_package_tarball_request(
+    name: &str,
+    version: &str,
+    api_token: Option<&str>,
+    config: &Config,
+) -> http::Request<String> {
+    config
+        .repository_request(
+            Method::GET,
+            &format!("tarballs/{}-{}.tar", name, version),
+            api_token,
+        )
+        .body(String::new())
+        .expect("get_package_tarball_request request")
+}
+
+/// Parse a response to download a version of a package as a tarball
+///
+pub fn get_package_tarball_response(
+    response: http::Response<Bytes>,
+    checksum: &[u8],
+) -> Result<Vec<u8>, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => (),
+        StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
+        status => {
+            return Err(ApiError::unexpected_response(status, body));
+        }
+    };
+    let body = read_and_check_body(body.reader(), checksum)?;
+    Ok(body)
+}
+
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error(transparent)]
@@ -281,34 +318,6 @@ pub trait Client {
             api_base: http::Uri::from_str(self.api_base_url().as_str()).unwrap(),
             repository_base: http::Uri::from_str(self.repository_base_url().as_str()).unwrap(),
         }
-    }
-
-    /// Download a version of a package as a tarball
-    ///
-    async fn get_package_tarball(
-        &self,
-        name: &str,
-        version: &str,
-        checksum: &[u8],
-    ) -> Result<Vec<u8>, ApiError> {
-        let url = self
-            .repository_base_url()
-            .join(&format!("tarballs/{}-{}.tar", name, version))
-            .unwrap();
-        let response = self.http_client().get(url).send().await?;
-
-        match response.status() {
-            StatusCode::OK => (),
-            StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
-            status => {
-                return Err(ApiError::UnexpectedResponse(
-                    status,
-                    response.text().await.unwrap_or_default(),
-                ));
-            }
-        };
-        let body = read_and_check_body(response.bytes().await?.reader(), checksum)?;
-        Ok(body)
     }
 }
 
