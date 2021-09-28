@@ -230,6 +230,9 @@ pub enum ApiError {
     #[error(transparent)]
     Json(#[from] serde_json::Error),
 
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
     #[error("the rate limit for the Hex API has been exceeded for this IP")]
     RateLimited,
 
@@ -256,6 +259,9 @@ pub enum ApiError {
 
     #[error("unexpected version requirement format {0}")]
     UnexpectedVersionRequirementFormat(String),
+
+    #[error("the downloaded data did not have the expected checksum")]
+    IncorrectChecksum,
 }
 
 impl ApiError {
@@ -284,7 +290,7 @@ pub trait Client {
         name: &str,
         version: &str,
         checksum: &[u8],
-    ) -> Result<Vec<u8>, GetPackageTarballError> {
+    ) -> Result<Vec<u8>, ApiError> {
         let url = self
             .repository_base_url()
             .join(&format!("tarballs/{}-{}.tar", name, version))
@@ -293,9 +299,9 @@ pub trait Client {
 
         match response.status() {
             StatusCode::OK => (),
-            StatusCode::FORBIDDEN => return Err(GetPackageTarballError::NotFound),
+            StatusCode::FORBIDDEN => return Err(ApiError::NotFound),
             status => {
-                return Err(GetPackageTarballError::UnexpectedResponse(
+                return Err(ApiError::UnexpectedResponse(
                     status,
                     response.text().await.unwrap_or_default(),
                 ));
@@ -307,10 +313,7 @@ pub trait Client {
 }
 
 /// Read a body and ensure it has the given sha256 digest.
-fn read_and_check_body(
-    reader: impl std::io::Read,
-    checksum: &[u8],
-) -> Result<Vec<u8>, ReadAndCheckBodyError> {
+fn read_and_check_body(reader: impl std::io::Read, checksum: &[u8]) -> Result<Vec<u8>, ApiError> {
     use std::io::Read;
     let mut reader = BufReader::new(reader);
     let mut context = Context::new(&SHA256);
@@ -331,7 +334,7 @@ fn read_and_check_body(
     if digest.as_ref() == checksum {
         Ok(body)
     } else {
-        Err(ReadAndCheckBodyError::IncorrectChecksum)
+        Err(ApiError::IncorrectChecksum)
     }
 }
 
@@ -452,72 +455,6 @@ pub struct Dependency {
     pub app: Option<String>,
     /// If set, the repository where the dependency is located
     pub repository: Option<String>,
-}
-
-#[derive(Error, Debug)]
-pub enum GetPackageError {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("an unexpected response was sent by Hex")]
-    UnexpectedResponse(StatusCode, String),
-
-    #[error("the payload signature does not match the downloaded payload")]
-    IncorrectPayloadSignature,
-
-    #[error("no package was found in the repository with the given name")]
-    NotFound,
-
-    #[error(transparent)]
-    DecodeFailed(#[from] protobuf::ProtobufError),
-
-    #[error("unexpected version requirement format {0}")]
-    UnexpectedVersionRequirementFormat(String),
-}
-
-#[derive(Error, Debug)]
-pub enum GetPackageTarballError {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
-    UnexpectedResponse(StatusCode, String),
-
-    #[error(transparent)]
-    BodyError(#[from] ReadAndCheckBodyError),
-
-    #[error("no package was found in the repository with the given name")]
-    NotFound,
-
-    #[error(transparent)]
-    DecodeFailed(#[from] protobuf::ProtobufError),
-}
-
-#[derive(Error, Debug)]
-pub enum ReadAndCheckBodyError {
-    #[error("the downloaded package did not have the expected checksum")]
-    IncorrectChecksum,
-
-    #[error("unable to read body")]
-    Io(#[from] std::io::Error),
-}
-
-#[derive(Error, Debug)]
-pub enum GetRepositoryVersionsError {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("unexpected version format {0}")]
-    BadVersionFormat(String),
-
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
-    UnexpectedResponse(StatusCode, String),
-
-    #[error("the payload signature does not match the downloaded payload")]
-    IncorrectPayloadSignature,
-
-    #[error(transparent)]
-    DecodeFailed(#[from] protobuf::ProtobufError),
 }
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");

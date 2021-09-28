@@ -707,7 +707,7 @@ async fn get_repository_tarball_bad_checksum_test() {
 
     assert_eq!(
         err.to_string(),
-        "the downloaded package did not have the expected checksum"
+        "the downloaded data did not have the expected checksum"
     );
 }
 
@@ -720,8 +720,5 @@ async fn get_repository_tarball_not_found_test() {
         .await
         .unwrap_err();
 
-    assert_eq!(
-        err.to_string(),
-        "no package was found in the repository with the given name"
-    );
+    assert_eq!(err.to_string(), "no resource was found");
 }
