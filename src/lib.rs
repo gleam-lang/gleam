@@ -469,42 +469,6 @@ pub struct Dependency {
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
 #[derive(Debug)]
-pub struct UnauthenticatedClient {
-    pub api_base: url::Url,
-    pub repository_base: url::Url,
-}
-
-impl Client for UnauthenticatedClient {
-    fn http_client(&self) -> reqwest::Client {
-        let mut headers = http::header::HeaderMap::new();
-        headers.insert("Accept", "application/json".parse().unwrap());
-
-        reqwest::ClientBuilder::new()
-            .user_agent(USER_AGENT)
-            .default_headers(headers)
-            .build()
-            .expect("failed to build API client")
-    }
-
-    fn api_base_url(&self) -> &url::Url {
-        &self.api_base
-    }
-
-    fn repository_base_url(&self) -> &url::Url {
-        &self.repository_base
-    }
-}
-
-impl UnauthenticatedClient {
-    pub fn new() -> Self {
-        Self {
-            api_base: url::Url::parse("https://hex.pm/api/").unwrap(),
-            repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
-        }
-    }
-}
-
-#[derive(Debug)]
 pub struct AuthenticatedClient {
     pub api_base: url::Url,
     pub repository_base: url::Url,
