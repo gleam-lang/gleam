@@ -1,6 +1,8 @@
 // TODO: remove all the async stuff and mockito server. The library is pure now
 // so it isn't needed.
 
+use std::str::FromStr;
+
 use super::*;
 use bytes::Bytes;
 use mockito::Matcher;
@@ -339,7 +341,7 @@ async fn remove_docs_bad_package_name() {
     let config = Config::new();
 
     match crate::remove_docs_request(package, version, token, &config).unwrap_err() {
-        ApiError::BadPackage(p, v) if p == package && v == version => (),
+        ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
     }
 }
@@ -361,10 +363,16 @@ async fn publish_docs_success() {
     .with_status(201)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.publish_docs(package, version, tarball).await {
+    let result = crate::publish_docs_response(
+        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+            .await
+            .unwrap(),
+    );
+
+    match result {
         Ok(()) => (),
         result => panic!("expected Ok(()), got {:?}", result),
     }
@@ -375,15 +383,15 @@ async fn publish_docs_success() {
 #[tokio::test]
 async fn publish_docs_bad_package_name() {
     let token = "my-api-token-here";
-    let package = "invalid name";
-    let version = "0.8.0";
+    let package = "not valid";
+    let version = "1.2.0";
     let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
 
-    let client = AuthenticatedClient::new(token.to_string());
+    let config = Config::new();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::BadPackage(p, v)) if p == package && v == version => (),
-        result => panic!("expected PublishDocsError::BadPackage, got {:?}", result),
+    match crate::publish_docs_request(package, version, tarball, token, &config).unwrap_err() {
+        ApiError::InvalidPackageNameFormat(p) if p == package => (),
+        result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
     }
 }
 
@@ -394,11 +402,11 @@ async fn publish_docs_bad_package_version() {
     let version = "invalid version";
     let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
 
-    let client = AuthenticatedClient::new(token.to_string());
+    let config = Config::new();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::BadPackage(p, v)) if p == package && v == version => (),
-        result => panic!("expected PublishDocsError::BadPackage, got {:?}", result),
+    match crate::publish_docs_request(package, version, tarball, token, &config).unwrap_err() {
+        ApiError::InvalidVersionFormat(v) if v == version => (),
+        result => panic!("expected ApiError::BadPackage, got {:?}", result),
     }
 }
 
@@ -419,12 +427,18 @@ async fn publish_docs_not_found() {
     .with_status(404)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::NotFound(p, v)) if p == package && v == version => (),
-        result => panic!("expected PublishDocsError::NotFound, got {:?}", result),
+    let result = crate::publish_docs_response(
+        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Err(ApiError::NotFound) => (),
+        result => panic!("expected ApiError::NotFound, got {:?}", result),
     }
 
     mock.assert()
@@ -447,12 +461,18 @@ async fn publish_docs_rate_limit() {
     .with_status(429)
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::RateLimited) => (),
-        result => panic!("expected PublishDocsError::RateLimited, got {:?}", result),
+    let result = crate::publish_docs_response(
+        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Err(ApiError::RateLimited) => (),
+        result => panic!("expected ApiError::RateLimited, got {:?}", result),
     }
 
     mock.assert()
@@ -482,15 +502,18 @@ async fn publish_docs_invalid_api_token() {
     )
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::InvalidApiKey) => (),
-        result => panic!(
-            "expected Err(PublishDocsError::InvalidApiKey), got {:?}",
-            result
-        ),
+    let result = crate::publish_docs_response(
+        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Err(ApiError::InvalidApiKey) => (),
+        result => panic!("expected Err(ApiError::InvalidApiKey), got {:?}", result),
     }
 
     mock.assert();
@@ -520,15 +543,18 @@ async fn publish_docs_forbidden() {
     )
     .create();
 
-    let mut client = AuthenticatedClient::new(token.to_string());
-    client.api_base = url::Url::parse(&mockito::server_url()).unwrap();
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    match client.publish_docs(package, version, tarball).await {
-        Err(PublishDocsError::Forbidden) => (),
-        result => panic!(
-            "expected Err(PublishDocsError::Forbidden), got {:?}",
-            result
-        ),
+    let result = crate::publish_docs_response(
+        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Err(ApiError::Forbidden) => (),
+        result => panic!("expected Err(ApiError::Forbidden), got {:?}", result),
     }
 
     mock.assert();

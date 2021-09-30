@@ -16,7 +16,7 @@ use reqwest::StatusCode;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use std::{collections::HashMap, convert::TryInto, io::BufReader, str::FromStr};
+use std::{collections::HashMap, convert::TryInto, io::BufReader};
 use thiserror::Error;
 use version::{Range, Version};
 
@@ -74,6 +74,7 @@ fn make_request(
         .method(method)
         .uri(uri)
         .header("content-type", "application/json")
+        .header("user-agent", USER_AGENT)
         .header("accept", "application/json");
     if let Some(token) = api_token {
         builder = builder.header("authorization", token);
@@ -156,7 +157,7 @@ pub fn get_repository_versions_response(
         .into_iter()
         .map(|mut n| {
             let parse_version = |v: &str| {
-                let err = |_| ApiError::BadVersionFormat(v.to_string());
+                let err = |_| ApiError::InvalidVersionFormat(v.to_string());
                 Version::parse(v).map_err(err)
             };
             let versions = n
@@ -263,8 +264,7 @@ pub fn remove_docs_request(
     api_token: &str,
     config: &Config,
 ) -> Result<http::Request<String>, ApiError> {
-    validate_package_and_version(package_name, version)
-        .map_err(|_| ApiError::BadPackage(package_name.to_string(), version.to_string()))?;
+    validate_package_and_version(package_name, version)?;
 
     Ok(config
         .api_request(
@@ -280,6 +280,39 @@ pub fn remove_docs_response(response: http::Response<Bytes>) -> Result<(), ApiEr
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
+pub fn publish_docs_request(
+    package_name: &str,
+    version: &str,
+    gzipped_tarball: Bytes,
+    api_token: &str,
+    config: &Config,
+) -> Result<http::Request<Bytes>, ApiError> {
+    validate_package_and_version(package_name, version)?;
+
+    Ok(config
+        .api_request(
+            Method::POST,
+            &format!("packages/{}/releases/{}/docs", package_name, version),
+            Some(api_token),
+        )
+        .header("content-encoding", "x-gzip")
+        .header("content-type", "application/x-tar")
+        .body(gzipped_tarball)
+        .expect("publish_docs_request request"))
+}
+
+pub fn publish_docs_response(response: http::Response<Bytes>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::CREATED => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
@@ -308,8 +341,8 @@ pub enum ApiError {
     #[error("an unexpected response was sent by Hex: {0}: {1}")]
     UnexpectedResponse(StatusCode, String),
 
-    #[error("the given package name and version {0} {1} are not valid")]
-    BadPackage(String, String),
+    #[error("the given package name {0} is not valid")]
+    InvalidPackageNameFormat(String),
 
     #[error("the payload signature does not match the downloaded payload")]
     IncorrectPayloadSignature,
@@ -318,13 +351,13 @@ pub enum ApiError {
     InvalidProtobuf(#[from] protobuf::ProtobufError),
 
     #[error("unexpected version format {0}")]
-    BadVersionFormat(String),
+    InvalidVersionFormat(String),
 
     #[error("no resource was found")]
     NotFound,
 
-    #[error("unexpected version requirement format {0}")]
-    UnexpectedVersionRequirementFormat(String),
+    #[error("the version requirement format {0} is not valid")]
+    InvalidVersionRequirementFormat(String),
 
     #[error("the downloaded data did not have the expected checksum")]
     IncorrectChecksum,
@@ -339,19 +372,6 @@ pub enum ApiError {
 impl ApiError {
     fn unexpected_response(status: StatusCode, body: Bytes) -> Self {
         ApiError::UnexpectedResponse(status, String::from_utf8_lossy(&body).to_string())
-    }
-}
-
-pub trait Client {
-    fn http_client(&self) -> reqwest::Client;
-    fn api_base_url(&self) -> &url::Url;
-    fn repository_base_url(&self) -> &url::Url;
-
-    fn make_config(&self) -> Config {
-        Config {
-            api_base: http::Uri::from_str(self.api_base_url().as_str()).unwrap(),
-            repository_base: http::Uri::from_str(self.repository_base_url().as_str()).unwrap(),
-        }
     }
 }
 
@@ -418,7 +438,7 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiEr
     };
     let requirement = dep.take_requirement();
     let requirement = Version::parse_range(&requirement)
-        .map_err(|_| ApiError::UnexpectedVersionRequirementFormat(requirement.clone()))?;
+        .map_err(|_| ApiError::InvalidVersionRequirementFormat(requirement.clone()))?;
     Ok(Dependency {
         package: dep.take_package(),
         requirement,
@@ -502,137 +522,16 @@ pub struct Dependency {
 
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
-#[derive(Debug)]
-pub struct AuthenticatedClient {
-    pub api_base: url::Url,
-    pub repository_base: url::Url,
-    pub api_token: String,
-}
-
-impl Client for AuthenticatedClient {
-    fn http_client(&self) -> reqwest::Client {
-        let mut headers = http::header::HeaderMap::new();
-        headers.insert("Authorization", self.api_token.parse().unwrap());
-        headers.insert("Accept", "application/json".parse().unwrap());
-
-        reqwest::ClientBuilder::new()
-            .user_agent(USER_AGENT)
-            .default_headers(headers)
-            .build()
-            .expect("failed to build API client")
-    }
-
-    fn api_base_url(&self) -> &url::Url {
-        &self.api_base
-    }
-
-    fn repository_base_url(&self) -> &url::Url {
-        &self.repository_base
-    }
-}
-
-impl AuthenticatedClient {
-    pub fn new(api_token: String) -> Self {
-        Self {
-            api_base: url::Url::parse("https://hex.pm/api/").unwrap(),
-            repository_base: url::Url::parse("https://repo.hex.pm/").unwrap(),
-            api_token,
-        }
-    }
-
-    pub async fn publish_docs<'a>(
-        &self,
-        package_name: &'a str,
-        version: &'a str,
-        gzipped_tarball: bytes::Bytes,
-    ) -> Result<(), PublishDocsError<'a>> {
-        validate_package_and_version(package_name, version)
-            .map_err(|_| PublishDocsError::BadPackage(package_name, version))?;
-
-        let url = self
-            .api_base
-            .join(format!("packages/{}/releases/{}/docs", package_name, version).as_str())
-            .expect("building publish_docs url");
-
-        let response = self
-            .http_client()
-            .post(url.to_string().as_str())
-            .body(gzipped_tarball)
-            .send()
-            .await?;
-
-        match response.status() {
-            StatusCode::CREATED => Ok(()),
-            StatusCode::NOT_FOUND => Err(PublishDocsError::NotFound(package_name, version)),
-            StatusCode::TOO_MANY_REQUESTS => Err(PublishDocsError::RateLimited),
-            StatusCode::UNAUTHORIZED => Err(PublishDocsError::InvalidApiKey),
-            StatusCode::FORBIDDEN => Err(PublishDocsError::Forbidden),
-            status => Err(PublishDocsError::UnexpectedResponse(
-                status,
-                response.text().await.unwrap_or_default(),
-            )),
-        }
-    }
-}
-
-#[derive(Error, Debug)]
-pub enum RemoveDocsError<'a> {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("the given package name and version {0} {1} are not valid")]
-    BadPackage(&'a str, &'a str),
-
-    #[error("could not find package {0} with version {1}")]
-    NotFound(&'a str, &'a str),
-
-    #[error("the rate limit for the Hex API has been exceeded for this IP")]
-    RateLimited,
-
-    #[error("the given API key was not valid")]
-    InvalidApiKey,
-
-    #[error("this account is not authorized for this action")]
-    Forbidden,
-
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
-    UnexpectedResponse(StatusCode, String),
-}
-
-#[derive(Error, Debug)]
-pub enum PublishDocsError<'a> {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
-    #[error("the given package name and version {0} {1} are not valid")]
-    BadPackage(&'a str, &'a str),
-
-    #[error("could not find package {0} with version {1}")]
-    NotFound(&'a str, &'a str),
-
-    #[error("the rate limit for the Hex API has been exceeded for this IP")]
-    RateLimited,
-
-    #[error("the given API key was not valid")]
-    InvalidApiKey,
-
-    #[error("this account is not authorized for this action")]
-    Forbidden,
-
-    #[error("an unexpected response was sent by Hex: {0}: {1}")]
-    UnexpectedResponse(StatusCode, String),
-}
-
-fn validate_package_and_version(package: &str, version: &str) -> Result<(), ()> {
+fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
     lazy_static! {
         static ref PACKAGE_PATTERN: Regex = Regex::new(r#"^[a-z_-]+$"#).unwrap();
         static ref VERSION_PATTERN: Regex = Regex::new(r#"^[a-zA-Z-0-9\._-]+$"#).unwrap();
     }
     if !PACKAGE_PATTERN.is_match(package) {
-        return Err(());
+        return Err(ApiError::InvalidPackageNameFormat(package.to_string()));
     }
     if !VERSION_PATTERN.is_match(version) {
-        return Err(());
+        return Err(ApiError::InvalidVersionFormat(version.to_string()));
     }
     Ok(())
 }
@@ -648,10 +547,11 @@ fn validate_package_and_version(package: &str, version: &str) -> Result<(), ()> 
 //
 // https://github.com/hexpm/specifications/blob/master/registry-v2.md#signing
 //
-fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, ()> {
-    let (_, pem) = x509_parser::pem::parse_x509_pem(pem_public_key).map_err(|_| ())?;
-    let (_, spki) =
-        x509_parser::prelude::SubjectPublicKeyInfo::from_der(&pem.contents).map_err(|_| ())?;
+fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, ApiError> {
+    let (_, pem) = x509_parser::pem::parse_x509_pem(pem_public_key)
+        .map_err(|_| ApiError::IncorrectPayloadSignature)?;
+    let (_, spki) = x509_parser::prelude::SubjectPublicKeyInfo::from_der(&pem.contents)
+        .map_err(|_| ApiError::IncorrectPayloadSignature)?;
     let payload = signed.take_payload();
     let verification = ring::signature::UnparsedPublicKey::new(
         &ring::signature::RSA_PKCS1_2048_8192_SHA512,
@@ -662,6 +562,6 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
     if verification.is_ok() {
         Ok(payload)
     } else {
-        Err(())
+        Err(ApiError::IncorrectPayloadSignature)
     }
 }
