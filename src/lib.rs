@@ -42,6 +42,8 @@ impl Config {
         api_token: Option<&str>,
     ) -> http::request::Builder {
         make_request(self.api_base.clone(), method, path_suffix, api_token)
+            .header("content-type", "application/json")
+            .header("accept", "application/json")
     }
 
     fn repository_request(
@@ -72,9 +74,7 @@ fn make_request(
     let mut builder = http::Request::builder()
         .method(method)
         .uri(uri)
-        .header("content-type", "application/json")
-        .header("user-agent", USER_AGENT)
-        .header("accept", "application/json");
+        .header("user-agent", USER_AGENT);
     if let Some(token) = api_token {
         builder = builder.header("authorization", token);
     }
@@ -127,6 +127,7 @@ pub fn get_repository_versions_request(
 ) -> http::Request<String> {
     config
         .repository_request(Method::GET, "versions", api_token)
+        .header("accept", "application/json")
         .body(String::new())
         .expect("create_api_token_request request")
 }
@@ -180,6 +181,7 @@ pub fn get_package_request(
 ) -> http::Request<String> {
     config
         .repository_request(Method::GET, &format!("packages/{}", name), api_token)
+        .header("accept", "application/json")
         .body(String::new())
         .expect("get_package_request request")
 }
@@ -229,14 +231,15 @@ pub fn get_package_tarball_request(
     api_token: Option<&str>,
     config: &Config,
 ) -> http::Request<String> {
-    config
+    dbg!(config
         .repository_request(
             Method::GET,
             &format!("tarballs/{}-{}.tar", name, version),
             api_token,
         )
+        .header("accept", "application/x-tar")
         .body(String::new())
-        .expect("get_package_tarball_request request")
+        .expect("get_package_tarball_request request"))
 }
 
 /// Parse a response to download a version of a package as a tarball
