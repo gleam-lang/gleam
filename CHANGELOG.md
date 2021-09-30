@@ -7,6 +7,7 @@
 - Gleam can now run an Erlang shell without an external build tool.
 - Fixed a bug where the error message for a record update with an unknown field
   would point to all the fields rather than the unknown one.
+- Improved styling for inline code in generated documentation.
 
 ## v0.17.0 - 2021-09-20
 
