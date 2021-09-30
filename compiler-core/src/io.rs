@@ -1,6 +1,9 @@
 pub mod memory;
 
+use bytes::Bytes;
+
 use crate::error::{Error, FileIoAction, FileKind, Result};
+use async_trait::async_trait;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
@@ -225,4 +228,9 @@ pub mod test {
     }
 
     impl Writer for InMemoryFile {}
+}
+
+#[async_trait]
+pub trait HttpClient {
+    async fn send(&self, request: http::Request<Vec<u8>>) -> Result<http::Response<Bytes>, Error>;
 }

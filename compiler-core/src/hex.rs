@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use hexpm::Client as _;
-
-use crate::{io::FileSystemIO, Error};
+use crate::{
+    io::{FileSystemIO, HttpClient},
+    Error,
+};
 
 // TODO: abstract away the IO portion of this module so that a HTTP client or
 // Hex client is injected in, or something like that...
@@ -11,6 +12,8 @@ use crate::{io::FileSystemIO, Error};
 
 pub struct Client {
     fs: Box<dyn FileSystemIO>,
+    http: Box<dyn HttpClient>,
+    config: hexpm::Config,
 }
 
 impl std::fmt::Debug for Client {
@@ -22,8 +25,12 @@ impl std::fmt::Debug for Client {
 }
 
 impl Client {
-    pub fn new(fs: Box<dyn FileSystemIO>) -> Self {
-        Self { fs }
+    pub fn new(fs: Box<dyn FileSystemIO>, http: Box<dyn HttpClient>) -> Self {
+        Self {
+            fs,
+            http,
+            config: hexpm::Config::new(),
+        }
     }
 
     pub async fn ensure_package_downloaded(
@@ -47,22 +54,19 @@ impl Client {
             "Downloading package"
         );
 
-        let tarball = self
-            .get_client()
-            .get_package_tarball(package_name, version, checksum)
-            .await
-            .map_err(|error| Error::DownloadPackageError {
+        let request = hexpm::get_package_tarball_request(package_name, version, None, &self.config);
+        let response = self.http.send(request.map(String::into_bytes)).await?;
+
+        let tarball = hexpm::get_package_tarball_response(response, checksum).map_err(|error| {
+            Error::DownloadPackageError {
                 package_name: package_name.to_string(),
                 package_version: version.to_string(),
                 error: error.to_string(),
-            })?;
+            }
+        })?;
         let mut file = self.fs.open(&tarball_path)?;
         file.write(&tarball)?;
         Ok(())
-    }
-
-    fn get_client(&self) -> hexpm::UnauthenticatedClient {
-        hexpm::UnauthenticatedClient::new()
     }
 }
 

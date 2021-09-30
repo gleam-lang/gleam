@@ -117,6 +117,12 @@ checksum = "cdb031dd78e28731d87d56cc8ffef4a8f36ca26c38fe2de700543e627f8a464a"
 
 [[package]]
 name = "base64"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3441f0f7b02788e948e47f457ca01f1d7e6d92c693bc132c22b087d3141c03ff"
+
+[[package]]
+name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
@@ -550,7 +556,7 @@ dependencies = [
  "flate2",
  "fs_extra",
  "gleam-core",
- "hexpm",
+ "hexpm 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ignore",
  "itertools",
  "lazy_static",
@@ -574,12 +580,15 @@ name = "gleam-core"
 version = "0.18.0-dev"
 dependencies = [
  "askama",
+ "async-trait",
+ "bytes",
  "capnp",
  "capnpc",
  "codespan-reporting",
  "dirs",
  "heck",
- "hexpm",
+ "hexpm 1.3.0 (git+https://github.com/gleam-lang/hexpm-rust)",
+ "http",
  "im",
  "insta",
  "itertools",
@@ -686,14 +695,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "hexpm"
+version = "1.3.0"
+source = "git+https://github.com/gleam-lang/hexpm-rust#e64396c366e953ed4e7390b305abc34a0a0594af"
+dependencies = [
+ "bytes",
+ "flate2",
+ "http",
+ "http-auth-basic",
+ "lazy_static",
+ "protobuf",
+ "protobuf-codegen-pure",
+ "pubgrub",
+ "regex",
+ "ring",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "url",
+ "x509-parser",
+]
+
+[[package]]
 name = "http"
-version = "0.2.4"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "527e8c9ac747e28542699a951517aa9a6945af506cd1f2e1b53a576c17b6cc11"
+checksum = "1323096b05d41827dadeaee54c9981958c0f94e670bc94ed80037d1a7b8b186b"
 dependencies = [
  "bytes",
  "fnv",
  "itoa",
+]
+
+[[package]]
+name = "http-auth-basic"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c692c953703936fa684b33084ce21ad4248769b5052079bbd89afe6b354a5762"
+dependencies = [
+ "base64 0.12.3",
 ]
 
 [[package]]
@@ -1238,6 +1278,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "pubgrub"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdd14552ad5f5d743a323c10d576f26822a044355d6601f377d813ece46f38fd"
+dependencies = [
+ "rustc-hash",
+ "thiserror",
+]
+
+[[package]]
 name = "pulldown-cmark"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1388,7 +1438,7 @@ version = "0.11.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "246e9f61b9bb77df069a947682be06e31ac43ea37862e244a69f177694ea6d22"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "bytes",
  "encoding_rs",
  "futures-core",
@@ -1441,6 +1491,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rusticata-macros"
@@ -2229,7 +2285,7 @@ version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64abca276c58f8341ddc13fd4bd6ae75993cc669043f5b34813c90f7dff04771"
 dependencies = [
- "base64",
+ "base64 0.13.0",
  "chrono",
  "data-encoding",
  "der-parser",

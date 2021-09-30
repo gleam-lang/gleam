@@ -38,9 +38,15 @@ pulldown-cmark = "0.8.0"
 # Non-empty vectors
 vec1 = "1.8.0"
 # Client for the Hex package repository API
-hexpm = "1.3.0"
+hexpm = { git = "https://github.com/gleam-lang/hexpm-rust" }
 # XDG directory locations
 dirs = "4.0.0"
+# HTTP types
+http = "0.2.5"
+# Byte collections
+bytes = "1"
+# Macro to work around Rust's traits not working with async. Sigh.
+async-trait = "0.1.51"
 
 [build-dependencies]
 # Data (de)serialisation
