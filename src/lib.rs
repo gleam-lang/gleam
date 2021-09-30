@@ -8,11 +8,10 @@ pub mod version;
 use crate::proto::{signed::Signed, versions::Versions};
 use bytes::{buf::Buf, Bytes};
 use flate2::read::GzDecoder;
-use http::Method;
+use http::{Method, StatusCode};
 use lazy_static::lazy_static;
 use protobuf::Message;
 use regex::Regex;
-use reqwest::StatusCode;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
@@ -323,9 +322,6 @@ pub fn publish_docs_response(response: http::Response<Bytes>) -> Result<(), ApiE
 
 #[derive(Error, Debug)]
 pub enum ApiError {
-    #[error(transparent)]
-    Http(#[from] reqwest::Error),
-
     #[error(transparent)]
     Json(#[from] serde_json::Error),
 

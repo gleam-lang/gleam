@@ -12,8 +12,6 @@ keywords = ["erlang", "gleam", "elixir", "hex", "api-client"]
 categories = ["api-bindings"]
 
 [dependencies]
-# HTTP client
-reqwest = { version = "0.11", features = ["json"] }
 # Derive Error trait
 thiserror = "1.0"
 # JSON (de)serialization
@@ -42,6 +40,8 @@ pubgrub = "0.2"
 http-auth-basic = "0.3"
 
 [dev-dependencies]
+# HTTP client
+reqwest = { version = "0.11", features = ["json"] }
 # HTTP mock server
 mockito = "0.30"
 # Async runtime
