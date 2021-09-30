@@ -349,7 +349,7 @@ pub enum ApiError {
     #[error("unexpected version format {0}")]
     InvalidVersionFormat(String),
 
-    #[error("no resource was found")]
+    #[error("resource was not found")]
     NotFound,
 
     #[error("the version requirement format {0} is not valid")]

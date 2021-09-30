@@ -795,5 +795,5 @@ async fn get_repository_tarball_not_found_test() {
     )
     .unwrap_err();
 
-    assert_eq!(err.to_string(), "no resource was found");
+    assert_eq!(err.to_string(), "resource was not found");
 }
