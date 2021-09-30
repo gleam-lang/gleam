@@ -6,7 +6,6 @@ mod tests;
 pub mod version;
 
 use crate::proto::{signed::Signed, versions::Versions};
-use async_trait::async_trait;
 use bytes::{buf::Buf, Bytes};
 use flate2::read::GzDecoder;
 use http::Method;
@@ -343,7 +342,6 @@ impl ApiError {
     }
 }
 
-#[async_trait]
 pub trait Client {
     fn http_client(&self) -> reqwest::Client;
     fn api_base_url(&self) -> &url::Url;

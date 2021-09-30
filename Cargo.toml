@@ -22,8 +22,6 @@ serde_json = "1.0"
 # HTTP types
 url = "2.2"
 http = "0.2"
-# Macro to have async fns in traits
-async-trait = "0.1"
 # Complex static values
 lazy_static = "1.4"
 # Text parsing with regular expressions

@@ -1,3 +1,6 @@
+// TODO: remove all the async stuff and mockito server. The library is pure now
+// so it isn't needed.
+
 use super::*;
 use bytes::Bytes;
 use mockito::Matcher;
