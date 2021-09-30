@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The HTTP client has been removed from this library in favour of request
+  building and response parsing functions. Bring your own HTTP client of choice.
 - `Version` and `Requirement` structs have been added for representing
   information about requests versions of packages.
 - Protobuf code updated to use `cfg_attr` rather than deprecated attributes.
