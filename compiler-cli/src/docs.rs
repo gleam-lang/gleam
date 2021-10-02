@@ -1,18 +1,19 @@
-use crate::{cli, project};
-use bytes::Bytes;
+use crate::{cli, http::HttpClient, project};
 use gleam_core::{
     config::{DocsPage, PackageConfig},
     error::Error,
-    io::OutputFile,
+    io::{HttpClient as _, OutputFile},
     project::ModuleOrigin,
 };
-use hexpm::Client;
 use std::path::{Path, PathBuf};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 static DOCS_DIR_NAME: &str = "docs";
 
 pub fn remove(package: String, version: String) -> Result<(), Error> {
+    let config = hexpm::Config::new();
+    let http = HttpClient::new();
+
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
@@ -20,16 +21,16 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
     let username = cli::ask("https://hex.pm username")?;
     let password = cli::ask_password("https://hex.pm password")?;
 
+    // Authenticate with API
+    let request = hexpm::create_api_token_request(&username, &password, TOKEN_NAME, &config);
+    let response = runtime.block_on(http.send(request))?;
+    let token = hexpm::create_api_token_response(response).map_err(Error::hex)?;
+
     // Remove docs from API
-    runtime.block_on(async {
-        hexpm::UnauthenticatedClient::new()
-            .authenticate(&username, &password, TOKEN_NAME)
-            .await
-            .map_err(|e| Error::Hex(e.to_string()))?
-            .remove_docs(&package, &version)
-            .await
-            .map_err(|e| Error::Hex(e.to_string()))
-    })?;
+    let request =
+        hexpm::remove_docs_request(&package, &version, &token, &config).map_err(Error::hex)?;
+    let response = runtime.block_on(http.send(request))?;
+    hexpm::remove_docs_response(response).map_err(Error::hex)?;
 
     // Done!
     println!(
@@ -76,6 +77,8 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
     })?;
 
     let output_dir = PathBuf::new();
+    let http = HttpClient::new();
+    let hex_config = hexpm::Config::new();
 
     // Build
     let (config, outputs) = build_project(&project_root, version.clone(), &output_dir)?;
@@ -90,16 +93,16 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
     let username = cli::ask("https://hex.pm username")?;
     let password = cli::ask_password("https://hex.pm password")?;
 
+    // Authenticate with API
+    let request = hexpm::create_api_token_request(&username, &password, TOKEN_NAME, &hex_config);
+    let response = runtime.block_on(http.send(request))?;
+    let token = hexpm::create_api_token_response(response).map_err(Error::hex)?;
+
     // Upload to hex
-    runtime.block_on(async {
-        hexpm::UnauthenticatedClient::new()
-            .authenticate(&username, &password, TOKEN_NAME)
-            .await
-            .map_err(|e| Error::Hex(e.to_string()))?
-            .publish_docs(&config.name, &version, Bytes::from(archive))
-            .await
-            .map_err(|e| Error::Hex(e.to_string()))
-    })?;
+    let request = hexpm::publish_docs_request(&config.name, &version, archive, &token, &hex_config)
+        .map_err(Error::hex)?;
+    let response = runtime.block_on(http.send(request))?;
+    hexpm::publish_docs_response(response).map_err(Error::hex)?;
 
     println!(
         "

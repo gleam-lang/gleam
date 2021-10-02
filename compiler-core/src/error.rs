@@ -144,6 +144,13 @@ impl Error {
     {
         Self::Http(error.to_string())
     }
+
+    pub fn hex<E>(error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::Hex(error.to_string())
+    }
 }
 
 impl From<capnp::Error> for Error {

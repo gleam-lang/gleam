@@ -48,7 +48,7 @@ impl Downloader {
 
         let request =
             hexpm::get_package_tarball_request(package_name, version, None, &self.hex_config);
-        let response = self.http.send(request.map(String::into_bytes)).await?;
+        let response = self.http.send(request).await?;
 
         let tarball = hexpm::get_package_tarball_response(response, checksum).map_err(|error| {
             Error::DownloadPackageError {

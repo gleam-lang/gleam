@@ -1,7 +1,6 @@
 use std::convert::TryInto;
 
 use async_trait::async_trait;
-use bytes::Bytes;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
 
@@ -20,7 +19,7 @@ impl HttpClient {
 
 #[async_trait]
 impl gleam_core::io::HttpClient for HttpClient {
-    async fn send(&self, request: Request<Vec<u8>>) -> Result<Response<Bytes>> {
+    async fn send(&self, request: Request<Vec<u8>>) -> Result<Response<Vec<u8>>> {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
@@ -32,7 +31,7 @@ impl gleam_core::io::HttpClient for HttpClient {
             std::mem::swap(headers, response.headers_mut());
         }
         builder
-            .body(response.bytes().await.map_err(Error::http)?)
+            .body(response.bytes().await.map_err(Error::http)?.to_vec())
             .map_err(Error::http)
     }
 }

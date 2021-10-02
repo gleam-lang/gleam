@@ -618,7 +618,7 @@ dependencies = [
  "fs_extra",
  "futures 0.3.17",
  "gleam-core",
- "hexpm 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hexpm",
  "http",
  "ignore",
  "itertools",
@@ -652,7 +652,7 @@ dependencies = [
  "debug-ignore",
  "dirs",
  "heck",
- "hexpm 1.3.0 (git+https://github.com/gleam-lang/hexpm-rust)",
+ "hexpm",
  "http",
  "im",
  "insta",
@@ -739,30 +739,7 @@ dependencies = [
 [[package]]
 name = "hexpm"
 version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e8f591cfe2bdd4650a0c435990b48fc9af3b12f41af364c3c726ef84ecc26f8"
-dependencies = [
- "async-trait",
- "bytes",
- "flate2",
- "http",
- "lazy_static",
- "protobuf",
- "protobuf-codegen-pure",
- "regex",
- "reqwest",
- "ring",
- "serde",
- "serde_json",
- "thiserror",
- "url",
- "x509-parser",
-]
-
-[[package]]
-name = "hexpm"
-version = "1.3.0"
-source = "git+https://github.com/gleam-lang/hexpm-rust#883b77bd8a64f02ae2f596f0ead3dd0a6658630f"
+source = "git+https://github.com/gleam-lang/hexpm-rust#1243d858f44e48d23afad0608a01d7622b93d9d3"
 dependencies = [
  "bytes",
  "flate2",
@@ -1533,7 +1510,6 @@ dependencies = [
  "percent-encoding",
  "pin-project-lite",
  "serde",
- "serde_json",
  "serde_urlencoded",
  "tokio",
  "tokio-native-tls",

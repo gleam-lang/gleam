@@ -37,7 +37,7 @@ askama = "0.10.5"
 pulldown-cmark = "0.8.0"
 # Non-empty vectors
 vec1 = "1.8.0"
-# Client for the Hex package repository API
+# Hex package manager client
 hexpm = { git = "https://github.com/gleam-lang/hexpm-rust" }
 # XDG directory locations
 dirs = "4.0.0"

@@ -1,6 +1,5 @@
 use futures::future;
-use gleam_core::{hex, Error, Result};
-use hexpm::Client;
+use gleam_core::{hex, io::HttpClient as _, Error, Result};
 use itertools::Itertools;
 
 use crate::{cli::print_downloading, fs::FileSystemAccessor, http::HttpClient};
@@ -56,13 +55,14 @@ fn split_package_name_version(package: String) -> Result<(String, String)> {
     }
 }
 
-// TODO: update to latest hex version
 async fn get_package_checksum(name: &str, version: &str) -> Result<Vec<u8>> {
-    Ok(hexpm::UnauthenticatedClient::new()
-        .get_package(name, HEXPM_PUBLIC_KEY)
-        .await
+    let config = hexpm::Config::new();
+    let request = hexpm::get_package_request(name, None, &config);
+    let response = HttpClient::new().send(request).await?;
+
+    Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
         // TODO: Better error handling. Handle the package not existing.
-        .map_err(|e| Error::Hex(e.to_string()))?
+        .map_err(Error::hex)?
         .releases
         .into_iter()
         .find(|p| p.version == version)
