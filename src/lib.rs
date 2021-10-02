@@ -6,7 +6,7 @@ mod tests;
 pub mod version;
 
 use crate::proto::{signed::Signed, versions::Versions};
-use bytes::{buf::Buf, Bytes};
+use bytes::buf::Buf;
 use flate2::read::GzDecoder;
 use http::{Method, StatusCode};
 use lazy_static::lazy_static;
@@ -104,7 +104,7 @@ pub fn create_api_token_request(
 }
 
 /// Parses a request that creates a Hex API token.
-pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<String, ApiError> {
+pub fn create_api_token_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
     #[derive(Deserialize)]
     struct Resp {
         secret: String,
@@ -136,7 +136,7 @@ pub fn get_repository_versions_request(
 /// the package registry.
 ///
 pub fn get_repository_versions_response(
-    response: http::Response<Bytes>,
+    response: http::Response<Vec<u8>>,
     public_key: &[u8],
 ) -> Result<HashMap<String, Vec<Version>>, ApiError> {
     let (parts, body) = response.into_parts();
@@ -189,7 +189,7 @@ pub fn get_package_request(
 /// Parse a response to get the information for a package in the repository.
 ///
 pub fn get_package_response(
-    response: http::Response<Bytes>,
+    response: http::Response<Vec<u8>>,
     public_key: &[u8],
 ) -> Result<Package, ApiError> {
     let (parts, body) = response.into_parts();
@@ -245,7 +245,7 @@ pub fn get_package_tarball_request(
 /// Parse a response to download a version of a package as a tarball
 ///
 pub fn get_package_tarball_response(
-    response: http::Response<Bytes>,
+    response: http::Response<Vec<u8>>,
     checksum: &[u8],
 ) -> Result<Vec<u8>, ApiError> {
     let (parts, body) = response.into_parts();
@@ -278,7 +278,7 @@ pub fn remove_docs_request(
         .expect("get_package_tarball_request request"))
 }
 
-pub fn remove_docs_response(response: http::Response<Bytes>) -> Result<(), ApiError> {
+pub fn remove_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::NO_CONTENT => Ok(()),
@@ -311,7 +311,7 @@ pub fn publish_docs_request(
         .expect("publish_docs_request request"))
 }
 
-pub fn publish_docs_response(response: http::Response<Bytes>) -> Result<(), ApiError> {
+pub fn publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
         StatusCode::CREATED => Ok(()),
@@ -369,7 +369,7 @@ pub enum ApiError {
 }
 
 impl ApiError {
-    fn unexpected_response(status: StatusCode, body: Bytes) -> Self {
+    fn unexpected_response(status: StatusCode, body: Vec<u8>) -> Self {
         ApiError::UnexpectedResponse(status, String::from_utf8_lossy(&body).to_string())
     }
 }

@@ -10,7 +10,7 @@ use serde_json::json;
 
 async fn http_send<Body: Into<reqwest::Body>>(
     request: http::Request<Body>,
-) -> Result<http::Response<Bytes>, reqwest::Error> {
+) -> Result<http::Response<Vec<u8>>, reqwest::Error> {
     // Make the request
     let mut response = reqwest::Client::new()
         .execute(request.try_into().unwrap())
@@ -20,7 +20,9 @@ async fn http_send<Body: Into<reqwest::Body>>(
         .status(response.status())
         .version(response.version());
     std::mem::swap(builder.headers_mut().unwrap(), response.headers_mut());
-    Ok(builder.body(response.bytes().await.unwrap()).unwrap())
+    Ok(builder
+        .body(response.bytes().await.unwrap().to_vec())
+        .unwrap())
 }
 
 #[tokio::test]
