@@ -51,7 +51,10 @@ fn split_package_name_version(package: String) -> Result<(String, String)> {
         Ok((name.to_string(), version.to_string()))
     } else {
         // Error!
-        todo!("Bad package format: {}", package)
+        Err(Error::Hex(format!(
+            "Bad package@version format: {}",
+            package
+        )))
     }
 }
 
