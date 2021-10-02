@@ -87,7 +87,7 @@ pub fn create_api_token_request(
     password: &str,
     token_name: &str,
     config: &Config,
-) -> http::Request<String> {
+) -> http::Request<Vec<u8>> {
     let body = json!({
         "name": token_name,
         "permissions": [{
@@ -99,7 +99,7 @@ pub fn create_api_token_request(
     config
         .api_request(Method::POST, "keys", None)
         .header("authorization", creds)
-        .body(body.to_string())
+        .body(body.to_string().into_bytes())
         .expect("create_api_token_request request")
 }
 
@@ -124,11 +124,11 @@ pub fn create_api_token_response(response: http::Response<Bytes>) -> Result<Stri
 pub fn get_repository_versions_request(
     api_token: Option<&str>,
     config: &Config,
-) -> http::Request<String> {
+) -> http::Request<Vec<u8>> {
     config
         .repository_request(Method::GET, "versions", api_token)
         .header("accept", "application/json")
-        .body(String::new())
+        .body(vec![])
         .expect("create_api_token_request request")
 }
 
@@ -178,11 +178,11 @@ pub fn get_package_request(
     name: &str,
     api_token: Option<&str>,
     config: &Config,
-) -> http::Request<String> {
+) -> http::Request<Vec<u8>> {
     config
         .repository_request(Method::GET, &format!("packages/{}", name), api_token)
         .header("accept", "application/json")
-        .body(String::new())
+        .body(vec![])
         .expect("get_package_request request")
 }
 
@@ -230,7 +230,7 @@ pub fn get_package_tarball_request(
     version: &str,
     api_token: Option<&str>,
     config: &Config,
-) -> http::Request<String> {
+) -> http::Request<Vec<u8>> {
     config
         .repository_request(
             Method::GET,
@@ -238,7 +238,7 @@ pub fn get_package_tarball_request(
             api_token,
         )
         .header("accept", "application/x-tar")
-        .body(String::new())
+        .body(vec![])
         .expect("get_package_tarball_request request")
 }
 
@@ -265,7 +265,7 @@ pub fn remove_docs_request(
     version: &str,
     api_token: &str,
     config: &Config,
-) -> Result<http::Request<String>, ApiError> {
+) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
 
     Ok(config
@@ -274,7 +274,7 @@ pub fn remove_docs_request(
             &format!("packages/{}/releases/{}/docs", package_name, version),
             Some(api_token),
         )
-        .body(String::new())
+        .body(vec![])
         .expect("get_package_tarball_request request"))
 }
 
