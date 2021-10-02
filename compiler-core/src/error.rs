@@ -133,6 +133,17 @@ pub enum Error {
         package_version: String,
         error: String,
     },
+
+    Http(String),
+}
+
+impl Error {
+    pub fn http<E>(error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::Http(error.to_string())
+    }
 }
 
 impl From<capnp::Error> for Error {
@@ -1749,6 +1760,22 @@ Fix the warnings and try again!"
                 writeln!(
                     buf,
                     "\nThe error from the package manager client was:
+
+    {}",
+                    error
+                )
+                .unwrap();
+            }
+
+            Error::Http(error) => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "HTTP error".to_string(),
+                    label: "A HTTP request failed".to_string(),
+                };
+                write_project(buf, diagnostic);
+                writeln!(
+                    buf,
+                    "\nThe error from the HTTP client was:
 
     {}",
                     error

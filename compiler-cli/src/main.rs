@@ -53,6 +53,7 @@ extern crate pretty_assertions;
 mod cli;
 mod compile_package;
 mod config;
+mod http;
 mod docs;
 mod eunit;
 mod format;

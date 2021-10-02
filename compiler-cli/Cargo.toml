@@ -50,6 +50,12 @@ fs_extra = "1.2.0"
 # Logging
 tracing = "0.1.22"
 tracing-subscriber = "0.2.15"
+# HTTP client
+reqwest = "0.11.4"
+# Macro to work around Rust's traits not working with async. Sigh.
+async-trait = "0.1.51"
+# HTTP types
+http = "0.2.5"
 
 [dev-dependencies]
 # Test assertion errors with diffs
