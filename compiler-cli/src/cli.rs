@@ -43,12 +43,16 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
         .map(|s| s.trim().to_string())
 }
 
+pub fn print_downloading(text: &str) {
+    print_green_prefix("Downloading", text)
+}
+
 pub fn print_compiling(text: &str) {
-    print_green_prefix("Compiling", text)
+    print_green_prefix("  Compiling", text)
 }
 
 pub fn print_running(text: &str) {
-    print_green_prefix("  Running", text)
+    print_green_prefix("    Running", text)
 }
 
 pub fn print_green_prefix(prefix: &str, text: &str) {

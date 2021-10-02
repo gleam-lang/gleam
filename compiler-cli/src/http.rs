@@ -8,6 +8,16 @@ use http::{Request, Response};
 #[derive(Debug)]
 pub struct HttpClient(reqwest::Client);
 
+impl HttpClient {
+    pub fn new() -> Self {
+        Self(reqwest::Client::new())
+    }
+
+    pub fn boxed() -> Box<Self> {
+        Box::new(Self::new())
+    }
+}
+
 #[async_trait]
 impl gleam_core::io::HttpClient for HttpClient {
     async fn send(&self, request: Request<Vec<u8>>) -> Result<Response<Bytes>> {
@@ -18,7 +28,9 @@ impl gleam_core::io::HttpClient for HttpClient {
         let mut builder = Response::builder()
             .status(response.status())
             .version(response.version());
-        std::mem::swap(builder.headers_mut().unwrap(), response.headers_mut());
+        if let Some(headers) = builder.headers_mut() {
+            std::mem::swap(headers, response.headers_mut());
+        }
         builder
             .body(response.bytes().await.map_err(Error::http)?)
             .map_err(Error::http)

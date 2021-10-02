@@ -21,6 +21,10 @@ impl FileSystemAccessor {
     pub fn new() -> Self {
         Self
     }
+
+    pub fn boxed() -> Box<Self> {
+        Box::new(Self::new())
+    }
 }
 
 impl gleam_core::io::FileSystemReader for FileSystemAccessor {

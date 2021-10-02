@@ -56,6 +56,8 @@ reqwest = "0.11.4"
 async-trait = "0.1.51"
 # HTTP types
 http = "0.2.5"
+# Async combinators for futures
+futures = "0.3.17"
 
 [dev-dependencies]
 # Test assertion errors with diffs

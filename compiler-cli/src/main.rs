@@ -53,11 +53,12 @@ extern crate pretty_assertions;
 mod cli;
 mod compile_package;
 mod config;
-mod http;
+mod dependencies;
 mod docs;
 mod eunit;
 mod format;
 mod fs;
+mod http;
 mod new;
 mod panic;
 mod project;
@@ -98,6 +99,9 @@ enum Command {
 
     /// Render HTML documentation
     Docs(Docs),
+
+    /// Work with dependency packages
+    Deps(Dependencies),
 
     /// Create a new project
     New(NewOptions),
@@ -202,6 +206,15 @@ impl CompilePackage {
 }
 
 #[derive(StructOpt, Debug)]
+enum Dependencies {
+    /// Download packages to the local cache
+    Download {
+        /// The package to download: packagename@1.0.0
+        packages: Vec<String>,
+    },
+}
+
+#[derive(StructOpt, Debug)]
 enum Docs {
     /// Render HTML docs locally
     Build {
@@ -269,6 +282,8 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
+
+        Command::Deps(Dependencies::Download { packages }) => dependencies::download(packages),
 
         Command::New(options) => new::create(options, VERSION),
 

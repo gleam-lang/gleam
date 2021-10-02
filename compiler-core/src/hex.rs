@@ -8,14 +8,14 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Client {
+pub struct Downloader {
     fs: DebugIgnore<Box<dyn FileSystemIO>>,
     http: DebugIgnore<Box<dyn HttpClient>>,
     hex_config: hexpm::Config,
     pub cache_directory: PathBuf,
 }
 
-impl Client {
+impl Downloader {
     pub fn new(fs: Box<dyn FileSystemIO>, http: Box<dyn HttpClient>) -> Self {
         Self {
             fs: DebugIgnore(fs),
