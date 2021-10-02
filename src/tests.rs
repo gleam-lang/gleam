@@ -4,7 +4,6 @@
 use std::str::FromStr;
 
 use super::*;
-use bytes::Bytes;
 use mockito::Matcher;
 use serde_json::json;
 
