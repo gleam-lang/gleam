@@ -46,7 +46,7 @@ pub fn download(packages: Vec<String>) -> Result<()> {
 }
 
 fn split_package_name_version(package: String) -> Result<(String, String)> {
-    let mut parts = package.split("@");
+    let mut parts = package.split('@');
     if let (Some(name), Some(version), None) = (parts.next(), parts.next(), parts.next()) {
         Ok((name.to_string(), version.to_string()))
     } else {
