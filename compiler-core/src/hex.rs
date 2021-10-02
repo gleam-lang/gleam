@@ -1,35 +1,25 @@
 use std::path::{Path, PathBuf};
 
+use debug_ignore::DebugIgnore;
+
 use crate::{
     io::{FileSystemIO, HttpClient},
     Error,
 };
 
-// TODO: abstract away the IO portion of this module so that a HTTP client or
-// Hex client is injected in, or something like that...
-// The current design of the hex client is... not amazing. It tries to be clever
-// but you can't build a trait object with it, making it rather awkward.
-
+#[derive(Debug)]
 pub struct Client {
-    fs: Box<dyn FileSystemIO>,
-    http: Box<dyn HttpClient>,
+    fs: DebugIgnore<Box<dyn FileSystemIO>>,
+    http: DebugIgnore<Box<dyn HttpClient>>,
     hex_config: hexpm::Config,
     pub cache_directory: PathBuf,
-}
-
-impl std::fmt::Debug for Client {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Client")
-            .field("fs", &"<FileSystemWriter>")
-            .finish()
-    }
 }
 
 impl Client {
     pub fn new(fs: Box<dyn FileSystemIO>, http: Box<dyn HttpClient>) -> Self {
         Self {
-            fs,
-            http,
+            fs: DebugIgnore(fs),
+            http: DebugIgnore(http),
             hex_config: hexpm::Config::new(),
             cache_directory: default_gleam_cache_directory(),
         }

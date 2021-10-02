@@ -47,6 +47,8 @@ http = "0.2.5"
 bytes = "1"
 # Macro to work around Rust's traits not working with async. Sigh.
 async-trait = "0.1.51"
+# Little helper to omit fields that cannot be debug printed
+debug-ignore = "1.0.1"
 
 [build-dependencies]
 # Data (de)serialisation
