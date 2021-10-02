@@ -293,10 +293,10 @@ pub fn remove_docs_response(response: http::Response<Bytes>) -> Result<(), ApiEr
 pub fn publish_docs_request(
     package_name: &str,
     version: &str,
-    gzipped_tarball: Bytes,
+    gzipped_tarball: Vec<u8>,
     api_token: &str,
     config: &Config,
-) -> Result<http::Request<Bytes>, ApiError> {
+) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
 
     Ok(config

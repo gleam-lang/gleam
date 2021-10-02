@@ -351,7 +351,7 @@ async fn publish_docs_success() {
     let token = "my-api-token-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let mock = mockito::mock(
         "POST",
@@ -385,7 +385,7 @@ async fn publish_docs_bad_package_name() {
     let token = "my-api-token-here";
     let package = "not valid";
     let version = "1.2.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
@@ -400,7 +400,7 @@ async fn publish_docs_bad_package_version() {
     let token = "my-api-token-here";
     let package = "name";
     let version = "invalid version";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
@@ -415,7 +415,7 @@ async fn publish_docs_not_found() {
     let token = "my-api-token-here";
     let package = "name";
     let version = "1.1.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let mock = mockito::mock(
         "POST",
@@ -449,7 +449,7 @@ async fn publish_docs_rate_limit() {
     let token = "my-api-token-here";
     let package = "name";
     let version = "1.1.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let mock = mockito::mock(
         "POST",
@@ -483,7 +483,7 @@ async fn publish_docs_invalid_api_token() {
     let token = "my-api-token-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let mock = mockito::mock(
         "POST",
@@ -524,7 +524,7 @@ async fn publish_docs_forbidden() {
     let token = "my-api-token-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
-    let tarball = Bytes::from_static(std::include_bytes!("../test/example.tar.gz"));
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let mock = mockito::mock(
         "POST",
