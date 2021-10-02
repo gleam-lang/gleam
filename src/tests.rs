@@ -1,7 +1,7 @@
 // TODO: remove all the async stuff and mockito server. The library is pure now
 // so it isn't needed.
 
-use std::str::FromStr;
+use std::{convert::TryFrom, str::FromStr};
 
 use super::*;
 use mockito::Matcher;
@@ -590,7 +590,7 @@ async fn get_package_ok_test() {
             repository: "hexpm".to_string(),
             releases: vec![
                 Release {
-                    version: "0.0.0".to_string(),
+                    version: Version::try_from("0.0.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -599,7 +599,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.1.0".to_string(),
+                    version: Version::try_from("0.1.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -608,7 +608,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.2.0".to_string(),
+                    version: Version::try_from("0.2.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -617,7 +617,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.2.1".to_string(),
+                    version: Version::try_from("0.2.1").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -626,7 +626,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.2.2".to_string(),
+                    version: Version::try_from("0.2.2").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -636,7 +636,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.2.3".to_string(),
+                    version: Version::try_from("0.2.3").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -645,7 +645,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.2.4".to_string(),
+                    version: Version::try_from("0.2.4").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -654,7 +654,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.3.0".to_string(),
+                    version: Version::try_from("0.3.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -663,7 +663,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.4.0".to_string(),
+                    version: Version::try_from("0.4.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![
@@ -672,7 +672,7 @@ async fn get_package_ok_test() {
                     ]
                 },
                 Release {
-                    version: "0.5.0".to_string(),
+                    version: Version::try_from("0.5.0").unwrap(),
                     dependencies: vec![],
                     retirement_status: None,
                     outer_checksum: vec![

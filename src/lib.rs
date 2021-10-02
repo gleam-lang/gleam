@@ -15,7 +15,7 @@ use regex::Regex;
 use ring::digest::{Context, SHA256};
 use serde::Deserialize;
 use serde_json::json;
-use std::{collections::HashMap, convert::TryInto, io::BufReader};
+use std::{collections::HashMap, convert::TryFrom, convert::TryInto, io::BufReader};
 use thiserror::Error;
 use version::{Range, Version};
 
@@ -453,8 +453,10 @@ fn proto_to_release(mut release: proto::package::Release) -> Result<Release, Api
         .into_iter()
         .map(proto_to_dep)
         .collect::<Result<Vec<_>, _>>()?;
+    let version =
+        Version::try_from(release.get_version()).expect("Failed to parse version format from Hex");
     Ok(Release {
-        version: release.take_version(),
+        version,
         outer_checksum: release.take_outer_checksum(),
         retirement_status: proto_to_retirement_status(release.take_retired()),
         dependencies,
@@ -471,7 +473,7 @@ pub struct Package {
 #[derive(Debug, PartialEq, Eq)]
 pub struct Release {
     /// Release version
-    pub version: String,
+    pub version: Version,
     /// All dependencies of the release
     pub dependencies: Vec<Dependency>,
     /// If set the release is retired, a retired release should only be
