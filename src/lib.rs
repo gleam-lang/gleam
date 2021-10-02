@@ -231,7 +231,7 @@ pub fn get_package_tarball_request(
     api_token: Option<&str>,
     config: &Config,
 ) -> http::Request<String> {
-    dbg!(config
+    config
         .repository_request(
             Method::GET,
             &format!("tarballs/{}-{}.tar", name, version),
@@ -239,7 +239,7 @@ pub fn get_package_tarball_request(
         )
         .header("accept", "application/x-tar")
         .body(String::new())
-        .expect("get_package_tarball_request request"))
+        .expect("get_package_tarball_request request")
 }
 
 /// Parse a response to download a version of a package as a tarball
