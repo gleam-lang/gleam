@@ -15,21 +15,19 @@ const DIR_NAME_PACKAGE_TEST: &str = "test";
 const DIR_NAME_PACKAGE_EBIN: &str = "ebin";
 
 #[derive(Debug)]
-pub struct ProjectRoot {
-    pub root: PathBuf,
-}
+pub struct ProjectRoot;
 
 impl ProjectRoot {
-    pub fn new(root: PathBuf) -> Self {
-        Self { root }
+    pub fn new() -> Self {
+        Self
     }
 
     pub fn src_path(&self) -> PathBuf {
-        self.root.join(DIR_NAME_PACKAGE_SRC)
+        PathBuf::from("./").join(DIR_NAME_PACKAGE_SRC)
     }
 
     pub fn build_path(&self) -> PathBuf {
-        self.root.join(DIR_NAME_BUILD)
+        PathBuf::from("./").join(DIR_NAME_BUILD)
     }
 
     pub fn default_build_lib_path(&self) -> PathBuf {

@@ -1,14 +1,12 @@
 use gleam_core::{build::project_root::ProjectRoot, error::Error};
-use std::path::PathBuf;
 use std::process::Command;
 
-pub fn command(root_string: String) -> Result<(), Error> {
-    let root_path = PathBuf::from(root_string);
-    let root = ProjectRoot::new(root_path.clone());
-    let config = crate::config::root_config(&root)?;
+pub fn command() -> Result<(), Error> {
+    let root = ProjectRoot::new();
+    let config = crate::config::root_config()?;
 
     // Build project
-    let _ = super::new_build_main(config, root_path)?;
+    let _ = super::new_build_main(config)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

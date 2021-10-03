@@ -13,13 +13,12 @@ struct EunitFile {
     content: String,
 }
 
-pub fn command(root_string: String) -> Result<(), Error> {
-    let root_path = PathBuf::from(root_string);
-    let root = ProjectRoot::new(root_path.clone());
-    let config = crate::config::root_config(&root)?;
+pub fn command() -> Result<(), Error> {
+    let root = ProjectRoot::new();
+    let config = crate::config::root_config()?;
 
     // Build project
-    let packages = crate::new_build_main(config, root_path)?;
+    let packages = crate::new_build_main(config)?;
 
     crate::cli::print_running("eunit");
 

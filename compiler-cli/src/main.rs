@@ -123,19 +123,11 @@ enum Command {
 
     /// Start an erlang shell
     #[structopt(setting = AppSettings::Hidden)]
-    Shell {
-        /// Location of the project root
-        #[structopt(default_value = ".")]
-        project_root: String,
-    },
+    Shell,
 
     /// Run eunit tests
     #[structopt(setting = AppSettings::Hidden)]
-    Eunit {
-        /// Location of the project root
-        #[structopt(default_value = ".")]
-        project_root: String,
-    },
+    Eunit,
 
     /// Compile a single Gleam package
     #[structopt(setting = AppSettings::Hidden)]
@@ -284,9 +276,9 @@ fn main() {
 
         Command::New(options) => new::create(options, VERSION),
 
-        Command::Shell { project_root } => shell::command(project_root),
+        Command::Shell => shell::command(),
 
-        Command::Eunit { project_root } => eunit::command(project_root),
+        Command::Eunit => eunit::command(),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
     };
@@ -314,7 +306,7 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
 
     // Use new build tool
     if config.tool == gleam_core::config::BuildTool::Gleam {
-        return new_build_main(config, root).map(|_| ());
+        return new_build_main(config).map(|_| ());
     }
 
     // Read and type check project
@@ -352,11 +344,8 @@ fn initialise_logger() {
         .init();
 }
 
-pub fn new_build_main(
-    root_config: PackageConfig,
-    path: PathBuf,
-) -> Result<HashMap<String, Package>, Error> {
-    let root = ProjectRoot::new(path);
+pub fn new_build_main(root_config: PackageConfig) -> Result<HashMap<String, Package>, Error> {
+    let root = ProjectRoot::new();
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::FileSystemAccessor::new();
 
@@ -412,7 +401,7 @@ fn copy_root_package_to_build(
     root_config: &PackageConfig,
 ) -> Result<(), Error> {
     let target = root.default_build_lib_package_path(&root_config.name);
-    let path = &root.root;
+    let path = PathBuf::from("./");
 
     // Reset _build dir
     crate::fs::delete_dir(&target)?;

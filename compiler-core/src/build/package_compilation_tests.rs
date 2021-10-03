@@ -1780,7 +1780,7 @@ fn config_compilation_test() {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
             let config = $config;
             let mut modules = HashMap::new();
-            let root = ProjectRoot::new(PathBuf::new());
+            let root = ProjectRoot::new();
             let (file_writer, file_receiver) = FilesChannel::new();
             let options = package_compiler::Options {
                 target: Target::Erlang,

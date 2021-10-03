@@ -1,8 +1,7 @@
 use futures::future;
-use gleam_core::{build::project_root::ProjectRoot, hex, io::HttpClient as _, Error, Result};
+use gleam_core::{hex, io::HttpClient as _, Error, Result};
 use hexpm::version::{ManifestPackage, Version};
 use itertools::Itertools;
-use std::path::PathBuf;
 
 use crate::{cli::print_downloading, fs::FileSystemAccessor, http::HttpClient};
 
@@ -27,8 +26,7 @@ pub fn download() -> Result<()> {
     let downloader = hex::Downloader::new(fs, http);
 
     // Read the project config
-    let root = ProjectRoot::new(PathBuf::from("./"));
-    let config = crate::config::root_config(&root)?;
+    let config = crate::config::root_config()?;
     let project_name = config.name.clone();
 
     // Start event loop so we can run async functions to call the Hex API

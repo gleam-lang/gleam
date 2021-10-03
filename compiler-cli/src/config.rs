@@ -1,4 +1,7 @@
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use gleam_core::{
     build::project_root::ProjectRoot,
@@ -6,8 +9,8 @@ use gleam_core::{
     error::{Error, FileIoAction, FileKind},
 };
 
-pub fn root_config(root: &ProjectRoot) -> Result<PackageConfig, Error> {
-    read_project_config(&root.root)
+pub fn root_config() -> Result<PackageConfig, Error> {
+    read_project_config(PathBuf::from("./"))
 }
 
 pub fn package_configs(
