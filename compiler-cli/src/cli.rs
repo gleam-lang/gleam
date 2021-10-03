@@ -2,7 +2,10 @@ use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
 };
-use std::io::Write;
+use std::{
+    io::Write,
+    time::{Duration, Instant},
+};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
 #[derive(Debug, Default, Clone)]
@@ -53,6 +56,17 @@ pub fn print_compiling(text: &str) {
 
 pub fn print_running(text: &str) {
     print_green_prefix("    Running", text)
+}
+
+pub fn print_packages_downloaded(start: Instant, count: usize) {
+    print_green_prefix(
+        " Downloaded",
+        &format!("{} new packages in {}", count, seconds(start.elapsed())),
+    )
+}
+
+pub fn seconds(duration: Duration) -> String {
+    format!("{:.2}s", duration.as_millis() as f32 / 1000.)
 }
 
 pub fn print_green_prefix(prefix: &str, text: &str) {

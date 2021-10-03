@@ -31,7 +31,7 @@ impl Downloader {
         package_name: &str,
         version: &Version,
         checksum: &[u8],
-    ) -> Result<(), Error> {
+    ) -> Result<bool, Error> {
         let tarball_path =
             package_cache_tarball_path(&self.cache_directory, package_name, &version.to_string());
         if self.fs.is_file(&tarball_path) {
@@ -40,7 +40,7 @@ impl Downloader {
                 version = %version,
                 "Package already downloaded"
             );
-            return Ok(());
+            return Ok(false);
         }
         tracing::info!(
             package = package_name,
@@ -65,7 +65,7 @@ impl Downloader {
         })?;
         let mut file = self.fs.open(&tarball_path)?;
         file.write(&tarball)?;
-        Ok(())
+        Ok(true)
     }
 }
 

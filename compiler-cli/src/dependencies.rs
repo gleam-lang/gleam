@@ -1,9 +1,14 @@
+use std::time::Instant;
+
 use futures::future;
 use gleam_core::{hex, io::HttpClient as _, Error, Result};
 use hexpm::version::{ManifestPackage, Version};
-use itertools::Itertools;
 
-use crate::{cli::print_downloading, fs::FileSystemAccessor, http::HttpClient};
+use crate::{
+    cli::{print_downloading, print_packages_downloaded},
+    fs::FileSystemAccessor,
+    http::HttpClient,
+};
 
 // TODO: move this elsewhere or pull from repo
 // https://github.com/hexpm/specifications/blob/74dd7ef3956ee2bc7b8db9608e5ee909f5e08037/endpoints.md#endpoints-1
@@ -20,6 +25,7 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 
 pub fn download() -> Result<()> {
     print_downloading("packages");
+    let start = Instant::now();
 
     let http = HttpClient::boxed();
     let fs = FileSystemAccessor::boxed();
@@ -43,7 +49,7 @@ pub fn download() -> Result<()> {
     // Prepare an async computation to download each package
     let futures = manifest.packages.into_iter().map(|package| async {
         match package {
-            ManifestPackage::Hex { name, .. } if name == project_name => Ok(()),
+            ManifestPackage::Hex { name, .. } if name == project_name => Ok(false),
             ManifestPackage::Hex { name, version } => {
                 let checksum = get_package_checksum(&name, &version).await?;
                 downloader
@@ -56,9 +62,15 @@ pub fn download() -> Result<()> {
     // Run the futures to download the packages concurrently
     let results = runtime.block_on(future::join_all(futures));
 
-    // Check for any errors
-    results.into_iter().try_collect()?;
+    // Count the number of packages downloaded while checking for errors
+    let mut count = 0;
+    for result in results {
+        if result? {
+            count += 1;
+        }
+    }
 
+    print_packages_downloaded(start, count);
     Ok(())
 }
 
