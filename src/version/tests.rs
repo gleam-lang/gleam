@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
 };
 
-use crate::Release;
+use crate::{ApiError, Release};
 
 use super::{
     Identifier::{AlphaNumeric, Numeric},
@@ -374,8 +374,11 @@ struct Remote {
 }
 
 impl PackageFetcher for Remote {
-    fn get_dependencies(&self, package: &str) -> Result<Package, ApiError> {
-        self.deps.get(package).cloned().ok_or(ApiError::NotFound)
+    fn get_dependencies(&self, package: &str) -> Result<Package, Box<dyn StdError>> {
+        self.deps
+            .get(package)
+            .cloned()
+            .ok_or(Box::new(ApiError::NotFound))
     }
 }
 

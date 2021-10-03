@@ -7,10 +7,10 @@
 
 use std::{
     borrow::Borrow, cell::RefCell, cmp::Ordering, collections::HashMap, convert::TryFrom,
-    error::Error, fmt,
+    error::Error as StdError, fmt,
 };
 
-use crate::{ApiError, Dependency, Package, Release};
+use crate::{Dependency, Package, Release};
 
 use self::parser::Parser;
 use pubgrub::{
@@ -372,7 +372,7 @@ where
 }
 
 pub trait PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<Package, ApiError>;
+    fn get_dependencies(&self, package: &str) -> Result<Package, Box<dyn StdError>>;
 }
 
 struct DependencyProvider {
@@ -405,7 +405,7 @@ impl DependencyProvider {
         // `&self` with interop mutability.
         &self,
         name: &str,
-    ) -> Result<(), ApiError> {
+    ) -> Result<(), Box<dyn StdError>> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
             let mut package = self.remote.get_dependencies(name)?;
@@ -431,9 +431,9 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
     >(
         &self,
         potential_packages: impl Iterator<Item = (Name, Ver)>,
-    ) -> Result<(Name, Option<Version>), Box<dyn Error>> {
+    ) -> Result<(Name, Option<Version>), Box<dyn StdError>> {
         let potential_packages: Vec<_> = potential_packages
-            .map::<Result<_, ApiError>, _>(|pair| {
+            .map::<Result<_, Box<dyn StdError>>, _>(|pair| {
                 self.ensure_package_fetched(pair.0.borrow())?;
                 Ok(pair)
             })
@@ -457,7 +457,7 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
         &self,
         name: &PackageName,
         version: &Version,
-    ) -> Result<pubgrub::solver::Dependencies<PackageName, Version>, Box<dyn Error>> {
+    ) -> Result<pubgrub::solver::Dependencies<PackageName, Version>, Box<dyn StdError>> {
         self.ensure_package_fetched(name)?;
         let packages = self.packages.borrow();
         let version = packages
