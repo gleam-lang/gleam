@@ -101,6 +101,11 @@ pub enum Error {
         reason: InvalidProjectNameReason,
     },
 
+    InvalidVersionFormat {
+        input: String,
+        error: String,
+    },
+
     ProjectRootAlreadyExist {
         path: String,
     },
@@ -1783,6 +1788,22 @@ Fix the warnings and try again!"
                 writeln!(
                     buf,
                     "\nThe error from the HTTP client was:
+
+    {}",
+                    error
+                )
+                .unwrap();
+            }
+
+            Error::InvalidVersionFormat { input, error } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Invalid version format".to_string(),
+                    label: format!("I was unable to parse the version {}.", input),
+                };
+                write_project(buf, diagnostic);
+                writeln!(
+                    buf,
+                    "\nThe error from the parser was:
 
     {}",
                     error

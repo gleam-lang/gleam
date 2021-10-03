@@ -14,6 +14,7 @@ use crate::{
 };
 use std::{path::PathBuf, sync::Arc};
 
+use hexpm::version::Range;
 use pretty_assertions::assert_eq;
 
 macro_rules! assert_erlang_compile {
@@ -1881,7 +1882,7 @@ fn config_compilation_test() {
         ("simple_json", "1.0.0"),
     ]
     .into_iter()
-    .map(|(a, b)| (a.to_string(), b.to_string()))
+    .map(|(a, b)| (a.to_string(), Range::new(b.to_string())))
     .collect();
     assert_config_compile!(
         config,

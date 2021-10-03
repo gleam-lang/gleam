@@ -18,7 +18,7 @@ pub struct PackageConfig {
     #[serde(default)]
     pub docs: Docs,
     #[serde(default)]
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, hexpm::version::Range>,
     #[serde(default)]
     pub otp_start_module: Option<String>,
     #[serde(default)]

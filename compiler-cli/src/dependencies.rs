@@ -1,6 +1,8 @@
 use futures::future;
 use gleam_core::{hex, io::HttpClient as _, Error, Result};
+use hexpm::version::Version;
 use itertools::Itertools;
+use std::convert::TryFrom;
 
 use crate::{cli::print_downloading, fs::FileSystemAccessor, http::HttpClient};
 
@@ -62,6 +64,10 @@ async fn get_package_checksum(name: &str, version: &str) -> Result<Vec<u8>> {
     let config = hexpm::Config::new();
     let request = hexpm::get_package_request(name, None, &config);
     let response = HttpClient::new().send(request).await?;
+    let version = Version::try_from(version).map_err(|e| Error::InvalidVersionFormat {
+        input: version.to_string(),
+        error: e.to_string(),
+    })?;
 
     Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
         // TODO: Better error handling. Handle the package not existing.
