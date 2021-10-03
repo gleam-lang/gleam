@@ -19,8 +19,6 @@ use std::{collections::HashMap, convert::TryFrom, convert::TryInto, io::BufReade
 use thiserror::Error;
 use version::{Range, Version};
 
-pub use pubgrub::error::PubGrubError;
-
 #[derive(Debug, Clone)]
 pub struct Config {
     /// Defaults to https://hex.pm/api/
