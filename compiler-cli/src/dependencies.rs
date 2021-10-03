@@ -98,7 +98,7 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .map_err(|e| Box::new(e))?;
+            .map_err(Box::new)?;
         hexpm::get_package_response(response, HEXPM_PUBLIC_KEY).map_err(|e| e.into())
     }
 }
