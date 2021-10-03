@@ -50,7 +50,7 @@ fn split_package_name_version(package: String) -> Result<(String, String)> {
     if let (Some(name), Some(version), None) = (parts.next(), parts.next(), parts.next()) {
         Ok((name.to_string(), version.to_string()))
     } else {
-        // Error!
+        // TODO: Error!
         Err(Error::Hex(format!(
             "Bad package@version format: {}",
             package
