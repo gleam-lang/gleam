@@ -124,7 +124,10 @@ pub fn build_project(
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
-    config.version = Version::parse(&version).unwrap();
+    config.version = Version::parse(&version).map_err(|e| Error::InvalidVersionFormat {
+        input: version.to_string(),
+        error: e.to_string(),
+    })?;
     check_app_file_version_matches(&project_root, &config)?;
 
     // Attach documentation to Src modules
