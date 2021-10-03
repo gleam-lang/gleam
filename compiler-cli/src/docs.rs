@@ -5,6 +5,7 @@ use gleam_core::{
     io::{HttpClient as _, OutputFile},
     project::ModuleOrigin,
 };
+use hexpm::version::Version;
 use std::path::{Path, PathBuf};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
@@ -123,7 +124,7 @@ pub fn build_project(
 ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
     // Read and type check project
     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
-    config.version = version;
+    config.version = Version::parse(&version).unwrap();
     check_app_file_version_matches(&project_root, &config)?;
 
     // Attach documentation to Src modules
@@ -174,12 +175,12 @@ fn check_app_file_version_matches(
                 .map(|capture| capture.as_str().to_string())
         })
         .map(|version| {
-            if version == project_config.version {
+            if version == project_config.version.to_string() {
                 Ok(())
             } else {
                 // Error if we've found the version and it doesn't match
                 Err(Error::VersionDoesNotMatch {
-                    toml_ver: project_config.version.clone(),
+                    toml_ver: project_config.version.to_string(),
                     app_ver: version,
                 })
             }

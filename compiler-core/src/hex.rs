@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use debug_ignore::DebugIgnore;
+use hexpm::version::Version;
 
 use crate::{
     io::{FileSystemIO, HttpClient},
@@ -28,26 +29,31 @@ impl Downloader {
     pub async fn ensure_package_downloaded(
         &self,
         package_name: &str,
-        version: &str,
+        version: &Version,
         checksum: &[u8],
     ) -> Result<(), Error> {
-        let tarball_path = package_cache_tarball_path(&self.cache_directory, package_name, version);
+        let tarball_path =
+            package_cache_tarball_path(&self.cache_directory, package_name, &version.to_string());
         if self.fs.is_file(&tarball_path) {
             tracing::info!(
                 package = package_name,
-                version = version,
+                version = %version,
                 "Package already downloaded"
             );
             return Ok(());
         }
         tracing::info!(
             package = package_name,
-            version = version,
+            version = %version,
             "Downloading package"
         );
 
-        let request =
-            hexpm::get_package_tarball_request(package_name, version, None, &self.hex_config);
+        let request = hexpm::get_package_tarball_request(
+            package_name,
+            &version.to_string(),
+            None,
+            &self.hex_config,
+        );
         let response = self.http.send(request).await?;
 
         let tarball = hexpm::get_package_tarball_response(response, checksum).map_err(|error| {

@@ -1,16 +1,17 @@
+use hexpm::version::Version;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-fn default_version() -> String {
-    "1.0.0".to_string()
+pub fn default_version() -> Version {
+    Version::parse("0.1.0").expect("default version")
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct PackageConfig {
     pub name: String,
     #[serde(default = "default_version")]
-    pub version: String,
+    pub version: Version,
     #[serde(default)]
     pub description: String,
     #[serde(default)]
@@ -23,6 +24,21 @@ pub struct PackageConfig {
     pub otp_start_module: Option<String>,
     #[serde(default)]
     pub repository: Repository,
+}
+
+impl Default for PackageConfig {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            version: default_version(),
+            description: Default::default(),
+            tool: Default::default(),
+            docs: Default::default(),
+            dependencies: Default::default(),
+            otp_start_module: Default::default(),
+            repository: Default::default(),
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone, Copy)]

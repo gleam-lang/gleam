@@ -75,7 +75,7 @@ pub fn generate_html(
             modules: &modules_links,
             project_name: &project_config.name,
             page_title: &project_config.name,
-            project_version: &project_config.version,
+            project_version: &project_config.version.to_string(),
             content: render_markdown(&content),
         };
 
@@ -102,7 +102,7 @@ pub fn generate_html(
             project_name: &project_config.name,
             page_title: &format!("{} - {}", name, project_config.name),
             module_name: name,
-            project_version: &project_config.version,
+            project_version: &project_config.version.to_string(),
             functions: module
                 .ast
                 .statements

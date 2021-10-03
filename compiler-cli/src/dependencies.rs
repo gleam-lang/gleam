@@ -1,8 +1,8 @@
 use futures::future;
-use gleam_core::{hex, io::HttpClient as _, Error, Result};
-use hexpm::version::Version;
+use gleam_core::{build::project_root::ProjectRoot, hex, io::HttpClient as _, Error, Result};
+use hexpm::version::{ManifestPackage, Version};
 use itertools::Itertools;
-use std::convert::TryFrom;
+use std::path::PathBuf;
 
 use crate::{cli::print_downloading, fs::FileSystemAccessor, http::HttpClient};
 
@@ -19,23 +19,41 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 -----END PUBLIC KEY-----
 ";
 
-pub fn download(packages: Vec<String>) -> Result<()> {
+pub fn download() -> Result<()> {
     print_downloading("packages");
 
     let http = HttpClient::boxed();
     let fs = FileSystemAccessor::boxed();
     let downloader = hex::Downloader::new(fs, http);
 
+    // Read the project config
+    let root = ProjectRoot::new(PathBuf::from("./"));
+    let config = crate::config::root_config(&root)?;
+    let project_name = config.name.clone();
+
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
+    let manifest = hexpm::version::resolve_versions(
+        PackageFetcher::boxed(runtime.handle().clone()),
+        config.name,
+        config.version,
+        config.dependencies.into_iter(),
+    )
+    // TODO: FIXME: error handling
+    .expect("pubgrub error");
+
     // Prepare an async computation to download each package
-    let futures = packages.into_iter().map(|package| async {
-        let (name, version) = split_package_name_version(package)?;
-        let checksum = get_package_checksum(&name, &version).await?;
-        downloader
-            .ensure_package_downloaded(&name, &version, &checksum)
-            .await
+    let futures = manifest.packages.into_iter().map(|package| async {
+        match package {
+            ManifestPackage::Hex { name, .. } if name == project_name => Ok(()),
+            ManifestPackage::Hex { name, version } => {
+                let checksum = get_package_checksum(&name, &version).await?;
+                downloader
+                    .ensure_package_downloaded(&name, &version, &checksum)
+                    .await
+            }
+        }
     });
 
     // Run the futures to download the packages concurrently
@@ -47,34 +65,53 @@ pub fn download(packages: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-fn split_package_name_version(package: String) -> Result<(String, String)> {
-    let mut parts = package.split('@');
-    if let (Some(name), Some(version), None) = (parts.next(), parts.next(), parts.next()) {
-        Ok((name.to_string(), version.to_string()))
-    } else {
-        // TODO: Error!
-        Err(Error::Hex(format!(
-            "Bad package@version format: {}",
-            package
-        )))
+struct PackageFetcher {
+    runtime: tokio::runtime::Handle,
+    http: HttpClient,
+}
+
+impl PackageFetcher {
+    pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
+        Box::new(Self {
+            runtime,
+            http: HttpClient::new(),
+        })
     }
 }
 
-async fn get_package_checksum(name: &str, version: &str) -> Result<Vec<u8>> {
+impl hexpm::version::PackageFetcher for PackageFetcher {
+    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, hexpm::ApiError> {
+        let config = hexpm::Config::new();
+        let request = hexpm::get_package_request(package, None, &config);
+        //
+        //
+        //
+        //
+        // TODO: FIXME: Make the hexpm library more flexible with errors here.
+        // We need to wire in out error type, but the library is limited to its
+        // own.
+        //
+        //
+        //
+        let response = self
+            .runtime
+            .block_on(self.http.send(request))
+            .expect("TODO! FIX ME");
+        hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+    }
+}
+
+async fn get_package_checksum(name: &str, version: &Version) -> Result<Vec<u8>> {
     let config = hexpm::Config::new();
     let request = hexpm::get_package_request(name, None, &config);
     let response = HttpClient::new().send(request).await?;
-    let version = Version::try_from(version).map_err(|e| Error::InvalidVersionFormat {
-        input: version.to_string(),
-        error: e.to_string(),
-    })?;
 
     Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
         // TODO: Better error handling. Handle the package not existing.
         .map_err(Error::hex)?
         .releases
         .into_iter()
-        .find(|p| p.version == version)
+        .find(|p| &p.version == version)
         .ok_or_else(|| {
             // TODO: version not found for package
             Error::Hex("Version not found".to_string())

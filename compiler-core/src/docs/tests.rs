@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    config::PackageConfig,
+    config::{default_version, PackageConfig},
     io::OutputFile,
     project::{Input, ModuleOrigin},
 };
@@ -48,7 +48,7 @@ pub fn complicated_fun(
         name: "test".to_string(),
         docs: Default::default(),
         tool: Default::default(),
-        version: Default::default(),
+        version: default_version(),
         repository: Default::default(),
         description: Default::default(),
         dependencies: Default::default(),

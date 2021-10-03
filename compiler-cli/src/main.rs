@@ -208,10 +208,7 @@ impl CompilePackage {
 #[derive(StructOpt, Debug)]
 enum Dependencies {
     /// Download packages to the local cache
-    Download {
-        /// The package to download: packagename@1.0.0
-        packages: Vec<String>,
-    },
+    Download,
 }
 
 #[derive(StructOpt, Debug)]
@@ -283,7 +280,7 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
-        Command::Deps(Dependencies::Download { packages }) => dependencies::download(packages),
+        Command::Deps(Dependencies::Download) => dependencies::download(),
 
         Command::New(options) => new::create(options, VERSION),
 
