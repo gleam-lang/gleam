@@ -143,6 +143,9 @@ pub enum Error {
 
     #[error("{0}")]
     Http(String),
+
+    #[error("Dependency tree resolution failed: {0}")]
+    DependencyResolutionFailed(String),
 }
 
 impl Error {
@@ -158,6 +161,13 @@ impl Error {
         E: std::error::Error,
     {
         Self::Hex(error.to_string())
+    }
+
+    pub fn dependency_resolution_failed<E>(error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::DependencyResolutionFailed(error.to_string())
     }
 }
 
@@ -1807,6 +1817,24 @@ Fix the warnings and try again!"
                 writeln!(
                     buf,
                     "\nThe error from the parser was:
+
+    {}",
+                    error
+                )
+                .unwrap();
+            }
+
+            Error::DependencyResolutionFailed(error) => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Dependency resolution failed".to_string(),
+                    label: "An error occured while determining what dependency packages and
+versions should be downloaded."
+                        .to_string(),
+                };
+                write_project(buf, diagnostic);
+                writeln!(
+                    buf,
+                    "\nThe error from the version resolver library was:
 
     {}",
                     error

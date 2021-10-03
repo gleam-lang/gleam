@@ -38,8 +38,7 @@ pub fn download() -> Result<()> {
         config.version,
         config.dependencies.into_iter(),
     )
-    // TODO: FIXME: error handling
-    .expect("pubgrub error");
+    .map_err(Error::dependency_resolution_failed)?;
 
     // Prepare an async computation to download each package
     let futures = manifest.packages.into_iter().map(|package| async {
@@ -98,14 +97,16 @@ async fn get_package_checksum(name: &str, version: &Version) -> Result<Vec<u8>> 
     let response = HttpClient::new().send(request).await?;
 
     Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
-        // TODO: Better error handling. Handle the package not existing.
         .map_err(Error::hex)?
         .releases
         .into_iter()
         .find(|p| &p.version == version)
         .ok_or_else(|| {
-            // TODO: version not found for package
-            Error::Hex("Version not found".to_string())
+            Error::Hex(format!(
+                "package {}@{} not found",
+                name,
+                version.to_string()
+            ))
         })?
         .outer_checksum)
 }

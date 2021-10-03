@@ -740,7 +740,7 @@ dependencies = [
 [[package]]
 name = "hexpm"
 version = "1.3.0"
-source = "git+https://github.com/gleam-lang/hexpm-rust#cb8f26a102d66bebc0a80ae0c5f059eb8ba7e467"
+source = "git+https://github.com/gleam-lang/hexpm-rust#a1fbaec7859a8ac2468e7d265b98d6737ed909fa"
 dependencies = [
  "bytes",
  "flate2",
