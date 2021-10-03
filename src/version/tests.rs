@@ -1,4 +1,9 @@
-use std::cmp::Ordering::{Equal, Greater, Less};
+use std::{
+    cmp::Ordering::{Equal, Greater, Less},
+    collections::HashMap,
+};
+
+use crate::Release;
 
 use super::{
     Identifier::{AlphaNumeric, Numeric},
@@ -350,3 +355,270 @@ assert_order!(ord_pre_smaller_than_zero, "1.0.0", Greater, "1.0.0-rc1");
 assert_order!(ord_pre_smaller_than_zero_flip, "1.0.0-rc1", Less, "1.0.0");
 
 assert_order!(ord_pre_rc1_2, "1.0.0-rc1", Less, "1.0.0-rc2");
+
+struct Remote {
+    deps: HashMap<String, Package>,
+}
+
+impl PackageFetcher for Remote {
+    fn get_dependencies(&self, package: &str) -> Result<Package, ApiError> {
+        self.deps.get(package).cloned().ok_or(ApiError::NotFound)
+    }
+}
+
+fn make_remote() -> Box<Remote> {
+    let mut deps = HashMap::new();
+    deps.insert(
+        "gleam_stdlib".to_string(),
+        Package {
+            name: "gleam_stdlib".to_string(),
+            repository: "hexpm".to_string(),
+            releases: vec![
+                Release {
+                    version: Version::try_from("0.1.0").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.2.0").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.2.2").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.3.0").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+            ],
+        },
+    );
+    deps.insert(
+        "gleam_otp".to_string(),
+        Package {
+            name: "gleam_otp".to_string(),
+            repository: "hexpm".to_string(),
+            releases: vec![
+                Release {
+                    version: Version::try_from("0.1.0").unwrap(),
+                    dependencies: vec![Dependency {
+                        app: None,
+                        optional: false,
+                        repository: None,
+                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        package: "gleam_stdlib".to_string(),
+                    }],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.2.0").unwrap(),
+                    dependencies: vec![Dependency {
+                        app: None,
+                        optional: false,
+                        repository: None,
+                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        package: "gleam_stdlib".to_string(),
+                    }],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.3.0-rc1").unwrap(),
+                    dependencies: vec![Dependency {
+                        app: None,
+                        optional: false,
+                        repository: None,
+                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        package: "gleam_stdlib".to_string(),
+                    }],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+            ],
+        },
+    );
+    Box::new(Remote { deps })
+}
+
+#[test]
+fn resolution_test_1() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![].into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![ManifestPackage::Hex {
+                name: "app".to_string(),
+                version: Version::try_from("1.0.0").unwrap()
+            }]
+        }
+    )
+}
+
+#[test]
+fn resolution_test_2() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![(
+            "gleam_stdlib".to_string(),
+            Range::try_from("~> 0.1").unwrap(),
+        )]
+        .into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![
+                ManifestPackage::Hex {
+                    name: "app".to_string(),
+                    version: Version::try_from("1.0.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_stdlib".to_string(),
+                    version: Version::try_from("0.3.0").unwrap()
+                },
+            ]
+        }
+    );
+}
+
+#[test]
+fn resolution_with_nested_deps() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![("gleam_otp".to_string(), Range::try_from("~> 0.1").unwrap())].into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![
+                ManifestPackage::Hex {
+                    name: "app".to_string(),
+                    version: Version::try_from("1.0.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_otp".to_string(),
+                    version: Version::try_from("0.2.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_stdlib".to_string(),
+                    version: Version::try_from("0.3.0").unwrap()
+                },
+            ]
+        }
+    );
+}
+
+#[test]
+fn resolution_locked_to_older_version() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![(
+            "gleam_otp".to_string(),
+            Range::try_from("~> 0.1.0").unwrap(),
+        )]
+        .into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![
+                ManifestPackage::Hex {
+                    name: "app".to_string(),
+                    version: Version::try_from("1.0.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_otp".to_string(),
+                    version: Version::try_from("0.1.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_stdlib".to_string(),
+                    version: Version::try_from("0.3.0").unwrap()
+                },
+            ]
+        }
+    );
+}
+
+#[test]
+fn resolution_prerelease_can_be_selected() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![(
+            "gleam_otp".to_string(),
+            Range::try_from("~> 0.3.0-rc1").unwrap(),
+        )]
+        .into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![
+                ManifestPackage::Hex {
+                    name: "app".to_string(),
+                    version: Version::try_from("1.0.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_otp".to_string(),
+                    version: Version::try_from("0.3.0-rc1").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "gleam_stdlib".to_string(),
+                    version: Version::try_from("0.3.0").unwrap()
+                },
+            ]
+        }
+    );
+}
+
+#[test]
+fn resolution_not_found_dep() {
+    resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![("unknown".to_string(), Range::try_from("~> 0.1").unwrap())].into_iter(),
+    )
+    .unwrap_err();
+}
+
+#[test]
+fn resolution_no_matching_version() {
+    resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![(
+            "gleam_stdlib".to_string(),
+            Range::try_from("~> 99.0").unwrap(),
+        )]
+        .into_iter(),
+    )
+    .unwrap_err();
+}

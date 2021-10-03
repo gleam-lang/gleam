@@ -463,14 +463,14 @@ fn proto_to_release(mut release: proto::package::Release) -> Result<Release, Api
     })
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Package {
     pub name: String,
     pub repository: String,
     pub releases: Vec<Release>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Release {
     /// Release version
     pub version: Version,
@@ -488,15 +488,19 @@ impl Release {
     pub fn is_retired(&self) -> bool {
         self.retirement_status.is_some()
     }
+
+    fn is_pre(&self) -> bool {
+        self.version.is_pre()
+    }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct RetirementStatus {
     pub reason: RetirementReason,
     pub message: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RetirementReason {
     Other,
     Invalid,
@@ -505,7 +509,7 @@ pub enum RetirementReason {
     Renamed,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Dependency {
     /// Package name of dependency
     pub package: String,

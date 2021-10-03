@@ -5,14 +5,17 @@
 // TODO: FIXME: Make it so prereleases are excluded by default.
 // e.g. The range `> 1` doesn't contain `2.0.0-rc1`.
 
-use std::{borrow::Borrow, cell::RefCell, cmp::Ordering, convert::TryFrom, error::Error, fmt};
+use std::{
+    borrow::Borrow, cell::RefCell, cmp::Ordering, collections::HashMap, convert::TryFrom,
+    error::Error, fmt,
+};
 
-use crate::{ApiError, Package};
+use crate::{ApiError, Dependency, Package, Release};
 
 use self::parser::Parser;
 use pubgrub::{
     error::PubGrubError,
-    solver::{Dependencies, OfflineDependencyProvider},
+    solver::{choose_package_with_fewest_versions, Dependencies},
 };
 
 mod lexer;
@@ -114,6 +117,10 @@ impl Version {
             PreOrder(self.pre.as_slice()),
         )
     }
+
+    pub fn is_pre(&self) -> bool {
+        !self.pre.is_empty()
+    }
 }
 
 impl std::cmp::PartialOrd for Version {
@@ -192,7 +199,7 @@ impl Identifier {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Range(pubgrub::range::Range<Version>);
 
 impl Range {
@@ -214,6 +221,20 @@ impl Range {
 
     pub fn union(&self, other: &Self) -> Self {
         Self(self.0.union(&other.0))
+    }
+}
+
+impl fmt::Debug for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Range").field(&self.0.to_string()).finish()
+    }
+}
+
+impl<'a> TryFrom<&'a str> for Range {
+    type Error = parser::Error<'a>;
+
+    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
+        Version::parse_range(value)
     }
 }
 
@@ -260,22 +281,38 @@ pub enum ManifestPackage {
     Hex { name: String, version: Version },
 }
 
+// TODO: test
 pub fn resolve_versions<Requirements>(
     remote: Box<dyn PackageFetcher>,
-    root_package: String,
+    root_name: PackageName,
     root_version: Version,
-    requirements: Requirements,
+    dependencies: Requirements,
 ) -> Result<Manifest, PubGrubError<String, Version>>
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
-    let mut dependency_provider = DependencyProvider::new(remote);
-    dependency_provider.add_dependencies(root_package.clone(), root_version.clone(), requirements);
-
+    let root = Package {
+        name: root_name.clone(),
+        repository: "local".to_string(),
+        releases: vec![Release {
+            version: root_version.clone(),
+            outer_checksum: vec![],
+            retirement_status: None,
+            dependencies: dependencies
+                .map(|(package, requirement)| Dependency {
+                    package,
+                    app: None,
+                    optional: false,
+                    repository: None,
+                    requirement,
+                })
+                .collect(),
+        }],
+    };
     let resolved = pubgrub::solver::resolve(
-        &dependency_provider,
-        root_package.clone(),
-        root_version.clone(),
+        &DependencyProvider::new(remote, root),
+        root_name.clone(),
+        root_version,
     )?;
 
     let mut packages: Vec<_> = resolved
@@ -292,31 +329,49 @@ pub trait PackageFetcher {
 }
 
 struct DependencyProvider {
-    cache: RefCell<OfflineDependencyProvider<PackageName, Version>>,
+    packages: RefCell<HashMap<String, Package>>,
     remote: Box<dyn PackageFetcher>,
 }
 
 impl DependencyProvider {
-    fn new(remote: Box<dyn PackageFetcher>) -> Self {
+    fn new(remote: Box<dyn PackageFetcher>, root: Package) -> Self {
+        let mut packages = HashMap::new();
+        let _ = packages.insert(root.name.clone(), root);
         Self {
-            cache: RefCell::new(OfflineDependencyProvider::new()),
+            packages: RefCell::new(packages),
             remote,
         }
     }
 
-    fn add_dependencies<Dependencies>(
-        &mut self,
-        package: PackageName,
-        version: Version,
-        dependencies: Dependencies,
-    ) where
-        Dependencies: IntoIterator<Item = (PackageName, Range)>,
-    {
-        self.cache.borrow_mut().add_dependencies(
-            package,
-            version,
-            dependencies.into_iter().map(|(p, r)| (p, r.0)),
-        )
+    /// Download information about the package from the registry into the local
+    /// store. Does nothing if the packages are already known.
+    ///
+    /// Package versions are sorted from newest to oldest, with all pre-releases
+    /// at the end to ensure that a non-prerelease version will be picked first
+    /// if there is one.
+    //
+    // TODO: handle retired versions in some fashion
+    // TODO: handle a lock file in some fashion
+    // TODO: how do local and git deps fit into this?
+    fn ensure_package_fetched(
+        // We would like to use `&mut self` but the pubgrub library enforces
+        // `&self` with interop mutability.
+        &self,
+        name: &str,
+    ) -> Result<(), ApiError> {
+        let mut packages = self.packages.borrow_mut();
+        if packages.get(name).is_none() {
+            let mut package = self.remote.get_dependencies(name)?;
+            // Sort the packages from newest to oldest, pres after all others
+            package.releases.sort_by(|a, b| a.version.cmp(&b.version));
+            package.releases.reverse();
+            let (pre, mut norm): (_, Vec<_>) =
+                package.releases.into_iter().partition(Release::is_pre);
+            norm.extend(pre);
+            package.releases = norm;
+            packages.insert(name.to_string(), package);
+        }
+        Ok(())
     }
 }
 
@@ -324,15 +379,31 @@ type PackageName = String;
 
 impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider {
     fn choose_package_version<
-        Package: Borrow<PackageName>,
+        Name: Borrow<PackageName>,
         Ver: Borrow<pubgrub::range::Range<Version>>,
     >(
         &self,
-        potential_packages: impl Iterator<Item = (Package, Ver)>,
-    ) -> Result<(Package, Option<Version>), Box<dyn Error>> {
-        self.cache
-            .borrow()
-            .choose_package_version(potential_packages)
+        potential_packages: impl Iterator<Item = (Name, Ver)>,
+    ) -> Result<(Name, Option<Version>), Box<dyn Error>> {
+        let potential_packages: Vec<_> = potential_packages
+            .map::<Result<_, ApiError>, _>(|pair| {
+                self.ensure_package_fetched(pair.0.borrow())?;
+                Ok(pair)
+            })
+            .collect::<Result<_, _>>()?;
+        let list_available_versions = |name: &String| {
+            self.packages
+                .borrow()
+                .get(name)
+                .cloned()
+                .into_iter()
+                .flat_map(|p| p.releases.into_iter())
+                .map(|p| p.version)
+        };
+        Ok(choose_package_with_fewest_versions(
+            list_available_versions,
+            potential_packages.into_iter(),
+        ))
     }
 
     fn get_dependencies(
@@ -340,27 +411,23 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
         name: &PackageName,
         version: &Version,
     ) -> Result<pubgrub::solver::Dependencies<PackageName, Version>, Box<dyn Error>> {
-        let mut cache = self.cache.borrow_mut();
-        match cache.get_dependencies(name, version) {
-            // If we don't have the dep in the cache already we look it up from
-            // the remote and then insert that into the cache so it'll be fast
-            // next time.
-            Ok(Dependencies::Unknown) => match self.remote.get_dependencies(name) {
-                Ok(package) => {
-                    for release in package.releases.into_iter() {
-                        let deps = release
-                            .dependencies
-                            .into_iter()
-                            .map(|dep| (dep.package, dep.requirement.0));
-                        cache.add_dependencies(name.clone(), release.version, deps);
-                    }
-                    cache.get_dependencies(name, version)
-                }
-                Err(ApiError::NotFound) => Ok(Dependencies::Unknown),
-                Err(error) => Err(Box::new(error)),
-            },
-            dependencies @ Ok(_) => dependencies,
-            error @ Err(_) => error,
-        }
+        self.ensure_package_fetched(name)?;
+        let packages = self.packages.borrow();
+        let version = packages
+            .get(name)
+            .into_iter()
+            .flat_map(|p| p.releases.iter())
+            .find(|r| &r.version == version);
+        Ok(match version {
+            Some(release) => {
+                let deps = release
+                    .dependencies
+                    .iter()
+                    .map(|d| (d.package.clone(), d.requirement.0.clone()))
+                    .collect();
+                Dependencies::Known(deps)
+            }
+            None => Dependencies::Unknown,
+        })
     }
 }
