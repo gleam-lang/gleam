@@ -17,6 +17,10 @@ use pubgrub::{
     error::PubGrubError,
     solver::{choose_package_with_fewest_versions, Dependencies},
 };
+use serde::{
+    de::{self, Deserializer},
+    Deserialize, Serialize,
+};
 
 mod lexer;
 mod parser;
@@ -120,6 +124,25 @@ impl Version {
 
     pub fn is_pre(&self) -> bool {
         !self.pre.is_empty()
+    }
+}
+
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        Version::try_from(s).map_err(de::Error::custom)
+    }
+}
+
+impl Serialize for Version {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -270,13 +293,12 @@ impl std::cmp::Ord for PreOrder<'_> {
     }
 }
 
-// TODO: serde
-#[derive(Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Manifest {
     packages: Vec<ManifestPackage>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum ManifestPackage {
     Hex { name: String, version: Version },
 }
