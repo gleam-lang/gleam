@@ -1,12 +1,103 @@
+use crate::{Error, Result};
 use std::path::{Path, PathBuf};
 
 use debug_ignore::DebugIgnore;
-use hexpm::version::Version;
+use futures::future;
+use hexpm::version::{Manifest, ManifestPackage, Version};
 
 use crate::{
+    config::PackageConfig,
     io::{FileSystemIO, HttpClient},
-    Error,
 };
+
+pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApqREcFDt5vV21JVe2QNB
+Edvzk6w36aNFhVGWN5toNJRjRJ6m4hIuG4KaXtDWVLjnvct6MYMfqhC79HAGwyF+
+IqR6Q6a5bbFSsImgBJwz1oadoVKD6ZNetAuCIK84cjMrEFRkELtEIPNHblCzUkkM
+3rS9+DPlnfG8hBvGi6tvQIuZmXGCxF/73hU0/MyGhbmEjIKRtG6b0sJYKelRLTPW
+XgK7s5pESgiwf2YC/2MGDXjAJfpfCd0RpLdvd4eRiXtVlE9qO9bND94E7PgQ/xqZ
+J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
+0wIDAQAB
+-----END PUBLIC KEY-----
+";
+
+pub fn resolve_versions(
+    package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
+    config: &PackageConfig,
+) -> Result<Manifest> {
+    let specified_dependencies = config
+        .dependencies
+        .iter()
+        .map(|(a, b)| (a.clone(), b.clone()));
+    hexpm::version::resolve_versions(
+        package_fetcher,
+        config.name.clone(),
+        config.version.clone(),
+        specified_dependencies,
+    )
+    .map_err(Error::dependency_resolution_failed)
+}
+
+async fn get_package_checksum<Http: HttpClient>(
+    http: &Http,
+    name: &str,
+    version: &Version,
+) -> Result<Vec<u8>> {
+    let config = hexpm::Config::new();
+    let request = hexpm::get_package_request(name, None, &config);
+    let response = http.send(request).await?;
+
+    Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+        .map_err(Error::hex)?
+        .releases
+        .into_iter()
+        .find(|p| &p.version == version)
+        .ok_or_else(|| {
+            Error::Hex(format!(
+                "package {}@{} not found",
+                name,
+                version.to_string()
+            ))
+        })?
+        .outer_checksum)
+}
+
+pub async fn download_to_cache<Http: HttpClient>(
+    manifest: &Manifest,
+    downloader: &Downloader,
+    http: &Http,
+    project_name: &str,
+) -> Result<usize> {
+    // Collect all the hex packages to be downloaded
+    let packages: Vec<_> = manifest
+        .packages
+        .iter()
+        .flat_map(|package| match package {
+            ManifestPackage::Hex { name, .. } if name == &project_name => None,
+            ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
+        })
+        .collect();
+
+    // Prepare an async computation to download each package
+    let futures = packages.into_iter().map(|(name, version)| async move {
+        let checksum = get_package_checksum(http, &name, &version).await?;
+        downloader
+            .ensure_package_downloaded(&name, &version, &checksum)
+            .await
+    });
+
+    // Run the futures to download the packages concurrently
+    let results = future::join_all(futures).await;
+
+    // Count the number of packages downloaded while checking for errors
+    let mut count = 0;
+    for result in results {
+        if result? {
+            count += 1;
+        }
+    }
+    Ok(count)
+}
 
 #[derive(Debug)]
 pub struct Downloader {

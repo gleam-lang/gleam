@@ -51,6 +51,8 @@ async-trait = "0.1.51"
 debug-ignore = "1.0.1"
 # std::error::Error definition macro
 thiserror = "1.0"
+# Async combinators for futures
+futures = "0.3.17"
 
 [build-dependencies]
 # Data (de)serialisation

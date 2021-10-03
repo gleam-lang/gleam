@@ -651,6 +651,7 @@ dependencies = [
  "codespan-reporting",
  "debug-ignore",
  "dirs",
+ "futures 0.3.17",
  "heck",
  "hexpm",
  "http",
