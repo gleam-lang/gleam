@@ -9,6 +9,7 @@
 - Protobuf code updated to use `cfg_attr` rather than deprecated attributes.
 - The `get_repository_versions` method returns `Version`s rather than strings.
 - The `get_package` uses the `version::Range` type to represent `requirement`s.
+- A pubgrub based dependency resolver has been added.
 
 ## v1.3.0 - 2020-03-30
 
