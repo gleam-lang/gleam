@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
 };
 
-use crate::{ApiError, Release};
+use crate::{ApiError, Release, RetirementReason, RetirementStatus};
 
 use super::{
     Identifier::{AlphaNumeric, Numeric},
@@ -462,6 +462,30 @@ fn make_remote() -> Box<Remote> {
             ],
         },
     );
+    deps.insert(
+        "package_with_retired".to_string(),
+        Package {
+            name: "package_with_retired".to_string(),
+            repository: "hexpm".to_string(),
+            releases: vec![
+                Release {
+                    version: Version::try_from("0.1.0").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                },
+                Release {
+                    version: Version::try_from("0.2.0").unwrap(),
+                    dependencies: vec![],
+                    retirement_status: Some(RetirementStatus {
+                        reason: RetirementReason::Security,
+                        message: "It's bad".to_string(),
+                    }),
+                    outer_checksum: vec![1, 2, 3],
+                },
+            ],
+        },
+    );
     Box::new(Remote { deps })
 }
 
@@ -565,6 +589,37 @@ fn resolution_locked_to_older_version() {
                 ManifestPackage::Hex {
                     name: "gleam_stdlib".to_string(),
                     version: Version::try_from("0.3.0").unwrap()
+                },
+            ]
+        }
+    );
+}
+
+#[test]
+fn resolution_retired_versions_not_used_by_default() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        Version::try_from("1.0.0").unwrap(),
+        vec![(
+            "package_with_retired".to_string(),
+            Range::new("> 0.0.0".to_string()),
+        )]
+        .into_iter(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        Manifest {
+            packages: vec![
+                ManifestPackage::Hex {
+                    name: "app".to_string(),
+                    version: Version::try_from("1.0.0").unwrap()
+                },
+                ManifestPackage::Hex {
+                    name: "package_with_retired".to_string(),
+                    // Uses the older version that hasn't been retired
+                    version: Version::try_from("0.1.0").unwrap()
                 },
             ]
         }

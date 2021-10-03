@@ -2,9 +2,6 @@
 //! and compatible with the Elixir Version module, which is used by Hex
 //! internally as well as be the Elixir build tool Hex client.
 
-// TODO: FIXME: Make it so prereleases are excluded by default.
-// e.g. The range `> 1` doesn't contain `2.0.0-rc1`.
-
 use std::{
     borrow::Borrow, cell::RefCell, cmp::Ordering, collections::HashMap, convert::TryFrom,
     error::Error as StdError, fmt,
@@ -328,7 +325,6 @@ pub enum ManifestPackage {
     Hex { name: String, version: Version },
 }
 
-// TODO: test
 pub fn resolve_versions<Requirements>(
     remote: Box<dyn PackageFetcher>,
     root_name: PackageName,
@@ -412,8 +408,11 @@ impl DependencyProvider {
             // Sort the packages from newest to oldest, pres after all others
             package.releases.sort_by(|a, b| a.version.cmp(&b.version));
             package.releases.reverse();
-            let (pre, mut norm): (_, Vec<_>) =
-                package.releases.into_iter().partition(Release::is_pre);
+            let (pre, mut norm): (_, Vec<_>) = package
+                .releases
+                .into_iter()
+                .filter(Release::is_active)
+                .partition(Release::is_pre);
             norm.extend(pre);
             package.releases = norm;
             packages.insert(name.to_string(), package);
