@@ -78,24 +78,17 @@ impl PackageFetcher {
 }
 
 impl hexpm::version::PackageFetcher for PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, hexpm::ApiError> {
+    fn get_dependencies(
+        &self,
+        package: &str,
+    ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
-        //
-        //
-        //
-        //
-        // TODO: FIXME: Make the hexpm library more flexible with errors here.
-        // We need to wire in out error type, but the library is limited to its
-        // own.
-        //
-        //
-        //
         let response = self
             .runtime
             .block_on(self.http.send(request))
-            .expect("TODO! FIX ME");
-        hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+            .map_err(|e| Box::new(e))?;
+        hexpm::get_package_response(response, HEXPM_PUBLIC_KEY).map_err(|e| e.into())
     }
 }
 

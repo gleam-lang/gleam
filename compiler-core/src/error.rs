@@ -13,26 +13,30 @@ use itertools::Itertools;
 use std::fmt::Debug;
 use std::path::PathBuf;
 use termcolor::Buffer;
+use thiserror::Error;
 
 pub type Src = String;
 pub type Name = String;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Error)]
 pub enum Error {
+    #[error("failed to parse Gleam source code")]
     Parse {
         path: PathBuf,
         src: Src,
         error: crate::parse::error::ParseError,
     },
 
+    #[error("type checking failed")]
     Type {
         path: PathBuf,
         src: Src,
         error: crate::type_::Error,
     },
 
+    #[error("unknown import {import} in {module}")]
     UnknownImport {
         module: Name,
         import: Name,
@@ -42,12 +46,14 @@ pub enum Error {
         modules: Vec<String>,
     },
 
+    #[error("duplicate module {module}")]
     DuplicateModule {
         module: Name,
         first: PathBuf,
         second: PathBuf,
     },
 
+    #[error("test module {test_module} imported into application module {src_module}")]
     SrcImportingTest {
         path: PathBuf,
         src: Src,
@@ -56,14 +62,13 @@ pub enum Error {
         test_module: Name,
     },
 
-    ImportCycle {
-        modules: Vec<String>,
-    },
+    #[error("cyclical module imports")]
+    ImportCycle { modules: Vec<String> },
 
-    PackageCycle {
-        packages: Vec<String>,
-    },
+    #[error("cyclical package dependencies")]
+    PackageCycle { packages: Vec<String> },
 
+    #[error("file operation failed")]
     FileIo {
         kind: FileKind,
         action: FileIoAction,
@@ -71,74 +76,72 @@ pub enum Error {
         err: Option<String>,
     },
 
+    #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
         err: Option<std::io::ErrorKind>,
     },
 
-    Format {
-        problem_files: Vec<Unformatted>,
-    },
+    #[error("source code incorrectly formatted")]
+    Format { problem_files: Vec<Unformatted> },
 
+    #[error("Hex error: {0}")]
     Hex(String),
 
-    Tar {
-        path: PathBuf,
-        err: String,
-    },
+    #[error("{err}")]
+    Tar { path: PathBuf, err: String },
 
+    #[error("{0}")]
     TarFinish(String),
 
+    #[error("{0}")]
     Gzip(String),
 
+    #[error("command failed")]
     ShellCommand {
         command: String,
         err: Option<std::io::ErrorKind>,
     },
 
+    #[error("{name} is not a valid project name")]
     InvalidProjectName {
         name: String,
         reason: InvalidProjectNameReason,
     },
 
-    InvalidVersionFormat {
-        input: String,
-        error: String,
-    },
+    #[error("{input} is not a valid version. {error}")]
+    InvalidVersionFormat { input: String, error: String },
 
-    ProjectRootAlreadyExist {
-        path: String,
-    },
+    #[error("project root already exists")]
+    ProjectRootAlreadyExist { path: String },
 
-    UnableToFindProjectRoot {
-        path: String,
-    },
+    #[error("unable to find project root")]
+    UnableToFindProjectRoot { path: String },
 
-    VersionDoesNotMatch {
-        toml_ver: String,
-        app_ver: String,
-    },
+    #[error("gleam.toml version {toml_ver} does not match .app version {app_ver}")]
+    VersionDoesNotMatch { toml_ver: String, app_ver: String },
 
-    MetadataDecodeError {
-        error: Option<String>,
-    },
+    #[error("metadata decoding failed")]
+    MetadataDecodeError { error: Option<String> },
 
-    ForbiddenWarnings {
-        count: usize,
-    },
+    #[error("warnings are not permitted")]
+    ForbiddenWarnings { count: usize },
 
+    #[error("javascript codegen failed")]
     JavaScript {
         path: PathBuf,
         src: Src,
         error: crate::javascript::Error,
     },
 
+    #[error("package downloading failed: {error}")]
     DownloadPackageError {
         package_name: String,
         package_version: String,
         error: String,
     },
 
+    #[error("{0}")]
     Http(String),
 }
 
