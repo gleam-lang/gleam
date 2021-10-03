@@ -320,7 +320,7 @@ impl std::cmp::Ord for PreOrder<'_> {
 
 #[derive(Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Manifest {
-    packages: Vec<ManifestPackage>,
+    pub packages: Vec<ManifestPackage>,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
