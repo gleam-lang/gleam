@@ -5,31 +5,34 @@ use std::mem;
 
 use self::Error::*;
 use super::lexer::{self, Lexer, Token};
-use crate::version::{Identifier, Range, Version};
+use crate::version::{Identifier, Version};
+use thiserror::Error;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Error<'input> {
+type PubgrubRange = pubgrub::range::Range<Version>;
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Error)]
+pub enum Error {
     /// Needed more tokens for parsing, but none are available.
     UnexpectedEnd,
     /// Unexpected token.
-    UnexpectedToken(Token<'input>),
+    UnexpectedToken(String),
     /// An error occurred in the lexer.
     Lexer(lexer::Error),
     /// More input available.
-    MoreInput(Vec<Token<'input>>),
+    MoreInput(String),
     /// Encountered empty predicate in a set of predicates.
     EmptyPredicate,
     /// Encountered an empty range.
     EmptyRange,
 }
 
-impl<'input> From<lexer::Error> for Error<'input> {
+impl<'input> From<lexer::Error> for Error {
     fn from(value: lexer::Error) -> Self {
         Error::Lexer(value)
     }
 }
 
-impl<'input> fmt::Display for Error<'input> {
+impl fmt::Display for Error {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         use self::Error::*;
 
@@ -45,8 +48,8 @@ impl<'input> fmt::Display for Error<'input> {
 }
 
 /// impl for backwards compatibility.
-impl<'input> From<Error<'input>> for String {
-    fn from(value: Error<'input>) -> Self {
+impl From<Error> for String {
+    fn from(value: Error) -> Self {
         value.to_string()
     }
 }
@@ -61,7 +64,7 @@ pub struct Parser<'input> {
 
 impl<'input> Parser<'input> {
     /// Construct a new parser for the given input.
-    pub fn new(input: &'input str) -> Result<Parser<'input>, Error<'input>> {
+    pub fn new(input: &'input str) -> Result<Parser<'input>, Error> {
         let mut lexer = Lexer::new(input);
 
         let c1 = if let Some(c1) = lexer.next() {
@@ -75,7 +78,7 @@ impl<'input> Parser<'input> {
 
     /// Pop one token.
     #[inline(always)]
-    fn pop(&mut self) -> Result<Token<'input>, Error<'input>> {
+    fn pop(&mut self) -> Result<Token<'input>, Error> {
         let c1 = if let Some(c1) = self.lexer.next() {
             Some(c1?)
         } else {
@@ -92,7 +95,7 @@ impl<'input> Parser<'input> {
     }
 
     /// Skip whitespace if present.
-    fn skip_whitespace(&mut self) -> Result<(), Error<'input>> {
+    fn skip_whitespace(&mut self) -> Result<(), Error> {
         match self.peek() {
             Some(&Token::Whitespace(_, _)) => self.pop().map(|_| ()),
             _ => Ok(()),
@@ -100,30 +103,30 @@ impl<'input> Parser<'input> {
     }
 
     /// Check that some whitespace is next and then discard it
-    fn expect_whitespace(&mut self) -> Result<(), Error<'input>> {
+    fn expect_whitespace(&mut self) -> Result<(), Error> {
         match self.pop()? {
             Token::Whitespace(_, _) => Ok(()),
-            token => Err(UnexpectedToken(token)),
+            token => Err(UnexpectedToken(token.to_string())),
         }
     }
 
     /// Parse a single numeric.
-    pub fn numeric(&mut self) -> Result<u32, Error<'input>> {
+    pub fn numeric(&mut self) -> Result<u32, Error> {
         match self.pop()? {
             Token::Numeric(number) => Ok(number),
-            tok => Err(UnexpectedToken(tok)),
+            token => Err(UnexpectedToken(token.to_string())),
         }
     }
 
-    fn dot(&mut self) -> Result<(), Error<'input>> {
+    fn dot(&mut self) -> Result<(), Error> {
         match self.pop()? {
             Token::Dot => Ok(()),
-            tok => Err(UnexpectedToken(tok)),
+            token => Err(UnexpectedToken(token.to_string())),
         }
     }
 
     /// Parse a dot, then a numeric.
-    fn dot_numeric(&mut self) -> Result<u32, Error<'input>> {
+    fn dot_numeric(&mut self) -> Result<u32, Error> {
         self.dot()?;
         self.numeric()
     }
@@ -131,14 +134,14 @@ impl<'input> Parser<'input> {
     /// Parse an string identifier.
     ///
     /// Like, `foo`, or `bar`, or `beta-1`.
-    pub fn identifier(&mut self) -> Result<Identifier, Error<'input>> {
+    pub fn identifier(&mut self) -> Result<Identifier, Error> {
         let identifier = match self.pop()? {
             Token::AlphaNumeric(identifier) => {
                 // TODO: Borrow?
                 Identifier::AlphaNumeric(identifier.to_string())
             }
             Token::Numeric(n) => Identifier::Numeric(n),
-            tok => return Err(UnexpectedToken(tok)),
+            tok => return Err(UnexpectedToken(tok.to_string())),
         };
 
         if let Some(&Token::Hyphen) = self.peek() {
@@ -156,7 +159,7 @@ impl<'input> Parser<'input> {
     /// Parse all pre-release identifiers, separated by dots.
     ///
     /// Like, `abcdef.1234`.
-    fn pre(&mut self) -> Result<Vec<Identifier>, Error<'input>> {
+    fn pre(&mut self) -> Result<Vec<Identifier>, Error> {
         match self.peek() {
             Some(&Token::Hyphen) => {}
             _ => return Ok(vec![]),
@@ -168,7 +171,7 @@ impl<'input> Parser<'input> {
     }
 
     /// Parse a dot-separated set of identifiers.
-    fn parts(&mut self) -> Result<Vec<Identifier>, Error<'input>> {
+    fn parts(&mut self) -> Result<Vec<Identifier>, Error> {
         let mut parts = Vec::new();
 
         parts.push(self.identifier()?);
@@ -185,7 +188,7 @@ impl<'input> Parser<'input> {
     /// Parse optional build metadata.
     ///
     /// Like, `` (empty), or `+abcdef`.
-    fn plus_build_metadata(&mut self) -> Result<Option<String>, Error<'input>> {
+    fn plus_build_metadata(&mut self) -> Result<Option<String>, Error> {
         match self.peek() {
             Some(&Token::Plus) => self.pop()?,
             _ => return Ok(None),
@@ -200,7 +203,7 @@ impl<'input> Parser<'input> {
                 Ok(Token::AlphaNumeric(s)) => buffer.push_str(s),
                 Ok(Token::Numeric(s)) => buffer.push_str(&s.to_string()),
                 Ok(Token::Dot) => buffer.push('.'),
-                Ok(token) => return Err(UnexpectedToken(token)),
+                Ok(token) => return Err(UnexpectedToken(token.to_string())),
                 Err(error) => return Err(error),
             }
         }
@@ -215,7 +218,7 @@ impl<'input> Parser<'input> {
     /// Parse a version.
     ///
     /// Like, `1.0.0` or `3.0.0-beta.1`.
-    pub fn version(&mut self) -> Result<Version, Error<'input>> {
+    pub fn version(&mut self) -> Result<Version, Error> {
         self.skip_whitespace()?;
 
         let major = self.numeric()?;
@@ -238,8 +241,8 @@ impl<'input> Parser<'input> {
     /// Parse a version range requirement.
     ///
     /// Like, `~> 1.0.0` or `3.0.0-beta.1 or < 1.0 and > 0.2.3`.
-    pub fn range(&mut self) -> Result<Range, Error<'input>> {
-        let mut range: Option<Range> = None;
+    pub fn range(&mut self) -> Result<PubgrubRange, Error> {
+        let mut range: Option<PubgrubRange> = None;
 
         loop {
             let constraint = self.range_ands_section()?;
@@ -259,7 +262,7 @@ impl<'input> Parser<'input> {
         range.ok_or(UnexpectedEnd)
     }
 
-    fn pessimistic_version_constraint(&mut self) -> Result<Range, Error<'input>> {
+    fn pessimistic_version_constraint(&mut self) -> Result<PubgrubRange, Error> {
         let mut included_patch = false;
         let major = self.numeric()?;
         let minor = self.dot_numeric()?;
@@ -286,13 +289,16 @@ impl<'input> Parser<'input> {
         } else {
             lower.bump_major()
         };
-        Ok(Range::higher_than(lower).intersection(&Range::strictly_lower_than(upper)))
+        Ok(
+            PubgrubRange::higher_than(lower)
+                .intersection(&PubgrubRange::strictly_lower_than(upper)),
+        )
     }
 
-    fn range_ands_section(&mut self) -> Result<Range, Error<'input>> {
+    fn range_ands_section(&mut self) -> Result<PubgrubRange, Error> {
         use Token::*;
         let mut range = None;
-        let and = |range: Option<Range>, constraint: Range| {
+        let and = |range: Option<PubgrubRange>, constraint: PubgrubRange| {
             Some(match range {
                 None => constraint,
                 Some(range) => range.intersection(&constraint),
@@ -302,42 +308,45 @@ impl<'input> Parser<'input> {
             self.skip_whitespace()?;
             match self.peek() {
                 None => break,
-                Some(Numeric(_)) => range = and(range, Range::exact(self.version()?)),
+                Some(Numeric(_)) => range = and(range, PubgrubRange::exact(self.version()?)),
 
                 Some(Eq) => {
                     self.pop()?;
-                    range = and(range, Range::exact(self.version()?));
+                    range = and(range, PubgrubRange::exact(self.version()?));
                 }
 
                 Some(NotEq) => {
                     self.pop()?;
                     let version = self.version()?;
                     let bumped = version.bump_patch();
-                    let below = Range::strictly_lower_than(version);
-                    let above = Range::higher_than(bumped);
+                    let below = PubgrubRange::strictly_lower_than(version);
+                    let above = PubgrubRange::higher_than(bumped);
                     range = and(range, below.union(&above));
                 }
 
                 Some(Gt) => {
                     self.pop()?;
-                    range = and(range, Range::higher_than(self.version()?.bump_patch()));
+                    range = and(
+                        range,
+                        PubgrubRange::higher_than(self.version()?.bump_patch()),
+                    );
                 }
 
                 Some(GtEq) => {
                     self.pop()?;
-                    range = and(range, Range::higher_than(self.version()?));
+                    range = and(range, PubgrubRange::higher_than(self.version()?));
                 }
 
                 Some(Lt) => {
                     self.pop()?;
-                    range = and(range, Range::strictly_lower_than(self.version()?));
+                    range = and(range, PubgrubRange::strictly_lower_than(self.version()?));
                 }
 
                 Some(LtEq) => {
                     self.pop()?;
                     range = and(
                         range,
-                        Range::strictly_lower_than(self.version()?.bump_patch()),
+                        PubgrubRange::strictly_lower_than(self.version()?.bump_patch()),
                     );
                 }
 
@@ -347,7 +356,7 @@ impl<'input> Parser<'input> {
                     range = and(range, self.pessimistic_version_constraint()?);
                 }
 
-                Some(_) => return Err(UnexpectedToken(self.pop()?)),
+                Some(_) => return Err(UnexpectedToken(self.pop()?.to_string())),
             };
             if self.peek() == Some(&Token::And) {
                 self.pop()?;
@@ -367,7 +376,7 @@ impl<'input> Parser<'input> {
     /// Get the rest of the tokens in the parser.
     ///
     /// Useful for debugging.
-    pub fn tail(&mut self) -> Result<Vec<Token<'input>>, Error<'input>> {
+    pub fn tail(&mut self) -> Result<Vec<Token<'input>>, Error> {
         let mut out = Vec::new();
 
         if let Some(t) = self.c1.take() {

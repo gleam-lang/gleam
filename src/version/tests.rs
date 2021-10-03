@@ -209,25 +209,31 @@ fn v_(major: u32, minor: u32, patch: u32, pre: Vec<Identifier>, build: Option<St
     }
 }
 
-parse_range_test!(leading_space, " 1.2.3", Range::exact(v(1, 2, 3)));
-parse_range_test!(trailing_space, "1.2.3 ", Range::exact(v(1, 2, 3)));
+type PubgrubRange = pubgrub::range::Range<Version>;
 
-parse_range_test!(eq_triplet, "== 1.2.3 ", Range::exact(v(1, 2, 3)));
+parse_range_test!(leading_space, " 1.2.3", PubgrubRange::exact(v(1, 2, 3)));
+parse_range_test!(trailing_space, "1.2.3 ", PubgrubRange::exact(v(1, 2, 3)));
 
-parse_range_test!(eq_triplet_nospace, "==1.2.3 ", Range::exact(v(1, 2, 3)));
+parse_range_test!(eq_triplet, "== 1.2.3 ", PubgrubRange::exact(v(1, 2, 3)));
+
+parse_range_test!(
+    eq_triplet_nospace,
+    "==1.2.3 ",
+    PubgrubRange::exact(v(1, 2, 3))
+);
 
 parse_range_test!(
     neq_triplet,
     "!= 1.2.3",
-    Range::strictly_lower_than(v(1, 2, 3)).union(&Range::higher_than(v(1, 2, 4)))
+    PubgrubRange::strictly_lower_than(v(1, 2, 3)).union(&PubgrubRange::higher_than(v(1, 2, 4)))
 );
 
-parse_range_test!(implicit_eq, "2.2.3", Range::exact(v(2, 2, 3)));
+parse_range_test!(implicit_eq, "2.2.3", PubgrubRange::exact(v(2, 2, 3)));
 
 parse_range_test!(
     range_pre_build,
     "1.2.3-thing+oop",
-    Range::exact(v_(
+    PubgrubRange::exact(v_(
         1,
         2,
         3,
@@ -239,50 +245,57 @@ parse_range_test!(
 parse_range_test!(
     and,
     "< 1.2.3 and > 1.0.1",
-    Range::strictly_lower_than(v(1, 2, 3)).intersection(&Range::higher_than(v(1, 0, 2)))
+    PubgrubRange::strictly_lower_than(v(1, 2, 3))
+        .intersection(&PubgrubRange::higher_than(v(1, 0, 2)))
 );
 
 parse_range_test!(
     or,
     "< 1.2.3 or > 1.0.1",
-    Range::strictly_lower_than(v(1, 2, 3)).union(&Range::higher_than(v(1, 0, 2)))
+    PubgrubRange::strictly_lower_than(v(1, 2, 3)).union(&PubgrubRange::higher_than(v(1, 0, 2)))
 );
 
-parse_range_test!(gt, "> 1.0.0", Range::higher_than(v(1, 0, 1)));
-parse_range_test!(gt_eq, ">= 1.0.0", Range::higher_than(v(1, 0, 0)));
-parse_range_test!(lt, "< 1.0.0", Range::strictly_lower_than(v(1, 0, 0)));
-parse_range_test!(lt_eq, "<= 1.0.0", Range::strictly_lower_than(v(1, 0, 1)));
+parse_range_test!(gt, "> 1.0.0", PubgrubRange::higher_than(v(1, 0, 1)));
+parse_range_test!(gt_eq, ">= 1.0.0", PubgrubRange::higher_than(v(1, 0, 0)));
+parse_range_test!(lt, "< 1.0.0", PubgrubRange::strictly_lower_than(v(1, 0, 0)));
+parse_range_test!(
+    lt_eq,
+    "<= 1.0.0",
+    PubgrubRange::strictly_lower_than(v(1, 0, 1))
+);
 
 parse_range_test!(
     pessimistic_pair,
     "~> 2.2",
-    Range::higher_than(v(2, 2, 0)).intersection(&Range::strictly_lower_than(v(3, 0, 0)))
+    PubgrubRange::higher_than(v(2, 2, 0))
+        .intersection(&PubgrubRange::strictly_lower_than(v(3, 0, 0)))
 );
 
 parse_range_test!(
     pessimistic_triplet,
     "~> 4.6.5",
-    Range::higher_than(v(4, 6, 5)).intersection(&Range::strictly_lower_than(v(4, 7, 0)))
+    PubgrubRange::higher_than(v(4, 6, 5))
+        .intersection(&PubgrubRange::strictly_lower_than(v(4, 7, 0)))
 );
 
 parse_range_test!(
     pessimistic_triplet_pre,
     "~> 4.6.5-eee",
-    Range::higher_than(v_(
+    PubgrubRange::higher_than(v_(
         4,
         6,
         5,
         vec![Identifier::AlphaNumeric("eee".to_string())],
         None,
     ))
-    .intersection(&Range::strictly_lower_than(v(4, 7, 0)))
+    .intersection(&PubgrubRange::strictly_lower_than(v(4, 7, 0)))
 );
 
 parse_range_test!(
     pessimistic_triplet_build,
     "~> 4.6.5+eee",
-    Range::higher_than(v_(4, 6, 5, vec![], Some("eee".to_string())))
-        .intersection(&Range::strictly_lower_than(v(4, 7, 0)))
+    PubgrubRange::higher_than(v_(4, 6, 5, vec![], Some("eee".to_string())))
+        .intersection(&PubgrubRange::strictly_lower_than(v(4, 7, 0)))
 );
 
 parse_range_fail_test!(range_quad, "1.1.1.1");
@@ -413,7 +426,7 @@ fn make_remote() -> Box<Remote> {
                         app: None,
                         optional: false,
                         repository: None,
-                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        requirement: Range::new(">= 0.1.0".to_string()),
                         package: "gleam_stdlib".to_string(),
                     }],
                     retirement_status: None,
@@ -425,7 +438,7 @@ fn make_remote() -> Box<Remote> {
                         app: None,
                         optional: false,
                         repository: None,
-                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        requirement: Range::new(">= 0.1.0".to_string()),
                         package: "gleam_stdlib".to_string(),
                     }],
                     retirement_status: None,
@@ -437,7 +450,7 @@ fn make_remote() -> Box<Remote> {
                         app: None,
                         optional: false,
                         repository: None,
-                        requirement: Range::try_from(">= 0.1.0").unwrap(),
+                        requirement: Range::new(">= 0.1.0".to_string()),
                         package: "gleam_stdlib".to_string(),
                     }],
                     retirement_status: None,
@@ -475,11 +488,7 @@ fn resolution_test_2() {
         make_remote(),
         "app".to_string(),
         Version::try_from("1.0.0").unwrap(),
-        vec![(
-            "gleam_stdlib".to_string(),
-            Range::try_from("~> 0.1").unwrap(),
-        )]
-        .into_iter(),
+        vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
     )
     .unwrap();
     assert_eq!(
@@ -505,7 +514,7 @@ fn resolution_with_nested_deps() {
         make_remote(),
         "app".to_string(),
         Version::try_from("1.0.0").unwrap(),
-        vec![("gleam_otp".to_string(), Range::try_from("~> 0.1").unwrap())].into_iter(),
+        vec![("gleam_otp".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
     )
     .unwrap();
     assert_eq!(
@@ -535,11 +544,7 @@ fn resolution_locked_to_older_version() {
         make_remote(),
         "app".to_string(),
         Version::try_from("1.0.0").unwrap(),
-        vec![(
-            "gleam_otp".to_string(),
-            Range::try_from("~> 0.1.0").unwrap(),
-        )]
-        .into_iter(),
+        vec![("gleam_otp".to_string(), Range::new("~> 0.1.0".to_string()))].into_iter(),
     )
     .unwrap();
     assert_eq!(
@@ -571,7 +576,7 @@ fn resolution_prerelease_can_be_selected() {
         Version::try_from("1.0.0").unwrap(),
         vec![(
             "gleam_otp".to_string(),
-            Range::try_from("~> 0.3.0-rc1").unwrap(),
+            Range::new("~> 0.3.0-rc1".to_string()),
         )]
         .into_iter(),
     )
@@ -603,7 +608,7 @@ fn resolution_not_found_dep() {
         make_remote(),
         "app".to_string(),
         Version::try_from("1.0.0").unwrap(),
-        vec![("unknown".to_string(), Range::try_from("~> 0.1").unwrap())].into_iter(),
+        vec![("unknown".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
     )
     .unwrap_err();
 }
@@ -616,7 +621,7 @@ fn resolution_no_matching_version() {
         Version::try_from("1.0.0").unwrap(),
         vec![(
             "gleam_stdlib".to_string(),
-            Range::try_from("~> 99.0").unwrap(),
+            Range::new("~> 99.0".to_string()),
         )]
         .into_iter(),
     )

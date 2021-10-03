@@ -70,12 +70,36 @@ pub enum Token<'input> {
     LeadingZero(&'input str),
 }
 
+#[cfg(test)]
 impl<'input> Token<'input> {
     /// Check if the current token is a whitespace token.
     pub fn is_whitespace(&self) -> bool {
         match *self {
             Whitespace(..) => true,
             _ => false,
+        }
+    }
+}
+
+impl<'input> std::fmt::Display for Token<'input> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Eq => write!(f, "=="),
+            NotEq => write!(f, "!="),
+            Gt => write!(f, ">"),
+            Lt => write!(f, "<"),
+            LtEq => write!(f, "<="),
+            GtEq => write!(f, "<="),
+            Pessimistic => write!(f, "~>"),
+            Dot => write!(f, "."),
+            Hyphen => write!(f, "-"),
+            Plus => write!(f, "+"),
+            Or => write!(f, "or"),
+            And => write!(f, "and"),
+            Whitespace(_, _) => write!(f, " "),
+            Numeric(i) => write!(f, "{}", i),
+            AlphaNumeric(a) => write!(f, "{}", a),
+            LeadingZero(z) => write!(f, "{}", z),
         }
     }
 }

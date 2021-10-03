@@ -16,6 +16,7 @@ use self::parser::Parser;
 use pubgrub::{
     error::PubGrubError,
     solver::{choose_package_with_fewest_versions, Dependencies},
+    type_aliases::Map,
 };
 use serde::{
     de::{self, Deserializer},
@@ -26,6 +27,8 @@ mod lexer;
 mod parser;
 #[cfg(test)]
 mod tests;
+
+type PubgrubRange = pubgrub::range::Range<Version>;
 
 /// In a nutshell, a version is represented by three numbers:
 ///
@@ -98,17 +101,31 @@ impl Version {
         let mut parser = Parser::new(input)?;
         let version = parser.version()?;
         if !parser.is_eof() {
-            return Err(parser::Error::MoreInput(parser.tail()?));
+            return Err(parser::Error::MoreInput(
+                parser
+                    .tail()?
+                    .into_iter()
+                    .map(|t| t.to_string())
+                    .collect::<Vec<_>>()
+                    .join(""),
+            ));
         }
         Ok(version)
     }
 
     /// Parse a Hex compatible version range. i.e. `> 1 and < 2 or == 4.5.2`.
-    pub fn parse_range(input: &str) -> Result<Range, parser::Error> {
+    fn parse_range(input: &str) -> Result<pubgrub::range::Range<Version>, parser::Error> {
         let mut parser = Parser::new(input)?;
         let version = parser.range()?;
         if !parser.is_eof() {
-            return Err(parser::Error::MoreInput(parser.tail()?));
+            return Err(parser::Error::MoreInput(
+                parser
+                    .tail()?
+                    .into_iter()
+                    .map(|t| t.to_string())
+                    .collect::<Vec<_>>()
+                    .join(""),
+            ));
         }
         Ok(version)
     }
@@ -169,7 +186,7 @@ impl pubgrub::version::Version for Version {
 }
 
 impl<'a> TryFrom<&'a str> for Version {
-    type Error = parser::Error<'a>;
+    type Error = parser::Error;
 
     fn try_from(value: &'a str) -> Result<Self, Self::Error> {
         Self::parse(value)
@@ -223,27 +240,17 @@ impl Identifier {
 }
 
 #[derive(Clone, PartialEq, Eq)]
-pub struct Range(pubgrub::range::Range<Version>);
+pub struct Range(String);
 
 impl Range {
-    pub fn strictly_lower_than(version: Version) -> Self {
-        Self(pubgrub::range::Range::strictly_lower_than(version))
+    pub fn new(spec: String) -> Self {
+        Self(spec)
     }
+}
 
-    pub fn higher_than(version: Version) -> Self {
-        Self(pubgrub::range::Range::higher_than(version))
-    }
-
-    pub fn exact(version: Version) -> Self {
-        Self(pubgrub::range::Range::exact(version))
-    }
-
-    pub fn intersection(&self, other: &Self) -> Self {
-        Self(self.0.intersection(&other.0))
-    }
-
-    pub fn union(&self, other: &Self) -> Self {
-        Self(self.0.union(&other.0))
+impl Range {
+    pub fn to_pubgrub(&self) -> Result<pubgrub::range::Range<Version>, parser::Error> {
+        Version::parse_range(&self.0)
     }
 }
 
@@ -253,11 +260,29 @@ impl fmt::Debug for Range {
     }
 }
 
-impl<'a> TryFrom<&'a str> for Range {
-    type Error = parser::Error<'a>;
+impl<'de> Deserialize<'de> for Range {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: &str = Deserialize::deserialize(deserializer)?;
+        Ok(Range::new(s.to_string()))
+    }
+}
 
-    fn try_from(value: &'a str) -> Result<Self, Self::Error> {
-        Version::parse_range(value)
+impl Serialize for Range {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+impl fmt::Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)?;
+        Ok(())
     }
 }
 
@@ -442,11 +467,11 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
             .find(|r| &r.version == version);
         Ok(match version {
             Some(release) => {
-                let deps = release
-                    .dependencies
-                    .iter()
-                    .map(|d| (d.package.clone(), d.requirement.0.clone()))
-                    .collect();
+                let mut deps: Map<String, PubgrubRange> = Default::default();
+                for d in &release.dependencies {
+                    let range = d.requirement.to_pubgrub()?;
+                    deps.insert(d.package.clone(), range);
+                }
                 Dependencies::Known(deps)
             }
             None => Dependencies::Unknown,

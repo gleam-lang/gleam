@@ -435,9 +435,7 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiEr
     } else {
         None
     };
-    let requirement = dep.take_requirement();
-    let requirement = Version::parse_range(&requirement)
-        .map_err(|_| ApiError::InvalidVersionRequirementFormat(requirement.clone()))?;
+    let requirement = Range::new(dep.take_requirement());
     Ok(Dependency {
         package: dep.take_package(),
         requirement,
