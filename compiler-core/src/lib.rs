@@ -66,6 +66,7 @@ pub mod javascript;
 pub mod line_numbers;
 pub mod metadata;
 pub mod parse;
+pub mod paths;
 pub mod pretty;
 pub mod project;
 pub mod type_;
