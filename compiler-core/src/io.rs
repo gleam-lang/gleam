@@ -52,6 +52,7 @@ pub struct OutputFile {
 pub trait FileSystemReader {
     fn gleam_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
     fn read(&self, path: &Path) -> Result<String, Error>;
+    // fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
 }
 
@@ -61,16 +62,28 @@ pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
 /// Typically we use an implementation that writes to the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
-    fn open(&self, path: &Path) -> Result<WrappedWriter, Error>;
+    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
 }
 
-// TODO: Remove this when the Rust compiler stops incorrectly suggesting this
-// could be derived. It can't because Write doesn't implement Debug
-#[allow(missing_debug_implementations)]
+// /// A wrapper around a Write implementing object that has Gleam's error handling.
+// pub struct WrappedReader {
+//     path: PathBuf,
+//     inner: Box<dyn std::io::Write>,
+// }
+
 /// A wrapper around a Write implementing object that has Gleam's error handling.
 pub struct WrappedWriter {
     path: PathBuf,
     inner: Box<dyn std::io::Write>,
+}
+
+impl Debug for WrappedWriter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WrappedWriter")
+            .field("path", &self.path)
+            .field("inner", &"...")
+            .finish()
+    }
 }
 
 impl Writer for WrappedWriter {}
@@ -154,7 +167,7 @@ pub mod test {
     }
 
     impl FileSystemWriter for FilesChannel {
-        fn open<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error> {
+        fn writer<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error> {
             let file = InMemoryFile::new();
             let _ = self.0.send((path.to_path_buf(), file.clone()));
             Ok(WrappedWriter::new(path, Box::new(file)))

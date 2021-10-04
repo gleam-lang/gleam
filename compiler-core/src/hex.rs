@@ -1,5 +1,4 @@
 use crate::{Error, Result};
-use std::path::PathBuf;
 
 use debug_ignore::DebugIgnore;
 use futures::future;
@@ -63,15 +62,36 @@ async fn get_package_checksum<Http: HttpClient>(
         .outer_checksum)
 }
 
-pub async fn download_to_cache<Http: HttpClient>(
+// pub async fn extract_package_from_cache<FileSystem: FileSystemIO>(
+//     name: &str,
+//     version: &Version,
+//     fs: FileSystem,
+// ) -> Result<()> {
+//     let tarball = paths::package_cache_tarball(name, &version.to_string());
+//     // let reader = fs.reader(&tarball)?;
+//     // let mut archive = Archive::new(GzDecoder::new(reader));
+//     // archive.unpack(".")?;
+//     Ok(())
+// }
+
+pub async fn download_package_to_cache<Http: HttpClient>(
+    name: String,
+    version: Version,
+    downloader: &Downloader,
+    http: &Http,
+) -> Result<bool> {
+    let checksum = get_package_checksum(http, &name, &version).await?;
+    downloader
+        .ensure_package_downloaded(&name, &version, &checksum)
+        .await
+}
+
+pub async fn download_manifest_packages_to_cache<Http: HttpClient>(
     manifest: &Manifest,
     downloader: &Downloader,
     http: &Http,
     project_name: &str,
 ) -> Result<usize> {
-    // Collect all the hex packages to be downloaded
-
-    // Prepare an async computation to download each package
     let futures = manifest
         .packages
         .iter()
@@ -79,12 +99,7 @@ pub async fn download_to_cache<Http: HttpClient>(
             ManifestPackage::Hex { name, .. } if name == &project_name => None,
             ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
         })
-        .map(|(name, version)| async move {
-            let checksum = get_package_checksum(http, &name, &version).await?;
-            downloader
-                .ensure_package_downloaded(&name, &version, &checksum)
-                .await
-        });
+        .map(|(name, version)| download_package_to_cache(name, version, downloader, http));
 
     // Run the futures to download the packages concurrently
     let results = future::join_all(futures).await;
@@ -104,7 +119,6 @@ pub struct Downloader {
     fs: DebugIgnore<Box<dyn FileSystemIO>>,
     http: DebugIgnore<Box<dyn HttpClient>>,
     hex_config: hexpm::Config,
-    pub cache_directory: PathBuf,
 }
 
 impl Downloader {
@@ -113,7 +127,6 @@ impl Downloader {
             fs: DebugIgnore(fs),
             http: DebugIgnore(http),
             hex_config: hexpm::Config::new(),
-            cache_directory: paths::default_gleam_cache(),
         }
     }
 
@@ -123,8 +136,7 @@ impl Downloader {
         version: &Version,
         checksum: &[u8],
     ) -> Result<bool, Error> {
-        let tarball_path =
-            paths::package_cache_tarball(&self.cache_directory, package_name, &version.to_string());
+        let tarball_path = paths::package_cache_tarball(package_name, &version.to_string());
         if self.fs.is_file(&tarball_path) {
             tracing::info!(
                 package = package_name,
@@ -154,7 +166,7 @@ impl Downloader {
                 error: error.to_string(),
             }
         })?;
-        let mut file = self.fs.open(&tarball_path)?;
+        let mut file = self.fs.writer(&tarball_path)?;
         file.write(&tarball)?;
         Ok(true)
     }

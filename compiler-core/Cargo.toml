@@ -53,6 +53,10 @@ debug-ignore = "1.0.1"
 thiserror = "1.0"
 # Async combinators for futures
 futures = "0.3.17"
+# Creation of tar file archives
+tar = "0.4.30"
+# gzip compression
+flate2 = "1.0.19"
 
 [build-dependencies]
 # Data (de)serialisation

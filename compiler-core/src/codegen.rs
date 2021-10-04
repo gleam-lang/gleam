@@ -43,7 +43,7 @@ impl<'a> Erlang<'a> {
     ) -> Result<()> {
         let name = format!("{}.erl", erl_name);
         let path = self.output_directory.join(&name);
-        let mut file = writer.open(&path)?;
+        let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
         let res = erlang::module(&module.ast, &line_numbers, &mut file);
         tracing::trace!(name = ?name, "Generated Erlang module");
@@ -60,7 +60,7 @@ impl<'a> Erlang<'a> {
             let name = format!("{}_{}.hrl", erl_name, name);
             tracing::trace!(name = ?name, "Generated Erlang header");
             writer
-                .open(&self.output_directory.join(name))?
+                .writer(&self.output_directory.join(name))?
                 .write(text.as_bytes())?;
         }
         Ok(())
@@ -125,7 +125,7 @@ impl<'a> ErlangApp<'a> {
             version = config.version,
         );
 
-        writer.open(&path)?.write(text.as_bytes())
+        writer.writer(&path)?.write(text.as_bytes())
     }
 }
 
@@ -151,7 +151,7 @@ impl<'a> JavaScript<'a> {
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
         tracing::trace!("Generated js prelude");
         writer
-            .open(&self.output_directory.join("gleam.js"))?
+            .writer(&self.output_directory.join("gleam.js"))?
             .str_write(javascript::PRELUDE)?;
         Ok(())
     }
@@ -164,7 +164,7 @@ impl<'a> JavaScript<'a> {
     ) -> Result<()> {
         let name = format!("{}.js", js_name);
         let path = self.output_directory.join(&name);
-        let mut file = writer.open(&path)?;
+        let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
         let res = javascript::module(
             &module.ast,

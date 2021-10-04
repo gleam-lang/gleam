@@ -116,7 +116,7 @@ where
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
             tracing::info!(name = %name, "Writing module metadata");
             let path = self.options.out_path.join(name);
-            ModuleEncoder::new(&module.ast.type_info).write(self.io.open(&path)?)?;
+            ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
         }
         Ok(())
     }

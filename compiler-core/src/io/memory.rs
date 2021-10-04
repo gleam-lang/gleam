@@ -26,7 +26,7 @@ impl InMemoryFileSystem {
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn open(&self, path: &Path) -> Result<WrappedWriter, Error> {
+    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
         let mut files = (*self.files).borrow_mut();
         let writer = files.entry(path.to_path_buf()).or_default();
         Ok(WrappedWriter {

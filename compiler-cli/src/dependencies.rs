@@ -31,7 +31,7 @@ pub fn download() -> Result<()> {
     let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime.handle().clone()), &config)?;
 
     // Download them from Hex to the local cache
-    let count = runtime.block_on(hex::download_to_cache(
+    let count = runtime.block_on(hex::download_manifest_packages_to_cache(
         &manifest,
         &downloader,
         &HttpClient::new(),
