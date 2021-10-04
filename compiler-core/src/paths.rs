@@ -4,6 +4,10 @@ pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {
     packages_cache().join(format!("{}-{}.tar", package_name, version))
 }
 
+pub fn target_package(package: &str) -> PathBuf {
+    PathBuf::from("target").join("dependencies").join(package)
+}
+
 fn packages_cache() -> PathBuf {
     default_gleam_cache()
         .join("hex")

@@ -31,7 +31,7 @@ impl FileSystemWriter for InMemoryFileSystem {
         let writer = files.entry(path.to_path_buf()).or_default();
         Ok(WrappedWriter {
             path: path.to_path_buf(),
-            inner: Box::new(writer.clone()),
+            inner: DebugIgnore(Box::new(writer.clone())),
         })
     }
 }
@@ -69,6 +69,10 @@ impl FileSystemReader for InMemoryFileSystem {
 
     fn is_file(&self, path: &Path) -> bool {
         (*self.files).borrow().contains_key(path)
+    }
+
+    fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
+        unimplemented!()
     }
 }
 

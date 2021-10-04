@@ -2,6 +2,7 @@ pub mod memory;
 
 use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
+use debug_ignore::DebugIgnore;
 use std::{
     fmt::Debug,
     path::{Path, PathBuf},
@@ -52,7 +53,7 @@ pub struct OutputFile {
 pub trait FileSystemReader {
     fn gleam_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
     fn read(&self, path: &Path) -> Result<String, Error>;
-    // fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
+    fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
 }
 
@@ -65,25 +66,37 @@ pub trait FileSystemWriter {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
 }
 
-// /// A wrapper around a Write implementing object that has Gleam's error handling.
-// pub struct WrappedReader {
-//     path: PathBuf,
-//     inner: Box<dyn std::io::Write>,
-// }
+#[derive(Debug)]
+/// A wrapper around a Read implementing object that has Gleam's error handling.
+pub struct WrappedReader {
+    path: PathBuf,
+    inner: DebugIgnore<Box<dyn std::io::Read>>,
+}
 
+impl WrappedReader {
+    pub fn new(path: &Path, inner: Box<dyn std::io::Read>) -> Self {
+        Self {
+            path: path.to_path_buf(),
+            inner: DebugIgnore(inner),
+        }
+    }
+
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buffer)
+    }
+}
+
+impl std::io::Read for WrappedReader {
+    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+        self.read(buffer)
+    }
+}
+
+#[derive(Debug)]
 /// A wrapper around a Write implementing object that has Gleam's error handling.
 pub struct WrappedWriter {
     path: PathBuf,
-    inner: Box<dyn std::io::Write>,
-}
-
-impl Debug for WrappedWriter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WrappedWriter")
-            .field("path", &self.path)
-            .field("inner", &"...")
-            .finish()
-    }
+    inner: DebugIgnore<Box<dyn std::io::Write>>,
 }
 
 impl Writer for WrappedWriter {}
@@ -103,7 +116,7 @@ impl WrappedWriter {
     pub fn new(path: &Path, inner: Box<dyn std::io::Write>) -> Self {
         Self {
             path: path.to_path_buf(),
-            inner,
+            inner: DebugIgnore(inner),
         }
     }
 
@@ -184,6 +197,10 @@ pub mod test {
         }
 
         fn is_file(&self, _path: &Path) -> bool {
+            unimplemented!()
+        }
+
+        fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
             unimplemented!()
         }
     }

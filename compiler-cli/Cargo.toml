@@ -58,6 +58,8 @@ async-trait = "0.1.51"
 http = "0.2.5"
 # Async combinators for futures
 futures = "0.3.17"
+# Little helper to omit fields that cannot be debug printed
+debug-ignore = "1.0.1"
 
 [dev-dependencies]
 # Test assertion errors with diffs

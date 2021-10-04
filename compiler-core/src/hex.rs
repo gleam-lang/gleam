@@ -1,8 +1,16 @@
-use crate::{Error, Result};
+use std::{io, path::Path};
+
+use crate::{
+    error::{FileIoAction, FileKind},
+    io::WrappedReader,
+    Error, Result,
+};
 
 use debug_ignore::DebugIgnore;
+use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::{Manifest, ManifestPackage, Version};
+use tar::Archive;
 
 use crate::{
     config::PackageConfig,
@@ -62,17 +70,36 @@ async fn get_package_checksum<Http: HttpClient>(
         .outer_checksum)
 }
 
-// pub async fn extract_package_from_cache<FileSystem: FileSystemIO>(
-//     name: &str,
-//     version: &Version,
-//     fs: FileSystem,
-// ) -> Result<()> {
-//     let tarball = paths::package_cache_tarball(name, &version.to_string());
-//     // let reader = fs.reader(&tarball)?;
-//     // let mut archive = Archive::new(GzDecoder::new(reader));
-//     // archive.unpack(".")?;
-//     Ok(())
-// }
+pub trait TarUnpacker {
+    fn io_result_unpack(
+        &self,
+        path: &Path,
+        archive: Archive<GzDecoder<WrappedReader>>,
+    ) -> io::Result<()>;
+
+    fn unpack(&self, path: &Path, archive: Archive<GzDecoder<WrappedReader>>) -> Result<()> {
+        self.io_result_unpack(path, archive)
+            .map_err(|e| Error::FileIo {
+                action: FileIoAction::WriteTo,
+                kind: FileKind::Directory,
+                path: path.to_path_buf(),
+                err: Some(e.to_string()),
+            })
+    }
+}
+
+pub async fn extract_package_from_cache<FileSystem: FileSystemIO, Untar: TarUnpacker>(
+    name: &str,
+    version: &Version,
+    fs: FileSystem,
+    unpacker: &Untar,
+) -> Result<()> {
+    let destination = paths::target_package(name);
+    let tarball = paths::package_cache_tarball(name, &version.to_string());
+    let reader = fs.reader(&tarball)?;
+    let archive = Archive::new(GzDecoder::new(reader));
+    unpacker.unpack(&destination, archive)
+}
 
 pub async fn download_package_to_cache<Http: HttpClient>(
     name: String,
@@ -96,7 +123,7 @@ pub async fn download_manifest_packages_to_cache<Http: HttpClient>(
         .packages
         .iter()
         .flat_map(|package| match package {
-            ManifestPackage::Hex { name, .. } if name == &project_name => None,
+            ManifestPackage::Hex { name, .. } if name == project_name => None,
             ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
         })
         .map(|(name, version)| download_package_to_cache(name, version, downloader, http));

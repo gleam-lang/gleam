@@ -614,6 +614,7 @@ dependencies = [
  "atty",
  "bytes",
  "ctrlc",
+ "debug-ignore",
  "flate2",
  "fs_extra",
  "futures 0.3.17",

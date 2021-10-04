@@ -1,7 +1,7 @@
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
-    io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedWriter},
+    io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter},
 };
 use ignore::DirEntry;
 use lazy_static::lazy_static;
@@ -47,6 +47,10 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
 
     fn is_file(&self, path: &Path) -> bool {
         path.is_file()
+    }
+
+    fn reader(&self, path: &Path) -> gleam_core::Result<WrappedReader, Error> {
+        reader(path)
     }
 }
 
@@ -286,6 +290,19 @@ pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
         path: PathBuf::from(path.as_ref()),
         err: Some(err.to_string()),
     })
+}
+
+pub fn reader(path: impl AsRef<Path> + Debug) -> Result<WrappedReader, Error> {
+    tracing::trace!("Reading file {:?}", path);
+
+    let reader = File::open(&path).map_err(|err| Error::FileIo {
+        action: FileIoAction::Open,
+        kind: FileKind::File,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(err.to_string()),
+    })?;
+
+    Ok(WrappedReader::new(path.as_ref(), Box::new(reader)))
 }
 
 pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
