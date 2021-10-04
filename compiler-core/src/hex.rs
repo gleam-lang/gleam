@@ -1,10 +1,4 @@
-use std::{io, path::Path};
-
-use crate::{
-    error::{FileIoAction, FileKind},
-    io::WrappedReader,
-    Error, Result,
-};
+use crate::{io::TarUnpacker, Error, Result};
 
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
@@ -46,136 +40,67 @@ pub fn resolve_versions(
     .map_err(Error::dependency_resolution_failed)
 }
 
-async fn get_package_checksum<Http: HttpClient>(
-    http: &Http,
-    name: &str,
-    version: &Version,
-) -> Result<Vec<u8>> {
-    let config = hexpm::Config::new();
-    let request = hexpm::get_package_request(name, None, &config);
-    let response = http.send(request).await?;
-
-    Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
-        .map_err(Error::hex)?
-        .releases
-        .into_iter()
-        .find(|p| &p.version == version)
-        .ok_or_else(|| {
-            Error::Hex(format!(
-                "package {}@{} not found",
-                name,
-                version.to_string()
-            ))
-        })?
-        .outer_checksum)
-}
-
-pub trait TarUnpacker {
-    fn io_result_unpack(
-        &self,
-        path: &Path,
-        archive: Archive<GzDecoder<WrappedReader>>,
-    ) -> io::Result<()>;
-
-    fn unpack(&self, path: &Path, archive: Archive<GzDecoder<WrappedReader>>) -> Result<()> {
-        self.io_result_unpack(path, archive)
-            .map_err(|e| Error::FileIo {
-                action: FileIoAction::WriteTo,
-                kind: FileKind::Directory,
-                path: path.to_path_buf(),
-                err: Some(e.to_string()),
-            })
-    }
-}
-
-pub async fn extract_package_from_cache<FileSystem: FileSystemIO, Untar: TarUnpacker>(
-    name: &str,
-    version: &Version,
-    fs: FileSystem,
-    unpacker: &Untar,
-) -> Result<()> {
-    let destination = paths::target_package(name);
-    let tarball = paths::package_cache_tarball(name, &version.to_string());
-    let reader = fs.reader(&tarball)?;
-    let archive = Archive::new(GzDecoder::new(reader));
-    unpacker.unpack(&destination, archive)
-}
-
-pub async fn download_package_to_cache<Http: HttpClient>(
-    name: String,
-    version: Version,
-    downloader: &Downloader,
-    http: &Http,
-) -> Result<bool> {
-    let checksum = get_package_checksum(http, &name, &version).await?;
-    downloader
-        .ensure_package_downloaded(&name, &version, &checksum)
-        .await
-}
-
-pub async fn download_manifest_packages_to_cache<Http: HttpClient>(
-    manifest: &Manifest,
-    downloader: &Downloader,
-    http: &Http,
-    project_name: &str,
-) -> Result<usize> {
-    let futures = manifest
-        .packages
-        .iter()
-        .flat_map(|package| match package {
-            ManifestPackage::Hex { name, .. } if name == project_name => None,
-            ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
-        })
-        .map(|(name, version)| download_package_to_cache(name, version, downloader, http));
-
-    // Run the futures to download the packages concurrently
-    let results = future::join_all(futures).await;
-
-    // Count the number of packages downloaded while checking for errors
-    let mut count = 0;
-    for result in results {
-        if result? {
-            count += 1;
-        }
-    }
-    Ok(count)
-}
-
 #[derive(Debug)]
 pub struct Downloader {
     fs: DebugIgnore<Box<dyn FileSystemIO>>,
     http: DebugIgnore<Box<dyn HttpClient>>,
+    untar: DebugIgnore<Box<dyn TarUnpacker>>,
     hex_config: hexpm::Config,
 }
 
 impl Downloader {
-    pub fn new(fs: Box<dyn FileSystemIO>, http: Box<dyn HttpClient>) -> Self {
+    pub fn new(
+        fs: Box<dyn FileSystemIO>,
+        http: Box<dyn HttpClient>,
+        untar: Box<dyn TarUnpacker>,
+    ) -> Self {
         Self {
             fs: DebugIgnore(fs),
             http: DebugIgnore(http),
+            untar: DebugIgnore(untar),
             hex_config: hexpm::Config::new(),
         }
+    }
+
+    async fn get_package_checksum(&self, name: &str, version: &Version) -> Result<Vec<u8>> {
+        let config = hexpm::Config::new();
+        let request = hexpm::get_package_request(name, None, &config);
+        let response = self.http.send(request).await?;
+
+        Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
+            .map_err(Error::hex)?
+            .releases
+            .into_iter()
+            .find(|p| &p.version == version)
+            .ok_or_else(|| {
+                Error::Hex(format!(
+                    "package {}@{} not found",
+                    name,
+                    version.to_string()
+                ))
+            })?
+            .outer_checksum)
     }
 
     pub async fn ensure_package_downloaded(
         &self,
         package_name: &str,
         version: &Version,
-        checksum: &[u8],
     ) -> Result<bool, Error> {
+        let checksum = self.get_package_checksum(package_name, version).await?;
         let tarball_path = paths::package_cache_tarball(package_name, &version.to_string());
         if self.fs.is_file(&tarball_path) {
             tracing::info!(
                 package = package_name,
                 version = %version,
-                "Package already downloaded"
+                "Package already in cache"
             );
             return Ok(false);
         }
         tracing::info!(
             package = package_name,
             version = %version,
-            "Downloading package"
+            "Downloading package to cache"
         );
 
         let request = hexpm::get_package_tarball_request(
@@ -186,15 +111,79 @@ impl Downloader {
         );
         let response = self.http.send(request).await?;
 
-        let tarball = hexpm::get_package_tarball_response(response, checksum).map_err(|error| {
-            Error::DownloadPackageError {
-                package_name: package_name.to_string(),
-                package_version: version.to_string(),
-                error: error.to_string(),
-            }
-        })?;
+        let tarball =
+            hexpm::get_package_tarball_response(response, &checksum).map_err(|error| {
+                Error::DownloadPackageError {
+                    package_name: package_name.to_string(),
+                    package_version: version.to_string(),
+                    error: error.to_string(),
+                }
+            })?;
         let mut file = self.fs.writer(&tarball_path)?;
         file.write(&tarball)?;
         Ok(true)
+    }
+
+    pub async fn ensure_package_in_target(&self, name: String, version: Version) -> Result<bool> {
+        let downloaded = self.ensure_package_downloaded(&name, &version).await?;
+        self.extract_package_from_cache(&name, &version)?;
+        Ok(downloaded)
+    }
+
+    // TODO: it would be really nice if this was async but the library is sync
+    pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<()> {
+        let destination = paths::target_package(name);
+
+        If the directory already exists then there's nothing for us to do
+        if self.fs.is_directory(&destination) {
+            tracing::info!(package = name, "package already in target");
+            return Ok(());
+        }
+
+        tracing::info!(package = name, "writing package to target");
+        let tarball = paths::package_cache_tarball(name, &version.to_string());
+        let reader = self.fs.reader(&tarball)?;
+        let archive = Archive::new(GzDecoder::new(reader));
+        //
+        //
+        //
+        // TODO: FIXME: this is wrong. It's not a gz archive, it's just tar.
+        // Inside that there's a `contents.tar.gz` and a `metadata.config`
+        //
+        //
+        match self.untar.unpack(&destination, archive) {
+            ok @ Ok(_) => ok,
+            err @ Err(_) => {
+                // TODO: delete the directory if expanding failed
+                err
+            }
+        }
+    }
+
+    pub async fn download_manifest_packages(
+        &self,
+        manifest: &Manifest,
+        project_name: &str,
+    ) -> Result<usize> {
+        let futures = manifest
+            .packages
+            .iter()
+            .flat_map(|package| match package {
+                ManifestPackage::Hex { name, .. } if name == project_name => None,
+                ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
+            })
+            .map(|(name, version)| self.ensure_package_in_target(name, version));
+
+        // Run the futures to download the packages concurrently
+        let results = future::join_all(futures).await;
+
+        // Count the number of packages downloaded while checking for errors
+        let mut count = 0;
+        for result in results {
+            if result? {
+                count += 1;
+            }
+        }
+        Ok(count)
     }
 }

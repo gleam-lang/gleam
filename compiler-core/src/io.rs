@@ -3,10 +3,13 @@ pub mod memory;
 use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
+use flate2::read::GzDecoder;
 use std::{
     fmt::Debug,
+    io,
     path::{Path, PathBuf},
 };
+use tar::Archive;
 
 pub trait Utf8Writer: std::fmt::Write {
     /// A wrapper around `fmt::Write` that has Gleam's error handling.
@@ -55,6 +58,7 @@ pub trait FileSystemReader {
     fn read(&self, path: &Path) -> Result<String, Error>;
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
+    fn is_directory(&self, path: &Path) -> bool;
 }
 
 pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
@@ -203,6 +207,10 @@ pub mod test {
         fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
             unimplemented!()
         }
+
+        fn is_directory(&self, _path: &Path) -> bool {
+            unimplemented!()
+        }
     }
 
     impl FileSystemIO for FilesChannel {}
@@ -262,4 +270,23 @@ pub mod test {
 pub trait HttpClient {
     async fn send(&self, request: http::Request<Vec<u8>>)
         -> Result<http::Response<Vec<u8>>, Error>;
+}
+
+pub trait TarUnpacker {
+    fn io_result_unpack(
+        &self,
+        path: &Path,
+        archive: Archive<GzDecoder<WrappedReader>>,
+    ) -> io::Result<()>;
+
+    fn unpack(&self, path: &Path, archive: Archive<GzDecoder<WrappedReader>>) -> Result<()> {
+        tracing::trace!(path = ?path, "unpacking tar archive");
+        self.io_result_unpack(path, archive)
+            .map_err(|e| Error::FileIo {
+                action: FileIoAction::WriteTo,
+                kind: FileKind::Directory,
+                path: path.to_path_buf(),
+                err: Some(e.to_string()),
+            })
+    }
 }

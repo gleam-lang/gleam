@@ -49,6 +49,10 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
         path.is_file()
     }
 
+    fn is_directory(&self, path: &Path) -> bool {
+        path.is_dir()
+    }
+
     fn reader(&self, path: &Path) -> gleam_core::Result<WrappedReader, Error> {
         reader(path)
     }
