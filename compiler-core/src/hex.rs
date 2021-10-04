@@ -69,7 +69,6 @@ pub async fn download_to_cache<Http: HttpClient>(
     project_name: &str,
 ) -> Result<usize> {
     // Collect all the hex packages to be downloaded
-    
 
     // Prepare an async computation to download each package
     let futures = manifest
@@ -78,12 +77,13 @@ pub async fn download_to_cache<Http: HttpClient>(
         .flat_map(|package| match package {
             ManifestPackage::Hex { name, .. } if name == &project_name => None,
             ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
-        }).map(|(name, version)| async move {
-        let checksum = get_package_checksum(http, &name, &version).await?;
-        downloader
-            .ensure_package_downloaded(&name, &version, &checksum)
-            .await
-    });
+        })
+        .map(|(name, version)| async move {
+            let checksum = get_package_checksum(http, &name, &version).await?;
+            downloader
+                .ensure_package_downloaded(&name, &version, &checksum)
+                .await
+        });
 
     // Run the futures to download the packages concurrently
     let results = future::join_all(futures).await;
