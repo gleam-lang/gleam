@@ -71,6 +71,10 @@ impl FileSystemReader for InMemoryFileSystem {
         (*self.files).borrow().contains_key(path)
     }
 
+    fn is_directory(&self, _path: &Path) -> bool {
+        unimplemented!()
+    }
+
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
         unimplemented!()
     }

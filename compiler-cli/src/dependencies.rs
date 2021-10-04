@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use gleam_core::{
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::HttpClient as _,
+    io::{HttpClient as _, TarUnpacker},
     Result,
 };
 
@@ -18,7 +18,7 @@ pub fn download() -> Result<()> {
 
     let http = HttpClient::boxed();
     let fs = FileSystemAccessor::boxed();
-    let downloader = hex::Downloader::new(fs, http);
+    let downloader = hex::Downloader::new(fs, http, Untar::boxed());
 
     // Read the project config
     let config = crate::config::root_config()?;
@@ -31,12 +31,8 @@ pub fn download() -> Result<()> {
     let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime.handle().clone()), &config)?;
 
     // Download them from Hex to the local cache
-    let count = runtime.block_on(hex::download_manifest_packages_to_cache(
-        &manifest,
-        &downloader,
-        &HttpClient::new(),
-        &project_name,
-    ))?;
+    let count =
+        runtime.block_on(downloader.download_manifest_packages(&manifest, &project_name))?;
 
     print_packages_downloaded(start, count);
     Ok(())
@@ -53,6 +49,25 @@ impl PackageFetcher {
             runtime,
             http: HttpClient::new(),
         })
+    }
+}
+
+#[derive(Debug)]
+pub struct Untar;
+
+impl Untar {
+    pub fn boxed() -> Box<Self> {
+        Box::new(Self)
+    }
+}
+
+impl TarUnpacker for Untar {
+    fn io_result_unpack(
+        &self,
+        path: &std::path::Path,
+        mut archive: tar::Archive<flate2::read::GzDecoder<gleam_core::io::WrappedReader>>,
+    ) -> std::io::Result<()> {
+        archive.unpack(path)
     }
 }
 
