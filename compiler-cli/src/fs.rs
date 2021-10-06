@@ -232,7 +232,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 
     for file in outputs {
         let mut header = tar::Header::new_gnu();
-        header.set_path(&file.path).map_err(|e| Error::Tar {
+        header.set_path(&file.path).map_err(|e| Error::AddTar {
             path: file.path.clone(),
             err: e.to_string(),
         })?;
@@ -240,7 +240,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
         header.set_cksum();
         builder
             .append(&header, file.text.as_bytes())
-            .map_err(|e| Error::Tar {
+            .map_err(|e| Error::AddTar {
                 path: file.path.clone(),
                 err: e.to_string(),
             })?;

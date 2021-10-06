@@ -88,8 +88,11 @@ pub enum Error {
     #[error("Hex error: {0}")]
     Hex(String),
 
+    #[error("{error}")]
+    ExpandTar { error: String },
+
     #[error("{err}")]
-    Tar { path: PathBuf, err: String },
+    AddTar { path: PathBuf, err: String },
 
     #[error("{0}")]
     TarFinish(String),
@@ -397,7 +400,7 @@ This was error from the gzip library:
                 write_project(buf, diagnostic);
             }
 
-            Error::Tar { path, err } => {
+            Error::AddTar { path, err } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Failure creating tar archive".to_string(),
                     label: format!(
@@ -409,6 +412,21 @@ This was error from the tar library:
     {}",
                         path.to_str().unwrap(),
                         err.to_string()
+                    ),
+                };
+                write_project(buf, diagnostic);
+            }
+
+            Error::ExpandTar { error } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Failure opening tar archive".to_string(),
+                    label: format!(
+                        "There was a problem when attempting to expand a to a tar archive.
+
+This was error from the tar library:
+
+    {}",
+                        error.to_string()
                     ),
                 };
                 write_project(buf, diagnostic);

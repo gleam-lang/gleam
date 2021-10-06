@@ -134,7 +134,7 @@ impl Downloader {
     pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<()> {
         let destination = paths::target_package(name);
 
-        If the directory already exists then there's nothing for us to do
+        // If the directory already exists then there's nothing for us to do
         if self.fs.is_directory(&destination) {
             tracing::info!(package = name, "package already in target");
             return Ok(());

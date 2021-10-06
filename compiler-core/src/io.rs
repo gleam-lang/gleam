@@ -273,6 +273,22 @@ pub trait HttpClient {
 }
 
 pub trait TarUnpacker {
+    fn io_result_entries<'a>(
+        &self,
+        archive: &'a mut Archive<GzDecoder<WrappedReader>>,
+    ) -> io::Result<tar::Entries<'a, GzDecoder<WrappedReader>>>;
+
+    fn entries<'a>(
+        &self,
+        archive: &'a mut Archive<GzDecoder<WrappedReader>>,
+    ) -> Result<tar::Entries<'a, GzDecoder<WrappedReader>>> {
+        tracing::trace!("iterating through tar archive");
+        self.io_result_entries(archive)
+            .map_err(|e| Error::ExpandTar {
+                error: e.to_string(),
+            })
+    }
+
     fn io_result_unpack(
         &self,
         path: &Path,
