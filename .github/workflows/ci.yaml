@@ -174,29 +174,30 @@ jobs:
 
       - name: Test app template
         run: |
-          gleam new app_project --template=app
+          gleam new app_project --template=rebar-app
           cd app_project
           rebar3 eunit
 
       - name: Test lib template
         run: |
-          gleam new lib_project --template=lib
+          gleam new lib_project --template=rebar-lib
           cd lib_project
           rebar3 eunit
 
       - name: Test escript template
         run: |
-          gleam new escript_project --template=escript
+          gleam new escript_project --template=rebar-escript
           cd escript_project
           rebar3 eunit
           rebar3 escriptize
           _build/default/bin/escript_project
 
+      # TODO: run tests
       - name: Test gleam-lib template
         run: |
-          gleam new gleam_lib_project --template=gleam-lib
+          gleam new gleam_lib_project --template=lib
           cd gleam_lib_project
-          gleam eunit
+          gleam deps download
 
       - name: Test JavaScript prelude
         run: |
