@@ -1,8 +1,9 @@
 use std::time::Instant;
 
+use flate2::read::GzDecoder;
 use gleam_core::{
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{self, HttpClient as _, TarUnpacker},
+    io::{HttpClient as _, TarUnpacker, WrappedReader},
     Result,
 };
 
@@ -62,19 +63,19 @@ impl Untar {
 }
 
 impl TarUnpacker for Untar {
+    fn io_result_entries<'a>(
+        &self,
+        archive: &'a mut tar::Archive<WrappedReader>,
+    ) -> std::io::Result<tar::Entries<'a, WrappedReader>> {
+        archive.entries()
+    }
+
     fn io_result_unpack(
         &self,
         path: &std::path::Path,
-        mut archive: tar::Archive<flate2::read::GzDecoder<io::WrappedReader>>,
+        mut archive: tar::Archive<GzDecoder<tar::Entry<'_, WrappedReader>>>,
     ) -> std::io::Result<()> {
         archive.unpack(path)
-    }
-
-    fn io_result_entries<'a>(
-        &self,
-        archive: &'a mut tar::Archive<flate2::read::GzDecoder<io::WrappedReader>>,
-    ) -> std::io::Result<tar::Entries<'a, flate2::read::GzDecoder<io::WrappedReader>>> {
-        archive.entries()
     }
 }
 
