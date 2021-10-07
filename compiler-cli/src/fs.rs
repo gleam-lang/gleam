@@ -85,6 +85,10 @@ impl FileSystemWriter for FileSystemAccessor {
 
         Ok(WrappedWriter::new(path, Box::new(file)))
     }
+
+    fn delete(&self, path: &Path) -> gleam_core::Result<(), Error> {
+        delete_dir(path) // I presume this works on files too. Let's find out.
+    }
 }
 
 impl FileSystemIO for FileSystemAccessor {}

@@ -124,42 +124,51 @@ impl Downloader {
     }
 
     pub async fn ensure_package_in_target(&self, name: String, version: Version) -> Result<bool> {
-        let downloaded = self.ensure_package_downloaded(&name, &version).await?;
-        self.extract_package_from_cache(&name, &version)?;
-        Ok(downloaded)
+        let _ = self.ensure_package_downloaded(&name, &version).await?;
+        self.extract_package_from_cache(&name, &version)
     }
 
-    // TODO: it would be really nice if this was async but the library is sync
-    pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<()> {
+    // It would be really nice if this was async but the library is sync
+    pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<bool> {
+        let contents_path = PathBuf::from("contents.tar.gz");
         let destination = paths::target_package(name);
 
         // If the directory already exists then there's nothing for us to do
         if self.fs.is_directory(&destination) {
             tracing::info!(package = name, "package already in target");
-            return Ok(());
+            return Ok(false);
         }
 
         tracing::info!(package = name, "writing package to target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
         let reader = self.fs.reader(&tarball)?;
         let mut archive = Archive::new(reader);
-        let contents_path = PathBuf::from("contents.tar.gz");
+
+        // Find the source code from within the outer tarball
         for entry in self.untar.entries(&mut archive)? {
-            let file = entry.unwrap(); // TODO: error
-            if file.header().path().unwrap().as_ref() == &contents_path {
-                // TODO: remove that unwrap above
+            let file = entry.map_err(Error::expand_tar)?;
+
+            let path = file.header().path().map_err(Error::expand_tar)?;
+            if path.as_ref() == &contents_path {
+                // Expand this inner source code and write to the file system
                 let archive = Archive::new(GzDecoder::new(file));
-                return match self.untar.unpack(&destination, archive) {
-                    ok @ Ok(_) => ok,
-                    err @ Err(_) => {
-                        // TODO: delete the directory if expanding failed
-                        err
+                let result = self.untar.unpack(&destination, archive);
+
+                // If we failed to expand the tarball remove any source code
+                // that was partially written so that we don't mistakenly think
+                // the operation succeeded next time we run.
+                return match result {
+                    Ok(()) => Ok(true),
+                    Err(err) => {
+                        self.fs.delete(&destination)?;
+                        Err(err)
                     }
                 };
             }
         }
+
         // TODO: return an error as it wasn't found
-        Ok(())
+        unimplemented!()
     }
 
     pub async fn download_manifest_packages(

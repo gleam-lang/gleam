@@ -35,6 +35,7 @@ pub fn download() -> Result<()> {
     let count =
         runtime.block_on(downloader.download_manifest_packages(&manifest, &project_name))?;
 
+    // TODO: we should print the number of deps new to ./target, not to the shared cache
     print_packages_downloaded(start, count);
     Ok(())
 }

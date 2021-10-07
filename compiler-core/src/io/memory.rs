@@ -34,6 +34,12 @@ impl FileSystemWriter for InMemoryFileSystem {
             inner: DebugIgnore(Box::new(writer.clone())),
         })
     }
+
+    fn delete(&self, path: &Path) -> Result<(), Error> {
+        let mut files = (*self.files).borrow_mut();
+        let _ = files.remove(path);
+        Ok(())
+    }
 }
 
 impl FileSystemReader for InMemoryFileSystem {
@@ -72,11 +78,11 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn is_directory(&self, _path: &Path) -> bool {
-        unimplemented!()
+        unreachable!() // TODO
     }
 
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
-        unimplemented!()
+        unreachable!() // TODO
     }
 }
 

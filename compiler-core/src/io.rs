@@ -68,6 +68,7 @@ pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
+    fn delete(&self, path: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -188,6 +189,10 @@ pub mod test {
             let file = InMemoryFile::new();
             let _ = self.0.send((path.to_path_buf(), file.clone()));
             Ok(WrappedWriter::new(path, Box::new(file)))
+        }
+
+        fn delete(&self, _path: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support deletion")
         }
     }
 

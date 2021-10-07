@@ -172,6 +172,15 @@ impl Error {
     {
         Self::DependencyResolutionFailed(error.to_string())
     }
+
+    pub fn expand_tar<E>(error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::ExpandTar {
+            error: error.to_string(),
+        }
+    }
 }
 
 impl From<capnp::Error> for Error {
