@@ -149,7 +149,7 @@ impl Downloader {
             let file = entry.map_err(Error::expand_tar)?;
 
             let path = file.header().path().map_err(Error::expand_tar)?;
-            if path.as_ref() == &contents_path {
+            if path.as_ref() == contents_path {
                 // Expand this inner source code and write to the file system
                 let archive = Archive::new(GzDecoder::new(file));
                 let result = self.untar.unpack(&destination, archive);
