@@ -20,9 +20,9 @@ const PROJECT_VERSION: &str = "0.1.0";
 #[strum(serialize_all = "kebab_case")]
 pub enum Template {
     Lib,
-    App,
-    GleamLib,
-    Escript,
+    RebarLib,
+    RebarApp,
+    RebarEscript,
 }
 
 #[derive(Debug)]
@@ -64,7 +64,7 @@ impl Creator {
         crate::fs::mkdir(&self.workflows)?;
 
         match self.options.template {
-            Template::Lib => {
+            Template::RebarLib => {
                 self.gitignore()?;
                 self.github_ci()?;
                 self.lib_readme()?;
@@ -75,7 +75,7 @@ impl Creator {
                 self.test_module()?;
             }
 
-            Template::App => {
+            Template::RebarApp => {
                 crate::fs::mkdir(&self.src.join(self.project_name.clone()))?;
                 self.gitignore()?;
                 self.github_ci()?;
@@ -88,7 +88,7 @@ impl Creator {
                 self.test_module()?;
             }
 
-            Template::Escript => {
+            Template::RebarEscript => {
                 self.gitignore()?;
                 self.github_ci()?;
                 self.escript_readme()?;
@@ -99,7 +99,7 @@ impl Creator {
                 self.test_module()?;
             }
 
-            Template::GleamLib => {
+            Template::Lib => {
                 self.gitignore()?;
                 self.gleam_github_ci()?;
                 self.gleam_lib_readme()?;
@@ -231,7 +231,9 @@ pub fn stop(_state: Dynamic) {
 
     fn erlang_app_src(&self) -> Result<()> {
         let module = match self.options.template {
-            Template::App => format!("\n  {{mod, {{{}@application, []}}}},", self.project_name),
+            Template::RebarApp => {
+                format!("\n  {{mod, {{{}@application, []}}}},", self.project_name)
+            }
             _ => "".to_string(),
         };
 
@@ -547,8 +549,8 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
     };
 
     let test_command = match &creator.options.template {
-        Template::Lib | Template::App | Template::Escript => "rebar3 eunit",
-        Template::GleamLib => "gleam eunit",
+        Template::RebarLib | Template::RebarApp | Template::RebarEscript => "rebar3 eunit",
+        Template::Lib => "gleam eunit",
     };
 
     println!(
