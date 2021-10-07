@@ -9,7 +9,7 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-use tar::Archive;
+use tar::{Archive, Entry};
 
 pub trait Utf8Writer: std::fmt::Write {
     /// A wrapper around `fmt::Write` that has Gleam's error handling.
@@ -273,15 +273,17 @@ pub trait HttpClient {
 }
 
 pub trait TarUnpacker {
+    // FIXME: The reader types are restrictive here. We should be more generic
+    // than this.
     fn io_result_entries<'a>(
         &self,
-        archive: &'a mut Archive<GzDecoder<WrappedReader>>,
-    ) -> io::Result<tar::Entries<'a, GzDecoder<WrappedReader>>>;
+        archive: &'a mut Archive<WrappedReader>,
+    ) -> io::Result<tar::Entries<'a, WrappedReader>>;
 
     fn entries<'a>(
         &self,
-        archive: &'a mut Archive<GzDecoder<WrappedReader>>,
-    ) -> Result<tar::Entries<'a, GzDecoder<WrappedReader>>> {
+        archive: &'a mut Archive<WrappedReader>,
+    ) -> Result<tar::Entries<'a, WrappedReader>> {
         tracing::trace!("iterating through tar archive");
         self.io_result_entries(archive)
             .map_err(|e| Error::ExpandTar {
@@ -292,10 +294,14 @@ pub trait TarUnpacker {
     fn io_result_unpack(
         &self,
         path: &Path,
-        archive: Archive<GzDecoder<WrappedReader>>,
+        archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
     ) -> io::Result<()>;
 
-    fn unpack(&self, path: &Path, archive: Archive<GzDecoder<WrappedReader>>) -> Result<()> {
+    fn unpack(
+        &self,
+        path: &Path,
+        archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
+    ) -> Result<()> {
         tracing::trace!(path = ?path, "unpacking tar archive");
         self.io_result_unpack(path, archive)
             .map_err(|e| Error::FileIo {

@@ -1,15 +1,14 @@
-use crate::{io::TarUnpacker, Error, Result};
-
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::{Manifest, ManifestPackage, Version};
+use std::path::PathBuf;
 use tar::Archive;
 
 use crate::{
     config::PackageConfig,
-    io::{FileSystemIO, HttpClient},
-    paths,
+    io::{FileSystemIO, HttpClient, TarUnpacker},
+    paths, Error, Result,
 };
 
 pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----
@@ -143,21 +142,24 @@ impl Downloader {
         tracing::info!(package = name, "writing package to target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
         let reader = self.fs.reader(&tarball)?;
-        let archive = Archive::new(GzDecoder::new(reader));
-        //
-        //
-        //
-        // TODO: FIXME: this is wrong. It's not a gz archive, it's just tar.
-        // Inside that there's a `contents.tar.gz` and a `metadata.config`
-        //
-        //
-        match self.untar.unpack(&destination, archive) {
-            ok @ Ok(_) => ok,
-            err @ Err(_) => {
-                // TODO: delete the directory if expanding failed
-                err
+        let mut archive = Archive::new(reader);
+        let contents_path = PathBuf::from("contents.tar.gz");
+        for entry in self.untar.entries(&mut archive)? {
+            let file = entry.unwrap(); // TODO: error
+            if file.header().path().unwrap().as_ref() == &contents_path {
+                // TODO: remove that unwrap above
+                let archive = Archive::new(GzDecoder::new(file));
+                return match self.untar.unpack(&destination, archive) {
+                    ok @ Ok(_) => ok,
+                    err @ Err(_) => {
+                        // TODO: delete the directory if expanding failed
+                        err
+                    }
+                };
             }
         }
+        // TODO: return an error as it wasn't found
+        Ok(())
     }
 
     pub async fn download_manifest_packages(
