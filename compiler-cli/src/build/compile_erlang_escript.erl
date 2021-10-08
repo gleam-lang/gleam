@@ -1,4 +1,4 @@
-#!/usr/bin/env erlang
+#!/usr/bin/env escript
 
 % TODO: build in parallel
 main([ProfilePath]) ->
