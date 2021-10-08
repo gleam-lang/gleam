@@ -2,9 +2,14 @@
 
 ## Unreleased
 
-- Gleam can now compile Gleam projects without an external build tool.
-- Gleam can now run eunit without an external build tool.
-- Gleam can now run an Erlang shell without an external build tool.
+- Gleam can now compile Gleam projects.
+- Gleam can now run eunit.
+- Gleam can now run an Erlang shell.
+- Gleam can now run an Erlang shell.
+- Gleam can now resolve package versions for a Gleam project's dependency tree.
+- Gleam can now download Hex packages.
+- Gleam is now the default build tool for new projects.
+- The template names for `gleam new` have been changed.
 - Fixed a bug where the error message for a record update with an unknown field
   would point to all the fields rather than the unknown one.
 - Improved styling for inline code in generated documentation.
