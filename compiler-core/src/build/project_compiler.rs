@@ -80,15 +80,15 @@ where
     ) -> Result<(), Error> {
         self.telemetry.compiling_package(&name);
         let test_path = match locations {
-            SourceLocations::SrcAndTest => Some(paths::build_dependencies_package_test(&name)),
+            SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(&name)),
             _ => None,
         };
 
         // TODO: this isn't the right location.
-        let out_path = paths::build_dependencies_package_src(&name);
+        let out_path = paths::build_deps_package_src(&name);
         let options = package_compiler::Options {
             target: Target::Erlang,
-            src_path: paths::build_dependencies_package_src(&name),
+            src_path: paths::build_deps_package_src(&name),
             out_path: out_path.clone(),
             test_path,
             name: name.clone(),

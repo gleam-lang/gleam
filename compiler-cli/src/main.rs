@@ -400,7 +400,7 @@ fn compile_erlang_to_beam() -> Result<(), Error> {
 }
 
 fn copy_root_package_to_build(root_config: &PackageConfig) -> Result<(), Error> {
-    let target = paths::build_dependencies_package(&root_config.name);
+    let target = paths::build_deps_package(&root_config.name);
     let path = PathBuf::from("./");
 
     // Reset _build dir

@@ -43,8 +43,8 @@ impl ProjectRoot {
 
     pub fn default_build_lib_package_source_path(&self, name: &str, origin: Origin) -> PathBuf {
         match origin {
-            Origin::Src => paths::build_dependencies_package_src(name),
-            Origin::Test => paths::build_dependencies_package_test(name),
+            Origin::Src => paths::build_deps_package_src(name),
+            Origin::Test => paths::build_deps_package_test(name),
         }
     }
 
