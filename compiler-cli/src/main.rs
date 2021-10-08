@@ -304,8 +304,8 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let root = PathBuf::from(&root);
     let config = config::read_project_config(&root)?;
 
-    // Use new build tool
-    if root.join("rebar.config").exists() {
+    // Use new build tool if not in a rebar or mix project
+    if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
         return new_build_main(config).map(|_| ());
     }
 
