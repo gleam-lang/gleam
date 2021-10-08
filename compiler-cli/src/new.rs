@@ -100,7 +100,7 @@ impl Creator {
             }
 
             Template::Lib => {
-                self.gitignore()?;
+                self.gleam_gitignore()?;
                 self.gleam_github_ci()?;
                 self.gleam_lib_readme()?;
                 self.gleam_gleam_toml()?;
@@ -261,6 +261,16 @@ pub fn stop(_state: Dynamic) {
                 version = PROJECT_VERSION,
                 module = module,
             ),
+        )
+    }
+
+    fn gleam_gitignore(&self) -> Result<()> {
+        write(
+            self.root.join(".gitignore"),
+            "*.beam
+*.ez
+.build
+",
         )
     }
 
