@@ -131,7 +131,7 @@ impl Downloader {
     // It would be really nice if this was async but the library is sync
     pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<bool> {
         let contents_path = PathBuf::from("contents.tar.gz");
-        let destination = paths::target_package(name);
+        let destination = paths::build_package(name);
 
         // If the directory already exists then there's nothing for us to do
         if self.fs.is_directory(&destination) {
