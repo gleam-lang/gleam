@@ -8,7 +8,7 @@ use crate::{
     codegen,
     config::PackageConfig,
     io::{FileSystemIO, FileSystemWriter},
-    type_, warning, Error, Warning,
+    paths, type_, warning, Error, Warning,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -80,17 +80,15 @@ where
     ) -> Result<(), Error> {
         self.telemetry.compiling_package(&name);
         let test_path = match locations {
-            SourceLocations::SrcAndTest => {
-                Some(self.root.default_build_lib_package_test_path(&name))
-            }
+            SourceLocations::SrcAndTest => Some(paths::build_dependencies_package_test(&name)),
             _ => None,
         };
 
-        // TODO: this isn't the right location. We may want multiple output locations.
-        let out_path = self.root.default_build_lib_package_src_path(&name);
+        // TODO: this isn't the right location.
+        let out_path = paths::build_dependencies_package_src(&name);
         let options = package_compiler::Options {
             target: Target::Erlang,
-            src_path: self.root.default_build_lib_package_src_path(&name),
+            src_path: paths::build_dependencies_package_src(&name),
             out_path: out_path.clone(),
             test_path,
             name: name.clone(),

@@ -2,6 +2,7 @@ use crate::{
     build::Origin,
     config::{self, PackageConfig},
     error::Error,
+    paths,
 };
 use std::collections::HashMap;
 use std::path::PathBuf;
@@ -42,19 +43,9 @@ impl ProjectRoot {
 
     pub fn default_build_lib_package_source_path(&self, name: &str, origin: Origin) -> PathBuf {
         match origin {
-            Origin::Src => self.default_build_lib_package_src_path(name),
-            Origin::Test => self.default_build_lib_package_test_path(name),
+            Origin::Src => paths::build_dependencies_package_src(name),
+            Origin::Test => paths::build_dependencies_package_test(name),
         }
-    }
-
-    pub fn default_build_lib_package_src_path(&self, name: &str) -> PathBuf {
-        self.default_build_lib_package_path(name)
-            .join(DIR_NAME_PACKAGE_SRC)
-    }
-
-    pub fn default_build_lib_package_test_path(&self, name: &str) -> PathBuf {
-        self.default_build_lib_package_path(name)
-            .join(DIR_NAME_PACKAGE_TEST)
     }
 
     pub fn default_build_lib_package_ebin_path(&self, name: &str) -> PathBuf {

@@ -1,13 +1,31 @@
 use std::path::PathBuf;
 
-const BUILD: &str = ".build";
+pub fn build() -> PathBuf {
+    PathBuf::from(".build")
+}
 
 pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {
     packages_cache().join(format!("{}-{}.tar", package_name, version))
 }
 
-pub fn build_package(package: &str) -> PathBuf {
-    PathBuf::from(BUILD).join("dependencies").join(package)
+pub fn build_dependencies_package_src(package: &str) -> PathBuf {
+    build_dependencies_package(package).join("src")
+}
+
+pub fn build_dependencies_package_test(package: &str) -> PathBuf {
+    build_dependencies_package(package).join("test")
+}
+
+pub fn build_dependencies() -> PathBuf {
+    build().join("dependencies")
+}
+
+pub fn build_dependencies_package(package: &str) -> PathBuf {
+    build_dependencies().join(package)
+}
+
+pub fn build_scripts() -> PathBuf {
+    build().join("scripts")
 }
 
 fn packages_cache() -> PathBuf {
