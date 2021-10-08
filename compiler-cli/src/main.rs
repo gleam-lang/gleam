@@ -305,7 +305,7 @@ fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let config = config::read_project_config(&root)?;
 
     // Use new build tool
-    if config.tool == gleam_core::config::BuildTool::Gleam {
+    if root.join("rebar.config").exists() {
         return new_build_main(config).map(|_| ());
     }
 
