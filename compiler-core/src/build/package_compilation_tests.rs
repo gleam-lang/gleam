@@ -7,7 +7,7 @@ use crate::{
         Origin, Target,
     },
     codegen,
-    config::{BuildTool, Docs, PackageConfig, Repository},
+    config::{Docs, PackageConfig, Repository},
     erlang,
     io::test::FilesChannel,
     javascript, type_,
@@ -1812,7 +1812,6 @@ fn config_compilation_test() {
             repository: Repository::None,
             docs: Default::default(),
             otp_start_module: None,
-            tool: BuildTool::Gleam,
         }
     }
 

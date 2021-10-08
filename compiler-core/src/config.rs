@@ -15,8 +15,6 @@ pub struct PackageConfig {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
-    pub tool: BuildTool,
-    #[serde(default)]
     pub docs: Docs,
     #[serde(default)]
     pub dependencies: HashMap<String, hexpm::version::Range>,
@@ -32,25 +30,11 @@ impl Default for PackageConfig {
             name: Default::default(),
             version: default_version(),
             description: Default::default(),
-            tool: Default::default(),
             docs: Default::default(),
             dependencies: Default::default(),
             otp_start_module: Default::default(),
             repository: Default::default(),
         }
-    }
-}
-
-#[derive(Deserialize, Debug, PartialEq, Clone, Copy)]
-#[serde(rename_all = "kebab-case")]
-pub enum BuildTool {
-    Gleam,
-    Other,
-}
-
-impl Default for BuildTool {
-    fn default() -> Self {
-        Self::Other
     }
 }
 

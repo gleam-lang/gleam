@@ -47,7 +47,6 @@ pub fn complicated_fun(
     let config = PackageConfig {
         name: "test".to_string(),
         docs: Default::default(),
-        tool: Default::default(),
         version: default_version(),
         repository: Default::default(),
         description: Default::default(),
