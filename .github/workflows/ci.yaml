@@ -192,12 +192,13 @@ jobs:
           rebar3 escriptize
           _build/default/bin/escript_project
 
-      # TODO: run tests
       - name: Test gleam-lib template
         run: |
           gleam new gleam_lib_project --template=lib
           cd gleam_lib_project
           gleam deps download
+          gleam run
+          gleam test
 
       - name: Test JavaScript prelude
         run: |
