@@ -380,16 +380,24 @@ _build/default/bin/{name}
 ## Quick start
 
 ```sh
-# Run the eunit tests
-gleam eunit
-
-# Run the Erlang REPL
-gleam shell
+gleam run   # Run the project
+gleam test  # Run the tests
+gleam shell # Run an Erlang shell
 ```
+
+## Installation
+
+If available on Hex this package can be installed by adding `{name}` 
+to your `gleam.toml` dependencies:
+
+```erlang
+[dependencies]
+{name} = "~> {version}"
 ```
 "#,
                 name = self.project_name,
-                description = self.options.description
+                description = self.options.description,
+                version = PROJECT_VERSION,
             ),
         )
     }
@@ -414,7 +422,7 @@ rebar3 shell
 
 ## Installation
 
-If [available in Hex](https://rebar3.org/docs/configuration/dependencies/#declaring-dependencies)
+If [available on Hex](https://rebar3.org/docs/configuration/dependencies/#declaring-dependencies)
 this package can be installed by adding `{name}` to your `rebar.config` dependencies:
 
 ```erlang
