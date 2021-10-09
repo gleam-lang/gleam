@@ -55,7 +55,6 @@ mod compile_package;
 mod config;
 mod dependencies;
 mod docs;
-mod eunit;
 mod format;
 mod fs;
 mod http;
@@ -125,10 +124,6 @@ enum Command {
 
     /// Run the project tests
     Test,
-
-    /// Run eunit tests
-    #[structopt(setting = AppSettings::Hidden)]
-    Eunit,
 
     /// Compile a single Gleam package
     #[structopt(setting = AppSettings::Hidden)]
@@ -279,8 +274,6 @@ fn main() {
         Command::Run => run::command(run::Which::Src),
 
         Command::Test => run::command(run::Which::Test),
-
-        Command::Eunit => eunit::command(),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
     };
