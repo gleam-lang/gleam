@@ -16,7 +16,7 @@ pub fn command(which: Which) -> Result<(), Error> {
 
     // Determine which module to run
     let code = match which {
-        Which::Src => format!("{}", &config.name),
+        Which::Src => config.name.to_string(),
         Which::Test => format!("{}_test", &config.name),
     };
 
