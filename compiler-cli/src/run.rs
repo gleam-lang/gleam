@@ -6,11 +6,11 @@ use gleam_core::{
 use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
-    let config = crate::config::root_config()?;
-    let name = config.name.clone();
+    let name = crate::config::root_config()?.name;
 
+    // TODO: Have this function return the config so we can use that info here.
     // Build project
-    let _ = super::new_build_main(config)?;
+    let _ = super::new_build_main()?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

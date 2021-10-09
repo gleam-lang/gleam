@@ -309,11 +309,10 @@ fn main() {
 
 fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
     let root = PathBuf::from(&root);
-    let config = config::read_project_config(&root)?;
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
-        return new_build_main(config).map(|_| ());
+        return new_build_main().map(|_| ());
     }
 
     // Read and type check project
@@ -351,7 +350,8 @@ fn initialise_logger() {
         .init();
 }
 
-pub fn new_build_main(root_config: PackageConfig) -> Result<HashMap<String, Package>, Error> {
+pub fn new_build_main() -> Result<HashMap<String, Package>, Error> {
+    let root_config = crate::config::root_config()?;
     let root = ProjectRoot::new();
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::FileSystemAccessor::new();

@@ -15,10 +15,9 @@ struct EunitFile {
 
 pub fn command() -> Result<(), Error> {
     let root = ProjectRoot::new();
-    let config = crate::config::root_config()?;
 
     // Build project
-    let packages = crate::new_build_main(config)?;
+    let packages = crate::new_build_main()?;
 
     crate::cli::print_running("eunit");
 
