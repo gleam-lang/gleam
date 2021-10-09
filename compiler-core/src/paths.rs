@@ -1,5 +1,7 @@
 use std::path::PathBuf;
 
+use crate::build::{Mode, Target};
+
 pub fn build() -> PathBuf {
     PathBuf::from(".build")
 }
@@ -39,6 +41,14 @@ pub fn default_gleam_cache() -> PathBuf {
     dirs::cache_dir()
         .expect("Failed to determine user cache directory")
         .join("gleam")
+}
+
+pub fn build_packages(mode: Mode, target: Target) -> PathBuf {
+    build().join(mode.to_string()).join(target.to_string())
+}
+
+pub fn build_package(mode: Mode, target: Target, package: &str) -> PathBuf {
+    build_packages(mode, target).join(package)
 }
 
 #[test]

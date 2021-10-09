@@ -169,7 +169,7 @@ impl<'a> JavaScript<'a> {
         let res = javascript::module(
             &module.ast,
             &line_numbers,
-            &module.path,
+            &module.input_path,
             &module.code,
             &mut file,
         );

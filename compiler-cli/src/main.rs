@@ -72,12 +72,11 @@ pub use gleam_core::{
 use gleam_core::{
     build::{package_compiler, project_root::ProjectRoot, Package, ProjectCompiler, Target},
     config::PackageConfig,
-    io::OutputFile,
     paths,
     project::Analysed,
 };
 
-use std::{collections::HashMap, path::PathBuf, process};
+use std::{collections::HashMap, path::PathBuf};
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 
@@ -359,44 +358,7 @@ pub fn new_build_main(root_config: PackageConfig) -> Result<HashMap<String, Pack
     tracing::info!("Compiling packages");
     let packages = ProjectCompiler::new(&root, root_config, configs, telemetry, io).compile()?;
 
-    tracing::info!("Compiling Erlang source code to BEAM bytecode");
-    compile_erlang_to_beam()?;
-
     Ok(packages)
-}
-
-fn compile_erlang_to_beam() -> Result<(), Error> {
-    crate::cli::print_compiling("Erlang code");
-
-    let escript_path = paths::build_scripts().join("compile_erlang.erl");
-    if !escript_path.exists() {
-        // TODO: a crate::fs::write(&path, &[u8]) function
-        let escript_source = std::include_str!("build/compile_erlang_escript.erl").to_string();
-        crate::fs::write_output(&OutputFile {
-            path: escript_path.clone(),
-            text: escript_source,
-        })?;
-    }
-
-    // Run escript to compile Erlang to beam files
-    let mut command = process::Command::new("escript");
-    let _ = command.arg(escript_path);
-    let _ = command.arg(paths::build());
-
-    tracing::trace!("Running OS process {:?}", command);
-    let status = command.status().map_err(|e| Error::ShellCommand {
-        command: "escript".to_string(),
-        err: Some(e.kind()),
-    })?;
-
-    if status.success() {
-        Ok(())
-    } else {
-        Err(Error::ShellCommand {
-            command: "escript".to_string(),
-            err: None,
-        })
-    }
 }
 
 fn copy_root_package_to_build(root_config: &PackageConfig) -> Result<(), Error> {

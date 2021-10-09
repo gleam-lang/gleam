@@ -232,7 +232,7 @@ fn type_check(
             name,
             code,
             ast,
-            path,
+            input_path: path,
         });
     }
 
