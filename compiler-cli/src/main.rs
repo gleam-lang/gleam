@@ -283,7 +283,7 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run => run::command(),
+        Command::Run => run::command(run::Which::Src),
 
         Command::Eunit => eunit::command(),
 

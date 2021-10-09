@@ -5,10 +5,21 @@ use gleam_core::{
 };
 use std::process::Command;
 
-pub fn command() -> Result<(), Error> {
-    let name = crate::config::root_config()?.name;
+#[derive(Debug, Clone, Copy)]
+pub enum Which {
+    Src,
+    Test,
+}
 
-    // TODO: Have this function return the config so we can use that info here.
+pub fn command(which: Which) -> Result<(), Error> {
+    let config = crate::config::root_config()?;
+
+    // Determine which module to run
+    let code = match which {
+        Which::Src => format!("{}.main()", &config.name),
+        Which::Test => format!("{}_test.main()", &config.name),
+    };
+
     // Build project
     let _ = super::new_build_main()?;
 
@@ -27,9 +38,9 @@ pub fn command() -> Result<(), Error> {
     // Run the main function
     let _ = command.arg("-noshell");
     let _ = command.arg("-eval");
-    let _ = command.arg(format!("{}:main(),erlang:halt()", &name));
+    let _ = command.arg(format!("{},erlang:halt()", &code));
 
-    crate::cli::print_running(&format!("{}.main()", name));
+    crate::cli::print_running(&code);
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
