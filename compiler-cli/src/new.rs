@@ -453,8 +453,9 @@ jobs:
       - uses: gleam-lang/setup-gleam@v1.0.2
         with:
           gleam-version: {}
-      - run: gleam eunit
       - run: gleam format --check src test
+      - run: gleam deps download
+      - run: gleam test
 "#,
                 ERLANG_OTP_VERSION, self.gleam_version
             ),
