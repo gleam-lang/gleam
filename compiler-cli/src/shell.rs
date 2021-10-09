@@ -6,7 +6,6 @@ use gleam_core::{
 use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
-    // TODO: Have this function return the config so we can use that info here.
     // Build project
     let _ = super::new_build_main()?;
 
