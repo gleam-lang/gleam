@@ -167,8 +167,9 @@ impl Downloader {
             }
         }
 
-        // TODO: return an error as it wasn't found
-        unimplemented!()
+        Err(Error::ExpandTar {
+            error: "Unable to locate Hex package contents.tar.gz".to_string(),
+        })
     }
 
     pub async fn download_manifest_packages(
