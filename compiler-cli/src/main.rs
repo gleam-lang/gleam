@@ -130,6 +130,10 @@ enum Command {
     #[structopt(setting = AppSettings::Hidden)]
     Run,
 
+    /// Run the tests
+    #[structopt(setting = AppSettings::Hidden)]
+    Test,
+
     /// Run eunit tests
     #[structopt(setting = AppSettings::Hidden)]
     Eunit,
@@ -284,6 +288,8 @@ fn main() {
         Command::Shell => shell::command(),
 
         Command::Run => run::command(run::Which::Src),
+
+        Command::Test => run::command(run::Which::Test),
 
         Command::Eunit => eunit::command(),
 
