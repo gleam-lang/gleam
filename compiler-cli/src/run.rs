@@ -40,7 +40,7 @@ pub fn command(which: Which) -> Result<(), Error> {
     let _ = command.arg("-eval");
     let _ = command.arg(format!("{}:main(),erlang:halt()", &code));
 
-    crate::cli::print_running(&code);
+    crate::cli::print_running(&format!("{}.main", code));
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
