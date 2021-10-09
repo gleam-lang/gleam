@@ -502,7 +502,7 @@ jobs:
 version = "0.1.0"
 
 [dependencies]
-gleam_stdlib = "{gleam_stdlib}"
+gleam_stdlib = "~> {gleam_stdlib}"
 "#,
                 name = self.project_name,
                 gleam_stdlib = GLEAM_STDLIB_VERSION,
