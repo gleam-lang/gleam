@@ -3,7 +3,6 @@ use crate::{
     ast::SrcSpan,
     build::{
         package_compiler::{Options, PackageCompiler, Source},
-        project_root::ProjectRoot,
         Origin, Target,
     },
     codegen,
@@ -1780,7 +1779,6 @@ fn config_compilation_test() {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
             let config = $config;
             let mut modules = HashMap::new();
-            let root = ProjectRoot::new();
             let (file_writer, file_receiver) = FilesChannel::new();
             let options = package_compiler::Options {
                 target: Target::Erlang,

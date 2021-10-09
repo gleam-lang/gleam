@@ -2,8 +2,8 @@ use codegen::ErlangApp;
 
 use crate::{
     build::{
-        dep_tree, package_compiler, package_compiler::PackageCompiler, project_root::ProjectRoot,
-        telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        dep_tree, package_compiler, package_compiler::PackageCompiler, telemetry::Telemetry, Mode,
+        Module, Origin, Package, Target,
     },
     codegen,
     config::PackageConfig,
@@ -16,8 +16,7 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ProjectCompiler<'a, IO> {
-    root: &'a ProjectRoot,
+pub struct ProjectCompiler<IO> {
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
     packages: HashMap<String, Package>,
@@ -32,12 +31,11 @@ pub struct ProjectCompiler<'a, IO> {
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
-impl<'a, IO> ProjectCompiler<'a, IO>
+impl<IO> ProjectCompiler<IO>
 where
     IO: FileSystemIO + Clone,
 {
     pub fn new(
-        root: &'a ProjectRoot,
         root_config: PackageConfig,
         configs: HashMap<String, PackageConfig>,
         telemetry: Box<dyn Telemetry>,
@@ -52,7 +50,6 @@ where
             root_config,
             telemetry,
             configs,
-            root,
             io,
         }
     }

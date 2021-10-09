@@ -1,6 +1,6 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, project_root::ProjectRoot, Module, Origin, Package, Target},
+    build::{dep_tree, Module, Origin, Package, Target},
     codegen::{Erlang, JavaScript},
     config::PackageConfig,
     error,

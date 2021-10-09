@@ -16,7 +16,6 @@
 mod dep_tree;
 pub mod package_compiler;
 mod project_compiler;
-pub mod project_root;
 mod telemetry;
 
 #[cfg(test)]
@@ -28,7 +27,6 @@ pub use self::telemetry::Telemetry;
 
 use crate::{
     ast::TypedModule,
-    build::project_root::ProjectRoot,
     config::{self, PackageConfig},
     erlang,
     error::{Error, FileIoAction, FileKind},

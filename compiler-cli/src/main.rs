@@ -71,7 +71,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{package_compiler, project_root::ProjectRoot, Package, ProjectCompiler, Target},
+    build::{package_compiler, Package, ProjectCompiler, Target},
     config::PackageConfig,
     paths,
     project::Analysed,
@@ -352,7 +352,6 @@ fn initialise_logger() {
 
 pub fn new_build_main() -> Result<HashMap<String, Package>, Error> {
     let root_config = crate::config::root_config()?;
-    let root = ProjectRoot::new();
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::FileSystemAccessor::new();
 
@@ -363,7 +362,7 @@ pub fn new_build_main() -> Result<HashMap<String, Package>, Error> {
     let configs = config::package_configs(&root_config.name)?;
 
     tracing::info!("Compiling packages");
-    let packages = ProjectCompiler::new(&root, root_config, configs, telemetry, io).compile()?;
+    let packages = ProjectCompiler::new(root_config, configs, telemetry, io).compile()?;
 
     Ok(packages)
 }

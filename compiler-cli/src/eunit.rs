@@ -1,7 +1,8 @@
 use gleam_core::{
-    build::{project_root::ProjectRoot, Origin},
+    build::{Mode, Origin, Target},
     error::Error,
     io::OutputFile,
+    paths,
 };
 use itertools::Itertools;
 use std::{path::PathBuf, process::Command};
@@ -14,8 +15,6 @@ struct EunitFile {
 }
 
 pub fn command() -> Result<(), Error> {
-    let root = ProjectRoot::new();
-
     // Build project
     let packages = crate::new_build_main()?;
 
@@ -33,12 +32,12 @@ pub fn command() -> Result<(), Error> {
     let eunit_files = vec![
         EunitFile {
             should_be_compiled: true,
-            path: root.build_path().join("eunit_progress.erl"),
+            path: paths::build_scripts().join("eunit_progress.erl"),
             content: std::include_str!("eunit/eunit_progress.erl").to_string(),
         },
         EunitFile {
             should_be_compiled: false,
-            path: root.build_path().join("eunit_runner.erl"),
+            path: paths::build_scripts().join("eunit_runner.erl"),
             content: std::include_str!("eunit/eunit_runner.erl").to_string(),
         },
     ];
@@ -53,7 +52,7 @@ pub fn command() -> Result<(), Error> {
     // compile eunit runner dependencies in the build path
     let mut compile_command = Command::new("erlc");
     let _ = compile_command.arg("-o");
-    let _ = compile_command.arg(root.build_path());
+    let _ = compile_command.arg(paths::build_packages(Mode::Dev, Target::Erlang));
 
     eunit_files
         .iter()
@@ -70,9 +69,9 @@ pub fn command() -> Result<(), Error> {
 
     // Prepare the escript command for running tests
     let mut command = Command::new("escript");
-    let _ = command.arg(root.build_path().join("eunit_runner.erl"));
+    let _ = command.arg(paths::build_scripts().join("eunit_runner.erl"));
 
-    let ebin_paths: String = crate::fs::read_dir(root.default_build_lib_path())?
+    let ebin_paths: String = crate::fs::read_dir(paths::build_packages(Mode::Dev, Target::Erlang))?
         .filter_map(Result::ok)
         .map(|entry| entry.path().join("ebin").display().to_string())
         .join(",");
