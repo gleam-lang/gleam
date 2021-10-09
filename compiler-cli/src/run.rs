@@ -16,8 +16,8 @@ pub fn command(which: Which) -> Result<(), Error> {
 
     // Determine which module to run
     let code = match which {
-        Which::Src => format!("{}.main()", &config.name),
-        Which::Test => format!("{}_test.main()", &config.name),
+        Which::Src => format!("{}", &config.name),
+        Which::Test => format!("{}_test", &config.name),
     };
 
     // Build project
@@ -38,7 +38,7 @@ pub fn command(which: Which) -> Result<(), Error> {
     // Run the main function
     let _ = command.arg("-noshell");
     let _ = command.arg("-eval");
-    let _ = command.arg(format!("{},erlang:halt()", &code));
+    let _ = command.arg(format!("{}:main(),erlang:halt()", &code));
 
     crate::cli::print_running(&code);
 
