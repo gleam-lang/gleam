@@ -122,17 +122,6 @@ where
     // TODO: remove this IO from core. Inject the command runner
     fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[Module]) -> Result<(), Error> {
         let escript_path = paths::build_scripts().join("compile_erlang.erl");
-        // if !escript_path.exists() {
-        //     let escript_source = std::include_str!("../../templates/compile_erlang_escript.erl");
-        //     self.io
-        //         .writer(&escript_path)?
-        //         .write(escript_source.as_bytes())?;
-        // }
-
-        // // Run escript to compile Erlang to beam files
-        // let mut command = std::process::Command::new("escript");
-        // let _ = command.arg(escript_path);
-        // let _ = command.arg(out_path);
 
         // Run escript to compile Erlang to beam files
         let mut command = std::process::Command::new("erlc");
