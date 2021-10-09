@@ -86,13 +86,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 #[derive(StructOpt, Debug)]
 #[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
 enum Command {
-    /// Compile a project
-    #[structopt(setting = AppSettings::Hidden)]
+    /// Build the project
     Build {
-        /// Location of the project root
-        #[structopt(default_value = ".")]
-        project_root: String,
-
         /// Emit compile time warnings as errors
         #[structopt(long)]
         warnings_as_errors: bool,
@@ -122,16 +117,13 @@ enum Command {
         check: bool,
     },
 
-    /// Start an erlang shell
-    #[structopt(setting = AppSettings::Hidden)]
+    /// Start an Erlang shell
     Shell,
 
     /// Run the project
-    #[structopt(setting = AppSettings::Hidden)]
     Run,
 
-    /// Run the tests
-    #[structopt(setting = AppSettings::Hidden)]
+    /// Run the project tests
     Test,
 
     /// Run eunit tests
@@ -257,10 +249,7 @@ fn main() {
     panic::add_handler();
 
     let result = match Command::from_args() {
-        Command::Build {
-            project_root,
-            warnings_as_errors,
-        } => command_build(project_root, warnings_as_errors),
+        Command::Build { warnings_as_errors } => command_build(warnings_as_errors),
 
         Command::Docs(Docs::Build {
             project_root,
@@ -313,8 +302,8 @@ fn main() {
     }
 }
 
-fn command_build(root: String, warnings_as_errors: bool) -> Result<(), Error> {
-    let root = PathBuf::from(&root);
+fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
+    let root = PathBuf::from(&PathBuf::from("./"));
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
