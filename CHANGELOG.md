@@ -3,9 +3,9 @@
 ## Unreleased
 
 - Gleam can now compile Gleam projects.
-- Gleam can now run eunit.
-- Gleam can now run an Erlang shell.
-- Gleam can now run an Erlang shell.
+- Gleam can now run tests with the `gleam eunit` command.
+- Gleam can now run programs with the `gleam run` command.
+- Gleam can now run an Erlang shell with the `gleam shell` command.
 - Gleam can now resolve package versions for a Gleam project's dependency tree.
 - Gleam can now download Hex packages.
 - Gleam is now the default build tool for new projects.
