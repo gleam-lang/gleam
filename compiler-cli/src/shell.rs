@@ -28,8 +28,6 @@ pub fn command() -> Result<(), Error> {
 
     crate::cli::print_running("Erlang shell");
 
-    // TODO: pass ctrl-c etc through to the shell process
-
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
     let _ = command.status().map_err(|e| Error::ShellCommand {
