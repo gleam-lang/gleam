@@ -152,10 +152,6 @@ jobs:
         run: make clean javascript
         working-directory: ./test/language
 
-      - name: test/build_with_gleam
-        run: gleam eunit
-        working-directory: ./test/build_with_gleam
-
       - name: test/rebar_project
         run: rebar3 eunit
         working-directory: ./test/rebar_project
