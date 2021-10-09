@@ -62,6 +62,7 @@ mod http;
 mod new;
 mod panic;
 mod project;
+mod run;
 mod shell;
 
 pub use gleam_core::{
@@ -124,6 +125,10 @@ enum Command {
     /// Start an erlang shell
     #[structopt(setting = AppSettings::Hidden)]
     Shell,
+
+    /// Run the project
+    #[structopt(setting = AppSettings::Hidden)]
+    Run,
 
     /// Run eunit tests
     #[structopt(setting = AppSettings::Hidden)]
@@ -277,6 +282,8 @@ fn main() {
         Command::New(options) => new::create(options, VERSION),
 
         Command::Shell => shell::command(),
+
+        Command::Run => run::command(),
 
         Command::Eunit => eunit::command(),
 
