@@ -29,10 +29,6 @@ pub fn command(which: Which) -> Result<(), Error> {
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
 
-    // Run in unicode mode instead of the unfortunate default of latin1
-    let _ = command.arg("+pc");
-    let _ = command.arg("unicode");
-
     // Specify locations of .beam files
     let packages = paths::build_packages(Mode::Dev, Target::Erlang);
     for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
@@ -44,6 +40,8 @@ pub fn command(which: Which) -> Result<(), Error> {
     let _ = command.arg(&format!(
         r#"
 try
+    io:setopts(standard_io, [binary, {{encoding, utf8}}]),
+    io:setopts(standard_error, [{{encoding, utf8}}]),
     {module}:main(),
     erlang:halt(0)
 catch
