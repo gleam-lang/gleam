@@ -37,26 +37,7 @@ pub fn command(which: Which) -> Result<(), Error> {
 
     // Run the main function.
     let _ = command.arg("-eval");
-    let _ = command.arg(&format!(
-        r#"
-try
-    io:setopts(standard_io, [binary, {{encoding, utf8}}]),
-    io:setopts(standard_error, [{{encoding, utf8}}]),
-    {module}:main(),
-    erlang:halt(0)
-catch
-    Class:Reason:StackTrace ->
-        PF = fun(Term, I) ->
-            io_lib:format("~." ++ integer_to_list(I) ++ "tP", [Term, 50])
-        end,
-        StackFn = fun(M, _F, _A) -> (M =:= erl_eval) orelse (M =:= init) end,
-        E = erl_error:format_exception(1, Class, Reason, StackTrace, StackFn, PF, unicode),
-        io:put_chars(E),
-        erlang:halt(127, [{{flush, true}}])
-end.
-"#,
-        module = &module,
-    ));
+    let _ = command.arg(&format!("gleam@@main:run({})", &module));
 
     // Don't run the Erlang shell
     let _ = command.arg("-noshell");

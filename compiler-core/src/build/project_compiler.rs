@@ -12,6 +12,7 @@ use crate::{
 };
 use std::{
     collections::HashMap,
+    fmt::Write,
     path::{Path, PathBuf},
 };
 
@@ -109,15 +110,31 @@ where
             &compiled.modules,
         )?;
 
+        let mut modules: Vec<_> = compiled
+            .modules
+            .iter()
+            .map(Module::compiled_erlang_path)
+            .collect();
+
+        // If we're the dev package render the entrypoint module used by the
+        // `gleam run` and `gleam test` commands
+        if locations == SourceLocations::SrcAndTest {
+            let name = "gleam@@main.erl";
+            self.io
+                .writer(&out_path.join(name))?
+                .write(std::include_bytes!("../../templates/gleam@@main.erl"))?;
+            modules.push(PathBuf::from(name));
+        }
+
         // Compile Erlang to .beam files
-        self.compile_erlang_to_beam(&out_path, &compiled.modules)?;
+        self.compile_erlang_to_beam(&out_path, &modules)?;
 
         let _ = self.packages.insert(name, compiled);
         Ok(())
     }
 
     // TODO: remove this IO from core. Inject the command runner
-    fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[Module]) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[PathBuf]) -> Result<(), Error> {
         let escript_path = paths::build_scripts().join("compile_erlang.erl");
 
         // Run escript to compile Erlang to beam files
@@ -125,7 +142,7 @@ where
         let _ = command.arg("-o");
         let _ = command.arg(out_path.join("ebin"));
         for module in modules {
-            let _ = command.arg(out_path.join(module.compiled_erlang_path()));
+            let _ = command.arg(out_path.join(module));
         }
 
         tracing::trace!("Running OS process {:?}", command);
