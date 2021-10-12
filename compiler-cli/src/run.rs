@@ -29,32 +29,51 @@ pub fn command(which: Which) -> Result<(), Error> {
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
 
+    // Run in unicode mode instead of the unfortunate default of latin1
+    let _ = command.arg("+pc");
+    let _ = command.arg("unicode");
+
     // Specify locations of .beam files
     let packages = paths::build_packages(Mode::Dev, Target::Erlang);
     for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
         let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }
 
-    // Run the main function
-    let _ = command.arg("-s");
-    let _ = command.arg(&module);
-    let _ = command.arg("main");
+    // Run the main function.
+    let _ = command.arg("-eval");
+    let _ = command.arg(&format!(
+        r#"
+try
+    {module}:main(),
+    erlang:halt(0)
+catch
+    Class:Reason:StackTrace ->
+        PF = fun(Term, I) ->
+            io_lib:format("~." ++ integer_to_list(I) ++ "tP", [Term, 50])
+        end,
+        StackFn = fun(M, _F, _A) -> (M =:= erl_eval) orelse (M =:= init) end,
+        E = erl_error:format_exception(1, Class, Reason, StackTrace, StackFn, PF, unicode),
+        io:put_chars(E),
+        erlang:halt(127, [{{flush, true}}])
+end.
+"#,
+        module = &module,
+    ));
 
     // Don't run the Erlang shell
     let _ = command.arg("-noshell");
 
     // Tell the BEAM that any following argument are for the program
-    let _ = command.arg("-noshell");
-
-    // TODO: Pass any command line flags
+    let _ = command.arg("-extra"); // TODO: Pass any user specified command line flags
 
     crate::cli::print_running(&format!("{}.main", module));
 
     // Run the shell
     tracing::trace!("Running OS process {:?}", command);
-    let _ = command.status().map_err(|e| Error::ShellCommand {
+    let status = command.status().map_err(|e| Error::ShellCommand {
         command: "erl".to_string(),
         err: Some(e.kind()),
     })?;
-    Ok(())
+
+    std::process::exit(status.code().unwrap_or_default());
 }
