@@ -3,9 +3,9 @@
 -export([run/1]).
 
 run(Module) ->
+    io:setopts(standard_io, [binary, {encoding, utf8}]),
+    io:setopts(standard_error, [{encoding, utf8}]),
     try
-        io:setopts(standard_io, [binary, {encoding, utf8}]),
-        io:setopts(standard_error, [{encoding, utf8}]),
         Module:main(),
         erlang:halt(0)
     catch
