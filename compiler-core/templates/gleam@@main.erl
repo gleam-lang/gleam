@@ -17,7 +17,7 @@ run(Module) ->
 print_error(Class, Reason, StackTrace) -> 
     E = erl_error:format_exception(
         1, Class, Reason, StackTrace, fun stack_filter/3, 
-        fun print_stack_layer/2, unicode
+        fun print_stack_frame/2, unicode
     ),
     io:put_chars(E).
 
@@ -29,5 +29,5 @@ stack_filter(Module, _F, _A) ->
         _ -> false
     end.
 
-print_stack_layer(Term, I) ->
+print_stack_frame(Term, I) ->
     io_lib:format("~." ++ integer_to_list(I) ++ "tP", [Term, 50]).
