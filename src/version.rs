@@ -20,6 +20,8 @@ use serde::{
     Deserialize, Serialize,
 };
 
+pub use pubgrub::report as pubgrub_report;
+
 mod lexer;
 mod parser;
 #[cfg(test)]
@@ -325,12 +327,14 @@ pub enum ManifestPackage {
     Hex { name: String, version: Version },
 }
 
+pub type ResolutionError = PubGrubError<String, Version>;
+
 pub fn resolve_versions<Requirements>(
     remote: Box<dyn PackageFetcher>,
     root_name: PackageName,
     root_version: Version,
     dependencies: Requirements,
-) -> Result<Manifest, PubGrubError<String, Version>>
+) -> Result<Manifest, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
