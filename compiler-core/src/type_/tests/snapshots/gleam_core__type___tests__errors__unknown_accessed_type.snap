@@ -10,8 +10,7 @@ error: Unknown type for record access
 1 │ fn(a) { a.field }
   │         ^ I don't know what type this is
 
-In order to access a record field we need to know what type it is, but
-I can't tell the type here. Try adding type annotations to your function
-and try again.
-
+In order to access a record field we need to know what type it is, but I
+can't tell the type here. Try adding type annotations to your function and
+try again.
 
