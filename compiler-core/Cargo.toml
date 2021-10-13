@@ -57,6 +57,8 @@ futures = "0.3.17"
 tar = "0.4.30"
 # gzip compression
 flate2 = "1.0.19"
+# Helper for wrapping text onto lines based upon width
+textwrap = { version="0.14", features = ["terminal_size"] }
 
 [build-dependencies]
 # Data (de)serialisation
