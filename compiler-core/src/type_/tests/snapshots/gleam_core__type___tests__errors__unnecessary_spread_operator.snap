@@ -10,5 +10,6 @@ error: Unnecessary spread operator
 8 │   let Triple(a, b, c, ..) = triple
   │                       ^^
 
-This record has 3 fields and you have already assigned variables to all of them.
+This record has 3 fields and you have already assigned variables to all
+of them.
 

@@ -10,6 +10,7 @@ error: BitString Segment Error
 1 │ case <<1>> { <<_:bit_string, _:binary>> -> 1 }
   │                  ^^^^^^^^^^ This segment has no size
 
-Hint: Bit string segments without a size are only allowed at the end of a bin pattern.
+Hint: Bit string segments without a size are only allowed at the end of a
+bin pattern.
 See: https://gleam.run/book/tour/bit-strings.html
 

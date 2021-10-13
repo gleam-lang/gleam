@@ -10,6 +10,7 @@ error: BitString Segment Error
 1 │ case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }
   │                  ^^^^^^^^^^^^^^^ unit cannot be specified here
 
-Hint: utf32_codepoint segments are sized based on their value and cannot have a unit.
+Hint: utf32_codepoint segments are sized based on their value and cannot
+have a unit.
 See: https://gleam.run/book/tour/bit-strings.html
 

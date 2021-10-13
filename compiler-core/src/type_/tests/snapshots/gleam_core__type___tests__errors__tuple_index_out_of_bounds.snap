@@ -10,6 +10,6 @@ error: Out of bounds tuple index
 1 │ #(0, 1).2
   │        ^^ this index is too large
 
-The index being accessed for this tuple is 2, but this tuple has
-2 elements so the highest valid index is 1.
+The index being accessed for this tuple is 2, but this tuple has 2 elements
+so the highest valid index is 1.
 

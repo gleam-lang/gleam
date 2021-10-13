@@ -10,6 +10,7 @@ error: BitString Segment Error
 1 │ let x = <<1:utf8_codepoint-unit(5)>> x
   │             ^^^^^^^^^^^^^^ unit cannot be specified here
 
-Hint: utf8_codepoint segments are sized based on their value and cannot have a unit.
+Hint: utf8_codepoint segments are sized based on their value and cannot
+have a unit.
 See: https://gleam.run/book/tour/bit-strings.html
 

@@ -11,6 +11,7 @@ error: Unexpected labelled argument
   │                            ^^^^
 
 
-This argument has been given a label but the constructor does not expect any.
+This argument has been given a label but the constructor does not expect
+any.
 Please remove the label `x`.
 

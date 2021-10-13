@@ -10,7 +10,9 @@ error: Duplicate variable in pattern
 1 │ case [3.33], 1 { x, x if x > x -> 1 }
   │                     ^ has already been used
 
-Variables can only be used once per pattern. This variable x appears multiple times.
-If you used the same variable twice deliberately in order to check for equality
-please use a guard clause instead e.g. (x, y) if x == y -> ...
+Variables can only be used once per pattern. This variable x appears
+multiple times.
+If you used the same variable twice deliberately in order to check for
+equality please use a guard clause instead.
+e.g. (x, y) if x == y -> ...
 
