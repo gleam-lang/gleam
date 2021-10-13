@@ -289,7 +289,7 @@ pub trait TarUnpacker {
         &self,
         archive: &'a mut Archive<WrappedReader>,
     ) -> Result<tar::Entries<'a, WrappedReader>> {
-        tracing::trace!("iterating through tar archive");
+        tracing::debug!("iterating through tar archive");
         self.io_result_entries(archive)
             .map_err(|e| Error::ExpandTar {
                 error: e.to_string(),
@@ -307,7 +307,7 @@ pub trait TarUnpacker {
         path: &Path,
         archive: Archive<GzDecoder<Entry<'_, WrappedReader>>>,
     ) -> Result<()> {
-        tracing::trace!(path = ?path, "unpacking tar archive");
+        tracing::debug!(path = ?path, "unpacking tar archive");
         self.io_result_unpack(path, archive)
             .map_err(|e| Error::FileIo {
                 action: FileIoAction::WriteTo,

@@ -145,7 +145,7 @@ where
             let _ = command.arg(out_path.join(module));
         }
 
-        tracing::trace!("Running OS process {:?}", command);
+        tracing::debug!("Running OS process {:?}", command);
         let status = command.status().map_err(|e| Error::ShellCommand {
             command: "erlc".to_string(),
             err: Some(e.kind()),

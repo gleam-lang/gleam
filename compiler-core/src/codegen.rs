@@ -46,7 +46,7 @@ impl<'a> Erlang<'a> {
         let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
         let res = erlang::module(&module.ast, &line_numbers, &mut file);
-        tracing::trace!(name = ?name, "Generated Erlang module");
+        tracing::debug!(name = ?name, "Generated Erlang module");
         res
     }
 
@@ -58,7 +58,7 @@ impl<'a> Erlang<'a> {
     ) -> Result<()> {
         for (name, text) in erlang::records(&module.ast) {
             let name = format!("{}_{}.hrl", erl_name, name);
-            tracing::trace!(name = ?name, "Generated Erlang header");
+            tracing::debug!(name = ?name, "Generated Erlang header");
             writer
                 .writer(&self.output_directory.join(name))?
                 .write(text.as_bytes())?;
@@ -149,7 +149,7 @@ impl<'a> JavaScript<'a> {
     }
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
-        tracing::trace!("Generated js prelude");
+        tracing::debug!("Generated js prelude");
         writer
             .writer(&self.output_directory.join("gleam.js"))?
             .str_write(javascript::PRELUDE)?;
@@ -173,7 +173,7 @@ impl<'a> JavaScript<'a> {
             &module.code,
             &mut file,
         );
-        tracing::trace!(name = ?js_name, "Generated js module");
+        tracing::debug!(name = ?js_name, "Generated js module");
         res
     }
 }

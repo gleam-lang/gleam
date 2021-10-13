@@ -27,7 +27,7 @@ pub fn command() -> Result<(), Error> {
     crate::cli::print_running("Erlang shell");
 
     // Run the shell
-    tracing::trace!("Running OS process {:?}", command);
+    tracing::info!("Running OS process {:?}", command);
     let _ = command.status().map_err(|e| Error::ShellCommand {
         command: "erl".to_string(),
         err: Some(e.kind()),

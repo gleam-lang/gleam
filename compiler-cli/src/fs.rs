@@ -60,7 +60,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
 
 impl FileSystemWriter for FileSystemAccessor {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        tracing::trace!("Writing file {:?}", path);
+        tracing::debug!("Writing file {:?}", path);
 
         let dir_path = path.parent().ok_or_else(|| Error::FileIo {
             action: FileIoAction::FindParent,
@@ -94,7 +94,7 @@ impl FileSystemWriter for FileSystemAccessor {
 impl FileSystemIO for FileSystemAccessor {}
 
 pub fn delete_dir(dir: &Path) -> Result<(), Error> {
-    tracing::trace!("Deleting directory {:?}", dir);
+    tracing::debug!("Deleting directory {:?}", dir);
     if dir.exists() {
         std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
@@ -103,13 +103,13 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
             err: Some(e.to_string()),
         })?;
     } else {
-        tracing::trace!("Did not exist for deletion: {:?}", dir);
+        tracing::debug!("Did not exist for deletion: {:?}", dir);
     }
     Ok(())
 }
 
 // pub fn delete(file: &PathBuf) -> Result<(), Error> {
-//     tracing::trace!("Deleting file {:?}", file);
+//     tracing::debug!("Deleting file {:?}", file);
 //     if file.exists() {
 //         std::fs::remove_file(&file).map_err(|e| Error::FileIO {
 //             action: FileIOAction::Delete,
@@ -118,7 +118,7 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
 //             err: Some(e.to_string()),
 //         })?;
 //     } else {
-//         tracing::trace!("Did not exist for deletion: {:?}", file);
+//         tracing::debug!("Did not exist for deletion: {:?}", file);
 //     }
 //     Ok(())
 // }
@@ -132,7 +132,7 @@ pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, text } = file;
-    tracing::trace!("Writing file {:?}", path);
+    tracing::debug!("Writing file {:?}", path);
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
         action: FileIoAction::FindParent,
@@ -229,7 +229,7 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
-    tracing::trace!("Creating tarball archive");
+    tracing::debug!("Creating tarball archive");
 
     let encoder = GzEncoder::new(vec![], Compression::default());
     let mut builder = tar::Builder::new(encoder);
@@ -258,7 +258,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 }
 
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
-    tracing::trace!("Creating directory {:?}", path);
+    tracing::debug!("Creating directory {:?}", path);
 
     std::fs::create_dir_all(&path).map_err(|err| Error::FileIo {
         kind: FileKind::Directory,
@@ -269,7 +269,7 @@ pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
 }
 
 pub fn read_dir(path: impl AsRef<Path> + Debug) -> Result<std::fs::ReadDir, Error> {
-    tracing::trace!("Reading directory {:?}", path);
+    tracing::debug!("Reading directory {:?}", path);
 
     std::fs::read_dir(&path).map_err(|e| Error::FileIo {
         action: FileIoAction::Read,
@@ -290,7 +290,7 @@ pub fn gleam_modules_metadata_paths(
 }
 
 pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
-    tracing::trace!("Reading file {:?}", path);
+    tracing::debug!("Reading file {:?}", path);
 
     std::fs::read_to_string(&path).map_err(|err| Error::FileIo {
         action: FileIoAction::Read,
@@ -301,7 +301,7 @@ pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
 }
 
 pub fn reader(path: impl AsRef<Path> + Debug) -> Result<WrappedReader, Error> {
-    tracing::trace!("Reading file {:?}", path);
+    tracing::debug!("Reading file {:?}", path);
 
     let reader = File::open(&path).map_err(|err| Error::FileIo {
         action: FileIoAction::Open,
@@ -314,7 +314,7 @@ pub fn reader(path: impl AsRef<Path> + Debug) -> Result<WrappedReader, Error> {
 }
 
 pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
-    tracing::trace!("Opening {:?} for reading", path);
+    tracing::debug!("Opening {:?} for reading", path);
     let reader = File::open(&path).map_err(|err| Error::FileIo {
         action: FileIoAction::Open,
         kind: FileKind::File,
@@ -325,7 +325,7 @@ pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, 
 }
 
 pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
-    tracing::trace!("Copying file {:?} to {:?}", path, to);
+    tracing::debug!("Copying file {:?} to {:?}", path, to);
 
     // TODO: include the destination in the error message
     std::fs::copy(&path, &to)
@@ -339,7 +339,7 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
 }
 
 pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
-    tracing::trace!("Copying directory {:?} to {:?}", path, to);
+    tracing::debug!("Copying directory {:?} to {:?}", path, to);
 
     // TODO: include the destination in the error message
     fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())

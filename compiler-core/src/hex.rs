@@ -123,7 +123,11 @@ impl Downloader {
         Ok(true)
     }
 
-    pub async fn ensure_package_in_target(&self, name: String, version: Version) -> Result<bool> {
+    pub async fn ensure_package_in_build_directory(
+        &self,
+        name: String,
+        version: Version,
+    ) -> Result<bool> {
         let _ = self.ensure_package_downloaded(&name, &version).await?;
         self.extract_package_from_cache(&name, &version)
     }
@@ -135,11 +139,11 @@ impl Downloader {
 
         // If the directory already exists then there's nothing for us to do
         if self.fs.is_directory(&destination) {
-            tracing::info!(package = name, "package already in target");
+            tracing::info!(package = name, "Package already in build directory");
             return Ok(false);
         }
 
-        tracing::info!(package = name, "writing package to target");
+        tracing::info!(package = name, "Writing package to target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
         let reader = self.fs.reader(&tarball)?;
         let mut archive = Archive::new(reader);
@@ -184,7 +188,7 @@ impl Downloader {
                 ManifestPackage::Hex { name, .. } if name == project_name => None,
                 ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
             })
-            .map(|(name, version)| self.ensure_package_in_target(name, version));
+            .map(|(name, version)| self.ensure_package_in_build_directory(name, version));
 
         // Run the futures to download the packages concurrently
         let results = future::join_all(futures).await;

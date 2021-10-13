@@ -10,7 +10,7 @@ license-file = "LICENCE"
 im = "15.0.0"
 # Error message and warning formatting
 codespan-reporting = "0.11"
-termcolor = "1.1.2" 
+termcolor = "1.1.2"
 # Logging
 tracing = "0.1.22"
 # Extra iter methods
@@ -58,7 +58,7 @@ tar = "0.4.30"
 # gzip compression
 flate2 = "1.0.19"
 # Helper for wrapping text onto lines based upon width
-textwrap = { version="0.14", features = ["terminal_size"] }
+textwrap = { version = "0.14", features = ["terminal_size"] }
 
 [build-dependencies]
 # Data (de)serialisation

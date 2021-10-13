@@ -29,9 +29,11 @@ pub fn download() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
+    tracing::info!("Resolving Hex package versions");
     let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime.handle().clone()), &config)?;
 
     // Download them from Hex to the local cache
+    tracing::info!("Downloading packages");
     let count =
         runtime.block_on(downloader.download_manifest_packages(&manifest, &project_name))?;
 
@@ -85,6 +87,7 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+        tracing::info!(package = package, "Looking up package in Hex API");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
         let response = self

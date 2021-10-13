@@ -198,7 +198,7 @@ fn type_check(
             .remove(&name)
             .expect("Getting parsed module for name");
 
-        tracing::trace!(module = ?name, "Type checking");
+        tracing::debug!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
         let ast = type_::infer_module(
             target,

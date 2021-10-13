@@ -48,7 +48,7 @@ pub fn command(which: Which) -> Result<(), Error> {
     crate::cli::print_running(&format!("{}.main", module));
 
     // Run the shell
-    tracing::trace!("Running OS process {:?}", command);
+    tracing::info!("Running OS process {:?}", command);
     let status = command.status().map_err(|e| Error::ShellCommand {
         command: "erl".to_string(),
         err: Some(e.kind()),

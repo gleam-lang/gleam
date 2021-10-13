@@ -42,7 +42,7 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata accessors");
+        tracing::debug!("Writing module metadata accessors");
         let mut builder = module
             .reborrow()
             .init_accessors(self.data.accessors.len() as u32);
@@ -91,7 +91,7 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata types");
+        tracing::debug!("Writing module metadata types");
         let mut types = module.reborrow().init_types(self.data.types.len() as u32);
         for (i, (name, type_)) in self.data.types.iter().enumerate() {
             let mut property = types.reborrow().get(i as u32);
@@ -101,7 +101,7 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn set_module_values(&mut self, module: &mut module::Builder<'_>) {
-        tracing::trace!("Writing module metadata values");
+        tracing::debug!("Writing module metadata values");
         let mut values = module.reborrow().init_values(self.data.values.len() as u32);
         for (i, (name, value)) in self.data.values.iter().enumerate() {
             let mut property = values.reborrow().get(i as u32);
