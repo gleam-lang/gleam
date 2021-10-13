@@ -9,6 +9,8 @@ use crate::{
     javascript,
     type_::{pretty::Printer, UnifyErrorSituation},
 };
+use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
+use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -166,11 +168,15 @@ impl Error {
         Self::Hex(error.to_string())
     }
 
-    pub fn dependency_resolution_failed<E>(error: E) -> Error
-    where
-        E: std::error::Error,
-    {
-        Self::DependencyResolutionFailed(error.to_string())
+    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
+        Self::DependencyResolutionFailed(match error {
+            ResolutionError::NoSolution(mut derivation_tree) => {
+                derivation_tree.collapse_no_versions();
+                let report = DefaultStringReporter::report(&derivation_tree);
+                wrap_text(&report)
+            }
+            _ => error.to_string(),
+        })
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -1859,14 +1865,7 @@ versions should be downloaded."
                         .to_string(),
                 };
                 write_project(buf, diagnostic);
-                writeln!(
-                    buf,
-                    "\nThe error from the version resolver library was:
-
-    {}",
-                    error
-                )
-                .unwrap();
+                writeln!(buf, "\n{}", error).unwrap();
             }
         }
     }
@@ -1971,4 +1970,8 @@ pub struct Unformatted {
     pub destination: PathBuf,
     pub input: String,
     pub output: String,
+}
+
+fn wrap_text(text: &str) -> String {
+    textwrap::fill(text, std::cmp::min(75, textwrap::termwidth()))
 }
