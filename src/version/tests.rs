@@ -685,3 +685,21 @@ fn resolution_no_matching_version() {
     )
     .unwrap_err();
 }
+
+#[test]
+fn manifest_toml() {
+    let manifest = toml::to_string(&Manifest {
+        packages: vec![ManifestPackage::Hex {
+            name: "one".to_string(),
+            version: Version::parse("0.0.0").unwrap(),
+        }],
+    })
+    .unwrap();
+    let expected = r#"[[packages]]
+type = "Hex"
+name = "one"
+version = "0.0.0"
+"#
+    .to_string();
+    assert_eq!(manifest, expected);
+}
