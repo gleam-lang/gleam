@@ -132,12 +132,16 @@ pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, text } = file;
+    write(&path, &text)
+}
+
+pub fn write(path: &Path, text: &str) -> Result<(), Error> {
     tracing::debug!("Writing file {:?}", path);
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
         action: FileIoAction::FindParent,
         kind: FileKind::Directory,
-        path: path.clone(),
+        path: path.to_path_buf(),
         err: None,
     })?;
 
@@ -151,14 +155,14 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let mut f = File::create(&path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
-        path: path.clone(),
+        path: path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
 
     f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
         action: FileIoAction::WriteTo,
         kind: FileKind::File,
-        path: path.clone(),
+        path: path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
     Ok(())

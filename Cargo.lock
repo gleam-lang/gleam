@@ -745,7 +745,7 @@ dependencies = [
 [[package]]
 name = "hexpm"
 version = "1.3.0"
-source = "git+https://github.com/gleam-lang/hexpm-rust#3c275cafefa17e6f6972f50380eca09ddbbd8b4a"
+source = "git+https://github.com/gleam-lang/hexpm-rust#4c192444d3db4d51d706854ec16ed633aa87bebd"
 dependencies = [
  "bytes",
  "flate2",
@@ -1242,9 +1242,9 @@ checksum = "7c9b1041b4387893b91ee6746cddfc28516aff326a3519fb2adf820932c5e6cb"
 
 [[package]]
 name = "ppv-lite86"
-version = "0.2.10"
+version = "0.2.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac74c624d6b2d21f425f752262f42188365d7b8ff1aff74c82e45136510a4857"
+checksum = "c3ca011bd0129ff4ae15cd04c4eef202cadf6c51c21e47aba319b4e0501db741"
 
 [[package]]
 name = "pretty_assertions"

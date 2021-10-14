@@ -1,15 +1,18 @@
-use std::time::Instant;
+use std::{path::PathBuf, time::Instant};
 
 use flate2::read::GzDecoder;
 use gleam_core::{
+    config::PackageConfig,
+    error::{FileIoAction, FileKind},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    Result,
+    Error, Result,
 };
+use hexpm::version::Manifest;
 
 use crate::{
     cli::{print_downloading, print_packages_downloaded},
-    fs::FileSystemAccessor,
+    fs::{self, FileSystemAccessor},
     http::HttpClient,
 };
 
@@ -29,8 +32,7 @@ pub fn download() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    tracing::info!("Resolving Hex package versions");
-    let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime.handle().clone()), &config)?;
+    let manifest = get_manifest(runtime.handle().clone(), &config)?;
 
     // Download them from Hex to the local cache
     tracing::info!("Downloading packages");
@@ -40,6 +42,33 @@ pub fn download() -> Result<()> {
     // TODO: we should print the number of deps new to ./target, not to the shared cache
     print_packages_downloaded(start, count);
     Ok(())
+}
+
+const MANIFEST_PATH: &str = "manifest.toml";
+
+pub fn get_manifest(runtime: tokio::runtime::Handle, config: &PackageConfig) -> Result<Manifest> {
+    let manifest_path = PathBuf::from(MANIFEST_PATH);
+    if manifest_path.exists() {
+        // If the manifest exists we read it and use that the versions specified
+        // in there
+        tracing::info!("Reading manifest.toml");
+        let toml = crate::fs::read(&manifest_path)?;
+        toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: manifest_path.clone(),
+            err: Some(e.to_string()),
+        })
+    } else {
+        // If there is no manifest then we resolve the versions from their
+        // specified requirements in the Hex API
+        tracing::info!("Resolving Hex package versions");
+        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), &config)?;
+        let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
+        tracing::info!("Writing manifest.toml");
+        fs::write(&manifest_path, &toml)?;
+        Ok(manifest)
+    }
 }
 
 struct PackageFetcher {
