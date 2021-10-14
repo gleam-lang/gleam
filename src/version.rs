@@ -323,6 +323,7 @@ pub struct Manifest {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum ManifestPackage {
     Hex { name: String, version: Version },
 }
