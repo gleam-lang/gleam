@@ -63,7 +63,7 @@ pub fn get_manifest(runtime: tokio::runtime::Handle, config: &PackageConfig) -> 
         // If there is no manifest then we resolve the versions from their
         // specified requirements in the Hex API
         tracing::info!("Resolving Hex package versions");
-        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), &config)?;
+        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), config)?;
         let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
         tracing::info!("Writing manifest.toml");
         fs::write(&manifest_path, &toml)?;
