@@ -61,6 +61,7 @@ mod http;
 mod new;
 mod panic;
 mod project;
+mod publish;
 mod run;
 mod shell;
 
@@ -91,6 +92,9 @@ enum Command {
         #[structopt(long)]
         warnings_as_errors: bool,
     },
+
+    /// Publish the package to the Hex package manager
+    Publish,
 
     /// Render HTML documentation
     Docs(Docs),
@@ -276,6 +280,8 @@ fn main() {
         Command::Test => run::command(run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
+
+        Command::Publish => publish::command(),
     };
 
     match result {
