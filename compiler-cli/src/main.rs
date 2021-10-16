@@ -93,7 +93,7 @@ enum Command {
         warnings_as_errors: bool,
     },
 
-    /// Publish the package to the Hex package manager
+    /// Publish the project to the Hex package manager
     Publish,
 
     /// Render HTML documentation
