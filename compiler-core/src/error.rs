@@ -184,6 +184,13 @@ impl Error {
         }
     }
 
+    pub fn finish_tar<E>(error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::TarFinish(error.to_string())
+    }
+
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
         Self::DependencyResolutionFailed(match error {
             ResolutionError::NoSolution(mut derivation_tree) => {

@@ -1,3 +1,4 @@
+use flate2::{write::GzEncoder, Compression};
 use gleam_core::{Error, Result};
 
 use crate::build;
@@ -21,7 +22,9 @@ pub fn command() -> Result<()> {
     // TODO: Read project files
 
     tracing::info!("Creating release tarball");
-    let _tarball = build_tarball()?;
+    let _tarball = contents_tarball()?;
+    // TODO: Build release tarball
+    // https://github.com/hexpm/specifications/blob/master/package_tarball.md
 
     // TODO: Publish release to hexpm
 
@@ -32,17 +35,18 @@ pub fn command() -> Result<()> {
     Ok(())
 }
 
-fn build_tarball() -> Result<Vec<u8>, Error> {
-    let mut bytes = Vec::new();
+fn contents_tarball() -> Result<Vec<u8>, Error> {
+    let mut contents_tar_gz = Vec::new();
     {
-        let mut tarball = tar::Builder::new(&mut bytes);
+        let mut tarball =
+            tar::Builder::new(GzEncoder::new(&mut contents_tar_gz, Compression::default()));
         tarball
             .append_dir_all("src", "src")
             .map_err(|e| Error::add_tar("src", e))?;
         tarball
             .append_path("gleam.toml")
             .map_err(|e| Error::add_tar("gleam.toml", e))?;
-        tarball.finish().unwrap();
+        tarball.finish().map_err(Error::finish_tar)?;
     }
-    Ok(bytes)
+    Ok(contents_tar_gz)
 }
