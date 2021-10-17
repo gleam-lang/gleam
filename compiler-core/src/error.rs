@@ -174,6 +174,16 @@ impl Error {
         Self::Hex(error.to_string())
     }
 
+    pub fn add_tar<E>(path: &str, error: E) -> Error
+    where
+        E: std::error::Error,
+    {
+        Self::AddTar {
+            path: PathBuf::from(path),
+            err: error.to_string(),
+        }
+    }
+
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
         Self::DependencyResolutionFailed(match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
