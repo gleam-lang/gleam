@@ -1,8 +1,6 @@
-use std::path::PathBuf;
+use gleam_core::{Error, Result};
 
-use gleam_core::Result;
-
-use crate::{build, fs};
+use crate::build;
 
 pub fn command() -> Result<()> {
     let _config = crate::config::root_config()?;
@@ -26,8 +24,12 @@ pub fn command() -> Result<()> {
     let mut bytes = Vec::new();
     {
         let mut tarball = tar::Builder::new(&mut bytes);
-        tarball.append_dir_all("src", "src").unwrap(); // TODO: error handling
-        tarball.append_path("gleam.toml").unwrap(); // TODO: error handling
+        tarball
+            .append_dir_all("src", "src")
+            .map_err(|e| Error::add_tar("src", e))?;
+        tarball
+            .append_path("gleam.toml")
+            .map_err(|e| Error::add_tar("gleam.toml", e))?;
         tarball.finish().unwrap();
     }
 
