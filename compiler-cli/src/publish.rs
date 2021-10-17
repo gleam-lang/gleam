@@ -20,7 +20,19 @@ pub fn command() -> Result<()> {
 
     // TODO: Read project files
 
-    // Create tarball
+    tracing::info!("Creating release tarball");
+    let _tarball = build_tarball()?;
+
+    // TODO: Publish release to hexpm
+
+    // TODO: Publish docs to hexpm for release
+
+    // TODO: Delete API token
+
+    Ok(())
+}
+
+fn build_tarball() -> Result<Vec<u8>, Error> {
     let mut bytes = Vec::new();
     {
         let mut tarball = tar::Builder::new(&mut bytes);
@@ -32,12 +44,5 @@ pub fn command() -> Result<()> {
             .map_err(|e| Error::add_tar("gleam.toml", e))?;
         tarball.finish().unwrap();
     }
-
-    // TODO: Publish release to hexpm
-
-    // TODO: Publish docs to hexpm for release
-
-    // TODO: Delete API token
-
-    Ok(())
+    Ok(bytes)
 }
