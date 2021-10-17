@@ -20,8 +20,8 @@ pub fn command(which: Which) -> Result<(), Error> {
         Which::Test => format!("{}_test", &config.name),
     };
 
-    // Build project
-    let _ = super::new_build_main()?;
+    // Build project so we have bytecode to run
+    let _ = crate::build::main()?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

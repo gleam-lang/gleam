@@ -136,6 +136,10 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
 }
 
 pub fn write(path: &Path, text: &str) -> Result<(), Error> {
+    write_bytes(path, text.as_bytes())
+}
+
+pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     tracing::debug!("Writing file {:?}", path);
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
@@ -159,7 +163,7 @@ pub fn write(path: &Path, text: &str) -> Result<(), Error> {
         err: Some(e.to_string()),
     })?;
 
-    f.write_all(text.as_bytes()).map_err(|e| Error::FileIo {
+    f.write_all(bytes).map_err(|e| Error::FileIo {
         action: FileIoAction::WriteTo,
         kind: FileKind::File,
         path: path.to_path_buf(),

@@ -7,7 +7,7 @@ use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
     // Build project
-    let _ = super::new_build_main()?;
+    let _ = crate::build::main()?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

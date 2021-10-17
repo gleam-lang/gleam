@@ -71,13 +71,13 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{package_compiler, Package, ProjectCompiler, Target},
+    build::{package_compiler, Target},
     config::PackageConfig,
     paths,
     project::Analysed,
 };
 
-use std::{collections::HashMap, path::PathBuf};
+use std::path::PathBuf;
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 
@@ -306,7 +306,7 @@ fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
-        return new_build_main().map(|_| ());
+        return build::main().map(|_| ());
     }
 
     // Read and type check project
@@ -344,22 +344,7 @@ fn initialise_logger() {
         .init();
 }
 
-pub fn new_build_main() -> Result<HashMap<String, Package>, Error> {
-    let root_config = crate::config::root_config()?;
-    let telemetry = Box::new(cli::Reporter::new());
-    let io = fs::FileSystemAccessor::new();
-
-    tracing::info!("Copying root package to _build");
-    copy_root_package_to_build(&root_config)?;
-
-    tracing::info!("Reading package configs from .build");
-    let configs = config::package_configs(&root_config.name)?;
-
-    tracing::info!("Compiling packages");
-    let packages = ProjectCompiler::new(root_config, configs, telemetry, io).compile()?;
-
-    Ok(packages)
-}
+mod build;
 
 fn copy_root_package_to_build(root_config: &PackageConfig) -> Result<(), Error> {
     let target = paths::build_deps_package(&root_config.name);
