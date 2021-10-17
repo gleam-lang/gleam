@@ -50,6 +50,7 @@
 #[macro_use]
 extern crate pretty_assertions;
 
+mod build;
 mod cli;
 mod compile_package;
 mod config;
@@ -343,8 +344,6 @@ fn initialise_logger() {
         .without_time()
         .init();
 }
-
-mod build;
 
 fn copy_root_package_to_build(root_config: &PackageConfig) -> Result<(), Error> {
     let target = paths::build_deps_package(&root_config.name);
