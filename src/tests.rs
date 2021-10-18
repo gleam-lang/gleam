@@ -689,6 +689,24 @@ async fn get_package_ok_test() {
 }
 
 #[tokio::test]
+async fn get_package_not_found() {
+    let config = Config::new();
+    let error = crate::get_package_response(
+        http_send(crate::get_package_request(
+            "louissaysthispackagedoesnotexist",
+            None,
+            &config,
+        ))
+        .await
+        .unwrap(),
+        std::include_bytes!("../test/public_key"),
+    )
+    .unwrap_err();
+
+    assert!(error.is_not_found());
+}
+
+#[tokio::test]
 async fn get_repository_versions_ok_test() {
     let response_body = std::include_bytes!("../test/versions");
 

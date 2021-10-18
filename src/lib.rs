@@ -196,7 +196,7 @@ pub fn get_package_response(
 
     match parts.status {
         StatusCode::OK => (),
-        StatusCode::NOT_FOUND => return Err(ApiError::NotFound),
+        StatusCode::FORBIDDEN => return Err(ApiError::NotFound), // Oddly this is the not-found code
         status => {
             return Err(ApiError::unexpected_response(status, body));
         }
@@ -371,6 +371,13 @@ pub enum ApiError {
 impl ApiError {
     fn unexpected_response(status: StatusCode, body: Vec<u8>) -> Self {
         ApiError::UnexpectedResponse(status, String::from_utf8_lossy(&body).to_string())
+    }
+
+    /// Returns `true` if the api error is [`NotFound`].
+    ///
+    /// [`NotFound`]: ApiError::NotFound
+    pub fn is_not_found(&self) -> bool {
+        matches!(self, Self::NotFound)
     }
 }
 

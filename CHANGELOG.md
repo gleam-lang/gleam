@@ -10,6 +10,8 @@
 - The `get_repository_versions` method returns `Version`s rather than strings.
 - The `get_package` uses the `version::Range` type to represent `requirement`s.
 - A pubgrub based dependency resolver has been added.
+- Fixed a bug where a forbidden error was returned for a not-found package by
+  the get-package API.
 
 ## v1.3.0 - 2020-03-30
 

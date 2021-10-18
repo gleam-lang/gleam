@@ -689,16 +689,39 @@ fn resolution_no_matching_version() {
 #[test]
 fn manifest_toml() {
     let manifest = toml::to_string(&Manifest {
-        packages: vec![ManifestPackage::Hex {
-            name: "one".to_string(),
-            version: Version::parse("0.0.0").unwrap(),
-        }],
+        packages: vec![
+            ManifestPackage::Hex {
+                name: "gleam_stdlib".to_string(),
+                version: Version {
+                    major: 0,
+                    minor: 17,
+                    patch: 1,
+                    pre: vec![],
+                    build: None,
+                },
+            },
+            ManifestPackage::Hex {
+                name: "thingy".to_string(),
+                version: Version {
+                    major: 0,
+                    minor: 1,
+                    patch: 0,
+                    pre: vec![],
+                    build: None,
+                },
+            },
+        ],
     })
     .unwrap();
     let expected = r#"[[packages]]
 type = "Hex"
-name = "one"
-version = "0.0.0"
+name = "gleam_stdlib"
+version = "0.17.1"
+
+[[packages]]
+type = "Hex"
+name = "thingy"
+version = "0.1.0"
 "#
     .to_string();
     assert_eq!(manifest, expected);
