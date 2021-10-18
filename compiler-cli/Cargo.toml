@@ -60,6 +60,8 @@ http = "0.2.5"
 futures = "0.3.17"
 # Little helper to omit fields that cannot be debug printed
 debug-ignore = "1.0.1"
+# Checksums
+sha2 = "0.9"
 
 [dev-dependencies]
 # Test assertion errors with diffs

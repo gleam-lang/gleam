@@ -1,12 +1,16 @@
-use std::path::{Path, PathBuf};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 use flate2::{write::GzEncoder, Compression};
-use gleam_core::{Error, Result};
+use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
 
-use crate::{build, fs};
+use crate::{build, fs, http::HttpClient};
 
 pub fn command() -> Result<()> {
-    let _config = crate::config::root_config()?;
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let config = crate::config::root_config()?;
 
     // Build the project to check that it is valid
     let _ = build::main()?;
@@ -25,6 +29,7 @@ pub fn command() -> Result<()> {
 
     tracing::info!("Creating release tarball");
     let _tarball = contents_tarball()?;
+    let _version_int = runtime.block_on(package_version_int(&config.name))?;
     // TODO: Build release tarball
     // https://github.com/hexpm/specifications/blob/master/package_tarball.md
 
@@ -35,6 +40,22 @@ pub fn command() -> Result<()> {
     // TODO: Delete API token
 
     Ok(())
+}
+
+/// Hex wants a second version number that is a single int. It's unclear why,
+/// and we don't know what this number should be locally, so use the number of
+/// releases as that int.
+async fn package_version_int(name: &str) -> Result<usize> {
+    let config = hexpm::Config::new();
+    let request = hexpm::get_package_request(name, None, &config);
+    let response = HttpClient::new().send(request).await?;
+    let int = match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
+        Ok(response) => response.releases.len(),
+        Err(hexpm::ApiError::NotFound) => 0, // Not found
+        Err(e) => return Err(Error::hex(e)),
+    };
+    tracing::debug!(version=%int, "Package int version fetched");
+    Ok(int)
 }
 
 fn contents_tarball() -> Result<Vec<u8>, Error> {
@@ -51,9 +72,10 @@ fn contents_tarball() -> Result<Vec<u8>, Error> {
     Ok(contents_tar_gz)
 }
 
-fn add_to_tar<P>(tarball: &mut tar::Builder<GzEncoder<&mut Vec<u8>>>, path: P) -> Result<()>
+fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P) -> Result<()>
 where
     P: AsRef<Path>,
+    W: Write,
 {
     let path = path.as_ref();
     tracing::debug!(file=?path, "Adding file to tarball");
