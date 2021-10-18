@@ -13,7 +13,7 @@ use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use std::fmt::Debug;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use termcolor::Buffer;
 use thiserror::Error;
 
@@ -174,12 +174,13 @@ impl Error {
         Self::Hex(error.to_string())
     }
 
-    pub fn add_tar<E>(path: &str, error: E) -> Error
+    pub fn add_tar<P, E>(path: P, error: E) -> Error
     where
+        P: AsRef<Path>,
         E: std::error::Error,
     {
         Self::AddTar {
-            path: PathBuf::from(path),
+            path: path.as_ref().to_path_buf(),
             err: error.to_string(),
         }
     }
