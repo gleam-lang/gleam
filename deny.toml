@@ -5,13 +5,16 @@ targets = []
 db-path = "~/.cargo/advisory-db"
 db-urls = ["https://github.com/rustsec/advisory-db"]
 vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
+unmaintained = "deny"
+yanked = "deny"
+notice = "deny"
 ignore = [
     # https://rustsec.org/advisories/RUSTSEC-2020-0096.html
     # `TreeFocus` that unconditionally implements `Send` and `Sync`
     "RUSTSEC-2020-0096", 
+    # https://rustsec.org/advisories/RUSTSEC-2020-0159
+    # Potential segfault in `localtime_r` invocations
+    "RUSTSEC-2020-0159", 
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
@@ -33,7 +36,7 @@ registries = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
-multiple-versions = "warn"
+multiple-versions = "deny"
 wildcards = "allow"
 highlight = "all"
 allow = []
@@ -42,12 +45,22 @@ skip = [
     { name = "ansi_term", version = "=0.11.0" },
     { name = "rand_core", version = "=0.5.1" },
     { name = "strsim", version = "=0.8.0" },
+    { name = "wasm-bindgen-futures", version = "=0.3.27" },
+    { name = "unicode-xid", version = "=0.1.0" },
+    { name = "textwrap", version = "=0.11.0" },
+    { name = "quote", version = "=0.6.13" },
+    { name = "futures", version = "=0.1.31" },
+    { name = "proc-macro2", version = "=0.4.30" },
+    { name = "cfg-if", version = "=0.1.10" },
+    { name = "base64", version = "=0.12.3" },
 ]
 skip-tree = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
 [sources]
-unknown-registry = "warn"
-unknown-git = "warn"
+unknown-registry = "deny"
+unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+allow-git = [
+    "https://github.com/gleam-lang/hexpm-rust",
+]
