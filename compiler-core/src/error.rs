@@ -199,7 +199,14 @@ impl Error {
                 let report = DefaultStringReporter::report(&derivation_tree);
                 wrap(&report)
             }
-            _ => error.to_string(),
+
+            // TODO: Custom error here
+            // ResolutionError::ErrorRetrievingDependencies {
+            //     package,
+            //     version,
+            //     source,
+            // } => Use the source, it'll provide a better error message
+            error => error.to_string(),
         })
     }
 
