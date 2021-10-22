@@ -25,11 +25,10 @@ pub fn command() -> Result<()> {
 
     // TODO: Build HTML documentation
 
-    // TODO: Read project files
-
     tracing::info!("Creating release tarball");
     let _tarball = contents_tarball()?;
     let _version_int = runtime.block_on(package_version_int(&config.name))?;
+
     // TODO: Build release tarball
     // https://github.com/hexpm/specifications/blob/master/package_tarball.md
 
@@ -82,4 +81,29 @@ where
     tarball
         .append_path(path)
         .map_err(|e| Error::add_tar(path, e))
+}
+
+#[derive(Debug, Clone)]
+pub struct ReleaseMetadata {
+    name: String,
+    version: String,
+    app: String,
+    description: String,
+    files: Vec<String>,
+    licenses: Vec<String>,
+    maintainers: Vec<String>,
+    links: Vec<(String, http::Uri)>,
+    requirements: Vec<ReleaseRequirement>,
+    build_tools: Vec<String>,
+    // What should this be? I can't find it in the API anywhere.
+    // extra: (kvlist(string => kvlist(...))) (optional)
+}
+
+#[derive(Debug, Clone)]
+struct ReleaseRequirement {
+    app: String,
+    optional: String,
+    requirement: String,
+    // What values are valid for this?
+    // repository: String,
 }
