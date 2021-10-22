@@ -175,11 +175,8 @@ where
             let location = error.location;
             let error = error.clone();
             parse_error(ParseErrorType::LexError { error }, location)
-        } else if parse_result.is_err() {
-            // Then parse errors
-            parse_result
         } else {
-            // no errors
+            // Return any existing parse error
             parse_result
         }
     }
