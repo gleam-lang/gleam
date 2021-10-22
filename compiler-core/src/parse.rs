@@ -2271,9 +2271,7 @@ where
             Some((start, tok, end)) => {
                 if let Token::Name { name } = tok {
                     Ok((start, name, end))
-                } else if let Token::UpName { .. } = tok {
-                    parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                } else if let Token::DiscardName { .. } = tok {
+                } else if let Token::UpName { .. } | Token::DiscardName { .. } = tok {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
                 } else if is_reserved_word(tok) {
                     parse_error(

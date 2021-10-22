@@ -2,7 +2,7 @@
 name = "gleam-wasm"
 version = "0.18.0-dev"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
-edition = "2018"
+edition = "2021"
 license-file = "LICENCE"
 
 [lib]
