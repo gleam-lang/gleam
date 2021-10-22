@@ -365,6 +365,7 @@ impl<'input> Parser<'input> {
                 break;
             }
         }
+        self.skip_whitespace()?;
         range.ok_or(UnexpectedEnd)
     }
 

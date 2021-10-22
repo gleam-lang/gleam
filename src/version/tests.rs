@@ -298,6 +298,26 @@ parse_range_test!(
         .intersection(&PubgrubRange::strictly_lower_than(v(4, 7, 0)))
 );
 
+parse_range_test!(
+    greater_or_pessimistic,
+    "> 10.0.0 or ~> 3.0.0",
+    PubgrubRange::higher_than(v(10, 0, 1)).union(
+        &PubgrubRange::higher_than(v(3, 0, 0))
+            .intersection(&PubgrubRange::strictly_lower_than(v(3, 1, 0)))
+    )
+);
+
+parse_range_test!(
+    pessimistic_or_pessimistic,
+    "~> 1.0.0 or ~> 3.0.0",
+    PubgrubRange::higher_than(v(1, 0, 0))
+        .intersection(&PubgrubRange::strictly_lower_than(v(1, 1, 0)))
+        .union(
+            &PubgrubRange::higher_than(v(3, 0, 0))
+                .intersection(&PubgrubRange::strictly_lower_than(v(3, 1, 0)))
+        )
+);
+
 parse_range_fail_test!(range_quad, "1.1.1.1");
 parse_range_fail_test!(range_just_major, "1");
 parse_range_fail_test!(range_just_major_minor, "1.1");
