@@ -210,6 +210,32 @@ async fn remove_key_success() {
 }
 
 #[tokio::test]
+async fn remove_key_success_2() {
+    let name = "some-key-name";
+    let key = "my-api-key-here";
+
+    let mock = mockito::mock("DELETE", format!("/keys/{}", name).as_str())
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(200)
+        .create();
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
+
+    let result = crate::remove_api_key_response(
+        http_send(crate::remove_api_key_request(name, key, &config))
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
 async fn remove_docs_unknown_package_version() {
     let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib_this_does_not_exist";

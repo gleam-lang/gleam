@@ -138,7 +138,7 @@ pub fn remove_api_key_request(
 pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
     let (parts, body) = response.into_parts();
     match parts.status {
-        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
         status => Err(ApiError::unexpected_response(status, body)),
