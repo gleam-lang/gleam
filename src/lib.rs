@@ -127,7 +127,7 @@ pub fn remove_api_key_request(
     config
         .api_request(
             Method::DELETE,
-            &format!("key/{}", name_of_key_to_delete),
+            &format!("keys/{}", name_of_key_to_delete),
             Some(api_key),
         )
         .body(vec![])

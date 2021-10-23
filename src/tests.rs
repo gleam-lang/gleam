@@ -187,8 +187,6 @@ async fn remove_docs_success() {
 async fn remove_key_success() {
     let name = "some-key-name";
     let key = "my-api-key-here";
-    let package = "gleam_experimental_stdlib";
-    let version = "0.8.0";
 
     let mock = mockito::mock("DELETE", format!("/keys/{}", name).as_str())
         .expect(1)
@@ -200,8 +198,8 @@ async fn remove_key_success() {
     let mut config = Config::new();
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let result = crate::remove_key_response(
-        http_send(crate::remove_key_request(package, version, key, &config).unwrap())
+    let result = crate::remove_api_key_response(
+        http_send(crate::remove_api_key_request(name, key, &config))
             .await
             .unwrap(),
     )
