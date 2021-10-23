@@ -68,7 +68,6 @@ async fn package_version_int(name: &str) -> Result<usize> {
     Ok(int)
 }
 
-// TODO: return the list of file paths from here to use in the metadata
 fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
     let mut contents_tar_gz = Vec::new();
     {
@@ -84,7 +83,16 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
 
 fn project_files() -> Vec<PathBuf> {
     let mut files: Vec<PathBuf> = fs::gleam_files(&PathBuf::from("src")).collect();
-    files.push(PathBuf::from("gleam.toml"));
+    let mut add = |path| {
+        let path = PathBuf::from(path);
+        if path.exists() {
+            files.push(path);
+        }
+    };
+    add("README.md");
+    add("gleam.toml");
+    add("LICENSE");
+    add("LICENCE");
     files
 }
 
@@ -101,31 +109,31 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct ReleaseMetadata {
-    name: String,
-    version: String,
-    // app: String,
-    description: String,
+pub struct ReleaseMetadata<'a> {
+    name: &'a str,
+    version: &'a str,
+    // app: &'a str,
+    description: &'a str,
     files: Vec<PathBuf>,
-    licenses: Vec<String>, // TODO: use spdx licence type to ensure correct format
-    links: Vec<(String, String)>, // TODO: use http::Uri type to ensure correct format
-    requirements: Vec<ReleaseRequirement>,
-    build_tools: Vec<String>,
+    licenses: Vec<&'a str>, // TODO: use spdx licence type to ensure correct format
+    links: Vec<(&'a str, &'a str)>, // TODO: use http::Uri type to ensure correct format
+    requirements: Vec<ReleaseRequirement<'a>>,
+    build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
     // extra: (kvlist(string => kvlist(...))) (optional)
 }
 
-impl ReleaseMetadata {
+impl<'a> ReleaseMetadata<'a> {
     pub fn to_erlang(&self) -> String {
-        fn link(link: &(String, String)) -> String {
+        fn link(link: &(&str, &str)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
                 name = link.0,
                 url = link.1
             )
         }
-        fn file(name: &PathBuf) -> String {
-            format!("\n  <<\"{name}\">>", name = name.to_string_lossy())
+        fn file(name: impl AsRef<Path>) -> String {
+            format!("\n  <<\"{name}\">>", name = name.as_ref().to_string_lossy())
         }
 
         format!(
@@ -157,14 +165,14 @@ impl ReleaseMetadata {
 }
 
 #[derive(Debug, Clone)]
-struct ReleaseRequirement {
-    app: String,
+struct ReleaseRequirement<'a> {
+    app: &'a str,
     // optional: bool,
-    requirement: String,
+    requirement: &'a str,
     // Support alternate repositories at a later date.
     // repository: String,
 }
-impl ReleaseRequirement {
+impl<'a> ReleaseRequirement<'a> {
     pub fn to_erlang(&self) -> String {
         format!(
             r#"
@@ -182,33 +190,30 @@ impl ReleaseRequirement {
 #[test]
 fn release_metadata_to_erlang() {
     let meta = ReleaseMetadata {
-        name: "myapp".to_string(),
-        version: "1.2.3".parse().unwrap(),
-        description: "description goes here".to_string(),
+        name: "myapp",
+        version: "1.2.3",
+        description: "description goes here",
         files: vec![
             PathBuf::from("gleam.toml"),
             PathBuf::from("src/thingy.gleam"),
             PathBuf::from("src/whatever.gleam"),
         ],
-        licenses: vec!["MIT".to_string(), "MPL-2.0".to_string()],
+        licenses: vec!["MIT", "MPL-2.0"],
         links: vec![
-            ("homepage".to_string(), "https://gleam.run".to_string()),
-            (
-                "github".to_string(),
-                "https://github.com/lpil/myapp".to_string(),
-            ),
+            ("homepage", "https://gleam.run"),
+            ("github", "https://github.com/lpil/myapp"),
         ],
         requirements: vec![
             ReleaseRequirement {
-                app: "wibble".to_string(),
-                requirement: "~> 1.2.3 or >= 5.0.0".to_string(),
+                app: "wibble",
+                requirement: "~> 1.2.3 or >= 5.0.0",
             },
             ReleaseRequirement {
-                app: "wobble".to_string(),
-                requirement: "~> 1.2".to_string(),
+                app: "wobble",
+                requirement: "~> 1.2",
             },
         ],
-        build_tools: vec!["gleam".to_string(), "rebar3".to_string()],
+        build_tools: vec!["gleam", "rebar3"],
     };
     assert_eq!(
         meta.to_erlang(),
@@ -250,6 +255,6 @@ fn get_hostname() -> String {
         .to_string()
 }
 
-fn quotes(x: &String) -> String {
+fn quotes(x: &&str) -> String {
     format!(r#"<<"{}">>"#, x)
 }
