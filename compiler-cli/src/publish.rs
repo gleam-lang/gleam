@@ -149,7 +149,7 @@ where
         .map_err(|e| Error::add_tar(path, e))
 }
 
-#[derive(info, Clone)]
+#[derive(Debug, Clone)]
 pub struct ReleaseMetadata<'a> {
     name: &'a str,
     version: &'a Version,
@@ -204,7 +204,7 @@ impl<'a> ReleaseMetadata<'a> {
     }
 }
 
-#[derive(info, Clone)]
+#[derive(Debug, Clone)]
 struct ReleaseRequirement<'a> {
     name: &'a str,
     // optional: bool,
