@@ -15,6 +15,7 @@ pub fn command() -> Result<()> {
 }
 
 pub async fn perform_command() -> Result<()> {
+    let hostname = get_hostname();
     let config = crate::config::root_config()?;
     let hex_config = hexpm::Config::new();
     let http = HttpClient::new();
@@ -27,7 +28,8 @@ pub async fn perform_command() -> Result<()> {
     let password = cli::ask_password("https://hex.pm password")?;
 
     // Create API token
-    let key = gleam_core::hex::create_api_key(&username, &password, &hex_config, &http).await?;
+    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
+        .await?;
 
     // TODO: Build HTML documentation
 
@@ -43,7 +45,7 @@ pub async fn perform_command() -> Result<()> {
     // TODO: Publish docs to hexpm for release
 
     // Delete API token
-    gleam_core::hex::remove_api_key(&hex_config, &key, &http).await?;
+    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
 
     Ok(())
 }
@@ -113,4 +115,11 @@ struct ReleaseRequirement {
     requirement: String,
     // What values are valid for this?
     // repository: String,
+}
+
+fn get_hostname() -> String {
+    hostname::get()
+        .expect("Looking up hostname")
+        .to_string_lossy()
+        .to_string()
 }

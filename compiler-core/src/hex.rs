@@ -22,8 +22,6 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 -----END PUBLIC KEY-----
 ";
 
-static KEY_NAME: &str = "gleam";
-
 pub fn resolve_versions(
     package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
     config: &PackageConfig,
@@ -41,25 +39,31 @@ pub fn resolve_versions(
     .map_err(Error::dependency_resolution_failed)
 }
 
+fn key_name(hostname: &str) -> String {
+    format!("gleam-{}", hostname)
+}
+
 pub async fn create_api_key<Http: HttpClient>(
+    hostname: &str,
     username: &str,
     password: &str,
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<String> {
     tracing::info!("Creating API key with Hex");
-    let request = hexpm::create_api_key_request(username, password, KEY_NAME, config);
+    let request = hexpm::create_api_key_request(username, password, &key_name(hostname), config);
     let response = http.send(request).await?;
     hexpm::create_api_key_response(response).map_err(Error::hex)
 }
 
 pub async fn remove_api_key<Http: HttpClient>(
+    hostname: &str,
     config: &hexpm::Config,
     auth_key: &str,
     http: &Http,
 ) -> Result<()> {
     tracing::info!("Deleting API key from Hex");
-    let request = hexpm::remove_api_key_request(KEY_NAME, auth_key, config);
+    let request = hexpm::remove_api_key_request(&key_name(hostname), auth_key, config);
     let response = http.send(request).await?;
     hexpm::remove_api_key_response(response).map_err(Error::hex)
 }
