@@ -6,28 +6,34 @@ use std::{
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
 
-use crate::{build, fs, http::HttpClient};
+use crate::{build, cli, fs, http::HttpClient};
 
 pub fn command() -> Result<()> {
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    tokio::runtime::Runtime::new()
+        .expect("Unable to start Tokio async runtime")
+        .block_on(perform_command())
+}
+
+pub async fn perform_command() -> Result<()> {
     let config = crate::config::root_config()?;
+    let hex_config = hexpm::Config::new();
+    let http = HttpClient::new();
 
     // Build the project to check that it is valid
     let _ = build::main()?;
 
-    // TODO: Get hex username from user
+    // Get login creds from user
+    let username = cli::ask("https://hex.pm username")?;
+    let password = cli::ask_password("https://hex.pm password")?;
 
-    // TODO: Get hex password from user
-
-    // TODO: Create API token
-
-    // TODO: Build HTML documentation
+    // Create API token
+    let key = gleam_core::hex::create_api_key(&username, &password, &hex_config, &http).await?;
 
     // TODO: Build HTML documentation
 
     tracing::info!("Creating release tarball");
     let _tarball = contents_tarball()?;
-    let _version_int = runtime.block_on(package_version_int(&config.name))?;
+    let _version_int = package_version_int(&config.name).await?;
 
     // TODO: Build release tarball
     // https://github.com/hexpm/specifications/blob/master/package_tarball.md
@@ -36,7 +42,8 @@ pub fn command() -> Result<()> {
 
     // TODO: Publish docs to hexpm for release
 
-    // TODO: Delete API token
+    // Delete API token
+    gleam_core::hex::remove_api_key(&hex_config, &key, &http).await?;
 
     Ok(())
 }
