@@ -100,9 +100,8 @@ pub struct ReleaseMetadata {
     // app: String,
     description: String,
     files: Vec<String>,
-    licenses: Vec<String>,
-    maintainers: Vec<String>,
-    links: Vec<(String, http::Uri)>,
+    licenses: Vec<String>, // TODO: use spdx licence type to ensure correct format
+    links: Vec<(String, String)>, // TODO: use http::Uri type to ensure correct format
     requirements: Vec<ReleaseRequirement>,
     build_tools: Vec<String>,
     // What should this be? I can't find it in the API anywhere.
@@ -111,6 +110,9 @@ pub struct ReleaseMetadata {
 
 impl ReleaseMetadata {
     pub fn to_erlang(&self) -> String {
+        fn link(link: &(String, String)) -> String {
+            format!(r#"{{"{name}", "{url}"}}"#, name = link.0, url = link.1)
+        }
         format!(
             r#"{{
   {{name, "{name}"}},
@@ -118,8 +120,7 @@ impl ReleaseMetadata {
   {{app, "{name}"}},
   {{files, [{files}]}},
   {{licenses, [{licenses}]}},
-  {{maintainers, []}},
-  {{links, []}},
+  {{links, [{links}]}},
   {{requirements, []}},
   {{build_tools, [{build_tools}]}}
 }}.
@@ -127,6 +128,7 @@ impl ReleaseMetadata {
             name = self.name,
             version = self.version,
             files = self.files.iter().map(quotes).join(", "),
+            links = self.links.iter().map(link).join(", "),
             licenses = self.licenses.iter().map(quotes).join(", "),
             build_tools = self.build_tools.iter().map(quotes).join(", "),
         )
@@ -138,7 +140,7 @@ struct ReleaseRequirement {
     app: String,
     optional: String,
     requirement: String,
-    // What values are valid for this?
+    // Support alternate repositories at a later date.
     // repository: String,
 }
 
@@ -153,9 +155,14 @@ fn release_metadata_to_erlang() {
             "src/thingy.gleam".to_string(),
             "src/whatever.gleam".to_string(),
         ],
-        licenses: vec![],     // TODO
-        maintainers: vec![],  // TODO
-        links: vec![],        // TODO
+        licenses: vec!["MIT".to_string(), "MPL-2.0".to_string()],
+        links: vec![
+            ("homepage".to_string(), "https://gleam.run".to_string()),
+            (
+                "github".to_string(),
+                "https://github.com/lpil/myapp".to_string(),
+            ),
+        ],
         requirements: vec![], // TODO
         build_tools: vec!["gleam".to_string(), "rebar3".to_string()],
     };
@@ -166,9 +173,8 @@ fn release_metadata_to_erlang() {
   {version, "1.2.3"},
   {app, "myapp"},
   {files, ["gleam.toml", "src/thingy.gleam", "src/whatever.gleam"]},
-  {licenses, []},
-  {maintainers, []},
-  {links, []},
+  {licenses, ["MIT", "MPL-2.0"]},
+  {links, [{"homepage", "https://gleam.run"}, {"github", "https://github.com/lpil/myapp"}]},
   {requirements, []},
   {build_tools, ["gleam", "rebar3"]}
 }.
