@@ -7,6 +7,7 @@ use flate2::{write::GzEncoder, Compression};
 use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
+use sha2::Digest;
 
 use crate::{build, cli, fs, http::HttpClient};
 
@@ -27,10 +28,43 @@ pub async fn perform_command() -> Result<()> {
 
     // TODO: Build HTML documentation
 
-    tracing::info!("Creating release tarball");
+    // Build the package release tarball
     let files = project_files();
-    let _tarball = contents_tarball(&files)?;
-    let _version_int = package_version_int(&config.name).await?.to_string();
+    let contents_tar_gz = contents_tarball(&files)?;
+    let version = package_version_int(&config.name).await?.to_string();
+    let metadata = metadata_config(config, files);
+
+    // Create inner checksum
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(version.as_bytes());
+    hasher.update(metadata.as_bytes());
+    hasher.update(contents_tar_gz);
+    let checksum = base16::encode_upper(&hasher.finalize());
+
+    tracing::info!(checksum = %checksum, "Generated Hex package inner checksum");
+
+    // Get login creds from user
+    let username = cli::ask("https://hex.pm username")?;
+    let password = cli::ask_password("https://hex.pm password")?;
+
+    // Create API token
+    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
+        .await?;
+
+    // TODO: Build release tarball
+    // https://github.com/hexpm/specifications/blob/master/package_tarball.md
+
+    // TODO: Publish release to hexpm
+
+    // TODO: Publish docs to hexpm for release
+
+    // Delete API token
+    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
+
+    Ok(())
+}
+
+fn metadata_config(config: gleam_core::config::PackageConfig, files: Vec<PathBuf>) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
@@ -54,28 +88,8 @@ pub async fn perform_command() -> Result<()> {
         build_tools: vec!["gleam"],
     }
     .as_erlang();
-
-    tracing::debug!(contents = ?metadata, "Generated metadata.config");
-
-    // Get login creds from user
-    let username = cli::ask("https://hex.pm username")?;
-    let password = cli::ask_password("https://hex.pm password")?;
-
-    // Create API token
-    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
-        .await?;
-
-    // TODO: Build release tarball
-    // https://github.com/hexpm/specifications/blob/master/package_tarball.md
-
-    // TODO: Publish release to hexpm
-
-    // TODO: Publish docs to hexpm for release
-
-    // Delete API token
-    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
-
-    Ok(())
+    tracing::info!(contents = ?metadata, "Generated Hex metadata.config");
+    metadata
 }
 
 /// Hex wants a second version number that is a single int. It's unclear why,
@@ -90,7 +104,7 @@ async fn package_version_int(name: &str) -> Result<usize> {
         Err(hexpm::ApiError::NotFound) => 0,
         Err(e) => return Err(Error::hex(e)),
     };
-    tracing::debug!(version=%int, "Package int version fetched");
+    tracing::info!(number=%int, "Package Hex internal version");
     Ok(int)
 }
 
@@ -104,6 +118,7 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
         }
         tarball.finish().map_err(Error::finish_tar)?;
     }
+    tracing::info!("Generated contents.tar.gz");
     Ok(contents_tar_gz)
 }
 
@@ -128,13 +143,13 @@ where
     W: Write,
 {
     let path = path.as_ref();
-    tracing::debug!(file=?path, "Adding file to tarball");
+    tracing::info!(file=?path, "Adding file to tarball");
     tarball
         .append_path(path)
         .map_err(|e| Error::add_tar(path, e))
 }
 
-#[derive(Debug, Clone)]
+#[derive(info, Clone)]
 pub struct ReleaseMetadata<'a> {
     name: &'a str,
     version: &'a Version,
@@ -189,7 +204,7 @@ impl<'a> ReleaseMetadata<'a> {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(info, Clone)]
 struct ReleaseRequirement<'a> {
     name: &'a str,
     // optional: bool,
