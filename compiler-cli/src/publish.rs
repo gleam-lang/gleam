@@ -5,6 +5,7 @@ use std::{
 
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
+use itertools::Itertools;
 
 use crate::{build, cli, fs, http::HttpClient};
 
@@ -96,7 +97,7 @@ where
 pub struct ReleaseMetadata {
     name: String,
     version: String,
-    app: String,
+    // app: String,
     description: String,
     files: Vec<String>,
     licenses: Vec<String>,
@@ -108,6 +109,30 @@ pub struct ReleaseMetadata {
     // extra: (kvlist(string => kvlist(...))) (optional)
 }
 
+impl ReleaseMetadata {
+    pub fn to_erlang(&self) -> String {
+        format!(
+            r#"{{
+  {{name, "{name}"}},
+  {{version, "{version}"}},
+  {{app, "{name}"}},
+  {{files, [{files}]}},
+  {{licenses, [{licenses}]}},
+  {{maintainers, []}},
+  {{links, []}},
+  {{requirements, []}},
+  {{build_tools, [{build_tools}]}}
+}}.
+"#,
+            name = self.name,
+            version = self.version,
+            files = self.files.iter().map(quotes).join(", "),
+            licenses = self.licenses.iter().map(quotes).join(", "),
+            build_tools = self.build_tools.iter().map(quotes).join(", "),
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 struct ReleaseRequirement {
     app: String,
@@ -117,9 +142,48 @@ struct ReleaseRequirement {
     // repository: String,
 }
 
+#[test]
+fn release_metadata_to_erlang() {
+    let meta = ReleaseMetadata {
+        name: "myapp".to_string(),
+        version: "1.2.3".parse().unwrap(),
+        description: "description goes here".to_string(),
+        files: vec![
+            "gleam.toml".to_string(),
+            "src/thingy.gleam".to_string(),
+            "src/whatever.gleam".to_string(),
+        ],
+        licenses: vec![],     // TODO
+        maintainers: vec![],  // TODO
+        links: vec![],        // TODO
+        requirements: vec![], // TODO
+        build_tools: vec!["gleam".to_string(), "rebar3".to_string()],
+    };
+    assert_eq!(
+        meta.to_erlang(),
+        r#"{
+  {name, "myapp"},
+  {version, "1.2.3"},
+  {app, "myapp"},
+  {files, ["gleam.toml", "src/thingy.gleam", "src/whatever.gleam"]},
+  {licenses, []},
+  {maintainers, []},
+  {links, []},
+  {requirements, []},
+  {build_tools, ["gleam", "rebar3"]}
+}.
+"#
+        .to_string()
+    );
+}
+
 fn get_hostname() -> String {
     hostname::get()
         .expect("Looking up hostname")
         .to_string_lossy()
         .to_string()
+}
+
+fn quotes(x: &String) -> String {
+    format!(r#""{}""#, x)
 }
