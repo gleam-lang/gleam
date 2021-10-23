@@ -12,6 +12,8 @@
 - A pubgrub based dependency resolver has been added.
 - Fixed a bug where a forbidden error was returned for a not-found package by
   the get-package API.
+- Swapped the word "token" for "key" to match Hex.
+- Added `remove_api_key_*` functions.
 
 ## v1.3.0 - 2020-03-30
 

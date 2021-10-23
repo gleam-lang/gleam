@@ -58,8 +58,8 @@ async fn authenticate_test_success() {
     let mut config = Config::new();
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let secret = crate::create_api_token_response(
-        http_send(crate::create_api_token_request(
+    let secret = crate::create_api_key_response(
+        http_send(crate::create_api_key_request(
             username, password, name, &config,
         ))
         .await
@@ -92,8 +92,8 @@ async fn authenticate_test_rate_limted() {
     let mut config = Config::new();
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let result = crate::create_api_token_response(
-        http_send(crate::create_api_token_request(
+    let result = crate::create_api_key_response(
+        http_send(crate::create_api_key_request(
             username, password, name, &config,
         ))
         .await
@@ -136,8 +136,8 @@ async fn authenticate_test_bad_creds() {
     let mut config = Config::new();
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
-    let result = crate::create_api_token_response(
-        http_send(crate::create_api_token_request(
+    let result = crate::create_api_key_response(
+        http_send(crate::create_api_key_request(
             username, password, name, &config,
         ))
         .await
@@ -155,7 +155,7 @@ async fn authenticate_test_bad_creds() {
 
 #[tokio::test]
 async fn remove_docs_success() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
@@ -164,7 +164,7 @@ async fn remove_docs_success() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(204)
     .create();
@@ -173,7 +173,35 @@ async fn remove_docs_success() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::remove_docs_response(
-        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+        http_send(crate::remove_docs_request(package, version, key, &config).unwrap())
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(result, ());
+    mock.assert();
+}
+
+#[tokio::test]
+async fn remove_key_success() {
+    let name = "some-key-name";
+    let key = "my-api-key-here";
+    let package = "gleam_experimental_stdlib";
+    let version = "0.8.0";
+
+    let mock = mockito::mock("DELETE", format!("/keys/{}", name).as_str())
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(204)
+        .create();
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
+
+    let result = crate::remove_key_response(
+        http_send(crate::remove_key_request(package, version, key, &config).unwrap())
             .await
             .unwrap(),
     )
@@ -185,7 +213,7 @@ async fn remove_docs_success() {
 
 #[tokio::test]
 async fn remove_docs_unknown_package_version() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib_this_does_not_exist";
     let version = "0.8.0";
 
@@ -194,7 +222,7 @@ async fn remove_docs_unknown_package_version() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(404)
     .create();
@@ -203,7 +231,7 @@ async fn remove_docs_unknown_package_version() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::remove_docs_response(
-        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+        http_send(crate::remove_docs_request(package, version, key, &config).unwrap())
             .await
             .unwrap(),
     )
@@ -219,7 +247,7 @@ async fn remove_docs_unknown_package_version() {
 
 #[tokio::test]
 async fn remove_docs_rate_limted() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
@@ -228,7 +256,7 @@ async fn remove_docs_rate_limted() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(429)
     .create();
@@ -237,7 +265,7 @@ async fn remove_docs_rate_limted() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::remove_docs_response(
-        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+        http_send(crate::remove_docs_request(package, version, key, &config).unwrap())
             .await
             .unwrap(),
     )
@@ -252,8 +280,8 @@ async fn remove_docs_rate_limted() {
 }
 
 #[tokio::test]
-async fn remove_docs_invalid_token() {
-    let token = "my-api-token-here";
+async fn remove_docs_invalid_key() {
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
 
@@ -262,7 +290,7 @@ async fn remove_docs_invalid_token() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(401)
     .with_body(
@@ -278,7 +306,7 @@ async fn remove_docs_invalid_token() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::remove_docs_response(
-        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+        http_send(crate::remove_docs_request(package, version, key, &config).unwrap())
             .await
             .unwrap(),
     )
@@ -294,7 +322,7 @@ async fn remove_docs_invalid_token() {
 
 #[tokio::test]
 async fn remove_docs_forbidden() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "jason";
     let version = "1.2.0";
 
@@ -303,7 +331,7 @@ async fn remove_docs_forbidden() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(403)
     .with_body(
@@ -319,7 +347,7 @@ async fn remove_docs_forbidden() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::remove_docs_response(
-        http_send(crate::remove_docs_request(package, version, token, &config).unwrap())
+        http_send(crate::remove_docs_request(package, version, key, &config).unwrap())
             .await
             .unwrap(),
     )
@@ -335,13 +363,13 @@ async fn remove_docs_forbidden() {
 
 #[tokio::test]
 async fn remove_docs_bad_package_name() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "not valid";
     let version = "1.2.0";
 
     let config = Config::new();
 
-    match crate::remove_docs_request(package, version, token, &config).unwrap_err() {
+    match crate::remove_docs_request(package, version, key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
     }
@@ -349,7 +377,7 @@ async fn remove_docs_bad_package_name() {
 
 #[tokio::test]
 async fn publish_docs_success() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
@@ -359,7 +387,7 @@ async fn publish_docs_success() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(201)
     .create();
@@ -368,7 +396,7 @@ async fn publish_docs_success() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_docs_response(
-        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+        http_send(crate::publish_docs_request(package, version, tarball, key, &config).unwrap())
             .await
             .unwrap(),
     );
@@ -383,14 +411,14 @@ async fn publish_docs_success() {
 
 #[tokio::test]
 async fn publish_docs_bad_package_name() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "not valid";
     let version = "1.2.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::publish_docs_request(package, version, tarball, token, &config).unwrap_err() {
+    match crate::publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
         ApiError::InvalidPackageNameFormat(p) if p == package => (),
         result => panic!("expected Err(ApiError::BadPackage), got {:?}", result),
     }
@@ -398,14 +426,14 @@ async fn publish_docs_bad_package_name() {
 
 #[tokio::test]
 async fn publish_docs_bad_package_version() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "name";
     let version = "invalid version";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
     let config = Config::new();
 
-    match crate::publish_docs_request(package, version, tarball, token, &config).unwrap_err() {
+    match crate::publish_docs_request(package, version, tarball, key, &config).unwrap_err() {
         ApiError::InvalidVersionFormat(v) if v == version => (),
         result => panic!("expected ApiError::BadPackage, got {:?}", result),
     }
@@ -413,7 +441,7 @@ async fn publish_docs_bad_package_version() {
 
 #[tokio::test]
 async fn publish_docs_not_found() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "name";
     let version = "1.1.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
@@ -423,7 +451,7 @@ async fn publish_docs_not_found() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(404)
     .create();
@@ -432,7 +460,7 @@ async fn publish_docs_not_found() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_docs_response(
-        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+        http_send(crate::publish_docs_request(package, version, tarball, key, &config).unwrap())
             .await
             .unwrap(),
     );
@@ -447,7 +475,7 @@ async fn publish_docs_not_found() {
 
 #[tokio::test]
 async fn publish_docs_rate_limit() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "name";
     let version = "1.1.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
@@ -457,7 +485,7 @@ async fn publish_docs_rate_limit() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(429)
     .create();
@@ -466,7 +494,7 @@ async fn publish_docs_rate_limit() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_docs_response(
-        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+        http_send(crate::publish_docs_request(package, version, tarball, key, &config).unwrap())
             .await
             .unwrap(),
     );
@@ -480,8 +508,8 @@ async fn publish_docs_rate_limit() {
 }
 
 #[tokio::test]
-async fn publish_docs_invalid_api_token() {
-    let token = "my-api-token-here";
+async fn publish_docs_invalid_api_key() {
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
@@ -491,7 +519,7 @@ async fn publish_docs_invalid_api_token() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(401)
     .with_body(
@@ -507,7 +535,7 @@ async fn publish_docs_invalid_api_token() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_docs_response(
-        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+        http_send(crate::publish_docs_request(package, version, tarball, key, &config).unwrap())
             .await
             .unwrap(),
     );
@@ -522,7 +550,7 @@ async fn publish_docs_invalid_api_token() {
 
 #[tokio::test]
 async fn publish_docs_forbidden() {
-    let token = "my-api-token-here";
+    let key = "my-api-key-here";
     let package = "gleam_experimental_stdlib";
     let version = "0.8.0";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
@@ -532,7 +560,7 @@ async fn publish_docs_forbidden() {
         format!("/packages/{}/releases/{}/docs", package, version).as_str(),
     )
     .expect(1)
-    .match_header("authorization", token)
+    .match_header("authorization", key)
     .match_header("accept", "application/json")
     .with_status(403)
     .with_body(
@@ -548,7 +576,7 @@ async fn publish_docs_forbidden() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_docs_response(
-        http_send(crate::publish_docs_request(package, version, tarball, token, &config).unwrap())
+        http_send(crate::publish_docs_request(package, version, tarball, key, &config).unwrap())
             .await
             .unwrap(),
     );

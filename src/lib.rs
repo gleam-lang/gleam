@@ -39,9 +39,9 @@ impl Config {
         &self,
         method: http::Method,
         path_suffix: &str,
-        api_token: Option<&str>,
+        api_key: Option<&str>,
     ) -> http::request::Builder {
-        make_request(self.api_base.clone(), method, path_suffix, api_token)
+        make_request(self.api_base.clone(), method, path_suffix, api_key)
             .header("content-type", "application/json")
             .header("accept", "application/json")
     }
@@ -50,9 +50,9 @@ impl Config {
         &self,
         method: http::Method,
         path_suffix: &str,
-        api_token: Option<&str>,
+        api_key: Option<&str>,
     ) -> http::request::Builder {
-        make_request(self.repository_base.clone(), method, path_suffix, api_token)
+        make_request(self.repository_base.clone(), method, path_suffix, api_key)
     }
 }
 
@@ -60,7 +60,7 @@ fn make_request(
     base: http::Uri,
     method: http::Method,
     path_suffix: &str,
-    api_token: Option<&str>,
+    api_key: Option<&str>,
 ) -> http::request::Builder {
     let mut parts = base.into_parts();
     parts.path_and_query = Some(
@@ -75,21 +75,21 @@ fn make_request(
         .method(method)
         .uri(uri)
         .header("user-agent", USER_AGENT);
-    if let Some(token) = api_token {
-        builder = builder.header("authorization", token);
+    if let Some(key) = api_key {
+        builder = builder.header("authorization", key);
     }
     builder
 }
 
-/// Create a request that creates a Hex API token.
-pub fn create_api_token_request(
+/// Create a request that creates a Hex API key.
+pub fn create_api_key_request(
     username: &str,
     password: &str,
-    token_name: &str,
+    key_name: &str,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     let body = json!({
-        "name": token_name,
+        "name": key_name,
         "permissions": [{
             "domain": "api",
             "resource": "write",
@@ -100,11 +100,11 @@ pub fn create_api_token_request(
         .api_request(Method::POST, "keys", None)
         .header("authorization", creds)
         .body(body.to_string().into_bytes())
-        .expect("create_api_token_request request")
+        .expect("create_api_key_request request")
 }
 
-/// Parses a request that creates a Hex API token.
-pub fn create_api_token_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
+/// Parses a request that creates a Hex API key.
+pub fn create_api_key_response(response: http::Response<Vec<u8>>) -> Result<String, ApiError> {
     #[derive(Deserialize)]
     struct Resp {
         secret: String,
@@ -118,18 +118,45 @@ pub fn create_api_token_response(response: http::Response<Vec<u8>>) -> Result<St
     }
 }
 
+/// Create a request that deletes an Hex API key.
+pub fn remove_api_key_request(
+    name_of_key_to_delete: &str,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    config
+        .api_request(
+            Method::DELETE,
+            &format!("key/{}", name_of_key_to_delete),
+            Some(api_key),
+        )
+        .body(vec![])
+        .expect("get_package_tarball_request request")
+}
+
+/// Parses a request that deleted a Hex API key.
+pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT => Ok(()),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
 /// Create a request that get the names and versions of all of the packages on
 /// the package registry.
 ///
 pub fn get_repository_versions_request(
-    api_token: Option<&str>,
+    api_key: Option<&str>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
-        .repository_request(Method::GET, "versions", api_token)
+        .repository_request(Method::GET, "versions", api_key)
         .header("accept", "application/json")
         .body(vec![])
-        .expect("create_api_token_request request")
+        .expect("create_api_key_request request")
 }
 
 /// Parse a request that get the names and versions of all of the packages on
@@ -176,11 +203,11 @@ pub fn get_repository_versions_response(
 ///
 pub fn get_package_request(
     name: &str,
-    api_token: Option<&str>,
+    api_key: Option<&str>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
-        .repository_request(Method::GET, &format!("packages/{}", name), api_token)
+        .repository_request(Method::GET, &format!("packages/{}", name), api_key)
         .header("accept", "application/json")
         .body(vec![])
         .expect("get_package_request request")
@@ -228,14 +255,14 @@ pub fn get_package_response(
 pub fn get_package_tarball_request(
     name: &str,
     version: &str,
-    api_token: Option<&str>,
+    api_key: Option<&str>,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
     config
         .repository_request(
             Method::GET,
             &format!("tarballs/{}-{}.tar", name, version),
-            api_token,
+            api_key,
         )
         .header("accept", "application/x-tar")
         .body(vec![])
@@ -263,7 +290,7 @@ pub fn get_package_tarball_response(
 pub fn remove_docs_request(
     package_name: &str,
     version: &str,
-    api_token: &str,
+    api_key: &str,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
@@ -272,7 +299,7 @@ pub fn remove_docs_request(
         .api_request(
             Method::DELETE,
             &format!("packages/{}/releases/{}/docs", package_name, version),
-            Some(api_token),
+            Some(api_key),
         )
         .body(vec![])
         .expect("get_package_tarball_request request"))
@@ -294,7 +321,7 @@ pub fn publish_docs_request(
     package_name: &str,
     version: &str,
     gzipped_tarball: Vec<u8>,
-    api_token: &str,
+    api_key: &str,
     config: &Config,
 ) -> Result<http::Request<Vec<u8>>, ApiError> {
     validate_package_and_version(package_name, version)?;
@@ -303,7 +330,7 @@ pub fn publish_docs_request(
         .api_request(
             Method::POST,
             &format!("packages/{}/releases/{}/docs", package_name, version),
-            Some(api_token),
+            Some(api_key),
         )
         .header("content-encoding", "x-gzip")
         .header("content-type", "application/x-tar")
