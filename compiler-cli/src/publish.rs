@@ -35,7 +35,8 @@ pub async fn perform_command() -> Result<()> {
     // TODO: Build HTML documentation
 
     tracing::info!("Creating release tarball");
-    let _tarball = contents_tarball()?;
+    let files = project_files();
+    let _tarball = contents_tarball(&files)?;
     let _version_int = package_version_int(&config.name).await?;
 
     // TODO: Build release tarball
@@ -67,18 +68,24 @@ async fn package_version_int(name: &str) -> Result<usize> {
     Ok(int)
 }
 
-fn contents_tarball() -> Result<Vec<u8>, Error> {
+// TODO: return the list of file paths from here to use in the metadata
+fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
     let mut contents_tar_gz = Vec::new();
     {
         let mut tarball =
             tar::Builder::new(GzEncoder::new(&mut contents_tar_gz, Compression::default()));
-        for path in fs::gleam_files(&PathBuf::from("src")) {
+        for path in files {
             add_to_tar(&mut tarball, path)?;
         }
-        add_to_tar(&mut tarball, "gleam.toml")?;
         tarball.finish().map_err(Error::finish_tar)?;
     }
     Ok(contents_tar_gz)
+}
+
+fn project_files() -> Vec<PathBuf> {
+    let mut files: Vec<PathBuf> = fs::gleam_files(&PathBuf::from("src")).collect();
+    files.push(PathBuf::from("gleam.toml"));
+    files
 }
 
 fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P) -> Result<()>
@@ -99,7 +106,7 @@ pub struct ReleaseMetadata {
     version: String,
     // app: String,
     description: String,
-    files: Vec<String>,
+    files: Vec<PathBuf>,
     licenses: Vec<String>, // TODO: use spdx licence type to ensure correct format
     links: Vec<(String, String)>, // TODO: use http::Uri type to ensure correct format
     requirements: Vec<ReleaseRequirement>,
@@ -117,8 +124,8 @@ impl ReleaseMetadata {
                 url = link.1
             )
         }
-        fn file(name: &String) -> String {
-            format!("\n  <<\"{name}\">>", name = name)
+        fn file(name: &PathBuf) -> String {
+            format!("\n  <<\"{name}\">>", name = name.to_string_lossy())
         }
 
         format!(
@@ -179,9 +186,9 @@ fn release_metadata_to_erlang() {
         version: "1.2.3".parse().unwrap(),
         description: "description goes here".to_string(),
         files: vec![
-            "gleam.toml".to_string(),
-            "src/thingy.gleam".to_string(),
-            "src/whatever.gleam".to_string(),
+            PathBuf::from("gleam.toml"),
+            PathBuf::from("src/thingy.gleam"),
+            PathBuf::from("src/whatever.gleam"),
         ],
         licenses: vec!["MIT".to_string(), "MPL-2.0".to_string()],
         links: vec![
