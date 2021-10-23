@@ -5,6 +5,7 @@ use std::{
 
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
+use hexpm::version::{Range, Version};
 use itertools::Itertools;
 
 use crate::{build, cli, fs, http::HttpClient};
@@ -24,6 +25,38 @@ pub async fn perform_command() -> Result<()> {
     // Build the project to check that it is valid
     let _ = build::main()?;
 
+    // TODO: Build HTML documentation
+
+    tracing::info!("Creating release tarball");
+    let files = project_files();
+    let _tarball = contents_tarball(&files)?;
+    let _version_int = package_version_int(&config.name).await?.to_string();
+    let metadata = ReleaseMetadata {
+        name: &config.name,
+        version: &config.version,
+        description: &config.description,
+        files,
+        licenses: vec![], // TODO: get from config, assert it exists
+        links: config
+            .docs
+            .links
+            .iter()
+            .map(|l| (l.title.as_str(), l.href.as_str()))
+            .collect(), // TODO: move links to the top level
+        requirements: config
+            .dependencies
+            .iter()
+            .map(|(name, requirement)| ReleaseRequirement {
+                name: name.as_str(),
+                requirement,
+            })
+            .collect(),
+        build_tools: vec!["gleam"],
+    }
+    .as_erlang();
+
+    tracing::debug!(contents = ?metadata, "Generated metadata.config");
+
     // Get login creds from user
     let username = cli::ask("https://hex.pm username")?;
     let password = cli::ask_password("https://hex.pm password")?;
@@ -31,13 +64,6 @@ pub async fn perform_command() -> Result<()> {
     // Create API token
     let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
         .await?;
-
-    // TODO: Build HTML documentation
-
-    tracing::info!("Creating release tarball");
-    let files = project_files();
-    let _tarball = contents_tarball(&files)?;
-    let _version_int = package_version_int(&config.name).await?;
 
     // TODO: Build release tarball
     // https://github.com/hexpm/specifications/blob/master/package_tarball.md
@@ -61,7 +87,7 @@ async fn package_version_int(name: &str) -> Result<usize> {
     let response = HttpClient::new().send(request).await?;
     let int = match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
         Ok(response) => response.releases.len(),
-        Err(hexpm::ApiError::NotFound) => 0, // Not found
+        Err(hexpm::ApiError::NotFound) => 0,
         Err(e) => return Err(Error::hex(e)),
     };
     tracing::debug!(version=%int, "Package int version fetched");
@@ -111,8 +137,7 @@ where
 #[derive(Debug, Clone)]
 pub struct ReleaseMetadata<'a> {
     name: &'a str,
-    version: &'a str,
-    // app: &'a str,
+    version: &'a Version,
     description: &'a str,
     files: Vec<PathBuf>,
     licenses: Vec<&'a str>, // TODO: use spdx licence type to ensure correct format
@@ -124,7 +149,7 @@ pub struct ReleaseMetadata<'a> {
 }
 
 impl<'a> ReleaseMetadata<'a> {
-    pub fn to_erlang(&self) -> String {
+    pub fn as_erlang(&self) -> String {
         fn link(link: &(&str, &str)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
@@ -158,7 +183,7 @@ impl<'a> ReleaseMetadata<'a> {
             requirements = self
                 .requirements
                 .iter()
-                .map(ReleaseRequirement::to_erlang)
+                .map(ReleaseRequirement::as_erlang)
                 .join(",")
         )
     }
@@ -166,14 +191,14 @@ impl<'a> ReleaseMetadata<'a> {
 
 #[derive(Debug, Clone)]
 struct ReleaseRequirement<'a> {
-    app: &'a str,
+    name: &'a str,
     // optional: bool,
-    requirement: &'a str,
+    requirement: &'a Range,
     // Support alternate repositories at a later date.
     // repository: String,
 }
 impl<'a> ReleaseRequirement<'a> {
-    pub fn to_erlang(&self) -> String {
+    pub fn as_erlang(&self) -> String {
         format!(
             r#"
   {{<<"{app}">>, [
@@ -181,17 +206,20 @@ impl<'a> ReleaseRequirement<'a> {
     {{<<"optional">>, false}},
     {{<<"requirement">>, <<"{requirement}">>}}
   ]}}"#,
-            app = self.app,
+            app = self.name,
             requirement = self.requirement,
         )
     }
 }
 
 #[test]
-fn release_metadata_to_erlang() {
+fn release_metadata_as_erlang() {
+    let version = "1.2.3".try_into().unwrap();
+    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
+    let req2 = Range::new("~> 1.2".to_string());
     let meta = ReleaseMetadata {
         name: "myapp",
-        version: "1.2.3",
+        version: &version,
         description: "description goes here",
         files: vec![
             PathBuf::from("gleam.toml"),
@@ -205,18 +233,18 @@ fn release_metadata_to_erlang() {
         ],
         requirements: vec![
             ReleaseRequirement {
-                app: "wibble",
-                requirement: "~> 1.2.3 or >= 5.0.0",
+                name: "wibble",
+                requirement: &req1,
             },
             ReleaseRequirement {
-                app: "wobble",
-                requirement: "~> 1.2",
+                name: "wobble",
+                requirement: &req2,
             },
         ],
         build_tools: vec!["gleam", "rebar3"],
     };
     assert_eq!(
-        meta.to_erlang(),
+        meta.as_erlang(),
         r#"{<<"name">>, <<"myapp">>}.
 {<<"app">>, <<"myapp">>}.
 {<<"version">>, <<"1.2.3">>}.
