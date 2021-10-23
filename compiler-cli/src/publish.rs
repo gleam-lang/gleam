@@ -111,26 +111,40 @@ pub struct ReleaseMetadata {
 impl ReleaseMetadata {
     pub fn to_erlang(&self) -> String {
         fn link(link: &(String, String)) -> String {
-            format!(r#"{{"{name}", "{url}"}}"#, name = link.0, url = link.1)
+            format!(
+                "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
+                name = link.0,
+                url = link.1
+            )
         }
+        fn file(name: &String) -> String {
+            format!("\n  <<\"{name}\">>", name = name)
+        }
+
         format!(
-            r#"{{
-  {{name, "{name}"}},
-  {{version, "{version}"}},
-  {{app, "{name}"}},
-  {{files, [{files}]}},
-  {{licenses, [{licenses}]}},
-  {{links, [{links}]}},
-  {{requirements, []}},
-  {{build_tools, [{build_tools}]}}
-}}.
+            r#"{{<<"name">>, <<"{name}">>}}.
+{{<<"app">>, <<"{name}">>}}.
+{{<<"version">>, <<"{version}">>}}.
+{{<<"licenses">>, [{licenses}]}}.
+{{<<"build_tools">>, [{build_tools}]}}.
+{{<<"links">>, [{links}
+]}}.
+{{<<"requirements">>, [{requirements}
+]}}.
+{{<<"files">>, [{files}
+]}}.
 "#,
             name = self.name,
             version = self.version,
-            files = self.files.iter().map(quotes).join(", "),
-            links = self.links.iter().map(link).join(", "),
+            files = self.files.iter().map(file).join(","),
+            links = self.links.iter().map(link).join(","),
             licenses = self.licenses.iter().map(quotes).join(", "),
             build_tools = self.build_tools.iter().map(quotes).join(", "),
+            requirements = self
+                .requirements
+                .iter()
+                .map(ReleaseRequirement::to_erlang)
+                .join(",")
         )
     }
 }
@@ -138,10 +152,24 @@ impl ReleaseMetadata {
 #[derive(Debug, Clone)]
 struct ReleaseRequirement {
     app: String,
-    optional: String,
+    // optional: bool,
     requirement: String,
     // Support alternate repositories at a later date.
     // repository: String,
+}
+impl ReleaseRequirement {
+    pub fn to_erlang(&self) -> String {
+        format!(
+            r#"
+  {{<<"{app}">>, [
+    {{<<"app">>, <<"{app}">>}},
+    {{<<"optional">>, false}},
+    {{<<"requirement">>, <<"{requirement}">>}}
+  ]}}"#,
+            app = self.app,
+            requirement = self.requirement,
+        )
+    }
 }
 
 #[test]
@@ -163,21 +191,46 @@ fn release_metadata_to_erlang() {
                 "https://github.com/lpil/myapp".to_string(),
             ),
         ],
-        requirements: vec![], // TODO
+        requirements: vec![
+            ReleaseRequirement {
+                app: "wibble".to_string(),
+                requirement: "~> 1.2.3 or >= 5.0.0".to_string(),
+            },
+            ReleaseRequirement {
+                app: "wobble".to_string(),
+                requirement: "~> 1.2".to_string(),
+            },
+        ],
         build_tools: vec!["gleam".to_string(), "rebar3".to_string()],
     };
     assert_eq!(
         meta.to_erlang(),
-        r#"{
-  {name, "myapp"},
-  {version, "1.2.3"},
-  {app, "myapp"},
-  {files, ["gleam.toml", "src/thingy.gleam", "src/whatever.gleam"]},
-  {licenses, ["MIT", "MPL-2.0"]},
-  {links, [{"homepage", "https://gleam.run"}, {"github", "https://github.com/lpil/myapp"}]},
-  {requirements, []},
-  {build_tools, ["gleam", "rebar3"]}
-}.
+        r#"{<<"name">>, <<"myapp">>}.
+{<<"app">>, <<"myapp">>}.
+{<<"version">>, <<"1.2.3">>}.
+{<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
+{<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
+{<<"links">>, [
+  {<<"homepage">>, <<"https://gleam.run">>},
+  {<<"github">>, <<"https://github.com/lpil/myapp">>}
+]}.
+{<<"requirements">>, [
+  {<<"wibble">>, [
+    {<<"app">>, <<"wibble">>},
+    {<<"optional">>, false},
+    {<<"requirement">>, <<"~> 1.2.3 or >= 5.0.0">>}
+  ]},
+  {<<"wobble">>, [
+    {<<"app">>, <<"wobble">>},
+    {<<"optional">>, false},
+    {<<"requirement">>, <<"~> 1.2">>}
+  ]}
+]}.
+{<<"files">>, [
+  <<"gleam.toml">>,
+  <<"src/thingy.gleam">>,
+  <<"src/whatever.gleam">>
+]}.
 "#
         .to_string()
     );
@@ -191,5 +244,5 @@ fn get_hostname() -> String {
 }
 
 fn quotes(x: &String) -> String {
-    format!(r#""{}""#, x)
+    format!(r#"<<"{}">>"#, x)
 }
