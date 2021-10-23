@@ -23,9 +23,9 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
     let password = cli::ask_password("https://hex.pm password")?;
 
     // Authenticate with API
-    let request = hexpm::create_api_token_request(&username, &password, TOKEN_NAME, &config);
+    let request = hexpm::create_api_key_request(&username, &password, TOKEN_NAME, &config);
     let response = runtime.block_on(http.send(request))?;
-    let token = hexpm::create_api_token_response(response).map_err(Error::hex)?;
+    let token = hexpm::create_api_key_response(response).map_err(Error::hex)?;
 
     // Remove docs from API
     let request =
@@ -95,9 +95,9 @@ pub fn publish(project_root: String, version: String) -> Result<(), Error> {
     let password = cli::ask_password("https://hex.pm password")?;
 
     // Authenticate with API
-    let request = hexpm::create_api_token_request(&username, &password, TOKEN_NAME, &hex_config);
+    let request = hexpm::create_api_key_request(&username, &password, TOKEN_NAME, &hex_config);
     let response = runtime.block_on(http.send(request))?;
-    let token = hexpm::create_api_token_response(response).map_err(Error::hex)?;
+    let token = hexpm::create_api_key_response(response).map_err(Error::hex)?;
 
     // Upload to hex
     let request = hexpm::publish_docs_request(&config.name, &version, archive, &token, &hex_config)
