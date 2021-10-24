@@ -1,6 +1,7 @@
 use std::{
     io::Write,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 use flate2::{write::GzEncoder, Compression};
@@ -31,11 +32,14 @@ pub async fn perform_command() -> Result<()> {
     // TODO: Build HTML documentation
 
     // Build the package release tarball
-    let tarball = build_hex_tarball(config).await?;
+    let tarball = build_hex_tarball(&config)?;
 
     // Get login creds from user
     let username = cli::ask("https://hex.pm username")?;
     let password = cli::ask_password("https://hex.pm password")?;
+
+    let start = Instant::now();
+    cli::print_publishing(&config.name, &config.version);
 
     // Create API token
     let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
@@ -53,16 +57,16 @@ pub async fn perform_command() -> Result<()> {
     // we remove it even in the case of an error
     result?;
 
-    // TODO: print publish success
+    cli::print_published(start.elapsed());
 
     Ok(())
 }
 
-async fn build_hex_tarball(config: gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
+fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
     let files = project_files();
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
-    let metadata = metadata_config(config, files);
+    let metadata = metadata_config(&config, files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -86,7 +90,7 @@ async fn build_hex_tarball(config: gleam_core::config::PackageConfig) -> Result<
     Ok(tarball)
 }
 
-fn metadata_config(config: gleam_core::config::PackageConfig, files: Vec<PathBuf>) -> String {
+fn metadata_config(config: &gleam_core::config::PackageConfig, files: Vec<PathBuf>) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
