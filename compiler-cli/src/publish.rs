@@ -66,7 +66,7 @@ fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u
     let files = project_files();
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
-    let metadata = metadata_config(&config, files);
+    let metadata = metadata_config(config, files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
