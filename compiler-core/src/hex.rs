@@ -43,6 +43,18 @@ fn key_name(hostname: &str) -> String {
     format!("gleam-{}", hostname)
 }
 
+pub async fn publish_package<Http: HttpClient>(
+    release_tarball: Vec<u8>,
+    api_key: &str,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!("Creating API key with Hex");
+    let request = hexpm::publish_package_request(release_tarball, api_key, config);
+    let response = http.send(request).await?;
+    hexpm::publish_package_response(response).map_err(Error::hex)
+}
+
 pub async fn create_api_key<Http: HttpClient>(
     hostname: &str,
     username: &str,
