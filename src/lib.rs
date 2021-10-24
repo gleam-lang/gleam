@@ -350,6 +350,32 @@ pub fn publish_docs_response(response: http::Response<Vec<u8>>) -> Result<(), Ap
     }
 }
 
+pub fn publish_package_request(
+    release_tarball: Vec<u8>,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    // TODO: do all the package tarball construction
+    config
+        .api_request(Method::POST, "publish", Some(api_key))
+        .header("content-type", "application/x-tar")
+        .body(release_tarball)
+        .expect("publish_package_request request")
+}
+
+pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    // TODO: return data from body
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::CREATED => Ok(()),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error(transparent)]

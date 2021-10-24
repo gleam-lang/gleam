@@ -868,3 +868,32 @@ async fn get_repository_tarball_not_found_test() {
 
     assert_eq!(err.to_string(), "resource was not found");
 }
+
+#[tokio::test]
+async fn publish_package_success() {
+    let key = "my-api-key-here";
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
+
+    let mock = mockito::mock("POST", "/publish")
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(201)
+        .create();
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
+
+    let result = crate::publish_package_response(
+        http_send(crate::publish_package_request(tarball, key, &config))
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Ok(()) => (),
+        result => panic!("expected Ok(()), got {:?}", result),
+    }
+
+    mock.assert()
+}
