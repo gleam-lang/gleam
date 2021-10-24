@@ -2,6 +2,7 @@ use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
 };
+use hexpm::version::Version;
 use std::{
     io::Write,
     time::{Duration, Instant},
@@ -44,6 +45,14 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
             err: Some(e.kind()),
         })
         .map(|s| s.trim().to_string())
+}
+
+pub fn print_publishing(name: &str, version: &Version) {
+    print_green_prefix(" Publishing", &format!("{} v{}", name, version.to_string()))
+}
+
+pub fn print_published(duration: Duration) {
+    print_green_prefix("  Published", &format!("in {}", seconds(duration)))
 }
 
 pub fn print_downloading(text: &str) {
