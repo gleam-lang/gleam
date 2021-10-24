@@ -4,7 +4,7 @@ use std::{
 };
 
 use flate2::{write::GzEncoder, Compression};
-use gleam_core::{hex::HEXPM_PUBLIC_KEY, io::HttpClient as _, Error, Result};
+use gleam_core::{hex, Error, Result};
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
@@ -23,25 +23,15 @@ pub async fn perform_command() -> Result<()> {
     let hex_config = hexpm::Config::new();
     let http = HttpClient::new();
 
+    // TODO: validate that config.description is non-null
+
     // Build the project to check that it is valid
     let _ = build::main()?;
 
     // TODO: Build HTML documentation
 
     // Build the package release tarball
-    let files = project_files();
-    let contents_tar_gz = contents_tarball(&files)?;
-    let version = package_version_int(&config.name).await?.to_string();
-    let metadata = metadata_config(config, files);
-
-    // Create inner checksum
-    let mut hasher = sha2::Sha256::new();
-    hasher.update(version.as_bytes());
-    hasher.update(metadata.as_bytes());
-    hasher.update(contents_tar_gz);
-    let checksum = base16::encode_upper(&hasher.finalize());
-
-    tracing::info!(checksum = %checksum, "Generated Hex package inner checksum");
+    let tarball = build_hex_tarball(config).await?;
 
     // Get login creds from user
     let username = cli::ask("https://hex.pm username")?;
@@ -51,17 +41,49 @@ pub async fn perform_command() -> Result<()> {
     let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
         .await?;
 
-    // TODO: Build release tarball
-    // https://github.com/hexpm/specifications/blob/master/package_tarball.md
-
-    // TODO: Publish release to hexpm
+    // Publish release to hexpm
+    let result = hex::publish_package(tarball, &key, &hex_config, &http).await;
 
     // TODO: Publish docs to hexpm for release
 
     // Delete API token
     gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
 
+    // The result from publishing is handled after key deletion to ensure that
+    // we remove it even in the case of an error
+    result?;
+
+    // TODO: print publish success
+
     Ok(())
+}
+
+async fn build_hex_tarball(config: gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
+    let files = project_files();
+    let contents_tar_gz = contents_tarball(&files)?;
+    let version = "3";
+    let metadata = metadata_config(config, files);
+
+    // Calculate checksum
+    let mut hasher = sha2::Sha256::new();
+    hasher.update(version.as_bytes());
+    hasher.update(metadata.as_bytes());
+    hasher.update(contents_tar_gz.as_slice());
+    let checksum = base16::encode_upper(&hasher.finalize());
+    tracing::info!(checksum = %checksum, "Generated Hex package inner checksum");
+
+    // Build tarball
+    let mut tarball = Vec::new();
+    {
+        let mut tarball = tar::Builder::new(&mut tarball);
+        add_to_tar(&mut tarball, "VERSION", version.as_bytes())?;
+        add_to_tar(&mut tarball, "metadata.config", metadata.as_bytes())?;
+        add_to_tar(&mut tarball, "contents.tar.gz", contents_tar_gz.as_slice())?;
+        add_to_tar(&mut tarball, "CHECKSUM", checksum.as_bytes())?;
+        tarball.finish().map_err(Error::finish_tar)?;
+    }
+    tracing::info!("Generated package Hex release tarball");
+    Ok(tarball)
 }
 
 fn metadata_config(config: gleam_core::config::PackageConfig, files: Vec<PathBuf>) -> String {
@@ -92,29 +114,13 @@ fn metadata_config(config: gleam_core::config::PackageConfig, files: Vec<PathBuf
     metadata
 }
 
-/// Hex wants a second version number that is a single int. It's unclear why,
-/// and we don't know what this number should be locally, so use the number of
-/// releases as that int.
-async fn package_version_int(name: &str) -> Result<usize> {
-    let config = hexpm::Config::new();
-    let request = hexpm::get_package_request(name, None, &config);
-    let response = HttpClient::new().send(request).await?;
-    let int = match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-        Ok(response) => response.releases.len(),
-        Err(hexpm::ApiError::NotFound) => 0,
-        Err(e) => return Err(Error::hex(e)),
-    };
-    tracing::info!(number=%int, "Package Hex internal version");
-    Ok(int)
-}
-
 fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
     let mut contents_tar_gz = Vec::new();
     {
         let mut tarball =
             tar::Builder::new(GzEncoder::new(&mut contents_tar_gz, Compression::default()));
         for path in files {
-            add_to_tar(&mut tarball, path)?;
+            add_path_to_tar(&mut tarball, path)?;
         }
         tarball.finish().map_err(Error::finish_tar)?;
     }
@@ -137,7 +143,23 @@ fn project_files() -> Vec<PathBuf> {
     files
 }
 
-fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P) -> Result<()>
+fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P, data: &[u8]) -> Result<()>
+where
+    P: AsRef<Path>,
+    W: Write,
+{
+    let path = path.as_ref();
+    tracing::info!(file=?path, "Adding file to tarball");
+    let mut header = tar::Header::new_gnu();
+    header.set_mode(0o600);
+    header.set_size(data.len() as u64);
+    header.set_cksum();
+    tarball
+        .append_data(&mut header, path, data)
+        .map_err(|e| Error::add_tar(path, e))
+}
+
+fn add_path_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P) -> Result<()>
 where
     P: AsRef<Path>,
     W: Write,
@@ -180,6 +202,7 @@ impl<'a> ReleaseMetadata<'a> {
             r#"{{<<"name">>, <<"{name}">>}}.
 {{<<"app">>, <<"{name}">>}}.
 {{<<"version">>, <<"{version}">>}}.
+{{<<"description">>, <<"{description}">>}}.
 {{<<"licenses">>, [{licenses}]}}.
 {{<<"build_tools">>, [{build_tools}]}}.
 {{<<"links">>, [{links}
@@ -191,6 +214,7 @@ impl<'a> ReleaseMetadata<'a> {
 "#,
             name = self.name,
             version = self.version,
+            description = self.description,
             files = self.files.iter().map(file).join(","),
             links = self.links.iter().map(link).join(","),
             licenses = self.licenses.iter().map(quotes).join(", "),
@@ -263,6 +287,7 @@ fn release_metadata_as_erlang() {
         r#"{<<"name">>, <<"myapp">>}.
 {<<"app">>, <<"myapp">>}.
 {<<"version">>, <<"1.2.3">>}.
+{<<"description">>, <<"description goes here">>}.
 {<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
 {<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
 {<<"links">>, [
