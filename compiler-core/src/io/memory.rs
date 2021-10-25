@@ -43,13 +43,26 @@ impl FileSystemWriter for InMemoryFileSystem {
 }
 
 impl FileSystemReader for InMemoryFileSystem {
-    fn gleam_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+    fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
         #[allow(clippy::needless_collect)] // to make borrow work. FIXME.
         let files: Vec<PathBuf> = (*self.files)
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
+            .filter(|file_path| file_path.ends_with(".gleam"))
+            .collect();
+        Box::new(files.into_iter())
+    }
+
+    fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+        #[allow(clippy::needless_collect)] // to make borrow work. FIXME.
+        let files: Vec<PathBuf> = (*self.files)
+            .borrow()
+            .iter()
+            .map(|(file_path, _)| file_path.to_path_buf())
+            .filter(|file_path| file_path.starts_with(dir))
+            .filter(|file_path| file_path.ends_with(".gleam_module"))
             .collect();
         Box::new(files.into_iter())
     }

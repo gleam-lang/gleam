@@ -1,26 +1,25 @@
-use codegen::ErlangApp;
-
 use crate::{
     build::{
         dep_tree, package_compiler, package_compiler::PackageCompiler, telemetry::Telemetry, Mode,
         Module, Origin, Package, Target,
     },
-    codegen,
+    codegen::{self, ErlangApp},
     config::PackageConfig,
     io::{FileSystemIO, FileSystemWriter},
-    paths, type_, warning, Error, Warning,
+    metadata, paths, type_, warning, Error, Result, Warning,
 };
 use std::{
     collections::HashMap,
     fmt::Write,
+    io::BufReader,
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
     root_config: PackageConfig,
     configs: HashMap<String, PackageConfig>,
-    packages: HashMap<String, Package>,
     importable_modules: HashMap<String, type_::Module>,
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
@@ -44,7 +43,6 @@ where
     ) -> Self {
         let estimated_number_of_modules = configs.len() * 5;
         Self {
-            packages: HashMap::with_capacity(configs.len()),
             importable_modules: HashMap::with_capacity(estimated_number_of_modules),
             defined_modules: HashMap::with_capacity(estimated_number_of_modules),
             warnings: Vec::new(),
@@ -55,7 +53,7 @@ where
         }
     }
 
-    pub fn compile(mut self) -> Result<HashMap<String, Package>, Error> {
+    pub fn compile(mut self) -> Result<()> {
         // Determine package processing order
         let sequence = order_packages(&self.configs)?;
 
@@ -68,10 +66,9 @@ where
         // Read and type check top level package
         let root_config = std::mem::replace(&mut self.root_config, Default::default());
         let name = root_config.name.clone();
-        let compiled = self.compile_package(&name, root_config, SourceLocations::SrcAndTest)?;
-        let _ = self.packages.insert(name, compiled);
+        self.compile_package(&name, root_config, SourceLocations::SrcAndTest)?;
 
-        Ok(self.packages)
+        Ok(())
     }
 
     fn load_cache_or_compile_package(
@@ -80,28 +77,30 @@ where
         config: PackageConfig,
     ) -> Result<(), Error> {
         let build_path = paths::build_package(Mode::Dev, Target::Erlang, &name);
-        let compiled = if self.io.is_directory(&build_path) {
+        if self.io.is_directory(&build_path) {
             tracing::info!(package=%name, "Loading precompiled package");
-            self.load_cached_package(&name, config)
+            self.load_cached_package(build_path, &name, config)
         } else {
             self.compile_package(&name, config, SourceLocations::Src)
-        }?;
-        let _ = self.packages.insert(name, compiled);
-        return Ok(());
+        }
     }
 
-    fn load_cached_package(&mut self, name: &str, config: PackageConfig) -> Result<Package, Error> {
-        let package = Package {
-            name: name.to_string(),
-            modules: vec![Module {
-                name: todo!(),
-                code: todo!(),
-                input_path: todo!(),
-                origin: todo!(),
-                ast: todo!(),
-            }],
-        };
-        Ok(package)
+    fn load_cached_package(
+        &mut self,
+        build_dir: PathBuf,
+        name: &str,
+        config: PackageConfig,
+    ) -> Result<(), Error> {
+        for path in self.io.gleam_metadata_files(&build_dir) {
+            let reader = BufReader::new(self.io.reader(&path)?);
+            let module = metadata::ModuleDecoder::new().read(reader)?;
+            let _ = self
+                .importable_modules
+                .insert(module.name.join("/"), module)
+                .ok_or(())
+                .expect_err("Metadata loaded for already loaded module");
+        }
+        Ok(())
     }
 
     fn compile_package(
@@ -109,7 +108,7 @@ where
         name: &str,
         config: PackageConfig,
         locations: SourceLocations,
-    ) -> Result<Package, Error> {
+    ) -> Result<(), Error> {
         self.telemetry.compiling_package(&name);
         let test_path = match locations {
             SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(name)),
@@ -163,7 +162,7 @@ where
         // Compile Erlang to .beam files
         self.compile_erlang_to_beam(&out_path, &modules)?;
 
-        Ok(compiled)
+        Ok(())
     }
 
     // TODO: remove this IO from core. Inject the command runner
