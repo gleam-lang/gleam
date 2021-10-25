@@ -284,7 +284,7 @@ pub fn main() {{
             self.root.join(".gitignore"),
             "*.beam
 *.ez
-.build
+build
 ",
         )
     }

@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use crate::build::{Mode, Target};
 
 pub fn build() -> PathBuf {
-    PathBuf::from(".build")
+    PathBuf::from("build")
 }
 
 pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {
