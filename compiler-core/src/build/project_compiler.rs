@@ -79,8 +79,8 @@ where
         name: String,
         config: PackageConfig,
     ) -> Result<(), Error> {
-        // TODO: remove this IO reading the FS. Use injected IO
-        let compiled = if paths::build_package(Mode::Dev, Target::Erlang, &name).exists() {
+        let build_path = paths::build_package(Mode::Dev, Target::Erlang, &name);
+        let compiled = if self.io.is_directory(&build_path) {
             tracing::info!(package=%name, "Loading precompiled package");
             self.load_cached_package(&name, config)
         } else {
