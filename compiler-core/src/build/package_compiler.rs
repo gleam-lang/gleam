@@ -125,7 +125,7 @@ where
         tracing::info!("Reading source files");
 
         // Src
-        for path in self.io.gleam_files(&self.options.src_path) {
+        for path in self.io.gleam_source_files(&self.options.src_path) {
             let name = module_name(&self.options.src_path, &path);
             let code = self.io.read(&path)?;
             self.sources.push(Source {
@@ -138,7 +138,7 @@ where
 
         // Test
         if let Some(test_path) = &self.options.test_path {
-            for path in self.io.gleam_files(test_path) {
+            for path in self.io.gleam_source_files(test_path) {
                 let name = module_name(test_path, &path);
                 let code = self.io.read(&path)?;
                 self.sources.push(Source {
