@@ -170,10 +170,10 @@ jobs:
           cd app_project
           rebar3 eunit
 
-      - name: Test lib template
+      - name: Test rebar lib template
         run: |
-          gleam new lib_project --template=rebar-lib
-          cd lib_project
+          gleam new rebar_lib_project --template=rebar-lib
+          cd rebar_lib_project
           rebar3 eunit
 
       - name: Test escript template
