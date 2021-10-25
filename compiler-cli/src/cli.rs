@@ -63,6 +63,10 @@ pub fn print_compiling(text: &str) {
     print_green_prefix("  Compiling", text)
 }
 
+pub fn print_compiled(duration: Duration) {
+    print_green_prefix("   Compiled", &format!("in {}", seconds(duration)))
+}
+
 pub fn print_running(text: &str) {
     print_green_prefix("    Running", text)
 }
