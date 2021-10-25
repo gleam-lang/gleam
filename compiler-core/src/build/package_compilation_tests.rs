@@ -24,6 +24,7 @@ macro_rules! assert_erlang_compile {
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
             out_path: PathBuf::from("_build/default/lib/the_package/src"),
+            write_metadata: false,
             test_path: None,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
@@ -45,6 +46,7 @@ macro_rules! assert_javascript_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let mut modules = HashMap::new();
         let options = Options {
+            write_metadata: false,
             target: Target::JavaScript,
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
@@ -70,6 +72,7 @@ macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
         let mut modules = HashMap::new();
         let options = Options {
+            write_metadata: false,
             target: Target::Erlang,
             name: "the_package".to_string(),
             src_path: PathBuf::from("_build/default/lib/the_package/src"),
@@ -1781,6 +1784,7 @@ fn config_compilation_test() {
             let mut modules = HashMap::new();
             let (file_writer, file_receiver) = FilesChannel::new();
             let options = package_compiler::Options {
+                write_metadata: false,
                 target: Target::Erlang,
                 name: config.name.clone(),
                 src_path: PathBuf::from("src"),

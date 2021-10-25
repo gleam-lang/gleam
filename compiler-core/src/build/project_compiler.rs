@@ -90,6 +90,7 @@ where
             target: Target::Erlang,
             src_path: paths::build_deps_package_src(&name),
             out_path: out_path.clone(),
+            write_metadata: true,
             test_path,
             name: name.clone(),
         };
@@ -135,6 +136,7 @@ where
 
     // TODO: remove this IO from core. Inject the command runner
     fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[PathBuf]) -> Result<(), Error> {
+        tracing::info!("Compiling Erlang code");
         let escript_path = paths::build_scripts().join("compile_erlang.erl");
 
         // Run escript to compile Erlang to beam files

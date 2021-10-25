@@ -194,6 +194,7 @@ impl CompilePackage {
             src_path: self.src_directory,
             test_path: self.test_directory,
             out_path: self.output_directory,
+            write_metadata: true,
         }
     }
 }
