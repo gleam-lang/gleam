@@ -44,7 +44,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
         Box::new({
             let dir = dir.to_path_buf();
-            walkdir::WalkDir::new(dir.clone())
+            walkdir::WalkDir::new(dir)
                 .follow_links(true)
                 .into_iter()
                 .filter_map(Result::ok)
