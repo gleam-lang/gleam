@@ -62,37 +62,68 @@ where
         // Read and type check deps packages
         for name in sequence {
             let config = self.configs.remove(&name).expect("Missing package config");
-            self.compile_package(name, config, SourceLocations::Src)?;
+            self.load_cache_or_compile_package(name, config)?;
         }
 
         // Read and type check top level package
         let root_config = std::mem::replace(&mut self.root_config, Default::default());
         let name = root_config.name.clone();
-        self.compile_package(name, root_config, SourceLocations::SrcAndTest)?;
+        let compiled = self.compile_package(&name, root_config, SourceLocations::SrcAndTest)?;
+        let _ = self.packages.insert(name, compiled);
 
         Ok(self.packages)
     }
 
-    fn compile_package(
+    fn load_cache_or_compile_package(
         &mut self,
         name: String,
         config: PackageConfig,
-        locations: SourceLocations,
     ) -> Result<(), Error> {
+        // TODO: remove this IO reading the FS. Use injected IO
+        let compiled = if paths::build_package(Mode::Dev, Target::Erlang, &name).exists() {
+            tracing::info!(package=%name, "Loading precompiled package");
+            self.load_cached_package(&name, config)
+        } else {
+            self.compile_package(&name, config, SourceLocations::Src)
+        }?;
+        let _ = self.packages.insert(name, compiled);
+        return Ok(());
+    }
+
+    fn load_cached_package(&mut self, name: &str, config: PackageConfig) -> Result<Package, Error> {
+        let package = Package {
+            name: name.to_string(),
+            modules: vec![Module {
+                name: todo!(),
+                code: todo!(),
+                input_path: todo!(),
+                origin: todo!(),
+                ast: todo!(),
+            }],
+        };
+        Ok(package)
+    }
+
+    fn compile_package(
+        &mut self,
+        name: &str,
+        config: PackageConfig,
+        locations: SourceLocations,
+    ) -> Result<Package, Error> {
         self.telemetry.compiling_package(&name);
         let test_path = match locations {
-            SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(&name)),
+            SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(name)),
             _ => None,
         };
 
-        let out_path = paths::build_package(Mode::Dev, Target::Erlang, &name);
+        let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
         let options = package_compiler::Options {
             target: Target::Erlang,
-            src_path: paths::build_deps_package_src(&name),
+            src_path: paths::build_deps_package_src(name),
             out_path: out_path.clone(),
             write_metadata: true,
             test_path,
-            name: name.clone(),
+            name: name.to_string(),
         };
 
         let mut compiler = options.into_compiler(self.io.clone())?;
@@ -119,6 +150,8 @@ where
 
         // If we're the dev package render the entrypoint module used by the
         // `gleam run` and `gleam test` commands
+        // TODO: Pass this config in in a better way rather than attaching extra
+        // meaning to this flag.
         if locations == SourceLocations::SrcAndTest {
             let name = "gleam@@main.erl";
             self.io
@@ -130,8 +163,7 @@ where
         // Compile Erlang to .beam files
         self.compile_erlang_to_beam(&out_path, &modules)?;
 
-        let _ = self.packages.insert(name, compiled);
-        Ok(())
+        Ok(compiled)
     }
 
     // TODO: remove this IO from core. Inject the command runner
