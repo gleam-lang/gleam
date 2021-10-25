@@ -184,13 +184,16 @@ jobs:
           rebar3 escriptize
           _build/default/bin/escript_project
 
-      - name: Test gleam-lib template
+      - name: Test lib template
         run: |
-          gleam new gleam_lib_project --template=lib
-          cd gleam_lib_project
+          gleam new lib_project --template=lib
+          cd lib_project
           gleam deps download
           gleam run
           gleam test
+
+          # Assert that module metadata has been written
+          ls build/dev/erlang/lib_project/lib_project.gleam_module
 
       - name: Test JavaScript prelude
         run: |
