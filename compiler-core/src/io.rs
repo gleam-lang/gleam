@@ -72,6 +72,7 @@ pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
 pub trait FileSystemWriter {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
     fn delete(&self, path: &Path) -> Result<(), Error>;
+    fn copy(&self, from: &Path, to: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -196,6 +197,10 @@ pub mod test {
 
         fn delete(&self, _path: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support deletion")
+        }
+
+        fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support copy")
         }
     }
 

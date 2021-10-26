@@ -40,6 +40,10 @@ impl FileSystemWriter for InMemoryFileSystem {
         let _ = files.remove(path);
         Ok(())
     }
+
+    fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
 }
 
 impl FileSystemReader for InMemoryFileSystem {
