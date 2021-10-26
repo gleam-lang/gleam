@@ -231,6 +231,8 @@ where
                 .to_str()
                 .unwrap_or_default();
 
+            // TODO: ensure modules are not overwritten
+
             // Copy any Erlang modules or header files
             if extension == "erl" || extension == "hrl" {
                 let relative_path = full_path
