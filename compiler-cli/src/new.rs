@@ -537,9 +537,9 @@ gleam_stdlib = "~> {gleam_stdlib}"
             self.test.join(format!("{}_test.gleam", self.project_name)),
             r#"import gleam/io
 
-pub fn main() {{
+pub fn main() {
   io.println("TODO: Write some tests")
-}}
+}
 "#,
         )
     }
