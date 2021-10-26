@@ -1,5 +1,11 @@
 import gleam/io
+import project
 
-pub fn main() {{
-  io.println("TODO: Write some tests")
-}}
+pub fn main() {
+  project.main()
+  io.println("Hello, from the Gleam test module!")
+  io.println(erlang_function())
+}
+
+external fn erlang_function() -> String =
+  "erlang_file" "main"
