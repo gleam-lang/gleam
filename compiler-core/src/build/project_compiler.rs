@@ -109,20 +109,23 @@ where
         config: PackageConfig,
         locations: SourceLocations,
     ) -> Result<(), Error> {
+        let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
+        let src_path = paths::build_deps_package_src(name);
+        let test_path = paths::build_deps_package_test(name);
+
         self.telemetry.compiling_package(&name);
         let test_path = match locations {
             SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(name)),
             _ => None,
         };
 
-        let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
         let options = package_compiler::Options {
             target: Target::Erlang,
-            src_path: paths::build_deps_package_src(name),
+            src_path: src_path.clone(),
             out_path: out_path.clone(),
-            write_metadata: true,
-            test_path,
+            test_path: test_path.clone(),
             name: name.to_string(),
+            write_metadata: true,
         };
 
         let mut compiler = options.into_compiler(self.io.clone())?;
@@ -159,10 +162,28 @@ where
             modules.push(PathBuf::from(name));
         }
 
+        // Copy across any Erlang files from src and test
+        self.copy_project_erlang_files(src_path, &mut modules, &out_path, locations, test_path)?;
+
         // Compile Erlang to .beam files
         self.compile_erlang_to_beam(&out_path, &modules)?;
 
         Ok(())
+    }
+
+    fn copy_project_erlang_files(
+        &mut self,
+        src_path: PathBuf,
+        modules: &mut Vec<PathBuf>,
+        out_path: &PathBuf,
+        locations: SourceLocations,
+        test_path: Option<PathBuf>,
+    ) -> Result<(), Error> {
+        tracing::info!("copying_erlang_source_files");
+        self.copy_erlang_files(&src_path, modules, out_path, locations)?;
+        Ok(if let Some(test_path) = test_path {
+            self.copy_erlang_files(&test_path, modules, out_path, locations)?;
+        })
     }
 
     // TODO: remove this IO from core. Inject the command runner
@@ -193,9 +214,43 @@ where
             })
         }
     }
+
+    fn copy_erlang_files(
+        &self,
+        src_path: &Path,
+        to_compile_modules: &mut Vec<PathBuf>,
+        out_path: &Path,
+        locations: SourceLocations,
+    ) -> Result<()> {
+        for entry in self.io.read_dir(src_path)? {
+            let full_path = entry.expect("copy_erlang_files dir_entry").path();
+
+            let extension = full_path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+
+            // Copy any Erlang modules or header files
+            if extension == "erl" || extension == ".hrl" {
+                let relative_path = full_path
+                    .strip_prefix(src_path)
+                    .expect("copy_erlang_files strip prefix")
+                    .to_path_buf();
+                let destination = out_path.join(&relative_path);
+                self.io.copy(&full_path, &destination)?;
+
+                // Track the new module to compile
+                if extension == "erl" {
+                    to_compile_modules.push(relative_path);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 enum SourceLocations {
     Src,
     SrcAndTest,

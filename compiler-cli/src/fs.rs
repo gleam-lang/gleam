@@ -106,6 +106,10 @@ impl FileSystemWriter for FileSystemAccessor {
     fn delete(&self, path: &Path) -> gleam_core::Result<(), Error> {
         delete_dir(path) // I presume this works on files too. Let's find out.
     }
+
+    fn copy(&self, from: &Path, to: &Path) -> gleam_core::Result<(), Error> {
+        copy(from, to)
+    }
 }
 
 impl FileSystemIO for FileSystemAccessor {}
