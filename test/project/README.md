@@ -1,21 +1,26 @@
-# project
+# Project
 
-A Gleam project
+A test Gleam project.
+
+It covers these features:
+
+- Downloading packages (the standard library)
+- Importing packages (the standard library)
+- Compilation of Gleam code
+  - in src
+  - in test
+- Compilation of locally defined Erlang modules
+  - in src
+  - in test
+- Importing of Erlang header files
+  - in src
+  - in test
+- Importing Gleam src code into test
 
 ## Quick start
 
 ```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-gleam shell # Run an Erlang shell
-```
-
-## Installation
-
-If available on Hex this package can be installed by adding `project` 
-to your `gleam.toml` dependencies:
-
-```erlang
-[dependencies]
-project = "~> 0.1.0"
+gleam deps download
+gleam run
+gleam test
 ```
