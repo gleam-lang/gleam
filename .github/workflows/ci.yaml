@@ -164,6 +164,13 @@ jobs:
         run: make
         working-directory: ./test/compile_package1
 
+      - name: test/project
+        working-directory: ./test/project
+        run: |
+          gleam deps download
+          gleam run
+          gleam test
+
       - name: Test app template
         run: |
           gleam new app_project --template=rebar-app
