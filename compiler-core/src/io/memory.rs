@@ -97,6 +97,10 @@ impl FileSystemReader for InMemoryFileSystem {
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
         unreachable!() // TODO
     }
+
+    fn read_dir(&self, _path: &Path) -> Result<ReadDir> {
+        unreachable!() // TODO
+    }
 }
 
 // An in memory sharable that can be used in place of a real file. It is a

@@ -6,6 +6,7 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use std::{
     fmt::Debug,
+    fs::ReadDir,
     io,
     path::{Path, PathBuf},
 };
@@ -56,6 +57,7 @@ pub struct OutputFile {
 pub trait FileSystemReader {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
+    fn read_dir(&self, path: &Path) -> Result<ReadDir>;
     fn read(&self, path: &Path) -> Result<String, Error>;
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
@@ -219,6 +221,10 @@ pub mod test {
         }
 
         fn is_directory(&self, _path: &Path) -> bool {
+            unimplemented!()
+        }
+
+        fn read_dir(&self, _path: &Path) -> Result<ReadDir> {
             unimplemented!()
         }
     }

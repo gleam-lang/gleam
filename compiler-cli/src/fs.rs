@@ -69,6 +69,10 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
     fn reader(&self, path: &Path) -> gleam_core::Result<WrappedReader, Error> {
         reader(path)
     }
+
+    fn read_dir(&self, path: &Path) -> gleam_core::Result<std::fs::ReadDir> {
+        read_dir(path)
+    }
 }
 
 impl FileSystemWriter for FileSystemAccessor {
