@@ -232,7 +232,7 @@ where
                 .unwrap_or_default();
 
             // Copy any Erlang modules or header files
-            if extension == "erl" || extension == ".hrl" {
+            if extension == "erl" || extension == "hrl" {
                 let relative_path = full_path
                     .strip_prefix(src_path)
                     .expect("copy_erlang_files strip prefix")

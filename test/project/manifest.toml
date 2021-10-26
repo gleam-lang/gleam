@@ -1,0 +1,9 @@
+[[packages]]
+type = "Hex"
+name = "gleam_stdlib"
+version = "0.17.1"
+
+[[packages]]
+type = "Hex"
+name = "project"
+version = "0.1.0"
