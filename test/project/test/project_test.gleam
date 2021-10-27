@@ -8,4 +8,4 @@ pub fn main() {
 }
 
 external fn erlang_function() -> String =
-  "erlang_file" "main"
+  "erlang_test_file" "main"
