@@ -22,6 +22,10 @@ pub fn packages() -> PathBuf {
     build().join("packages")
 }
 
+pub fn packages_toml() -> PathBuf {
+    packages().join("packages.toml")
+}
+
 pub fn build_deps_package(package: &str) -> PathBuf {
     packages().join(package)
 }
