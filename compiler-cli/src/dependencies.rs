@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Instant};
+use std::{collections::HashMap, path::PathBuf, time::Instant};
 
 use flate2::read::GzDecoder;
 use gleam_core::{
@@ -9,7 +9,7 @@ use gleam_core::{
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     Error, Result,
 };
-use hexpm::version::Manifest;
+use hexpm::version::{Manifest, Version};
 
 use crate::{
     cli::{print_downloading, print_packages_downloaded},
@@ -46,9 +46,26 @@ pub fn download() -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct LocalPackages {
+    packages: HashMap<String, Version>,
+}
+
+impl LocalPackages {
+    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<String> {
+        let mut extra = Vec::new();
+        for (name, version) in &self.packages {
+            if manifest.packages.get(name.as_str()) == Some(version) {
+                extra.push(name.to_string());
+            }
+        }
+        extra
+    }
+}
+
 const MANIFEST_PATH: &str = "manifest.toml";
 
-pub fn get_manifest(
+fn get_manifest(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
