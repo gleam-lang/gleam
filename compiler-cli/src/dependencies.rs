@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, time::Instant};
+use std::{collections::HashMap, time::Instant};
 
 use flate2::read::GzDecoder;
 use gleam_core::{
@@ -7,7 +7,7 @@ use gleam_core::{
     error::{FileIoAction, FileKind},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
-    Error, Result,
+    paths, Error, Result,
 };
 use hexpm::version::{Manifest, Version};
 
@@ -61,16 +61,34 @@ impl LocalPackages {
         }
         extra
     }
-}
 
-const MANIFEST_PATH: &str = "manifest.toml";
+    pub fn read() -> Result<Option<Self>> {
+        let path = paths::packages_toml();
+        if !path.exists() {
+            return Ok(None);
+        }
+        let toml = crate::fs::read(&path)?;
+        Ok(Some(toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: path.clone(),
+            err: Some(e.to_string()),
+        })?))
+    }
+
+    pub fn write(&self) -> Result<()> {
+        let path = paths::packages_toml();
+        let toml = toml::to_string(&self).expect("packages.toml serialization");
+        fs::write(&path, &toml)
+    }
+}
 
 fn get_manifest(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
 ) -> Result<Manifest> {
-    let manifest_path = PathBuf::from(MANIFEST_PATH);
+    let manifest_path = paths::manifest_path();
     if manifest_path.exists() {
         // If the manifest exists we read it and use that the versions specified
         // in there

@@ -6,6 +6,10 @@ pub fn build() -> PathBuf {
     PathBuf::from("build")
 }
 
+pub fn manifest_path() -> PathBuf {
+    PathBuf::from("manifest.toml")
+}
+
 pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {
     packages_cache().join(format!("{}-{}.tar", package_name, version))
 }
