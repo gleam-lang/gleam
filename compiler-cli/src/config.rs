@@ -16,6 +16,9 @@ pub fn root_config() -> Result<PackageConfig, Error> {
 pub fn package_configs(root_name: &str) -> Result<HashMap<String, PackageConfig>, Error> {
     let mut configs = HashMap::with_capacity(25);
     for dir_entry in crate::fs::read_dir(paths::packages())?.filter_map(Result::ok) {
+        if dir_entry.path().is_file() {
+            continue;
+        }
         let config = read_project_config(dir_entry.path())?;
         if config.name != root_name {
             let _ = configs.insert(config.name.clone(), config);
