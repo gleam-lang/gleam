@@ -18,12 +18,12 @@ pub fn build_deps_package_test(package: &str) -> PathBuf {
     build_deps_package(package).join("test")
 }
 
-pub fn build_deps() -> PathBuf {
-    build().join("deps")
+pub fn packages() -> PathBuf {
+    build().join("packages")
 }
 
 pub fn build_deps_package(package: &str) -> PathBuf {
-    build_deps().join(package)
+    packages().join(package)
 }
 
 pub fn build_scripts() -> PathBuf {
