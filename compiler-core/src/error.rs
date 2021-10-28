@@ -157,6 +157,9 @@ pub enum Error {
 
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
+
+    #[error("The package {0} is listed in dependencies and dev-dependencies")]
+    DuplicateDependency(String),
 }
 
 impl Error {
@@ -1883,6 +1886,15 @@ Fix the warnings and try again!",
                 };
                 write_project(buf, diagnostic);
                 writeln!(buf, "\n{}", error).unwrap();
+            }
+
+            Error::DuplicateDependency(name) => {
+                let label = format!("The package {name} is specified in both the dependencies and dev-dependencies sections of the gleam.toml file.", name=name);
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Dependency duplicated".to_string(),
+                    label: wrap(&label),
+                };
+                write_project(buf, diagnostic);
             }
         }
     }
