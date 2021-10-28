@@ -512,6 +512,9 @@ version = "0.1.0"
 
 [dependencies]
 gleam_stdlib = "~> {gleam_stdlib}"
+
+[dev-dependencies]
+# some_test_package = "~> 1.0.0"
 "#,
                 name = self.project_name,
                 gleam_stdlib = GLEAM_STDLIB_VERSION,
