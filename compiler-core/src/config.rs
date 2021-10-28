@@ -1,11 +1,16 @@
+use crate::Result;
 use hexpm::version::Version;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
+use crate::build::Mode;
+
 pub fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
 }
+
+pub type Dependencies = HashMap<String, hexpm::version::Range>;
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct PackageConfig {
@@ -17,13 +22,35 @@ pub struct PackageConfig {
     #[serde(default)]
     pub docs: Docs,
     #[serde(default)]
-    pub dependencies: HashMap<String, hexpm::version::Range>,
+    pub dependencies: Dependencies,
     #[serde(default, rename = "dev-dependencies")]
-    pub dev_dependencies: HashMap<String, hexpm::version::Range>,
+    pub dev_dependencies: Dependencies,
     #[serde(default)]
     pub otp_start_module: Option<String>,
     #[serde(default)]
     pub repository: Repository,
+}
+
+impl PackageConfig {
+    pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
+        match mode {
+            Mode::Dev => self.all_dependencies(),
+            Mode::Prod => Ok(self.dependencies.clone()),
+        }
+    }
+
+    pub fn all_dependencies(&self) -> Result<Dependencies> {
+        let mut deps =
+            HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
+        for (name, requirement) in self.dependencies.iter().chain(self.dev_dependencies.iter()) {
+            let already_inserted = deps.insert(name.clone(), requirement.clone()).is_some();
+            if already_inserted {
+                // TODO: error to say dep has been duplicated
+                todo!();
+            }
+        }
+        Ok(deps)
+    }
 }
 
 impl Default for PackageConfig {
