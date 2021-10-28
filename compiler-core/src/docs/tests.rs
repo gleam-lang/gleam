@@ -51,6 +51,7 @@ pub fn complicated_fun(
         repository: Default::default(),
         description: Default::default(),
         dependencies: Default::default(),
+        dev_dependencies: Default::default(),
         otp_start_module: None,
     };
 
