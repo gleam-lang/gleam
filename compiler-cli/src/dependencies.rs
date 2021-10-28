@@ -111,6 +111,35 @@ impl LocalPackages {
     }
 }
 
+#[test]
+fn extra_local_packages() {
+    let mut extra = LocalPackages {
+        packages: vec![
+            ("local1".to_string(), Version::parse("1.0.0").unwrap()),
+            ("local2".to_string(), Version::parse("2.0.0").unwrap()),
+            ("local3".to_string(), Version::parse("3.0.0").unwrap()),
+        ]
+        .into_iter()
+        .collect(),
+    }
+    .extra_local_packages(&Manifest {
+        packages: vec![
+            ("local1".to_string(), Version::parse("1.0.0").unwrap()),
+            ("local2".to_string(), Version::parse("3.0.0").unwrap()),
+        ]
+        .into_iter()
+        .collect(),
+    });
+    extra.sort();
+    assert_eq!(
+        extra,
+        vec![
+            ("local2".to_string(), "2.0.0".to_string()),
+            ("local3".to_string(), "3.0.0".to_string()),
+        ]
+    )
+}
+
 fn get_manifest(
     runtime: tokio::runtime::Handle,
     mode: Mode,
