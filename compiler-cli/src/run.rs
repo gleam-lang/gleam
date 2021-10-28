@@ -12,6 +12,8 @@ pub enum Which {
 }
 
 pub fn command(which: Which) -> Result<(), Error> {
+    crate::dependencies::download()?;
+
     let config = crate::config::root_config()?;
 
     // Determine which module to run
