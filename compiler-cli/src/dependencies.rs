@@ -106,7 +106,7 @@ impl LocalPackages {
 
     pub fn from_manifest(manifest: Manifest) -> Self {
         Self {
-            packages: manifest.packages.clone(),
+            packages: manifest.packages,
         }
     }
 }
