@@ -1,7 +1,7 @@
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::version::{Manifest, ManifestPackage, Version};
+use hexpm::version::{Manifest, Version};
 use std::path::PathBuf;
 use tar::Archive;
 
@@ -224,11 +224,10 @@ impl Downloader {
         let futures = manifest
             .packages
             .iter()
-            .flat_map(|package| match package {
-                ManifestPackage::Hex { name, .. } if name == project_name => None,
-                ManifestPackage::Hex { name, version } => Some((name.to_string(), version.clone())),
-            })
-            .map(|(name, version)| self.ensure_package_in_build_directory(name, version));
+            .filter(|(name, _)| project_name != name.as_str())
+            .map(|(name, version)| {
+                self.ensure_package_in_build_directory(name.clone(), version.clone())
+            });
 
         // Run the futures to download the packages concurrently
         let results = future::join_all(futures).await;
