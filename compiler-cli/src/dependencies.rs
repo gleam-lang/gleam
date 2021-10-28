@@ -44,6 +44,9 @@ pub fn download() -> Result<()> {
     let count =
         runtime.block_on(downloader.download_manifest_packages(&manifest, &project_name))?;
 
+    // Record new state of the packages directory
+    LocalPackages::from_manifest(manifest).write()?;
+
     // TODO: we should print the number of deps new to ./target, not to the shared cache
     print_packages_downloaded(start, count);
     Ok(())
@@ -55,8 +58,11 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
         None => return Ok(()),
     };
     for package in extra.extra_local_packages(manifest) {
-        tracing::info!(package=%package, "removing_unneeded_package");
-        fs::delete_dir(&paths::build_deps_package(&package))?;
+        let path = paths::build_deps_package(&package);
+        if path.exists() {
+            tracing::info!(package=%package, "removing_unneeded_package");
+            fs::delete_dir(&path)?;
+        }
     }
     Ok(())
 }
@@ -95,6 +101,12 @@ impl LocalPackages {
         let path = paths::packages_toml();
         let toml = toml::to_string(&self).expect("packages.toml serialization");
         fs::write(&path, &toml)
+    }
+
+    pub fn from_manifest(manifest: Manifest) -> Self {
+        Self {
+            packages: manifest.packages.clone(),
+        }
     }
 }
 
