@@ -48,31 +48,31 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
-    print_green_prefix(" Publishing", &format!("{} v{}", name, version.to_string()))
+    print_colourful_prefix(" Publishing", &format!("{} v{}", name, version.to_string()))
 }
 
 pub fn print_published(duration: Duration) {
-    print_green_prefix("  Published", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("  Published", &format!("in {}", seconds(duration)))
 }
 
 pub fn print_downloading(text: &str) {
-    print_green_prefix("Downloading", text)
+    print_colourful_prefix("Downloading", text)
 }
 
 pub fn print_compiling(text: &str) {
-    print_green_prefix("  Compiling", text)
+    print_colourful_prefix("  Compiling", text)
 }
 
 pub fn print_compiled(duration: Duration) {
-    print_green_prefix("   Compiled", &format!("in {}", seconds(duration)))
+    print_colourful_prefix("   Compiled", &format!("in {}", seconds(duration)))
 }
 
 pub fn print_running(text: &str) {
-    print_green_prefix("    Running", text)
+    print_colourful_prefix("    Running", text)
 }
 
 pub fn print_packages_downloaded(start: Instant, count: usize) {
-    print_green_prefix(
+    print_colourful_prefix(
         " Downloaded",
         &format!("{} new packages in {}", count, seconds(start.elapsed())),
     )
@@ -82,11 +82,15 @@ pub fn seconds(duration: Duration) -> String {
     format!("{:.2}s", duration.as_millis() as f32 / 1000.)
 }
 
-pub fn print_green_prefix(prefix: &str, text: &str) {
+pub fn print_colourful_prefix(prefix: &str, text: &str) {
     let buffer_writer = stdout_buffer_writer();
     let mut buffer = buffer_writer.buffer();
     buffer
-        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Green)))
+        .set_color(
+            ColorSpec::new()
+                .set_intense(true)
+                .set_fg(Some(Color::Magenta)),
+        )
         .expect("print_green_prefix");
     write!(buffer, "{}", prefix).expect("print_green_prefix");
     buffer

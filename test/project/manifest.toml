@@ -1,4 +1,4 @@
 [packages]
 gleam_stdlib = "0.17.1"
-first_gleam_publish_package = "0.3.0"
 project = "0.1.0"
+first_gleam_publish_package = "0.3.0"
