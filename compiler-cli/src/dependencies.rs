@@ -2,6 +2,7 @@ use std::{path::PathBuf, time::Instant};
 
 use flate2::read::GzDecoder;
 use gleam_core::{
+    build::Mode,
     config::PackageConfig,
     error::{FileIoAction, FileKind},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -19,6 +20,7 @@ use crate::{
 pub fn download() -> Result<()> {
     print_downloading("packages");
     let start = Instant::now();
+    let mode = Mode::Dev;
 
     let http = HttpClient::boxed();
     let fs = FileSystemAccessor::boxed();
@@ -32,7 +34,7 @@ pub fn download() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let manifest = get_manifest(runtime.handle().clone(), &config)?;
+    let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
 
     // Download them from Hex to the local cache
     tracing::info!("Downloading packages");
@@ -46,7 +48,11 @@ pub fn download() -> Result<()> {
 
 const MANIFEST_PATH: &str = "manifest.toml";
 
-pub fn get_manifest(runtime: tokio::runtime::Handle, config: &PackageConfig) -> Result<Manifest> {
+pub fn get_manifest(
+    runtime: tokio::runtime::Handle,
+    mode: Mode,
+    config: &PackageConfig,
+) -> Result<Manifest> {
     let manifest_path = PathBuf::from(MANIFEST_PATH);
     if manifest_path.exists() {
         // If the manifest exists we read it and use that the versions specified
@@ -63,7 +69,7 @@ pub fn get_manifest(runtime: tokio::runtime::Handle, config: &PackageConfig) -> 
         // If there is no manifest then we resolve the versions from their
         // specified requirements in the Hex API
         tracing::info!("Resolving Hex package versions");
-        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), config)?;
+        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?;
         let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
         tracing::info!("Writing manifest.toml");
         fs::write(&manifest_path, &toml)?;
