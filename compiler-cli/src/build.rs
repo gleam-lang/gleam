@@ -13,7 +13,7 @@ pub fn main() -> Result<()> {
     tracing::info!("Copying root package to _build");
     crate::copy_root_package_to_build(&root_config)?;
 
-    tracing::info!("Reading package configs from .build");
+    tracing::info!("Reading package configs from build");
     let configs = crate::config::package_configs(&root_config.name)?;
 
     tracing::info!("Compiling packages");

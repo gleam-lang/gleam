@@ -57,10 +57,10 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
         Some(extra) => extra,
         None => return Ok(()),
     };
-    for package in extra.extra_local_packages(manifest) {
+    for (package, version) in extra.extra_local_packages(manifest) {
         let path = paths::build_deps_package(&package);
         if path.exists() {
-            tracing::info!(package=%package, "removing_unneeded_package");
+            tracing::info!(package=%package, version=%version, "removing_unneeded_package");
             fs::delete_dir(&path)?;
         }
     }
@@ -73,11 +73,12 @@ struct LocalPackages {
 }
 
 impl LocalPackages {
-    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<String> {
+    // TODO: test
+    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, String)> {
         let mut extra = Vec::new();
         for (name, version) in &self.packages {
-            if manifest.packages.get(name.as_str()) == Some(version) {
-                extra.push(name.to_string());
+            if manifest.packages.get(name.as_str()) != Some(version) {
+                extra.push((name.to_string(), version.to_string()));
             }
         }
         extra
