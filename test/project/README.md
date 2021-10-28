@@ -4,8 +4,12 @@ A test Gleam project.
 
 It covers these features:
 
-- Downloading packages (the standard library)
-- Importing packages (the standard library)
+- Downloading packages
+  - Specified in config.dependencies
+  - Specified in config.dev-dependencies
+- Importing packages
+  - Specified in config.dependencies
+  - Specified in config.dev-dependencies
 - Compilation of Gleam code
   - in src
   - in test
