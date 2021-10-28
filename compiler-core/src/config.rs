@@ -18,6 +18,8 @@ pub struct PackageConfig {
     pub docs: Docs,
     #[serde(default)]
     pub dependencies: HashMap<String, hexpm::version::Range>,
+    #[serde(default, rename = "dev-dependencies")]
+    pub dev_dependencies: HashMap<String, hexpm::version::Range>,
     #[serde(default)]
     pub otp_start_module: Option<String>,
     #[serde(default)]
@@ -34,6 +36,7 @@ impl Default for PackageConfig {
             dependencies: Default::default(),
             otp_start_module: Default::default(),
             repository: Default::default(),
+            dev_dependencies: Default::default(),
         }
     }
 }

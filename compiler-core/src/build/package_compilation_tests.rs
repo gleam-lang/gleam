@@ -1808,6 +1808,7 @@ fn config_compilation_test() {
     fn make_config() -> PackageConfig {
         PackageConfig {
             dependencies: HashMap::new(),
+            dev_dependencies: HashMap::new(),
             description: "".to_string(),
             version: Version::parse("1.0.0").unwrap(),
             name: "the_package".to_string(),
