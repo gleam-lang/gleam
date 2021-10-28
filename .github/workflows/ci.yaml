@@ -195,7 +195,6 @@ jobs:
         run: |
           gleam new lib_project --template=lib
           cd lib_project
-          gleam deps download
           gleam run
           gleam test
 
