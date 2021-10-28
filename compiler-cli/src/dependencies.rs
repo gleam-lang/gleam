@@ -36,6 +36,9 @@ pub fn download() -> Result<()> {
     // Determine what versions we need
     let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
 
+    // Remove any packages that are no longer required due to gleam.toml changes
+    remove_extra_packages(&manifest)?;
+
     // Download them from Hex to the local cache
     tracing::info!("Downloading packages");
     let count =
@@ -43,6 +46,18 @@ pub fn download() -> Result<()> {
 
     // TODO: we should print the number of deps new to ./target, not to the shared cache
     print_packages_downloaded(start, count);
+    Ok(())
+}
+
+fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
+    let extra = match LocalPackages::read()? {
+        Some(extra) => extra,
+        None => return Ok(()),
+    };
+    for package in extra.extra_local_packages(manifest) {
+        tracing::info!(package=%package, "removing_unneeded_package");
+        fs::delete_dir(&paths::build_deps_package(&package))?;
+    }
     Ok(())
 }
 
