@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use tar::Archive;
 
 use crate::{
+    build::Mode,
     config::PackageConfig,
     io::{FileSystemIO, HttpClient, TarUnpacker},
     paths, Error, Result,
@@ -24,12 +25,10 @@ J1i2xWFndWa6nfFnRxZmCStCOZWYYPlaxr+FZceFbpMwzTNs4g3d4tLNUcbKAIH4
 
 pub fn resolve_versions(
     package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
+    mode: Mode,
     config: &PackageConfig,
 ) -> Result<Manifest> {
-    let specified_dependencies = config
-        .dependencies
-        .iter()
-        .map(|(a, b)| (a.clone(), b.clone()));
+    let specified_dependencies = config.dependencies_for(mode)?.into_iter();
     hexpm::version::resolve_versions(
         package_fetcher,
         config.name.clone(),
