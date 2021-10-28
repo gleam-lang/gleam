@@ -521,10 +521,9 @@ fn resolution_test_1() {
     assert_eq!(
         result,
         Manifest {
-            packages: vec![ManifestPackage::Hex {
-                name: "app".to_string(),
-                version: Version::try_from("1.0.0").unwrap()
-            }]
+            packages: vec![("app".to_string(), Version::try_from("1.0.0").unwrap())]
+                .into_iter()
+                .collect()
         }
     )
 }
@@ -542,15 +541,14 @@ fn resolution_test_2() {
         result,
         Manifest {
             packages: vec![
-                ManifestPackage::Hex {
-                    name: "app".to_string(),
-                    version: Version::try_from("1.0.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_stdlib".to_string(),
-                    version: Version::try_from("0.3.0").unwrap()
-                },
+                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+                (
+                    "gleam_stdlib".to_string(),
+                    Version::try_from("0.3.0").unwrap()
+                )
             ]
+            .into_iter()
+            .collect()
         }
     );
 }
@@ -568,19 +566,15 @@ fn resolution_with_nested_deps() {
         result,
         Manifest {
             packages: vec![
-                ManifestPackage::Hex {
-                    name: "app".to_string(),
-                    version: Version::try_from("1.0.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_otp".to_string(),
-                    version: Version::try_from("0.2.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_stdlib".to_string(),
-                    version: Version::try_from("0.3.0").unwrap()
-                },
+                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+                ("gleam_otp".to_string(), Version::try_from("0.2.0").unwrap()),
+                (
+                    "gleam_stdlib".to_string(),
+                    Version::try_from("0.3.0").unwrap()
+                )
             ]
+            .into_iter()
+            .collect()
         }
     );
 }
@@ -598,19 +592,15 @@ fn resolution_locked_to_older_version() {
         result,
         Manifest {
             packages: vec![
-                ManifestPackage::Hex {
-                    name: "app".to_string(),
-                    version: Version::try_from("1.0.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_otp".to_string(),
-                    version: Version::try_from("0.1.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_stdlib".to_string(),
-                    version: Version::try_from("0.3.0").unwrap()
-                },
+                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+                ("gleam_otp".to_string(), Version::try_from("0.1.0").unwrap()),
+                (
+                    "gleam_stdlib".to_string(),
+                    Version::try_from("0.3.0").unwrap()
+                )
             ]
+            .into_iter()
+            .collect()
         }
     );
 }
@@ -632,16 +622,15 @@ fn resolution_retired_versions_not_used_by_default() {
         result,
         Manifest {
             packages: vec![
-                ManifestPackage::Hex {
-                    name: "app".to_string(),
-                    version: Version::try_from("1.0.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "package_with_retired".to_string(),
+                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+                (
+                    "package_with_retired".to_string(),
                     // Uses the older version that hasn't been retired
-                    version: Version::try_from("0.1.0").unwrap()
-                },
+                    Version::try_from("0.1.0").unwrap()
+                ),
             ]
+            .into_iter()
+            .collect()
         }
     );
 }
@@ -663,19 +652,18 @@ fn resolution_prerelease_can_be_selected() {
         result,
         Manifest {
             packages: vec![
-                ManifestPackage::Hex {
-                    name: "app".to_string(),
-                    version: Version::try_from("1.0.0").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_otp".to_string(),
-                    version: Version::try_from("0.3.0-rc1").unwrap()
-                },
-                ManifestPackage::Hex {
-                    name: "gleam_stdlib".to_string(),
-                    version: Version::try_from("0.3.0").unwrap()
-                },
+                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+                (
+                    "gleam_otp".to_string(),
+                    Version::try_from("0.3.0-rc1").unwrap()
+                ),
+                (
+                    "gleam_stdlib".to_string(),
+                    Version::try_from("0.3.0").unwrap()
+                ),
             ]
+            .into_iter()
+            .collect()
         }
     );
 }
@@ -710,39 +698,38 @@ fn resolution_no_matching_version() {
 fn manifest_toml() {
     let manifest = toml::to_string(&Manifest {
         packages: vec![
-            ManifestPackage::Hex {
-                name: "gleam_stdlib".to_string(),
-                version: Version {
+            (
+                "gleam_stdlib".to_string(),
+                Version {
                     major: 0,
                     minor: 17,
                     patch: 1,
                     pre: vec![],
                     build: None,
                 },
-            },
-            ManifestPackage::Hex {
-                name: "thingy".to_string(),
-                version: Version {
+            ),
+            (
+                "thingy".to_string(),
+                Version {
                     major: 0,
                     minor: 1,
                     patch: 0,
                     pre: vec![],
                     build: None,
                 },
-            },
-        ],
+            ),
+        ]
+        .into_iter()
+        .collect(),
     })
     .unwrap();
-    let expected = r#"[[packages]]
-type = "Hex"
-name = "gleam_stdlib"
-version = "0.17.1"
-
-[[packages]]
-type = "Hex"
-name = "thingy"
-version = "0.1.0"
-"#
-    .to_string();
-    assert_eq!(manifest, expected);
+    let expected1 = r#"[packages]
+thingy = "0.1.0"
+gleam_stdlib = "0.17.1"
+"#;
+    let expected2 = r#"[packages]
+gleam_stdlib = "0.17.1"
+thingy = "0.1.0"
+"#;
+    assert!(&manifest == expected1 || &manifest == expected2);
 }

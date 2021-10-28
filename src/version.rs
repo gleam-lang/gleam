@@ -317,15 +317,9 @@ impl std::cmp::Ord for PreOrder<'_> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Manifest {
-    pub packages: Vec<ManifestPackage>,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(tag = "type")]
-pub enum ManifestPackage {
-    Hex { name: String, version: Version },
+    pub packages: HashMap<String, Version>,
 }
 
 pub type ResolutionError = PubGrubError<String, Version>;
@@ -357,17 +351,13 @@ where
                 .collect(),
         }],
     };
-    let resolved = pubgrub::solver::resolve(
+    let packages = pubgrub::solver::resolve(
         &DependencyProvider::new(remote, root),
         root_name.clone(),
         root_version,
-    )?;
-
-    let mut packages: Vec<_> = resolved
-        .into_iter()
-        .map(|(name, version)| ManifestPackage::Hex { name, version })
-        .collect();
-    packages.sort();
+    )?
+    .into_iter()
+    .collect();
 
     Ok(Manifest { packages })
 }
