@@ -1,5 +1,10 @@
 [[packages]]
 type = "Hex"
+name = "first_gleam_publish_package"
+version = "0.3.0"
+
+[[packages]]
+type = "Hex"
 name = "gleam_stdlib"
 version = "0.17.1"
 

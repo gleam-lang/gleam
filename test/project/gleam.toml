@@ -3,3 +3,6 @@ version = "0.1.0"
 
 [dependencies]
 gleam_stdlib = "~> 0.17.1"
+
+[dev-dependencies]
+first_gleam_publish_package = "> 0.0.0"
