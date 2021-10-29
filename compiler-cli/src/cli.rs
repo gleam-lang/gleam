@@ -72,10 +72,12 @@ pub fn print_running(text: &str) {
 }
 
 pub fn print_packages_downloaded(start: Instant, count: usize) {
-    print_colourful_prefix(
-        " Downloaded",
-        &format!("{} new packages in {}", count, seconds(start.elapsed())),
-    )
+    let elapsed = seconds(start.elapsed());
+    let msg = match count {
+        1 => format!("1 package in {}", elapsed),
+        _ => format!("{} packages in {}", count, elapsed),
+    };
+    print_colourful_prefix(" Downloaded", &msg)
 }
 
 pub fn seconds(duration: Duration) -> String {
