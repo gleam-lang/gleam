@@ -109,7 +109,6 @@ struct LocalPackages {
 }
 
 impl LocalPackages {
-    // TODO: test
     pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, String)> {
         let mut extra = Vec::new();
         for (name, version) in &self.packages {
@@ -194,7 +193,7 @@ fn get_manifest(
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if &manifest.config_checksum == checksum {
+    if manifest.config_checksum == checksum {
         tracing::info!("manifest_up_to_date");
         Ok(manifest)
     } else {
