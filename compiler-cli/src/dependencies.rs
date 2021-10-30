@@ -9,7 +9,7 @@ use gleam_core::{
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     paths, Error, Result,
 };
-use hexpm::version::Version;
+use hexpm::version::{Range, Version};
 
 use crate::{
     cli,
@@ -79,6 +79,7 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct Manifest {
     config_checksum: String,
+    requirements: HashMap<String, Range>,
     packages: HashMap<String, Version>,
 }
 
@@ -159,6 +160,7 @@ fn extra_local_packages() {
     }
     .extra_local_packages(&Manifest {
         config_checksum: "".to_string(),
+        requirements: HashMap::new(),
         packages: vec![
             ("local1".to_string(), Version::parse("1.0.0").unwrap()),
             ("local2".to_string(), Version::parse("3.0.0").unwrap()),
@@ -193,7 +195,7 @@ fn get_manifest(
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if manifest.config_checksum == checksum {
+    if manifest.requirements == config.all_dependencies()? {
         tracing::info!("manifest_up_to_date");
         Ok(manifest)
     } else {
@@ -211,6 +213,7 @@ fn resolve_versions(
     cli::print_resolving_versions();
     let manifest = Manifest {
         packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
+        requirements: config.all_dependencies()?,
         config_checksum: "".to_string(),
     };
     Ok(manifest)
