@@ -77,30 +77,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
 
 impl FileSystemWriter for FileSystemAccessor {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        tracing::debug!(path = ?path, "opening_file_writer");
-
-        let dir_path = path.parent().ok_or_else(|| Error::FileIo {
-            action: FileIoAction::FindParent,
-            kind: FileKind::Directory,
-            path: path.to_path_buf(),
-            err: None,
-        })?;
-
-        std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
-            action: FileIoAction::Create,
-            kind: FileKind::Directory,
-            path: dir_path.to_path_buf(),
-            err: Some(e.to_string()),
-        })?;
-
-        let file = File::create(&path).map_err(|e| Error::FileIo {
-            action: FileIoAction::Create,
-            kind: FileKind::File,
-            path: path.to_path_buf(),
-            err: Some(e.to_string()),
-        })?;
-
-        Ok(WrappedWriter::new(path, Box::new(file)))
+        writer(path)
     }
 
     fn delete(&self, path: &Path) -> gleam_core::Result<(), Error> {
@@ -158,6 +135,29 @@ pub fn write_output(file: &OutputFile) -> Result<(), Error> {
 
 pub fn write(path: &Path, text: &str) -> Result<(), Error> {
     write_bytes(path, text.as_bytes())
+}
+
+pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
+    tracing::debug!(path = ?path, "opening_file_writer");
+    let dir_path = path.parent().ok_or_else(|| Error::FileIo {
+        action: FileIoAction::FindParent,
+        kind: FileKind::Directory,
+        path: path.to_path_buf(),
+        err: None,
+    })?;
+    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
+        kind: FileKind::Directory,
+        path: dir_path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+    let file = File::create(&path).map_err(|e| Error::FileIo {
+        action: FileIoAction::Create,
+        kind: FileKind::File,
+        path: path.to_path_buf(),
+        err: Some(e.to_string()),
+    })?;
+    Ok(WrappedWriter::new(path, Box::new(file)))
 }
 
 pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
