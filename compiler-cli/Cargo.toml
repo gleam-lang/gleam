@@ -67,7 +67,7 @@ md5 = "0.7"
 hostname = "0.3"
 # base encoding
 base16 = "0.2"
-base64 = "0.2"
+base64 = "0.13"
 
 [dev-dependencies]
 # Test assertion errors with diffs

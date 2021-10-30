@@ -154,6 +154,7 @@ fn extra_local_packages() {
 
 fn get_manifest(
     runtime: tokio::runtime::Handle,
+
     mode: Mode,
     config: &PackageConfig,
 ) -> Result<Manifest> {
