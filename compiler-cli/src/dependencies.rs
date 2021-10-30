@@ -52,6 +52,11 @@ pub fn download() -> Result<()> {
     Ok(())
 }
 
+fn gleam_toml_md5() -> Result<String> {
+    let checksum = &md5::compute(&fs::read(paths::root_config())?).to_vec();
+    Ok(base64::encode(checksum))
+}
+
 fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
     let extra = match LocalPackages::read()? {
         Some(extra) => extra,
@@ -69,6 +74,7 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct Manifest {
+    config_checksum: String,
     packages: HashMap<String, Version>,
 }
 
@@ -128,6 +134,7 @@ fn extra_local_packages() {
         .collect(),
     }
     .extra_local_packages(&Manifest {
+        config_checksum: "".to_string(),
         packages: vec![
             ("local1".to_string(), Version::parse("1.0.0").unwrap()),
             ("local2".to_string(), Version::parse("3.0.0").unwrap()),
@@ -166,8 +173,10 @@ fn get_manifest(
         // If there is no manifest then we resolve the versions from their
         // specified requirements in the Hex API
         tracing::info!("Resolving Hex package versions");
-        let packages = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?;
-        let manifest = Manifest { packages };
+        let manifest = Manifest {
+            packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
+            config_checksum: gleam_toml_md5()?,
+        };
         let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
         tracing::info!("Writing manifest.toml");
         fs::write(&manifest_path, &toml)?;
