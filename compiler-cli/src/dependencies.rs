@@ -9,7 +9,7 @@ use gleam_core::{
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     paths, Error, Result,
 };
-use hexpm::version::{Manifest, Version};
+use hexpm::version::Version;
 
 use crate::{
     cli::{print_downloading, print_packages_downloaded},
@@ -42,7 +42,7 @@ pub fn download() -> Result<()> {
     // Download them from Hex to the local cache
     tracing::info!("Downloading packages");
     let count =
-        runtime.block_on(downloader.download_manifest_packages(&manifest, &project_name))?;
+        runtime.block_on(downloader.download_hex_packages(&manifest.packages, &project_name))?;
 
     // Record new state of the packages directory
     LocalPackages::from_manifest(manifest).write()?;
@@ -65,6 +65,11 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
         }
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+struct Manifest {
+    packages: HashMap<String, Version>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -161,7 +166,8 @@ fn get_manifest(
         // If there is no manifest then we resolve the versions from their
         // specified requirements in the Hex API
         tracing::info!("Resolving Hex package versions");
-        let manifest = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?;
+        let packages = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?;
+        let manifest = Manifest { packages };
         let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
         tracing::info!("Writing manifest.toml");
         fs::write(&manifest_path, &toml)?;
