@@ -12,13 +12,14 @@ use gleam_core::{
 use hexpm::version::Version;
 
 use crate::{
-    cli::{print_downloading, print_packages_downloaded},
+    cli,
     fs::{self, FileSystemAccessor},
     http::HttpClient,
 };
 
 pub fn download() -> Result<()> {
-    print_downloading("packages");
+    let span = tracing::info_span!("dependencies");
+    let _enter = span.enter();
     let start = Instant::now();
     let mode = Mode::Dev;
 
@@ -28,27 +29,30 @@ pub fn download() -> Result<()> {
 
     // Read the project config
     let config = crate::config::root_config()?;
+    let checksum = gleam_toml_md5()?;
     let project_name = config.name.clone();
 
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
+    let mut manifest = get_manifest(runtime.handle().clone(), &checksum, mode, &config)?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
     remove_extra_packages(&manifest)?;
 
     // Download them from Hex to the local cache
-    tracing::info!("Downloading packages");
+    cli::print_downloading("packages");
     let count =
         runtime.block_on(downloader.download_hex_packages(&manifest.packages, &project_name))?;
 
     // Record new state of the packages directory
-    LocalPackages::from_manifest(manifest).write()?;
+    manifest.config_checksum = checksum;
+    manifest.write_to_disc()?;
+    LocalPackages::from_manifest(manifest).write_to_disc()?;
 
     // TODO: we should print the number of deps new to ./target, not to the shared cache
-    print_packages_downloaded(start, count);
+    cli::print_packages_downloaded(start, count);
     Ok(())
 }
 
@@ -76,6 +80,27 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
 struct Manifest {
     config_checksum: String,
     packages: HashMap<String, Version>,
+}
+
+impl Manifest {
+    pub fn read_from_disc() -> Result<Self> {
+        tracing::info!("Reading manifest.toml");
+        let manifest_path = paths::manifest_path();
+        let toml = crate::fs::read(&manifest_path)?;
+        let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: manifest_path.clone(),
+            err: Some(e.to_string()),
+        })?;
+        Ok(manifest)
+    }
+
+    pub fn write_to_disc(&self) -> Result<()> {
+        let path = paths::manifest_path();
+        let toml = toml::to_string(&self).expect("manifest.toml serialization");
+        fs::write(&path, &toml)
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -109,7 +134,7 @@ impl LocalPackages {
         })?))
     }
 
-    pub fn write(&self) -> Result<()> {
+    pub fn write_to_disc(&self) -> Result<()> {
         let path = paths::packages_toml();
         let toml = toml::to_string(&self).expect("packages.toml serialization");
         fs::write(&path, &toml)
@@ -154,35 +179,42 @@ fn extra_local_packages() {
 
 fn get_manifest(
     runtime: tokio::runtime::Handle,
-
+    checksum: &str,
     mode: Mode,
     config: &PackageConfig,
 ) -> Result<Manifest> {
-    let manifest_path = paths::manifest_path();
-    if manifest_path.exists() {
-        // If the manifest exists we read it and use that the versions specified
-        // in there
-        tracing::info!("Reading manifest.toml");
-        let toml = crate::fs::read(&manifest_path)?;
-        toml::from_str(&toml).map_err(|e| Error::FileIo {
-            action: FileIoAction::Parse,
-            kind: FileKind::File,
-            path: manifest_path.clone(),
-            err: Some(e.to_string()),
-        })
-    } else {
-        // If there is no manifest then we resolve the versions from their
-        // specified requirements in the Hex API
-        tracing::info!("Resolving Hex package versions");
-        let manifest = Manifest {
-            packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
-            config_checksum: gleam_toml_md5()?,
-        };
-        let toml = toml::to_string(&manifest).expect("manifest.toml serialization");
-        tracing::info!("Writing manifest.toml");
-        fs::write(&manifest_path, &toml)?;
-        Ok(manifest)
+    // If there's no manifest then resolve the versions anew
+    if !paths::manifest_path().exists() {
+        tracing::info!("manifest_not_present");
+        return resolve_versions(runtime, mode, config);
     }
+
+    // If gleam.toml's checksum has changed then we can use the existing manifest
+    let manifest = Manifest::read_from_disc()?;
+
+    // If the config has unchanged since the manifest was written then it is up
+    // to date so we can return it unmodified.
+    if &manifest.config_checksum == checksum {
+        tracing::info!("manifest_up_to_date");
+        Ok(manifest)
+    } else {
+        tracing::info!("manifest_outdated");
+        // TODO: use the existing already locked versions
+        resolve_versions(runtime, mode, config)
+    }
+}
+
+fn resolve_versions(
+    runtime: tokio::runtime::Handle,
+    mode: Mode,
+    config: &PackageConfig,
+) -> Result<Manifest, Error> {
+    cli::print_resolving_versions();
+    let manifest = Manifest {
+        packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
+        config_checksum: "".to_string(),
+    };
+    Ok(manifest)
 }
 
 struct PackageFetcher {
