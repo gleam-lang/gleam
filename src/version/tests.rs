@@ -520,11 +520,9 @@ fn resolution_test_1() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![("app".to_string(), Version::try_from("1.0.0").unwrap())]
-                .into_iter()
-                .collect()
-        }
+        vec![("app".to_string(), Version::try_from("1.0.0").unwrap())]
+            .into_iter()
+            .collect()
     )
 }
 
@@ -539,17 +537,15 @@ fn resolution_test_2() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![
-                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                )
-            ]
-            .into_iter()
-            .collect()
-        }
+        vec![
+            ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+            (
+                "gleam_stdlib".to_string(),
+                Version::try_from("0.3.0").unwrap()
+            )
+        ]
+        .into_iter()
+        .collect()
     );
 }
 
@@ -564,18 +560,16 @@ fn resolution_with_nested_deps() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![
-                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
-                ("gleam_otp".to_string(), Version::try_from("0.2.0").unwrap()),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                )
-            ]
-            .into_iter()
-            .collect()
-        }
+        vec![
+            ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+            ("gleam_otp".to_string(), Version::try_from("0.2.0").unwrap()),
+            (
+                "gleam_stdlib".to_string(),
+                Version::try_from("0.3.0").unwrap()
+            )
+        ]
+        .into_iter()
+        .collect()
     );
 }
 
@@ -590,18 +584,16 @@ fn resolution_locked_to_older_version() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![
-                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
-                ("gleam_otp".to_string(), Version::try_from("0.1.0").unwrap()),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                )
-            ]
-            .into_iter()
-            .collect()
-        }
+        vec![
+            ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+            ("gleam_otp".to_string(), Version::try_from("0.1.0").unwrap()),
+            (
+                "gleam_stdlib".to_string(),
+                Version::try_from("0.3.0").unwrap()
+            )
+        ]
+        .into_iter()
+        .collect()
     );
 }
 
@@ -620,18 +612,16 @@ fn resolution_retired_versions_not_used_by_default() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![
-                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
-                (
-                    "package_with_retired".to_string(),
-                    // Uses the older version that hasn't been retired
-                    Version::try_from("0.1.0").unwrap()
-                ),
-            ]
-            .into_iter()
-            .collect()
-        }
+        vec![
+            ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+            (
+                "package_with_retired".to_string(),
+                // Uses the older version that hasn't been retired
+                Version::try_from("0.1.0").unwrap()
+            ),
+        ]
+        .into_iter()
+        .collect()
     );
 }
 
@@ -650,21 +640,19 @@ fn resolution_prerelease_can_be_selected() {
     .unwrap();
     assert_eq!(
         result,
-        Manifest {
-            packages: vec![
-                ("app".to_string(), Version::try_from("1.0.0").unwrap()),
-                (
-                    "gleam_otp".to_string(),
-                    Version::try_from("0.3.0-rc1").unwrap()
-                ),
-                (
-                    "gleam_stdlib".to_string(),
-                    Version::try_from("0.3.0").unwrap()
-                ),
-            ]
-            .into_iter()
-            .collect()
-        }
+        vec![
+            ("app".to_string(), Version::try_from("1.0.0").unwrap()),
+            (
+                "gleam_otp".to_string(),
+                Version::try_from("0.3.0-rc1").unwrap()
+            ),
+            (
+                "gleam_stdlib".to_string(),
+                Version::try_from("0.3.0").unwrap()
+            ),
+        ]
+        .into_iter()
+        .collect()
     );
 }
 
@@ -696,8 +684,8 @@ fn resolution_no_matching_version() {
 
 #[test]
 fn manifest_toml() {
-    let manifest = toml::to_string(&Manifest {
-        packages: vec![
+    let manifest = toml::to_string(
+        &vec![
             (
                 "gleam_stdlib".to_string(),
                 Version {
@@ -720,15 +708,13 @@ fn manifest_toml() {
             ),
         ]
         .into_iter()
-        .collect(),
-    })
+        .collect::<PackageVersions>(),
+    )
     .unwrap();
-    let expected1 = r#"[packages]
-thingy = "0.1.0"
+    let expected1 = r#"thingy = "0.1.0"
 gleam_stdlib = "0.17.1"
 "#;
-    let expected2 = r#"[packages]
-gleam_stdlib = "0.17.1"
+    let expected2 = r#"gleam_stdlib = "0.17.1"
 thingy = "0.1.0"
 "#;
     assert!(&manifest == expected1 || &manifest == expected2);

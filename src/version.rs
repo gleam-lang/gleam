@@ -317,10 +317,7 @@ impl std::cmp::Ord for PreOrder<'_> {
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Manifest {
-    pub packages: HashMap<String, Version>,
-}
+pub type PackageVersions = HashMap<String, Version>;
 
 pub type ResolutionError = PubGrubError<String, Version>;
 
@@ -329,7 +326,7 @@ pub fn resolve_versions<Requirements>(
     root_name: PackageName,
     root_version: Version,
     dependencies: Requirements,
-) -> Result<Manifest, ResolutionError>
+) -> Result<PackageVersions, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
@@ -359,7 +356,7 @@ where
     .into_iter()
     .collect();
 
-    Ok(Manifest { packages })
+    Ok(packages)
 }
 
 pub trait PackageFetcher {
