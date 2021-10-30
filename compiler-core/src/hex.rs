@@ -1,7 +1,7 @@
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::version::{Manifest, Version};
+use hexpm::version::{PackageVersions, Version};
 use std::path::PathBuf;
 use tar::Archive;
 
@@ -27,7 +27,7 @@ pub fn resolve_versions(
     package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
     mode: Mode,
     config: &PackageConfig,
-) -> Result<Manifest> {
+) -> Result<PackageVersions> {
     let specified_dependencies = config.dependencies_for(mode)?.into_iter();
     hexpm::version::resolve_versions(
         package_fetcher,
@@ -216,13 +216,12 @@ impl Downloader {
         })
     }
 
-    pub async fn download_manifest_packages(
+    pub async fn download_hex_packages(
         &self,
-        manifest: &Manifest,
+        versions: &PackageVersions,
         project_name: &str,
     ) -> Result<usize> {
-        let futures = manifest
-            .packages
+        let futures = versions
             .iter()
             .filter(|(name, _)| project_name != name.as_str())
             .map(|(name, version)| {
