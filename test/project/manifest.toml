@@ -2,10 +2,10 @@
 # You typically do not need to edit this file manually
 
 [requirements]
-gleam_stdlib = "~> 0.17.1"
 first_gleam_publish_package = "> 0.0.0"
+gleam_stdlib = "~> 0.17.1"
 
 [packages]
-gleam_stdlib = "0.17.1"
 first_gleam_publish_package = "0.3.0"
+gleam_stdlib = "0.17.1"
 project = "0.1.0"

@@ -71,7 +71,9 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct Manifest {
+    #[serde(serialize_with = "ordered_map")]
     requirements: HashMap<String, Range>,
+    #[serde(serialize_with = "ordered_map")]
     packages: HashMap<String, Version>,
 }
 
@@ -103,6 +105,17 @@ impl Manifest {
         file.write(toml.as_slice())?;
         Ok(())
     }
+}
+
+fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    K: serde::Serialize + Ord,
+    V: serde::Serialize,
+{
+    use serde::Serialize;
+    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
