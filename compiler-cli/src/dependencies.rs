@@ -29,14 +29,13 @@ pub fn download() -> Result<()> {
 
     // Read the project config
     let config = crate::config::root_config()?;
-    let checksum = gleam_toml_md5()?;
     let project_name = config.name.clone();
 
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let mut manifest = get_manifest(runtime.handle().clone(), &checksum, mode, &config)?;
+    let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
     remove_extra_packages(&manifest)?;
@@ -47,18 +46,12 @@ pub fn download() -> Result<()> {
         runtime.block_on(downloader.download_hex_packages(&manifest.packages, &project_name))?;
 
     // Record new state of the packages directory
-    manifest.config_checksum = checksum;
     manifest.write_to_disc()?;
     LocalPackages::from_manifest(manifest).write_to_disc()?;
 
     // TODO: we should print the number of deps new to ./target, not to the shared cache
     cli::print_packages_downloaded(start, count);
     Ok(())
-}
-
-fn gleam_toml_md5() -> Result<String> {
-    let checksum = &md5::compute(&fs::read(paths::root_config())?).to_vec();
-    Ok(base64::encode(checksum))
 }
 
 fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
@@ -78,7 +71,6 @@ fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct Manifest {
-    config_checksum: String,
     requirements: HashMap<String, Range>,
     packages: HashMap<String, Version>,
 }
@@ -159,7 +151,6 @@ fn extra_local_packages() {
         .collect(),
     }
     .extra_local_packages(&Manifest {
-        config_checksum: "".to_string(),
         requirements: HashMap::new(),
         packages: vec![
             ("local1".to_string(), Version::parse("1.0.0").unwrap()),
@@ -180,7 +171,6 @@ fn extra_local_packages() {
 
 fn get_manifest(
     runtime: tokio::runtime::Handle,
-    checksum: &str,
     mode: Mode,
     config: &PackageConfig,
 ) -> Result<Manifest> {
@@ -190,7 +180,6 @@ fn get_manifest(
         return resolve_versions(runtime, mode, config);
     }
 
-    // If gleam.toml's checksum has changed then we can use the existing manifest
     let manifest = Manifest::read_from_disc()?;
 
     // If the config has unchanged since the manifest was written then it is up
@@ -214,7 +203,6 @@ fn resolve_versions(
     let manifest = Manifest {
         packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
         requirements: config.all_dependencies()?,
-        config_checksum: "".to_string(),
     };
     Ok(manifest)
 }
