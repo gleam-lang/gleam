@@ -2,6 +2,10 @@ use std::path::PathBuf;
 
 use crate::build::{Mode, Target};
 
+pub fn root_config() -> PathBuf {
+    PathBuf::from("gleam.toml")
+}
+
 pub fn build() -> PathBuf {
     PathBuf::from("build")
 }

@@ -62,10 +62,12 @@ futures = "0.3.17"
 debug-ignore = "1.0.1"
 # Checksums
 sha2 = "0.9"
+md5 = "0.7"
 # Getting hostname
 hostname = "0.3"
-# base16 encoding
+# base encoding
 base16 = "0.2"
+base64 = "0.2"
 
 [dev-dependencies]
 # Test assertion errors with diffs
