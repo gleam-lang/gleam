@@ -59,6 +59,10 @@ pub fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
 }
 
+pub fn print_resolving_versions() {
+    print_colourful_prefix("  Resolving", "versions")
+}
+
 pub fn print_compiling(text: &str) {
     print_colourful_prefix("  Compiling", text)
 }
