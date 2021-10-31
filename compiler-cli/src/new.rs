@@ -392,12 +392,11 @@ to your `gleam.toml` dependencies:
 
 ```toml
 [dependencies]
-{name} = "~> {version}"
+{name} = "~> 0.1"
 ```
 "#,
                 name = self.project_name,
                 description = self.options.description,
-                version = PROJECT_VERSION,
             ),
         )
     }
@@ -514,7 +513,7 @@ version = "0.1.0"
 gleam_stdlib = "~> {gleam_stdlib}"
 
 [dev-dependencies]
-# some_test_package = "~> 1.0.0"
+# some_test_package = "~> 1.0"
 "#,
                 name = self.project_name,
                 gleam_stdlib = GLEAM_STDLIB_VERSION,
