@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\nfn id(x: a, y: a) { x }\npub fn x() { id(1, 1.0) }"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:20
   │

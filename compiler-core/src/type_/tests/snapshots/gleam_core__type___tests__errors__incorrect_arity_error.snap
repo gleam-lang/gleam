@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "let id = fn(x) { x } id()"
 
 ---
-
 error: Incorrect arity
   ┌─ /src/one/two.gleam:1:22
   │

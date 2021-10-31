@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Box(a) { Box(inner: a) }\npub fn main(box: Box(Int)) { box.unknown }\n"
 
 ---
-
 error: Unknown record field
   ┌─ /src/one/two.gleam:3:30
   │

@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "#(0, 1).2"
 
 ---
-
 error: Out of bounds tuple index
   ┌─ /src/one/two.gleam:1:8
   │

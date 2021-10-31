@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
 
 ---
-
 error: Invalid guard variable
   ┌─ /src/one/two.gleam:2:27
   │

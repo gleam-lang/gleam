@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "const duplicate = 1;\npub const duplicate = 1"
 
 ---
-
 error: Duplicate const definition with name `duplicate`
   ┌─ /src/one/two.gleam:2:11
   │

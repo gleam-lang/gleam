@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }"
 
 ---
-
 error: BitString Segment Error
   ┌─ /src/one/two.gleam:1:18
   │

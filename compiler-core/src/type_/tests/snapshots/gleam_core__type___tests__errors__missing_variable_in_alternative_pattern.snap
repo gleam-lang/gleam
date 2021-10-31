@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "case [] { [x] | [] -> x _ -> 0 }"
 
 ---
-
 error: Missing alternative pattern variable
   ┌─ /src/one/two.gleam:1:11
   │
@@ -12,4 +11,3 @@ error: Missing alternative pattern variable
 
 All alternative patterns must define the same variables as the initial
 pattern, but the `x` variable is missing.
-

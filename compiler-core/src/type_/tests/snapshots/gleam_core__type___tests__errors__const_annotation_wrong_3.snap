@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "pub const numbers: List(Int) = [1.1, 2.2, 3.3]"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:32
   │

@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "fn main() { assert 5: Int = \"\" 5 }"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:20
   │

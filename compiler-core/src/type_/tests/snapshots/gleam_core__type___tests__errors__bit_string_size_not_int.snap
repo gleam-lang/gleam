@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "let x = <<1:size(\"1\")>> x"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:18
   │

@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Box(a) {\n  Box(value: a, i: Int)\n};\npub fn update_box(box: Box(a), value: b) {\n  Box(..box, value: value)\n};"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:6:21
   │

@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "let Ok(1, x) = 1 x"
 
 ---
-
 error: Incorrect arity
   ┌─ /src/one/two.gleam:1:5
   │

@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "fn(x: Int) -> Float { x }"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:23
   │

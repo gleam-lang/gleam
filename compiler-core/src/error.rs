@@ -327,9 +327,6 @@ impl Error {
         use crate::type_::Error as TypeError;
         use std::io::Write;
 
-        buf.write_all(b"\n")
-            .expect("error pretty buffer write space before");
-
         match self {
             Error::MetadataDecodeError { error } => {
                 let diagnostic = ProjectErrorDiagnostic {

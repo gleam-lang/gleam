@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "case [3.33], 1 { x, x if x > x -> 1 }"
 
 ---
-
 error: Duplicate variable in pattern
   ┌─ /src/one/two.gleam:1:21
   │

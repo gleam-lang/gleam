@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "try x = Error(1) Error(\"Not this one\") Error(\"This one\")"
 
 ---
-
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:40
   │

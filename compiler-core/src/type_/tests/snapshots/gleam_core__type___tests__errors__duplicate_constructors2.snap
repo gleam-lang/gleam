@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "type Boxy { Box(Int) }\ntype Box { Box(x: Int) }"
 
 ---
-
 error: Duplicate function definition with name `Box`
   ┌─ /src/one/two.gleam:2:12
   │

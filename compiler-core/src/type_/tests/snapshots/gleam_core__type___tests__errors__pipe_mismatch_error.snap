@@ -3,7 +3,6 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "pub fn main() -> String {\n            Orange\n            |> eat_veggie\n         }\n          \n         type Fruit{ Orange }\n         type Veg{ Lettuce }\n          \n         fn eat_veggie(v: Veg) -> String {\n            \"Ok\"\n         }"
 
 ---
-
 error: This function cannot handle the argument sent through the (|>) pipe:
   ┌─ /src/one/two.gleam:3:16
   │
