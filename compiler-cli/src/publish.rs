@@ -221,8 +221,8 @@ impl<'a> ReleaseMetadata<'a> {
             description = self.description,
             files = self.files.iter().map(file).join(","),
             links = self.links.iter().map(link).join(","),
-            licenses = self.licenses.iter().map(quotes).join(", "),
-            build_tools = self.build_tools.iter().map(quotes).join(", "),
+            licenses = self.licenses.iter().map(|l| quotes(l.as_str())).join(", "),
+            build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
             requirements = self
                 .requirements
                 .iter()
@@ -257,6 +257,7 @@ impl<'a> ReleaseRequirement<'a> {
 
 #[test]
 fn release_metadata_as_erlang() {
+    let licences = vec!["MIT".to_string(), "MPL-2.0".to_string()];
     let version = "1.2.3".try_into().unwrap();
     let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
     let req2 = Range::new("~> 1.2".to_string());
@@ -269,7 +270,7 @@ fn release_metadata_as_erlang() {
             PathBuf::from("src/thingy.gleam"),
             PathBuf::from("src/whatever.gleam"),
         ],
-        licenses: vec!["MIT", "MPL-2.0"],
+        licenses: licences.as_slice(),
         links: vec![
             ("homepage", "https://gleam.run"),
             ("github", "https://github.com/lpil/myapp"),
@@ -327,6 +328,6 @@ fn get_hostname() -> String {
         .to_string()
 }
 
-fn quotes(x: &&str) -> String {
+fn quotes(x: &str) -> String {
     format!(r#"<<"{}">>"#, x)
 }
