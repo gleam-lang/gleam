@@ -12,17 +12,12 @@ use strum::{Display, EnumString, EnumVariantNames};
 use crate::NewOptions;
 
 const GLEAM_STDLIB_VERSION: &str = "0.17";
-const GLEAM_OTP_VERSION: &str = "0.2";
 const ERLANG_OTP_VERSION: &str = "23.2";
-const PROJECT_VERSION: &str = "0.1.0";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
 pub enum Template {
     Lib,
-    RebarLib,
-    RebarApp,
-    RebarEscript,
 }
 
 #[derive(Debug)]
@@ -64,120 +59,20 @@ impl Creator {
         crate::fs::mkdir(&self.workflows)?;
 
         match self.options.template {
-            Template::RebarLib => {
-                self.gitignore()?;
-                self.github_ci()?;
-                self.lib_readme()?;
-                self.gleam_toml()?;
-                self.lib_rebar_config()?;
-                self.erlang_app_src()?;
-                self.src_module()?;
-                self.test_module()?;
-            }
-
-            Template::RebarApp => {
-                crate::fs::mkdir(&self.src.join(self.project_name.clone()))?;
-                self.gitignore()?;
-                self.github_ci()?;
-                self.app_readme()?;
-                self.gleam_toml()?;
-                self.app_rebar_config()?;
-                self.erlang_app_src()?;
-                self.src_module()?;
-                self.src_application_module()?;
-                self.test_module()?;
-            }
-
-            Template::RebarEscript => {
-                self.gitignore()?;
-                self.github_ci()?;
-                self.escript_readme()?;
-                self.gleam_toml()?;
-                self.lib_rebar_config()?;
-                self.erlang_app_src()?;
-                self.src_escript_module()?;
-                self.test_module()?;
-            }
-
             Template::Lib => {
-                self.gleam_gitignore()?;
-                self.gleam_github_ci()?;
-                self.gleam_lib_readme()?;
-                self.gleam_gleam_toml()?;
-                self.gleam_src_module()?;
-                self.gleam_test_module()?;
+                self.gitignore()?;
+                self.github_ci()?;
+                self.readme()?;
+                self.gleam_toml()?;
+                self.src_module()?;
+                self.test_module()?;
             }
         }
 
         Ok(())
     }
 
-    fn src_escript_module(&self) -> Result<()> {
-        write(
-            self.src.join(format!("{}.gleam", self.project_name)),
-            &format!(
-                r#"import gleam/list
-import gleam/io
-
-pub external type CharList
-
-pub fn main(args: List(CharList)) {{
-  let _args = list.map(args, char_list_to_string)
-  io.println(hello_world())
-}}
-
-pub fn hello_world() -> String {{
-  "Hello, from {}!"
-}}
-
-external fn char_list_to_string(CharList) -> String =
-  "erlang" "list_to_binary"
-"#,
-                self.project_name
-            ),
-        )
-    }
-
-    fn src_application_module(&self) -> Result<()> {
-        write(
-            self.src.join(&self.project_name).join("application.gleam"),
-            r#"import gleam/otp/supervisor.{ApplicationStartMode, ErlangStartResult}
-import gleam/dynamic.{Dynamic}
-
-fn init(children) {
-  children
-}
-
-pub fn start(
-  _mode: ApplicationStartMode,
-  _args: List(Dynamic),
-) -> ErlangStartResult {
-  init
-  |> supervisor.start
-  |> supervisor.to_erlang_start_result
-}
-
-pub fn stop(_state: Dynamic) {
-  supervisor.application_stopped()
-}
-"#,
-        )
-    }
-
     fn src_module(&self) -> Result<()> {
-        write(
-            self.src.join(format!("{}.gleam", self.project_name)),
-            &format!(
-                r#"pub fn hello_world() -> String {{
-  "Hello, from {}!"
-}}
-"#,
-                self.project_name
-            ),
-        )
-    }
-
-    fn gleam_src_module(&self) -> Result<()> {
         write(
             self.src.join(format!("{}.gleam", self.project_name)),
             &format!(
@@ -192,184 +87,18 @@ pub fn main() {{
         )
     }
 
-    fn lib_rebar_config(&self) -> Result<()> {
-        write(
-            self.root.join("rebar.config"),
-            &format!(
-                r#"{{erl_opts, [debug_info]}}.
-{{src_dirs, ["src", "gen/src"]}}.
-
-{{profiles, [
-    {{test, [{{src_dirs, ["src", "test", "gen/src", "gen/test"]}}]}}
-]}}.
-
-{{project_plugins, [rebar_gleam]}}.
-
-{{deps, [
-    {{gleam_stdlib, "{stdlib}"}}
-]}}.
-"#,
-                stdlib = GLEAM_STDLIB_VERSION,
-            ),
-        )
-    }
-
-    fn app_rebar_config(&self) -> Result<()> {
-        write(
-            self.root.join("rebar.config"),
-            &format!(
-                r#"{{erl_opts, [debug_info]}}.
-{{src_dirs, ["src", "gen/src"]}}.
-
-{{profiles, [
-    {{test, [{{src_dirs, ["src", "test", "gen/src", "gen/test"]}}]}}
-]}}.
-
-{{shell, [
-    % {{config, "config/sys.config"}},
-    {{apps, [{name}]}}
-]}}.
-
-{{project_plugins, [rebar_gleam]}}.
-
-{{deps, [
-    {{gleam_stdlib, "{stdlib}"}},
-    {{gleam_otp, "{otp}"}}
-]}}.
-"#,
-                name = self.project_name,
-                stdlib = GLEAM_STDLIB_VERSION,
-                otp = GLEAM_OTP_VERSION,
-            ),
-        )
-    }
-
-    fn erlang_app_src(&self) -> Result<()> {
-        let module = match self.options.template {
-            Template::RebarApp => {
-                format!("\n  {{mod, {{{}@application, []}}}},", self.project_name)
-            }
-            _ => "".to_string(),
-        };
-
-        write(
-            self.src.join(format!("{}.app.src", self.project_name)),
-            &format!(
-                r#"{{application, {application},
- [{{description, "{description}"}},
-  {{vsn, "{version}"}},
-  {{registered, []}},{module}
-  {{applications,
-   [kernel,
-    stdlib,
-    gleam_stdlib
-   ]}},
-  {{env,[]}},
-  {{modules, []}},
-
-  {{include_files, ["gleam.toml", "gen"]}},
-  {{links, []}}
-]}}.
-"#,
-                application = self.project_name,
-                description = &self.options.description,
-                version = PROJECT_VERSION,
-                module = module,
-            ),
-        )
-    }
-
-    fn gleam_gitignore(&self) -> Result<()> {
+    fn gitignore(&self) -> Result<()> {
         write(
             self.root.join(".gitignore"),
             "*.beam
 *.ez
 build
-",
-        )
-    }
-
-    fn gitignore(&self) -> Result<()> {
-        write(
-            self.root.join(".gitignore"),
-            "*.beam
-*.iml
-*.o
-*.plt
-*.swo
-*.swp
-*~
-.erlang.cookie
-.eunit
-.idea
-.rebar
-.rebar3
-_*
-_build
-docs
-ebin
 erl_crash.dump
-gen
-log
-logs
-rebar3.crashdump
 ",
         )
     }
 
-    fn app_readme(&self) -> Result<()> {
-        write(
-            self.root.join("README.md"),
-            &format!(
-                r#"# {name}
-
-{description}
-
-## Quick start
-
-```sh
-# Run the eunit tests
-rebar3 eunit
-
-# Run the Erlang REPL
-rebar3 shell
-```
-"#,
-                name = self.project_name,
-                description = self.options.description
-            ),
-        )
-    }
-
-    fn escript_readme(&self) -> Result<()> {
-        write(
-            self.root.join("README.md"),
-            &format!(
-                r#"# {name}
-
-{description}
-
-## Quick start
-
-```sh
-# Run the eunit tests
-rebar3 eunit
-
-# Run the Erlang REPL
-rebar3 shell
-
-# Build and run the escript
-rebar3 escriptize
-_build/default/bin/{name}
-```
-"#,
-                name = self.project_name,
-                description = self.options.description
-            ),
-        )
-    }
-
-    fn gleam_lib_readme(&self) -> Result<()> {
+    fn readme(&self) -> Result<()> {
         write(
             self.root.join("README.md"),
             &format!(
@@ -401,42 +130,7 @@ to your `gleam.toml` dependencies:
         )
     }
 
-    fn lib_readme(&self) -> Result<()> {
-        write(
-            self.root.join("README.md"),
-            &format!(
-                r#"# {name}
-
-{description}
-
-## Quick start
-
-```sh
-# Run the eunit tests
-rebar3 eunit
-
-# Run the Erlang REPL
-rebar3 shell
-```
-
-## Installation
-
-If [available on Hex](https://rebar3.org/docs/configuration/dependencies/#declaring-dependencies)
-this package can be installed by adding `{name}` to your `rebar.config` dependencies:
-
-```erlang
-{{deps, [
-    {name}
-]}}.
-```
-"#,
-                name = self.project_name,
-                description = self.options.description
-            ),
-        )
-    }
-
-    fn gleam_github_ci(&self) -> Result<()> {
+    fn github_ci(&self) -> Result<()> {
         write(
             self.workflows.join("test.yml"),
             &format!(
@@ -469,40 +163,7 @@ jobs:
         )
     }
 
-    fn github_ci(&self) -> Result<()> {
-        write(
-            self.workflows.join("test.yml"),
-            &format!(
-                r#"name: test
-
-on:
-  push:
-    branches:
-      - master
-      - main
-  pull_request:
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2.0.0
-      - uses: gleam-lang/setup-erlang@v1.1.2
-        with:
-          otp-version: {}
-      - uses: gleam-lang/setup-gleam@v1.0.2
-        with:
-          gleam-version: {}
-      - run: rebar3 install_deps
-      - run: rebar3 eunit
-      - run: gleam format --check src test
-"#,
-                ERLANG_OTP_VERSION, self.gleam_version
-            ),
-        )
-    }
-
-    fn gleam_gleam_toml(&self) -> Result<()> {
+    fn gleam_toml(&self) -> Result<()> {
         write(
             self.root.join("gleam.toml"),
             &format!(
@@ -521,20 +182,7 @@ gleam_stdlib = "~> {gleam_stdlib}"
         )
     }
 
-    fn gleam_toml(&self) -> Result<()> {
-        write(
-            self.root.join("gleam.toml"),
-            &format!(
-                r#"name = "{name}"
-
-# repository = {{ type = "github", user = "my-user", repo = "{name}" }}
-"#,
-                name = self.project_name,
-            ),
-        )
-    }
-
-    fn gleam_test_module(&self) -> Result<()> {
+    fn test_module(&self) -> Result<()> {
         write(
             self.test.join(format!("{}_test.gleam", self.project_name)),
             r#"import gleam/io
@@ -543,21 +191,6 @@ pub fn main() {
   io.println("TODO: Write some tests")
 }
 "#,
-        )
-    }
-
-    fn test_module(&self) -> Result<()> {
-        write(
-            self.test.join(format!("{}_test.gleam", self.project_name)),
-            &format!(
-                r#"import {name}
-
-pub fn hello_world_test() {{
-  assert "Hello, from {name}!" = {name}.hello_world()
-}}
-"#,
-                name = self.project_name
-            ),
         )
     }
 }
@@ -580,18 +213,13 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
         format!("\tcd {}\n", creator.options.project_root)
     };
 
-    let test_command = match &creator.options.template {
-        Template::RebarLib | Template::RebarApp | Template::RebarEscript => "rebar3 eunit",
-        Template::Lib => "gleam test",
-    };
-
     println!(
         "Your Gleam project {} has been successfully created.
 The project can be compiled and tested by running these commands:
 
-{}\t{}
+{}\tgleam test
 ",
-        creator.project_name, cd_folder, test_command,
+        creator.project_name, cd_folder,
     );
     Ok(())
 }
