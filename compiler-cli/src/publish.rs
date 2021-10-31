@@ -13,12 +13,7 @@ use sha2::Digest;
 use crate::{build, cli, fs, http::HttpClient};
 
 pub fn command() -> Result<()> {
-    tokio::runtime::Runtime::new()
-        .expect("Unable to start Tokio async runtime")
-        .block_on(perform_command())
-}
-
-pub async fn perform_command() -> Result<()> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hostname = get_hostname();
     let config = crate::config::root_config()?;
     let hex_config = hexpm::Config::new();
@@ -39,19 +34,10 @@ pub async fn perform_command() -> Result<()> {
     let password = cli::ask_password("https://hex.pm password")?;
 
     let start = Instant::now();
-    cli::print_publishing(&config.name, &config.version);
-
-    // Create API token
-    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
-        .await?;
-
-    // Publish release to hexpm
-    let result = hex::publish_package(tarball, &key, &hex_config, &http).await;
-
-    // TODO: Publish docs to hexpm for release
-
-    // Delete API token
-    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
+    // Publish the package
+    let result = runtime.block_on(perform_publish(
+        config, hostname, username, password, hex_config, http, tarball,
+    ))?;
 
     // The result from publishing is handled after key deletion to ensure that
     // we remove it even in the case of an error
@@ -60,6 +46,30 @@ pub async fn perform_command() -> Result<()> {
     cli::print_published(start.elapsed());
 
     Ok(())
+}
+
+async fn perform_publish(
+    config: gleam_core::config::PackageConfig,
+    hostname: String,
+    username: String,
+    password: String,
+    hex_config: hexpm::Config,
+    http: HttpClient,
+    tarball: Vec<u8>,
+) -> Result<Result<(), Error>, Error> {
+    cli::print_publishing(&config.name, &config.version);
+
+    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
+        .await?;
+
+    // Publish the package but don't exit early if it fails, we want to always
+    // remove the API key
+    let result = hex::publish_package(tarball, &key, &hex_config, &http).await;
+
+    // Ensure to remove the API key
+    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
+
+    Ok(result)
 }
 
 fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
