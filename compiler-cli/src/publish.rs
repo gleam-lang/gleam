@@ -96,7 +96,7 @@ fn metadata_config(config: &gleam_core::config::PackageConfig, files: Vec<PathBu
         version: &config.version,
         description: &config.description,
         files,
-        licenses: vec![], // TODO: get from config, assert it exists
+        licenses: &config.licences,
         links: config
             .docs
             .links
@@ -181,7 +181,7 @@ pub struct ReleaseMetadata<'a> {
     version: &'a Version,
     description: &'a str,
     files: Vec<PathBuf>,
-    licenses: Vec<&'a str>, // TODO: use spdx licence type to ensure correct format
+    licenses: &'a [String],
     links: Vec<(&'a str, &'a str)>, // TODO: use http::Uri type to ensure correct format
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
