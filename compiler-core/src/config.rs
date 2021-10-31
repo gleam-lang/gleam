@@ -17,6 +17,8 @@ pub struct PackageConfig {
     pub name: String,
     #[serde(default = "default_version")]
     pub version: Version,
+    #[serde(default, alias = "licenses")]
+    pub licences: Vec<String>,
     #[serde(default)]
     pub description: String,
     #[serde(default)]
@@ -64,6 +66,7 @@ impl Default for PackageConfig {
             otp_start_module: Default::default(),
             repository: Default::default(),
             dev_dependencies: Default::default(),
+            licences: Default::default(),
         }
     }
 }

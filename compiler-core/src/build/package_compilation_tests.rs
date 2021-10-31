@@ -1814,6 +1814,7 @@ fn config_compilation_test() {
             name: "the_package".to_string(),
             repository: Repository::None,
             docs: Default::default(),
+            licences: Default::default(),
             otp_start_module: None,
         }
     }
