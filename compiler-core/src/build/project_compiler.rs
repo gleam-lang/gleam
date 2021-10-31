@@ -9,7 +9,7 @@ use crate::{
     metadata, paths, type_, warning, Error, Result, Warning,
 };
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Write,
     io::BufReader,
     path::{Path, PathBuf},
@@ -180,9 +180,10 @@ where
         test_path: Option<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_erlang_source_files");
-        self.copy_erlang_files(&src_path, modules, out_path, locations)?;
+        let mut copied = HashSet::new();
+        self.copy_erlang_files(&src_path, &mut copied, modules, out_path, locations)?;
         Ok(if let Some(test_path) = test_path {
-            self.copy_erlang_files(&test_path, modules, out_path, locations)?;
+            self.copy_erlang_files(&test_path, &mut copied, modules, out_path, locations)?;
         })
     }
 
@@ -215,9 +216,11 @@ where
         }
     }
 
+    // TODO: test
     fn copy_erlang_files(
         &self,
         src_path: &Path,
+        copied: &mut HashSet<PathBuf>,
         to_compile_modules: &mut Vec<PathBuf>,
         out_path: &Path,
         locations: SourceLocations,
@@ -231,8 +234,6 @@ where
                 .to_str()
                 .unwrap_or_default();
 
-            // TODO: ensure modules are not overwritten
-
             // Copy any Erlang modules or header files
             if extension == "erl" || extension == "hrl" {
                 let relative_path = full_path
@@ -240,6 +241,14 @@ where
                     .expect("copy_erlang_files strip prefix")
                     .to_path_buf();
                 let destination = out_path.join(&relative_path);
+
+                // TODO: test
+                if !copied.insert(relative_path.clone()) {
+                    return Err(Error::DuplicateErlangFile {
+                        file: relative_path.to_string_lossy().to_string(),
+                    });
+                }
+
                 self.io.copy(&full_path, &destination)?;
 
                 // Track the new module to compile

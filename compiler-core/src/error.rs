@@ -61,6 +61,9 @@ pub enum Error {
         second: PathBuf,
     },
 
+    #[error("duplicate Erlang file {file}")]
+    DuplicateErlangFile { file: String },
+
     #[error("test module {test_module} imported into application module {src_module}")]
     SrcImportingTest {
         path: PathBuf,
@@ -552,6 +555,14 @@ Second: {}",
                         first.to_str().expect("pretty error print PathBuf to_str"),
                         second.to_str().expect("pretty error print PathBuf to_str"),
                     ),
+                };
+                write_project(buf, diagnostic);
+            }
+
+            Error::DuplicateErlangFile { file } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Duplicate Erlang file".to_string(),
+                    label: format!("The file `{}` is defined multiple times.", file),
                 };
                 write_project(buf, diagnostic);
             }
