@@ -2,6 +2,7 @@ use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter},
+    Result,
 };
 use ignore::DirEntry;
 use lazy_static::lazy_static;
@@ -54,7 +55,7 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
         })
     }
 
-    fn read(&self, path: &Path) -> gleam_core::Result<String, Error> {
+    fn read(&self, path: &Path) -> Result<String, Error> {
         read(path)
     }
 
@@ -66,11 +67,11 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
         path.is_dir()
     }
 
-    fn reader(&self, path: &Path) -> gleam_core::Result<WrappedReader, Error> {
+    fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
         reader(path)
     }
 
-    fn read_dir(&self, path: &Path) -> gleam_core::Result<std::fs::ReadDir> {
+    fn read_dir(&self, path: &Path) -> Result<std::fs::ReadDir> {
         read_dir(path)
     }
 }
@@ -80,11 +81,11 @@ impl FileSystemWriter for FileSystemAccessor {
         writer(path)
     }
 
-    fn delete(&self, path: &Path) -> gleam_core::Result<(), Error> {
+    fn delete(&self, path: &Path) -> Result<()> {
         delete_dir(path) // I presume this works on files too. Let's find out.
     }
 
-    fn copy(&self, from: &Path, to: &Path) -> gleam_core::Result<(), Error> {
+    fn copy(&self, from: &Path, to: &Path) -> Result<()> {
         copy(from, to)
     }
 }
@@ -255,6 +256,20 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
         .map(DirEntry::into_path)
         .filter(move |d| is_gleam_path(d, dir))
+}
+
+pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
+    Ok(read_dir(dir)?
+        .flat_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|path| {
+            let extension = path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+            extension == "erl" || extension == "hrl"
+        }))
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {

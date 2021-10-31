@@ -73,7 +73,7 @@ async fn perform_publish(
 }
 
 fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
-    let files = project_files();
+    let files = project_files()?;
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
     let metadata = metadata_config(config, files);
@@ -142,19 +142,30 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
     Ok(contents_tar_gz)
 }
 
-fn project_files() -> Vec<PathBuf> {
-    let mut files: Vec<PathBuf> = fs::gleam_files(&PathBuf::from("src")).collect();
+// TODO: test
+// TODO: Don't include git-ignored Erlang files
+fn project_files() -> Result<Vec<PathBuf>> {
+    let src = PathBuf::from("src");
+    let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(&src)
+        .chain(fs::erlang_files(&src)?)
+        .collect();
     let mut add = |path| {
         let path = PathBuf::from(path);
         if path.exists() {
             files.push(path);
         }
     };
+    add("README");
     add("README.md");
+    add("README.txt");
     add("gleam.toml");
     add("LICENSE");
     add("LICENCE");
-    files
+    add("LICENSE.md");
+    add("LICENCE.md");
+    add("LICENSE.txt");
+    add("LICENCE.txt");
+    Ok(files)
 }
 
 fn add_to_tar<P, W>(tarball: &mut tar::Builder<W>, path: P, data: &[u8]) -> Result<()>
