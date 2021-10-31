@@ -20,7 +20,6 @@ use crate::{
 pub fn download() -> Result<()> {
     let span = tracing::info_span!("dependencies");
     let _enter = span.enter();
-    let start = Instant::now();
     let mode = Mode::Dev;
 
     let http = HttpClient::boxed();
@@ -36,30 +35,46 @@ pub fn download() -> Result<()> {
 
     // Determine what versions we need
     let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
+    let local = LocalPackages::read_from_disc()?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
-    remove_extra_packages(&manifest)?;
+    remove_extra_packages(&local, &manifest)?;
 
     // Download them from Hex to the local cache
-    cli::print_downloading("packages");
-    let count =
-        runtime.block_on(downloader.download_hex_packages(&manifest.packages, &project_name))?;
+    runtime.block_on(download_missing_packages(
+        downloader,
+        &manifest,
+        &local,
+        project_name,
+    ))?;
 
     // Record new state of the packages directory
     manifest.write_to_disc()?;
     LocalPackages::from_manifest(manifest).write_to_disc()?;
 
-    // TODO: we should print the number of deps new to ./target, not to the shared cache
-    cli::print_packages_downloaded(start, count);
     Ok(())
 }
 
-fn remove_extra_packages(manifest: &Manifest) -> Result<()> {
-    let extra = match LocalPackages::read()? {
-        Some(extra) => extra,
-        None => return Ok(()),
-    };
-    for (package, version) in extra.extra_local_packages(manifest) {
+async fn download_missing_packages(
+    downloader: hex::Downloader,
+    manifest: &Manifest,
+    local: &LocalPackages,
+    project_name: String,
+) -> Result<(), Error> {
+    let missing = local.missing_local_packages(manifest);
+    if !missing.is_empty() {
+        let start = Instant::now();
+        cli::print_downloading("packages");
+        downloader
+            .download_hex_packages(&missing, &project_name)
+            .await?;
+        cli::print_packages_downloaded(start, missing.len());
+    }
+    Ok(())
+}
+
+fn remove_extra_packages(local: &LocalPackages, manifest: &Manifest) -> Result<()> {
+    for (package, version) in local.extra_local_packages(manifest) {
         let path = paths::build_deps_package(&package);
         if path.exists() {
             tracing::info!(package=%package, version=%version, "removing_unneeded_package");
@@ -124,28 +139,41 @@ struct LocalPackages {
 }
 
 impl LocalPackages {
-    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, String)> {
+    pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
+        Self::hash_diff(&manifest.packages, &self.packages)
+    }
+
+    pub fn missing_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
+        Self::hash_diff(&self.packages, &manifest.packages)
+    }
+
+    fn hash_diff(
+        a: &HashMap<String, Version>,
+        b: &HashMap<String, Version>,
+    ) -> Vec<(String, Version)> {
         let mut extra = Vec::new();
-        for (name, version) in &self.packages {
-            if manifest.packages.get(name.as_str()) != Some(version) {
-                extra.push((name.to_string(), version.to_string()));
+        for (name, version) in b {
+            if a.get(name.as_str()) != Some(version) {
+                extra.push((name.to_string(), version.clone()));
             }
         }
         extra
     }
 
-    pub fn read() -> Result<Option<Self>> {
+    pub fn read_from_disc() -> Result<Self> {
         let path = paths::packages_toml();
         if !path.exists() {
-            return Ok(None);
+            return Ok(Self {
+                packages: HashMap::new(),
+            });
         }
         let toml = crate::fs::read(&path)?;
-        Ok(Some(toml::from_str(&toml).map_err(|e| Error::FileIo {
+        Ok(toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: path.clone(),
             err: Some(e.to_string()),
-        })?))
+        })?)
     }
 
     pub fn write_to_disc(&self) -> Result<()> {
@@ -185,8 +213,8 @@ fn extra_local_packages() {
     assert_eq!(
         extra,
         vec![
-            ("local2".to_string(), "2.0.0".to_string()),
-            ("local3".to_string(), "3.0.0".to_string()),
+            ("local2".to_string(), Version::new(2, 0, 0)),
+            ("local3".to_string(), Version::new(3, 0, 0)),
         ]
     )
 }
