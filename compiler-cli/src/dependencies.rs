@@ -168,12 +168,12 @@ impl LocalPackages {
             });
         }
         let toml = crate::fs::read(&path)?;
-        Ok(toml::from_str(&toml).map_err(|e| Error::FileIo {
+        toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
             path: path.clone(),
             err: Some(e.to_string()),
-        })?)
+        })
     }
 
     pub fn write_to_disc(&self) -> Result<()> {
