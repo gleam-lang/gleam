@@ -218,9 +218,9 @@ impl Downloader {
 
     pub async fn download_hex_packages(
         &self,
-        versions: &PackageVersions,
+        versions: &[(String, Version)],
         project_name: &str,
-    ) -> Result<usize> {
+    ) -> Result<()> {
         let futures = versions
             .iter()
             .filter(|(name, _)| project_name != name.as_str())
@@ -232,12 +232,9 @@ impl Downloader {
         let results = future::join_all(futures).await;
 
         // Count the number of packages downloaded while checking for errors
-        let mut count = 0;
         for result in results {
-            if result? {
-                count += 1;
-            }
+            let _ = result?;
         }
-        Ok(count)
+        Ok(())
     }
 }
