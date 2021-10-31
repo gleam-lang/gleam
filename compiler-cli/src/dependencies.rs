@@ -17,7 +17,7 @@ use crate::{
     http::HttpClient,
 };
 
-pub fn download() -> Result<()> {
+pub fn download() -> Result<Manifest> {
     let span = tracing::info_span!("dependencies");
     let _enter = span.enter();
     let mode = Mode::Dev;
@@ -50,9 +50,9 @@ pub fn download() -> Result<()> {
 
     // Record new state of the packages directory
     manifest.write_to_disc()?;
-    LocalPackages::from_manifest(manifest).write_to_disc()?;
+    LocalPackages::from_manifest(&manifest).write_to_disc()?;
 
-    Ok(())
+    Ok(manifest)
 }
 
 async fn download_missing_packages(
@@ -85,11 +85,11 @@ fn remove_extra_packages(local: &LocalPackages, manifest: &Manifest) -> Result<(
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-struct Manifest {
+pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    requirements: HashMap<String, Range>,
+    pub requirements: HashMap<String, Range>,
     #[serde(serialize_with = "ordered_map")]
-    packages: HashMap<String, Version>,
+    pub packages: HashMap<String, Version>,
 }
 
 impl Manifest {
@@ -182,9 +182,9 @@ impl LocalPackages {
         fs::write(&path, &toml)
     }
 
-    pub fn from_manifest(manifest: Manifest) -> Self {
+    pub fn from_manifest(manifest: &Manifest) -> Self {
         Self {
-            packages: manifest.packages,
+            packages: manifest.packages.clone(),
         }
     }
 }

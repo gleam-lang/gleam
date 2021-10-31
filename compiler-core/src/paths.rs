@@ -22,6 +22,10 @@ pub fn build_deps_package_src(package: &str) -> PathBuf {
     build_deps_package(package).join("src")
 }
 
+pub fn build_deps_package_config(package: &str) -> PathBuf {
+    build_deps_package(package).join("gleam.toml")
+}
+
 pub fn build_deps_package_test(package: &str) -> PathBuf {
     build_deps_package(package).join("test")
 }
