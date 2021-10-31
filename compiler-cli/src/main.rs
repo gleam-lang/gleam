@@ -304,12 +304,13 @@ fn main() {
 }
 
 fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
-    let root = PathBuf::from(&PathBuf::from("./"));
+    let root = PathBuf::from("./");
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
         return build::main().map(|_| ());
     }
+    tracing::warn!("Running deprecated build process");
 
     // Read and type check project
     let (_config, analysed) = project::read_and_analyse(&root)?;
