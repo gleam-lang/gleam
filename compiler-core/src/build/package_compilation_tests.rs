@@ -1816,6 +1816,7 @@ fn config_compilation_test() {
             docs: Default::default(),
             licences: Default::default(),
             otp_start_module: None,
+            links: vec![],
         }
     }
 

@@ -54,6 +54,7 @@ pub fn complicated_fun(
         dev_dependencies: Default::default(),
         licences: Default::default(),
         otp_start_module: None,
+        links: vec![],
     };
 
     let mut analysed = crate::project::analysed(vec![input]).expect("Compilation failed");

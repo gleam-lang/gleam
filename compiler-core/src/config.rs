@@ -31,6 +31,8 @@ pub struct PackageConfig {
     pub otp_start_module: Option<String>,
     #[serde(default)]
     pub repository: Repository,
+    #[serde(default)]
+    pub links: Vec<Link>,
 }
 
 impl PackageConfig {
@@ -67,6 +69,7 @@ impl Default for PackageConfig {
             repository: Default::default(),
             dev_dependencies: Default::default(),
             licences: Default::default(),
+            links: Default::default(),
         }
     }
 }
@@ -109,8 +112,6 @@ impl Default for Repository {
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
-    #[serde(default)]
-    pub links: Vec<DocsLink>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
@@ -121,7 +122,7 @@ pub struct DocsPage {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
-pub struct DocsLink {
+pub struct Link {
     pub title: String,
     pub href: String,
 }

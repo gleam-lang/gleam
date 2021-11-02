@@ -108,11 +108,10 @@ fn metadata_config(config: &gleam_core::config::PackageConfig, files: Vec<PathBu
         files,
         licenses: &config.licences,
         links: config
-            .docs
             .links
             .iter()
             .map(|l| (l.title.as_str(), l.href.as_str()))
-            .collect(), // TODO: move links to the top level
+            .collect(),
         requirements: config
             .dependencies
             .iter()

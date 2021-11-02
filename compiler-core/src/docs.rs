@@ -36,7 +36,7 @@ pub fn generate_html(
         })
         .collect();
 
-    let doc_links = project_config.docs.links.iter().map(|doc_link| Link {
+    let doc_links = project_config.links.iter().map(|doc_link| Link {
         name: doc_link.title.to_string(),
         path: doc_link.href.to_string(),
     });
