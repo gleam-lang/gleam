@@ -1906,7 +1906,7 @@ Fix the warnings and try again!",
                 let label = &format!("The package {name} is specified in both the dependencies and dev-dependencies sections of the gleam.toml file.", name=name);
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Dependency duplicated".to_string(),
-                    label: wrap(&label),
+                    label: wrap(label),
                 };
                 write_project(buf, diagnostic);
             }
@@ -1919,7 +1919,7 @@ Fix the warnings and try again!",
                     "Licence information and package description are required to publish a package to Hex.";
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Missing required package fields".to_string(),
-                    label: wrap(&label),
+                    label: wrap(label),
                 };
                 write_project(buf, diagnostic);
                 let msg = if *description_missing && *licence_missing {
