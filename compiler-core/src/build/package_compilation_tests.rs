@@ -1815,10 +1815,32 @@ fn config_compilation_test() {
             repository: Repository::None,
             docs: Default::default(),
             licences: Default::default(),
-            otp_start_module: None,
+            erlang: Default::default(),
             links: vec![],
         }
     }
+
+    assert_config_compile!(
+        {
+            let mut config = make_config();
+            config.erlang.otp_start_module = Some("mymod".to_string());
+            config
+        },
+        vec![],
+        vec![OutputFile {
+            text: r#"{application, the_package, [
+    {mod, 'mymod'},
+    {vsn, "1.0.0"},
+    {applications, []},
+    {description, ""},
+    {modules, []},
+    {registered, []},
+]}.
+"#
+            .to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+        }]
+    );
 
     assert_config_compile!(
         make_config(),

@@ -53,7 +53,7 @@ pub fn complicated_fun(
         dependencies: Default::default(),
         dev_dependencies: Default::default(),
         licences: Default::default(),
-        otp_start_module: None,
+        erlang: Default::default(),
         links: vec![],
     };
 
