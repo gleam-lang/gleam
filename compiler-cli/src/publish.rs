@@ -19,7 +19,14 @@ pub fn command() -> Result<()> {
     let hex_config = hexpm::Config::new();
     let http = HttpClient::new();
 
-    // TODO: validate that config.description is non-null
+    // These fields are required to publish a Hex package. Hex will reject
+    // packages without them.
+    if config.description.is_empty() || config.licences.is_empty() {
+        return Err(Error::MissingHexPublishFields {
+            description_missing: config.description.is_empty(),
+            licence_missing: config.licences.is_empty(),
+        });
+    }
 
     // Build the project to check that it is valid
     let _ = build::main()?;
