@@ -28,11 +28,11 @@ pub struct PackageConfig {
     #[serde(default, rename = "dev-dependencies")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
-    pub otp_start_module: Option<String>,
-    #[serde(default)]
     pub repository: Repository,
     #[serde(default)]
     pub links: Vec<Link>,
+    #[serde(default)]
+    pub erlang: ErlangConfig,
 }
 
 impl PackageConfig {
@@ -64,13 +64,19 @@ impl Default for PackageConfig {
             description: Default::default(),
             docs: Default::default(),
             dependencies: Default::default(),
-            otp_start_module: Default::default(),
+            erlang: Default::default(),
             repository: Default::default(),
             dev_dependencies: Default::default(),
             licences: Default::default(),
             links: Default::default(),
         }
     }
+}
+
+#[derive(Deserialize, Debug, PartialEq, Default)]
+pub struct ErlangConfig {
+    #[serde(default, rename = "otp-application-start-module")]
+    pub otp_start_module: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

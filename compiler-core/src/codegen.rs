@@ -91,6 +91,7 @@ impl<'a> ErlangApp<'a> {
         let path = self.output_directory.join(format!("{}.app", &config.name));
 
         let start_module = config
+            .erlang
             .otp_start_module
             .as_ref()
             .map(|module| tuple("mod", &format!("'{}'", module)))
