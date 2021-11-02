@@ -49,7 +49,6 @@ impl PackageConfig {
         for (name, requirement) in self.dependencies.iter().chain(self.dev_dependencies.iter()) {
             let already_inserted = deps.insert(name.clone(), requirement.clone()).is_some();
             if already_inserted {
-                // TODO: error to say dep has been duplicated
                 return Err(Error::DuplicateDependency(name.clone()));
             }
         }

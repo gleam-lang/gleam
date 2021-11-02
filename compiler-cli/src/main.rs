@@ -66,6 +66,7 @@ mod publish;
 mod run;
 mod shell;
 
+use config::root_config;
 pub use gleam_core::{
     error::{Error, Result},
     warning::Warning,
@@ -133,6 +134,10 @@ enum Command {
     /// Compile a single Gleam package
     #[structopt(setting = AppSettings::Hidden)]
     CompilePackage(CompilePackage),
+
+    /// Read and print gleam.toml for debugging
+    #[structopt(setting = AppSettings::Hidden)]
+    PrintConfig,
 }
 
 #[derive(StructOpt, Debug, Clone)]
@@ -284,6 +289,8 @@ fn main() {
         Command::CompilePackage(opts) => compile_package::command(opts),
 
         Command::Publish => publish::command(),
+
+        Command::PrintConfig => print_config(),
     };
 
     match result {
@@ -336,6 +343,12 @@ fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
 
     println!("Done!");
 
+    Ok(())
+}
+
+fn print_config() -> Result<()> {
+    let config = root_config()?;
+    println!("{:#?}", config);
     Ok(())
 }
 
