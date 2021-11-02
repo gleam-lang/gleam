@@ -163,6 +163,12 @@ pub enum Error {
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(String),
+
+    #[error("The package was missing required fields for publishing")]
+    MissingHexPublishFields {
+        description_missing: bool,
+        licence_missing: bool,
+    },
 }
 
 impl Error {
@@ -1897,12 +1903,40 @@ Fix the warnings and try again!",
             }
 
             Error::DuplicateDependency(name) => {
-                let label = format!("The package {name} is specified in both the dependencies and dev-dependencies sections of the gleam.toml file.", name=name);
+                let label = &format!("The package {name} is specified in both the dependencies and dev-dependencies sections of the gleam.toml file.", name=name);
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Dependency duplicated".to_string(),
                     label: wrap(&label),
                 };
                 write_project(buf, diagnostic);
+            }
+
+            Error::MissingHexPublishFields {
+                description_missing,
+                licence_missing,
+            } => {
+                let label =
+                    "The licence and description fields are rquired to publish a package to Hex.";
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Missing required package fields".to_string(),
+                    label: wrap(&label),
+                };
+                write_project(buf, diagnostic);
+                let msg = if *description_missing && *licence_missing {
+                    r#"Add the licence and description fields to your gleam.toml file.
+                
+description = "A Gleam library"
+licence = "Apache-2.0""#
+                } else if *description_missing {
+                    r#"Add the description field to your gleam.toml file.
+                
+description = "A Gleam library""#
+                } else {
+                    r#"Add the licence field to your gleam.toml file.
+                
+licence = "Apache-2.0""#
+                };
+                wrap_writeln!(buf, "{}", &msg).unwrap();
             }
         }
     }
