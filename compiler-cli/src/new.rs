@@ -173,7 +173,7 @@ version = "0.1.0"
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
 #
-# license = "Apache-2.0"
+# licence = "Apache-2.0"
 # description = "A Gleam library..."
 # repository = {{ type = "github", user = "username", repo = "project" }}
 # links = [{{ title = "Website", href = "https://gleam.run" }}]

@@ -1916,25 +1916,25 @@ Fix the warnings and try again!",
                 licence_missing,
             } => {
                 let label =
-                    "The licence and description fields are rquired to publish a package to Hex.";
+                    "Licence information and package description are required to publish a package to Hex.";
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Missing required package fields".to_string(),
                     label: wrap(&label),
                 };
                 write_project(buf, diagnostic);
                 let msg = if *description_missing && *licence_missing {
-                    r#"Add the licence and description fields to your gleam.toml file.
+                    r#"Add the licences and description fields to your gleam.toml file.
                 
 description = "A Gleam library"
-licence = "Apache-2.0""#
+licences = ["Apache-2.0"]"#
                 } else if *description_missing {
                     r#"Add the description field to your gleam.toml file.
                 
 description = "A Gleam library""#
                 } else {
-                    r#"Add the licence field to your gleam.toml file.
+                    r#"Add the licences field to your gleam.toml file.
                 
-licence = "Apache-2.0""#
+licences = ["Apache-2.0"]"#
                 };
                 wrap_writeln!(buf, "{}", &msg).unwrap();
             }
