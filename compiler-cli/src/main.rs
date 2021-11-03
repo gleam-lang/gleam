@@ -81,7 +81,7 @@ use gleam_core::{
 
 use std::path::PathBuf;
 use structopt::{clap::AppSettings, StructOpt};
-use strum::VariantNames;
+use strum::{EnumString, EnumVariantNames, VariantNames};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -103,6 +103,9 @@ enum Command {
 
     /// Work with dependency packages
     Deps(Dependencies),
+
+    /// Work with the Hex package manager
+    Hex(Hex),
 
     /// Create a new project
     New(NewOptions),
@@ -211,6 +214,43 @@ enum Dependencies {
 }
 
 #[derive(StructOpt, Debug)]
+enum Hex {
+    /// Retire a release from Hex
+    Retire {
+        #[structopt(long = "package")]
+        package: String,
+
+        #[structopt(long = "version")]
+        version: String,
+
+        #[structopt(long = "reason", possible_values = &RetirementReason::VARIANTS)]
+        reason: RetirementReason,
+
+        #[structopt(long = "message")]
+        message: Option<String>,
+    },
+
+    /// Un-retire a release from Hex
+    Unretire {
+        #[structopt(long = "package")]
+        package: String,
+
+        #[structopt(long = "version")]
+        version: String,
+    },
+}
+
+#[derive(Debug, EnumString, EnumVariantNames, Clone, Copy, PartialEq)]
+#[strum(serialize_all = "lowercase")]
+enum RetirementReason {
+    Other,
+    Invalid,
+    Security,
+    Deprecated,
+    Renamed,
+}
+
+#[derive(StructOpt, Debug)]
 enum Docs {
     /// Render HTML docs locally
     Build {
@@ -291,6 +331,11 @@ fn main() {
         Command::Publish => publish::command(),
 
         Command::PrintConfig => print_config(),
+
+        Command::Hex(hex) => {
+            dbg!(hex);
+            Ok(())
+        }
     };
 
     match result {
