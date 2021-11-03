@@ -145,6 +145,70 @@ pub fn remove_api_key_response(response: http::Response<Vec<u8>>) -> Result<(), 
     }
 }
 
+/// Retire an existing package release from Hex.
+pub fn retire_release_request(
+    package: &str,
+    version: &str,
+    reason: RetirementReason,
+    message: Option<&str>,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    let body = json!({
+        "reason": reason.to_str(),
+        "message": message,
+    });
+    config
+        .api_request(
+            Method::POST,
+            &format!("packages/{}/releases/{}/retire", package, version),
+            Some(api_key),
+        )
+        .body(body.to_string().into_bytes())
+        .expect("require_release_request request")
+}
+
+/// Parses a request that retired a release.
+pub fn retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
+/// Un-retire an existing retired package release from Hex.
+pub fn unretire_release_request(
+    package: &str,
+    version: &str,
+    reason: RetirementReason,
+    message: Option<&str>,
+    api_key: &str,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    config
+        .api_request(
+            Method::DELETE,
+            &format!("packages/{}/releases/{}/retire", package, version),
+            Some(api_key),
+        )
+        .body(vec![])
+        .expect("require_release_request request")
+}
+
+/// Parses a request that un-retired a package version.
+pub fn unretire_release_response(response: http::Response<Vec<u8>>) -> Result<(), ApiError> {
+    let (parts, body) = response.into_parts();
+    match parts.status {
+        StatusCode::NO_CONTENT | StatusCode::OK => Ok(()),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidCredentials),
+        status => Err(ApiError::unexpected_response(status, body)),
+    }
+}
+
 /// Create a request that get the names and versions of all of the packages on
 /// the package registry.
 ///
@@ -569,6 +633,18 @@ pub enum RetirementReason {
     Security,
     Deprecated,
     Renamed,
+}
+
+impl RetirementReason {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            RetirementReason::Other => "other",
+            RetirementReason::Invalid => "invalid",
+            RetirementReason::Security => "security",
+            RetirementReason::Deprecated => "deprecated",
+            RetirementReason::Renamed => "renamed",
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
