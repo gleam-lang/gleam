@@ -219,27 +219,18 @@ enum Dependencies {
 enum Hex {
     /// Retire a release from Hex
     Retire {
-        #[structopt(long = "package")]
         package: String,
 
-        #[structopt(long = "version")]
         version: String,
 
-        #[structopt(long = "reason", possible_values = &RetirementReason::VARIANTS)]
+        #[structopt(possible_values = &RetirementReason::VARIANTS)]
         reason: RetirementReason,
 
-        #[structopt(long = "message")]
         message: Option<String>,
     },
 
     /// Un-retire a release from Hex
-    Unretire {
-        #[structopt(long = "package")]
-        package: String,
-
-        #[structopt(long = "version")]
-        version: String,
-    },
+    Unretire { package: String, version: String },
 }
 
 #[derive(StructOpt, Debug)]
