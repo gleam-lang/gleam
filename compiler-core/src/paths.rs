@@ -10,8 +10,16 @@ pub fn build() -> PathBuf {
     PathBuf::from("build")
 }
 
-pub fn manifest_path() -> PathBuf {
+pub fn manifest() -> PathBuf {
     PathBuf::from("manifest.toml")
+}
+
+pub fn src() -> PathBuf {
+    PathBuf::from("src")
+}
+
+pub fn test() -> PathBuf {
+    PathBuf::from("test")
 }
 
 pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {

@@ -75,9 +75,7 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{package_compiler, Target},
-    config::PackageConfig,
     hex::RetirementReason,
-    paths,
     project::Analysed,
 };
 use hex::ApiKeyCommand as _;
@@ -393,22 +391,6 @@ fn initialise_logger() {
         .with_target(false)
         .without_time()
         .init();
-}
-
-fn copy_root_package_to_build(root_config: &PackageConfig) -> Result<(), Error> {
-    let target = paths::build_deps_package(&root_config.name);
-    let path = PathBuf::from("./");
-
-    // Reset _build dir
-    crate::fs::delete_dir(&target)?;
-    crate::fs::mkdir(&target)?;
-
-    // Copy source files across
-    crate::fs::copy(path.join("gleam.toml"), target.join("gleam.toml"))?;
-    crate::fs::copy_dir(path.join("src"), &target)?;
-    crate::fs::copy_dir(path.join("test"), &target)?;
-
-    Ok(())
 }
 
 fn print_warnings(analysed: &[Analysed]) -> usize {

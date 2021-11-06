@@ -382,16 +382,16 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
         .map(|_| ())
 }
 
-pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
-    tracing::debug!(from=?path, to=?to, "copying_directory");
+// pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+//     tracing::debug!(from=?path, to=?to, "copying_directory");
 
-    // TODO: include the destination in the error message
-    fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
-        .map_err(|err| Error::FileIo {
-            action: FileIoAction::Copy,
-            kind: FileKind::Directory,
-            path: PathBuf::from(path.as_ref()),
-            err: Some(err.to_string()),
-        })
-        .map(|_| ())
-}
+//     // TODO: include the destination in the error message
+//     fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
+//         .map_err(|err| Error::FileIo {
+//             action: FileIoAction::Copy,
+//             kind: FileKind::Directory,
+//             path: PathBuf::from(path.as_ref()),
+//             err: Some(err.to_string()),
+//         })
+//         .map(|_| ())
+// }

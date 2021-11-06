@@ -66,7 +66,7 @@ where
         // Read and type check top level package
         let root_config = std::mem::replace(&mut self.root_config, Default::default());
         let name = root_config.name.clone();
-        self.compile_package(&name, root_config, SourceLocations::SrcAndTest)?;
+        self.compile_package(&name, root_config, paths::src(), Some(paths::test()))?;
 
         Ok(())
     }
@@ -81,7 +81,7 @@ where
             tracing::info!(package=%name, "Loading precompiled package");
             self.load_cached_package(build_path, &name, config)
         } else {
-            self.compile_package(&name, config, SourceLocations::Src)
+            self.compile_package(&name, config, paths::build_deps_package_src(&name), None)
         }
     }
 
@@ -107,17 +107,12 @@ where
         &mut self,
         name: &str,
         config: PackageConfig,
-        locations: SourceLocations,
+        src_path: PathBuf,
+        test_path: Option<PathBuf>,
     ) -> Result<(), Error> {
         let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
-        let src_path = paths::build_deps_package_src(name);
-        let test_path = paths::build_deps_package_test(name);
 
         self.telemetry.compiling_package(&name);
-        let test_path = match locations {
-            SourceLocations::SrcAndTest => Some(paths::build_deps_package_test(name)),
-            _ => None,
-        };
 
         let options = package_compiler::Options {
             target: Target::Erlang,
@@ -154,7 +149,7 @@ where
         // `gleam run` and `gleam test` commands
         // TODO: Pass this config in in a better way rather than attaching extra
         // meaning to this flag.
-        if locations == SourceLocations::SrcAndTest {
+        if test_path.is_some() {
             let name = "gleam@@main.erl";
             self.io
                 .writer(&out_path.join(name))?
@@ -163,7 +158,7 @@ where
         }
 
         // Copy across any Erlang files from src and test
-        self.copy_project_erlang_files(src_path, &mut modules, &out_path, locations, test_path)?;
+        self.copy_project_erlang_files(src_path, &mut modules, &out_path, test_path)?;
 
         // Compile Erlang to .beam files
         self.compile_erlang_to_beam(&out_path, &modules)?;
@@ -176,14 +171,13 @@ where
         src_path: PathBuf,
         modules: &mut Vec<PathBuf>,
         out_path: &PathBuf,
-        locations: SourceLocations,
         test_path: Option<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_erlang_source_files");
         let mut copied = HashSet::new();
-        self.copy_erlang_files(&src_path, &mut copied, modules, out_path, locations)?;
+        self.copy_erlang_files(&src_path, &mut copied, modules, out_path)?;
         Ok(if let Some(test_path) = test_path {
-            self.copy_erlang_files(&test_path, &mut copied, modules, out_path, locations)?;
+            self.copy_erlang_files(&test_path, &mut copied, modules, out_path)?;
         })
     }
 
@@ -223,7 +217,6 @@ where
         copied: &mut HashSet<PathBuf>,
         to_compile_modules: &mut Vec<PathBuf>,
         out_path: &Path,
-        locations: SourceLocations,
     ) -> Result<()> {
         for entry in self.io.read_dir(src_path)? {
             let full_path = entry.expect("copy_erlang_files dir_entry").path();

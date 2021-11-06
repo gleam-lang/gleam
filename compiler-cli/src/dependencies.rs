@@ -95,7 +95,7 @@ pub struct Manifest {
 impl Manifest {
     pub fn read_from_disc() -> Result<Self> {
         tracing::info!("Reading manifest.toml");
-        let manifest_path = paths::manifest_path();
+        let manifest_path = paths::manifest();
         let toml = crate::fs::read(&manifest_path)?;
         let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
@@ -107,7 +107,7 @@ impl Manifest {
     }
 
     pub fn write_to_disc(&self) -> Result<()> {
-        let path = paths::manifest_path();
+        let path = paths::manifest();
         let toml = toml::to_vec(&self).expect("manifest.toml serialization");
         let mut file = fs::writer(&path)?;
         file.write(
@@ -263,7 +263,7 @@ fn get_manifest(
     config: &PackageConfig,
 ) -> Result<Manifest> {
     // If there's no manifest then resolve the versions anew
-    if !paths::manifest_path().exists() {
+    if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
         return resolve_versions(runtime, mode, config, &HashMap::new());
     }
