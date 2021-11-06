@@ -321,15 +321,17 @@ pub type PackageVersions = HashMap<String, Version>;
 
 pub type ResolutionError = PubGrubError<String, Version>;
 
-pub fn resolve_versions<Requirements>(
+pub fn resolve_versions<Requirements, Locked>(
     remote: Box<dyn PackageFetcher>,
     root_name: PackageName,
-    root_version: Version,
     dependencies: Requirements,
+    locked: Locked,
 ) -> Result<PackageVersions, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
+    Locked: Iterator<Item = (String, Version)>,
 {
+    let root_version = Version::new(0, 0, 0);
     let root = Package {
         name: root_name.clone(),
         repository: "local".to_string(),
@@ -337,15 +339,7 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            dependencies: dependencies
-                .map(|(package, requirement)| Dependency {
-                    package,
-                    app: None,
-                    optional: false,
-                    repository: None,
-                    requirement,
-                })
-                .collect(),
+            dependencies: root_dependencies(dependencies, locked),
         }],
     };
     let packages = pubgrub::solver::resolve(
@@ -354,9 +348,34 @@ where
         root_version,
     )?
     .into_iter()
+    .filter(|(name, _)| name.as_str() != root_name.as_str())
     .collect();
 
     Ok(packages)
+}
+
+fn root_dependencies<Requirements, Locked>(
+    dependencies: Requirements,
+    locked: Locked,
+) -> Vec<Dependency>
+where
+    Requirements: Iterator<Item = (String, Range)>,
+    Locked: Iterator<Item = (String, Version)>,
+{
+    // Add the locked versions as new requirements that override any existing
+    // entry in the dependencies list
+    let deps: HashMap<_, _> = dependencies
+        .chain(locked.map(|(name, version)| (name, Range::new(version.to_string()))))
+        .collect();
+    deps.into_iter()
+        .map(|(package, requirement)| Dependency {
+            package,
+            app: None,
+            optional: false,
+            repository: None,
+            requirement,
+        })
+        .collect()
 }
 
 pub trait PackageFetcher {
