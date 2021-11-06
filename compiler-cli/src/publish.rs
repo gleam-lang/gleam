@@ -5,81 +5,68 @@ use std::{
 };
 
 use flate2::{write::GzEncoder, Compression};
-use gleam_core::{hex, Error, Result};
+use gleam_core::{config::PackageConfig, hex, Error, Result};
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 
-use crate::{build, cli, fs, http::HttpClient};
+use crate::{build, cli, fs, hex::ApiKeyCommand, http::HttpClient};
 
 pub fn command() -> Result<()> {
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hostname = get_hostname();
-    let config = crate::config::root_config()?;
-    let hex_config = hexpm::Config::new();
-    let http = HttpClient::new();
-
-    // These fields are required to publish a Hex package. Hex will reject
-    // packages without them.
-    if config.description.is_empty() || config.licences.is_empty() {
-        return Err(Error::MissingHexPublishFields {
-            description_missing: config.description.is_empty(),
-            licence_missing: config.licences.is_empty(),
-        });
-    }
-
-    // Build the project to check that it is valid
-    let _ = build::main()?;
-
-    // TODO: Build HTML documentation
-
-    // Build the package release tarball
-    let tarball = build_hex_tarball(&config)?;
-
-    // Get login creds from user
-    let username = cli::ask("https://hex.pm username")?;
-    let password = cli::ask_password("https://hex.pm password")?;
-
-    let start = Instant::now();
-    // Publish the package
-    let result = runtime.block_on(perform_publish(
-        config, hostname, username, password, hex_config, http, tarball,
-    ));
-
-    // The result from publishing is handled after key deletion to ensure that
-    // we remove it even in the case of an error
-    result?;
-
-    cli::print_published(start.elapsed());
-
-    Ok(())
+    PublishCommand::setup()?.run()
 }
 
-async fn perform_publish(
-    config: gleam_core::config::PackageConfig,
-    hostname: String,
-    username: String,
-    password: String,
-    hex_config: hexpm::Config,
-    http: HttpClient,
+pub struct PublishCommand {
+    config: PackageConfig,
     tarball: Vec<u8>,
-) -> Result<(), Error> {
-    cli::print_publishing(&config.name, &config.version);
-
-    let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
-        .await?;
-
-    // Publish the package but don't exit early if it fails, we want to always
-    // remove the API key
-    let result = hex::publish_package(tarball, &key, &hex_config, &http).await;
-
-    // Ensure to remove the API key
-    gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
-
-    result
 }
 
-fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
+impl PublishCommand {
+    pub fn setup() -> Result<Self> {
+        let config = crate::config::root_config()?;
+
+        // These fields are required to publish a Hex package. Hex will reject
+        // packages without them.
+        if config.description.is_empty() || config.licences.is_empty() {
+            return Err(Error::MissingHexPublishFields {
+                description_missing: config.description.is_empty(),
+                licence_missing: config.licences.is_empty(),
+            });
+        }
+
+        // Build the project to check that it is valid
+        let _ = build::main()?;
+
+        // TODO: Build HTML documentation
+
+        // Build the package release tarball
+        let tarball = build_hex_tarball(&config)?;
+
+        Ok(Self { config, tarball })
+    }
+}
+
+impl ApiKeyCommand for PublishCommand {
+    fn with_api_key(
+        &mut self,
+        runtime: &tokio::runtime::Handle,
+        hex_config: &hexpm::Config,
+        api_key: &str,
+    ) -> Result<()> {
+        cli::print_publishing(&self.config.name, &self.config.version);
+        let start = Instant::now();
+        runtime.block_on(hex::publish_package(
+            std::mem::take(&mut self.tarball),
+            api_key,
+            hex_config,
+            &HttpClient::new(),
+        ))?;
+        cli::print_published(start.elapsed());
+        Ok(())
+    }
+}
+
+fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
     let files = project_files()?;
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
@@ -107,7 +94,7 @@ fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u
     Ok(tarball)
 }
 
-fn metadata_config(config: &gleam_core::config::PackageConfig, files: Vec<PathBuf>) -> String {
+fn metadata_config(config: &PackageConfig, files: Vec<PathBuf>) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
