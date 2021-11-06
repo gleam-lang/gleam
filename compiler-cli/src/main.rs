@@ -75,13 +75,14 @@ pub use gleam_core::{
 use gleam_core::{
     build::{package_compiler, Target},
     config::PackageConfig,
+    hex::RetirementReason,
     paths,
     project::Analysed,
 };
 
 use std::path::PathBuf;
 use structopt::{clap::AppSettings, StructOpt};
-use strum::{EnumString, EnumVariantNames, VariantNames};
+use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -238,16 +239,6 @@ enum Hex {
         #[structopt(long = "version")]
         version: String,
     },
-}
-
-#[derive(Debug, EnumString, EnumVariantNames, Clone, Copy, PartialEq)]
-#[strum(serialize_all = "lowercase")]
-enum RetirementReason {
-    Other,
-    Invalid,
-    Security,
-    Deprecated,
-    Renamed,
 }
 
 #[derive(StructOpt, Debug)]
