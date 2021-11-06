@@ -80,6 +80,7 @@ use gleam_core::{
     paths,
     project::Analysed,
 };
+use hex::ApiKeyCommand as _;
 
 use std::path::PathBuf;
 use structopt::{clap::AppSettings, StructOpt};
@@ -320,9 +321,11 @@ fn main() {
             version,
             reason,
             message,
-        }) => hex::retire(package, version, reason, message),
+        }) => hex::RetireCommand::new(package, version, reason, message).run(),
 
-        Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
+        Command::Hex(Hex::Unretire { package, version }) => {
+            hex::UnretireCommand::new(package, version).run()
+        }
     };
 
     match result {
