@@ -55,6 +55,14 @@ pub fn print_published(duration: Duration) {
     print_colourful_prefix("  Published", &format!("in {}", seconds(duration)))
 }
 
+pub fn print_retired(package: &str, version: &str) {
+    print_colourful_prefix("    Retired", &format!("{} {}", package, version))
+}
+
+pub fn print_unretired(package: &str, version: &str) {
+    print_colourful_prefix("  Unretired", &format!("{} {}", package, version))
+}
+
 pub fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
 }

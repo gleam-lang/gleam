@@ -44,7 +44,7 @@ pub fn command() -> Result<()> {
     // Publish the package
     let result = runtime.block_on(perform_publish(
         config, hostname, username, password, hex_config, http, tarball,
-    ))?;
+    ));
 
     // The result from publishing is handled after key deletion to ensure that
     // we remove it even in the case of an error
@@ -63,7 +63,7 @@ async fn perform_publish(
     hex_config: hexpm::Config,
     http: HttpClient,
     tarball: Vec<u8>,
-) -> Result<Result<(), Error>, Error> {
+) -> Result<(), Error> {
     cli::print_publishing(&config.name, &config.version);
 
     let key = gleam_core::hex::create_api_key(&hostname, &username, &password, &hex_config, &http)
@@ -76,7 +76,7 @@ async fn perform_publish(
     // Ensure to remove the API key
     gleam_core::hex::remove_api_key(&hostname, &hex_config, &key, &http).await?;
 
-    Ok(result)
+    result
 }
 
 fn build_hex_tarball(config: &gleam_core::config::PackageConfig) -> Result<Vec<u8>> {
@@ -348,7 +348,7 @@ fn release_metadata_as_erlang() {
     );
 }
 
-fn get_hostname() -> String {
+pub fn get_hostname() -> String {
     hostname::get()
         .expect("Looking up hostname")
         .to_string_lossy()
