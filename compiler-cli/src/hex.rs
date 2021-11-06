@@ -5,6 +5,7 @@ use gleam_core::{
 
 use crate::{cli, http::HttpClient};
 
+/// A helper trait that handles the provisioning and destruction of a Hex API key.
 pub trait ApiKeyCommand {
     fn with_api_key(
         &mut self,
