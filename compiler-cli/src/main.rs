@@ -58,6 +58,7 @@ mod dependencies;
 mod docs;
 mod format;
 mod fs;
+mod hex;
 mod http;
 mod new;
 mod panic;
@@ -323,10 +324,14 @@ fn main() {
 
         Command::PrintConfig => print_config(),
 
-        Command::Hex(hex) => {
-            dbg!(hex);
-            Ok(())
-        }
+        Command::Hex(Hex::Retire {
+            package,
+            version,
+            reason,
+            message,
+        }) => hex::retire(package, version, reason, message),
+
+        Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
     };
 
     match result {
