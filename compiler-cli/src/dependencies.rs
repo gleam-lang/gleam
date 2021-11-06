@@ -34,7 +34,7 @@ pub fn download() -> Result<Manifest> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let manifest = get_manifest(runtime.handle().clone(), mode, &config)?;
+    let (manifest_updated, manifest) = get_manifest(runtime.handle().clone(), mode, &config)?;
     let local = LocalPackages::read_from_disc()?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
@@ -49,7 +49,9 @@ pub fn download() -> Result<Manifest> {
     ))?;
 
     // Record new state of the packages directory
-    manifest.write_to_disc()?;
+    if manifest_updated {
+        manifest.write_to_disc()?;
+    }
     LocalPackages::from_manifest(&manifest).write_to_disc()?;
 
     Ok(manifest)
@@ -261,11 +263,12 @@ fn get_manifest(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
-) -> Result<Manifest> {
+) -> Result<(bool, Manifest)> {
     // If there's no manifest then resolve the versions anew
     if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
-        return resolve_versions(runtime, mode, config, &HashMap::new());
+        let manifest = resolve_versions(runtime, mode, config, &HashMap::new())?;
+        return Ok((true, manifest));
     }
 
     let manifest = Manifest::read_from_disc()?;
@@ -274,10 +277,11 @@ fn get_manifest(
     // to date so we can return it unmodified.
     if manifest.requirements == config.all_dependencies()? {
         tracing::info!("manifest_up_to_date");
-        Ok(manifest)
+        Ok((false, manifest))
     } else {
         tracing::info!("manifest_outdated");
-        resolve_versions(runtime, mode, config, &manifest.packages)
+        let manifest = resolve_versions(runtime, mode, config, &manifest.packages)?;
+        return Ok((true, manifest));
     }
 }
 
