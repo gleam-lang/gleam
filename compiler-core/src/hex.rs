@@ -54,6 +54,50 @@ pub async fn publish_package<Http: HttpClient>(
     hexpm::publish_package_response(response).map_err(Error::hex)
 }
 
+#[derive(Debug, strum::EnumString, strum::EnumVariantNames, Clone, Copy, PartialEq)]
+#[strum(serialize_all = "lowercase")]
+pub enum RetirementReason {
+    Other,
+    Invalid,
+    Security,
+    Deprecated,
+    Renamed,
+}
+
+impl RetirementReason {
+    pub fn to_library_enum(&self) -> hexpm::RetirementReason {
+        match self {
+            RetirementReason::Other => hexpm::RetirementReason::Other,
+            RetirementReason::Invalid => hexpm::RetirementReason::Invalid,
+            RetirementReason::Security => hexpm::RetirementReason::Security,
+            RetirementReason::Deprecated => hexpm::RetirementReason::Deprecated,
+            RetirementReason::Renamed => hexpm::RetirementReason::Renamed,
+        }
+    }
+}
+
+pub async fn retire_release<Http: HttpClient>(
+    package: &str,
+    version: &str,
+    reason: RetirementReason,
+    message: Option<&str>,
+    api_key: &str,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!(package=%package, version=%version, "retiring_hex_release");
+    let request = hexpm::retire_release_request(
+        package,
+        version,
+        reason.to_library_enum(),
+        message,
+        api_key,
+        config,
+    );
+    let response = http.send(request).await?;
+    hexpm::retire_release_response(response).map_err(Error::hex)
+}
+
 pub async fn create_api_key<Http: HttpClient>(
     hostname: &str,
     username: &str,
