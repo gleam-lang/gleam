@@ -183,8 +183,6 @@ pub fn retire_release_response(response: http::Response<Vec<u8>>) -> Result<(), 
 pub fn unretire_release_request(
     package: &str,
     version: &str,
-    reason: RetirementReason,
-    message: Option<&str>,
     api_key: &str,
     config: &Config,
 ) -> http::Request<Vec<u8>> {
