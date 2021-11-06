@@ -321,15 +321,14 @@ pub type PackageVersions = HashMap<String, Version>;
 
 pub type ResolutionError = PubGrubError<String, Version>;
 
-pub fn resolve_versions<Requirements, Locked>(
+pub fn resolve_versions<Requirements>(
     remote: Box<dyn PackageFetcher>,
     root_name: PackageName,
     dependencies: Requirements,
-    locked: Locked,
+    locked: HashMap<String, Version>,
 ) -> Result<PackageVersions, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
-    Locked: Iterator<Item = (String, Version)>,
 {
     let root_version = Version::new(0, 0, 0);
     let root = Package {
@@ -339,11 +338,11 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            dependencies: root_dependencies(dependencies, locked),
+            dependencies: root_dependencies(dependencies, &locked),
         }],
     };
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(remote, root),
+        &DependencyProvider::new(remote, root, locked),
         root_name.clone(),
         root_version,
     )?
@@ -354,19 +353,20 @@ where
     Ok(packages)
 }
 
-fn root_dependencies<Requirements, Locked>(
+fn root_dependencies<Requirements>(
     dependencies: Requirements,
-    locked: Locked,
+    locked: &HashMap<String, Version>,
 ) -> Vec<Dependency>
 where
     Requirements: Iterator<Item = (String, Range)>,
-    Locked: Iterator<Item = (String, Version)>,
 {
+    let locked = locked
+        .iter()
+        .map(|(name, version)| (name.to_string(), Range::new(version.to_string())));
     // Add the locked versions as new requirements that override any existing
-    // entry in the dependencies list
-    let deps: HashMap<_, _> = dependencies
-        .chain(locked.map(|(name, version)| (name, Range::new(version.to_string()))))
-        .collect();
+    // entry in the dependencies list. Collection into a HashMap is used for
+    // de-duplication.
+    let deps: HashMap<_, _> = dependencies.chain(locked).collect();
     deps.into_iter()
         .map(|(package, requirement)| Dependency {
             package,
@@ -385,14 +385,20 @@ pub trait PackageFetcher {
 struct DependencyProvider {
     packages: RefCell<HashMap<String, Package>>,
     remote: Box<dyn PackageFetcher>,
+    locked: HashMap<String, Version>,
 }
 
 impl DependencyProvider {
-    fn new(remote: Box<dyn PackageFetcher>, root: Package) -> Self {
+    fn new(
+        remote: Box<dyn PackageFetcher>,
+        root: Package,
+        locked: HashMap<String, Version>,
+    ) -> Self {
         let mut packages = HashMap::new();
         let _ = packages.insert(root.name.clone(), root);
         Self {
             packages: RefCell::new(packages),
+            locked,
             remote,
         }
     }
@@ -467,21 +473,26 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
     ) -> Result<pubgrub::solver::Dependencies<PackageName, Version>, Box<dyn StdError>> {
         self.ensure_package_fetched(name)?;
         let packages = self.packages.borrow();
-        let version = packages
+        let release = match packages
             .get(name)
             .into_iter()
             .flat_map(|p| p.releases.iter())
-            .find(|r| !r.is_retired() && &r.version == version);
-        Ok(match version {
-            Some(release) => {
-                let mut deps: Map<String, PubgrubRange> = Default::default();
-                for d in &release.dependencies {
-                    let range = d.requirement.to_pubgrub()?;
-                    deps.insert(d.package.clone(), range);
-                }
-                Dependencies::Known(deps)
-            }
-            None => Dependencies::Unknown,
-        })
+            .find(|r| &r.version == version)
+        {
+            Some(release) => release,
+            None => return Ok(Dependencies::Unknown),
+        };
+
+        // Only use retired versions if they have been locked
+        if release.is_retired() && self.locked.get(name) != Some(version) {
+            return Ok(Dependencies::Unknown);
+        }
+
+        let mut deps: Map<String, PubgrubRange> = Default::default();
+        for d in &release.dependencies {
+            let range = d.requirement.to_pubgrub()?;
+            deps.insert(d.package.clone(), range);
+        }
+        Ok(Dependencies::Known(deps))
     }
 }

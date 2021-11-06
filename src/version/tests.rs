@@ -516,7 +516,7 @@ fn resolution_with_locked() {
         make_remote(),
         "app".to_string(),
         vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
-        vec![locked_stdlib.clone()].into_iter(),
+        vec![locked_stdlib.clone()].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -533,7 +533,7 @@ fn resolution_without_deps() {
         make_remote(),
         "app".to_string(),
         vec![].into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(result, vec![].into_iter().collect())
@@ -545,7 +545,7 @@ fn resolution_1_dep() {
         make_remote(),
         "app".to_string(),
         vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -565,7 +565,7 @@ fn resolution_with_nested_deps() {
         make_remote(),
         "app".to_string(),
         vec![("gleam_otp".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -588,7 +588,7 @@ fn resolution_locked_to_older_version() {
         make_remote(),
         "app".to_string(),
         vec![("gleam_otp".to_string(), Range::new("~> 0.1.0".to_string()))].into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -615,7 +615,7 @@ fn resolution_retired_versions_not_used_by_default() {
             Range::new("> 0.0.0".to_string()),
         )]
         .into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -624,6 +624,33 @@ fn resolution_retired_versions_not_used_by_default() {
             "package_with_retired".to_string(),
             // Uses the older version that hasn't been retired
             Version::try_from("0.1.0").unwrap()
+        ),]
+        .into_iter()
+        .collect()
+    );
+}
+
+#[test]
+fn resolution_retired_versions_can_be_used_if_locked() {
+    let result = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        vec![(
+            "package_with_retired".to_string(),
+            Range::new("> 0.0.0".to_string()),
+        )]
+        .into_iter(),
+        vec![("package_with_retired".to_string(), Version::new(0, 2, 0))]
+            .into_iter()
+            .collect(),
+    )
+    .unwrap();
+    assert_eq!(
+        result,
+        vec![(
+            "package_with_retired".to_string(),
+            // Uses the locked version even though it's retired
+            Version::new(0, 2, 0)
         ),]
         .into_iter()
         .collect()
@@ -640,7 +667,7 @@ fn resolution_prerelease_can_be_selected() {
             Range::new("~> 0.3.0-rc1".to_string()),
         )]
         .into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
@@ -666,7 +693,7 @@ fn resolution_not_found_dep() {
         make_remote(),
         "app".to_string(),
         vec![("unknown".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap_err();
 }
@@ -681,7 +708,7 @@ fn resolution_no_matching_version() {
             Range::new("~> 99.0".to_string()),
         )]
         .into_iter(),
-        vec![].into_iter(),
+        vec![].into_iter().collect(),
     )
     .unwrap_err();
 }
