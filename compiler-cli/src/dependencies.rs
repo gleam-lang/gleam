@@ -282,7 +282,7 @@ fn get_manifest(
     } else {
         tracing::info!("manifest_outdated");
         let manifest = resolve_versions(runtime, mode, config, &manifest.packages)?;
-        return Ok((true, manifest));
+        Ok((true, manifest))
     }
 }
 
