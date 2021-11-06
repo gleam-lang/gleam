@@ -400,11 +400,8 @@ impl DependencyProvider {
             // Sort the packages from newest to oldest, pres after all others
             package.releases.sort_by(|a, b| a.version.cmp(&b.version));
             package.releases.reverse();
-            let (pre, mut norm): (_, Vec<_>) = package
-                .releases
-                .into_iter()
-                .filter(Release::is_active)
-                .partition(Release::is_pre);
+            let (pre, mut norm): (_, Vec<_>) =
+                package.releases.into_iter().partition(Release::is_pre);
             norm.extend(pre);
             package.releases = norm;
             packages.insert(name.to_string(), package);
@@ -455,7 +452,7 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
             .get(name)
             .into_iter()
             .flat_map(|p| p.releases.iter())
-            .find(|r| &r.version == version);
+            .find(|r| !r.is_retired() && &r.version == version);
         Ok(match version {
             Some(release) => {
                 let mut deps: Map<String, PubgrubRange> = Default::default();

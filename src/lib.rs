@@ -612,10 +612,6 @@ impl Release {
     fn is_pre(&self) -> bool {
         self.version.is_pre()
     }
-
-    fn is_active(&self) -> bool {
-        self.retirement_status.is_none()
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
