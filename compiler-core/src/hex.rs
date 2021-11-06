@@ -98,6 +98,19 @@ pub async fn retire_release<Http: HttpClient>(
     hexpm::retire_release_response(response).map_err(Error::hex)
 }
 
+pub async fn unretire_release<Http: HttpClient>(
+    package: &str,
+    version: &str,
+    api_key: &str,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!(package=%package, version=%version, "retiring_hex_release");
+    let request = hexpm::unretire_release_request(package, version, api_key, config);
+    let response = http.send(request).await?;
+    hexpm::unretire_release_response(response).map_err(Error::hex)
+}
+
 pub async fn create_api_key<Http: HttpClient>(
     hostname: &str,
     username: &str,
