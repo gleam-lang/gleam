@@ -61,7 +61,7 @@ async fn download_missing_packages(
     local: &LocalPackages,
     project_name: String,
 ) -> Result<(), Error> {
-    let missing = local.missing_local_packages(manifest);
+    let missing = local.missing_local_packages(manifest, &project_name);
     if !missing.is_empty() {
         let start = Instant::now();
         cli::print_downloading("packages");
@@ -140,20 +140,25 @@ struct LocalPackages {
 
 impl LocalPackages {
     pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
-        Self::hash_diff(&manifest.packages, &self.packages)
+        Self::hash_diff(&manifest.packages, &self.packages, "")
     }
 
-    pub fn missing_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
-        Self::hash_diff(&self.packages, &manifest.packages)
+    pub fn missing_local_packages(
+        &self,
+        manifest: &Manifest,
+        root: &str,
+    ) -> Vec<(String, Version)> {
+        Self::hash_diff(&self.packages, &manifest.packages, root)
     }
 
     fn hash_diff(
         a: &HashMap<String, Version>,
         b: &HashMap<String, Version>,
+        skip: &str,
     ) -> Vec<(String, Version)> {
         let mut extra = Vec::new();
         for (name, version) in b {
-            if a.get(name.as_str()) != Some(version) {
+            if name != skip && a.get(name.as_str()) != Some(version) {
                 extra.push((name.to_string(), version.clone()));
             }
         }
@@ -187,6 +192,39 @@ impl LocalPackages {
             packages: manifest.packages.clone(),
         }
     }
+}
+
+#[test]
+fn missing_local_packages() {
+    let mut extra = LocalPackages {
+        packages: vec![
+            ("local2".to_string(), Version::parse("2.0.0").unwrap()),
+            ("local3".to_string(), Version::parse("3.0.0").unwrap()),
+        ]
+        .into_iter()
+        .collect(),
+    }
+    .missing_local_packages(
+        &Manifest {
+            requirements: HashMap::new(),
+            packages: vec![
+                ("root".to_string(), Version::parse("1.0.0").unwrap()),
+                ("local1".to_string(), Version::parse("1.0.0").unwrap()),
+                ("local2".to_string(), Version::parse("3.0.0").unwrap()),
+            ]
+            .into_iter()
+            .collect(),
+        },
+        "root",
+    );
+    extra.sort();
+    assert_eq!(
+        extra,
+        vec![
+            ("local1".to_string(), Version::new(1, 0, 0)),
+            ("local2".to_string(), Version::new(3, 0, 0)),
+        ]
+    )
 }
 
 #[test]
