@@ -265,7 +265,7 @@ fn get_manifest(
     // If there's no manifest then resolve the versions anew
     if !paths::manifest_path().exists() {
         tracing::info!("manifest_not_present");
-        return resolve_versions(runtime, mode, config);
+        return resolve_versions(runtime, mode, config, &HashMap::new());
     }
 
     let manifest = Manifest::read_from_disc()?;
@@ -277,8 +277,7 @@ fn get_manifest(
         Ok(manifest)
     } else {
         tracing::info!("manifest_outdated");
-        // TODO: use the existing already locked versions
-        resolve_versions(runtime, mode, config)
+        resolve_versions(runtime, mode, config, &manifest.packages)
     }
 }
 
@@ -286,10 +285,11 @@ fn resolve_versions(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
+    locked: &HashMap<String, Version>,
 ) -> Result<Manifest, Error> {
     cli::print_resolving_versions();
     let manifest = Manifest {
-        packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config)?,
+        packages: hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, locked)?,
         requirements: config.all_dependencies()?,
     };
     Ok(manifest)
