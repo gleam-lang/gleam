@@ -50,6 +50,7 @@ pub fn download() -> Result<Manifest> {
 
     // Record new state of the packages directory
     if manifest_updated {
+        tracing::info!("writing_manifest_toml");
         manifest.write_to_disc()?;
     }
     LocalPackages::from_manifest(&manifest).write_to_disc()?;
