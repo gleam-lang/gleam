@@ -325,7 +325,7 @@ pub fn resolve_versions<Requirements>(
     remote: Box<dyn PackageFetcher>,
     root_name: PackageName,
     dependencies: Requirements,
-    locked: HashMap<String, Version>,
+    locked: &HashMap<String, Version>,
 ) -> Result<PackageVersions, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
@@ -382,17 +382,17 @@ pub trait PackageFetcher {
     fn get_dependencies(&self, package: &str) -> Result<Package, Box<dyn StdError>>;
 }
 
-struct DependencyProvider {
+struct DependencyProvider<'a> {
     packages: RefCell<HashMap<String, Package>>,
     remote: Box<dyn PackageFetcher>,
-    locked: HashMap<String, Version>,
+    locked: &'a HashMap<String, Version>,
 }
 
-impl DependencyProvider {
+impl<'a> DependencyProvider<'a> {
     fn new(
         remote: Box<dyn PackageFetcher>,
         root: Package,
-        locked: HashMap<String, Version>,
+        locked: &'a HashMap<String, Version>,
     ) -> Self {
         let mut packages = HashMap::new();
         let _ = packages.insert(root.name.clone(), root);
@@ -437,7 +437,7 @@ impl DependencyProvider {
 
 type PackageName = String;
 
-impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider {
+impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'a> {
     fn choose_package_version<
         Name: Borrow<PackageName>,
         Ver: Borrow<pubgrub::range::Range<Version>>,
