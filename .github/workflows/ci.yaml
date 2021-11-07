@@ -177,9 +177,16 @@ jobs:
           cd lib_project
           gleam run
           gleam test
+          gleam docs build
 
           # Assert that module metadata has been written
           ls build/dev/erlang/lib_project/lib_project.gleam_module
+
+          # Assert that HTML docs have been written
+          ls build/dev/docs/lib_project/index.html
+          ls build/dev/docs/lib_project/index.css
+          ls build/dev/docs/lib_project/gleam.js
+          ls build/dev/docs/lib_project/lib_project/index.html
 
       - name: Test JavaScript prelude
         run: |
