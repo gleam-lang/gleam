@@ -6,6 +6,9 @@ pub fn root_config() -> PathBuf {
     PathBuf::from("gleam.toml")
 }
 
+pub fn readme() -> PathBuf {
+    PathBuf::from("README.md")
+}
 pub fn build() -> PathBuf {
     PathBuf::from("build")
 }
@@ -69,6 +72,13 @@ pub fn default_gleam_cache() -> PathBuf {
 
 pub fn build_packages(mode: Mode, target: Target) -> PathBuf {
     build().join(mode.to_string()).join(target.to_string())
+}
+
+pub fn build_docs(package: &str) -> PathBuf {
+    build()
+        .join(Mode::Dev.to_string())
+        .join("docs")
+        .join(package)
 }
 
 pub fn build_package(mode: Mode, target: Target, package: &str) -> PathBuf {

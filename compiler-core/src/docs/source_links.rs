@@ -1,8 +1,9 @@
 use crate::{
     ast::SrcSpan,
+    build,
     config::{PackageConfig, Repository},
     line_numbers::LineNumbers,
-    project::Analysed,
+    paths,
 };
 use std::path::{Component, Path};
 
@@ -12,12 +13,8 @@ pub struct SourceLinker {
 }
 
 impl SourceLinker {
-    pub fn new(
-        project_root: impl AsRef<Path>,
-        project_config: &PackageConfig,
-        module: &Analysed,
-    ) -> Self {
-        let path_in_repo = get_path_in_repo(project_root, &module.path);
+    pub fn new(project_config: &PackageConfig, module: &build::Module) -> Self {
+        let path_in_repo = get_path_in_repo(&module.name);
 
         let url_pattern = match &project_config.repository {
             Repository::GitHub { user, repo } => Some((
@@ -45,7 +42,7 @@ impl SourceLinker {
         };
 
         SourceLinker {
-            line_numbers: LineNumbers::new(&module.src),
+            line_numbers: LineNumbers::new(&module.code),
             url_pattern,
         }
     }
@@ -62,11 +59,10 @@ impl SourceLinker {
     }
 }
 
-fn get_path_in_repo(project_root: impl AsRef<Path>, path: &Path) -> String {
-    path.strip_prefix(&project_root)
-        .ok()
-        .and_then(to_url_path)
-        .unwrap_or_default()
+fn get_path_in_repo(name: &str) -> String {
+    let mut path = paths::src().join(name);
+    let _ =path.set_extension("gleam");
+    to_url_path(&path).unwrap_or_default()
 }
 
 fn to_url_path(path: &Path) -> Option<String> {

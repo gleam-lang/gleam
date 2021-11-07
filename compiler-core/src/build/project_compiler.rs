@@ -53,7 +53,8 @@ where
         }
     }
 
-    pub fn compile(mut self) -> Result<()> {
+    /// Returns the compiled information from the root package
+    pub fn compile(mut self) -> Result<Package> {
         // Determine package processing order
         let sequence = order_packages(&self.configs)?;
 
@@ -66,9 +67,7 @@ where
         // Read and type check top level package
         let root_config = std::mem::replace(&mut self.root_config, Default::default());
         let name = root_config.name.clone();
-        self.compile_package(&name, root_config, paths::src(), Some(paths::test()))?;
-
-        Ok(())
+        self.compile_package(&name, root_config, paths::src(), Some(paths::test()))
     }
 
     fn load_cache_or_compile_package(
@@ -82,6 +81,7 @@ where
             self.load_cached_package(build_path, &name, config)
         } else {
             self.compile_package(&name, config, paths::build_deps_package_src(&name), None)
+                .map(|_| ())
         }
     }
 
@@ -109,7 +109,7 @@ where
         config: PackageConfig,
         src_path: PathBuf,
         test_path: Option<PathBuf>,
-    ) -> Result<(), Error> {
+    ) -> Result<Package, Error> {
         let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
 
         self.telemetry.compiling_package(&name);
@@ -163,7 +163,7 @@ where
         // Compile Erlang to .beam files
         self.compile_erlang_to_beam(&out_path, &modules)?;
 
-        Ok(())
+        Ok(compiled)
     }
 
     fn copy_project_erlang_files(

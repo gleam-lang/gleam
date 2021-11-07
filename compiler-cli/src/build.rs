@@ -1,10 +1,13 @@
 use std::time::Instant;
 
-use gleam_core::{build::ProjectCompiler, Result};
+use gleam_core::{
+    build::{Package, ProjectCompiler},
+    Result,
+};
 
 use crate::{cli, fs};
 
-pub fn main() -> Result<()> {
+pub fn main() -> Result<Package> {
     let manifest = crate::dependencies::download()?;
 
     let root_config = crate::config::root_config()?;
@@ -16,8 +19,8 @@ pub fn main() -> Result<()> {
     let configs = crate::config::package_configs(&root_config.name, &manifest)?;
 
     tracing::info!("Compiling packages");
-    let _ = ProjectCompiler::new(root_config, configs, telemetry, io).compile()?;
+    let compiled = ProjectCompiler::new(root_config, configs, telemetry, io).compile()?;
 
     cli::print_compiled(start.elapsed());
-    Ok(())
+    Ok(compiled)
 }
