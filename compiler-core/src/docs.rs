@@ -4,31 +4,29 @@ mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
+    build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
     format,
     io::OutputFile,
-    pretty,
-    project::Analysed,
+    paths, pretty,
 };
 use askama::Template;
 use itertools::Itertools;
-use std::path::Path;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn generate_html(
-    project_root: impl AsRef<Path>,
-    project_config: &PackageConfig,
-    analysed: &[Analysed],
-    docspages: &[DocsPage],
-    output_dir: &Path,
+    config: &PackageConfig,
+    analysed: &[Module],
+    docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
     let modules = analysed.iter();
+    let out = paths::build_docs(&config.name);
 
     // Define user-supplied (or README) pages
-    let pages: Vec<_> = docspages
+    let pages: Vec<_> = docs_pages
         .iter()
         .map(|page| Link {
             name: page.title.to_string(),
@@ -36,35 +34,34 @@ pub fn generate_html(
         })
         .collect();
 
-    let doc_links = project_config.links.iter().map(|doc_link| Link {
+    let doc_links = config.links.iter().map(|doc_link| Link {
         name: doc_link.title.to_string(),
         path: doc_link.href.to_string(),
     });
 
-    let repo_link = project_config.repository.url().map(|path| Link {
+    let repo_link = config.repository.url().map(|path| Link {
         name: "Repository".to_string(),
         path,
     });
 
     let links: Vec<_> = doc_links.chain(repo_link).collect();
 
-    // index.css
-    // highlightjs-gleam.js
-    let num_asset_files = 2;
-    let mut files = Vec::with_capacity(analysed.len() + pages.len() + 1 + num_asset_files);
+    let mut files = vec![];
 
     let modules_links: Vec<_> = modules
         .clone()
         .map(|m| {
-            let name = m.name.join("/");
-            let path = [&name, "/"].concat();
-            Link { path, name }
+            let path = [&m.name, "/"].concat();
+            Link {
+                path,
+                name: m.name.to_string(),
+            }
         })
         .sorted()
         .collect();
 
     // Generate user-supplied (or README) pages
-    for page in docspages {
+    for page in docs_pages {
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
 
         let temp = PageTemplate {
@@ -73,36 +70,38 @@ pub fn generate_html(
             links: &links,
             pages: &pages,
             modules: &modules_links,
-            project_name: &project_config.name,
-            page_title: &project_config.name,
-            project_version: &project_config.version.to_string(),
+            project_name: &config.name,
+            page_title: &config.name,
+            project_version: &config.version.to_string(),
             content: render_markdown(&content),
         };
 
         files.push(OutputFile {
-            path: output_dir.join(&page.path),
+            path: out.join(&page.path),
             text: temp.render().expect("Page template rendering"),
         });
     }
 
     // Generate module documentation pages
     for module in modules {
-        let name = module.name.join("/");
+        let name = module.name.clone();
 
         // Read module src & create line number lookup structure
-        let source_links = SourceLinker::new(&project_root, project_config, module);
+        let source_links = SourceLinker::new(config, module);
+
+        let unnest = Itertools::intersperse(module.name.split("/").map(|_| ".."), "/").collect();
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
-            unnest: Itertools::intersperse(module.name.iter().map(|_| ".."), "/").collect(),
+            unnest,
             links: &links,
             pages: &pages,
             documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
             modules: &modules_links,
-            project_name: &project_config.name,
-            page_title: &format!("{} - {}", name, project_config.name),
+            project_name: &config.name,
+            page_title: &format!("{} - {}", name, config.name),
             module_name: name,
-            project_version: &project_config.version.to_string(),
+            project_version: &config.version.to_string(),
             functions: module
                 .ast
                 .statements
@@ -126,11 +125,8 @@ pub fn generate_html(
                 .collect(),
         };
 
-        let mut path = output_dir.to_path_buf();
-        path.extend(&module.name);
-        path.push("index.html");
         files.push(OutputFile {
-            path,
+            path: out.join(&module.name).join("index.html"),
             text: template
                 .render()
                 .expect("Module documentation template rendering"),
@@ -139,17 +135,17 @@ pub fn generate_html(
 
     // Render static assets
     files.push(OutputFile {
-        path: output_dir.join("index.css"),
+        path: out.join("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
 
     files.push(OutputFile {
-        path: output_dir.join("gleam.js"),
+        path: out.join("gleam.js"),
         text: std::include_str!("../templates/gleam.js").to_string(),
     });
 
     files.push(OutputFile {
-        path: output_dir.join("highlightjs-gleam.js"),
+        path: out.join("highlightjs-gleam.js"),
         text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
     });
 

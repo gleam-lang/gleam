@@ -1,4 +1,4 @@
-use flate2::{write::GzEncoder, Compression};
+// use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter},
@@ -272,34 +272,34 @@ pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
         }))
 }
 
-pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
-    tracing::debug!("creating_tar_archive");
+// pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
+//     tracing::debug!("creating_tar_archive");
 
-    let encoder = GzEncoder::new(vec![], Compression::default());
-    let mut builder = tar::Builder::new(encoder);
+//     let encoder = GzEncoder::new(vec![], Compression::default());
+//     let mut builder = tar::Builder::new(encoder);
 
-    for file in outputs {
-        let mut header = tar::Header::new_gnu();
-        header.set_path(&file.path).map_err(|e| Error::AddTar {
-            path: file.path.clone(),
-            err: e.to_string(),
-        })?;
-        header.set_size(file.text.as_bytes().len() as u64);
-        header.set_cksum();
-        builder
-            .append(&header, file.text.as_bytes())
-            .map_err(|e| Error::AddTar {
-                path: file.path.clone(),
-                err: e.to_string(),
-            })?;
-    }
+//     for file in outputs {
+//         let mut header = tar::Header::new_gnu();
+//         header.set_path(&file.path).map_err(|e| Error::AddTar {
+//             path: file.path.clone(),
+//             err: e.to_string(),
+//         })?;
+//         header.set_size(file.text.as_bytes().len() as u64);
+//         header.set_cksum();
+//         builder
+//             .append(&header, file.text.as_bytes())
+//             .map_err(|e| Error::AddTar {
+//                 path: file.path.clone(),
+//                 err: e.to_string(),
+//             })?;
+//     }
 
-    builder
-        .into_inner()
-        .map_err(|e| Error::TarFinish(e.to_string()))?
-        .finish()
-        .map_err(|e| Error::Gzip(e.to_string()))
-}
+//     builder
+//         .into_inner()
+//         .map_err(|e| Error::TarFinish(e.to_string()))?
+//         .finish()
+//         .map_err(|e| Error::Gzip(e.to_string()))
+// }
 
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::debug!(path=?path,"creating_directory");

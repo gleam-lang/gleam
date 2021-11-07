@@ -235,19 +235,7 @@ enum Hex {
 #[derive(StructOpt, Debug)]
 enum Docs {
     /// Render HTML docs locally
-    Build {
-        /// Location of the project root
-        #[structopt(default_value = ".")]
-        project_root: String,
-
-        /// The directory to write the docs to
-        #[structopt(long)]
-        to: Option<String>,
-
-        /// The version to publish
-        #[structopt(long)]
-        version: String,
-    },
+    Build,
 
     /// Publish HTML docs to HexDocs
     Publish {
@@ -279,16 +267,14 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { warnings_as_errors } => command_build(warnings_as_errors),
 
-        Command::Docs(Docs::Build {
-            project_root,
-            version,
-            to,
-        }) => docs::build(project_root, version, to),
+        Command::Docs(Docs::Build) => docs::build(),
 
         Command::Docs(Docs::Publish {
-            project_root,
-            version,
-        }) => docs::publish(project_root, version),
+            ..
+            // project_root,
+            // version,
+            // }) => docs::publish(project_root, version),
+        }) => todo!(),
 
         Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
 
