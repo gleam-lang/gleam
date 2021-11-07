@@ -61,7 +61,7 @@ impl SourceLinker {
 
 fn get_path_in_repo(name: &str) -> String {
     let mut path = paths::src().join(name);
-    let _ =path.set_extension("gleam");
+    let _ = path.set_extension("gleam");
     to_url_path(&path).unwrap_or_default()
 }
 
