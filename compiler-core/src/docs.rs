@@ -89,7 +89,7 @@ pub fn generate_html(
         // Read module src & create line number lookup structure
         let source_links = SourceLinker::new(config, module);
 
-        let unnest = Itertools::intersperse(module.name.split("/").map(|_| ".."), "/").collect();
+        let unnest = Itertools::intersperse(module.name.split('/').map(|_| ".."), "/").collect();
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
