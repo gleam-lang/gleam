@@ -105,7 +105,7 @@ impl<'module> Generator<'module> {
             TypedExpr::List { elements, tail, .. } => {
                 self.tracker.list_used = true;
                 self.not_in_tail_position(|gen| {
-                    let tail = match tail.as_ref() {
+                    let tail = match tail {
                         Some(tail) => Some(gen.wrap_expression(tail)?),
                         None => None,
                     };
@@ -613,7 +613,7 @@ impl<'module> Generator<'module> {
             "case_no_match",
             "No case clause matched",
             location,
-            vec![("values", array(subjects.into_iter().map(Ok))?)],
+            [("values", array(subjects.into_iter().map(Ok))?)],
         ))
     }
 
@@ -622,7 +622,7 @@ impl<'module> Generator<'module> {
             "assignment_no_match",
             "Assignment pattern did not much",
             location,
-            vec![("value", subject)],
+            [("value", subject)],
         ))
     }
 
@@ -654,11 +654,7 @@ impl<'module> Generator<'module> {
                 constructor: ModuleValueConstructor::Record { name, .. },
                 module_alias,
                 ..
-            } => Ok(self.wrap_return(construct_record(
-                Some(module_alias.as_str()),
-                name,
-                arguments,
-            ))),
+            } => Ok(self.wrap_return(construct_record(Some(module_alias), name, arguments))),
 
             // Record construction
             TypedExpr::Var {
@@ -1098,11 +1094,7 @@ pub(crate) fn constant_expression<'a>(
                 .iter()
                 .map(|arg| constant_expression(tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(
-                module.as_ref().map(|s| s.as_str()),
-                tag,
-                field_values,
-            ))
+            Ok(construct_record(module.as_deref(), tag, field_values))
         }
 
         Constant::BitString { location, .. } => Err(Error::Unsupported {

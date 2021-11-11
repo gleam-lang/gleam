@@ -390,9 +390,7 @@ pub struct UnqualifiedImport {
 
 impl UnqualifiedImport {
     pub fn variable_name(&self) -> &str {
-        self.as_name
-            .as_deref()
-            .unwrap_or_else(|| self.name.as_str())
+        self.as_name.as_deref().unwrap_or(&self.name)
     }
 
     pub fn is_value(&self) -> bool {

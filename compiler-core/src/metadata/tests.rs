@@ -30,7 +30,7 @@ fn constant_module(constant: TypedConstant) -> Module {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
-        values: vec![(
+        values: [(
             "one".to_string(),
             ValueConstructor {
                 public: true,
@@ -39,8 +39,7 @@ fn constant_module(constant: TypedConstant) -> Module {
                 variant: ValueConstructorVariant::ModuleConstant { literal: constant },
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
     }
 }
 
@@ -78,7 +77,7 @@ fn module_with_app_type() {
         package: "some_package".to_string(),
         origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
-        types: vec![(
+        types: [(
             "ListIntType".to_string(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
@@ -88,8 +87,7 @@ fn module_with_app_type() {
                 parameters: vec![],
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -102,7 +100,7 @@ fn module_with_fn_type() {
         package: "some_package".to_string(),
         origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
-        types: vec![(
+        types: [(
             "FnType".to_string(),
             TypeConstructor {
                 typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
@@ -112,8 +110,7 @@ fn module_with_fn_type() {
                 parameters: vec![],
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -126,7 +123,7 @@ fn module_with_tuple_type() {
         package: "some_package".to_string(),
         origin: Origin::Src,
         name: vec!["a".to_string(), "b".to_string()],
-        types: vec![(
+        types: [(
             "TupleType".to_string(),
             TypeConstructor {
                 typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
@@ -136,8 +133,7 @@ fn module_with_tuple_type() {
                 parameters: vec![],
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -156,7 +152,7 @@ fn module_with_generic_type() {
             package: "some_package".to_string(),
             origin: Origin::Src,
             name: vec!["a".to_string(), "b".to_string()],
-            types: vec![(
+            types: [(
                 "TupleType".to_string(),
                 TypeConstructor {
                     typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
@@ -166,8 +162,7 @@ fn module_with_generic_type() {
                     parameters: vec![t1, t2],
                 },
             )]
-            .into_iter()
-            .collect(),
+            .into(),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -186,7 +181,7 @@ fn module_with_type_links() {
             package: "some_package".to_string(),
             origin: Origin::Src,
             name: vec!["a".to_string()],
-            types: vec![(
+            types: [(
                 "SomeType".to_string(),
                 TypeConstructor {
                     typ: type_,
@@ -196,8 +191,7 @@ fn module_with_type_links() {
                     parameters: vec![],
                 },
             )]
-            .into_iter()
-            .collect(),
+            .into(),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -214,7 +208,7 @@ fn module_fn_value() {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
-        values: vec![(
+        values: [(
             "one".to_string(),
             ValueConstructor {
                 public: true,
@@ -228,8 +222,7 @@ fn module_fn_value() {
                 },
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -243,7 +236,7 @@ fn module_fn_value_with_field_map() {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
-        values: vec![(
+        values: [(
             "one".to_string(),
             ValueConstructor {
                 public: true,
@@ -253,17 +246,14 @@ fn module_fn_value_with_field_map() {
                     name: "one".to_string(),
                     field_map: Some(FieldMap {
                         arity: 20,
-                        fields: vec![("ok".to_string(), 5), ("ko".to_string(), 7)]
-                            .into_iter()
-                            .collect(),
+                        fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
                     }),
                     module: vec!["a".to_string()],
                     arity: 5,
                 },
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -277,7 +267,7 @@ fn record_value() {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
-        values: vec![(
+        values: [(
             "one".to_string(),
             ValueConstructor {
                 public: true,
@@ -290,8 +280,7 @@ fn record_value() {
                 },
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -305,7 +294,7 @@ fn record_value_with_field_map() {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         accessors: HashMap::new(),
-        values: vec![(
+        values: [(
             "one".to_string(),
             ValueConstructor {
                 public: true,
@@ -315,16 +304,13 @@ fn record_value_with_field_map() {
                     name: "one".to_string(),
                     field_map: Some(FieldMap {
                         arity: 20,
-                        fields: vec![("ok".to_string(), 5), ("ko".to_string(), 7)]
-                            .into_iter()
-                            .collect(),
+                        fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
                     }),
                     arity: 5,
                 },
             },
         )]
-        .into_iter()
-        .collect(),
+        .into(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -338,13 +324,13 @@ fn accessors() {
         name: vec!["a".to_string()],
         types: HashMap::new(),
         values: HashMap::new(),
-        accessors: vec![
+        accessors: [
             (
                 "one".to_string(),
                 AccessorsMap {
                     public: true,
                     type_: type_::int(),
-                    accessors: vec![
+                    accessors: [
                         (
                             "a".to_string(),
                             RecordAccessor {
@@ -362,8 +348,7 @@ fn accessors() {
                             },
                         ),
                     ]
-                    .into_iter()
-                    .collect(),
+                    .into(),
                 },
             ),
             (
@@ -371,7 +356,7 @@ fn accessors() {
                 AccessorsMap {
                     public: true,
                     type_: type_::int(),
-                    accessors: vec![(
+                    accessors: [(
                         "a".to_string(),
                         RecordAccessor {
                             index: 1,
@@ -379,13 +364,11 @@ fn accessors() {
                             type_: type_::float(),
                         },
                     )]
-                    .into_iter()
-                    .collect(),
+                    .into(),
                 },
             ),
         ]
-        .into_iter()
-        .collect(),
+        .into(),
     };
 
     assert_eq!(roundtrip(&module), module);

@@ -109,10 +109,7 @@ fn metadata_config(config: &PackageConfig, files: Vec<PathBuf>) -> String {
         requirements: config
             .dependencies
             .iter()
-            .map(|(name, requirement)| ReleaseRequirement {
-                name: name.as_str(),
-                requirement,
-            })
+            .map(|(name, requirement)| ReleaseRequirement { name, requirement })
             .collect(),
         build_tools: vec!["gleam"],
     }
@@ -138,9 +135,9 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
 // TODO: test
 // TODO: Don't include git-ignored Erlang files
 fn project_files() -> Result<Vec<PathBuf>> {
-    let src = PathBuf::from("src");
-    let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(&src)
-        .chain(fs::erlang_files(&src)?)
+    let src = Path::new("src");
+    let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(src)
+        .chain(fs::erlang_files(src)?)
         .collect();
     let mut add = |path| {
         let path = PathBuf::from(path);
@@ -235,7 +232,7 @@ impl<'a> ReleaseMetadata<'a> {
             description = self.description,
             files = self.files.iter().map(file).join(","),
             links = self.links.iter().map(link).join(","),
-            licenses = self.licenses.iter().map(|l| quotes(l.as_str())).join(", "),
+            licenses = self.licenses.iter().map(|l| quotes(l)).join(", "),
             build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
             requirements = self
                 .requirements
@@ -284,7 +281,7 @@ fn release_metadata_as_erlang() {
             PathBuf::from("src/thingy.gleam"),
             PathBuf::from("src/whatever.gleam"),
         ],
-        licenses: licences.as_slice(),
+        licenses: &licences,
         links: vec![
             ("homepage", "https://gleam.run"),
             ("github", "https://github.com/lpil/myapp"),

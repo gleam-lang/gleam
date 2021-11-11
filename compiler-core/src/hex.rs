@@ -2,7 +2,7 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::{PackageVersions, Version};
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::Path};
 use tar::Archive;
 
 use crate::{
@@ -232,7 +232,7 @@ impl Downloader {
 
     // It would be really nice if this was async but the library is sync
     pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<bool> {
-        let contents_path = PathBuf::from("contents.tar.gz");
+        let contents_path = Path::new("contents.tar.gz");
         let destination = paths::build_deps_package(name);
 
         // If the directory already exists then there's nothing for us to do
@@ -281,7 +281,7 @@ impl Downloader {
     ) -> Result<()> {
         let futures = versions
             .iter()
-            .filter(|(name, _)| project_name != name.as_str())
+            .filter(|(name, _)| project_name != name)
             .map(|(name, version)| {
                 self.ensure_package_in_build_directory(name.clone(), version.clone())
             });

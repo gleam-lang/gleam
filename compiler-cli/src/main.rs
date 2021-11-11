@@ -80,7 +80,7 @@ use gleam_core::{
 };
 use hex::ApiKeyCommand as _;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 
@@ -344,7 +344,7 @@ fn main() {
 }
 
 fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
-    let root = PathBuf::from("./");
+    let root = Path::new("./");
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {

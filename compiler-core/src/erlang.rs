@@ -1536,7 +1536,9 @@ fn external_fun<'a>(
     let chars: String = incrementing_args_list(args.len());
     let var_usages = collect_type_var_usages(
         HashMap::new(),
-        std::iter::once(return_type).chain(args.iter().map(|a| &a.type_)),
+        [return_type]
+            .into_iter()
+            .chain(args.iter().map(|a| &a.type_)),
     );
     let type_printer = TypePrinter::new(current_module).with_var_usages(&var_usages);
     let args_spec = args.iter().map(|a| type_printer.print(&a.type_));

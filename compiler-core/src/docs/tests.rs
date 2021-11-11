@@ -62,16 +62,10 @@ pub fn complicated_fun(
         .iter_mut()
         .for_each(|a| a.attach_doc_and_module_comments());
 
-    let output_files = generate_html(
-        PathBuf::from("."),
-        &config,
-        &analysed,
-        &[],
-        &PathBuf::from("/docs"),
-    );
+    let output_files = generate_html(Path::new("."), &config, &analysed, &[], Path::new("/docs"));
     let module_page = output_files
         .iter()
-        .find(|page| page.path == PathBuf::from("/docs/test/index.html"))
+        .find(|page| page.path == Path::new("/docs/test/index.html"))
         .expect("Missing docs page");
 
     // Comments

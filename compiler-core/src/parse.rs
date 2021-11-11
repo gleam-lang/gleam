@@ -182,7 +182,7 @@ where
     }
 
     fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
-        match self.tok0.as_ref() {
+        match &self.tok0 {
             Some((_, Token::If, _)) => {
                 let _ = self.next_tok();
                 let target = self.expect_target()?;
@@ -1404,7 +1404,7 @@ where
     //   a: expr
     fn parse_fn_arg(&mut self) -> Result<Option<ParserArg>, ParseError> {
         let mut start = 0;
-        let label = match (self.tok0.take(), self.tok1.as_ref()) {
+        let label = match (self.tok0.take(), &self.tok1) {
             (Some((s, Token::Name { name }, _)), Some((_, Token::Colon, _))) => {
                 let _ = self.next_tok();
                 let _ = self.next_tok();
@@ -2056,7 +2056,7 @@ where
     //  name: const
     //  const
     fn parse_const_record_arg(&mut self) -> Result<Option<CallArg<UntypedConstant>>, ParseError> {
-        let name = match (self.tok0.take(), self.tok1.as_ref()) {
+        let name = match (self.tok0.take(), &self.tok1) {
             // Named arg
             (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
                 let _ = self.next_tok();

@@ -1015,7 +1015,7 @@ impl<'comments> Formatter<'comments> {
                 name.to_doc()
             } else {
                 name.to_doc()
-                    .append(wrap_args(args.iter().map(|e| e.as_str().to_doc())))
+                    .append(wrap_args(args.iter().map(|e| e.to_doc())))
             })
     }
 
