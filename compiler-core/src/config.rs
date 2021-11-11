@@ -46,7 +46,7 @@ impl PackageConfig {
     pub fn all_dependencies(&self) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
-        for (name, requirement) in self.dependencies.iter().chain(self.dev_dependencies.iter()) {
+        for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
             let already_inserted = deps.insert(name.clone(), requirement.clone()).is_some();
             if already_inserted {
                 return Err(Error::DuplicateDependency(name.clone()));

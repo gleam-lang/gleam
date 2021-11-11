@@ -206,7 +206,7 @@ fn field_map_reorder_test() {
 
     Case {
         arity: 3,
-        fields: [("last".to_string(), 2)].iter().cloned().collect(),
+        fields: [("last".to_string(), 2)].into(),
         args: vec![
             CallArg {
                 location: Default::default(),

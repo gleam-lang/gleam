@@ -579,7 +579,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     pub fn local_value_names(&self) -> Vec<String> {
         self.local_values
             .keys()
-            .filter(|t| PIPE_VARIABLE != t.as_str())
+            .filter(|&t| PIPE_VARIABLE != t)
             .map(|t| t.to_string())
             .collect()
     }

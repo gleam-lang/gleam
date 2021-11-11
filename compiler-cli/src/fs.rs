@@ -216,23 +216,23 @@ fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
 #[test]
 fn is_gleam_path_test() {
     assert!(is_gleam_path(
-        &PathBuf::from("/some-prefix/a.gleam"),
-        &PathBuf::from("/some-prefix/")
+        Path::new("/some-prefix/a.gleam"),
+        Path::new("/some-prefix/")
     ));
 
     assert!(is_gleam_path(
-        &PathBuf::from("/some-prefix/one_two/a.gleam"),
-        &PathBuf::from("/some-prefix/")
+        Path::new("/some-prefix/one_two/a.gleam"),
+        Path::new("/some-prefix/")
     ));
 
     assert!(is_gleam_path(
-        &PathBuf::from("/some-prefix/one_two/a123.gleam"),
-        &PathBuf::from("/some-prefix/")
+        Path::new("/some-prefix/one_two/a123.gleam"),
+        Path::new("/some-prefix/")
     ));
 
     assert!(is_gleam_path(
-        &PathBuf::from("/some-prefix/one_2/a123.gleam"),
-        &PathBuf::from("/some-prefix/")
+        Path::new("/some-prefix/one_2/a123.gleam"),
+        Path::new("/some-prefix/")
     ));
 }
 

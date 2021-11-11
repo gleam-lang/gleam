@@ -63,7 +63,8 @@ fn tag_tuple_pattern<'a>(
         atom(name.to_snake_case())
     } else {
         tuple(
-            std::iter::once(atom(name.to_snake_case()))
+            [atom(name.to_snake_case())]
+                .into_iter()
                 .chain(args.iter().map(|p| to_doc(&p.value, vars, env))),
         )
     }
