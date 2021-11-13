@@ -26,16 +26,19 @@ pub use self::project_compiler::ProjectCompiler;
 pub use self::telemetry::Telemetry;
 
 use crate::{
-    ast::TypedModule,
+    ast::{SrcSpan, Statement, TypedModule},
     config::{self, PackageConfig},
     erlang,
     error::{Error, FileIoAction, FileKind},
     io::OutputFile,
+    parse::extra::{Comment, ModuleExtra},
     type_,
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, ffi::OsString, fs::DirEntry, path::PathBuf, process};
+use std::{
+    collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, path::PathBuf, process,
+};
 use strum::{Display, EnumString, EnumVariantNames, VariantNames};
 
 #[derive(
@@ -68,6 +71,14 @@ pub struct Package {
     pub modules: Vec<Module>,
 }
 
+impl Package {
+    pub fn attach_doc_and_module_comments(&mut self) {
+        for mut module in &mut self.modules {
+            module.attach_doc_and_module_comments();
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Module {
     pub name: String,
@@ -75,6 +86,7 @@ pub struct Module {
     pub input_path: PathBuf,
     pub origin: Origin,
     pub ast: TypedModule,
+    pub extra: ModuleExtra,
 }
 
 impl Module {
@@ -83,10 +95,74 @@ impl Module {
         path.push_str(".erl");
         PathBuf::from(path)
     }
+
+    pub fn attach_doc_and_module_comments(&mut self) {
+        // Module Comments
+        self.ast.documentation = self
+            .extra
+            .module_comments
+            .iter()
+            .map(|span| {
+                Comment::from((span, self.code.as_str()))
+                    .content
+                    .to_string()
+            })
+            .collect();
+
+        // Doc Comments
+        let mut doc_comments = self.extra.doc_comments.iter().peekable();
+        for statement in &mut self.ast.statements {
+            let docs: Vec<&str> =
+                comments_before(&mut doc_comments, statement.location().start, &self.code);
+            if !docs.is_empty() {
+                let doc = docs.join("\n");
+                statement.put_doc(doc);
+            }
+
+            if let Statement::CustomType { constructors, .. } = statement {
+                for constructor in constructors {
+                    let docs: Vec<&str> =
+                        comments_before(&mut doc_comments, constructor.location.start, &self.code);
+                    if !docs.is_empty() {
+                        let doc = docs.join("\n");
+                        constructor.put_doc(doc);
+                    }
+
+                    for argument in constructor.arguments.iter_mut() {
+                        let docs: Vec<&str> =
+                            comments_before(&mut doc_comments, argument.location.start, &self.code);
+                        if !docs.is_empty() {
+                            let doc = docs.join("\n");
+                            argument.put_doc(doc);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Origin {
     Src,
     Test,
+}
+
+fn comments_before<'a>(
+    comment_spans: &mut Peekable<impl Iterator<Item = &'a SrcSpan>>,
+    byte: usize,
+    src: &'a str,
+) -> Vec<&'a str> {
+    let mut comments = vec![];
+    while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
+        if start <= &byte {
+            let comment = comment_spans
+                .next()
+                .expect("Comment before accessing next span");
+            comments.push(Comment::from((comment, src)).content)
+        } else {
+            break;
+        }
+    }
+    comments
 }

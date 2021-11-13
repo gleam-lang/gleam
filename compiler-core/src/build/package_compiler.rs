@@ -6,6 +6,7 @@ use crate::{
     error,
     io::{FileSystemIO, FileSystemReader, FileSystemWriter},
     metadata::ModuleEncoder,
+    parse::extra::ModuleExtra,
     type_, Error, Result, Warning,
 };
 use std::path::{Path, PathBuf};
@@ -192,6 +193,7 @@ fn type_check(
             path,
             origin,
             package,
+            extra,
         } = parsed_modules
             .remove(&name)
             .expect("Getting parsed module for name");
@@ -227,6 +229,7 @@ fn type_check(
         // used for code generation
         modules.push(Module {
             origin,
+            extra,
             name,
             code,
             ast,
@@ -267,7 +270,7 @@ fn parse_sources(
         origin,
     } in sources
     {
-        let (mut ast, _) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+        let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
             path: path.clone(),
             src: code.clone(),
             error,
@@ -279,6 +282,7 @@ fn parse_sources(
         let module = Parsed {
             package: package_name.to_string(),
             origin,
+            extra,
             path,
             name,
             code,
@@ -340,4 +344,5 @@ struct Parsed {
     origin: Origin,
     package: String,
     ast: UntypedModule,
+    extra: ModuleExtra,
 }

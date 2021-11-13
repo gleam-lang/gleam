@@ -1,10 +1,5 @@
 use crate::{cli, http::HttpClient};
-use gleam_core::{
-    config::DocsPage,
-    error::{wrap, Error},
-    io::HttpClient as _,
-    paths, Result,
-};
+use gleam_core::{config::DocsPage, error::Error, io::HttpClient as _, paths, Result};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
@@ -40,21 +35,13 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
-    let compiled = crate::build::main()?;
+    let mut compiled = crate::build::main()?;
+
+    // Attach documentation comments to modules
+    compiled.attach_doc_and_module_comments();
 
     cli::print_generating_documentation();
     let out = paths::build_docs(&config.name);
-
-    // Attach documentation to Src modules
-    // let analysed: Vec<_> = compiled
-    //     .modules
-    //     .into_iter()
-    //     .filter(|a| a.origin == Origin::Src)
-    //     .map(|mut a| {
-    //         a.attach_doc_and_module_comments();
-    //         a
-    //     })
-    //     .collect();
 
     // Initialize pages with the README
     let mut pages = vec![DocsPage {
