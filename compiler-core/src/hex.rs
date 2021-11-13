@@ -296,3 +296,18 @@ impl Downloader {
         Ok(())
     }
 }
+
+pub async fn publish_documentation<Http: HttpClient>(
+    name: &str,
+    version: &Version,
+    archive: Vec<u8>,
+    api_key: &str,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<()> {
+    tracing::info!("publishing_documentation");
+    let request = hexpm::publish_docs_request(name, &version.to_string(), archive, api_key, config)
+        .map_err(Error::hex)?;
+    let response = http.send(request).await?;
+    hexpm::publish_docs_response(response).map_err(Error::hex)
+}

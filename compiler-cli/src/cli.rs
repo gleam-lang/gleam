@@ -63,6 +63,10 @@ pub fn print_unretired(package: &str, version: &str) {
     print_colourful_prefix("  Unretired", &format!("{} {}", package, version))
 }
 
+pub fn print_published_documentation() {
+    print_colourful_prefix("  Published", "documentation");
+}
+
 pub fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
 }

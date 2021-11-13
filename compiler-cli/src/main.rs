@@ -238,15 +238,7 @@ enum Docs {
     Build,
 
     /// Publish HTML docs to HexDocs
-    Publish {
-        /// Location of the project root
-        #[structopt(default_value = ".")]
-        project_root: String,
-
-        /// The version to publish
-        #[structopt(long)]
-        version: String,
-    },
+    Publish,
 
     /// Remove HTML docs from HexDocs
     Remove {
@@ -269,12 +261,7 @@ fn main() {
 
         Command::Docs(Docs::Build) => docs::build(),
 
-        Command::Docs(Docs::Publish {
-            ..
-            // project_root,
-            // version,
-            // }) => docs::publish(project_root, version),
-        }) => todo!(),
+        Command::Docs(Docs::Publish) => docs::PublishCommand::publish(),
 
         Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
 
