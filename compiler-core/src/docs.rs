@@ -51,7 +51,7 @@ pub fn generate_html(
     let modules_links: Vec<_> = modules
         .clone()
         .map(|m| {
-            let path = [&m.name, "/"].concat();
+            let path = [&m.name, ".html"].concat();
             Link {
                 path,
                 name: m.name.to_string(),
@@ -89,7 +89,11 @@ pub fn generate_html(
         // Read module src & create line number lookup structure
         let source_links = SourceLinker::new(config, module);
 
-        let unnest = Itertools::intersperse(module.name.split('/').map(|_| ".."), "/").collect();
+        let mut unnest: String =
+            Itertools::intersperse(module.name.split('/').skip(1).map(|_| ".."), "/").collect();
+        if unnest.is_empty() {
+            unnest = "./".to_string();
+        }
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
@@ -126,7 +130,7 @@ pub fn generate_html(
         };
 
         files.push(OutputFile {
-            path: out.join(&module.name).join("index.html"),
+            path: out.join(&format!("{}.html", module.name)),
             text: template
                 .render()
                 .expect("Module documentation template rendering"),
