@@ -96,6 +96,10 @@ impl Module {
         PathBuf::from(path)
     }
 
+    pub fn is_test(&self) -> bool {
+        self.origin == Origin::Test
+    }
+
     pub fn attach_doc_and_module_comments(&mut self) {
         // Module Comments
         self.ast.documentation = self
