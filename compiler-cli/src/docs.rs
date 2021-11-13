@@ -1,5 +1,11 @@
-use crate::{cli, http::HttpClient};
-use gleam_core::{config::DocsPage, error::Error, io::HttpClient as _, paths, Result};
+use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
+use gleam_core::{
+    config::{DocsPage, PackageConfig},
+    error::Error,
+    hex,
+    io::HttpClient as _,
+    paths, Result,
+};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
@@ -35,26 +41,8 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
-    let mut compiled = crate::build::main()?;
-
-    // Attach documentation comments to modules
-    compiled.attach_doc_and_module_comments();
-
-    cli::print_generating_documentation();
     let out = paths::build_docs(&config.name);
-
-    // Initialize pages with the README
-    let mut pages = vec![DocsPage {
-        title: "README".to_string(),
-        path: "index.html".to_string(),
-        source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
-    }];
-
-    // Add any user-supplied pages
-    pages.extend(config.docs.pages.iter().cloned());
-
-    // Generate HTML
-    let outputs = gleam_core::docs::generate_html(&config, compiled.modules.as_slice(), &pages);
+    let outputs = build_documentation(&config)?;
 
     // Write
     crate::fs::delete_dir(&out)?;
@@ -68,6 +56,58 @@ pub fn build() -> Result<()> {
 
     // We're done!
     Ok(())
+}
+
+fn build_documentation(config: &PackageConfig) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
+    let mut compiled = crate::build::main()?;
+    compiled.attach_doc_and_module_comments();
+    cli::print_generating_documentation();
+    let mut pages = vec![DocsPage {
+        title: "README".to_string(),
+        path: "index.html".to_string(),
+        source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
+    }];
+    pages.extend(config.docs.pages.iter().cloned());
+    let outputs = gleam_core::docs::generate_html(config, compiled.modules.as_slice(), &pages);
+    Ok(outputs)
+}
+
+pub struct PublishCommand {
+    config: PackageConfig,
+    archive: Vec<u8>,
+}
+
+impl PublishCommand {
+    pub fn new() -> Result<Self> {
+        let config = crate::config::root_config()?;
+        let outputs = build_documentation(&config)?;
+        let archive = crate::fs::create_tar_archive(outputs)?;
+        Ok(Self { config, archive })
+    }
+
+    pub fn publish() -> Result<()> {
+        Self::new()?.run()
+    }
+}
+
+impl ApiKeyCommand for PublishCommand {
+    fn with_api_key(
+        &mut self,
+        handle: &tokio::runtime::Handle,
+        hex_config: &hexpm::Config,
+        api_key: &str,
+    ) -> Result<()> {
+        handle.block_on(hex::publish_documentation(
+            &self.config.name,
+            &self.config.version,
+            std::mem::take(&mut self.archive),
+            api_key,
+            hex_config,
+            &HttpClient::new(),
+        ))?;
+        cli::print_published_documentation();
+        Ok(())
+    }
 }
 
 // pub fn publish(project_root: String, version: String) -> Result<(), Error> {
@@ -115,42 +155,4 @@ pub fn build() -> Result<()> {
 
 //     // We're done!
 //     Ok(())
-// }
-
-// pub fn build_project(
-//     project_root: impl AsRef<Path>,
-//     version: String,
-//     output_dir: &Path,
-// ) -> Result<(PackageConfig, Vec<OutputFile>), Error> {
-//     // Read and type check project
-//     let (mut config, analysed) = project::read_and_analyse(&project_root)?;
-//     config.version = Version::parse(&version).map_err(|e| Error::InvalidVersionFormat {
-//         input: version.to_string(),
-//         error: e.to_string(),
-//     })?;
-//     check_app_file_version_matches(&project_root, &config)?;
-
-//     // Attach documentation to Src modules
-//     let analysed: Vec<_> = analysed
-//         .into_iter()
-//         .filter(|a| a.origin == ModuleOrigin::Src)
-//         .map(|mut a| {
-//             a.attach_doc_and_module_comments();
-//             a
-//         })
-//         .collect();
-
-//     // Initialize pages with the README
-//     let mut pages = vec![DocsPage {
-//         title: "README".to_string(),
-//         path: "index.html".to_string(),
-//         source: paths::readme(),
-//     }];
-
-//     // Add any user-supplied pages
-//     pages.extend(config.docs.pages.iter().cloned());
-
-//     // Generate HTML
-//     let outputs = gleam_core::docs::generate_html(&config, &analysed, &pages, output_dir);
-//     Ok((config, outputs))
 // }
