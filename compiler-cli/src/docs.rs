@@ -50,7 +50,7 @@ pub fn build() -> Result<()> {
 
     // Write
     crate::fs::delete_dir(&out)?;
-    crate::fs::write_outputs(&outputs)?;
+    crate::fs::write_outputs_under(&outputs, &out)?;
 
     println!(
         "\nThe documentation for {package} has been rendered to \n./{out}/index.html",
