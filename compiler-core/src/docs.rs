@@ -1,6 +1,4 @@
 mod source_links;
-#[cfg(test)]
-mod tests;
 
 use crate::{
     ast::{Statement, TypedStatement},
