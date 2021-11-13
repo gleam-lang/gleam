@@ -186,7 +186,8 @@ jobs:
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/index.css
           ls build/dev/docs/lib_project/gleam.js
-          ls build/dev/docs/lib_project/lib_project/index.html
+          ls build/dev/docs/lib_project/index.html
+          ls build/dev/docs/lib_project/lib_project.html
 
       - name: Test JavaScript prelude
         run: |
