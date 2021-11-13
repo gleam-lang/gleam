@@ -122,11 +122,23 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
 //     Ok(())
 // }
 
+pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Error> {
+    for file in outputs {
+        write_output_under(file, base)?;
+    }
+    Ok(())
+}
+
 pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
     for file in outputs {
         write_output(file)?;
     }
     Ok(())
+}
+
+pub fn write_output_under(file: &OutputFile, base: &Path) -> Result<(), Error> {
+    let OutputFile { path, text } = file;
+    write(&base.join(path), text)
 }
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {

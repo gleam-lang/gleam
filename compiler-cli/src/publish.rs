@@ -79,7 +79,7 @@ impl ApiKeyCommand for PublishCommand {
         ))?;
         cli::print_published(start.elapsed());
         println!(
-            "\nView your package at https://hex.pm/packages/{}\n",
+            "\nView your package at https://hex.pm/packages/{}",
             &self.config.name
         );
         Ok(())

@@ -1,5 +1,7 @@
 mod source_links;
 
+use std::path::PathBuf;
+
 use crate::{
     ast::{Statement, TypedStatement},
     build::Module,
@@ -7,7 +9,7 @@ use crate::{
     docs::source_links::SourceLinker,
     format,
     io::OutputFile,
-    paths, pretty,
+    pretty,
 };
 use askama::Template;
 use itertools::Itertools;
@@ -21,7 +23,6 @@ pub fn generate_html(
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
     let modules = analysed.iter();
-    let out = paths::build_docs(&config.name);
 
     // Define user-supplied (or README) pages
     let pages: Vec<_> = docs_pages
@@ -75,7 +76,7 @@ pub fn generate_html(
         };
 
         files.push(OutputFile {
-            path: out.join(&page.path),
+            path: PathBuf::from(&page.path),
             text: temp.render().expect("Page template rendering"),
         });
     }
@@ -128,7 +129,7 @@ pub fn generate_html(
         };
 
         files.push(OutputFile {
-            path: out.join(&format!("{}.html", module.name)),
+            path: PathBuf::from(format!("{}.html", module.name)),
             text: template
                 .render()
                 .expect("Module documentation template rendering"),
@@ -137,17 +138,17 @@ pub fn generate_html(
 
     // Render static assets
     files.push(OutputFile {
-        path: out.join("index.css"),
+        path: PathBuf::from("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
     });
 
     files.push(OutputFile {
-        path: out.join("gleam.js"),
+        path: PathBuf::from("gleam.js"),
         text: std::include_str!("../templates/gleam.js").to_string(),
     });
 
     files.push(OutputFile {
-        path: out.join("highlightjs-gleam.js"),
+        path: PathBuf::from("highlightjs-gleam.js"),
         text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
     });
 
