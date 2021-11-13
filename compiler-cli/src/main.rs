@@ -130,10 +130,12 @@ enum Command {
     Shell,
 
     /// Run the project
-    Run,
+    #[structopt(settings = &[AppSettings::TrailingVarArg])]
+    Run { arguments: Vec<String> },
 
     /// Run the project tests
-    Test,
+    #[structopt(settings = &[AppSettings::TrailingVarArg])]
+    Test { arguments: Vec<String> },
 
     /// Compile a single Gleam package
     #[structopt(setting = AppSettings::Hidden)]
@@ -277,9 +279,9 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run => run::command(run::Which::Src),
+        Command::Run { arguments } => run::command(&arguments, run::Which::Src),
 
-        Command::Test => run::command(run::Which::Test),
+        Command::Test { arguments } => run::command(&arguments, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
