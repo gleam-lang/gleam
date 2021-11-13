@@ -83,6 +83,10 @@ pub fn print_running(text: &str) {
     print_colourful_prefix("    Running", text)
 }
 
+pub fn print_generating_html_documentation() {
+    print_colourful_prefix(" Generating", "html documentation")
+}
+
 pub fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
