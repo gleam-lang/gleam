@@ -70,24 +70,31 @@ pub struct ProjectErrorDiagnostic {
     pub label: String,
 }
 
-pub fn write_title(buffer: &mut Buffer, title: &str) {
+pub fn write_title(buffer: &mut Buffer, title: &str, severity: Severity) {
     use std::io::Write;
     use termcolor::{Color, ColorSpec, WriteColor};
+    let (kind, colour) = match severity {
+        Severity::Bug => ("bug", Color::Red),
+        Severity::Error => ("error", Color::Red),
+        Severity::Warning => ("warning", Color::Yellow),
+        Severity::Note => ("note", Color::Blue),
+        Severity::Help => ("help", Color::Blue),
+    };
     buffer
-        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(Color::Red)))
-        .expect("write_title");
-    write!(buffer, "error").expect("write_title");
+        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(colour)))
+        .expect("write_title_color1");
+    write!(buffer, "{}", kind).expect("write_title_kind");
     buffer
         .set_color(ColorSpec::new().set_bold(true))
-        .expect("write_title");
-    write!(buffer, ": {}\n\n", title).expect("write_title");
-    buffer.set_color(&ColorSpec::new()).expect("write_title");
+        .expect("write_title_color2");
+    write!(buffer, ": {}\n\n", title).expect("write_title_title");
+    buffer
+        .set_color(&ColorSpec::new())
+        .expect("write_title_reset");
 }
 
 pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
     use std::io::Write;
-    use termcolor::{ColorSpec, WriteColor};
-    write_title(buffer, &d.title);
-    buffer.set_color(&ColorSpec::new()).expect("write_project");
+    write_title(buffer, &d.title, Severity::Error);
     writeln!(buffer, "{}", d.label).expect("write_project");
 }

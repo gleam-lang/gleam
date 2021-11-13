@@ -329,6 +329,7 @@ impl Error {
         self.pretty(&mut nocolor);
         String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
     }
+
     pub fn pretty(&self, buf: &mut Buffer) {
         use crate::type_::Error as TypeError;
         use std::io::Write;
@@ -1724,7 +1725,7 @@ Try a different name for this module.",
             }
 
             Error::ImportCycle { modules } => {
-                crate::diagnostic::write_title(buf, "Import cycle");
+                crate::diagnostic::write_title(buf, "Import cycle", Severity::Error);
                 writeln!(
                     buf,
                     "The import statements for these modules form a cycle:\n"
@@ -1740,7 +1741,7 @@ Try a different name for this module.",
             }
 
             Error::PackageCycle { packages } => {
-                crate::diagnostic::write_title(buf, "Dependency cycle");
+                crate::diagnostic::write_title(buf, "Dependency cycle", Severity::Error);
                 writeln!(buf, "The dependencies for these packages form a cycle:\n").unwrap();
                 import_cycle(buf, packages);
                 wrap_writeln!(
@@ -2041,6 +2042,6 @@ pub struct Unformatted {
     pub output: String,
 }
 
-fn wrap(text: &str) -> String {
+pub fn wrap(text: &str) -> String {
     textwrap::fill(text, std::cmp::min(75, textwrap::termwidth()))
 }

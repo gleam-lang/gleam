@@ -75,12 +75,17 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{package_compiler, Target},
+    diagnostic::{self, Severity},
+    error::wrap,
     hex::RetirementReason,
     project::Analysed,
 };
 use hex::ApiKeyCommand as _;
 
-use std::path::{Path, PathBuf};
+use std::{
+    io::Write,
+    path::{Path, PathBuf},
+};
 use structopt::{clap::AppSettings, StructOpt};
 use strum::VariantNames;
 
@@ -257,9 +262,10 @@ enum Docs {
 fn main() {
     initialise_logger();
     panic::add_handler();
+    let stderr = cli::stderr_buffer_writer();
 
     let result = match Command::from_args() {
-        Command::Build { warnings_as_errors } => command_build(warnings_as_errors),
+        Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
 
         Command::Docs(Docs::Build) => docs::build(),
 
@@ -307,25 +313,43 @@ fn main() {
         }
         Err(error) => {
             tracing::error!(error = ?error, "Failed");
-            let buffer_writer = cli::stderr_buffer_writer();
-            let mut buffer = buffer_writer.buffer();
+            let mut buffer = stderr.buffer();
             error.pretty(&mut buffer);
-            buffer_writer
-                .print(&buffer)
-                .expect("Final result error writing");
+            stderr.print(&buffer).expect("Final result error writing");
             std::process::exit(1);
         }
     }
 }
 
-fn command_build(warnings_as_errors: bool) -> Result<(), Error> {
+const REBAR_DEPRECATION_NOTICE: &str = "The built-in rebar3 support is deprecated and will \
+be removed in a future version of Gleam.
+
+Please switch to the new Gleam build tool or update your project to use the new `gleam \
+compile-package` API with your existing build tool.
+
+";
+
+fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> Result<(), Error> {
+    let mut buffer = stderr.buffer();
     let root = Path::new("./");
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
         return build::main().map(|_| ());
     }
-    tracing::warn!("Running deprecated build process");
+
+    diagnostic::write_title(
+        &mut buffer,
+        "Deprecated rebar3 build command",
+        Severity::Warning,
+    );
+    buffer
+        .write_all(wrap(REBAR_DEPRECATION_NOTICE).as_bytes())
+        .expect("rebar deprecation message");
+    buffer.flush().expect("flush");
+    stderr
+        .print(&buffer)
+        .expect("command_build_rebar_deprecated_write");
 
     // Read and type check project
     let (_config, analysed) = project::read_and_analyse(&root)?;
