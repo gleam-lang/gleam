@@ -1,5 +1,10 @@
 use crate::{cli, http::HttpClient};
-use gleam_core::{config::DocsPage, error::Error, io::HttpClient as _, paths, Result};
+use gleam_core::{
+    config::DocsPage,
+    error::{wrap, Error},
+    io::HttpClient as _,
+    paths, Result,
+};
 
 static TOKEN_NAME: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
@@ -36,6 +41,8 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
     let compiled = crate::build::main()?;
+
+    cli::print_generating_documentation();
     let out = paths::build_docs(&config.name);
 
     // Attach documentation to Src modules
@@ -67,7 +74,7 @@ pub fn build() -> Result<()> {
     crate::fs::write_outputs(&outputs)?;
 
     println!(
-        "\nThe docs for {package} have been rendered to {out}",
+        "\nThe documentation for {package} have been rendered to \n./{out}/",
         package = config.name,
         out = out.to_string_lossy()
     );
