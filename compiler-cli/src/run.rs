@@ -11,7 +11,7 @@ pub enum Which {
     Test,
 }
 
-pub fn command(which: Which) -> Result<(), Error> {
+pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     let config = crate::config::root_config()?;
 
     // Determine which module to run
@@ -43,7 +43,10 @@ pub fn command(which: Which) -> Result<(), Error> {
     let _ = command.arg("-noshell");
 
     // Tell the BEAM that any following argument are for the program
-    let _ = command.arg("-extra"); // TODO: Pass any user specified command line flags
+    let _ = command.arg("-extra");
+    for argument in arguments {
+        let _ = command.arg(argument);
+    }
 
     crate::cli::print_running(&format!("{}.main", module));
 
