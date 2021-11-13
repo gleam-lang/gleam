@@ -1,5 +1,8 @@
+use std::time::Instant;
+
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
+    build::Package,
     config::{DocsPage, PackageConfig},
     error::Error,
     hex,
@@ -42,7 +45,8 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
     let out = paths::build_docs(&config.name);
-    let outputs = build_documentation(&config)?;
+    let mut compiled = crate::build::main()?;
+    let outputs = build_documentation(&config, &mut compiled)?;
 
     // Write
     crate::fs::delete_dir(&out)?;
@@ -58,8 +62,10 @@ pub fn build() -> Result<()> {
     Ok(())
 }
 
-fn build_documentation(config: &PackageConfig) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
-    let mut compiled = crate::build::main()?;
+pub(crate) fn build_documentation(
+    config: &PackageConfig,
+    compiled: &mut Package,
+) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
     let mut pages = vec![DocsPage {
@@ -80,7 +86,8 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
-        let outputs = build_documentation(&config)?;
+        let mut compiled = crate::build::main()?;
+        let outputs = build_documentation(&config, &mut compiled)?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })
     }
@@ -97,6 +104,8 @@ impl ApiKeyCommand for PublishCommand {
         hex_config: &hexpm::Config,
         api_key: &str,
     ) -> Result<()> {
+        let start = Instant::now();
+        cli::print_publishing_documentation();
         handle.block_on(hex::publish_documentation(
             &self.config.name,
             &self.config.version,
@@ -105,54 +114,7 @@ impl ApiKeyCommand for PublishCommand {
             hex_config,
             &HttpClient::new(),
         ))?;
-        cli::print_published_documentation();
+        cli::print_published(start.elapsed());
         Ok(())
     }
 }
-
-// pub fn publish(project_root: String, version: String) -> Result<(), Error> {
-//     let project_root = PathBuf::from(&project_root).canonicalize().map_err(|_| {
-//         Error::UnableToFindProjectRoot {
-//             path: project_root.clone(),
-//         }
-//     })?;
-
-//     let output_dir = PathBuf::new();
-//     let http = HttpClient::new();
-//     let hex_config = hexpm::Config::new();
-
-//     // Build
-//     let (config, outputs) = build_project(&project_root, version.clone(), &output_dir)?;
-
-//     // Create gzipped tarball of docs
-//     let archive = crate::fs::create_tar_archive(outputs)?;
-
-//     // Start event loop so we can run async functions to call the Hex API
-//     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-
-//     // Get login creds from user
-//     let username = cli::ask("https://hex.pm username")?;
-//     let password = cli::ask_password("https://hex.pm password")?;
-
-//     // Authenticate with API
-//     let request = hexpm::create_api_key_request(&username, &password, TOKEN_NAME, &hex_config);
-//     let response = runtime.block_on(http.send(request))?;
-//     let token = hexpm::create_api_key_response(response).map_err(Error::hex)?;
-
-//     // Upload to hex
-//     let request = hexpm::publish_docs_request(&config.name, &version, archive, &token, &hex_config)
-//         .map_err(Error::hex)?;
-//     let response = runtime.block_on(http.send(request))?;
-//     hexpm::publish_docs_response(response).map_err(Error::hex)?;
-
-//     println!(
-//         "
-// The docs for {package} have been published to HexDocs:
-
-//     https://hexdocs.pm/{package}",
-//         package = config.name
-//     );
-
-//     // We're done!
-//     Ok(())
-// }

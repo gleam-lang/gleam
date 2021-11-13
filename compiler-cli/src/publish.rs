@@ -10,7 +10,7 @@ use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
 
-use crate::{build, cli, fs, hex::ApiKeyCommand, http::HttpClient};
+use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
 pub fn command() -> Result<()> {
     PublishCommand::setup()?.run()
@@ -18,7 +18,8 @@ pub fn command() -> Result<()> {
 
 pub struct PublishCommand {
     config: PackageConfig,
-    tarball: Vec<u8>,
+    package_tarball: Vec<u8>,
+    docs_tarball: Vec<u8>,
 }
 
 impl PublishCommand {
@@ -35,14 +36,20 @@ impl PublishCommand {
         }
 
         // Build the project to check that it is valid
-        let _ = build::main()?;
+        let mut compiled = build::main()?;
 
-        // TODO: Build HTML documentation
+        // Build HTML documentation
+        let docs_tarball =
+            fs::create_tar_archive(docs::build_documentation(&config, &mut compiled)?)?;
 
         // Build the package release tarball
-        let tarball = build_hex_tarball(&config)?;
+        let package_tarball = build_hex_tarball(&config)?;
 
-        Ok(Self { config, tarball })
+        Ok(Self {
+            config,
+            docs_tarball,
+            package_tarball,
+        })
     }
 }
 
@@ -56,12 +63,25 @@ impl ApiKeyCommand for PublishCommand {
         cli::print_publishing(&self.config.name, &self.config.version);
         let start = Instant::now();
         runtime.block_on(hex::publish_package(
-            std::mem::take(&mut self.tarball),
+            std::mem::take(&mut self.package_tarball),
+            api_key,
+            hex_config,
+            &HttpClient::new(),
+        ))?;
+        cli::print_publishing_documentation();
+        runtime.block_on(hex::publish_documentation(
+            &self.config.name,
+            &self.config.version,
+            std::mem::take(&mut self.docs_tarball),
             api_key,
             hex_config,
             &HttpClient::new(),
         ))?;
         cli::print_published(start.elapsed());
+        println!(
+            "\nView your package at https://hex.pm/packages/{}\n",
+            &self.config.name
+        );
         Ok(())
     }
 }
