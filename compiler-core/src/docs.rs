@@ -92,7 +92,7 @@ pub fn generate_html(
         let mut unnest: String =
             Itertools::intersperse(module.name.split('/').skip(1).map(|_| ".."), "/").collect();
         if unnest.is_empty() {
-            unnest = "./".to_string();
+            unnest = ".".to_string();
         }
 
         let template = ModuleTemplate {
