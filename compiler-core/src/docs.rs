@@ -22,7 +22,7 @@ pub fn generate_html(
     analysed: &[Module],
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
-    let modules = analysed.iter();
+    let modules = analysed.iter().filter(|module| !module.is_test());
 
     // Define user-supplied (or README) pages
     let pages: Vec<_> = docs_pages
