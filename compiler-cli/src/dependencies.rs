@@ -183,7 +183,7 @@ impl LocalPackages {
         manifest
             .packages
             .iter()
-            .filter(|(n, v)| n.as_str() != root && !local_packages.contains(&(&n, &v)))
+            .filter(|(n, v)| n.as_str() != root && !local_packages.contains(&(n, v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -326,7 +326,7 @@ fn resolve_versions(
     locked: &HashMap<String, Version>,
 ) -> Result<Manifest, Error> {
     cli::print_resolving_versions();
-    let packages = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, &locked)?;
+    let packages = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, locked)?;
     let manifest = Manifest {
         packages,
         requirements: config.all_dependencies()?,
