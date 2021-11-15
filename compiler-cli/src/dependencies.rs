@@ -144,7 +144,7 @@ where
     ordered.serialize(serializer)
 }
 
-fn sorted_vec<S, T>(value: &Vec<T>, serializer: S) -> Result<S::Ok, S::Error>
+fn sorted_vec<S, T>(value: &[T], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
     T: serde::Serialize + Ord,
