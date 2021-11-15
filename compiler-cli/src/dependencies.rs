@@ -94,8 +94,8 @@ fn remove_extra_packages(local: &LocalPackages, manifest: &Manifest) -> Result<(
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
     pub requirements: HashMap<String, Range>,
-    #[serde(serialize_with = "sorted_vec")]
-    pub packages: Vec<ManifestPackage>,
+    #[serde(serialize_with = "ordered_map")]
+    pub packages: HashMap<String, Version>,
 }
 
 impl Manifest {
@@ -128,7 +128,7 @@ impl Manifest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
-pub struct ManifestPackage {
+pub struct LocalPackage {
     pub name: String,
     pub version: Version,
 }
@@ -157,20 +157,16 @@ where
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 struct LocalPackages {
-    packages: HashMap<String, Version>,
+    #[serde(serialize_with = "sorted_vec")]
+    pub packages: Vec<LocalPackage>,
 }
 
 impl LocalPackages {
     pub fn extra_local_packages(&self, manifest: &Manifest) -> Vec<(String, Version)> {
-        let manifest_packages: HashSet<_> = manifest
-            .packages
-            .iter()
-            .map(|p| (&p.name, &p.version))
-            .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&n, &v)))
-            .map(|(n, v)| (n.clone(), v.clone()))
+            .filter(|p| manifest.packages.get(&p.name) != Some(&p.version))
+            .map(|p| (p.name.clone(), p.version.clone()))
             .collect()
     }
 
@@ -179,20 +175,23 @@ impl LocalPackages {
         manifest: &Manifest,
         root: &str,
     ) -> Vec<(String, Version)> {
+        let local_packages: HashSet<_> = self
+            .packages
+            .iter()
+            .map(|p| (&p.name, &p.version))
+            .collect();
         manifest
             .packages
             .iter()
-            .filter(|p| p.name != root && self.packages.get(&p.name) != Some(&p.version))
-            .map(|p| (p.name.clone(), p.version.clone()))
+            .filter(|(n, v)| n.as_str() != root && !local_packages.contains(&(&n, &v)))
+            .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
 
     pub fn read_from_disc() -> Result<Self> {
         let path = paths::packages_toml();
         if !path.exists() {
-            return Ok(Self {
-                packages: HashMap::new(),
-            });
+            return Ok(Self { packages: vec![] });
         }
         let toml = crate::fs::read(&path)?;
         toml::from_str(&toml).map_err(|e| Error::FileIo {
@@ -210,42 +209,41 @@ impl LocalPackages {
     }
 
     pub fn from_manifest(manifest: &Manifest) -> Self {
-        Self {
-            packages: manifest
-                .packages
-                .iter()
-                .map(|p| (p.name.clone(), p.version.clone()))
-                .collect(),
-        }
+        let packages = manifest
+            .packages
+            .iter()
+            .map(|(name, version)| LocalPackage {
+                name: name.clone(),
+                version: version.clone(),
+            })
+            .collect();
+        Self { packages }
     }
 }
 
 #[test]
 fn missing_local_packages() {
     let mut extra = LocalPackages {
-        packages: [
-            ("local2".to_string(), Version::parse("2.0.0").unwrap()),
-            ("local3".to_string(), Version::parse("3.0.0").unwrap()),
-        ]
-        .into(),
+        packages: vec![
+            LocalPackage {
+                name: "local2".to_string(),
+                version: Version::parse("2.0.0").unwrap(),
+            },
+            LocalPackage {
+                name: "local3".to_string(),
+                version: Version::parse("3.0.0").unwrap(),
+            },
+        ],
     }
     .missing_local_packages(
         &Manifest {
             requirements: HashMap::new(),
-            packages: vec![
-                ManifestPackage {
-                    name: "root".to_string(),
-                    version: Version::parse("1.0.0").unwrap(),
-                },
-                ManifestPackage {
-                    name: "local1".to_string(),
-                    version: Version::parse("1.0.0").unwrap(),
-                },
-                ManifestPackage {
-                    name: "local2".to_string(),
-                    version: Version::parse("3.0.0").unwrap(),
-                },
-            ],
+            packages: [
+                ("root".to_string(), Version::parse("1.0.0").unwrap()),
+                ("local1".to_string(), Version::parse("1.0.0").unwrap()),
+                ("local2".to_string(), Version::parse("3.0.0").unwrap()),
+            ]
+            .into(),
         },
         "root",
     );
@@ -262,25 +260,28 @@ fn missing_local_packages() {
 #[test]
 fn extra_local_packages() {
     let mut extra = LocalPackages {
-        packages: [
-            ("local1".to_string(), Version::parse("1.0.0").unwrap()),
-            ("local2".to_string(), Version::parse("2.0.0").unwrap()),
-            ("local3".to_string(), Version::parse("3.0.0").unwrap()),
-        ]
-        .into(),
-    }
-    .extra_local_packages(&Manifest {
-        requirements: HashMap::new(),
         packages: vec![
-            ManifestPackage {
+            LocalPackage {
                 name: "local1".to_string(),
                 version: Version::parse("1.0.0").unwrap(),
             },
-            ManifestPackage {
+            LocalPackage {
                 name: "local2".to_string(),
+                version: Version::parse("2.0.0").unwrap(),
+            },
+            LocalPackage {
+                name: "local3".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
             },
         ],
+    }
+    .extra_local_packages(&Manifest {
+        requirements: HashMap::new(),
+        packages: [
+            ("local1".to_string(), Version::parse("1.0.0").unwrap()),
+            ("local2".to_string(), Version::parse("3.0.0").unwrap()),
+        ]
+        .into(),
     });
     extra.sort();
     assert_eq!(
@@ -300,7 +301,7 @@ fn get_manifest(
     // If there's no manifest then resolve the versions anew
     if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
-        let manifest = resolve_versions(runtime, mode, config, &[])?;
+        let manifest = resolve_versions(runtime, mode, config, &HashMap::new())?;
         return Ok((true, manifest));
     }
 
@@ -322,19 +323,10 @@ fn resolve_versions(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
-    locked: &[ManifestPackage],
+    locked: &HashMap<String, Version>,
 ) -> Result<Manifest, Error> {
     cli::print_resolving_versions();
-    let locked = locked
-        .iter()
-        // TODO: remove clones. Will require library modification.
-        .map(|p| (p.name.clone(), p.version.clone()))
-        .collect();
-    let resolved = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, &locked)?;
-    let packages = resolved
-        .into_iter()
-        .map(|(name, version)| ManifestPackage { name, version })
-        .collect();
+    let packages = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, &locked)?;
     let manifest = Manifest {
         packages,
         requirements: config.all_dependencies()?,

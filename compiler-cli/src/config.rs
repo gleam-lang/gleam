@@ -16,11 +16,11 @@ pub fn package_configs(
     manifest: &Manifest,
 ) -> Result<HashMap<String, PackageConfig>, Error> {
     let mut configs = HashMap::new();
-    for package in &manifest.packages {
-        if package.name == root_name {
+    for name in manifest.packages.keys() {
+        if name == root_name {
             continue;
         }
-        let config = read_project_config(paths::build_deps_package_config(&package.name))?;
+        let config = read_project_config(paths::build_deps_package_config(name))?;
         let _ = configs.insert(config.name.clone(), config);
     }
     Ok(configs)
