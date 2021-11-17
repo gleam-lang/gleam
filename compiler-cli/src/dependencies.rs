@@ -145,7 +145,7 @@ impl Manifest {
         {
             write!(
                 buffer,
-                "  {{ name = \"{name}\", version = \"{version}\" }}\n",
+                "  {{ name = \"{name}\", version = \"{version}\" }},\n",
                 name = name,
                 version = version
             )?;
@@ -203,10 +203,10 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0" }
-  { name = "gleam_stdlib", version = "0.17.1" }
-  { name = "gleeunit", version = "0.4.0" }
-  { name = "zzz", version = "0.4.0" }
+  { name = "aaa", version = "0.4.0" },
+  { name = "gleam_stdlib", version = "0.17.1" },
+  { name = "gleeunit", version = "0.4.0" },
+  { name = "zzz", version = "0.4.0" },
 ]
 
 [requirements]
