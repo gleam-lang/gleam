@@ -104,8 +104,8 @@ impl std::io::Read for WrappedReader {
 #[derive(Debug)]
 /// A wrapper around a Write implementing object that has Gleam's error handling.
 pub struct WrappedWriter {
-    path: PathBuf,
-    inner: DebugIgnore<Box<dyn std::io::Write>>,
+    pub path: PathBuf,
+    pub inner: DebugIgnore<Box<dyn std::io::Write>>,
 }
 
 impl Writer for WrappedWriter {}
