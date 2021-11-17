@@ -2,8 +2,8 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "first_gleam_publish_package", version = "2.1.0" }
-  { name = "gleam_stdlib", version = "0.17.1" }
+  { name = "first_gleam_publish_package", version = "2.1.0" },
+  { name = "gleam_stdlib", version = "0.17.1" },
 ]
 
 [requirements]
