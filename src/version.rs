@@ -251,6 +251,10 @@ impl Range {
     pub fn to_pubgrub(&self) -> Result<pubgrub::range::Range<Version>, parser::Error> {
         Version::parse_range(&self.0)
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl fmt::Debug for Range {
