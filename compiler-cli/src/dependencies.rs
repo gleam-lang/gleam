@@ -139,13 +139,13 @@ impl Manifest {
         )?;
 
         // Packages
-        write!(buffer, "packages = [\n")?;
+        writeln!(buffer, "packages = [")?;
         for ManifestPackage { name, version } in
             packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
         {
-            write!(
+            writeln!(
                 buffer,
-                "  {{ name = \"{name}\", version = \"{version}\" }},\n",
+                "  {{ name = \"{name}\", version = \"{version}\" }},",
                 name = name,
                 version = version
             )?;
@@ -153,9 +153,9 @@ impl Manifest {
         write!(buffer, "]\n\n")?;
 
         // Requirements
-        write!(buffer, "[requirements]\n")?;
-        for (name, range) in requirements.iter().sorted_by(|a, b| a.0.cmp(&b.0)) {
-            write!(buffer, "{} = \"{}\"\n", name, range)?;
+        writeln!(buffer, "[requirements]")?;
+        for (name, range) in requirements.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            writeln!(buffer, "{} = \"{}\"", name, range)?;
         }
 
         Ok(())
@@ -260,7 +260,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&n, &v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(n, v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
