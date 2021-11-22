@@ -342,7 +342,7 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            dependencies: root_dependencies(dependencies, &locked),
+            requirements: root_dependencies(dependencies, &locked),
             meta: (),
         }],
     };
@@ -361,7 +361,7 @@ where
 fn root_dependencies<Requirements>(
     dependencies: Requirements,
     locked: &HashMap<String, Version>,
-) -> Vec<Dependency>
+) -> HashMap<String, Dependency>
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
@@ -373,12 +373,16 @@ where
     // de-duplication.
     let deps: HashMap<_, _> = dependencies.chain(locked).collect();
     deps.into_iter()
-        .map(|(package, requirement)| Dependency {
-            package,
-            app: None,
-            optional: false,
-            repository: None,
-            requirement,
+        .map(|(package, requirement)| {
+            (
+                package,
+                Dependency {
+                    app: None,
+                    optional: false,
+                    repository: None,
+                    requirement,
+                },
+            )
         })
         .collect()
 }
@@ -492,9 +496,9 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
         }
 
         let mut deps: Map<String, PubgrubRange> = Default::default();
-        for d in &release.dependencies {
+        for (name, d) in &release.requirements {
             let range = d.requirement.to_pubgrub()?;
-            deps.insert(d.package.clone(), range);
+            deps.insert(name.clone(), range);
         }
         Ok(Dependencies::Known(deps))
     }

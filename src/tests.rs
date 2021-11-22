@@ -643,7 +643,7 @@ async fn get_package_ok_test() {
             releases: vec![
                 Release {
                     version: Version::try_from("0.0.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         82, 48, 191, 145, 92, 172, 0, 108, 238, 71, 57, 23, 101, 177, 161, 83, 91,
@@ -653,7 +653,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.1.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         111, 246, 240, 176, 118, 229, 12, 15, 164, 61, 186, 3, 89, 106, 153, 225,
@@ -663,7 +663,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.2.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         149, 9, 192, 229, 84, 162, 110, 207, 161, 43, 31, 0, 126, 168, 14, 243, 31,
@@ -673,7 +673,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.2.1").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         157, 229, 28, 212, 92, 249, 14, 240, 235, 104, 31, 12, 160, 199, 83, 195,
@@ -683,7 +683,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.2.2").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         112, 250, 133, 189, 183, 192, 54, 218, 115, 55, 216, 97, 204, 201, 191,
@@ -694,7 +694,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.2.3").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         131, 20, 29, 160, 171, 124, 7, 125, 210, 88, 17, 189, 199, 49, 191, 190,
@@ -704,7 +704,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.2.4").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         109, 162, 185, 169, 26, 4, 62, 60, 167, 54, 182, 161, 140, 197, 75, 113,
@@ -714,7 +714,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.3.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         97, 50, 95, 212, 242, 59, 245, 177, 140, 78, 79, 180, 108, 174, 119, 176,
@@ -724,7 +724,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.4.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         246, 178, 237, 214, 217, 158, 143, 52, 130, 186, 64, 50, 94, 175, 161, 81,
@@ -734,7 +734,7 @@ async fn get_package_ok_test() {
                 },
                 Release {
                     version: Version::try_from("0.5.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![
                         151, 86, 157, 218, 218, 131, 240, 119, 198, 216, 202, 240, 65, 17, 57, 228,
@@ -906,4 +906,72 @@ async fn publish_package_success() {
     }
 
     mock.assert()
+}
+
+#[tokio::test]
+async fn get_package_release_not_found() {
+    let config = Config::new();
+    let error = crate::get_package_release_response(
+        http_send(crate::get_package_release_request(
+            "louissaysthispackagedoesnotexist",
+            "1.0.1",
+            None,
+            &config,
+        ))
+        .await
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(error.is_not_found());
+}
+
+#[tokio::test]
+async fn get_package_release_ok() {
+    let config = Config::new();
+    let resp = crate::get_package_release_response(
+        http_send(crate::get_package_release_request(
+            "clint", "0.0.1", None, &config,
+        ))
+        .await
+        .unwrap(),
+    )
+    .unwrap();
+
+    assert_eq!(
+        resp,
+        Release {
+            version: Version::new(0, 0, 1),
+            requirements: [
+                (
+                    "plug".into(),
+                    Dependency {
+                        requirement: Range::new("~>0.11.0".into()),
+                        optional: false,
+                        app: Some("plug".into()),
+                        repository: None
+                    }
+                ),
+                (
+                    "cowboy".into(),
+                    Dependency {
+                        requirement: Range::new("~>1.0.0".into()),
+                        optional: false,
+                        app: Some("cowboy".into()),
+                        repository: None
+                    }
+                )
+            ]
+            .into(),
+            retirement_status: None,
+            outer_checksum: vec![
+                65, 198, 120, 27, 95, 75, 152, 107, 206, 20, 195, 87, 141, 57, 196, 151, 188, 184,
+                66, 127, 29, 54, 216, 205, 229, 252, 170, 110, 3, 202, 226, 177
+            ],
+            meta: ReleaseMeta {
+                app: "clint".into(),
+                build_tools: vec!["mix".into()]
+            }
+        }
+    )
 }

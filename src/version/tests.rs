@@ -412,28 +412,28 @@ fn make_remote() -> Box<Remote> {
             releases: vec![
                 Release {
                     version: Version::try_from("0.1.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.2.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.2.2").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.3.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
@@ -449,39 +449,48 @@ fn make_remote() -> Box<Remote> {
             releases: vec![
                 Release {
                     version: Version::try_from("0.1.0").unwrap(),
-                    dependencies: vec![Dependency {
-                        app: None,
-                        optional: false,
-                        repository: None,
-                        requirement: Range::new(">= 0.1.0".to_string()),
-                        package: "gleam_stdlib".to_string(),
-                    }],
+                    requirements: [(
+                        "gleam_stdlib".to_string(),
+                        Dependency {
+                            app: None,
+                            optional: false,
+                            repository: None,
+                            requirement: Range::new(">= 0.1.0".to_string()),
+                        },
+                    )]
+                    .into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.2.0").unwrap(),
-                    dependencies: vec![Dependency {
-                        app: None,
-                        optional: false,
-                        repository: None,
-                        requirement: Range::new(">= 0.1.0".to_string()),
-                        package: "gleam_stdlib".to_string(),
-                    }],
+                    requirements: [(
+                        "gleam_stdlib".to_string(),
+                        Dependency {
+                            app: None,
+                            optional: false,
+                            repository: None,
+                            requirement: Range::new(">= 0.1.0".to_string()),
+                        },
+                    )]
+                    .into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.3.0-rc1").unwrap(),
-                    dependencies: vec![Dependency {
-                        app: None,
-                        optional: false,
-                        repository: None,
-                        requirement: Range::new(">= 0.1.0".to_string()),
-                        package: "gleam_stdlib".to_string(),
-                    }],
+                    requirements: [(
+                        "gleam_stdlib".to_string(),
+                        Dependency {
+                            app: None,
+                            optional: false,
+                            repository: None,
+                            requirement: Range::new(">= 0.1.0".to_string()),
+                        },
+                    )]
+                    .into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
@@ -497,14 +506,14 @@ fn make_remote() -> Box<Remote> {
             releases: vec![
                 Release {
                     version: Version::try_from("0.1.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: None,
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 },
                 Release {
                     version: Version::try_from("0.2.0").unwrap(),
-                    dependencies: vec![],
+                    requirements: [].into(),
                     retirement_status: Some(RetirementStatus {
                         reason: RetirementReason::Security,
                         message: "It's bad".to_string(),

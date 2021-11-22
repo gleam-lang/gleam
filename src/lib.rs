@@ -546,7 +546,7 @@ fn proto_to_retirement_reason(reason: proto::package::RetirementReason) -> Retir
     }
 }
 
-fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiError> {
+fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<(String, Dependency), ApiError> {
     let app = if dep.has_app() {
         Some(dep.take_app())
     } else {
@@ -558,13 +558,15 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiEr
         None
     };
     let requirement = Range::new(dep.take_requirement());
-    Ok(Dependency {
-        package: dep.take_package(),
-        requirement,
-        optional: dep.has_optional(),
-        app,
-        repository,
-    })
+    Ok((
+        dep.take_package(),
+        Dependency {
+            requirement,
+            optional: dep.has_optional(),
+            app,
+            repository,
+        },
+    ))
 }
 
 fn proto_to_release(mut release: proto::package::Release) -> Result<Release<()>, ApiError> {
@@ -572,14 +574,14 @@ fn proto_to_release(mut release: proto::package::Release) -> Result<Release<()>,
         .take_dependencies()
         .into_iter()
         .map(proto_to_dep)
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<HashMap<_, _>, _>>()?;
     let version =
         Version::try_from(release.get_version()).expect("Failed to parse version format from Hex");
     Ok(Release {
         version,
         outer_checksum: release.take_outer_checksum(),
         retirement_status: proto_to_retirement_status(release.take_retired()),
-        dependencies,
+        requirements: dependencies,
         meta: (),
     })
 }
@@ -596,15 +598,24 @@ pub struct Release<Meta> {
     /// Release version
     pub version: Version,
     /// All dependencies of the release
-    pub dependencies: Vec<Dependency>,
+    pub requirements: HashMap<String, Dependency>,
     /// If set the release is retired, a retired release should only be
     /// resolved if it has already been locked in a project
     pub retirement_status: Option<RetirementStatus>,
     /// sha256 checksum of outer package tarball
     /// required when encoding but optional when decoding
+    #[serde(alias = "checksum", deserialize_with = "deserialize_checksum")]
     pub outer_checksum: Vec<u8>,
     /// This is not present in all API endpoints so may be absent sometimes.
     pub meta: Meta,
+}
+
+fn deserialize_checksum<'de, D>(deserializer: D) -> Result<Vec<u8>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+    base16::decode(s).map_err(serde::de::Error::custom)
 }
 
 impl<Meta> Release<Meta> {
@@ -619,6 +630,7 @@ impl<Meta> Release<Meta> {
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct ReleaseMeta {
+    app: String,
     build_tools: Vec<String>,
 }
 
@@ -642,8 +654,8 @@ impl<'de> serde::Deserialize<'de> for RetirementReason {
     where
         D: serde::Deserializer<'de>,
     {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
+        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        match s {
             "other" => Ok(RetirementReason::Other),
             "invalid" => Ok(RetirementReason::Invalid),
             "security" => Ok(RetirementReason::Security),
@@ -668,8 +680,6 @@ impl RetirementReason {
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct Dependency {
-    /// Package name of dependency
-    pub package: String,
     /// Version requirement of dependency
     pub requirement: Range,
     /// If true the package is optional and does not need to be resolved
@@ -725,5 +735,41 @@ fn verify_payload(mut signed: Signed, pem_public_key: &[u8]) -> Result<Vec<u8>, 
         Ok(payload)
     } else {
         Err(ApiError::IncorrectPayloadSignature)
+    }
+}
+
+/// Create a request to get the information for a package release.
+///
+pub fn get_package_release_request(
+    name: &str,
+    version: &str,
+    api_key: Option<&str>,
+    config: &Config,
+) -> http::Request<Vec<u8>> {
+    config
+        .api_request(
+            Method::GET,
+            &format!("packages/{}/releases/{}", name, version),
+            api_key,
+        )
+        .header("accept", "application/json")
+        .body(vec![])
+        .expect("get_package_release request")
+}
+
+/// Parse a response to get the information for a package release.
+///
+pub fn get_package_release_response(
+    response: http::Response<Vec<u8>>,
+) -> Result<Release<ReleaseMeta>, ApiError> {
+    let (parts, body) = response.into_parts();
+
+    match parts.status {
+        StatusCode::OK => Ok(serde_json::from_slice(&body)?),
+        StatusCode::NOT_FOUND => Err(ApiError::NotFound),
+        StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
+        StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
+        StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        status => Err(ApiError::unexpected_response(status, body)),
     }
 }
