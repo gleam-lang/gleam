@@ -4,6 +4,7 @@ use std::{
 };
 
 use flate2::read::GzDecoder;
+use futures::future;
 use gleam_core::{
     build::Mode,
     config::PackageConfig,
@@ -140,15 +141,25 @@ impl Manifest {
 
         // Packages
         writeln!(buffer, "packages = [")?;
-        for ManifestPackage { name, version } in
-            packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
+        for ManifestPackage {
+            name,
+            version,
+            tools,
+        } in packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
         {
-            writeln!(
+            write!(
                 buffer,
-                "  {{ name = \"{name}\", version = \"{version}\" }},",
+                "  {{ name = \"{name}\", version = \"{version}\", tools = [",
                 name = name,
                 version = version
             )?;
+            for (i, tool) in tools.iter().enumerate() {
+                if i != 0 {
+                    write!(buffer, ", ")?;
+                }
+                write!(buffer, "\"{}\"", tool)?;
+            }
+            writeln!(buffer, "] }},")?;
         }
         write!(buffer, "]\n\n")?;
 
@@ -180,18 +191,22 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "gleam_stdlib".to_string(),
                 version: Version::new(0, 17, 1),
+                tools: ["gleam".into()].into(),
             },
             ManifestPackage {
                 name: "aaa".to_string(),
                 version: Version::new(0, 4, 0),
+                tools: ["rebar3".into(), "make".into()].into(),
             },
             ManifestPackage {
                 name: "zzz".to_string(),
                 version: Version::new(0, 4, 0),
+                tools: ["mix".into()].into(),
             },
             ManifestPackage {
                 name: "gleeunit".to_string(),
                 version: Version::new(0, 4, 0),
+                tools: ["gleam".into()].into(),
             },
         ],
     };
@@ -202,10 +217,10 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0" },
-  { name = "gleam_stdlib", version = "0.17.1" },
-  { name = "gleeunit", version = "0.4.0" },
-  { name = "zzz", version = "0.4.0" },
+  { name = "aaa", version = "0.4.0", tools = ["rebar3", "make"] },
+  { name = "gleam_stdlib", version = "0.17.1", tools = ["gleam"] },
+  { name = "gleeunit", version = "0.4.0", tools = ["gleam"] },
+  { name = "zzz", version = "0.4.0", tools = ["mix"] },
 ]
 
 [requirements]
@@ -224,6 +239,7 @@ zzz = "> 0.0.0"
 pub struct ManifestPackage {
     pub name: String,
     pub version: Version,
+    pub tools: Vec<String>,
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
@@ -329,14 +345,17 @@ fn missing_local_packages() {
                 ManifestPackage {
                     name: "root".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
+                    tools: ["gleam".into()].into(),
                 },
                 ManifestPackage {
                     name: "local1".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
+                    tools: ["gleam".into()].into(),
                 },
                 ManifestPackage {
                     name: "local2".to_string(),
                     version: Version::parse("3.0.0").unwrap(),
+                    tools: ["gleam".into()].into(),
                 },
             ],
         },
@@ -368,10 +387,12 @@ fn extra_local_packages() {
             ManifestPackage {
                 name: "local1".to_string(),
                 version: Version::parse("1.0.0").unwrap(),
+                tools: ["gleam".into()].into(),
             },
             ManifestPackage {
                 name: "local2".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
+                tools: ["gleam".into()].into(),
             },
         ],
     });
@@ -423,14 +444,30 @@ fn resolve_versions(
         // TODO: remove clones. Will require library modification.
         .map(|p| (p.name.clone(), p.version.clone()))
         .collect();
-    let resolved = hex::resolve_versions(PackageFetcher::boxed(runtime), mode, config, &locked)?;
-    let packages = resolved
-        .into_iter()
-        .map(|(name, version)| ManifestPackage { name, version })
-        .collect();
+    let resolved = hex::resolve_versions(
+        PackageFetcher::boxed(runtime.clone()),
+        mode,
+        config,
+        &locked,
+    )?;
+    let packages = runtime.block_on(future::try_join_all(
+        resolved
+            .into_iter()
+            .map(|(name, version)| lookup_package(name, version)),
+    ))?;
     let manifest = Manifest {
         packages,
         requirements: config.all_dependencies()?,
+    };
+    Ok(manifest)
+}
+
+async fn lookup_package(name: String, version: Version) -> Result<ManifestPackage> {
+    // TODO: get the release info from the Hex API
+    let manifest = ManifestPackage {
+        name,
+        version,
+        tools: todo!(),
     };
     Ok(manifest)
 }
