@@ -144,16 +144,16 @@ impl Manifest {
         for ManifestPackage {
             name,
             version,
-            tools,
+            build_tools,
         } in packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
         {
             write!(
                 buffer,
-                "  {{ name = \"{name}\", version = \"{version}\", tools = [",
+                "  {{ name = \"{name}\", version = \"{version}\", build_tools = [",
                 name = name,
                 version = version
             )?;
-            for (i, tool) in tools.iter().enumerate() {
+            for (i, tool) in build_tools.iter().enumerate() {
                 if i != 0 {
                     write!(buffer, ", ")?;
                 }
@@ -191,22 +191,22 @@ fn manifest_toml_format() {
             ManifestPackage {
                 name: "gleam_stdlib".to_string(),
                 version: Version::new(0, 17, 1),
-                tools: ["gleam".into()].into(),
+                build_tools: ["gleam".into()].into(),
             },
             ManifestPackage {
                 name: "aaa".to_string(),
                 version: Version::new(0, 4, 0),
-                tools: ["rebar3".into(), "make".into()].into(),
+                build_tools: ["rebar3".into(), "make".into()].into(),
             },
             ManifestPackage {
                 name: "zzz".to_string(),
                 version: Version::new(0, 4, 0),
-                tools: ["mix".into()].into(),
+                build_tools: ["mix".into()].into(),
             },
             ManifestPackage {
                 name: "gleeunit".to_string(),
                 version: Version::new(0, 4, 0),
-                tools: ["gleam".into()].into(),
+                build_tools: ["gleam".into()].into(),
             },
         ],
     };
@@ -217,10 +217,10 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", tools = ["rebar3", "make"] },
-  { name = "gleam_stdlib", version = "0.17.1", tools = ["gleam"] },
-  { name = "gleeunit", version = "0.4.0", tools = ["gleam"] },
-  { name = "zzz", version = "0.4.0", tools = ["mix"] },
+  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"] },
+  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"] },
+  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"] },
+  { name = "zzz", version = "0.4.0", build_tools = ["mix"] },
 ]
 
 [requirements]
@@ -239,7 +239,7 @@ zzz = "> 0.0.0"
 pub struct ManifestPackage {
     pub name: String,
     pub version: Version,
-    pub tools: Vec<String>,
+    pub build_tools: Vec<String>,
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
@@ -345,17 +345,17 @@ fn missing_local_packages() {
                 ManifestPackage {
                     name: "root".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
-                    tools: ["gleam".into()].into(),
+                    build_tools: ["gleam".into()].into(),
                 },
                 ManifestPackage {
                     name: "local1".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
-                    tools: ["gleam".into()].into(),
+                    build_tools: ["gleam".into()].into(),
                 },
                 ManifestPackage {
                     name: "local2".to_string(),
                     version: Version::parse("3.0.0").unwrap(),
-                    tools: ["gleam".into()].into(),
+                    build_tools: ["gleam".into()].into(),
                 },
             ],
         },
@@ -387,12 +387,12 @@ fn extra_local_packages() {
             ManifestPackage {
                 name: "local1".to_string(),
                 version: Version::parse("1.0.0").unwrap(),
-                tools: ["gleam".into()].into(),
+                build_tools: ["gleam".into()].into(),
             },
             ManifestPackage {
                 name: "local2".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
-                tools: ["gleam".into()].into(),
+                build_tools: ["gleam".into()].into(),
             },
         ],
     });
@@ -467,7 +467,7 @@ async fn lookup_package(name: String, version: Version) -> Result<ManifestPackag
     let manifest = ManifestPackage {
         name,
         version,
-        tools: todo!(),
+        build_tools: todo!(),
     };
     Ok(manifest)
 }
