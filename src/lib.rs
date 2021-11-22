@@ -630,8 +630,8 @@ impl<Meta> Release<Meta> {
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct ReleaseMeta {
-    app: String,
-    build_tools: Vec<String>,
+    pub app: String,
+    pub build_tools: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
