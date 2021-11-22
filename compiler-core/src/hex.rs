@@ -311,3 +311,15 @@ pub async fn publish_documentation<Http: HttpClient>(
     let response = http.send(request).await?;
     hexpm::publish_docs_response(response).map_err(Error::hex)
 }
+
+pub async fn get_package_release<Http: HttpClient>(
+    name: &str,
+    version: &Version,
+    config: &hexpm::Config,
+    http: &Http,
+) -> Result<hexpm::Release<hexpm::ReleaseMeta>> {
+    tracing::info!("getting_package_release");
+    let request = hexpm::get_package_release_request(name, &version.to_string(), None, config);
+    let response = http.send(request).await?;
+    hexpm::get_package_release_response(response).map_err(Error::hex)
+}

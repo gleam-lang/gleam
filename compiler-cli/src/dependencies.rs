@@ -463,11 +463,12 @@ fn resolve_versions(
 }
 
 async fn lookup_package(name: String, version: Version) -> Result<ManifestPackage> {
-    // TODO: get the release info from the Hex API
+    let config = hexpm::Config::new();
+    let release = hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
     let manifest = ManifestPackage {
         name,
         version,
-        build_tools: todo!(),
+        build_tools: release.meta.build_tools,
     };
     Ok(manifest)
 }

@@ -9,28 +9,28 @@ license-file = "LICENCE"
 # Immutable data structures
 im = "15.0.0"
 # Error message and warning formatting
-codespan-reporting = "0.11"
+codespan-reporting = "0.11.1"
 termcolor = "1.1.2"
 # Logging
-tracing = "0.1.22"
+tracing = "0.1.29"
 # Extra iter methods
-itertools = "0.10.0"
+itertools = "0.10.1"
 # String case conversion
-heck = "0.3.2"
+heck = "0.3.3"
 # Parsing
-regex = "1.4.3"
+regex = "1.5.4"
 # Graph data structures
-petgraph = "0.5.1"
+petgraph = "0.6.0"
 # Initialize complex static values at runtime
 lazy_static = "1.4.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
 # Data (de)serialisation
-serde = { version = "1.0.119", features = ["derive"] }
+serde = { version = "1.0.130", features = ["derive"] }
 # Cap'n Proto binary format runtime
-capnp = "0.14.0"
+capnp = "0.14.3"
 # Enum trait impl macros
-strum = { version = "0.20.0", features = ["derive"] }
+strum = { version = "0.23.0", features = ["derive"] }
 # Template rendering
 askama = "0.10.5"
 # Markdown parsing
@@ -44,30 +44,30 @@ dirs = "4.0.0"
 # HTTP types
 http = "0.2.5"
 # Byte collections
-bytes = "1"
+bytes = "1.1.0"
 # Macro to work around Rust's traits not working with async. Sigh.
 async-trait = "0.1.51"
 # Little helper to omit fields that cannot be debug printed
 debug-ignore = "1.0.1"
 # std::error::Error definition macro
-thiserror = "1.0"
+thiserror = "1.0.30"
 # Async combinators for futures
 futures = "0.3.17"
 # Creation of tar file archives
-tar = "0.4.30"
+tar = "0.4.37"
 # gzip compression
-flate2 = "1.0.19"
+flate2 = "1.0.22"
 # Helper for wrapping text onto lines based upon width
-textwrap = { version = "0.14", features = ["terminal_size"] }
+textwrap = { version = "0.14.2", features = ["terminal_size"] }
 
 [build-dependencies]
 # Data (de)serialisation
-serde_derive = "1.0.119"
+serde_derive = "1.0.130"
 # Cap'n Proto binary format codegen
-capnpc = "0.14.2"
+capnpc = "0.14.4"
 
 [dev-dependencies]
 # Test assertion errors with diffs
-pretty_assertions = "0.7"
+pretty_assertions = "1.0.0"
 # Snapshot testing to make test maintainence easier
-insta = "1.7.0"
+insta = "1.8.0"
