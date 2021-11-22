@@ -343,6 +343,7 @@ where
             outer_checksum: vec![],
             retirement_status: None,
             dependencies: root_dependencies(dependencies, &locked),
+            meta: (),
         }],
     };
     let packages = pubgrub::solver::resolve(

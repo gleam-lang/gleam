@@ -567,7 +567,7 @@ fn proto_to_dep(mut dep: proto::package::Dependency) -> Result<Dependency, ApiEr
     })
 }
 
-fn proto_to_release(mut release: proto::package::Release) -> Result<Release, ApiError> {
+fn proto_to_release(mut release: proto::package::Release) -> Result<Release<()>, ApiError> {
     let dependencies = release
         .take_dependencies()
         .into_iter()
@@ -580,6 +580,7 @@ fn proto_to_release(mut release: proto::package::Release) -> Result<Release, Api
         outer_checksum: release.take_outer_checksum(),
         retirement_status: proto_to_retirement_status(release.take_retired()),
         dependencies,
+        meta: (),
     })
 }
 
@@ -587,11 +588,11 @@ fn proto_to_release(mut release: proto::package::Release) -> Result<Release, Api
 pub struct Package {
     pub name: String,
     pub repository: String,
-    pub releases: Vec<Release>,
+    pub releases: Vec<Release<()>>,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub struct Release {
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+pub struct Release<Meta> {
     /// Release version
     pub version: Version,
     /// All dependencies of the release
@@ -602,9 +603,11 @@ pub struct Release {
     /// sha256 checksum of outer package tarball
     /// required when encoding but optional when decoding
     pub outer_checksum: Vec<u8>,
+    /// This is not present in all API endpoints so may be absent sometimes.
+    pub meta: Meta,
 }
 
-impl Release {
+impl<Meta> Release<Meta> {
     pub fn is_retired(&self) -> bool {
         self.retirement_status.is_some()
     }
@@ -614,7 +617,12 @@ impl Release {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
+pub struct ReleaseMeta {
+    build_tools: Vec<String>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct RetirementStatus {
     pub reason: RetirementReason,
     pub message: String,
@@ -629,6 +637,23 @@ pub enum RetirementReason {
     Renamed,
 }
 
+impl<'de> serde::Deserialize<'de> for RetirementReason {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "other" => Ok(RetirementReason::Other),
+            "invalid" => Ok(RetirementReason::Invalid),
+            "security" => Ok(RetirementReason::Security),
+            "deprecated" => Ok(RetirementReason::Deprecated),
+            "renamed" => Ok(RetirementReason::Renamed),
+            _ => Err(serde::de::Error::custom("unknown retirement reason type")),
+        }
+    }
+}
+
 impl RetirementReason {
     pub fn to_str(&self) -> &'static str {
         match self {
@@ -641,7 +666,7 @@ impl RetirementReason {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize)]
 pub struct Dependency {
     /// Package name of dependency
     pub package: String,
