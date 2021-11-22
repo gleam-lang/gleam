@@ -145,13 +145,15 @@ impl Manifest {
             name,
             version,
             build_tools,
+            outer_checksum,
         } in packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
         {
             write!(
                 buffer,
-                "  {{ name = \"{name}\", version = \"{version}\", build_tools = [",
+                "  {{ name = \"{name}\", version = \"{version}\", outer_checksum = \"{checksum}\", build_tools = [",
                 name = name,
-                version = version
+                version = version,
+                checksum = outer_checksum.to_string(),
             )?;
             for (i, tool) in build_tools.iter().enumerate() {
                 if i != 0 {
@@ -192,21 +194,25 @@ fn manifest_toml_format() {
                 name: "gleam_stdlib".to_string(),
                 version: Version::new(0, 17, 1),
                 build_tools: ["gleam".into()].into(),
+                outer_checksum: Base16Checksum(vec![1, 22]),
             },
             ManifestPackage {
                 name: "aaa".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["rebar3".into(), "make".into()].into(),
+                outer_checksum: Base16Checksum(vec![3, 22]),
             },
             ManifestPackage {
                 name: "zzz".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["mix".into()].into(),
+                outer_checksum: Base16Checksum(vec![3, 22]),
             },
             ManifestPackage {
                 name: "gleeunit".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
+                outer_checksum: Base16Checksum(vec![3, 46]),
             },
         ],
     };
@@ -217,10 +223,10 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"] },
-  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"] },
-  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"] },
-  { name = "zzz", version = "0.4.0", build_tools = ["mix"] },
+  { name = "aaa", version = "0.4.0", outer_checksum = "0316", build_tools = ["rebar3", "make"] },
+  { name = "gleam_stdlib", version = "0.17.1", outer_checksum = "0116", build_tools = ["gleam"] },
+  { name = "gleeunit", version = "0.4.0", outer_checksum = "032E", build_tools = ["gleam"] },
+  { name = "zzz", version = "0.4.0", outer_checksum = "0316", build_tools = ["mix"] },
 ]
 
 [requirements]
@@ -235,11 +241,42 @@ zzz = "> 0.0.0"
     assert_eq!(deserialised, manifest);
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Base16Checksum(Vec<u8>);
+
+impl ToString for Base16Checksum {
+    fn to_string(&self) -> String {
+        base16::encode_upper(&self.0)
+    }
+}
+
+impl serde::Serialize for Base16Checksum {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&base16::encode_upper(&self.0))
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for Base16Checksum {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        base16::decode(s)
+            .map(Base16Checksum)
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
     pub name: String,
     pub version: Version,
     pub build_tools: Vec<String>,
+    pub outer_checksum: Base16Checksum,
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
@@ -346,16 +383,19 @@ fn missing_local_packages() {
                     name: "root".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
                 },
                 ManifestPackage {
                     name: "local1".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
                 },
                 ManifestPackage {
                     name: "local2".to_string(),
                     version: Version::parse("3.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
                 },
             ],
         },
@@ -388,11 +428,13 @@ fn extra_local_packages() {
                 name: "local1".to_string(),
                 version: Version::parse("1.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
+                outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
             },
             ManifestPackage {
                 name: "local2".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
+                outer_checksum: Base16Checksum(vec![4, 5]),
             },
         ],
     });
@@ -469,6 +511,7 @@ async fn lookup_package(name: String, version: Version) -> Result<ManifestPackag
         name,
         version,
         build_tools: release.meta.build_tools,
+        outer_checksum: Base16Checksum(release.outer_checksum),
     };
     Ok(manifest)
 }
