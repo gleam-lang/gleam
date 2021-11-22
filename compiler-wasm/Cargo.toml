@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 gleam-core = { path = "../compiler-core" }
-wasm-bindgen = "0.2"
+wasm-bindgen = "0.2.78"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.2"
+wasm-bindgen-test = "0.3.28"

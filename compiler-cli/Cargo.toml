@@ -9,49 +9,49 @@ license-file = "LICENCE"
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
 # OS SIGINT and SIGTERM signal handling
-ctrlc = { version = "3.1.7", features = ["termination"] }
+ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface
-structopt = "0.3.21"
+structopt = "0.3.25"
 # # Immutable data structures
 # im = "15.0.0"
 # Extra iter methods
-itertools = "0.10.0"
+itertools = "0.10.1"
 # Parsing
-regex = "1.4.3"
+regex = "1.5.4"
 # Colours in terminal
-termcolor = "1.1.2" 
+termcolor = "1.1.2"
 # Initialize complex static values at runtime
 lazy_static = "1.4.0"
 # Data (de)serialisation
-serde = { version = "1.0.119", features = ["derive"] }
+serde = { version = "1.0.130", features = ["derive"] }
 # toml config file parsing
 toml = "0.5.8"
 # Recursively traversing directories
-ignore = "0.4.17"
-walkdir = "2.3.1"
+ignore = "0.4.18"
+walkdir = "2.3.2"
 # Enum trait impl macros
-strum = { version = "0.20.0", features = ["derive"] }
+strum = { version = "0.23.0", features = ["derive"] }
 # Check for tty
 atty = "0.2.14"
 # Hex package manager client
 hexpm = { git = "https://github.com/gleam-lang/hexpm-rust" }
 # Allow user to type in sensitive information without showing it in the shell
-rpassword = "5.0.0"
+rpassword = "5.0.1"
 # Async runtime
-tokio = { version = "1.0.1", features = ["rt", "rt-multi-thread"] }
+tokio = { version = "1.14.0", features = ["rt", "rt-multi-thread"] }
 # Creation of tar file archives
-tar = "0.4.30"
+tar = "0.4.37"
 # gzip compression
-flate2 = "1.0.19"
+flate2 = "1.0.22"
 # Byte array data type
-bytes = "1.0"
+bytes = "1.1.0"
 # Further file system functions (i.e. copy directory)
 fs_extra = "1.2.0"
 # Logging
-tracing = "0.1.22"
-tracing-subscriber = "0.2.15"
+tracing = "0.1.29"
+tracing-subscriber = { version = "0.3.2", features = ["fmt", "env-filter"] }
 # HTTP client
-reqwest = "0.11.4"
+reqwest = "0.11.6"
 # Macro to work around Rust's traits not working with async. Sigh.
 async-trait = "0.1.51"
 # HTTP types
@@ -61,12 +61,12 @@ futures = "0.3.17"
 # Little helper to omit fields that cannot be debug printed
 debug-ignore = "1.0.1"
 # Checksums
-sha2 = "0.9"
+sha2 = "0.9.8"
 # Getting hostname
-hostname = "0.3"
+hostname = "0.3.1"
 # base encoding
-base16 = "0.2"
+base16 = "0.2.1"
 
 [dev-dependencies]
 # Test assertion errors with diffs
-pretty_assertions = "0.7"
+pretty_assertions = "1.0.0"
