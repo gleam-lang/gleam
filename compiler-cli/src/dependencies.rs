@@ -144,6 +144,7 @@ impl Manifest {
         for ManifestPackage {
             name,
             version,
+            otp_app,
             build_tools,
             outer_checksum,
         } in packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
@@ -161,7 +162,11 @@ impl Manifest {
                 }
                 write!(buffer, "\"{}\"", tool)?;
             }
-            writeln!(buffer, "] }},")?;
+            write!(buffer, "]")?;
+            if let Some(app) = otp_app {
+                write!(buffer, ", otp_app = \"{}\"", app)?;
+            }
+            writeln!(buffer, " }},")?;
         }
         write!(buffer, "]\n\n")?;
 
@@ -195,24 +200,28 @@ fn manifest_toml_format() {
                 version: Version::new(0, 17, 1),
                 build_tools: ["gleam".into()].into(),
                 outer_checksum: Base16Checksum(vec![1, 22]),
+                otp_app: None,
             },
             ManifestPackage {
                 name: "aaa".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["rebar3".into(), "make".into()].into(),
                 outer_checksum: Base16Checksum(vec![3, 22]),
+                otp_app: Some("aaa_app".into()),
             },
             ManifestPackage {
                 name: "zzz".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["mix".into()].into(),
                 outer_checksum: Base16Checksum(vec![3, 22]),
+                otp_app: None,
             },
             ManifestPackage {
                 name: "gleeunit".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
                 outer_checksum: Base16Checksum(vec![3, 46]),
+                otp_app: None,
             },
         ],
     };
@@ -223,7 +232,7 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", outer_checksum = "0316", build_tools = ["rebar3", "make"] },
+  { name = "aaa", version = "0.4.0", outer_checksum = "0316", build_tools = ["rebar3", "make"], otp_app = "aaa_app" },
   { name = "gleam_stdlib", version = "0.17.1", outer_checksum = "0116", build_tools = ["gleam"] },
   { name = "gleeunit", version = "0.4.0", outer_checksum = "032E", build_tools = ["gleam"] },
   { name = "zzz", version = "0.4.0", outer_checksum = "0316", build_tools = ["mix"] },
@@ -277,6 +286,8 @@ pub struct ManifestPackage {
     pub version: Version,
     pub build_tools: Vec<String>,
     pub outer_checksum: Base16Checksum,
+    #[serde(default)]
+    pub otp_app: Option<String>,
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
@@ -384,18 +395,21 @@ fn missing_local_packages() {
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
                     outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                    otp_app: None,
                 },
                 ManifestPackage {
                     name: "local1".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
                     outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                    otp_app: None,
                 },
                 ManifestPackage {
                     name: "local2".to_string(),
                     version: Version::parse("3.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
                     outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                    otp_app: None,
                 },
             ],
         },
@@ -429,12 +443,14 @@ fn extra_local_packages() {
                 version: Version::parse("1.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
                 outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                otp_app: None,
             },
             ManifestPackage {
                 name: "local2".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
                 outer_checksum: Base16Checksum(vec![4, 5]),
+                otp_app: None,
             },
         ],
     });
@@ -510,6 +526,7 @@ async fn lookup_package(name: String, version: Version) -> Result<ManifestPackag
     let manifest = ManifestPackage {
         name,
         version,
+        otp_app: Some(release.meta.app),
         build_tools: release.meta.build_tools,
         outer_checksum: Base16Checksum(release.outer_checksum),
     };
