@@ -1,8 +1,10 @@
+use crate::error::{FileIoAction, FileKind};
+use crate::io::FileSystemReader;
 use crate::{Error, Result};
 use hexpm::version::Version;
 use serde::Deserialize;
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::build::Mode;
 
@@ -53,6 +55,19 @@ impl PackageConfig {
             }
         }
         Ok(deps)
+    }
+
+    pub fn read<FS: FileSystemReader, P: AsRef<Path>>(
+        path: P,
+        fs: &FS,
+    ) -> Result<PackageConfig, Error> {
+        let toml = fs.read(path.as_ref())?;
+        toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: path.as_ref().to_path_buf(),
+            err: Some(e.to_string()),
+        })
     }
 }
 

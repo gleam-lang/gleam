@@ -15,11 +15,9 @@ pub fn main() -> Result<Package> {
     let io = fs::FileSystemAccessor::new();
     let start = Instant::now();
 
-    tracing::info!("Reading package configs from build");
-    let configs = crate::config::package_configs(&root_config.name, &manifest)?;
-
     tracing::info!("Compiling packages");
-    let compiled = ProjectCompiler::new(root_config, configs, telemetry, io).compile()?;
+    let compiled =
+        ProjectCompiler::new(root_config, &manifest.packages, telemetry, io).compile()?;
 
     cli::print_compiled(start.elapsed());
     Ok(compiled)

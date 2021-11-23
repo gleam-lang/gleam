@@ -6,7 +6,9 @@ use crate::{
     codegen::{self, ErlangApp},
     config::PackageConfig,
     io::{FileSystemIO, FileSystemWriter},
-    metadata, paths, type_, warning, Error, Result, Warning,
+    metadata, paths,
+    project::ManifestPackage,
+    type_, warning, Error, Result, Warning,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -17,9 +19,9 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct ProjectCompiler<IO> {
-    root_config: PackageConfig,
-    configs: HashMap<String, PackageConfig>,
+pub struct ProjectCompiler<'a, IO> {
+    config: PackageConfig,
+    packages: HashMap<String, &'a ManifestPackage>,
     importable_modules: HashMap<String, type_::Module>,
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
@@ -31,24 +33,25 @@ pub struct ProjectCompiler<IO> {
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
-impl<IO> ProjectCompiler<IO>
+impl<'a, IO> ProjectCompiler<'a, IO>
 where
     IO: FileSystemIO + Clone,
 {
     pub fn new(
-        root_config: PackageConfig,
-        configs: HashMap<String, PackageConfig>,
+        config: PackageConfig,
+        packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
     ) -> Self {
-        let estimated_number_of_modules = configs.len() * 5;
+        let estimated_modules = packages.len() * 5;
+        let packages = packages.iter().map(|p| (p.name.to_string(), p)).collect();
         Self {
-            importable_modules: HashMap::with_capacity(estimated_number_of_modules),
-            defined_modules: HashMap::with_capacity(estimated_number_of_modules),
+            importable_modules: HashMap::with_capacity(estimated_modules),
+            defined_modules: HashMap::with_capacity(estimated_modules),
             warnings: Vec::new(),
-            root_config,
+            config,
             telemetry,
-            configs,
+            packages,
             io,
         }
     }
@@ -56,31 +59,28 @@ where
     /// Returns the compiled information from the root package
     pub fn compile(mut self) -> Result<Package> {
         // Determine package processing order
-        let sequence = order_packages(&self.configs)?;
+        let sequence = order_packages(&self.packages)?;
 
         // Read and type check deps packages
         for name in sequence {
-            let config = self.configs.remove(&name).expect("Missing package config");
-            self.load_cache_or_compile_package(name, config)?;
+            let package = self.packages.remove(&name).expect("Missing package config");
+            self.load_cache_or_compile_package(package)?;
         }
 
         // Read and type check top level package
-        let root_config = std::mem::replace(&mut self.root_config, Default::default());
-        let name = root_config.name.clone();
-        self.compile_package(&name, root_config, paths::src(), Some(paths::test()))
+        let config = std::mem::take(&mut self.config);
+        self.compile_package(&config, paths::src(), Some(paths::test()))
     }
 
-    fn load_cache_or_compile_package(
-        &mut self,
-        name: String,
-        config: PackageConfig,
-    ) -> Result<(), Error> {
-        let build_path = paths::build_package(Mode::Dev, Target::Erlang, &name);
+    fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        let build_path = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
         if self.io.is_directory(&build_path) {
-            tracing::info!(package=%name, "Loading precompiled package");
-            self.load_cached_package(build_path, &name, config)
+            tracing::info!(package=%package.name, "Loading precompiled package");
+            self.load_cached_package(build_path, package)
         } else {
-            self.compile_package(&name, config, paths::build_deps_package_src(&name), None)
+            let config_path = paths::build_deps_package_config(&package.name);
+            let config = PackageConfig::read(config_path, &self.io)?;
+            self.compile_package(&config, paths::build_deps_package_src(&package.name), None)
                 .map(|_| ())
         }
     }
@@ -88,8 +88,7 @@ where
     fn load_cached_package(
         &mut self,
         build_dir: PathBuf,
-        name: &str,
-        config: PackageConfig,
+        package: &ManifestPackage,
     ) -> Result<(), Error> {
         for path in self.io.gleam_metadata_files(&build_dir) {
             let reader = BufReader::new(self.io.reader(&path)?);
@@ -105,21 +104,20 @@ where
 
     fn compile_package(
         &mut self,
-        name: &str,
-        config: PackageConfig,
+        config: &PackageConfig,
         src_path: PathBuf,
         test_path: Option<PathBuf>,
     ) -> Result<Package, Error> {
-        let out_path = paths::build_package(Mode::Dev, Target::Erlang, name);
+        let out_path = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
 
-        self.telemetry.compiling_package(&name);
+        self.telemetry.compiling_package(&config.name);
 
         let options = package_compiler::Options {
             target: Target::Erlang,
             src_path: src_path.clone(),
             out_path: out_path.clone(),
             test_path: test_path.clone(),
-            name: name.to_string(),
+            name: config.name.to_string(),
             write_metadata: true,
         };
 
@@ -135,7 +133,7 @@ where
         // Write an Erlang .app file
         ErlangApp::new(&out_path.join("ebin")).render(
             self.io.clone(),
-            &config,
+            config,
             &compiled.modules,
         )?;
 
@@ -260,23 +258,18 @@ enum SourceLocations {
     SrcAndTest,
 }
 
-fn order_packages(configs: &HashMap<String, PackageConfig>) -> Result<Vec<String>, Error> {
-    dep_tree::toposort_deps(configs.values().map(package_deps_for_graph).collect())
-        .map_err(convert_deps_tree_error)
+fn order_packages(packages: &HashMap<String, &ManifestPackage>) -> Result<Vec<String>, Error> {
+    dep_tree::toposort_deps(
+        packages
+            .values()
+            .map(|package| (package.name.clone(), package.requirements.clone()))
+            .collect(),
+    )
+    .map_err(convert_deps_tree_error)
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     match e {
         dep_tree::Error::Cycle(packages) => Error::PackageCycle { packages },
     }
-}
-
-fn package_deps_for_graph(config: &PackageConfig) -> (String, Vec<String>) {
-    let name = config.name.to_string();
-    let deps: Vec<_> = config
-        .dependencies
-        .iter()
-        .map(|(dep, _)| dep.to_string())
-        .collect();
-    (name, deps)
 }
