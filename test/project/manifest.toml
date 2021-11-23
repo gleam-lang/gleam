@@ -2,8 +2,8 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "first_gleam_publish_package", version = "2.1.0", outer_checksum = "AAEF097BE113F2EA688BD7C63936329CFF42659606C2845F4302292FEAF1FBA7", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package" },
-  { name = "gleam_stdlib", version = "0.17.1", outer_checksum = "F2AF084B2C38AD94DFB3D8EB0FF868B42AF2BFCBDD89A30B5C62945C8A2C9EB8", build_tools = ["rebar3"], requirements = [], otp_app = "gleam_stdlib" },
+  { name = "first_gleam_publish_package", version = "2.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "AAEF097BE113F2EA688BD7C63936329CFF42659606C2845F4302292FEAF1FBA7" },
+  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["rebar3"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "F2AF084B2C38AD94DFB3D8EB0FF868B42AF2BFCBDD89A30B5C62945C8A2C9EB8" },
 ]
 
 [requirements]
