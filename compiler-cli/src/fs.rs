@@ -1,7 +1,9 @@
 // use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
-    io::{FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter},
+    io::{
+        CommandExecutor, FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter,
+    },
     Result,
 };
 use ignore::DirEntry;
@@ -16,9 +18,9 @@ use std::{
 
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
-pub struct FileSystemAccessor;
+pub struct ProjectIO;
 
-impl FileSystemAccessor {
+impl ProjectIO {
     pub fn new() -> Self {
         Self
     }
@@ -28,7 +30,7 @@ impl FileSystemAccessor {
     }
 }
 
-impl gleam_core::io::FileSystemReader for FileSystemAccessor {
+impl gleam_core::io::FileSystemReader for ProjectIO {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
         Box::new({
             let dir = dir.to_path_buf();
@@ -76,13 +78,13 @@ impl gleam_core::io::FileSystemReader for FileSystemAccessor {
     }
 }
 
-impl FileSystemWriter for FileSystemAccessor {
+impl FileSystemWriter for ProjectIO {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
         writer(path)
     }
 
     fn delete(&self, path: &Path) -> Result<()> {
-        delete_dir(path) // I presume this works on files too. Let's find out.
+        delete_dir(path) // I presume this works on files too.
     }
 
     fn copy(&self, from: &Path, to: &Path) -> Result<()> {
@@ -90,7 +92,25 @@ impl FileSystemWriter for FileSystemAccessor {
     }
 }
 
-impl FileSystemIO for FileSystemAccessor {}
+impl CommandExecutor for ProjectIO {
+    fn exec(
+        &self,
+        program: &str,
+        args: &[String],
+        env: &[(&str, String)],
+    ) -> Result<std::process::ExitStatus, Error> {
+        std::process::Command::new(program)
+            .args(args)
+            .envs(env.iter().map(|(a, b)| (a, b)))
+            .status()
+            .map_err(|e| Error::ShellCommand {
+                command: program.to_ascii_uppercase(),
+                err: Some(e.kind()),
+            })
+    }
+}
+
+impl FileSystemIO for ProjectIO {}
 
 pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::debug!(path=?dir, "deleting_directory");

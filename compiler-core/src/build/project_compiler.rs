@@ -5,7 +5,7 @@ use crate::{
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
-    io::{FileSystemIO, FileSystemWriter},
+    io::{CommandExecutor, FileSystemIO, FileSystemWriter},
     metadata, paths,
     project::ManifestPackage,
     type_, warning, Error, Result, Warning,
@@ -35,7 +35,7 @@ pub struct ProjectCompiler<'a, IO> {
 
 impl<'a, IO> ProjectCompiler<'a, IO>
 where
-    IO: FileSystemIO + Clone,
+    IO: CommandExecutor + FileSystemIO + Clone,
 {
     pub fn new(
         config: PackageConfig,
@@ -87,8 +87,11 @@ where
     }
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        // TODO: Compile the rebar3 package
-        todo!("Compile the rebar3 package");
+        let args = [];
+        let env = [];
+        // TODO: check status
+        // TODO: set environment variables
+        let _ = self.io.exec("rebar3", &args, &env)?;
         Ok(())
     }
 
