@@ -1,10 +1,10 @@
 use std::{collections::HashMap, path::PathBuf};
 
-use crate::dependencies::Manifest;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
     paths,
+    project::Manifest,
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {

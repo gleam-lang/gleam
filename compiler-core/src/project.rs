@@ -1,3 +1,4 @@
+mod manifest;
 mod source_tree;
 #[cfg(test)]
 mod tests;
@@ -10,6 +11,8 @@ use crate::{
 };
 use source_tree::SourceTree;
 use std::{collections::HashMap, iter::Peekable, path::PathBuf};
+
+pub use manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource};
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
 

@@ -59,6 +59,10 @@ tar = "0.4.37"
 flate2 = "1.0.22"
 # Helper for wrapping text onto lines based upon width
 textwrap = { version = "0.14.2", features = ["terminal_size"] }
+# base encoding
+base16 = "0.2.1"
+# toml config file parsing
+toml = "0.5.8"
 
 [build-dependencies]
 # Data (de)serialisation

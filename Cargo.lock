@@ -678,6 +678,7 @@ version = "0.18.0-dev"
 dependencies = [
  "askama",
  "async-trait",
+ "base16",
  "bytes",
  "capnp",
  "capnpc",
@@ -705,6 +706,7 @@ dependencies = [
  "termcolor",
  "textwrap 0.14.2",
  "thiserror",
+ "toml",
  "tracing",
  "vec1",
 ]
