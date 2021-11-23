@@ -346,6 +346,8 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         }
     }
 
-    // TODO: return an error
-    todo!()
+    Err(Error::UnsupportedBuildTool {
+        package: package.name.to_string(),
+        build_tools: package.build_tools.clone(),
+    })
 }
