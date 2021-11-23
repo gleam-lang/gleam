@@ -4,7 +4,7 @@ use crate::{
     codegen::{Erlang, JavaScript},
     config::PackageConfig,
     error,
-    io::{FileSystemIO, FileSystemReader, FileSystemWriter},
+    io::{CommandExecutor, FileSystemIO, FileSystemReader, FileSystemWriter},
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     type_, Error, Result, Warning,
@@ -25,7 +25,7 @@ pub struct Options {
 impl Options {
     pub fn into_compiler<IO>(self, io: IO) -> Result<PackageCompiler<IO>>
     where
-        IO: FileSystemIO + Clone,
+        IO: FileSystemIO + CommandExecutor + Clone,
     {
         let mut compiler = PackageCompiler {
             options: self,

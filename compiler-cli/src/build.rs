@@ -12,7 +12,7 @@ pub fn main() -> Result<Package> {
 
     let root_config = crate::config::root_config()?;
     let telemetry = Box::new(cli::Reporter::new());
-    let io = fs::FileSystemAccessor::new();
+    let io = fs::ProjectIO::new();
     let start = Instant::now();
 
     tracing::info!("Compiling packages");

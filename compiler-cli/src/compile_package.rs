@@ -2,7 +2,7 @@ use gleam_core::{metadata, type_::Module, Result};
 use std::{collections::HashMap, path::PathBuf};
 
 use crate::{
-    fs::{self, FileSystemAccessor},
+    fs::{self, ProjectIO},
     CompilePackage,
 };
 
@@ -15,7 +15,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
 
     let _package = options
         .into_package_compiler_options()
-        .into_compiler(FileSystemAccessor::new())?
+        .into_compiler(ProjectIO::new())?
         .write_metadata(true)
         .compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 

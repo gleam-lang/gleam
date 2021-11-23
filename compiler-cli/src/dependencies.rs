@@ -20,7 +20,7 @@ use itertools::Itertools;
 
 use crate::{
     cli,
-    fs::{self, FileSystemAccessor},
+    fs::{self, ProjectIO},
     http::HttpClient,
 };
 
@@ -30,7 +30,7 @@ pub fn download() -> Result<Manifest> {
     let mode = Mode::Dev;
 
     let http = HttpClient::boxed();
-    let fs = FileSystemAccessor::boxed();
+    let fs = ProjectIO::boxed();
     let downloader = hex::Downloader::new(fs, http, Untar::boxed());
 
     // Read the project config

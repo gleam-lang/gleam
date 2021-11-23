@@ -9,6 +9,7 @@ use std::{
     fs::ReadDir,
     io,
     path::{Path, PathBuf},
+    process::ExitStatus,
 };
 use tar::{Archive, Entry};
 
@@ -65,6 +66,16 @@ pub trait FileSystemReader {
 }
 
 pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
+
+/// A trait used to run other programs.
+pub trait CommandExecutor {
+    fn exec(
+        &self,
+        program: &str,
+        args: &[String],
+        env: &[(&str, String)],
+    ) -> Result<ExitStatus, Error>;
+}
 
 /// A trait used to write files.
 /// Typically we use an implementation that writes to the file system,
