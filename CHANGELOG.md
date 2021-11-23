@@ -8,11 +8,14 @@
 - Gleam can now run an Erlang shell with the `gleam shell` command.
 - Gleam can now resolve package versions for a Gleam project's dependency tree.
 - Gleam can now download Hex packages.
+- Gleam can now build dependency packages that are managed using Gleam or
+  rebar3.
 - Gleam is now the default build tool for new projects.
 - The template names for `gleam new` have been changed.
 - Fixed a bug where the error message for a record update with an unknown field
   would point to all the fields rather than the unknown one.
 - Improved styling for inline code in generated documentation.
+- New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
 

@@ -11,7 +11,7 @@ use strum::{Display, EnumString, EnumVariantNames};
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.17";
+const GLEAM_STDLIB_VERSION: &str = "0.18";
 const ERLANG_OTP_VERSION: &str = "23.2";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
