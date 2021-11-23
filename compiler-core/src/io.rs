@@ -74,6 +74,7 @@ pub trait CommandExecutor {
         program: &str,
         args: &[String],
         env: &[(&str, String)],
+        cwd: Option<&Path>,
     ) -> Result<ExitStatus, Error>;
 }
 

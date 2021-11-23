@@ -98,10 +98,12 @@ impl CommandExecutor for ProjectIO {
         program: &str,
         args: &[String],
         env: &[(&str, String)],
+        cwd: Option<&Path>,
     ) -> Result<std::process::ExitStatus, Error> {
         std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
+            .current_dir(cwd.unwrap_or(Path::new("./")))
             .status()
             .map_err(|e| Error::ShellCommand {
                 command: program.to_ascii_uppercase(),
