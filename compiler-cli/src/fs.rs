@@ -84,11 +84,19 @@ impl FileSystemWriter for ProjectIO {
     }
 
     fn delete(&self, path: &Path) -> Result<()> {
-        delete_dir(path) // I presume this works on files too.
+        delete_dir(path)
     }
 
     fn copy(&self, from: &Path, to: &Path) -> Result<()> {
         copy(from, to)
+    }
+
+    fn copy_dir(&self, from: &Path, to: &Path) -> Result<()> {
+        copy_dir(from, to)
+    }
+
+    fn mkdir(&self, path: &Path) -> Result<(), Error> {
+        mkdir(path)
     }
 }
 
@@ -100,6 +108,7 @@ impl CommandExecutor for ProjectIO {
         env: &[(&str, String)],
         cwd: Option<&Path>,
     ) -> Result<std::process::ExitStatus, Error> {
+        tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
         std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
@@ -336,7 +345,7 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 }
 
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
-    tracing::debug!(path=?path,"creating_directory");
+    tracing::debug!(path=?path, "creating_directory");
 
     std::fs::create_dir_all(&path).map_err(|err| Error::FileIo {
         kind: FileKind::Directory,
@@ -416,16 +425,16 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
         .map(|_| ())
 }
 
-// pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
-//     tracing::debug!(from=?path, to=?to, "copying_directory");
+pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::debug!(from=?path, to=?to, "copying_directory");
 
-//     // TODO: include the destination in the error message
-//     fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
-//         .map_err(|err| Error::FileIo {
-//             action: FileIoAction::Copy,
-//             kind: FileKind::Directory,
-//             path: PathBuf::from(path.as_ref()),
-//             err: Some(err.to_string()),
-//         })
-//         .map(|_| ())
-// }
+    // TODO: include the destination in the error message
+    fs_extra::dir::copy(&path, &to, &fs_extra::dir::CopyOptions::new())
+        .map_err(|err| Error::FileIo {
+            action: FileIoAction::Copy,
+            kind: FileKind::Directory,
+            path: PathBuf::from(path.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
+}

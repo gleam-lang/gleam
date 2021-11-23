@@ -82,9 +82,11 @@ pub trait CommandExecutor {
 /// Typically we use an implementation that writes to the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
+    fn mkdir(&self, path: &Path) -> Result<(), Error>;
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
     fn delete(&self, path: &Path) -> Result<(), Error>;
     fn copy(&self, from: &Path, to: &Path) -> Result<(), Error>;
+    fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]

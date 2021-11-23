@@ -75,7 +75,11 @@ pub fn build_packages(mode: Mode, target: Target) -> PathBuf {
 }
 
 pub fn build_packages_ebins_glob(mode: Mode, target: Target) -> PathBuf {
-    build_package(mode, target, "*").join("ebin")
+    build_packages_erl_libs_glob(mode, target).join("ebin")
+}
+
+pub fn build_packages_erl_libs_glob(mode: Mode, target: Target) -> PathBuf {
+    build_package(mode, target, "*")
 }
 
 pub fn unnest(within: &Path) -> PathBuf {

@@ -2,10 +2,17 @@
 # You typically do not need to edit this file
 
 packages = [
+  { name = "accept", version = "0.3.5", build_tools = ["rebar3"], requirements = [], otp_app = "accept", source = "hex", outer_checksum = "11B18C220BCC2EAB63B5470C038EF10EB6783BCB1FCDB11AA4137DEFA5AC1BB8" },
   { name = "first_gleam_publish_package", version = "2.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "AAEF097BE113F2EA688BD7C63936329CFF42659606C2845F4302292FEAF1FBA7" },
-  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["rebar3"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "F2AF084B2C38AD94DFB3D8EB0FF868B42AF2BFCBDD89A30B5C62945C8A2C9EB8" },
+  { name = "gleam_erlang", version = "0.2.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "B183BA07519354B4C27AD7F000E6CC8DF4F1B853FB940EC84E14F907EFFBA777" },
+  { name = "gleam_otp", version = "0.3.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_erlang"], otp_app = "gleam_otp", source = "hex", outer_checksum = "95F86E34A3D7DD5064270C72461E7BDBB92221D975F68F85D0D5549313B89CBA" },
+  { name = "gleam_stdlib", version = "0.18.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "2938F996BBB25D75E973226846CDDFA33AB5590AFC8A9D043A356EA85272510D" },
+  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "E8FDD4E31E0BBB87F625B0BB4DEABDE780180F1C2B15A4534442823066468638" },
 ]
 
 [requirements]
+accept = "~> 0.3"
 first_gleam_publish_package = "> 0.0.0"
-gleam_stdlib = "~> 0.17.1"
+gleam_otp = "~> 0.3"
+gleam_stdlib = "~> 0.18"
+gleeunit = "~> 0.1"

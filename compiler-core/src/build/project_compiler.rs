@@ -1,7 +1,7 @@
 use crate::{
     build::{
-        dep_tree, package_compiler, package_compiler::PackageCompiler, telemetry::Telemetry, Mode,
-        Module, Origin, Package, Target,
+        dep_tree, package_compiler, package_compiler::PackageCompiler, project_compiler,
+        telemetry::Telemetry, Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
@@ -89,16 +89,31 @@ where
     }
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        fn path(path: &Path) -> String {
-            path.to_str().unwrap_or_default().to_string()
-        }
         let name = &package.name;
+        let mode = Mode::Dev;
+        let target = Target::Erlang;
+
         let project_dir = paths::build_deps_package(&package.name);
-        let root = paths::unnest(&project_dir);
-        let ebins = root.join(paths::build_packages_ebins_glob(Mode::Dev, Target::Erlang));
-        let dest = root.join(paths::build_package(Mode::Dev, Target::Erlang, name));
+        let up = paths::unnest(&project_dir);
+        let rebar3_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
+        let ebins = paths::build_packages_ebins_glob(mode, target);
+        let erl_libs = paths::build_packages_erl_libs_glob(mode, target);
+        let dest = paths::build_package(mode, target, name);
+
+        // rebar3 would make this if it didn't exist, but we make it anyway as
+        // we may need to copy the include directory into there
+        self.io.mkdir(&dest)?;
+
+        let src_include = project_dir.join("include");
+        if self.io.is_directory(&src_include) {
+            tracing::debug!("copying_include_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&src_include, &dest)?;
+        }
+
         let env = [
-            ("REBAR_BARE_COMPILER_OUTPUT_DIR", path(&dest)),
+            ("ERL_LIBS", rebar3_path(&erl_libs)),
+            ("REBAR_BARE_COMPILER_OUTPUT_DIR", rebar3_path(&dest)),
             ("REBAR_PROFILE", "prod".into()),
             ("TERM", "dumb".into()),
         ];
@@ -106,11 +121,16 @@ where
             "bare".into(),
             "compile".into(),
             "--paths".into(),
-            path(&ebins),
+            rebar3_path(&ebins),
         ];
-        // TODO: check status
-        let _ = self.io.exec("rebar3", &args, &env, Some(&project_dir))?;
-        Ok(())
+        let status = self.io.exec("rebar3", &args, &env, Some(&project_dir))?;
+
+        if status.success() {
+            Ok(())
+        } else {
+            // TODO: status error
+            todo!()
+        }
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
