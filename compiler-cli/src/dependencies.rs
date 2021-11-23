@@ -15,7 +15,7 @@ use gleam_core::{
     project::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     Error, Result,
 };
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 use itertools::Itertools;
 
 use crate::{
