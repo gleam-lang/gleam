@@ -216,6 +216,14 @@ pub mod test {
         fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support copy")
         }
+
+        fn mkdir(&self, _path: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support copy")
+        }
+
+        fn copy_dir(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support copy")
+        }
     }
 
     impl FileSystemReader for FilesChannel {
