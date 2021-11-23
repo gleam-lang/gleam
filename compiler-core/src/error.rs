@@ -169,6 +169,12 @@ pub enum Error {
         description_missing: bool,
         licence_missing: bool,
     },
+
+    #[error("The package {package} uses unsupported build tools {build_tools:?}")]
+    UnsupportedBuildTool {
+        package: String,
+        build_tools: Vec<String>,
+    },
 }
 
 impl Error {
@@ -1938,6 +1944,24 @@ description = "A Gleam library""#
 licences = ["Apache-2.0"]"#
                 };
                 wrap_writeln!(buf, "{}", &msg).unwrap();
+            }
+
+            Error::UnsupportedBuildTool {
+                package,
+                build_tools,
+            } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Unsupported build tool".to_string(),
+                    label: wrap(&format!(
+                        "The package {} cannot be built as it does not use \
+a build tool supported by Gleam. It uses {:?}.
+
+If you would like us to support this package please let us know by opening an \
+issue in our tracker: https://github.com/gleam-lang/gleam/issues",
+                        package, build_tools
+                    )),
+                };
+                write_project(buf, diagnostic);
             }
         }
     }
