@@ -112,7 +112,7 @@ impl CommandExecutor for ProjectIO {
         std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
-            .current_dir(cwd.unwrap_or(Path::new("./")))
+            .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
             .status()
             .map_err(|e| Error::ShellCommand {
                 command: program.to_ascii_uppercase(),
