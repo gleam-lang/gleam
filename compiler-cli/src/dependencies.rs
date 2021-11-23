@@ -143,26 +143,24 @@ impl Manifest {
         writeln!(buffer, "packages = [")?;
         for ManifestPackage {
             name,
+            source,
             version,
             otp_app,
             build_tools,
             requirements,
-            outer_checksum,
         } in packages.iter().sorted_by(|a, b| a.name.cmp(&b.name))
         {
-            write!(
-                buffer,
-                "  {{ name = \"{name}\", version = \"{version}\", outer_checksum = \"{checksum}\", build_tools = [",
-                name = name,
-                version = version,
-                checksum = outer_checksum.to_string(),
-            )?;
+            write!(buffer, r#"  {{"#)?;
+            write!(buffer, r#" name = "{}""#, name)?;
+            write!(buffer, r#", version = "{}""#, version)?;
+            write!(buffer, r#", build_tools = ["#)?;
             for (i, tool) in build_tools.iter().enumerate() {
                 if i != 0 {
                     write!(buffer, ", ")?;
                 }
                 write!(buffer, "\"{}\"", tool)?;
             }
+
             write!(buffer, "], requirements = [")?;
             for (i, package) in requirements.iter().enumerate() {
                 if i != 0 {
@@ -171,9 +169,22 @@ impl Manifest {
                 write!(buffer, "\"{}\"", package)?;
             }
             write!(buffer, "]")?;
+
             if let Some(app) = otp_app {
                 write!(buffer, ", otp_app = \"{}\"", app)?;
             }
+
+            match source {
+                ManifestPackageSource::Hex { outer_checksum } => {
+                    write!(buffer, r#", source = "hex""#)?;
+                    write!(
+                        buffer,
+                        r#", outer_checksum = "{}""#,
+                        outer_checksum.to_string()
+                    )?;
+                }
+            };
+
             writeln!(buffer, " }},")?;
         }
         write!(buffer, "]\n\n")?;
@@ -207,33 +218,41 @@ fn manifest_toml_format() {
                 name: "gleam_stdlib".to_string(),
                 version: Version::new(0, 17, 1),
                 build_tools: ["gleam".into()].into(),
-                outer_checksum: Base16Checksum(vec![1, 22]),
                 otp_app: None,
                 requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 22]),
+                },
             },
             ManifestPackage {
                 name: "aaa".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["rebar3".into(), "make".into()].into(),
-                outer_checksum: Base16Checksum(vec![3, 22]),
                 otp_app: Some("aaa_app".into()),
                 requirements: vec!["zzz".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
             },
             ManifestPackage {
                 name: "zzz".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["mix".into()].into(),
-                outer_checksum: Base16Checksum(vec![3, 22]),
                 otp_app: None,
                 requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
             },
             ManifestPackage {
                 name: "gleeunit".to_string(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
-                outer_checksum: Base16Checksum(vec![3, 46]),
                 otp_app: None,
                 requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 46]),
+                },
             },
         ],
     };
@@ -244,10 +263,10 @@ fn manifest_toml_format() {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", outer_checksum = "0316", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app" },
-  { name = "gleam_stdlib", version = "0.17.1", outer_checksum = "0116", build_tools = ["gleam"], requirements = [] },
-  { name = "gleeunit", version = "0.4.0", outer_checksum = "032E", build_tools = ["gleam"], requirements = ["gleam_stdlib"] },
-  { name = "zzz", version = "0.4.0", outer_checksum = "0316", build_tools = ["mix"], requirements = [] },
+  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
+  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
+  { name = "zzz", version = "0.4.0", build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
 ]
 
 [requirements]
@@ -297,11 +316,19 @@ pub struct ManifestPackage {
     pub name: String,
     pub version: Version,
     pub build_tools: Vec<String>,
-    pub outer_checksum: Base16Checksum,
     #[serde(default)]
     pub otp_app: Option<String>,
     #[serde(serialize_with = "sorted_vec")]
     pub requirements: Vec<String>,
+    #[serde(flatten)]
+    pub source: ManifestPackageSource,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "source")]
+pub enum ManifestPackageSource {
+    #[serde(rename = "hex")]
+    Hex { outer_checksum: Base16Checksum },
 }
 
 fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
@@ -354,7 +381,7 @@ impl LocalPackages {
             .packages
             .iter()
             .filter(|p| p.name != root && self.packages.get(&p.name) != Some(&p.version))
-            .map(|p| (p.name.clone(), p.version.clone()))
+            .map(|p| (p.name.to_string(), p.version.clone()))
             .collect()
     }
 
@@ -385,7 +412,7 @@ impl LocalPackages {
             packages: manifest
                 .packages
                 .iter()
-                .map(|p| (p.name.clone(), p.version.clone()))
+                .map(|p| (p.name.to_string(), p.version.clone()))
                 .collect(),
         }
     }
@@ -408,25 +435,31 @@ fn missing_local_packages() {
                     name: "root".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
-                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
                     otp_app: None,
                     requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                    },
                 },
                 ManifestPackage {
                     name: "local1".to_string(),
                     version: Version::parse("1.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
-                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
                     otp_app: None,
                     requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                    },
                 },
                 ManifestPackage {
                     name: "local2".to_string(),
                     version: Version::parse("3.0.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
-                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
                     otp_app: None,
                     requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                    },
                 },
             ],
         },
@@ -459,17 +492,21 @@ fn extra_local_packages() {
                 name: "local1".to_string(),
                 version: Version::parse("1.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
-                outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
                 otp_app: None,
                 requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                },
             },
             ManifestPackage {
                 name: "local2".to_string(),
                 version: Version::parse("3.0.0").unwrap(),
                 build_tools: ["gleam".into()].into(),
-                outer_checksum: Base16Checksum(vec![4, 5]),
                 otp_app: None,
                 requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![4, 5]),
+                },
             },
         ],
     });
@@ -519,7 +556,7 @@ fn resolve_versions(
     let locked = locked
         .iter()
         // TODO: remove clones. Will require library modification.
-        .map(|p| (p.name.clone(), p.version.clone()))
+        .map(|p| (p.name.to_string(), p.version.clone()))
         .collect();
     let resolved = hex::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
@@ -548,7 +585,9 @@ async fn lookup_package(name: String, version: Version) -> Result<ManifestPackag
         otp_app: Some(release.meta.app),
         build_tools: release.meta.build_tools,
         requirements: release.requirements.keys().cloned().collect_vec(),
-        outer_checksum: Base16Checksum(release.outer_checksum),
+        source: ManifestPackageSource::Hex {
+            outer_checksum: Base16Checksum(release.outer_checksum),
+        },
     };
     Ok(manifest)
 }

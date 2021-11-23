@@ -17,7 +17,7 @@ pub fn package_configs(
 ) -> Result<HashMap<String, PackageConfig>, Error> {
     let mut configs = HashMap::new();
     for package in &manifest.packages {
-        if package.name == root_name {
+        if &package.name == root_name {
             continue;
         }
         let config = read_project_config(paths::build_deps_package_config(&package.name))?;
