@@ -69,20 +69,35 @@ where
 
         // Read and type check top level package
         let config = std::mem::take(&mut self.config);
-        self.compile_package(&config, paths::src(), Some(paths::test()))
+        self.compile_gleam_package(&config, paths::src(), Some(paths::test()))
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let build_path = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
         if self.io.is_directory(&build_path) {
             tracing::info!(package=%package.name, "Loading precompiled package");
-            self.load_cached_package(build_path, package)
-        } else {
-            let config_path = paths::build_deps_package_config(&package.name);
-            let config = PackageConfig::read(config_path, &self.io)?;
-            self.compile_package(&config, paths::build_deps_package_src(&package.name), None)
-                .map(|_| ())
+            return self.load_cached_package(build_path, package);
         }
+
+        match usable_build_tool(package)? {
+            BuildTool::Gleam => self.compile_gleam_dep_package(package)?,
+            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package)?,
+        }
+        Ok(())
+    }
+
+    fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        // TODO: Compile the rebar3 package
+        todo!("Compile the rebar3 package");
+        Ok(())
+    }
+
+    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        let config_path = paths::build_deps_package_config(&package.name);
+        let config = PackageConfig::read(config_path, &self.io)?;
+        let src = paths::build_deps_package_src(&package.name);
+        self.compile_gleam_package(&config, src, None).map(|_| ())?;
+        Ok(())
     }
 
     fn load_cached_package(
@@ -102,7 +117,7 @@ where
         Ok(())
     }
 
-    fn compile_package(
+    fn compile_gleam_package(
         &mut self,
         config: &PackageConfig,
         src_path: PathBuf,
@@ -272,4 +287,24 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     match e {
         dep_tree::Error::Cycle(packages) => Error::PackageCycle { packages },
     }
+}
+
+#[derive(Debug)]
+enum BuildTool {
+    Gleam,
+    Rebar3,
+}
+
+/// Determine the build tool we should use to build this package
+fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
+    for tool in &package.build_tools {
+        match tool.as_str() {
+            "gleam" => return Ok(BuildTool::Gleam),
+            "rebar3" => return Ok(BuildTool::Rebar3),
+            _ => (),
+        }
+    }
+
+    // TODO: return an error
+    todo!()
 }
