@@ -2,7 +2,10 @@ name = "project"
 version = "0.1.0"
 
 [dependencies]
-gleam_stdlib = "~> 0.17.1"
+gleam_stdlib = "~> 0.18"
+gleam_otp = "~> 0.3"
 
 [dev-dependencies]
 first_gleam_publish_package = "> 0.0.0"
+gleeunit = "~> 0.1"
+accept = "~> 0.3" # This is a rebar3 dep
