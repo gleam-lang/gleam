@@ -128,8 +128,10 @@ where
         if status.success() {
             Ok(())
         } else {
-            // TODO: status error
-            todo!()
+            Err(Error::ShellCommand {
+                command: "rebar3".to_string(),
+                err: None,
+            })
         }
     }
 
