@@ -68,6 +68,7 @@ where
         }
 
         // Read and type check top level package
+        self.telemetry.compiling_package(&self.config.name);
         let config = std::mem::take(&mut self.config);
         self.compile_gleam_package(&config, paths::src(), Some(paths::test()))
     }
@@ -79,6 +80,7 @@ where
             return self.load_cached_package(build_path, package);
         }
 
+        self.telemetry.compiling_package(&package.name);
         match usable_build_tool(package)? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package)?,
             BuildTool::Rebar3 => self.compile_rebar3_dep_package(package)?,
@@ -87,11 +89,27 @@ where
     }
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let args = [];
-        let env = [];
+        fn path(path: &Path) -> String {
+            path.to_str().unwrap_or_default().to_string()
+        }
+        let name = &package.name;
+        let project_dir = paths::build_deps_package(&package.name);
+        let root = paths::unnest(&project_dir);
+        let ebins = root.join(paths::build_packages_ebins_glob(Mode::Dev, Target::Erlang));
+        let dest = root.join(paths::build_package(Mode::Dev, Target::Erlang, name));
+        let env = [
+            ("REBAR_BARE_COMPILER_OUTPUT_DIR", path(&dest)),
+            ("REBAR_PROFILE", "prod".into()),
+            ("TERM", "dumb".into()),
+        ];
+        let args = [
+            "bare".into(),
+            "compile".into(),
+            "--paths".into(),
+            path(&ebins),
+        ];
         // TODO: check status
-        // TODO: set environment variables
-        let _ = self.io.exec("rebar3", &args, &env)?;
+        let _ = self.io.exec("rebar3", &args, &env, Some(&project_dir))?;
         Ok(())
     }
 
@@ -127,8 +145,6 @@ where
         test_path: Option<PathBuf>,
     ) -> Result<Package, Error> {
         let out_path = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
-
-        self.telemetry.compiling_package(&config.name);
 
         let options = package_compiler::Options {
             target: Target::Erlang,
