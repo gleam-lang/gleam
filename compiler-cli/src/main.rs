@@ -289,7 +289,7 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
-        Command::Deps(Dependencies::Download) => dependencies::download().map(|_| ()),
+        Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
 
         Command::New(options) => new::create(options, VERSION),
 
