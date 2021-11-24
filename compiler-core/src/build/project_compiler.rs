@@ -235,24 +235,22 @@ where
         })
     }
 
-    // TODO: remove this IO from core. Inject the command runner
     fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[PathBuf]) -> Result<(), Error> {
-        tracing::info!("Compiling Erlang code");
-        let escript_path = paths::build_scripts().join("compile_erlang.erl");
+        tracing::info!("compiling_erlang");
 
-        // Run escript to compile Erlang to beam files
-        let mut command = std::process::Command::new("erlc");
-        let _ = command.arg("-o");
-        let _ = command.arg(out_path.join("ebin"));
+        let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang);
+        let env = [
+            ("ERL_LIBS", erl_libs.to_string_lossy().to_string()),
+            ("TERM", "dumb".into()),
+        ];
+        let mut args = vec![
+            "-o".into(),
+            out_path.join("ebin").to_string_lossy().to_string(),
+        ];
         for module in modules {
-            let _ = command.arg(out_path.join(module));
+            args.push(out_path.join(module).to_string_lossy().to_string());
         }
-
-        tracing::debug!("Running OS process {:?}", command);
-        let status = command.status().map_err(|e| Error::ShellCommand {
-            command: "erlc".to_string(),
-            err: Some(e.kind()),
-        })?;
+        let status = self.io.exec("erlc", &args, &env, None)?;
 
         if status.success() {
             Ok(())
