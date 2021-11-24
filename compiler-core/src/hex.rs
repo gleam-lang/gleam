@@ -9,7 +9,9 @@ use crate::{
     build::Mode,
     config::PackageConfig,
     io::{FileSystemIO, HttpClient, TarUnpacker},
-    paths, Error, Result,
+    paths,
+    project::{ManifestPackage, ManifestPackageSource},
+    Error, Result,
 };
 
 pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----
@@ -159,60 +161,41 @@ impl Downloader {
         }
     }
 
-    async fn get_package_checksum(&self, name: &str, version: &Version) -> Result<Vec<u8>> {
-        let config = hexpm::Config::new();
-        let request = hexpm::get_package_request(name, None, &config);
-        let response = self.http.send(request).await?;
-
-        Ok(hexpm::get_package_response(response, HEXPM_PUBLIC_KEY)
-            .map_err(Error::hex)?
-            .releases
-            .into_iter()
-            .find(|p| &p.version == version)
-            .ok_or_else(|| {
-                Error::Hex(format!(
-                    "package {}@{} not found",
-                    name,
-                    version.to_string()
-                ))
-            })?
-            .outer_checksum)
-    }
-
     pub async fn ensure_package_downloaded(
         &self,
-        package_name: &str,
-        version: &Version,
+        package: &ManifestPackage,
     ) -> Result<bool, Error> {
-        let checksum = self.get_package_checksum(package_name, version).await?;
-        let tarball_path = paths::package_cache_tarball(package_name, &version.to_string());
+        let tarball_path =
+            paths::package_cache_tarball(&package.name, &package.version.to_string());
         if self.fs.is_file(&tarball_path) {
             tracing::info!(
-                package = package_name,
-                version = %version,
+                package = package.name.as_str(),
+                version = %package.version,
                 "Package already in cache"
             );
             return Ok(false);
         }
         tracing::info!(
-            package = package_name,
-            version = %version,
+            package = &package.name.as_str(),
+            version = %package.version,
             "Downloading package to cache"
         );
 
         let request = hexpm::get_package_tarball_request(
-            package_name,
-            &version.to_string(),
+            &package.name,
+            &package.version.to_string(),
             None,
             &self.hex_config,
         );
         let response = self.http.send(request).await?;
 
+        let ManifestPackageSource::Hex { outer_checksum } = &package.source;
+
         let tarball =
-            hexpm::get_package_tarball_response(response, &checksum).map_err(|error| {
+            hexpm::get_package_tarball_response(response, &outer_checksum.0).map_err(|error| {
                 Error::DownloadPackageError {
-                    package_name: package_name.to_string(),
-                    package_version: version.to_string(),
+                    package_name: package.name.to_string(),
+                    package_version: package.version.to_string(),
                     error: error.to_string(),
                 }
             })?;
@@ -223,11 +206,10 @@ impl Downloader {
 
     pub async fn ensure_package_in_build_directory(
         &self,
-        name: String,
-        version: Version,
+        package: &ManifestPackage,
     ) -> Result<bool> {
-        let _ = self.ensure_package_downloaded(&name, &version).await?;
-        self.extract_package_from_cache(&name, &version)
+        let _ = self.ensure_package_downloaded(package).await?;
+        self.extract_package_from_cache(&package.name, &package.version)
     }
 
     // It would be really nice if this was async but the library is sync
@@ -274,17 +256,14 @@ impl Downloader {
         })
     }
 
-    pub async fn download_hex_packages(
+    pub async fn download_hex_packages<'a, Packages: Iterator<Item = &'a ManifestPackage>>(
         &self,
-        versions: &[(String, Version)],
+        packages: Packages,
         project_name: &str,
     ) -> Result<()> {
-        let futures = versions
-            .iter()
-            .filter(|(name, _)| project_name != name)
-            .map(|(name, version)| {
-                self.ensure_package_in_build_directory(name.clone(), version.clone())
-            });
+        let futures = packages
+            .filter(|package| project_name != package.name)
+            .map(|package| self.ensure_package_in_build_directory(package));
 
         // Run the futures to download the packages concurrently
         let results = future::join_all(futures).await;

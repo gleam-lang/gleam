@@ -71,14 +71,22 @@ async fn download_missing_packages(
     local: &LocalPackages,
     project_name: String,
 ) -> Result<(), Error> {
-    let missing = local.missing_local_packages(manifest, &project_name);
-    if !missing.is_empty() {
+    let mut count = 0;
+    let mut missing = local
+        .missing_local_packages(manifest, &project_name)
+        .into_iter()
+        .map(|package| {
+            count = count + 1;
+            package
+        })
+        .peekable();
+    if missing.peek().is_some() {
         let start = Instant::now();
         cli::print_downloading("packages");
         downloader
-            .download_hex_packages(&missing, &project_name)
+            .download_hex_packages(missing, &project_name)
             .await?;
-        cli::print_packages_downloaded(start, missing.len());
+        cli::print_packages_downloaded(start, count);
     }
     Ok(())
 }
@@ -134,16 +142,15 @@ impl LocalPackages {
             .collect()
     }
 
-    pub fn missing_local_packages(
+    pub fn missing_local_packages<'a>(
         &self,
-        manifest: &Manifest,
+        manifest: &'a Manifest,
         root: &str,
-    ) -> Vec<(String, Version)> {
+    ) -> Vec<&'a ManifestPackage> {
         manifest
             .packages
             .iter()
             .filter(|p| p.name != root && self.packages.get(&p.name) != Some(&p.version))
-            .map(|p| (p.name.to_string(), p.version.clone()))
             .collect()
     }
 
@@ -182,6 +189,41 @@ impl LocalPackages {
 
 #[test]
 fn missing_local_packages() {
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "root".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "local1".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                },
+            },
+            ManifestPackage {
+                name: "local2".to_string(),
+                version: Version::parse("3.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                },
+            },
+        ],
+    };
     let mut extra = LocalPackages {
         packages: [
             ("local2".to_string(), Version::parse("2.0.0").unwrap()),
@@ -189,50 +231,31 @@ fn missing_local_packages() {
         ]
         .into(),
     }
-    .missing_local_packages(
-        &Manifest {
-            requirements: HashMap::new(),
-            packages: vec![
-                ManifestPackage {
-                    name: "root".to_string(),
-                    version: Version::parse("1.0.0").unwrap(),
-                    build_tools: ["gleam".into()].into(),
-                    otp_app: None,
-                    requirements: vec![],
-                    source: ManifestPackageSource::Hex {
-                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
-                    },
-                },
-                ManifestPackage {
-                    name: "local1".to_string(),
-                    version: Version::parse("1.0.0").unwrap(),
-                    build_tools: ["gleam".into()].into(),
-                    otp_app: None,
-                    requirements: vec![],
-                    source: ManifestPackageSource::Hex {
-                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
-                    },
-                },
-                ManifestPackage {
-                    name: "local2".to_string(),
-                    version: Version::parse("3.0.0").unwrap(),
-                    build_tools: ["gleam".into()].into(),
-                    otp_app: None,
-                    requirements: vec![],
-                    source: ManifestPackageSource::Hex {
-                        outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
-                    },
-                },
-            ],
-        },
-        "root",
-    );
+    .missing_local_packages(&manifest, "root");
     extra.sort();
     assert_eq!(
         extra,
         [
-            ("local1".to_string(), Version::new(1, 0, 0)),
-            ("local2".to_string(), Version::new(3, 0, 0)),
+            &ManifestPackage {
+                name: "local1".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                },
+            },
+            &ManifestPackage {
+                name: "local2".to_string(),
+                version: Version::parse("3.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4, 5]),
+                },
+            },
         ]
     )
 }
