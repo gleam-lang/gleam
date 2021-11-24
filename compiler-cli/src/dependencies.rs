@@ -76,7 +76,7 @@ async fn download_missing_packages(
         .missing_local_packages(manifest, &project_name)
         .into_iter()
         .map(|package| {
-            count = count + 1;
+            count += 1;
             package
         })
         .peekable();
