@@ -5,7 +5,7 @@ use gleam_core::{
     Error, Result,
 };
 
-use crate::fs;
+use crate::{cli, fs};
 
 pub fn command(to_add: String, dev: bool) -> Result<()> {
     // Insert the new package into the manifest and perform dependency
@@ -38,13 +38,15 @@ pub fn command(to_add: String, dev: bool) -> Result<()> {
 
     // Insert the new dep
     if dev {
-        toml["dev-dependencies"][to_add] = toml_edit::value(range);
+        toml["dev-dependencies"][&to_add] = toml_edit::value(range);
     } else {
-        toml["dependencies"][to_add] = toml_edit::value(range);
+        toml["dependencies"][&to_add] = toml_edit::value(range);
     };
 
     // Write the updated config
     fs::write(Path::new("gleam.toml"), &toml.to_string())?;
+
+    cli::print_added(&format!("{} v{}", to_add, version.to_string()));
 
     Ok(())
 }

@@ -87,6 +87,10 @@ pub fn print_running(text: &str) {
     print_colourful_prefix("    Running", text)
 }
 
+pub fn print_added(text: &str) {
+    print_colourful_prefix("      Added", text)
+}
+
 pub fn print_generating_documentation() {
     print_colourful_prefix(" Generating", "documentation")
 }
