@@ -24,8 +24,8 @@ use crate::{
     http::HttpClient,
 };
 
-pub fn download() -> Result<Manifest> {
-    let span = tracing::info_span!("dependencies");
+pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
+    let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
     let mode = Mode::Dev;
 
@@ -34,8 +34,18 @@ pub fn download() -> Result<Manifest> {
     let downloader = hex::Downloader::new(fs, http, Untar::boxed());
 
     // Read the project config
-    let config = crate::config::root_config()?;
+    let mut config = crate::config::root_config()?;
     let project_name = config.name.clone();
+
+    // Insert the new package to add, if it exists
+    if let Some((package, dev)) = new_package {
+        let version = hexpm::version::Range::new(">= 0.0.0".into());
+        let _ = if dev {
+            config.dev_dependencies.insert(package.to_string(), version)
+        } else {
+            config.dependencies.insert(package.to_string(), version)
+        };
+    }
 
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");

@@ -66,6 +66,8 @@ sha2 = "0.9.8"
 hostname = "0.3.1"
 # base encoding
 base16 = "0.2.1"
+# TOML parser/editor that preserves comments & formatting
+toml_edit = "0.9"
 
 [dev-dependencies]
 # Test assertion errors with diffs
