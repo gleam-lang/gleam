@@ -151,10 +151,11 @@ enum Command {
     #[structopt(setting = AppSettings::Hidden)]
     PrintConfig,
 
-    /// Add a new Hex package as a project dependency
+    /// Add a new project dependency
     Add {
         package: String,
 
+        /// Add the package as a dev-only dependency
         #[structopt(long)]
         dev: bool,
     },
