@@ -43,7 +43,21 @@ impl PublishCommand {
             fs::create_tar_archive(docs::build_documentation(&config, &mut compiled)?)?;
 
         // Build the package release tarball
-        let package_tarball = build_hex_tarball(&config)?;
+        let (package_tarball, added_files) = build_hex_tarball(&config)?;
+
+        cli::print_publishing(&config.name, &config.version);
+
+        // Ask user if this is correct
+        println!("\nFiles:");
+        for file in added_files.iter().sorted() {
+            println!("  - {}", file.to_string_lossy());
+        }
+        println!("Name: {}", config.name);
+        println!("Version: {}", config.version.to_string());
+        if cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
+            println!("Not publishing.");
+            std::process::exit(0);
+        }
 
         Ok(Self {
             config,
@@ -60,7 +74,6 @@ impl ApiKeyCommand for PublishCommand {
         hex_config: &hexpm::Config,
         api_key: &str,
     ) -> Result<()> {
-        cli::print_publishing(&self.config.name, &self.config.version);
         let start = Instant::now();
         runtime.block_on(hex::publish_package(
             std::mem::take(&mut self.package_tarball),
@@ -86,11 +99,11 @@ impl ApiKeyCommand for PublishCommand {
     }
 }
 
-fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
+fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> {
     let files = project_files()?;
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
-    let metadata = metadata_config(config, files);
+    let metadata = metadata_config(config, &files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -111,10 +124,10 @@ fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
         tarball.finish().map_err(Error::finish_tar)?;
     }
     tracing::info!("Generated package Hex release tarball");
-    Ok(tarball)
+    Ok((tarball, files))
 }
 
-fn metadata_config(config: &PackageConfig, files: Vec<PathBuf>) -> String {
+fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
@@ -211,7 +224,7 @@ pub struct ReleaseMetadata<'a> {
     name: &'a str,
     version: &'a Version,
     description: &'a str,
-    files: Vec<PathBuf>,
+    files: &'a [PathBuf],
     licenses: &'a [String],
     links: Vec<(&'a str, &'a str)>, // TODO: use http::Uri type to ensure correct format
     requirements: Vec<ReleaseRequirement<'a>>,
@@ -296,7 +309,7 @@ fn release_metadata_as_erlang() {
         name: "myapp",
         version: &version,
         description: "description goes here",
-        files: vec![
+        files: &[
             PathBuf::from("gleam.toml"),
             PathBuf::from("src/thingy.gleam"),
             PathBuf::from("src/whatever.gleam"),
