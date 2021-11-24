@@ -37,6 +37,7 @@ pub fn command(to_add: String, dev: bool) -> Result<()> {
         })?;
 
     // Insert the new dep
+    #[allow(clippy::indexing_slicing)]
     if dev {
         toml["dev-dependencies"][&to_add] = toml_edit::value(range);
     } else {
