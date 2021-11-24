@@ -47,11 +47,11 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 ///
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Version {
-    major: u32,
-    minor: u32,
-    patch: u32,
-    pre: Vec<Identifier>,
-    build: Option<String>,
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+    pub pre: Vec<Identifier>,
+    pub build: Option<String>,
 }
 
 impl Version {
