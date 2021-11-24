@@ -336,13 +336,18 @@ impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
                 }
 
                 Type::Var { .. } => {
-                    let elems_types = (0..(elems.len()))
+                    let elems_types: Vec<_> = (0..(elems.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
                     self.environment
-                        .unify(tuple(elems_types), type_.clone())
+                        .unify(tuple(elems_types.clone()), type_.clone())
                         .map_err(|e| convert_unify_error(e, location))?;
-                    self.unify(Pattern::Tuple { elems, location }, type_)
+                    let elems = elems
+                        .into_iter()
+                        .zip(elems_types)
+                        .map(|(pattern, typ)| self.unify(pattern, typ))
+                        .try_collect()?;
+                    Ok(Pattern::Tuple { elems, location })
                 }
 
                 _ => {
