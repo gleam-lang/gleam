@@ -1645,6 +1645,18 @@ pub fn b_get_first(b: B(#(a))) {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1348
+#[test]
+fn try_overflow() {
+    assert_module_infer!(
+        "pub fn main() {
+  try #() = Error(1.9)
+  Ok(1)
+}",
+        vec![("main", "fn() -> Result(Int, Float)")],
+    );
+}
+
 #[test]
 fn module_name_validation() {
     assert!(validate_module_name(&["dream".to_string()]).is_ok());
