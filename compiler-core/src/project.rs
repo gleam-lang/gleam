@@ -1,3 +1,5 @@
+//! TODO: Remove this rebar3 support
+
 mod manifest;
 mod source_tree;
 #[cfg(test)]
@@ -16,7 +18,6 @@ pub use manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSou
 
 pub const OUTPUT_DIR_NAME: &str = "gen";
 
-// TODO: move to deprecated crate
 #[derive(Debug, PartialEq)]
 pub struct Analysed {
     pub ast: TypedModule,

@@ -29,7 +29,6 @@ pub struct ProjectCompiler<'a, IO> {
     io: IO,
 }
 
-// TODO: test top level package has test modules compiled
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
@@ -262,7 +261,6 @@ where
         }
     }
 
-    // TODO: test
     fn copy_erlang_files(
         &self,
         src_path: &Path,

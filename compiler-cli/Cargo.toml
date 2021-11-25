@@ -34,7 +34,7 @@ strum = { version = "0.23.0", features = ["derive"] }
 # Check for tty
 atty = "0.2.14"
 # Hex package manager client
-hexpm = { git = "https://github.com/gleam-lang/hexpm-rust" }
+hexpm = "1.4.0"
 # Allow user to type in sensitive information without showing it in the shell
 rpassword = "5.0.1"
 # Async runtime

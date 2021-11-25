@@ -139,6 +139,8 @@ impl Type {
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
+    /// This function is currently only used for finding the `List` type.
+    ///
     pub fn get_app_args(
         &self,
         public: bool,
@@ -174,7 +176,8 @@ impl Type {
                     TypeVar::Generic { .. } => return None,
                 };
 
-                // TODO: use the real type here rather than making a copy
+                // We are an unbound type variable! So convert us to a type link
+                // to the desired type.
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::App {
                         name: name.to_string(),

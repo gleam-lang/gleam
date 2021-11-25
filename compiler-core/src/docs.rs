@@ -237,7 +237,9 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             ..
         } => Some(Type {
             name,
-            // TODO: Don't use the same printer for docs as for the formatter
+            // TODO: Don't use the same printer for docs as for the formatter.
+            // We are not interested in showing the exact implementation in the
+            // documentation and we could add things like colours, etc.
             definition: print(formatter.custom_type(true, false, name, parameters, cs, location)),
             documentation: markdown_documentation(doc),
             constructors: cs

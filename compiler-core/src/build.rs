@@ -1,18 +1,5 @@
 #![allow(warnings)]
 
-// TODO: Avoid rebuilding clean modules
-// TODO: Download deps from Hex
-// TODO: Support compilation of rebar3 packages
-// TODO: Track removed files in src and test so they can be removed from _build
-// TODO: Test profile and default profile
-// TODO: Only compile test code in test profile
-// TODO: Full .app generation
-// TODO: Validate config.otp_start_module does not contain '
-// TODO: Validate config.otp_start_module has a start function
-// - custom output paths
-// - no .app generation
-// - no Erlang generation
-
 mod dep_tree;
 pub mod package_compiler;
 mod project_compiler;
