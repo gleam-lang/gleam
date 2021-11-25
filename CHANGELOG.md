@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.18.0-rc1 - 2021-11-25
 
 - Gleam can now compile Gleam projects.
 - Gleam can now run tests with the `gleam eunit` command.
