@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.4.0 - 2021-11-25
 
 - The HTTP client has been removed from this library in favour of request
   building and response parsing functions. Bring your own HTTP client of choice.
