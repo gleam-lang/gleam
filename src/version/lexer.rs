@@ -220,7 +220,7 @@ impl<'input> Iterator for Lexer<'input> {
                     ('o', 'r') => Some(Or),
                     ('a', 'n') => {
                         self.step_n(2);
-                        return Some(self.and(start)); // TODO: Returns either And or AlphaNumeric
+                        return Some(self.and(start));
                     }
                     _ => None,
                 };

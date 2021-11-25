@@ -419,7 +419,6 @@ impl<'a> DependencyProvider<'a> {
     /// at the end to ensure that a non-prerelease version will be picked first
     /// if there is one.
     //
-    // TODO: how do local and git deps fit into this?
     fn ensure_package_fetched(
         // We would like to use `&mut self` but the pubgrub library enforces
         // `&self` with interop mutability.
