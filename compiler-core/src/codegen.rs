@@ -115,7 +115,7 @@ impl<'a> ErlangApp<'a> {
     {{applications, [{applications}]}},
     {{description, "{description}"}},
     {{modules, [{modules}]}},
-    {{registered, []}},
+    {{registered, []}}
 ]}}.
 "#,
             applications = applications,

@@ -1834,7 +1834,7 @@ fn config_compilation_test() {
     {applications, []},
     {description, ""},
     {modules, []},
-    {registered, []},
+    {registered, []}
 ]}.
 "#
             .to_string(),
@@ -1851,7 +1851,7 @@ fn config_compilation_test() {
     {applications, []},
     {description, ""},
     {modules, []},
-    {registered, []},
+    {registered, []}
 ]}.
 "#
             .to_string(),
@@ -1871,7 +1871,7 @@ fn config_compilation_test() {
     {applications, []},
     {description, ""},
     {modules, []},
-    {registered, []},
+    {registered, []}
 ]}.
 "#
             .to_string(),
@@ -1891,7 +1891,7 @@ fn config_compilation_test() {
     {applications, []},
     {description, "Very exciting"},
     {modules, []},
-    {registered, []},
+    {registered, []}
 ]}.
 "#
             .to_string(),
@@ -1922,7 +1922,7 @@ fn config_compilation_test() {
                     simple_json]},
     {description, ""},
     {modules, []},
-    {registered, []},
+    {registered, []}
 ]}.
 "#
             .to_string(),
