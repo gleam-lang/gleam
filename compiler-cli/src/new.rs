@@ -77,7 +77,7 @@ impl Creator {
             self.src.join(format!("{}.gleam", self.project_name)),
             &format!(
                 r#"import gleam/io
-                
+
 pub fn main() {{
   io.println("Hello from {}!")
 }}
