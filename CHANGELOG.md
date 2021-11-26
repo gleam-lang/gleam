@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where OTP .app files would be generated with invalid syntax.
+
 ## v0.18.0-rc1 - 2021-11-25
 
 - Gleam can now compile Gleam projects.
