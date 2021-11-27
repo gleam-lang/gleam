@@ -2,6 +2,7 @@ use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::{Error, Result};
 use hexpm::version::Version;
+use http::Uri;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -144,5 +145,26 @@ pub struct DocsPage {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct Link {
     pub title: String,
-    pub href: String,
+    #[serde(with = "uri_serde")]
+    pub href: Uri,
+}
+
+// Note we don't use http-serde since we also want to validate the scheme and host is set.
+mod uri_serde {
+    use http::uri::InvalidUri;
+    use serde::{de::Error as _, Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+        let uri: http::Uri = string
+            .parse()
+            .map_err(|err: InvalidUri| D::Error::custom(err.to_string()))?;
+        if uri.scheme().is_none() || uri.host().is_none() {
+            return Err(D::Error::custom("uri without scheme"));
+        }
+        Ok(uri)
+    }
 }

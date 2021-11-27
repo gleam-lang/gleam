@@ -5,7 +5,7 @@ use std::{
 };
 
 use flate2::{write::GzEncoder, Compression};
-use gleam_core::{config::Link, config::PackageConfig, hex, Error, Result};
+use gleam_core::{config::PackageConfig, hex, Error, Result};
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
@@ -103,7 +103,7 @@ fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> 
     let files = project_files()?;
     let contents_tar_gz = contents_tarball(&files)?;
     let version = "3";
-    let metadata = metadata_config(config, &files)?;
+    let metadata = metadata_config(config, &files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -127,35 +127,18 @@ fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> 
     Ok((tarball, files))
 }
 
-fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> Result<String> {
-    fn parse_link(link: &Link) -> Result<(&str, http::Uri)> {
-        let make_error = |msg| Error::MetadataDecodeError {
-            error: Some(format!(
-                "Link `{}` has {}: `{}`",
-                link.title, msg, link.href
-            )),
-        };
-        let uri = link
-            .href
-            .parse::<http::Uri>()
-            .map_err(|e| make_error(e.to_string()))?;
-        if uri.scheme().is_none() || uri.host().is_none() {
-            return Err(make_error("no valid scheme".to_string()));
-        }
-        Ok((link.title.as_str(), uri))
-    }
-    let links = config
-        .links
-        .iter()
-        .map(parse_link)
-        .collect::<Result<Vec<(&str, http::Uri)>>>()?;
+fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
         description: &config.description,
         files,
         licenses: &config.licences,
-        links,
+        links: config
+            .links
+            .iter()
+            .map(|l| (l.title.as_str(), &l.href))
+            .collect(),
         requirements: config
             .dependencies
             .iter()
@@ -165,7 +148,7 @@ fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> Result<String> 
     }
     .as_erlang();
     tracing::info!(contents = ?metadata, "Generated Hex metadata.config");
-    Ok(metadata)
+    metadata
 }
 
 fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
@@ -243,7 +226,7 @@ pub struct ReleaseMetadata<'a> {
     description: &'a str,
     files: &'a [PathBuf],
     licenses: &'a [String],
-    links: Vec<(&'a str, http::Uri)>,
+    links: Vec<(&'a str, &'a http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
@@ -252,7 +235,7 @@ pub struct ReleaseMetadata<'a> {
 
 impl<'a> ReleaseMetadata<'a> {
     pub fn as_erlang(&self) -> String {
-        fn link(link: &(&str, http::Uri)) -> String {
+        fn link(link: &(&str, &http::Uri)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
                 name = link.0,
@@ -320,6 +303,8 @@ impl<'a> ReleaseRequirement<'a> {
 fn release_metadata_as_erlang() {
     let licences = vec!["MIT".to_string(), "MPL-2.0".to_string()];
     let version = "1.2.3".try_into().unwrap();
+    let homepage = "https://gleam.run".parse().unwrap();
+    let github = "https://github.com/lpil/myapp".parse().unwrap();
     let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
     let req2 = Range::new("~> 1.2".to_string());
     let meta = ReleaseMetadata {
@@ -332,10 +317,7 @@ fn release_metadata_as_erlang() {
             PathBuf::from("src/whatever.gleam"),
         ],
         licenses: &licences,
-        links: vec![
-            ("homepage", "https://gleam.run".parse().unwrap()),
-            ("github", "https://github.com/lpil/myapp".parse().unwrap()),
-        ],
+        links: vec![("homepage", &homepage), ("github", &github)],
         requirements: vec![
             ReleaseRequirement {
                 name: "wibble",
