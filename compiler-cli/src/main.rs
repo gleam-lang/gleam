@@ -227,6 +227,9 @@ impl CompilePackage {
 
 #[derive(StructOpt, Debug)]
 enum Dependencies {
+    /// List packages from the root config
+    List,
+
     /// Download packages to the local cache
     Download,
 }
@@ -288,6 +291,8 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
+
+        Command::Deps(Dependencies::List) => dependencies::list(),
 
         Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
 

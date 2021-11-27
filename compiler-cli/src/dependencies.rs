@@ -24,6 +24,26 @@ use crate::{
     http::HttpClient,
 };
 
+pub fn list() -> Result<()> {
+    let config = crate::config::root_config()?;
+
+    println!(
+        "{} deps (from {}):\n",
+        config.name,
+        paths::root_config().display().to_string(),
+    );
+
+    for (name, version) in config.dependencies {
+        println!("    * {} ({})", name, version);
+    }
+
+    for (name, version) in config.dev_dependencies {
+        println!("    * {} ({}) (dev)", name, version);
+    }
+
+    Ok(())
+}
+
 pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
