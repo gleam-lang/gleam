@@ -128,7 +128,7 @@ fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> 
 }
 
 fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> Result<String> {
-    fn parse_link(link: &Link) -> Result<(&String, http::Uri)> {
+    fn parse_link(link: &Link) -> Result<(&str, http::Uri)> {
         let make_error = |msg| Error::MetadataDecodeError {
             error: Some(format!(
                 "Link `{}` has {}: `{}`",
@@ -142,18 +142,20 @@ fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> Result<String> 
         if uri.scheme().is_none() || uri.host().is_none() {
             return Err(make_error("no valid scheme".to_string()));
         }
-        Ok((&link.title, uri))
+        Ok((link.title.as_str(), uri))
     }
-    let links_result: Result<Vec<(&String, http::Uri)>> =
-        config.links.iter().map(parse_link).collect();
-    let links: Vec<(&String, http::Uri)> = links_result?;
+    let links = config
+        .links
+        .iter()
+        .map(parse_link)
+        .collect::<Result<Vec<(&str, http::Uri)>>>()?;
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
         description: &config.description,
         files,
         licenses: &config.licences,
-        links: links.iter().map(|(l, u)| (l.as_str(), u)).collect(),
+        links,
         requirements: config
             .dependencies
             .iter()
@@ -241,7 +243,7 @@ pub struct ReleaseMetadata<'a> {
     description: &'a str,
     files: &'a [PathBuf],
     licenses: &'a [String],
-    links: Vec<(&'a str, &'a http::Uri)>,
+    links: Vec<(&'a str, http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
@@ -250,7 +252,7 @@ pub struct ReleaseMetadata<'a> {
 
 impl<'a> ReleaseMetadata<'a> {
     pub fn as_erlang(&self) -> String {
-        fn link(link: &(&str, &http::Uri)) -> String {
+        fn link(link: &(&str, http::Uri)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
                 name = link.0,
@@ -320,10 +322,6 @@ fn release_metadata_as_erlang() {
     let version = "1.2.3".try_into().unwrap();
     let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
     let req2 = Range::new("~> 1.2".to_string());
-    let homepage = "https://gleam.run".parse::<http::Uri>().unwrap();
-    let github = "https://github.com/lpil/myapp"
-        .parse::<http::Uri>()
-        .unwrap();
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
@@ -334,7 +332,10 @@ fn release_metadata_as_erlang() {
             PathBuf::from("src/whatever.gleam"),
         ],
         licenses: &licences,
-        links: vec![("homepage", &homepage), ("github", &github)],
+        links: vec![
+            ("homepage", "https://gleam.run".parse().unwrap()),
+            ("github", "https://github.com/lpil/myapp".parse().unwrap()),
+        ],
         requirements: vec![
             ReleaseRequirement {
                 name: "wibble",
