@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.18.0-rc1 - 2021-11-26
+## v0.18.0-rc2 - 2021-11-26
 
 - Fixed a bug where OTP .app files would be generated with invalid syntax.
 - Removed extra whitespace from newly generated projects.
