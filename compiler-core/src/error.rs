@@ -266,12 +266,14 @@ pub enum InvalidProjectNameReason {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum StandardIoAction {
     Read,
+    Write,
 }
 
 impl StandardIoAction {
     fn text(&self) -> &'static str {
         match self {
             StandardIoAction::Read => "read from",
+            StandardIoAction::Write => "write to",
         }
     }
 }
