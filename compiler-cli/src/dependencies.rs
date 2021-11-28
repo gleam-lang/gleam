@@ -8,7 +8,7 @@ use futures::future;
 use gleam_core::{
     build::Mode,
     config::PackageConfig,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, Utf8Writer, WrappedReader},
     paths,
@@ -24,24 +24,25 @@ use crate::{
     http::HttpClient,
 };
 
-pub fn list() -> Result<()> {
+pub fn list<W: std::io::Write>(mut buffer: W) -> Result<()> {
     let config = crate::config::root_config()?;
 
-    println!(
+    writeln!(
+        buffer,
         "{} deps (from {}):\n",
         config.name,
         paths::root_config().display().to_string(),
-    );
-
-    for (name, version) in config.dependencies {
-        println!("    * {} ({})", name, version);
-    }
-
-    for (name, version) in config.dev_dependencies {
-        println!("    * {} ({}) (dev)", name, version);
-    }
-
-    Ok(())
+    )
+    .and_then(|_| {
+        config
+            .dependencies
+            .into_iter()
+            .try_for_each(|(name, version)| writeln!(buffer, "    * {} ({})", name, version))
+    })
+    .map_err(|e| Error::StandardIo {
+        action: StandardIoAction::Write,
+        err: Some(e.kind()),
+    })
 }
 
 pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
