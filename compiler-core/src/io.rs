@@ -6,7 +6,6 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use std::{
     fmt::Debug,
-    fs::ReadDir,
     io,
     path::{Path, PathBuf},
     process::ExitStatus,
@@ -50,6 +49,41 @@ pub trait Writer: std::io::Write + Utf8Writer {
 pub struct OutputFile {
     pub text: String,
     pub path: PathBuf,
+}
+
+pub struct ReadDir {
+    entries: Box<dyn Iterator<Item = io::Result<DirEntry>>>,
+}
+
+impl ReadDir {
+    pub fn from_entries(entries: Vec<io::Result<DirEntry>>) -> Self {
+        ReadDir {
+            entries: Box::new(entries.into_iter()),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DirEntry {
+    pub pathbuf: PathBuf,
+}
+
+impl DirEntry {
+    pub fn path(&self) -> PathBuf {
+        self.pathbuf.clone()
+    }
+
+    pub fn into_path(self) -> PathBuf {
+        self.pathbuf
+    }
+}
+
+impl Iterator for ReadDir {
+    type Item = io::Result<DirEntry>;
+
+    fn next(&mut self) -> Option<io::Result<DirEntry>> {
+        self.entries.next()
+    }
 }
 
 /// A trait used to read files.

@@ -1,12 +1,5 @@
 // use flate2::{write::GzEncoder, Compression};
-use gleam_core::{
-    error::{Error, FileIoAction, FileKind},
-    io::{
-        CommandExecutor, FileSystemIO, FileSystemWriter, OutputFile, WrappedReader, WrappedWriter,
-    },
-    Result,
-};
-use ignore::DirEntry;
+use gleam_core::{Result, error::{Error, FileIoAction, FileKind}, io::{CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir, WrappedReader, WrappedWriter}};
 use lazy_static::lazy_static;
 use std::{
     ffi::OsStr,
@@ -73,8 +66,18 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
         reader(path)
     }
 
-    fn read_dir(&self, path: &Path) -> Result<std::fs::ReadDir> {
-        read_dir(path)
+    fn read_dir(&self, path: &Path) -> Result<ReadDir> {
+        read_dir(path).map(|res| {
+            let mut blah = Vec::new();
+
+            for item in res {
+                if let Ok(a) = item {
+                    blah.push(Ok(DirEntry { pathbuf: a.path() }))
+                }
+            }
+
+            ReadDir::from_entries(blah)
+        })
     }
 }
 
@@ -297,7 +300,7 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
-        .map(DirEntry::into_path)
+        .map(ignore::DirEntry::into_path)
         .filter(move |d| is_gleam_path(d, dir))
 }
 

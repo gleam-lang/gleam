@@ -1,9 +1,6 @@
 use std::time::Instant;
 
-use gleam_core::{
-    build::{Package, ProjectCompiler},
-    Result,
-};
+use gleam_core::{Result, build::{Package, ProjectCompiler, Target}};
 
 use crate::{cli, fs};
 
@@ -16,8 +13,8 @@ pub fn main() -> Result<Package> {
     let start = Instant::now();
 
     tracing::info!("Compiling packages");
-    let compiled =
-        ProjectCompiler::new(root_config, &manifest.packages, telemetry, io).compile()?;
+    let compiled = ProjectCompiler::new(root_config, &manifest.packages, telemetry, io)
+        .compile(Target::JavaScript)?;
 
     cli::print_compiled(start.elapsed());
     Ok(compiled)

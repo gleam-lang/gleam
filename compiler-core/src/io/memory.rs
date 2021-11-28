@@ -1,5 +1,5 @@
 use super::*;
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc};
 
 // An in memory sharable collection of pretend files that can be used in place
 // of a real file system. It is a shared reference to a set of buffer than can
@@ -24,6 +24,8 @@ impl InMemoryFileSystem {
         Self::default()
     }
 }
+
+impl FileSystemIO for InMemoryFileSystem {}
 
 impl FileSystemWriter for InMemoryFileSystem {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
@@ -61,7 +63,7 @@ impl FileSystemReader for InMemoryFileSystem {
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.ends_with(".gleam"))
+            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam")))
             .collect();
         Box::new(files.into_iter())
     }
@@ -73,7 +75,7 @@ impl FileSystemReader for InMemoryFileSystem {
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.ends_with(".gleam_module"))
+            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam_module")))
             .collect();
         Box::new(files.into_iter())
     }
@@ -109,8 +111,17 @@ impl FileSystemReader for InMemoryFileSystem {
         unreachable!() // TODO
     }
 
-    fn read_dir(&self, _path: &Path) -> Result<ReadDir> {
-        unreachable!() // TODO
+    fn read_dir(&self, path: &Path) -> Result<ReadDir> {
+        let entries: Vec<io::Result<DirEntry>> = (*self.files)
+            .borrow()
+            .iter()
+            .map(|(file_path, _)| file_path.to_path_buf())
+            .filter(|file_path| file_path.starts_with(path))
+            .map(|pathbuf| DirEntry { pathbuf })
+            .map(|entry| Ok(entry))
+            .collect();
+
+        Ok(ReadDir::from_entries(entries))
     }
 }
 

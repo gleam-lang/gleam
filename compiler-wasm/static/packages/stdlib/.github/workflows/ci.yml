@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - "main"
+      - "v*.*.*"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.0.0
+      - uses: gleam-lang/setup-erlang@v1.1.2
+        with:
+          otp-version: "23.2"
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16.0.0"
+      - uses: gleam-lang/setup-gleam@v1.0.1
+        with:
+          gleam-version: "0.18.0-rc1"
+      - run: gleam test
+      - run: npm test
+      - run: gleam format --check src test

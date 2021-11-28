@@ -1,0 +1,14 @@
+name = "gleam_stdlib"
+version = "0.18.0"
+licences = ["Apache-2.0"]
+description = "A standard library for the Gleam programming language"
+
+repository = { type = "github", user = "gleam-lang", repo = "stdlib" }
+links = [
+  { title = "Website", href = "https://gleam.run" },
+  { title = "Sponsor", href = "https://github.com/sponsors/lpil" },
+]
+
+[dependencies]
+
+[dev-dependencies]
