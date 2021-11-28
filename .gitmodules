@@ -1,0 +1,3 @@
+[submodule "compiler-wasm/packages/stdlib"]
+	path = compiler-wasm/packages/stdlib
+	url = https://github.com/gleam-lang/stdlib
