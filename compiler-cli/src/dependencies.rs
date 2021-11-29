@@ -24,20 +24,27 @@ use crate::{
     http::HttpClient,
 };
 
-pub fn list<W: std::io::Write>(mut buffer: W) -> Result<()> {
+pub fn list() -> Result<()> {
     let config = crate::config::root_config()?;
+    let manifest = read_manifest_from_disc()?;
+    list_manifest_packages(std::io::stdout(), config.name, manifest)
+}
 
+fn list_manifest_packages<W: std::io::Write>(
+    mut buffer: W,
+    project_name: String,
+    manifest: Manifest,
+) -> Result<()> {
     writeln!(
         buffer,
         "{} deps (from {}):\n",
-        config.name,
-        paths::root_config().display().to_string(),
+        project_name,
+        paths::manifest().display().to_string(),
     )
     .and_then(|_| {
-        config
-            .dependencies
-            .into_iter()
-            .try_for_each(|(name, version)| writeln!(buffer, "    * {} ({})", name, version))
+        manifest.packages.into_iter().try_for_each(|package| {
+            writeln!(buffer, "    * {} ({})", package.name, package.version)
+        })
     })
     .map_err(|e| Error::StandardIo {
         action: StandardIoAction::Write,
