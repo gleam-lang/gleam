@@ -292,7 +292,7 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
-        Command::Deps(Dependencies::List) => dependencies::list(std::io::stdout()),
+        Command::Deps(Dependencies::List) => dependencies::list(),
 
         Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
 
