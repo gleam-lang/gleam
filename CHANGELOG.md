@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.18.0-rc3 - Unreleased
+
+- URL format in gleam.toml is now validated.
+
 ## v0.18.0-rc2 - 2021-11-26
 
 - Fixed a bug where OTP .app files would be generated with invalid syntax.
