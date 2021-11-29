@@ -54,7 +54,52 @@ fn list_manifest_packages<W: std::io::Write>(
 
 #[test]
 fn list_manifest_format() {
-    assert_eq!("Hello", "there")
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "root".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "aaa".to_string(),
+                version: Version::new(0, 4, 2),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec!["zzz".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "zzz".to_string(),
+                version: Version::new(0, 4, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    list_manifest_packages(&mut buffer, "test_project".to_string(), manifest).unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"test_project deps (from manifest.toml):
+
+    * root (1.0.0)
+    * aaa (0.4.2)
+    * zzz (0.4.0)
+"#
+    )
 }
 
 pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
