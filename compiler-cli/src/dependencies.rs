@@ -52,6 +52,11 @@ fn list_manifest_packages<W: std::io::Write>(
     })
 }
 
+#[test]
+fn list_manifest_format() {
+    assert_eq!("Hello", "there")
+}
+
 pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
