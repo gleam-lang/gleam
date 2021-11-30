@@ -25,8 +25,10 @@ use crate::{
 };
 
 pub fn list() -> Result<()> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+
     let config = crate::config::root_config()?;
-    let manifest = read_manifest_from_disc()?;
+    let (_, manifest) = get_manifest(runtime.handle().clone(), Mode::Dev, &config)?;
     list_manifest_packages(std::io::stdout(), config.name, manifest)
 }
 
