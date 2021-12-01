@@ -141,7 +141,13 @@ impl<'a> StalePackageRemover<'a> {
         manifest
             .packages
             .iter()
-            .filter(|package| self.fresh.contains(package.name.as_str()))
+            .filter(|package| {
+                let fresh = self.fresh.contains(package.name.as_str());
+                if !fresh {
+                    tracing::info!(name = package.name.as_str(), "unlocking_stale_package");
+                }
+                fresh
+            })
             .map(|package| (package.name.clone(), package.version.clone()))
             .collect()
     }
