@@ -29,29 +29,18 @@ pub fn list() -> Result<()> {
 
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(runtime.handle().clone(), Mode::Dev, &config)?;
-    list_manifest_packages(std::io::stdout(), config.name, manifest)
+    list_manifest_packages(std::io::stdout(), manifest)
 }
 
-fn list_manifest_packages<W: std::io::Write>(
-    mut buffer: W,
-    project_name: String,
-    manifest: Manifest,
-) -> Result<()> {
-    writeln!(
-        buffer,
-        "{} deps (from {}):\n",
-        project_name,
-        paths::manifest().display().to_string(),
-    )
-    .and_then(|_| {
-        manifest.packages.into_iter().try_for_each(|package| {
-            writeln!(buffer, "    * {} ({})", package.name, package.version)
+fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+    manifest
+        .packages
+        .into_iter()
+        .try_for_each(|package| writeln!(buffer, "{} {}", package.name, package.version))
+        .map_err(|e| Error::StandardIo {
+            action: StandardIoAction::Write,
+            err: Some(e.kind()),
         })
-    })
-    .map_err(|e| Error::StandardIo {
-        action: StandardIoAction::Write,
-        err: Some(e.kind()),
-    })
 }
 
 #[test]
@@ -92,14 +81,12 @@ fn list_manifest_format() {
             },
         ],
     };
-    list_manifest_packages(&mut buffer, "test_project".to_string(), manifest).unwrap();
+    list_manifest_packages(&mut buffer, manifest).unwrap();
     assert_eq!(
         std::str::from_utf8(&buffer).unwrap(),
-        r#"test_project deps (from manifest.toml):
-
-    * root (1.0.0)
-    * aaa (0.4.2)
-    * zzz (0.4.0)
+        r#"root 1.0.0
+aaa 0.4.2
+zzz 0.4.0
 "#
     )
 }
