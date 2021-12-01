@@ -390,7 +390,7 @@ fn get_manifest(
     // If there's no manifest then resolve the versions anew
     if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
-        let manifest = resolve_versions(runtime, mode, config, &[])?;
+        let manifest = resolve_versions(runtime, mode, config, None)?;
         return Ok((true, manifest));
     }
 
@@ -403,7 +403,7 @@ fn get_manifest(
         Ok((false, manifest))
     } else {
         tracing::info!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, config, &manifest.packages)?;
+        let manifest = resolve_versions(runtime, mode, config, Some(&manifest))?;
         Ok((true, manifest))
     }
 }
@@ -412,19 +412,14 @@ fn resolve_versions(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
-    locked: &[ManifestPackage],
+    manifest: Option<&Manifest>,
 ) -> Result<Manifest, Error> {
     cli::print_resolving_versions();
-    let locked = locked
-        .iter()
-        // TODO: remove clones. Will require library modification.
-        .map(|p| (p.name.to_string(), p.version.clone()))
-        .collect();
     let resolved = hex::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         mode,
         config,
-        &locked,
+        manifest,
     )?;
     let packages = runtime.block_on(future::try_join_all(
         resolved

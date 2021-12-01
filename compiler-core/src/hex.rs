@@ -2,7 +2,7 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::{PackageVersions, Version};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 use tar::Archive;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     config::PackageConfig,
     io::{FileSystemIO, HttpClient, TarUnpacker},
     paths,
-    project::{ManifestPackage, ManifestPackageSource},
+    project::{Manifest, ManifestPackage, ManifestPackageSource},
     Error, Result,
 };
 
@@ -29,14 +29,14 @@ pub fn resolve_versions(
     package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
     mode: Mode,
     config: &PackageConfig,
-    locked: &HashMap<String, Version>,
+    manifest: Option<&Manifest>,
 ) -> Result<PackageVersions> {
     let specified_dependencies = config.dependencies_for(mode)?.into_iter();
     hexpm::version::resolve_versions(
         package_fetcher,
         config.name.clone(),
         specified_dependencies,
-        locked,
+        &config.locked(manifest)?,
     )
     .map_err(Error::dependency_resolution_failed)
 }
