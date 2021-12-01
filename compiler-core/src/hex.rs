@@ -173,14 +173,14 @@ impl Downloader {
             tracing::info!(
                 package = package.name.as_str(),
                 version = %package.version,
-                "Package already in cache"
+                "package_in_cache"
             );
             return Ok(false);
         }
         tracing::info!(
             package = &package.name.as_str(),
             version = %package.version,
-            "Downloading package to cache"
+            "downloading_package_to_cache"
         );
 
         let request = hexpm::get_package_tarball_request(
@@ -225,7 +225,7 @@ impl Downloader {
             return Ok(false);
         }
 
-        tracing::info!(package = name, "Writing package to target");
+        tracing::info!(package = name, "writing_package_to_target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
         let reader = self.fs.reader(&tarball)?;
         let mut archive = Archive::new(reader);
@@ -303,7 +303,7 @@ pub async fn get_package_release<Http: HttpClient>(
     tracing::info!(
         name = name,
         version = version.as_str(),
-        "getting_package_release"
+        "looking_up_package_release"
     );
     let request = hexpm::get_package_release_request(name, &version, None, config);
     let response = http.send(request).await?;
