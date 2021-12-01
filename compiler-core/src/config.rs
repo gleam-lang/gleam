@@ -128,7 +128,7 @@ impl<'a> StalePackageRemover<'a> {
     ) -> HashMap<String, Version> {
         // Record all the requirements that have not changed
         for (name, requirement) in requirements {
-            if manifest.requirements.get(name) != Some(&requirement) {
+            if manifest.requirements.get(name) != Some(requirement) {
                 continue; // This package has changed, don't record it
             }
 
@@ -346,7 +346,7 @@ fn manifest_package(
         version: Version::parse(version).unwrap(),
         build_tools: vec![],
         otp_app: None,
-        requirements: requirements.iter().map(|e| e.to_string()).collect(),
+        requirements: requirements.iter().map(|e| (*e).to_string()).collect(),
         source: crate::project::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },
