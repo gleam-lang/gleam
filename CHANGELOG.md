@@ -3,6 +3,7 @@
 ## v0.18.0-rc3 - Unreleased
 
 - URL format in gleam.toml is now validated.
+- The `gleam deps list` command has been added.
 
 ## v0.18.0-rc2 - 2021-11-26
 
