@@ -136,6 +136,8 @@ impl<'a> StalePackageRemover<'a> {
             self.record_tree_fresh(name);
         }
 
+        // Return all the previously resolved packages that have not been
+        // recorded as fresh
         manifest
             .packages
             .iter()
@@ -152,6 +154,7 @@ impl<'a> StalePackageRemover<'a> {
             .locked
             .get(name)
             .expect("Package fresh but not in manifest");
+        // Record each of its deps recursively
         for package in *deps {
             self.record_tree_fresh(package);
         }
