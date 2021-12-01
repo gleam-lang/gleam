@@ -494,7 +494,7 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
-        tracing::info!(package = package, "Looking up package in Hex API");
+        tracing::info!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
         let response = self

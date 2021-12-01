@@ -32,11 +32,13 @@ pub fn resolve_versions(
     manifest: Option<&Manifest>,
 ) -> Result<PackageVersions> {
     let specified_dependencies = config.dependencies_for(mode)?.into_iter();
+    let locked = config.locked(manifest)?;
+    tracing::info!("resolving_versions");
     hexpm::version::resolve_versions(
         package_fetcher,
         config.name.clone(),
         specified_dependencies,
-        &config.locked(manifest)?,
+        &locked,
     )
     .map_err(Error::dependency_resolution_failed)
 }
@@ -297,8 +299,13 @@ pub async fn get_package_release<Http: HttpClient>(
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<hexpm::Release<hexpm::ReleaseMeta>> {
-    tracing::info!("getting_package_release");
-    let request = hexpm::get_package_release_request(name, &version.to_string(), None, config);
+    let version = version.to_string();
+    tracing::info!(
+        name = name,
+        version = version.as_str(),
+        "getting_package_release"
+    );
+    let request = hexpm::get_package_release_request(name, &version, None, config);
     let response = http.send(request).await?;
     hexpm::get_package_release_response(response).map_err(Error::hex)
 }
