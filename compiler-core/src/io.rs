@@ -63,26 +63,30 @@ impl ReadDir {
     }
 }
 
+impl Iterator for ReadDir {
+    type Item = io::Result<DirEntry>;
+
+    fn next(&mut self) -> Option<io::Result<DirEntry>> {
+        self.entries.next()
+    }
+}
+
 #[derive(Debug)]
 pub struct DirEntry {
     pub pathbuf: PathBuf,
 }
 
 impl DirEntry {
+    pub fn from_pathbuf(pathbuf: PathBuf) -> DirEntry {
+        DirEntry { pathbuf }
+    }
+
     pub fn path(&self) -> PathBuf {
         self.pathbuf.clone()
     }
 
     pub fn into_path(self) -> PathBuf {
         self.pathbuf
-    }
-}
-
-impl Iterator for ReadDir {
-    type Item = io::Result<DirEntry>;
-
-    fn next(&mut self) -> Option<io::Result<DirEntry>> {
-        self.entries.next()
     }
 }
 

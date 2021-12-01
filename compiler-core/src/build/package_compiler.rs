@@ -163,22 +163,6 @@ where
         }
     }
 
-    // fn perform_codegen_in_memory(&self, modules: &[Module]) -> Result<InMemoryFileSystem> {
-    //     let mut imfs = InMemoryFileSystem::new();
-
-    //     // TODO: returns errors
-    //     (match self.options.target {
-    //         Target::JavaScript => {
-    //             JavaScript::new(&self.options.out_path).render(&mut imfs, modules);
-    //         }
-    //         Target::Erlang => {
-    //             Erlang::new(&self.options.out_path).render(self.io.clone(), modules);
-    //         }
-    //     });
-
-    //     Ok(imfs)
-    // }
-
     /// Set whether to write metadata files
     pub fn write_metadata(mut self, write_metadata: bool) -> Self {
         self.options.write_metadata = write_metadata;

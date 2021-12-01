@@ -77,6 +77,8 @@ where
         package: &ManifestPackage,
         target: Target,
     ) -> Result<(), Error> {
+        println!("load_cache_or_compile_package");
+
         let build_path = paths::build_package(Mode::Dev, target, &package.name);
         if self.io.is_directory(&build_path) {
             tracing::info!(package=%package.name, "Loading precompiled package");
@@ -146,6 +148,7 @@ where
         package: &ManifestPackage,
         target: Target,
     ) -> Result<(), Error> {
+        println!("compile_gleam_dep_package");
         let config_path = paths::build_deps_package_config(&package.name);
         let config = PackageConfig::read(config_path, &self.io)?;
         let src = paths::build_deps_package_src(&package.name);
@@ -179,6 +182,8 @@ where
         target: Target,
     ) -> Result<Package, Error> {
         let out_path = paths::build_package(Mode::Dev, target, &config.name);
+
+        println!("compile_gleam_package: {:?}", out_path);
 
         let options = package_compiler::Options {
             target: target,

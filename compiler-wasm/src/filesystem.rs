@@ -1,5 +1,6 @@
 use std::{
     ffi::OsStr,
+    io,
     path::{Path, PathBuf},
     process::ExitStatus,
 };
@@ -7,7 +8,7 @@ use std::{
 use gleam_core::{
     error::{FileIoAction, FileKind},
     io::{
-        memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
+        memory::InMemoryFileSystem, CommandExecutor, DirEntry, FileSystemIO, FileSystemReader,
         FileSystemWriter, ReadDir, WrappedReader, WrappedWriter,
     },
     Error, Result,
@@ -47,6 +48,7 @@ impl FileSystemIO for WasmFileSystem {}
 
 impl FileSystemWriter for WasmFileSystem {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
+        println!("wrote to {:?}", path);
         self.imfs.writer(path)
     }
 
@@ -68,10 +70,28 @@ impl FileSystemWriter for WasmFileSystem {
 
 impl FileSystemReader for WasmFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        self.imfs.gleam_source_files(dir)
+        println!(
+            "gleam_source_files {:?}",
+            dir
+        );
+        let mut files1: Vec<PathBuf> = self.imfs.gleam_source_files(dir).collect();
+
+        let mut files2: Vec<PathBuf> = Packages::iter()
+            .map(|x| {
+                let path_os_str = OsStr::new(x.as_ref());
+                Path::new(path_os_str).to_path_buf()
+            })
+            .filter(|file_path| file_path.starts_with(dir))
+            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam")))
+            .collect();
+
+        files1.append(&mut files2);
+
+        Box::new(files1.into_iter())
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+        println!("gleam_metadata_files {:?}", dir);
         let files: Vec<PathBuf> = Packages::iter()
             .map(|x| {
                 let path_os_str = OsStr::new(x.as_ref());
@@ -85,6 +105,7 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
+        println!("read {:?}", path);
         self.imfs.read(path).or_else(|error| {
             if let Some(package) = Packages::get(path.to_str().unwrap()) {
                 let bytes = package.data.to_vec();
@@ -106,7 +127,7 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn is_directory(&self, _path: &Path) -> bool {
-        true
+        false // The directory is a lie!
     }
 
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
@@ -120,6 +141,22 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        self.imfs.read_dir(path)
+        println!("read_dir {:?}", path);
+        let mut files: Vec<io::Result<DirEntry>> = Packages::iter()
+            .map(|x| {
+                let path_os_str = OsStr::new(x.as_ref());
+                Path::new(path_os_str).to_path_buf()
+            })
+            .filter(|file_path| file_path.starts_with(path))
+            .map(DirEntry::from_pathbuf)
+            .map(Ok)
+            .collect();
+
+        let mut files2: Vec<io::Result<DirEntry>> =
+            self.imfs.read_dir(path).unwrap().into_iter().collect();
+
+        files.append(&mut files2);
+
+        Ok(ReadDir::from_entries(files))
     }
 }
