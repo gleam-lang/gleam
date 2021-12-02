@@ -40,7 +40,12 @@ impl CommandExecutor for WasmFileSystem {
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
     ) -> Result<ExitStatus, Error> {
-        panic!("Not implemented")
+        // Err(Error::ShellCommand {
+        //     command: "blah".to_string(),
+        //     err: None,
+        // })
+
+        unimplemented!();
     }
 }
 
@@ -57,23 +62,23 @@ impl FileSystemWriter for WasmFileSystem {
     }
 
     fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
-        panic!("unimplemented");
+        //panic!("unimplemented");
+        Ok(()) // LIES!
     }
     fn copy_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
-        panic!("unimplemented");
+        //panic!("unimplemented");
+        Ok(()) // LIES!
     }
 
     fn mkdir(&self, _: &Path) -> Result<(), Error> {
-        panic!("unimplemented");
+        //panic!("unimplemented");
+        Ok(()) // LIES!
     }
 }
 
 impl FileSystemReader for WasmFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        println!(
-            "gleam_source_files {:?}",
-            dir
-        );
+        println!("gleam_source_files {:?}", dir);
         let mut files1: Vec<PathBuf> = self.imfs.gleam_source_files(dir).collect();
 
         let mut files2: Vec<PathBuf> = Packages::iter()

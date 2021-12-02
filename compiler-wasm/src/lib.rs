@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 use std::ffi::OsStr;
-use std::hash::Hash;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-use gleam_core::build::package_compiler::{Options, Source};
+use gleam_core::Error;
 use wasm_bindgen::prelude::*;
 
 use hexpm::version::{Range, Version};
 
-use gleam_core::build::{Origin, Package, PackageCompiler, ProjectCompiler, Target, Telemetry};
+use gleam_core::build::{Package, ProjectCompiler, Target, Telemetry};
 use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Repository};
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
@@ -30,16 +29,13 @@ impl Telemetry for VoidTelemetry {
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
 ///
-/// The `main_source` file is always required.
+/// The `main_source` file is required.
 /// The `additional_source_files` are optional.
-///
-/// Libraries are paths in the static file system containing libraries to
-/// include with compilation, such as the std-library.
 pub fn compile(
     main_source: &str,
     additional_source_files: HashMap<String, String>,
     target: Target,
-) -> Result<HashMap<String, String>, ()> {
+) -> Result<HashMap<String, String>, String> {
     let mut wfs = WasmFileSystem::new();
 
     write_source_file(main_source, "src/main.gleam", &mut wfs);
@@ -48,10 +44,9 @@ pub fn compile(
         write_source_file(&source, &path, &mut wfs);
     }
 
-    //let _package = compile_std_library(&mut wfs, target).unwrap();
-    let _package = compile_project(&mut wfs, target).unwrap();
+    let _package = compile_project(&mut wfs, target).map_err(|e| e.pretty_string())?;
 
-    gather_compiled_files(&wfs, target)
+    Ok(gather_compiled_files(&wfs, target).unwrap())
 }
 
 fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
@@ -61,7 +56,7 @@ fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSy
         .expect("should always succeed with the virtual file system");
 }
 
-fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, ()> {
+fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, Error> {
     let mut deps = HashMap::new();
     deps.insert("gleam_stdlib".to_string(), Range::new("*".to_string()));
 
@@ -85,7 +80,7 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
         },
     }];
 
-    let mut pcompiler = ProjectCompiler::new(
+    let pcompiler = ProjectCompiler::new(
         PackageConfig {
             name: PROJECT_NAME.to_string(),
             version: Version::new(1, 0, 0),
@@ -103,48 +98,13 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
         wfs.clone(),
     );
 
-    Ok(pcompiler.compile(target).unwrap())
-}
-
-fn gather_compiled_project_files(
-    package: &Package,
-    wfs: &WasmFileSystem,
-    target: Target,
-) -> Result<HashMap<String, String>, ()> {
-    let mut files: HashMap<String, String> = HashMap::new();
-
-    for module in package.modules.iter() {
-        let path = match target {
-            Target::JavaScript => format!("./{}.js", module.name),
-            Target::Erlang => format!("./{}.erl", module.name),
-        };
-
-        let existing_path = match target {
-            Target::JavaScript => {
-                format!("build/dev/javascript/{}/{}.js", PROJECT_NAME, module.name)
-            }
-            Target::Erlang => format!(
-                "build/dev/erlang/{}/gleam@{}.erl",
-                PROJECT_NAME, module.name
-            ),
-        };
-
-        files.insert(
-            path,
-            wfs.read(&Path::new(&existing_path))
-                .expect("should be found"),
-        );
-    }
-
-    Ok(files)
+    pcompiler.compile(target)
 }
 
 fn gather_compiled_files(
-    //package: &Package,
     wfs: &WasmFileSystem,
     target: Target,
 ) -> Result<HashMap<String, String>, ()> {
-    //let files_map = gather_compiled_project_files(package, wfs, target).unwrap();
     let mut files: HashMap<String, String> = HashMap::new();
 
     let extension_to_search_for = match target {
@@ -165,72 +125,13 @@ fn gather_compiled_files(
                 .to_str()
                 .unwrap()
                 .replace("\\", "/")
-                .replace("build/dev/javascript/", "./gleam-packages/");
-
-            files.insert(
-                path,
-                contents,
-            );
+                .replace("build/dev/javascript/", "gleam-packages/");
+            files.insert(path, contents);
         }
     }
 
     Ok(files)
 }
-
-// fn compile_std_library(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, ()> {
-//     let mut pcompiler = PackageCompiler::new(
-//         Options {
-//             target,
-//             name: String::from("stdlib"),
-//             src_path: PathBuf::from("stdlib/src"),
-//             test_path: None,
-//             out_path: PathBuf::from("build"),
-//             write_metadata: false,
-//         },
-//         wfs.clone(),
-//     );
-
-//     for file in wfs.read_dir(&Path::new("stdlib/src")).unwrap() {
-//         let file = file.unwrap();
-
-//         if file.path().extension() == Some(OsStr::new("gleam")) {
-//             println!("compiling stdlib: {:?}", file.path());
-
-//             let contents: String = wfs.read(file.path().as_path()).unwrap();
-//             let name = file
-//                 .path()
-//                 .file_stem()
-//                 .unwrap()
-//                 .to_str()
-//                 .unwrap()
-//                 .to_string();
-
-//             println!("{:?}", name);
-
-//             "build\\dev\\javascript\\";
-//             // becomes
-//             "gleam-packages/javascript\\";
-
-//             let path1 = file.path().to_owned();
-//             let path = path1
-//                 .to_str()
-//                 .unwrap()
-//                 .replace("build\\dev\\javascript\\", "gleam-packages/javascript\\")
-//                 .replace("\\", "/");
-
-//             pcompiler.sources.push(Source {
-//                 path: PathBuf::from(path),
-//                 name: format!("gleam/{}", name),
-//                 code: contents,
-//                 origin: Origin::Src, // TODO: is this used?
-//             });
-//         }
-//     }
-
-//     Ok(pcompiler
-//         .compile(&mut Vec::new(), &mut HashMap::new(), &mut HashMap::new())
-//         .unwrap())
-// }
 
 /// Should be called once to setup any state that persists across compilation
 /// cycles.
@@ -250,41 +151,12 @@ pub fn compile_to_js(gleam_source: &str) -> JsValue {
     JsValue::from_serde(&result).expect("should never fail")
 }
 
-// #[test]
-// fn test() {
-//     compile_to_js(
-//         r#"
-//     import gleam/io
+#[wasm_bindgen]
+pub fn compile_to_erlang(erlang_source: &str) -> JsValue {
+    let result = compile(erlang_source, HashMap::new(), Target::Erlang);
 
-//     pub fn main() {
-//         io.print("hi")
-//         42
-//     }
-//     "#,
-//     );
-// }
-
-// #[test]
-// fn test_javascript_project_no_stdlib() {
-//     let result = compile(
-//         r#"
-//     pub fn main() {
-//         42
-//     }
-//     "#,
-//         HashMap::new(),
-//         &[],
-//         Target::JavaScript,
-//     )
-//     .unwrap();
-
-//     assert_eq!(
-//         result.get("./main.js"),
-//         Some(&String::from("export function main() {\n  return 42;\n}\n"))
-//     );
-
-//     println!("{:?}", result);
-// }
+    JsValue::from_serde(&result).expect("should never fail")
+}
 
 #[test]
 fn test_javascript_project_stdlib() {
@@ -305,6 +177,35 @@ fn test_javascript_project_stdlib() {
         result.get("gleam-packages/gleam-wasm/main.js"),
         Some(&String::from("import * as $io from \"gleam-packages/gleam_stdlib/gleam/io.js\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
     );
+
+    //let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
+
+    for key in result.keys() {
+        println!("{:?}", key);
+    }
+
+    //println!("{:?}", result);
+}
+
+#[test]
+fn test_erlang_project_stdlib() {
+    let result = compile(
+        r#"
+    import gleam/io
+
+    pub fn main() {
+        io.println("Hello, world!")
+    }
+    "#,
+        HashMap::new(),
+        Target::Erlang,
+    )
+    .unwrap();
+
+    // assert_eq!(
+    //     result.get("gleam-packages/gleam-wasm/main.js"),
+    //     Some(&String::from("import * as $io from \"gleam-packages/gleam_stdlib/gleam/io.js\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
+    // );
 
     //let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
 
