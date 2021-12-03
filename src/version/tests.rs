@@ -732,6 +732,31 @@ fn resolution_no_matching_version() {
 }
 
 #[test]
+fn resolution_locked_version_doesnt_satisfy_requirements() {
+    let err = resolve_versions(
+        make_remote(),
+        "app".to_string(),
+        vec![(
+            "gleam_stdlib".to_string(),
+            Range::new("~> 0.1.0".to_string()),
+        )]
+        .into_iter(),
+        &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
+            .into_iter()
+            .collect(),
+    )
+    .unwrap_err();
+
+    match err {
+        PubGrubError::Failure(msg) => assert_eq!(
+            msg,
+            "gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+        ),
+        _ => panic!("wrong error: {}", err),
+    }
+}
+
+#[test]
 fn manifest_toml() {
     let manifest = toml::to_string(
         &vec![

@@ -342,7 +342,7 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            requirements: root_dependencies(dependencies, &locked),
+            requirements: root_dependencies(dependencies, &locked)?,
             meta: (),
         }],
     };
@@ -359,32 +359,69 @@ where
 }
 
 fn root_dependencies<Requirements>(
-    dependencies: Requirements,
+    base_requirements: Requirements,
     locked: &HashMap<String, Version>,
-) -> HashMap<String, Dependency>
+) -> Result<HashMap<String, Dependency>, ResolutionError>
 where
     Requirements: Iterator<Item = (String, Range)>,
 {
-    let locked = locked
+    // Record all of the already locked versions as hard requirements
+    let mut requirements: HashMap<_, _> = locked
         .iter()
-        .map(|(name, version)| (name.to_string(), Range::new(version.to_string())));
-    // Add the locked versions as new requirements that override any existing
-    // entry in the dependencies list. Collection into a HashMap is used for
-    // de-duplication.
-    let deps: HashMap<_, _> = dependencies.chain(locked).collect();
-    deps.into_iter()
-        .map(|(package, requirement)| {
-            (
-                package,
-                Dependency {
-                    app: None,
-                    optional: false,
-                    repository: None,
-                    requirement,
-                },
-            )
-        })
-        .collect()
+        .map(|(name, version)| (name.to_string(), Dependency::from_version(version)))
+        .collect();
+
+    for (name, range) in base_requirements {
+        match locked.get(&name) {
+            // If the package was not already locked then we can use the
+            // specified version requirement without modification.
+            None => {
+                let _ = requirements.insert(name, Dependency::from_range(range));
+            }
+
+            // If the version was locked we verify that the requirement is
+            // compatible with the locked version.
+            Some(locked_version) => {
+                let compatible = range
+                    .to_pubgrub()
+                    .map_err(|e| {
+                        ResolutionError::Failure(format!("Failed to parse range {}", e.to_string()))
+                    })?
+                    .contains(locked_version);
+                if !compatible {
+                    return Err(ResolutionError::Failure(format!(
+                        "{package} is specified with the requirement `{requirement}`, \
+but it is locked to {version}, which is incompatible.",
+                        package = name,
+                        requirement = range.to_string(),
+                        version = locked_version,
+                    )));
+                }
+            }
+        };
+    }
+
+    Ok(requirements)
+    // let locked = locked
+    //     .iter()
+    //     .map(|(name, version)| (name.to_string(), Range::new(version.to_string())));
+    // // Add the locked versions as new requirements that override any existing
+    // // entry in the dependencies list. Collection into a HashMap is used for
+    // // de-duplication.
+    // let deps: HashMap<_, _> = dependencies.chain(locked).collect();
+    // deps.into_iter()
+    //     .map(|(package, requirement)| {
+    //         (
+    //             package,
+    //             Dependency {
+    //                 app: None,
+    //                 optional: false,
+    //                 repository: None,
+    //                 requirement,
+    //             },
+    //         )
+    //     })
+    //     .collect()
 }
 
 pub trait PackageFetcher {

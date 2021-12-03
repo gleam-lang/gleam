@@ -692,6 +692,26 @@ pub struct Dependency {
     pub repository: Option<String>,
 }
 
+impl Dependency {
+    pub(crate) fn from_range(range: Range) -> Self {
+        Dependency {
+            app: None,
+            optional: false,
+            repository: None,
+            requirement: range,
+        }
+    }
+
+    pub(crate) fn from_version(version: &Version) -> Self {
+        Dependency {
+            app: None,
+            optional: false,
+            repository: None,
+            requirement: Range::new(version.to_string()),
+        }
+    }
+}
+
 static USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), " (", env!("CARGO_PKG_VERSION"), ")");
 
 fn validate_package_and_version(package: &str, version: &str) -> Result<(), ApiError> {
