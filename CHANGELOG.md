@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.1 - Unreleased
+## v1.4.1 - 2021-12-03
 
 - Fixed a bug where locked versions would discard incompatible requirements
   during version resolution.
