@@ -85,7 +85,7 @@ impl<'input> Parser<'input> {
             None
         };
 
-        mem::replace(&mut self.c1, c1).ok_or_else(|| UnexpectedEnd)
+        mem::replace(&mut self.c1, c1).ok_or(UnexpectedEnd)
     }
 
     /// Peek one token.
@@ -384,7 +384,7 @@ impl<'input> Parser<'input> {
             out.push(t);
         }
 
-        while let Some(t) = self.lexer.next() {
+        for t in self.lexer.by_ref() {
             out.push(t?);
         }
 

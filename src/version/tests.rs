@@ -534,7 +534,7 @@ fn resolution_with_locked() {
         make_remote(),
         "app".to_string(),
         vec![("gleam_stdlib".to_string(), Range::new("~> 0.1".to_string()))].into_iter(),
-        &vec![locked_stdlib.clone()].into_iter().collect(),
+        &vec![locked_stdlib].into_iter().collect(),
     )
     .unwrap();
     assert_eq!(
