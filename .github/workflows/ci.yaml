@@ -164,12 +164,9 @@ jobs:
         run: make
         working-directory: ./test/compile_package1
 
-      - name: test/project
-        working-directory: ./test/project
-        run: |
-          gleam deps download
-          gleam run
-          gleam test
+      - name: Test JavaScript prelude
+        run: make
+        working-directory: ./test/javascript_prelude
 
       - name: Test lib template
         run: |
@@ -188,8 +185,3 @@ jobs:
           ls build/dev/docs/lib_project/gleam.js
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/lib_project.html
-
-      - name: Test JavaScript prelude
-        run: |
-          cd test/javascript_prelude
-          make
