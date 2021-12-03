@@ -192,4 +192,4 @@ jobs:
       - name: Test JavaScript prelude
         run: |
           cd test/javascript_prelude
-          npm test
+          make
