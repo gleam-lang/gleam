@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.1 - Unreleased
+
+- Fixed a bug where locked versions would discard incompatible requirements
+  during version resolution.
+
 ## v1.4.0 - 2021-11-25
 
 - The HTTP client has been removed from this library in favour of request

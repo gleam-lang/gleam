@@ -7,8 +7,8 @@
 A Rust client for [Hex][hex], the package manager for the Erlang ecosystem.
 
 This library was created for use in the [Gleam programming language][gleam]
-compiler. Breaking API changes may occur depending on the needs of the Gleam
-compiler.
+compiler. The API is not overly well considered and breaking API changes may
+occur depending on the needs of the Gleam compiler.
 
 [hex]: https://hex.pm/
 [gleam]: https://gleam.run/
