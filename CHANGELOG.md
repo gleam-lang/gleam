@@ -4,6 +4,8 @@
 
 - URL format in gleam.toml is now validated.
 - The `gleam deps list` command has been added.
+- Fixed a bug where changing requirements in `gleam.toml` would not cause deps
+  to be re-resolved.
 
 ## v0.18.0-rc2 - 2021-11-26
 
