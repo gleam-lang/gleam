@@ -6,6 +6,8 @@
 - The `gleam deps list` command has been added.
 - Fixed a bug where changing requirements in `gleam.toml` would not cause deps
   to be re-resolved.
+- Fixed a bug where locked deps would cause incompatible package requirements to
+  be discarded.
 
 ## v0.18.0-rc2 - 2021-11-26
 
