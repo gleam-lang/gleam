@@ -13,36 +13,41 @@ use std::{
 };
 use tar::{Archive, Entry};
 
+pub trait Reader: std::io::Read {
+    /// A wrapper around `std::io::Write` that has Gleam's error handling.
+    fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
+        self.read(buffer).map_err(|e| self.convert_err(e))
+    }
+
+    fn convert_err<E: std::error::Error>(&self, error: E) -> Error;
+}
+
 pub trait Utf8Writer: std::fmt::Write {
     /// A wrapper around `fmt::Write` that has Gleam's error handling.
     fn str_write(&mut self, str: &str) -> Result<()> {
-        let res = self.write_str(str);
-        self.wrap_result(res)
+        self.write_str(str).map_err(|e| self.convert_err(e))
     }
 
-    fn wrap_result<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<()> {
-        self.convert_err(result.map(|_| ()))
-    }
-
-    fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<T>;
+    fn convert_err<E: std::error::Error>(&self, err: E) -> Error;
 }
 
 impl Utf8Writer for String {
-    fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<T> {
-        result.map_err(|error| Error::FileIo {
+    fn convert_err<E: std::error::Error>(&self, error: E) -> Error {
+        Error::FileIo {
             action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: PathBuf::from("<in memory>"),
             err: Some(error.to_string()),
-        })
+        }
     }
 }
 
 pub trait Writer: std::io::Write + Utf8Writer {
     /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        let res = std::io::Write::write(self, bytes);
-        self.wrap_result(res)
+        std::io::Write::write(self, bytes)
+            .map(|_| ())
+            .map_err(|e| self.convert_err(e))
     }
 }
 
@@ -115,6 +120,17 @@ impl std::io::Read for WrappedReader {
     }
 }
 
+impl Reader for WrappedReader {
+    fn convert_err<E: std::error::Error>(&self, err: E) -> Error {
+        Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Read,
+            path: self.path.clone(),
+            err: Some(err.to_string()),
+        }
+    }
+}
+
 #[derive(Debug)]
 /// A wrapper around a Write implementing object that has Gleam's error handling.
 pub struct WrappedWriter {
@@ -125,13 +141,13 @@ pub struct WrappedWriter {
 impl Writer for WrappedWriter {}
 
 impl Utf8Writer for WrappedWriter {
-    fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<T> {
-        result.map_err(|error| Error::FileIo {
+    fn convert_err<E: std::error::Error>(&self, error: E) -> Error {
+        Error::FileIo {
             action: FileIoAction::WriteTo,
             kind: FileKind::File,
             path: self.path.to_path_buf(),
             err: Some(error.to_string()),
-        })
+        }
     }
 }
 
@@ -144,8 +160,10 @@ impl WrappedWriter {
     }
 
     pub fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        let result = self.inner.write(bytes);
-        self.wrap_result(result)
+        self.inner
+            .write(bytes)
+            .map(|_| ())
+            .map_err(|e| self.convert_err(e))
     }
 }
 
@@ -296,13 +314,13 @@ pub mod test {
     }
 
     impl Utf8Writer for InMemoryFile {
-        fn convert_err<T, E: std::error::Error>(&self, result: Result<T, E>) -> Result<T> {
-            result.map_err(|error| Error::FileIo {
+        fn convert_err<E: std::error::Error>(&self, error: E) -> Error {
+            Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path: PathBuf::from("<in memory test file>"),
                 err: Some(error.to_string()),
-            })
+            }
         }
     }
 

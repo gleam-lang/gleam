@@ -1422,11 +1422,11 @@ where
             if label.is_some() {
                 location.start = start
             };
-            Ok(Some(ParserArg::Arg(CallArg {
+            Ok(Some(ParserArg::Arg(Box::new(CallArg {
                 label,
                 location,
                 value,
-            })))
+            }))))
         } else if let Some((start, _, end)) = self.maybe_discard_name() {
             let mut location = SrcSpan { start, end };
             if label.is_some() {
@@ -2773,7 +2773,7 @@ fn is_reserved_word(tok: Token) -> bool {
 // Parsing a function call into the appropriate structure
 #[derive(Debug)]
 pub enum ParserArg {
-    Arg(CallArg<UntypedExpr>),
+    Arg(Box<CallArg<UntypedExpr>>),
     Hole {
         location: SrcSpan,
         label: Option<String>,
@@ -2790,7 +2790,7 @@ pub fn make_call(
     let args = args
         .into_iter()
         .map(|a| match a {
-            ParserArg::Arg(arg) => arg,
+            ParserArg::Arg(arg) => *arg,
             ParserArg::Hole { location, label } => {
                 num_holes += 1;
                 CallArg {

@@ -41,7 +41,7 @@ impl<'a> ModuleEncoder<'a> {
         module.set_package(&self.data.package);
 
         let result = capnp::serialize_packed::write_message(&mut writer, &message);
-        writer.convert_err(result)
+        result.map_err(|e| writer.convert_err(e))
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {

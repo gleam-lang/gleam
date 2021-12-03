@@ -196,7 +196,7 @@ fn write_manifest_to_disc(manifest: &Manifest) -> Result<()> {
     let path = paths::manifest();
     let mut file = fs::writer(&path)?;
     let result = manifest.write_to(&mut file);
-    file.wrap_result(result)?;
+    result.map_err(|e| file.convert_err(e))?;
     Ok(())
 }
 
