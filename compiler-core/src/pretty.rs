@@ -139,13 +139,13 @@ enum Mode {
     Unbroken,
 }
 
-fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> bool {
+fn fits(mut limit: isize, mut docs: im::Vector<Document<'_>>) -> bool {
     loop {
         if limit < 0 {
             return false;
         };
 
-        let (indent, mode, document) = match docs.pop_front() {
+        let document = match docs.pop_front() {
             Some(x) => x,
             None => return true,
         };
@@ -155,26 +155,23 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
 
             Document::ForceBreak => return false,
 
-            Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
+            Document::Nest(_, doc) => docs.push_front(*doc),
 
             // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front((indent, mode, *doc)),
+            Document::NestCurrent(doc) => docs.push_front(*doc),
 
-            Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
+            Document::Group(doc) => docs.push_front(*doc),
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
 
-            Document::Break { unbroken, .. } => match mode {
-                Mode::Broken => return true,
-                Mode::Unbroken => limit -= unbroken.len() as isize,
-            },
+            Document::Break { unbroken, .. } => limit -= unbroken.len() as isize,
 
-            Document::FlexBreak(doc) => docs.push_front((indent, mode, *doc)),
+            Document::FlexBreak(doc) => docs.push_front(*doc),
 
             Document::Vec(vec) => {
                 for doc in vec.into_iter().rev() {
-                    docs.push_front((indent, mode.clone(), doc));
+                    docs.push_front(doc);
                 }
             }
         }
@@ -244,7 +241,7 @@ fn fmt(
 
             Document::Group(doc) | Document::FlexBreak(doc) => {
                 // TODO: don't clone the doc
-                let group_docs = im::vector![(indent, Mode::Unbroken, (*doc).clone())];
+                let group_docs = im::vector![(*doc).clone()];
                 if fits(limit - width, group_docs) {
                     docs.push_front((indent, Mode::Unbroken, *doc));
                 } else {
