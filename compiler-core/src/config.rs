@@ -28,8 +28,8 @@ pub struct PackageConfig {
     pub licences: Vec<String>,
     #[serde(default)]
     pub description: String,
-    #[serde(default)]
-    pub docs: Docs,
+    #[serde(default, alias = "docs")]
+    pub documentation: Docs,
     #[serde(default)]
     pub dependencies: Dependencies,
     #[serde(default, rename = "dev-dependencies")]
@@ -364,7 +364,7 @@ impl Default for PackageConfig {
             name: Default::default(),
             version: default_version(),
             description: Default::default(),
-            docs: Default::default(),
+            documentation: Default::default(),
             dependencies: Default::default(),
             erlang: Default::default(),
             repository: Default::default(),

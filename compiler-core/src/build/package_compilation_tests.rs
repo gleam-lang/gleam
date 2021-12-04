@@ -1813,7 +1813,7 @@ fn config_compilation_test() {
             version: Version::parse("1.0.0").unwrap(),
             name: "the_package".to_string(),
             repository: Repository::None,
-            docs: Default::default(),
+            documentation: Default::default(),
             licences: Default::default(),
             erlang: Default::default(),
             links: vec![],

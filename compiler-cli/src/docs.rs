@@ -73,7 +73,7 @@ pub(crate) fn build_documentation(
         path: "index.html".to_string(),
         source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
-    pages.extend(config.docs.pages.iter().cloned());
+    pages.extend(config.documentation.pages.iter().cloned());
     let outputs = gleam_core::docs::generate_html(config, compiled.modules.as_slice(), &pages);
     Ok(outputs)
 }
