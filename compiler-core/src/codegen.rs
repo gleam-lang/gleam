@@ -106,6 +106,7 @@ impl<'a> ErlangApp<'a> {
         let applications = config
             .dependencies
             .keys()
+            .chain(config.dev_dependencies.keys())
             .sorted()
             .join(",\n                    ");
 
