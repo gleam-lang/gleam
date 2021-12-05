@@ -100,6 +100,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Tomochika Hara](https://github.com/thara)
  - [Topher Hunt](https://github.com/topherhunt)
  - [Tristan Sloughter](https://github.com/tsloughter)
+ - [Tristan de Cacqueray](https://github.com/TristanCacqueray)
  - [vincent-lg](https://github.com/vincent-lg)
  - [Wilson Silva](https://github.com/wilsonsilva)
  - [Wojtek Mach](https://github.com/wojtekmach)
