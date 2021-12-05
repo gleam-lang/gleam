@@ -92,7 +92,7 @@ impl<'a> ErlangApp<'a> {
 
         let start_module = config
             .erlang
-            .otp_start_module
+            .application_start_module
             .as_ref()
             .map(|module| tuple("mod", &format!("'{}'", module.replace("/", "@"))))
             .unwrap_or_default();

@@ -378,7 +378,7 @@ impl Default for PackageConfig {
 #[derive(Deserialize, Debug, PartialEq, Default)]
 pub struct ErlangConfig {
     #[serde(default)]
-    pub otp_start_module: Option<String>,
+    pub application_start_module: Option<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
