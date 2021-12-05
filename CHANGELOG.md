@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.18.0-rc4 - unreleased
+
+- New projects now include `gleeunit`.
+
 ## v0.18.0-rc3 - 2021-12-05
 
 - URL format in gleam.toml is now validated.
