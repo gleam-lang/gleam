@@ -1823,13 +1823,13 @@ fn config_compilation_test() {
     assert_config_compile!(
         {
             let mut config = make_config();
-            config.erlang.otp_start_module = Some("mymod".to_string());
+            config.erlang.otp_start_module = Some("myapp/mymod".to_string());
             config
         },
         vec![],
         vec![OutputFile {
             text: r#"{application, the_package, [
-    {mod, 'mymod'},
+    {mod, 'myapp@mymod'},
     {vsn, "1.0.0"},
     {applications, []},
     {description, ""},
