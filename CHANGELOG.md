@@ -8,6 +8,8 @@
   to be re-resolved.
 - Fixed a bug where locked deps would cause incompatible package requirements to
   be discarded.
+- Development dependencies are now included in the applications listed in the
+  generated OTP `.app` file.
 
 ## v0.18.0-rc2 - 2021-11-26
 
