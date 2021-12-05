@@ -379,6 +379,8 @@ impl Default for PackageConfig {
 pub struct ErlangConfig {
     #[serde(default)]
     pub application_start_module: Option<String>,
+    #[serde(default)]
+    pub extra_applications: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
