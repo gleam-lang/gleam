@@ -103,10 +103,13 @@ impl<'a> ErlangApp<'a> {
             .sorted()
             .join(",\n               ");
 
+        // TODO: When precompiling for production (i.e. as a precompiled hex
+        // package) we will need to exclude the dev deps.
         let applications = config
             .dependencies
             .keys()
             .chain(config.dev_dependencies.keys())
+            .chain(config.erlang.extra_applications.iter())
             .sorted()
             .join(",\n                    ");
 
