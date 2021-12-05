@@ -10,6 +10,8 @@
   be discarded.
 - Development dependencies are now included in the applications listed in the
   generated OTP `.app` file.
+- `gleam.toml` now includes an `erlang.extra_applications` key to specify extra
+  OTP applications that need to be started.
 
 ## v0.18.0-rc2 - 2021-11-26
 
