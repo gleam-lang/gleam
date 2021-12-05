@@ -117,12 +117,10 @@ gleam shell # Run an Erlang shell
 
 ## Installation
 
-If available on Hex this package can be installed by adding `{name}` 
-to your `gleam.toml` dependencies:
+If available on Hex this package can be added to your Gleam project.
 
-```toml
-[dependencies]
-{name} = "~> 0.1"
+```sh
+gleam add {name}
 ```
 "#,
                 name = self.project_name,
