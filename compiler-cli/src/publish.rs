@@ -45,8 +45,6 @@ impl PublishCommand {
         // Build the package release tarball
         let (package_tarball, added_files) = build_hex_tarball(&config)?;
 
-        cli::print_publishing(&config.name, &config.version);
-
         // Ask user if this is correct
         println!("\nFiles:");
         for file in added_files.iter().sorted() {
@@ -75,12 +73,15 @@ impl ApiKeyCommand for PublishCommand {
         api_key: &str,
     ) -> Result<()> {
         let start = Instant::now();
+        cli::print_publishing(&self.config.name, &self.config.version);
+
         runtime.block_on(hex::publish_package(
             std::mem::take(&mut self.package_tarball),
             api_key,
             hex_config,
             &HttpClient::new(),
         ))?;
+
         cli::print_publishing_documentation();
         runtime.block_on(hex::publish_documentation(
             &self.config.name,
