@@ -87,7 +87,10 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::{clap::{AppSettings, Shell}, StructOpt};
+use structopt::{
+    clap::{AppSettings, Shell},
+    StructOpt,
+};
 use strum::VariantNames;
 
 const NAME: &str = env!("CARGO_BIN_NAME");
@@ -163,9 +166,9 @@ enum Command {
 
     /// Generate shell completion script
     Completion {
-        /// 
+        /// Shell type
         #[structopt(value_name = "SHELL", possible_values = &["bash", "zsh", "fish", "powershell", "elvish"])]
-        shell: Shell
+        shell: Shell,
     },
 }
 
