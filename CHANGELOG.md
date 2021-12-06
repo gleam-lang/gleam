@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.18.0-rc4 - unreleased
+## v0.18.0 - 2021-12-06
 
 - New projects now include `gleeunit`.
 
