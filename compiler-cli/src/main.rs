@@ -87,9 +87,10 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::{clap::AppSettings, StructOpt};
+use structopt::{clap::{AppSettings, Shell}, StructOpt};
 use strum::VariantNames;
 
+const NAME: &str = env!("CARGO_BIN_NAME");
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(StructOpt, Debug)]
@@ -158,6 +159,13 @@ enum Command {
         /// Add the package as a dev-only dependency
         #[structopt(long)]
         dev: bool,
+    },
+
+    /// Generate shell completion script
+    Completion {
+        /// 
+        #[structopt(value_name = "SHELL", possible_values = &["bash", "zsh", "fish", "powershell", "elvish"])]
+        shell: Shell
     },
 }
 
@@ -272,6 +280,12 @@ enum Docs {
     },
 }
 
+fn generate_completion(shell: Shell) -> Result<()> {
+    Command::clap().gen_completions_to(NAME, shell, &mut std::io::stdout());
+
+    Ok(())
+}
+
 fn main() {
     initialise_logger();
     panic::add_handler();
@@ -322,6 +336,8 @@ fn main() {
         }
 
         Command::Add { package, dev } => add::command(package, dev),
+
+        Command::Completion { shell } => generate_completion(shell),
     };
 
     match result {
