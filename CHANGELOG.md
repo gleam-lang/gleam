@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- `gleam` learned a new subcommand `completion` that generates shell completion scripts.
+
 ## v0.18.0 - 2021-12-06
 
 - New projects now include `gleeunit`.
