@@ -227,10 +227,10 @@ impl CompilePackage {
 
 #[derive(StructOpt, Debug)]
 enum Dependencies {
-    /// List packages from the root config
+    /// List all dependency packages
     List,
 
-    /// Download packages to the local cache
+    /// Download all dependency packages
     Download,
 }
 
