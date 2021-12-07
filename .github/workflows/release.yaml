@@ -26,13 +26,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [macos, windows-64bit]
+        build: [macos, macos-arm, windows-64bit]
         toolchain: [stable]
         include:
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
-          - build: macos
+          - build: macos-arm
             os: macos-latest
             target: aarch64-apple-darwin
           - build: windows-64bit
