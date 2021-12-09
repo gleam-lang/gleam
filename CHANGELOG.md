@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.18.1 - Unreleased
+
+- Fixed a bug where pipe expressions in record updates could geneate incorrect
+  Erlang code.
+
 ## v0.18.0 - 2021-12-06
 
 - New projects now include `gleeunit`.
