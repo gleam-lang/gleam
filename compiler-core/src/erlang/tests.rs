@@ -3158,6 +3158,10 @@ pub fn main(x) {
 
 -type x() :: {x, integer(), integer()}.
 
+-spec id(A) -> A.
+id(X) ->
+    X.
+
 -spec main(x()) -> x().
 main(X) ->
     erlang:setelement(

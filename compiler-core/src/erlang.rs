@@ -1299,7 +1299,7 @@ fn record_update<'a>(
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
         let index_doc = (arg.index + 2).to_doc();
-        let value_doc = expr(&arg.value, env);
+        let value_doc = maybe_block_expr(&arg.value, env);
 
         "erlang:setelement"
             .to_doc()
