@@ -1128,6 +1128,18 @@ fn record_update_tests() {
       let updated = record_update.Box(..module_box, value: 6)
       assert_equal(record_update.Box("a", 6), updated)
     }),
+    // https://github.com/gleam-lang/gleam/issues/1379
+    "pipe in record update"
+    |> example(fn() {
+      let module_box = record_update.Box("a", 5)
+      let updated =
+        record_update.Box(
+          ..module_box,
+          value: 6
+          |> id,
+        )
+      assert_equal(record_update.Box("a", 6), updated)
+    }),
   ]
 }
 
@@ -1159,3 +1171,7 @@ type PortMonitorFlag {
 
 pub external fn go(Port) -> Nil =
   "" ""
+
+fn id(x) {
+  x
+}
