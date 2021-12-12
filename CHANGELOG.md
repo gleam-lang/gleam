@@ -6,6 +6,8 @@
   could geneate incorrect Erlang code.
 - The `priv` directory is now copied to the output directory for rebar3 packages
   prior to compilation. This is required for some packages to compile.
+- Fixed a bug where deps that fail to compile would be skipped when compilation
+  would next be attempted, resulting the project being in an invalid state.
 
 ## v0.18.0 - 2021-12-06
 
