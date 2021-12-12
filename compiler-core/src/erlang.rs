@@ -771,12 +771,12 @@ fn bin_op<'a>(
 
     let left_expr = match left {
         TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
-        _ => expr(left, env),
+        _ => maybe_block_expr(left, env),
     };
 
     let right_expr = match right {
         TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
-        _ => expr(right, env),
+        _ => maybe_block_expr(right, env),
     };
 
     let div = |left: Document<'a>, right: Document<'a>| {
