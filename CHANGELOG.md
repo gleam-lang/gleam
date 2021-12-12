@@ -2,8 +2,8 @@
 
 ## v0.18.1 - Unreleased
 
-- Fixed a bug where pipe expressions in record updates could geneate incorrect
-  Erlang code.
+- Fixed a bug where pipe expressions in record updates and operator expressions
+  could geneate incorrect Erlang code.
 - The `priv` directory is now copied to the output directory for rebar3 packages
   prior to compilation. This is required for some packages to compile.
 
