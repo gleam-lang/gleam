@@ -149,10 +149,10 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - uses: gleam-lang/setup-erlang@v1.1.2
         with:
-          otp-version: {}
+          otp-version: "{}"
       - uses: gleam-lang/setup-gleam@v1.0.2
         with:
-          gleam-version: {}
+          gleam-version: "{}"
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
