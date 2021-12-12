@@ -1,3 +1,5 @@
+use askama::Template;
+
 use crate::{
     build::{
         dep_tree, package_compiler, package_compiler::PackageCompiler, project_compiler,
@@ -221,9 +223,14 @@ where
         // meaning to this flag.
         if test_path.is_some() {
             let name = "gleam@@main.erl";
+            let module = ErlangEntrypointModule {
+                application: &config.name,
+            }
+            .render()
+            .expect("Erlang entrypoint rendering");
             self.io
                 .writer(&out_path.join(name))?
-                .write(std::include_bytes!("../../templates/gleam@@main.erl"))?;
+                .write(module.as_bytes())?;
             modules.push(PathBuf::from(name));
         }
 
@@ -363,4 +370,10 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         package: package.name.to_string(),
         build_tools: package.build_tools.clone(),
     })
+}
+
+#[derive(Template)]
+#[template(path = "gleam@@main.erl", escape = "none")]
+struct ErlangEntrypointModule<'a> {
+    application: &'a str,
 }
