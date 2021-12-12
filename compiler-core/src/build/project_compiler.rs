@@ -75,15 +75,23 @@ where
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let build_path = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
         if self.io.is_directory(&build_path) {
-            tracing::info!(package=%package.name, "Loading precompiled package");
+            tracing::info!(package=%package.name, "loading_precompiled_package");
             return self.load_cached_package(build_path, package);
         }
 
         self.telemetry.compiling_package(&package.name);
-        match usable_build_tool(package)? {
-            BuildTool::Gleam => self.compile_gleam_dep_package(package)?,
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package)?,
+        let result = match usable_build_tool(package)? {
+            BuildTool::Gleam => self.compile_gleam_dep_package(package),
+            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
+        };
+
+        // TODO: test. This one is not covered by the integration tests.
+        if result.is_err() {
+            tracing::debug!(package=%package.name,"removing_failed_build");
+            let dir = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
+            self.io.delete(&dir)?;
         }
+
         Ok(())
     }
 
@@ -103,6 +111,7 @@ where
         // we may need to copy the include directory into there
         self.io.mkdir(&dest)?;
 
+        // TODO: unit test
         let src_include = project_dir.join("include");
         if self.io.is_directory(&src_include) {
             tracing::debug!("copying_include_to_build");
@@ -110,6 +119,7 @@ where
             self.io.copy_dir(&src_include, &dest)?;
         }
 
+        // TODO: unit test
         let src_priv = project_dir.join("priv");
         if self.io.is_directory(&src_priv) {
             tracing::debug!("copying_priv_to_build");
