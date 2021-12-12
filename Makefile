@@ -20,6 +20,7 @@ test: ## Run the compiler unit tests
 	cargo clippy
 	cd test/language && make
 	cd test/javascript_prelude && make test
+	cd test/project && rm -r build && gleam test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets

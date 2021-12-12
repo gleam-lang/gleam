@@ -110,6 +110,13 @@ where
             self.io.copy_dir(&src_include, &dest)?;
         }
 
+        let src_priv = project_dir.join("priv");
+        if self.io.is_directory(&src_priv) {
+            tracing::debug!("copying_priv_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&src_priv, &dest)?;
+        }
+
         let env = [
             ("ERL_LIBS", rebar3_path(&erl_libs)),
             ("REBAR_BARE_COMPILER_OUTPUT_DIR", rebar3_path(&dest)),
