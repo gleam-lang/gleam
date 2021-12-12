@@ -9,4 +9,3 @@ certifi = "~> 2.8" # This is a rebar3 dep that uses files in ./priv
 [dev-dependencies]
 first_gleam_publish_package = "> 0.0.0"
 gleeunit = "~> 0.1"
-accept = "~> 0.3" # This is a rebar3 dep
