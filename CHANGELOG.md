@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.18.1 - Unreleased
+## v0.18.1 - 2021-12-12
 
 - Fixed a bug where pipe expressions in record updates and operator expressions
   could geneate incorrect Erlang code.
