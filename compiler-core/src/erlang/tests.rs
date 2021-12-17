@@ -1,5 +1,6 @@
 mod records;
 mod statement_if;
+mod variables;
 
 #[macro_export]
 macro_rules! assert_erl {
@@ -35,116 +36,40 @@ macro_rules! assert_erl {
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
-}
 
-#[test]
-fn variable_rewrite() {
-    // https://github.com/gleam-lang/gleam/issues/333
-    assert_erl!(
-        r#"
-pub fn go(a) {
-  case a {
-    99 -> {
-      let a = a
-      1
-    }
-    _ -> a
-  }
-}
-
-                    "#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/1]).
-
--spec go(integer()) -> integer().
-go(A) ->
-    case A of
-        99 ->
-            A@1 = A,
-            1;
-
-        _@1 ->
-            A
-    end.
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/772
-    assert_erl!(
-        "pub fn main(board) {
-fn(board) { board }
-  board
-}",
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(A) -> A.
-main(Board) ->
-    fun(Board@1) -> Board@1 end,
-    Board.
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/762
-    assert_erl!(
-        r#"
-pub fn main(x) {
-  fn(x) { x }(x)
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(A) -> A.
-main(X) ->
-    (fun(X@1) -> X@1 end)(X).
-"#,
-    );
-
-    assert_erl!(
-        r#"
-pub fn main(x) {
-  x
-  |> fn(x) { x }
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(D) -> D.
-main(X) ->
-    _pipe = X,
-    (fun(X@1) -> X@1 end)(_pipe).
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/788
-    assert_erl!(
-        r#"pub fn go() {
-  let _r = 1
-  let _r = 2
-  Nil
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/0]).
-
--spec go() -> nil.
-go() ->
-    _@1 = 1,
-    _@2 = 2,
-    nil.
-"#,
-    );
+    // Insta snapshot variation
+    ($src:expr $(,)?) => {{
+        use crate::{
+            build::Origin,
+            erlang::module,
+            line_numbers::LineNumbers,
+            type_::{build_prelude, infer_module},
+        };
+        use std::collections::HashMap;
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let ast = infer_module(
+            crate::build::Target::Erlang,
+            &mut 0,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
+        let mut output = String::new();
+        let line_numbers = LineNumbers::new($src);
+        module(&ast, &line_numbers, &mut output).unwrap();
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
 }
 
 #[test]
