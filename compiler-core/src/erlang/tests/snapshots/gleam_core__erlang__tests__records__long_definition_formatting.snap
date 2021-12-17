@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "record_definition(\"PetCat\",\n                  &[(\"name\", type_::generic_var(1)),\n                    (\"is_cute\", type_::unbound_var(1)),\n                    (\"linked\", type_::link(type_::int())),\n                    (\"whatever\",\n                     type_::list(type_::tuple(vec![type_ :: nil(), type_ ::\n                                                   list(type_ ::\n                                                        tuple(vec!\n                                                              [type_ :: nil(),\n                                                               type_ :: nil(),\n                                                               type_ ::\n                                                               nil()])), type_\n                                                   :: nil(), type_ ::\n                                                   list(type_ ::\n                                                        tuple(vec!\n                                                              [type_ :: nil(),\n                                                               type_ :: nil(),\n                                                               type_ ::\n                                                               nil()])), type_\n                                                   :: nil(), type_ ::\n                                                   list(type_ ::\n                                                        tuple(vec!\n                                                              [type_ :: nil(),\n                                                               type_ :: nil(),\n                                                               type_ ::\n                                                               nil()])),])))])"
+
+---
+-record(pet_cat, {
+    name :: any(),
+    is_cute :: any(),
+    linked :: integer(),
+    whatever :: list({nil,
+                      list({nil, nil, nil}),
+                      nil,
+                      list({nil, nil, nil}),
+                      nil,
+                      list({nil, nil, nil})})
+}).
+
