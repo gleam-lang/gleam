@@ -1,5 +1,6 @@
 mod records;
 mod statement_if;
+mod todo;
 mod variables;
 
 #[macro_export]
@@ -1414,51 +1415,6 @@ main(Args) ->
         _@2 ->
             0
     end.
-"#,
-    );
-}
-
-#[test]
-fn todo_expr() {
-    assert_erl!(
-        r#"
-pub fn main() {
-  todo
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/0]).
-
--spec main() -> any().
-main() ->
-    erlang:error(#{gleam_error => todo,
-                   message => <<"This has not yet been implemented"/utf8>>,
-                   module => <<"the_app"/utf8>>,
-                   function => <<"main"/utf8>>,
-                   line => 3}).
-"#,
-    );
-
-    assert_erl!(
-        r#"
-pub fn main() {
-  todo("testing")
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/0]).
-
--spec main() -> any().
-main() ->
-    erlang:error(#{gleam_error => todo,
-                   message => <<"testing"/utf8>>,
-                   module => <<"the_app"/utf8>>,
-                   function => <<"main"/utf8>>,
-                   line => 3}).
 "#,
     );
 }
