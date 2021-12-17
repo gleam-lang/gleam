@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `-server` flag is now given to `erlc` when compiling Erlang code.
+
 ## v0.18.2 - 2021-12-12
 
 - Erlang applications are now automatically started when the VM is started by
