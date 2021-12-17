@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "record_definition(\"PetCat\",\n                  &[(\"name\",\n                     Arc::new(type_::Type::App{public: true,\n                                               module: module_name,\n                                               name: \"my_type\".to_string(),\n                                               args: vec![],}))])"
+
+---
+-record(pet_cat, {name :: name:my_type()}).
+
