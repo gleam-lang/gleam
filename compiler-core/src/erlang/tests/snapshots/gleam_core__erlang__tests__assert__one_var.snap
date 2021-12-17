@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "pub fn go() {\n  assert Ok(y) = Ok(1)\n  y\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec go() -> integer().
+go() ->
+    {ok, Y@1} = case {ok, 1} of
+        {ok, Y} -> {ok, Y};
+        _try ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => _try,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    Y@1.
+

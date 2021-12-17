@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/assert.rs
+expression: "pub fn go(x) {\n  assert [1 as a, b, c] = x\n  [a, b, c]\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(list(integer())) -> list(integer()).
+go(X) ->
+    [1 = A@1, B@1, C@1] = case X of
+        [1 = A, B, C] -> [1 = A, B, C];
+        _try ->
+            erlang:error(#{gleam_error => assert,
+                           message => <<"Assertion pattern match failed"/utf8>>,
+                           value => _try,
+                           module => <<"the_app"/utf8>>,
+                           function => <<"go"/utf8>>,
+                           line => 2})
+    end,
+    [A@1, B@1, C@1].
+
