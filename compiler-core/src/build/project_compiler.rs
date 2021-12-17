@@ -267,9 +267,13 @@ where
             ("TERM", "dumb".into()),
         ];
         let mut args = vec![
+            // Use a compile server to avoid repeatedly starting VM
+            "-server".into(),
+            // Write compiled .beam to ./ebin
             "-o".into(),
             out_path.join("ebin").to_string_lossy().to_string(),
         ];
+        // Add the list of modules to compile
         for module in modules {
             args.push(out_path.join(module).to_string_lossy().to_string());
         }
