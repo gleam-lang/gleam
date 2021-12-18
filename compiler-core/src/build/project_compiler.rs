@@ -26,6 +26,8 @@ pub struct ProjectCompiler<'a, IO> {
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
+    target: Target,
+    mode: Mode,
     io: IO,
 }
 
@@ -38,6 +40,7 @@ where
 {
     pub fn new(
         config: PackageConfig,
+        target: Target,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
@@ -48,9 +51,11 @@ where
             importable_modules: HashMap::with_capacity(estimated_modules),
             defined_modules: HashMap::with_capacity(estimated_modules),
             warnings: Vec::new(),
-            config,
+            mode: Mode::Dev,
             telemetry,
             packages,
+            config,
+            target,
             io,
         }
     }
@@ -74,7 +79,7 @@ where
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let build_path = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
+        let build_path = paths::build_package(self.mode, self.target, &package.name);
         if self.io.is_directory(&build_path) {
             tracing::info!(package=%package.name, "loading_precompiled_package");
             return self.load_cached_package(build_path, package);
@@ -89,7 +94,7 @@ where
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
             tracing::debug!(package=%package.name,"removing_failed_build");
-            let dir = paths::build_package(Mode::Dev, Target::Erlang, &package.name);
+            let dir = paths::build_package(self.mode, self.target, &package.name);
             self.io.delete(&dir)?;
         }
 
@@ -98,8 +103,8 @@ where
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let name = &package.name;
-        let mode = Mode::Dev;
-        let target = Target::Erlang;
+        let mode = self.mode;
+        let target = self.target;
 
         let project_dir = paths::build_deps_package(&package.name);
         let up = paths::unnest(&project_dir);
@@ -184,9 +189,9 @@ where
         is_root: bool,
         root_path: PathBuf,
     ) -> Result<Vec<Module>, Error> {
-        let out_path = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
+        let out_path = paths::build_package(self.mode, self.target, &config.name);
         let artifact_path = out_path.join("gleam_src");
-        let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang)
+        let erl_libs = paths::build_packages_erl_libs_glob(self.mode, self.target)
             .to_string_lossy()
             .into_owned();
 
@@ -194,7 +199,7 @@ where
             config,
             &root_path,
             &out_path,
-            Target::Erlang,
+            self.target,
             &erl_libs,
             self.io.clone(),
         );

@@ -11,10 +11,14 @@ use std::path::{Path, PathBuf};
 #[cfg(test)]
 use crate::project::ManifestPackage;
 
-use crate::build::Mode;
+use crate::build::{Mode, Target};
 
-pub fn default_version() -> Version {
+fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
+}
+
+fn erlang_target() -> Target {
+    Target::Erlang
 }
 
 pub type Dependencies = HashMap<String, Range>;
@@ -40,6 +44,8 @@ pub struct PackageConfig {
     pub links: Vec<Link>,
     #[serde(default)]
     pub erlang: ErlangConfig,
+    #[serde(default = "erlang_target")]
+    pub target: Target,
 }
 
 impl PackageConfig {
@@ -371,6 +377,7 @@ impl Default for PackageConfig {
             dev_dependencies: Default::default(),
             licences: Default::default(),
             links: Default::default(),
+            target: Target::Erlang,
         }
     }
 }
