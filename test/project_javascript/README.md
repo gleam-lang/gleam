@@ -6,17 +6,20 @@ It covers these features:
 
 - Downloading packages
   - Specified in config.dependencies
-  - Specified in config.dev-dependencies
 - Importing packages
   - Specified in config.dependencies
-  - Specified in config.dev-dependencies
 - Compilation of Gleam code
   - in src
   - in test
-- Compilation of locally defined Erlang modules
-  - in src
-  - in test
-- Importing of Erlang header files
+- Importing Gleam src code into test
+
+These features are not tested yet
+
+- Downloading packages
+  - Specified in config.dev-dependencies
+- Importing packages
+  - Specified in config.dev-dependencies
+- Compilation of locally defined JavaScript modules
   - in src
   - in test
 - Importing Gleam src code into test
@@ -24,7 +27,6 @@ It covers these features:
 ## Quick start
 
 ```sh
-gleam deps download
 gleam run
 gleam test
 ```

@@ -144,6 +144,20 @@ jobs:
           sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
         working-directory: ./test
 
+      - name: test/project_erlang
+        run: |
+          gleam run
+          gleam test
+          gleam docs build
+        working-directory: ./test/project_erlang
+
+      - name: test/project_javascript
+        run: |
+          gleam run
+          gleam test
+          gleam docs build
+        working-directory: ./test/project_javascript
+
       - name: test/language Erlang
         run: make clean erlang
         working-directory: ./test/language
