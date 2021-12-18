@@ -33,6 +33,7 @@ macro_rules! assert_erlang_compile {
                 application_start_module: None,
                 extra_applications: vec![],
             },
+            target: Target::Erlang,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
         let root = PathBuf::from("some/build/path/root");
@@ -72,6 +73,7 @@ macro_rules! assert_javascript_compile {
                 application_start_module: None,
                 extra_applications: vec![],
             },
+            target: Target::JavaScript,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
         let root = PathBuf::from("some/build/path/root");
@@ -117,6 +119,7 @@ macro_rules! assert_no_warnings {
                 application_start_module: None,
                 extra_applications: vec![],
             },
+            target: Target::Erlang,
         };
         let mut warnings = vec![];
         let (file_writer, file_receiver) = FilesChannel::new();
@@ -2302,6 +2305,7 @@ fn config_compilation_test() {
             licences: Default::default(),
             erlang: Default::default(),
             links: vec![],
+            target: Target::Erlang,
         }
     }
 

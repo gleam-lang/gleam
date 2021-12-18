@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use gleam_core::{
-    build::{Package, ProjectCompiler},
+    build::{Package, ProjectCompiler, Target},
     Result,
 };
 
@@ -14,10 +14,11 @@ pub fn main() -> Result<Package> {
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::ProjectIO::new();
     let start = Instant::now();
+    let target = Target::Erlang;
 
     tracing::info!("Compiling packages");
     let compiled =
-        ProjectCompiler::new(root_config, &manifest.packages, telemetry, io).compile()?;
+        ProjectCompiler::new(root_config, target, &manifest.packages, telemetry, io).compile()?;
 
     cli::print_compiled(start.elapsed());
     Ok(compiled)
