@@ -192,15 +192,15 @@ pub struct CompilePackage {
     target: Target,
 
     /// The directory of the Gleam package
-    #[structopt(long = "package")]
+    #[structopt(long = "in", default_value = ".")]
     package_directory: PathBuf,
 
     /// A directory to write compiled package to
-    #[structopt(long = "out")]
+    #[structopt(long = "out", default_value = ".")]
     output_directory: PathBuf,
 
     /// A path to which directories of precompiled Gleam projects can be found
-    #[structopt(long = "lib")]
+    #[structopt(long = "lib", default_value = ".")]
     libraries_directory: PathBuf,
 }
 

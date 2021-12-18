@@ -1,6 +1,6 @@
 !/usr/bin/env escript
 %% -*- erlang -*-
-%%! -pa target-erlang
+%%! -pa target-erlang/ebin
 
 -module(democtl).
 

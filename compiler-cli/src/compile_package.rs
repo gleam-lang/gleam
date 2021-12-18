@@ -36,6 +36,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
+    compiler.read_source_files()?;
     let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // Print warnings
