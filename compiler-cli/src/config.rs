@@ -7,10 +7,10 @@ use gleam_core::{
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    read_project_config(paths::root_config())
+    read(paths::root_config())
 }
 
-pub fn read_project_config(config_path: PathBuf) -> Result<PackageConfig, Error> {
+pub fn read(config_path: PathBuf) -> Result<PackageConfig, Error> {
     let toml = crate::fs::read(&config_path)?;
     toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,

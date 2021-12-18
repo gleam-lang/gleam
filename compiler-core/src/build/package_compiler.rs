@@ -1,7 +1,7 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, Module, Origin, Package, Target},
-    codegen::{Erlang, JavaScript},
+    codegen::{Erlang, ErlangApp, JavaScript},
     config::PackageConfig,
     error,
     io::{CommandExecutor, FileSystemIO, FileSystemReader, FileSystemWriter},
@@ -9,54 +9,54 @@ use crate::{
     parse::extra::ModuleExtra,
     type_, Error, Result, Warning,
 };
-use std::path::{Path, PathBuf};
+use askama::Template;
 use std::{collections::HashMap, fmt::write};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug)]
-pub struct Options {
-    pub target: Target,
-    pub name: String,
-    pub src_path: PathBuf,
-    pub test_path: Option<PathBuf>,
-    pub out_path: PathBuf,
-    pub write_metadata: bool,
-}
-
-impl Options {
-    pub fn into_compiler<IO>(self, io: IO) -> Result<PackageCompiler<IO>>
-    where
-        IO: FileSystemIO + CommandExecutor + Clone,
-    {
-        let mut compiler = PackageCompiler {
-            options: self,
-            sources: vec![],
-            io,
-        };
-        compiler.read_source_files()?;
-        Ok(compiler)
-    }
-}
-
-#[derive(Debug)]
-pub struct PackageCompiler<IO> {
-    pub options: Options,
-    pub sources: Vec<Source>,
+pub struct PackageCompiler<'a, IO> {
     pub io: IO,
+    pub out: &'a Path,
+    pub root: &'a Path,
+    pub target: Target,
+    pub config: &'a PackageConfig,
+    pub sources: Vec<Source>,
+    pub erl_libs: &'a str,
+    pub write_metadata: bool,
+    pub compile_erlang: bool,
+    pub write_entrypoint: bool,
 }
 
 // TODO: ensure this is not a duplicate module
 // TODO: tests
 // Including cases for:
 // - modules that don't import anything
-impl<IO> PackageCompiler<IO>
+impl<'a, IO> PackageCompiler<'a, IO>
 where
-    IO: FileSystemIO + Clone,
+    IO: FileSystemIO + CommandExecutor + Clone,
 {
-    pub fn new(options: Options, io: IO) -> Self {
+    pub fn new(
+        config: &'a PackageConfig,
+        root: &'a Path,
+        out: &'a Path,
+        target: Target,
+        erl_libs: &'a str,
+        io: IO,
+    ) -> Self {
         Self {
             io,
-            options,
+            out,
+            root,
+            config,
+            target,
             sources: vec![],
+            erl_libs,
+            compile_erlang: true,
+            write_metadata: true,
+            write_entrypoint: false,
         }
     }
 
@@ -65,13 +65,13 @@ where
         warnings: &mut Vec<Warning>,
         existing_modules: &mut HashMap<String, type_::Module>,
         already_defined_modules: &mut HashMap<String, PathBuf>,
-    ) -> Result<Package, Error> {
-        let span = tracing::info_span!("compile", package = %self.options.name.as_str());
+    ) -> Result<Vec<Module>, Error> {
+        let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
         tracing::info!("Parsing source code");
         let parsed_modules = parse_sources(
-            &self.options.name,
+            &self.config.name,
             std::mem::take(&mut self.sources),
             already_defined_modules,
         )?;
@@ -80,15 +80,15 @@ where
         let sequence = dep_tree::toposort_deps(
             parsed_modules
                 .values()
-                .map(|m| module_deps_for_graph(self.options.target, m))
+                .map(|m| module_deps_for_graph(self.target, m))
                 .collect(),
         )
         .map_err(convert_deps_tree_error)?;
 
         tracing::info!("Type checking modules");
-        let modules = type_check(
-            &self.options.name,
-            self.options.target,
+        let mut modules = type_check(
+            &self.config.name,
+            self.target,
             sequence,
             parsed_modules,
             existing_modules,
@@ -100,70 +100,187 @@ where
 
         self.encode_and_write_metadata(&modules)?;
 
-        Ok(Package {
-            name: self.options.name,
-            modules,
-        })
+        Ok(modules)
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
-        if !self.options.write_metadata {
-            tracing::info!("Package metadata writing disabled");
-            return Ok(());
-        }
-        tracing::info!("Writing package metadata to disc");
+    fn compile_erlang_to_beam(&self, modules: &[PathBuf]) -> Result<(), Error> {
+        tracing::info!("compiling_erlang");
+
+        let env = [
+            ("ERL_LIBS", self.erl_libs.to_string()),
+            ("TERM", "dumb".into()),
+        ];
+        let mut args = vec![
+            // Use a compile server to avoid repeatedly starting VM
+            "-server".into(),
+            // Write compiled .beam to ./ebin
+            "-o".into(),
+            self.out.join("ebin").to_string_lossy().to_string(),
+        ];
+        // Add the list of modules to compile
         for module in modules {
-            let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
-            let path = self.options.out_path.join(name);
-            ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
+            args.push(
+                self.out
+                    .join("gleam_src")
+                    .join(module)
+                    .to_string_lossy()
+                    .to_string(),
+            );
+        }
+        let status = self.io.exec("erlc", &args, &env, None)?;
+
+        if status == 0 {
+            Ok(())
+        } else {
+            Err(Error::ShellCommand {
+                command: "erlc".to_string(),
+                err: None,
+            })
+        }
+    }
+
+    fn copy_project_erlang_files(&mut self, modules: &mut Vec<PathBuf>) -> Result<(), Error> {
+        tracing::info!("copying_erlang_source_files");
+        let src = self.root.join("src");
+        let test = self.root.join("test");
+        let mut copied = HashSet::new();
+        self.copy_erlang_files(&src, &mut copied, modules)?;
+        if self.io.is_directory(&test) {
+            self.copy_erlang_files(&test, &mut copied, modules)?;
         }
         Ok(())
     }
 
-    pub fn read_source_files(&mut self) -> Result<()> {
-        let span = tracing::info_span!("load", package = %self.options.name.as_str());
-        let _enter = span.enter();
-        tracing::info!("Reading source files");
+    fn copy_erlang_files(
+        &self,
+        src_path: &Path,
+        copied: &mut HashSet<PathBuf>,
+        to_compile_modules: &mut Vec<PathBuf>,
+    ) -> Result<()> {
+        let out = self.out.join("gleam_src");
+        self.io.mkdir(&out)?;
 
-        // Src
-        for path in self.io.gleam_source_files(&self.options.src_path) {
-            let name = module_name(&self.options.src_path, &path);
-            let code = self.io.read(&path)?;
-            self.sources.push(Source {
-                name,
-                path,
-                code,
-                origin: Origin::Src,
-            });
-        }
+        for entry in self.io.read_dir(src_path)? {
+            let path = entry.expect("copy_erlang_files dir_entry").path();
 
-        // Test
-        if let Some(test_path) = &self.options.test_path {
-            for path in self.io.gleam_source_files(test_path) {
-                let name = module_name(test_path, &path);
-                let code = self.io.read(&path)?;
-                self.sources.push(Source {
-                    name,
-                    path,
-                    code,
-                    origin: Origin::Test,
+            let extension = path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+            let relative_path = path
+                .strip_prefix(src_path)
+                .expect("copy_erlang_files strip prefix")
+                .to_path_buf();
+
+            match extension {
+                "hrl" => (),
+                "erl" => {
+                    to_compile_modules.push(relative_path.clone());
+                }
+                _ => continue,
+            };
+
+            self.io.copy(&path, &out.join(&relative_path))?;
+
+            // TODO: test
+            if !copied.insert(relative_path.clone()) {
+                return Err(Error::DuplicateErlangFile {
+                    file: relative_path.to_string_lossy().to_string(),
                 });
             }
         }
         Ok(())
     }
 
-    fn perform_codegen(&self, modules: &[Module]) -> Result<()> {
-        match self.options.target {
-            Target::JavaScript => JavaScript::new(&self.options.out_path).render(&self.io, modules),
-            Target::Erlang => Erlang::new(&self.options.out_path).render(self.io.clone(), modules),
+    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
+        if !self.write_metadata {
+            tracing::info!("Package metadata writing disabled");
+            return Ok(());
         }
+        tracing::info!("Writing package metadata to disc");
+        for module in modules {
+            let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
+            let path = self.out.join("gleam_src").join(name);
+            ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
+        }
+        Ok(())
     }
 
-    /// Set whether to write metadata files
-    pub fn write_metadata(mut self, write_metadata: bool) -> Self {
-        self.options.write_metadata = write_metadata;
-        self
+    pub fn read_source_files(&mut self) -> Result<()> {
+        let span = tracing::info_span!("load", package = %self.config.name.as_str());
+        let _enter = span.enter();
+        tracing::info!("Reading source files");
+        let src = self.root.join("src");
+        let test = self.root.join("test");
+
+        // Src
+        for path in self.io.gleam_source_files(&src) {
+            self.add_module(path, &src, Origin::Src)?;
+        }
+
+        // Test
+        if self.io.is_directory(&test) {
+            for path in self.io.gleam_source_files(&test) {
+                self.add_module(path, &test, Origin::Test)?;
+            }
+        }
+        Ok(())
+    }
+
+    fn add_module(&mut self, path: PathBuf, dir: &Path, origin: Origin) -> Result<()> {
+        let name = module_name(&dir, &path);
+        let code = self.io.read(&path)?;
+        self.sources.push(Source {
+            name,
+            path,
+            code,
+            origin,
+        });
+        Ok(())
+    }
+
+    fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
+        let artifact_dir = self.out.join("gleam_src");
+        match self.target {
+            Target::JavaScript => {
+                JavaScript::new(&artifact_dir).render(&self.io, modules)?;
+            }
+
+            Target::Erlang => {
+                let io = self.io.clone();
+                Erlang::new(&artifact_dir).render(io.clone(), modules)?;
+                ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
+                let mut erlang = vec![];
+
+                if self.write_entrypoint {
+                    self.render_entrypoint_module(&artifact_dir, &mut erlang)?;
+                }
+
+                if self.compile_erlang {
+                    erlang.extend(modules.iter().map(Module::compiled_erlang_path));
+                    self.copy_project_erlang_files(&mut erlang)?;
+                    self.compile_erlang_to_beam(&erlang)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn render_entrypoint_module(
+        &self,
+        out: &Path,
+        modules_to_compile: &mut Vec<PathBuf>,
+    ) -> Result<(), Error> {
+        let name = "gleam@@main.erl";
+        let module = ErlangEntrypointModule {
+            application: &self.config.name,
+        }
+        .render()
+        .expect("Erlang entrypoint rendering");
+        self.io.writer(&out.join(name))?.write(module.as_bytes())?;
+        modules_to_compile.push(name.into());
+        Ok(())
     }
 }
 
@@ -345,4 +462,10 @@ struct Parsed {
     package: String,
     ast: UntypedModule,
     extra: ModuleExtra,
+}
+
+#[derive(Template)]
+#[template(path = "gleam@@main.erl", escape = "none")]
+struct ErlangEntrypointModule<'a> {
+    application: &'a str,
 }

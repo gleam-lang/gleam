@@ -6,6 +6,10 @@ pub fn root_config() -> PathBuf {
     PathBuf::from("gleam.toml")
 }
 
+pub fn root() -> PathBuf {
+    PathBuf::from("./")
+}
+
 pub fn readme() -> PathBuf {
     PathBuf::from("README.md")
 }

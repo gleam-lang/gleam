@@ -75,7 +75,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{package_compiler, Target},
+    build::Target,
     diagnostic::{self, Severity},
     error::wrap,
     hex::RetirementReason,
@@ -191,38 +191,17 @@ pub struct CompilePackage {
     #[structopt(long, case_insensitive = true, default_value = "erlang")]
     target: Target,
 
-    /// The name of the package being compiler
-    #[structopt(long = "name")]
-    package_name: String,
+    /// The directory of the Gleam package
+    #[structopt(long = "package")]
+    package_directory: PathBuf,
 
-    /// A directory of source Gleam code
-    #[structopt(long = "src")]
-    src_directory: PathBuf,
-
-    /// A directory of test Gleam code
-    #[structopt(long = "test")]
-    test_directory: Option<PathBuf>,
-
-    /// A directory to write compiled code to
+    /// A directory to write compiled package to
     #[structopt(long = "out")]
     output_directory: PathBuf,
 
-    /// A path to a compiled dependency library
+    /// A path to which directories of precompiled Gleam projects can be found
     #[structopt(long = "lib")]
-    libraries: Vec<PathBuf>,
-}
-
-impl CompilePackage {
-    pub fn into_package_compiler_options(self) -> package_compiler::Options {
-        package_compiler::Options {
-            target: self.target,
-            name: self.package_name,
-            src_path: self.src_directory,
-            test_path: self.test_directory,
-            out_path: self.output_directory,
-            write_metadata: true,
-        }
-    }
+    libraries_directory: PathBuf,
 }
 
 #[derive(StructOpt, Debug)]

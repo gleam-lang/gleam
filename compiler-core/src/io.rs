@@ -9,7 +9,6 @@ use std::{
     fs::ReadDir,
     io,
     path::{Path, PathBuf},
-    process::ExitStatus,
 };
 use tar::{Archive, Entry};
 
@@ -80,7 +79,7 @@ pub trait CommandExecutor {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
-    ) -> Result<ExitStatus, Error>;
+    ) -> Result<i32, Error>;
 }
 
 /// A trait used to write files.
@@ -217,6 +216,18 @@ pub mod test {
                     })
                 })
                 .collect()
+        }
+    }
+
+    impl CommandExecutor for FilesChannel {
+        fn exec(
+            &self,
+            _program: &str,
+            _args: &[String],
+            _env: &[(&str, String)],
+            _cwd: Option<&Path>,
+        ) -> Result<i32, Error> {
+            Ok(0)
         }
     }
 

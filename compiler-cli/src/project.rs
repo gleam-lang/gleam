@@ -10,7 +10,7 @@ use crate::config;
 pub const OUTPUT_DIR_NAME: &str = "gen";
 
 pub fn read_and_analyse(root: impl AsRef<Path>) -> Result<(PackageConfig, Vec<Analysed>), Error> {
-    let project_config = config::read_project_config(root.as_ref().join("gleam.toml"))?;
+    let project_config = config::read(root.as_ref().join("gleam.toml"))?;
     let mut srcs = vec![];
     let root = root.as_ref();
     let lib_dir = root.join("_build").join("default").join("lib");
