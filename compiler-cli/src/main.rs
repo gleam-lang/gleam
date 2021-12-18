@@ -199,7 +199,7 @@ pub struct CompilePackage {
     #[structopt(long = "out", default_value = ".")]
     output_directory: PathBuf,
 
-    /// A path to which directories of precompiled Gleam projects can be found
+    /// A directories of precompiled Gleam projects
     #[structopt(long = "lib", default_value = ".")]
     libraries_directory: PathBuf,
 }
