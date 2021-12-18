@@ -107,13 +107,14 @@ impl CommandExecutor for ProjectIO {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
-    ) -> Result<std::process::ExitStatus, Error> {
+    ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
         std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
             .status()
+            .map(|s| s.code().unwrap_or_default())
             .map_err(|e| Error::ShellCommand {
                 command: program.to_ascii_uppercase(),
                 err: Some(e.kind()),

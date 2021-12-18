@@ -1,5 +1,3 @@
-use askama::Template;
-
 use crate::{
     build::{
         dep_tree, package_compiler, package_compiler::PackageCompiler, project_compiler,
@@ -71,7 +69,8 @@ where
         // Read and type check top level package
         self.telemetry.compiling_package(&self.config.name);
         let config = std::mem::take(&mut self.config);
-        self.compile_gleam_package(&config, paths::src(), Some(paths::test()))
+        let modules = self.compile_gleam_package(&config, true, paths::root())?;
+        Ok(Package { config, modules })
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
@@ -143,7 +142,7 @@ where
         ];
         let status = self.io.exec("rebar3", &args, &env, Some(&project_dir))?;
 
-        if status.success() {
+        if status == 0 {
             Ok(())
         } else {
             Err(Error::ShellCommand {
@@ -156,8 +155,9 @@ where
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let config_path = paths::build_deps_package_config(&package.name);
         let config = PackageConfig::read(config_path, &self.io)?;
-        let src = paths::build_deps_package_src(&package.name);
-        self.compile_gleam_package(&config, src, None).map(|_| ())?;
+        let root = paths::build_deps_package(&package.name);
+        self.compile_gleam_package(&config, false, root)
+            .map(|_| ())?;
         Ok(())
     }
 
@@ -181,22 +181,26 @@ where
     fn compile_gleam_package(
         &mut self,
         config: &PackageConfig,
-        src_path: PathBuf,
-        test_path: Option<PathBuf>,
-    ) -> Result<Package, Error> {
+        is_root: bool,
+        root_path: PathBuf,
+    ) -> Result<Vec<Module>, Error> {
         let out_path = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
         let artifact_path = out_path.join("gleam_src");
+        let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang)
+            .to_string_lossy()
+            .into_owned();
 
-        let options = package_compiler::Options {
-            target: Target::Erlang,
-            src_path: src_path.clone(),
-            out_path: artifact_path.clone(),
-            test_path: test_path.clone(),
-            name: config.name.to_string(),
-            write_metadata: true,
-        };
-
-        let mut compiler = options.into_compiler(self.io.clone())?;
+        let mut compiler = PackageCompiler::new(
+            config,
+            &root_path,
+            &out_path,
+            Target::Erlang,
+            &erl_libs,
+            self.io.clone(),
+        );
+        compiler.write_metadata = true;
+        compiler.write_entrypoint = is_root;
+        compiler.read_source_files()?;
 
         // Compile project to Erlang source code
         let compiled = compiler.compile(
@@ -205,136 +209,7 @@ where
             &mut self.defined_modules,
         )?;
 
-        // Write an Erlang .app file
-        ErlangApp::new(&out_path.join("ebin")).render(
-            self.io.clone(),
-            config,
-            &compiled.modules,
-        )?;
-
-        let mut modules: Vec<_> = compiled
-            .modules
-            .iter()
-            .map(Module::compiled_erlang_path)
-            .collect();
-
-        // If we're the dev package render the entrypoint module used by the
-        // `gleam run` and `gleam test` commands
-        // TODO: Pass this config in in a better way rather than attaching extra
-        // meaning to this flag.
-        if test_path.is_some() {
-            let name = "gleam@@main.erl";
-            let module = ErlangEntrypointModule {
-                application: &config.name,
-            }
-            .render()
-            .expect("Erlang entrypoint rendering");
-            self.io
-                .writer(&artifact_path.join(name))?
-                .write(module.as_bytes())?;
-            modules.push(PathBuf::from(name));
-        }
-
-        // Copy across any Erlang files from src and test
-        self.copy_project_erlang_files(src_path, &mut modules, &artifact_path, test_path)?;
-
-        // Compile Erlang to .beam files
-        self.compile_erlang_to_beam(&artifact_path, &out_path, &modules)?;
-
         Ok(compiled)
-    }
-
-    fn copy_project_erlang_files(
-        &mut self,
-        src_path: PathBuf,
-        modules: &mut Vec<PathBuf>,
-        out_path: &PathBuf,
-        test_path: Option<PathBuf>,
-    ) -> Result<(), Error> {
-        tracing::info!("copying_erlang_source_files");
-        let mut copied = HashSet::new();
-        self.copy_erlang_files(&src_path, &mut copied, modules, out_path)?;
-        Ok(if let Some(test_path) = test_path {
-            self.copy_erlang_files(&test_path, &mut copied, modules, out_path)?;
-        })
-    }
-
-    fn compile_erlang_to_beam(
-        &self,
-        artifact_path: &Path,
-        out_path: &Path,
-        modules: &[PathBuf],
-    ) -> Result<(), Error> {
-        tracing::info!("compiling_erlang");
-
-        let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang);
-        let env = [
-            ("ERL_LIBS", erl_libs.to_string_lossy().to_string()),
-            ("TERM", "dumb".into()),
-        ];
-        let mut args = vec![
-            // Use a compile server to avoid repeatedly starting VM
-            "-server".into(),
-            // Write compiled .beam to ./ebin
-            "-o".into(),
-            out_path.join("ebin").to_string_lossy().to_string(),
-        ];
-        // Add the list of modules to compile
-        for module in modules {
-            args.push(artifact_path.join(module).to_string_lossy().to_string());
-        }
-        let status = self.io.exec("erlc", &args, &env, None)?;
-
-        if status.success() {
-            Ok(())
-        } else {
-            Err(Error::ShellCommand {
-                command: "erlc".to_string(),
-                err: None,
-            })
-        }
-    }
-
-    fn copy_erlang_files(
-        &self,
-        src_path: &Path,
-        copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut Vec<PathBuf>,
-        out_path: &Path,
-    ) -> Result<()> {
-        for entry in self.io.read_dir(src_path)? {
-            let full_path = entry.expect("copy_erlang_files dir_entry").path();
-
-            let extension = full_path
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-
-            // Copy any Erlang modules or header files
-            if extension == "erl" || extension == "hrl" {
-                let relative_path = full_path
-                    .strip_prefix(src_path)
-                    .expect("copy_erlang_files strip prefix")
-                    .to_path_buf();
-                let destination = out_path.join(&relative_path);
-
-                // TODO: test
-                if !copied.insert(relative_path.clone()) {
-                    return Err(Error::DuplicateErlangFile {
-                        file: relative_path.to_string_lossy().to_string(),
-                    });
-                }
-
-                self.io.copy(&full_path, &destination)?;
-
-                // Track the new module to compile
-                if extension == "erl" {
-                    to_compile_modules.push(relative_path);
-                }
-            }
-        }
-        Ok(())
     }
 }
 
@@ -380,10 +255,4 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         package: package.name.to_string(),
         build_tools: package.build_tools.clone(),
     })
-}
-
-#[derive(Template)]
-#[template(path = "gleam@@main.erl", escape = "none")]
-struct ErlangEntrypointModule<'a> {
-    application: &'a str,
 }

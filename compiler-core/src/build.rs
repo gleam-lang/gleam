@@ -54,7 +54,7 @@ pub enum Mode {
 
 #[derive(Debug)]
 pub struct Package {
-    pub name: String,
+    pub config: PackageConfig,
     pub modules: Vec<Module>,
 }
 
