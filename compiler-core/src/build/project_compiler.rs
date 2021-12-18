@@ -185,11 +185,12 @@ where
         test_path: Option<PathBuf>,
     ) -> Result<Package, Error> {
         let out_path = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
+        let artifact_path = out_path.join("gleam_src");
 
         let options = package_compiler::Options {
             target: Target::Erlang,
             src_path: src_path.clone(),
-            out_path: out_path.clone(),
+            out_path: artifact_path.clone(),
             test_path: test_path.clone(),
             name: config.name.to_string(),
             write_metadata: true,
@@ -229,16 +230,16 @@ where
             .render()
             .expect("Erlang entrypoint rendering");
             self.io
-                .writer(&out_path.join(name))?
+                .writer(&artifact_path.join(name))?
                 .write(module.as_bytes())?;
             modules.push(PathBuf::from(name));
         }
 
         // Copy across any Erlang files from src and test
-        self.copy_project_erlang_files(src_path, &mut modules, &out_path, test_path)?;
+        self.copy_project_erlang_files(src_path, &mut modules, &artifact_path, test_path)?;
 
         // Compile Erlang to .beam files
-        self.compile_erlang_to_beam(&out_path, &modules)?;
+        self.compile_erlang_to_beam(&artifact_path, &out_path, &modules)?;
 
         Ok(compiled)
     }
@@ -258,7 +259,12 @@ where
         })
     }
 
-    fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[PathBuf]) -> Result<(), Error> {
+    fn compile_erlang_to_beam(
+        &self,
+        artifact_path: &Path,
+        out_path: &Path,
+        modules: &[PathBuf],
+    ) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
         let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang);
@@ -275,7 +281,7 @@ where
         ];
         // Add the list of modules to compile
         for module in modules {
-            args.push(out_path.join(module).to_string_lossy().to_string());
+            args.push(artifact_path.join(module).to_string_lossy().to_string());
         }
         let status = self.io.exec("erlc", &args, &env, None)?;
 
