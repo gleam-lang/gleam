@@ -1,3 +1,3 @@
-import { main } from "./target-javascript/main.js";
+import { main } from "./target-javascript/gleam_src/main.js";
 
 process.exit(main());
