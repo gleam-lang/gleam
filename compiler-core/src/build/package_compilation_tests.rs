@@ -2569,19 +2569,19 @@ const x = two.A"#
         ],
         Ok(vec![
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/gleam.js"),
+                path: PathBuf::from("_build/default/lib/the_package/gleam_src/gleam.mjs"),
                 text: javascript::PRELUDE.to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one/two.js"),
-                text: "import { CustomType } from \"../gleam.js\";
+                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one/two.mjs"),
+                text: "import { CustomType } from \"../gleam.mjs\";
 
 export class A extends CustomType {}\n"
                     .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.js"),
-                text: r#"import * as $two from "./one/two.js";
+                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.mjs"),
+                text: r#"import * as $two from "./one/two.mjs";
 
 const x = new $two.A();
 "#

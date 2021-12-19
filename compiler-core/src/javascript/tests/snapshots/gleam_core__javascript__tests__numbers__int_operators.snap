@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nfn go() {\n    1 + 1 // => 2\n    5 - 1 // => 4\n    5 / 2 // => 2\n    3 * 3 // => 9\n    5 % 2 // => 1\n    2 > 1  // => True\n    2 < 1  // => False\n    2 >= 1 // => True\n    2 <= 1 // => False\n}\n"
 
 ---
-import { divideInt } from "../gleam.js";
+import { divideInt } from "../gleam.mjs";
 
 function go() {
   1 + 1;

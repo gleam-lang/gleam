@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
 
 ---
-import { toList } from "../gleam.js";
+import { toList } from "../gleam.mjs";
 
 function go(x) {
   toList([]);

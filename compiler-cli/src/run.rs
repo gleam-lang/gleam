@@ -59,7 +59,6 @@ fn erlang_command(
         let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }
 
-    // Run the main function.
     let _ = command.arg("-eval");
     let _ = command.arg(format!("gleam@@main:run({})", &module));
 
@@ -84,9 +83,10 @@ fn javascript_command(
         .join(module);
     let mut command = Command::new("node");
 
+    // Run the main function.
     let _ = command.arg("-e");
     let _ = command.arg(&format!(
-        "import('./{}.js').then(module => module.main())",
+        "import('./{}.mjs').then(module => module.main())",
         module.to_string_lossy()
     ));
 

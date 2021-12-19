@@ -269,15 +269,15 @@ impl<'a> Generator<'a> {
             // TODO: strip shared prefixed between current module and imported
             // module to avoid decending and climbing back out again
             match self.module.name.len() {
-                1 => format!("./{}.js", path),
+                1 => format!("./{}.mjs", path),
                 _ => {
                     let prefix = "../".repeat(self.module.name.len() - 1);
-                    format!("{}{}.js", prefix, path)
+                    format!("{}{}.mjs", prefix, path)
                 }
             }
         } else {
             // Different packages uses absolute imports
-            format!("gleam-packages/{}/{}.js", package, path)
+            format!("gleam-packages/{}/{}.mjs", package, path)
         }
     }
 

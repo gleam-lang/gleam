@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Ip{\n    Ip(String)\n}\n\nconst local = Ip(\"0.0.0.0\")\n\nfn build(x) {\n    x(\"1.2.3.4\")\n}\n\nfn go() {\n    build(Ip)\n    Ip(\"5.6.7.8\")\n}\n\nfn destructure(x) {\n  let Ip(raw) = x\n  raw\n}\n"
 
 ---
-import { CustomType, throwError } from "../gleam.js";
+import { CustomType, throwError } from "../gleam.mjs";
 
 const local = new Ip("0.0.0.0");
 

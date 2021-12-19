@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport rocket_ship as boop\npub fn go() { boop.go() }\n"
 
 ---
-import * as $boop from "../rocket_ship.js";
+import * as $boop from "../rocket_ship.mjs";
 
 export function go() {
   return $boop.go();
