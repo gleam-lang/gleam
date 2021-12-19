@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- You can now remove build artifacts using the new `gleam clean` command.
 - The `compile-package` can now generate `package.app` files and compile source
   modules to `.beam` bytecode files.
 - The flags that `compile-package` accepts have changed.
