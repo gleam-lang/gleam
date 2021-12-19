@@ -79,7 +79,7 @@ fn javascript_command(
     arguments: &[String],
 ) -> Result<Command, Error> {
     let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
-        .join("gleam_src")
+        .join("build")
         .join(module);
     let mut command = Command::new("node");
 

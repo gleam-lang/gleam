@@ -2,8 +2,8 @@ ifndef GLEAM_NO_COMPILE
 GLEAM_INSTALLED := $(shell command -v gleam)
 endif
 
-ERLANG_FILES = $(wildcard {src,gleam_src}/*.erl)
-GLEAM_FILES = $(wildcard {src,gleam_src}/**/*.gleam)
+ERLANG_FILES = $(wildcard {src,build}/*.erl)
+GLEAM_FILES = $(wildcard {src,build}/**/*.gleam)
 
 .PHONY: ebin check
 
@@ -13,7 +13,7 @@ ebin: check $(GLEAM_FILES) $(ERLANG_FILES)
 else
 ebin: check $(ERLANG_FILES)
 	@mkdir -p ./ebin
-	@cp gleam_src/*.app ebin/
+	@cp build/*.app ebin/
 	@erlc -server -o ebin $(ERLANG_FILES) || (rm -rf ebin && false)
 endif
 

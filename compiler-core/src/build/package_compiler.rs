@@ -121,7 +121,7 @@ where
         for module in modules {
             args.push(
                 self.out
-                    .join("gleam_src")
+                    .join("build")
                     .join(module)
                     .to_string_lossy()
                     .to_string(),
@@ -157,7 +157,7 @@ where
         copied: &mut HashSet<PathBuf>,
         to_compile_modules: &mut Vec<PathBuf>,
     ) -> Result<()> {
-        let out = self.out.join("gleam_src");
+        let out = self.out.join("build");
         self.io.mkdir(&out)?;
 
         for entry in self.io.read_dir(src_path)? {
@@ -201,7 +201,7 @@ where
         tracing::info!("Writing package metadata to disc");
         for module in modules {
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
-            let path = self.out.join("gleam_src").join(name);
+            let path = self.out.join("build").join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
         }
         Ok(())
@@ -241,7 +241,7 @@ where
     }
 
     fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
-        let artifact_dir = self.out.join("gleam_src");
+        let artifact_dir = self.out.join("build");
         match self.target {
             Target::JavaScript => {
                 JavaScript::new(&artifact_dir).render(&self.io, modules)?;

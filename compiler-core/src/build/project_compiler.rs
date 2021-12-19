@@ -190,7 +190,7 @@ where
         root_path: PathBuf,
     ) -> Result<Vec<Module>, Error> {
         let out_path = paths::build_package(self.mode, self.target, &config.name);
-        let artifact_path = out_path.join("gleam_src");
+        let artifact_path = out_path.join("build");
         let erl_libs = paths::build_packages_erl_libs_glob(self.mode, self.target)
             .to_string_lossy()
             .into_owned();
