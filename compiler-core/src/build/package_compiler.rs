@@ -241,13 +241,14 @@ where
     }
 
     fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
-        let artifact_dir = self.out.join("build");
         match self.target {
             Target::JavaScript => {
+                let artifact_dir = self.out.join("dist");
                 JavaScript::new(&artifact_dir).render(&self.io, modules)?;
             }
 
             Target::Erlang => {
+                let artifact_dir = self.out.join("build");
                 let io = self.io.clone();
                 Erlang::new(&artifact_dir).render(io.clone(), modules)?;
                 ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
