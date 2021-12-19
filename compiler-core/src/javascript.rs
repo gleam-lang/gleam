@@ -269,16 +269,16 @@ impl<'a> Generator<'a> {
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.module.name.len() {
-                1 => format!("./{}.js", path),
+                1 => format!("./{}.mjs", path),
                 _ => {
                     let prefix = "../".repeat(self.module.name.len() - 1);
-                    format!("{}{}.js", prefix, path)
+                    format!("{}{}.mjs", prefix, path)
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.module.name.len() + 1);
-            format!("{}{}/dist/{}.js", prefix, package, path)
+            format!("{}{}/dist/{}.mjs", prefix, package, path)
         }
     }
 

@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
 
 ---
-import { throwError } from "../gleam.js";
+import { throwError } from "../gleam.mjs";
 
 function go(x) {
   if (x) {

@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nfn go(a) {\n  case a {\n    Nil -> 0\n  }\n}\n"
 
 ---
-import { throwError } from "../gleam.js";
+import { throwError } from "../gleam.mjs";
 
 function go(a) {
   if (!a) {
