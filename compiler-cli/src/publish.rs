@@ -29,10 +29,7 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn setup() -> Result<Self> {
         // Reset the build directory so we know the state of the project
-        let build = paths::build();
-        if build.is_dir() {
-            fs::delete_dir(&build)?;
-        }
+        fs::delete_dir(&paths::build())?;
 
         // Build the project to check that it is valid
         let mut compiled = build::main()?;

@@ -386,7 +386,7 @@ fn print_config() -> Result<()> {
 }
 
 fn clean() -> Result<()> {
-    crate::fs::delete_dir(gleam_core::paths::build().as_path())
+    fs::delete_dir(&gleam_core::paths::build())
 }
 
 fn initialise_logger() {
