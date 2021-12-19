@@ -1,3 +1,5 @@
+import gleam/io
+
 pub fn main() {
-  "Hello, from Gleam compiled to JavaScript!"
+  io.println("Hello, from Gleam compiled to JavaScript!")
 }

@@ -151,12 +151,14 @@ jobs:
           gleam docs build
         working-directory: ./test/project_erlang
 
-      - name: test/project_javascript
-        run: |
-          gleam run
-          gleam test
-          gleam docs build
-        working-directory: ./test/project_javascript
+      # TODO: This will not work until we release a version of the build tool
+      # that outputs mjs modules and then we update the stdlib imports to match.
+      # - name: test/project_javascript
+      #   run: |
+      #     gleam run
+      #     gleam test
+      #     gleam docs build
+      #   working-directory: ./test/project_javascript
 
       - name: test/language Erlang
         run: make clean erlang
