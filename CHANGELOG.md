@@ -6,6 +6,8 @@
   modules to `.beam` bytecode files.
 - The flags that `compile-package` accepts have changed.
 - Published Hex packages now include precompiled Erlang files.
+- Erlang record headers are now written to the `include` directory within the
+  package build directory.
 
 ## v0.18.2 - 2021-12-12
 
