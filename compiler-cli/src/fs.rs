@@ -302,7 +302,7 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
+pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
     Ok(read_dir(dir)?
         .flat_map(Result::ok)
         .map(|e| e.path())
@@ -312,7 +312,7 @@ pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
                 .unwrap_or_default()
                 .to_str()
                 .unwrap_or_default();
-            extension == "erl" || extension == "hrl"
+            extension == "erl" || extension == "hrl" || extension == "js" || extension == "mjs"
         }))
 }
 
