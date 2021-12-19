@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/assignments.rs
 expression: "\nfn go(x) {\n  let #(1, 2) = x\n}\n"
 
 ---
-import { throwError } from "../gleam.mjs";
+import { throwError } from "../gleam.js";
 
 function go(x) {
   if (x[0] !== 1 || x[1] !== 2) {

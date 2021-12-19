@@ -3,8 +3,8 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\nconst a = Two\n"
 
 ---
-import * as $other from "../other.mjs";
-import { Two } from "../other.mjs";
+import * as $other from "../other.js";
+import { Two } from "../other.js";
 
 const a = new Two();
 

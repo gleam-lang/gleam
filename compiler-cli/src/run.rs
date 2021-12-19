@@ -86,7 +86,7 @@ fn javascript_command(
     // Run the main function.
     let _ = command.arg("-e");
     let _ = command.arg(&format!(
-        "import('./{}.mjs').then(module => module.main())",
+        "import('./{}.js').then(module => module.main())",
         module.to_string_lossy()
     ));
 

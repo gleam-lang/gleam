@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/try_.rs
 expression: "pub fn main(x) {\n  try #(a, b) = x\n  try #(1, 2) = x\n  try #(a, 2) = Ok(#(1, 2))\n  Ok(x)\n}"
 
 ---
-import { Ok, throwError } from "../gleam.mjs";
+import { Ok, throwError } from "../gleam.js";
 
 export function main(x) {
   if (!x.isOk()) return x;

@@ -15,7 +15,7 @@ import {
   stringBits,
   toBitString,
   toList,
-} from "./prelude.mjs";
+} from "./prelude.js";
 
 let failures = 0;
 let passes = 0;
