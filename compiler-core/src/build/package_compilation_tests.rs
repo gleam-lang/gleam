@@ -52,7 +52,11 @@ macro_rules! assert_erlang_compile {
                 outputs
             })
             .map_err(|e| normalise_error(e));
-        assert_eq!($expected_output, outputs);
+        let expected = $expected_output.map(|mut outputs: Vec<OutputFile>| {
+            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+            outputs
+        });
+        assert_eq!(expected, outputs);
     };
 }
 

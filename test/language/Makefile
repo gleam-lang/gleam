@@ -15,5 +15,5 @@ erlang:
 javascript:
 	@echo test/language on JavaScript
 	@cargo run --quiet -- compile-package --in . --out target-javascript --target javascript
-	@cp src/*.js target-javascript/build
+	@cp src/*.mjs target-javascript/build
 	@node main_javascript.js
