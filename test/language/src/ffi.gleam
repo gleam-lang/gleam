@@ -1,15 +1,15 @@
 if javascript {
   pub external fn print(String) -> Nil =
-    "./ffi_javascript.mjs" "print"
+    "./ffi_javascript.js" "print"
 
   pub external fn append(String, String) -> String =
-    "./ffi_javascript.mjs" "append"
+    "./ffi_javascript.js" "append"
 
   pub external fn to_string(anything) -> String =
-    "./ffi_javascript.mjs" "toString"
+    "./ffi_javascript.js" "toString"
 
   pub external fn ansi_green(String) -> String =
-    "./ffi_javascript.mjs" "ansi_green"
+    "./ffi_javascript.js" "ansi_green"
 }
 
 if erlang {

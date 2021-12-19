@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/prelude.rs
 expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
 
 ---
-import * as $gleam from "../gleam.mjs";
+import * as $gleam from "../gleam.js";
 
 export function go() {
   return new $gleam.Ok(1);

@@ -3,8 +3,8 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "import for.{class}\n\npub fn export() {\n  class()\n}\n"
 
 ---
-import * as $for from "../for.mjs";
-import { class$ } from "../for.mjs";
+import * as $for from "../for.js";
+import { class$ } from "../for.js";
 
 export function export$() {
   return class$();

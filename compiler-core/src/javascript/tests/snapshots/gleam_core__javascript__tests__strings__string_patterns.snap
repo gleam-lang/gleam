@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/strings.rs
 expression: "\nfn go(x) {\n  let \"Hello\" = x\n}\n"
 
 ---
-import { throwError } from "../gleam.mjs";
+import { throwError } from "../gleam.js";
 
 function go(x) {
   if (x !== "Hello") {
