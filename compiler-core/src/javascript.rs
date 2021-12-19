@@ -278,7 +278,7 @@ impl<'a> Generator<'a> {
         } else {
             // Different package
             let prefix = "../".repeat(self.module.name.len());
-            format!("{}{}/build/{}.mjs", prefix, package, path)
+            format!("{}{}/dist/{}.mjs", prefix, package, path)
         }
     }
 
