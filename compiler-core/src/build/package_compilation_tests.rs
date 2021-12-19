@@ -104,7 +104,11 @@ macro_rules! assert_javascript_compile {
                 outputs
             })
             .map_err(|e| normalise_error(e));
-        assert_eq!($expected_output, outputs);
+        let expected = $expected_output.map(|mut outputs: Vec<OutputFile>| {
+            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+            outputs
+        });
+        assert_eq!(expected, outputs);
     };
 }
 
@@ -896,7 +900,7 @@ pub fn x(p) { let one.Point(x, _) = p x }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_Point.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_Point.hrl"),
                 text: "-record(point, {x :: integer(), y :: integer()}).
 "
                 .to_string(),
@@ -1394,7 +1398,7 @@ funky() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
@@ -1463,7 +1467,7 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
@@ -1517,7 +1521,7 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
@@ -1571,7 +1575,7 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_C.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_C.hrl"),
                 text: "-record(c, {a :: integer(), b :: integer()}).
 "
                 .to_string(),
@@ -1639,7 +1643,7 @@ id(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_X.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_X.hrl"),
                 text: "-record(x, {x :: integer()}).
 "
                 .to_string(),
@@ -1754,7 +1758,7 @@ make_list() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one_C.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/include/one_C.hrl"),
                 text: "-record(c, {a :: integer(), b :: integer()}).
 "
                 .to_string(),
@@ -1922,7 +1926,7 @@ main() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/two_Two.hrl",),
+                path: PathBuf::from("_build/default/lib/the_package/include/two_Two.hrl",),
                 text: "-record(two, {thing :: one:one(integer())}).
 "
                 .to_string(),
@@ -1998,7 +2002,7 @@ to_int(P) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/power_Power.hrl",),
+                path: PathBuf::from("_build/default/lib/the_package/include/power_Power.hrl",),
                 text: "-record(power, {value :: integer()}).
 "
                 .to_string(),

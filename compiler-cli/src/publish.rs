@@ -448,11 +448,11 @@ fn release_metadata_as_erlang() {
 ]}.
 {<<"files">>, [
   <<"gleam.toml">>,
-  <<"src/thingy.gleam">>,
-  <<"src/whatever.gleam">>,
   <<"src/myapp.app">>,
   <<"src/thingy.erl">>,
-  <<"src/whatever.erl">>
+  <<"src/thingy.gleam">>,
+  <<"src/whatever.erl">>,
+  <<"src/whatever.gleam">>
 ]}.
 "#
         .to_string()
