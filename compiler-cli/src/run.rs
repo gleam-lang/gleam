@@ -47,7 +47,7 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
 
 fn erlang_command(
     config: &PackageConfig,
-    module: &String,
+    module: &str,
     arguments: &[String],
 ) -> Result<Command, Error> {
     let mut command = Command::new("erl");
@@ -76,7 +76,7 @@ fn erlang_command(
 
 fn javascript_command(
     config: &PackageConfig,
-    module: &String,
+    module: &str,
     arguments: &[String],
 ) -> Result<Command, Error> {
     let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
