@@ -159,6 +159,9 @@ enum Command {
         #[structopt(long)]
         dev: bool,
     },
+
+    /// Clean build artifacts
+    Clean,
 }
 
 #[derive(StructOpt, Debug, Clone)]
@@ -301,6 +304,8 @@ fn main() {
         }
 
         Command::Add { package, dev } => add::command(package, dev),
+
+        Command::Clean => clean(),
     };
 
     match result {
@@ -378,6 +383,10 @@ fn print_config() -> Result<()> {
     let config = root_config()?;
     println!("{:#?}", config);
     Ok(())
+}
+
+fn clean() -> Result<()> {
+    crate::fs::delete_dir(gleam_core::paths::build().as_path())
 }
 
 fn initialise_logger() {
