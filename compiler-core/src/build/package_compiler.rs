@@ -28,6 +28,7 @@ pub struct PackageCompiler<'a, IO> {
     pub write_metadata: bool,
     pub compile_erlang: bool,
     pub write_entrypoint: bool,
+    pub copy_native_files: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -57,6 +58,7 @@ where
             compile_erlang: true,
             write_metadata: true,
             write_entrypoint: false,
+            copy_native_files: true,
         }
     }
 
@@ -139,29 +141,33 @@ where
         }
     }
 
-    fn copy_project_erlang_files(&mut self, modules: &mut Vec<PathBuf>) -> Result<(), Error> {
-        tracing::info!("copying_erlang_source_files");
+    fn copy_project_native_files(
+        &mut self,
+        out: &Path,
+        modules: &mut Vec<PathBuf>,
+    ) -> Result<(), Error> {
+        tracing::info!("copying_native_source_files");
         let src = self.root.join("src");
         let test = self.root.join("test");
         let mut copied = HashSet::new();
-        self.copy_erlang_files(&src, &mut copied, modules)?;
+        self.copy_native_files(&src, out, &mut copied, modules)?;
         if self.io.is_directory(&test) {
-            self.copy_erlang_files(&test, &mut copied, modules)?;
+            self.copy_native_files(&test, out, &mut copied, modules)?;
         }
         Ok(())
     }
 
-    fn copy_erlang_files(
+    fn copy_native_files(
         &self,
         src_path: &Path,
+        out: &Path,
         copied: &mut HashSet<PathBuf>,
         to_compile_modules: &mut Vec<PathBuf>,
     ) -> Result<()> {
-        let out = self.out.join("build");
         self.io.mkdir(&out)?;
 
         for entry in self.io.read_dir(src_path)? {
-            let path = entry.expect("copy_erlang_files dir_entry").path();
+            let path = entry.expect("copy_native_files dir_entry").path();
 
             let extension = path
                 .extension()
@@ -170,11 +176,11 @@ where
                 .unwrap_or_default();
             let relative_path = path
                 .strip_prefix(src_path)
-                .expect("copy_erlang_files strip prefix")
+                .expect("copy_native_files strip prefix")
                 .to_path_buf();
 
             match extension {
-                "hrl" => (),
+                "mjs" | "js" | "hrl" => (),
                 "erl" => {
                     to_compile_modules.push(relative_path.clone());
                 }
@@ -185,7 +191,7 @@ where
 
             // TODO: test
             if !copied.insert(relative_path.clone()) {
-                return Err(Error::DuplicateErlangFile {
+                return Err(Error::DuplicateSourceFile {
                     file: relative_path.to_string_lossy().to_string(),
                 });
             }
@@ -241,11 +247,16 @@ where
     }
 
     fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
+        let mut written = vec![];
+
         match self.target {
             Target::JavaScript => {
                 let artifact_dir = self.out.join("dist");
-                // TODO: copy .js files
                 JavaScript::new(&artifact_dir).render(&self.io, modules)?;
+
+                if self.copy_native_files {
+                    self.copy_project_native_files(&artifact_dir, &mut written)?;
+                }
             }
 
             Target::Erlang => {
@@ -253,16 +264,17 @@ where
                 let io = self.io.clone();
                 Erlang::new(&artifact_dir).render(io.clone(), modules)?;
                 ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
-                let mut erlang = vec![];
-
                 if self.write_entrypoint {
-                    self.render_entrypoint_module(&artifact_dir, &mut erlang)?;
+                    self.render_entrypoint_module(&artifact_dir, &mut written)?;
+                }
+
+                if self.copy_native_files {
+                    self.copy_project_native_files(&artifact_dir, &mut written)?;
                 }
 
                 if self.compile_erlang {
-                    erlang.extend(modules.iter().map(Module::compiled_erlang_path));
-                    self.copy_project_erlang_files(&mut erlang)?;
-                    self.compile_erlang_to_beam(&erlang)?;
+                    written.extend(modules.iter().map(Module::compiled_erlang_path));
+                    self.compile_erlang_to_beam(&written)?;
                 }
             }
         }
