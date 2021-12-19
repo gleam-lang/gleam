@@ -29,8 +29,8 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
 
     // Prepare the Erlang shell command
     let mut command = match config.target {
-        Target::Erlang => run_erlang_command(&config, &module, arguments),
-        Target::JavaScript => run_javascript_command(&config, &module, arguments),
+        Target::Erlang => erlang_command(&config, &module, arguments),
+        Target::JavaScript => javascript_command(&config, &module, arguments),
     }?;
 
     crate::cli::print_running(&format!("{}.main", module));
@@ -45,7 +45,7 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     std::process::exit(status.code().unwrap_or_default());
 }
 
-fn run_erlang_command(
+fn erlang_command(
     config: &PackageConfig,
     module: &String,
     arguments: &[String],
@@ -74,7 +74,7 @@ fn run_erlang_command(
     Ok(command)
 }
 
-fn run_javascript_command(
+fn javascript_command(
     config: &PackageConfig,
     module: &String,
     arguments: &[String],
@@ -84,23 +84,9 @@ fn run_javascript_command(
         .join(module);
     let mut command = Command::new("node");
 
-    // // Specify locations of .beam files
-    // let packages = paths::build_packages(Mode::Dev, config.target);
-
-    // for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
-    //     let _ = command.arg("-pa").arg(entry.path().join("ebin"));
-    // }
-
-    // // Run the main function.
-    // let _ = command.arg("-eval");
-    // let _ = command.arg(format!("gleam@@main:run({})", &module));
-
-    // // Don't run the Erlang shell
-    // let _ = command.arg("-noshell");
-
     let _ = command.arg("-e");
     let _ = command.arg(&format!(
-        "import('./{}.js').then(module => console.log(module.main()))",
+        "import('./{}.js').then(module => module.main())",
         module.to_string_lossy()
     ));
 
