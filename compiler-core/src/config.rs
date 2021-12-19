@@ -23,7 +23,7 @@ fn erlang_target() -> Target {
 
 pub type Dependencies = HashMap<String, Range>;
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     pub name: String,
     #[serde(default = "default_version")]
@@ -382,7 +382,7 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default)]
+#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
     pub application_start_module: Option<String>,
@@ -390,7 +390,7 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, PartialEq)]
+#[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
     GitHub { user: String, repo: String },
@@ -424,7 +424,7 @@ impl Default for Repository {
     }
 }
 
-#[derive(Deserialize, Default, Debug, PartialEq)]
+#[derive(Deserialize, Default, Debug, PartialEq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,

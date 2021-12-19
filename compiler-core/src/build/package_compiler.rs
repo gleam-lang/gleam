@@ -260,16 +260,19 @@ where
             }
 
             Target::Erlang => {
-                let artifact_dir = self.out.join("build");
+                let build_dir = self.out.join("build");
+                let include_dir = self.out.join("include");
                 let io = self.io.clone();
-                Erlang::new(&artifact_dir).render(io.clone(), modules)?;
+
+                Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
                 ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
+
                 if self.write_entrypoint {
-                    self.render_entrypoint_module(&artifact_dir, &mut written)?;
+                    self.render_entrypoint_module(&build_dir, &mut written)?;
                 }
 
                 if self.copy_native_files {
-                    self.copy_project_native_files(&artifact_dir, &mut written)?;
+                    self.copy_project_native_files(&build_dir, &mut written)?;
                 }
 
                 if self.compile_erlang {

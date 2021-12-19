@@ -1,4 +1,3 @@
-// use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
@@ -313,6 +312,20 @@ pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
                 .to_str()
                 .unwrap_or_default();
             extension == "erl" || extension == "hrl" || extension == "js" || extension == "mjs"
+        }))
+}
+
+pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
+    Ok(read_dir(dir)?
+        .flat_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|path| {
+            let extension = path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+            extension == "erl" || extension == "hrl"
         }))
 }
 
