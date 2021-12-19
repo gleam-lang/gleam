@@ -5,7 +5,7 @@
 - The `compile-package` can now generate `package.app` files and compile source
   modules to `.beam` bytecode files.
 - The flags that `compile-package` accepts have changed.
-- The `-server` flag is now given to `erlc` when compiling Erlang code.
+- Published Hex packages now include precompiled Erlang files.
 
 ## v0.18.2 - 2021-12-12
 
