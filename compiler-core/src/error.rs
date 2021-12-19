@@ -1698,6 +1698,10 @@ Try a different name for this module.",
                         "This is a reserved word.",
                         vec!["Hint: I was expecting to see a name here.".to_string(), "See: https://gleam.run/book/tour/reserved-words".to_string()]
                     ),
+                    ParseErrorType::LowcaseBooleanPattern => (
+                        "Did you want a Bool instead of a variable?",
+                        vec!["Hint: In Gleam boolean literals are True and False".to_string(), "See: https://gleam.run/book/tour/bools.html".to_string()]
+                    ),
                     ParseErrorType::UnexpectedToken { expected } => {
                         let mut messages = expected.clone();
                         if let Some(s) = messages.first_mut() {

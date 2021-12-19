@@ -55,6 +55,7 @@ pub enum ParseErrorType {
     OpaqueTypeAlias, // Type aliases cannot be opaque
     TooManyArgHoles, // a function call can have at most 1 arg hole
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
+    LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken { expected: Vec<String> },
