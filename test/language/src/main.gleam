@@ -338,9 +338,9 @@ fn make_error(reason) {
 // same result
 fn clause_guard_tests() -> List(Test) {
   // Testing that the name reuse is valid
-  let true = true()
+  let true_ = true()
   // Testing that the name reuse is valid
-  let false = false()
+  let false_ = false()
   let int_zero = make_int_zero()
   let int_one = make_int_zero() + 1
   let float_zero = make_float_zero()
@@ -355,7 +355,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true -> 0
+          _ if true_ -> 0
           _ -> 1
         },
       )
@@ -365,7 +365,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false -> 0
+          _ if false_ -> 0
           _ -> 1
         },
       )
@@ -455,7 +455,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true && true -> 0
+          _ if true_ && true_ -> 0
           _ -> 1
         },
       )
@@ -465,7 +465,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if true && false -> 0
+          _ if true_ && false_ -> 0
           _ -> 1
         },
       )
@@ -475,7 +475,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false && true -> 0
+          _ if false_ && true_ -> 0
           _ -> 1
         },
       )
@@ -485,7 +485,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false && false -> 0
+          _ if false_ && false_ -> 0
           _ -> 1
         },
       )
@@ -495,7 +495,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true || true -> 0
+          _ if true_ || true_ -> 0
           _ -> 1
         },
       )
@@ -505,7 +505,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true || false -> 0
+          _ if true_ || false_ -> 0
           _ -> 1
         },
       )
@@ -515,7 +515,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if false || true -> 0
+          _ if false_ || true_ -> 0
           _ -> 1
         },
       )
@@ -525,7 +525,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false || false -> 0
+          _ if false_ || false_ -> 0
           _ -> 1
         },
       )

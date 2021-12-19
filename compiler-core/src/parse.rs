@@ -763,9 +763,17 @@ where
                 if self.maybe_one(&Token::Dot).is_some() {
                     self.expect_constructor_pattern(Some((start, name, end)))?
                 } else {
-                    Pattern::Var {
-                        location: SrcSpan { start, end },
-                        name,
+                    match name.as_str() {
+                        "true" | "false" => {
+                            return parse_error(
+                                ParseErrorType::LowcaseBooleanPattern,
+                                SrcSpan { start, end },
+                            )
+                        }
+                        _ => Pattern::Var {
+                            location: SrcSpan { start, end },
+                            name,
+                        },
                     }
                 }
             }
