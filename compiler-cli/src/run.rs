@@ -1,8 +1,5 @@
 use gleam_core::{
-    build::{
-        Mode,
-        Target::{Erlang, JavaScript},
-    },
+    build::{Mode, Target},
     config::PackageConfig,
     error::Error,
     paths,
@@ -32,8 +29,8 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
 
     // Prepare the Erlang shell command
     let mut command = match config.target {
-        Erlang => run_erlang_command(&config, &module, arguments),
-        JavaScript => run_javascript_command(&config, &module, arguments),
+        Target::Erlang => run_erlang_command(&config, &module, arguments),
+        Target::JavaScript => run_javascript_command(&config, &module, arguments),
     }?;
 
     crate::cli::print_running(&format!("{}.main", module));
@@ -80,8 +77,11 @@ fn run_erlang_command(
 fn run_javascript_command(
     config: &PackageConfig,
     module: &String,
-    arguments: &[String],
+    _arguments: &[String],
 ) -> Result<Command, Error> {
+    let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
+        .join("gleam_src")
+        .join(module);
     let mut command = Command::new("node");
 
     // // Specify locations of .beam files
@@ -105,7 +105,10 @@ fn run_javascript_command(
     // }
 
     let _ = command.arg("-e");
-    let _ = command.arg("console.log('Hello, from Gleam')");
+    let _ = command.arg(&format!(
+        "import('./{}.js').then(module => console.log(module.main()))",
+        module.to_string_lossy()
+    ));
 
     Ok(command)
 }
