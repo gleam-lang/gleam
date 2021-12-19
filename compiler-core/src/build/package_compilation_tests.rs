@@ -43,6 +43,7 @@ macro_rules! assert_erlang_compile {
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_erlang = false;
+        compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
             .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
@@ -93,6 +94,7 @@ macro_rules! assert_javascript_compile {
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_erlang = false;
+        compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
             .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
@@ -134,6 +136,7 @@ macro_rules! assert_no_warnings {
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_erlang = false;
+        compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
             .compile(&mut warnings, &mut modules, &mut HashMap::with_capacity(4))
@@ -2287,6 +2290,7 @@ fn config_compilation_test() {
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;
             compiler.compile_erlang = false;
+            compiler.copy_native_files = false;
             compiler.sources = $sources;
             let compiled = compiler
                 .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
