@@ -167,11 +167,11 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
 }
 
 // TODO: test
-// TODO: Don't include git-ignored Erlang files
+// TODO: Don't include git-ignored native files
 fn project_files() -> Result<Vec<PathBuf>> {
     let src = Path::new("src");
     let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(src)
-        .chain(fs::erlang_files(src)?)
+        .chain(fs::native_files(src)?)
         .collect();
     let mut add = |path| {
         let path = PathBuf::from(path);
