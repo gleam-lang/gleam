@@ -349,6 +349,7 @@ impl<'a> ReleaseMetadata<'a> {
                 .iter()
                 .chain(self.generated_files.iter().map(|(p, _)| p))
                 .map(file)
+                .sorted()
                 .join(","),
             links = self.links.iter().map(link).join(","),
             licenses = self.licenses.iter().map(|l| quotes(l)).join(", "),
