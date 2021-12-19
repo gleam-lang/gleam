@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other\npub const main = other.Two(1)\n"
 
 ---
-import * as $other from "../other.js";
+import * as $other from "../other.mjs";
 
 export const main = new $other.Two(1);
 

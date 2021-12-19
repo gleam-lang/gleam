@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> Nil\n  }\n}\n"
 
 ---
-import { throwError } from "../gleam.js";
+import { throwError } from "../gleam.mjs";
 
 function go(x, f) {
   let $ = (() => {
