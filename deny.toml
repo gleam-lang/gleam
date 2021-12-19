@@ -36,18 +36,12 @@ registries = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/bans/cfg.html
 [bans]
-multiple-versions = "deny"
+multiple-versions = "allow"
 wildcards = "allow"
 highlight = "all"
 allow = []
 deny = []
-skip = [
-    { name = "rand_core", version = "=0.5.1" },
-    { name = "strsim", version = "=0.8.0" },
-    { name = "textwrap", version = "=0.11.0" },
-    { name = "base64", version = "=0.12.3" },
-    { name = "itoa", version = "=0.4.8" },
-]
+skip = []
 skip-tree = []
 
 # https://embarkstudios.github.io/cargo-deny/checks/sources/cfg.html
