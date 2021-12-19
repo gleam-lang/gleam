@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other\npub fn main() {\n  other.Two\n}"
 
 ---
-import * as $other from "../other.js";
+import * as $other from "../other.mjs";
 
 export function main() {
   return (var0, var1, var2) => { return new $other.Two(var0, var1, var2); };

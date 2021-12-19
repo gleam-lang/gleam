@@ -156,7 +156,7 @@ impl<'a> JavaScript<'a> {
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
         tracing::debug!("Generated js prelude");
         writer
-            .writer(&self.output_directory.join("gleam.js"))?
+            .writer(&self.output_directory.join("gleam.mjs"))?
             .str_write(javascript::PRELUDE)?;
         Ok(())
     }
@@ -167,7 +167,7 @@ impl<'a> JavaScript<'a> {
         module: &Module,
         js_name: &str,
     ) -> Result<()> {
-        let name = format!("{}.js", js_name);
+        let name = format!("{}.mjs", js_name);
         let path = self.output_directory.join(&name);
         let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);

@@ -3,7 +3,7 @@ source: compiler-core/src/javascript/tests/case_clause_guards.rs
 expression: "pub fn main(x, y) {\n  case x {\n    1 -> 1\n    _ if y -> 0\n  }\n}\n"
 
 ---
-import { throwError } from "../gleam.js";
+import { throwError } from "../gleam.mjs";
 
 export function main(x, y) {
   if (x === 1) {
