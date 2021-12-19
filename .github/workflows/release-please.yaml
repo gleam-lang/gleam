@@ -1,0 +1,16 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: GoogleCloudPlatform/release-please-action@v2
+        name: create release
+        with:
+          release-type: rust
+          bump-minor-pre-major: true 
