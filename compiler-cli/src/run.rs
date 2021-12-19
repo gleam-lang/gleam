@@ -77,7 +77,7 @@ fn run_erlang_command(
 fn run_javascript_command(
     config: &PackageConfig,
     module: &String,
-    _arguments: &[String],
+    arguments: &[String],
 ) -> Result<Command, Error> {
     let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
         .join("gleam_src")
@@ -98,17 +98,17 @@ fn run_javascript_command(
     // // Don't run the Erlang shell
     // let _ = command.arg("-noshell");
 
-    // // Tell the BEAM that any following argument are for the program
-    // let _ = command.arg("-extra");
-    // for argument in arguments {
-    //     let _ = command.arg(argument);
-    // }
-
     let _ = command.arg("-e");
     let _ = command.arg(&format!(
         "import('./{}.js').then(module => console.log(module.main()))",
         module.to_string_lossy()
     ));
+
+    // Tell Node that any following argument are for the program
+    let _ = command.arg("--");
+    for argument in arguments {
+        let _ = command.arg(argument);
+    }
 
     Ok(command)
 }
