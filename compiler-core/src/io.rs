@@ -247,7 +247,7 @@ pub mod test {
         }
 
         fn mkdir(&self, _path: &Path) -> Result<(), Error> {
-            panic!("FilesChannel does not support mkdir")
+            Ok(())
         }
 
         fn copy_dir(&self, _from: &Path, _to: &Path) -> Result<(), Error> {

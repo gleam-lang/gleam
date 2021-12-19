@@ -244,6 +244,7 @@ where
         match self.target {
             Target::JavaScript => {
                 let artifact_dir = self.out.join("dist");
+                // TODO: copy .js and .mjs files
                 JavaScript::new(&artifact_dir).render(&self.io, modules)?;
             }
 
