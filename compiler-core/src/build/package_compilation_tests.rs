@@ -178,7 +178,7 @@ fn package_compiler_test() {
             },
             OutputFile {
                 text: "-module(one).\n".to_string(),
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
             },
         ])
     );
@@ -214,11 +214,11 @@ fn package_compiler_test() {
             },
             OutputFile {
                 text: "-module(one).\n".to_string(),
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
             },
             OutputFile {
                 text: "-module(two).\n".to_string(),
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
             },
         ])
     );
@@ -244,7 +244,7 @@ fn package_compiler_test() {
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).\n".to_string(),
             },
         ]),
@@ -306,11 +306,11 @@ fn package_compiler_test() {
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).\n".to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).\n".to_string(),
             },
         ]),
@@ -346,11 +346,11 @@ fn package_compiler_test() {
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).\n".to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).\n".to_string(),
             },
         ]),
@@ -386,7 +386,7 @@ fn package_compiler_test() {
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -399,7 +399,7 @@ fn package_compiler_test() {
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -445,7 +445,7 @@ unbox(X) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -458,7 +458,7 @@ unbox(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -494,7 +494,7 @@ box(X) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one@two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one@two.erl"),
                 text: "-module(one@two).
 -compile(no_auto_import).
 
@@ -539,7 +539,7 @@ box(X) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -552,7 +552,7 @@ box(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -597,7 +597,7 @@ box() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -610,7 +610,7 @@ go() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -657,7 +657,7 @@ pub fn go(x) { let one.Box(y) = x y }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/nested@one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/nested@one.erl"),
                 text: "-module(nested@one).
 -compile(no_auto_import).
 
@@ -670,7 +670,7 @@ pub fn go(x) { let one.Box(y) = x y }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -718,7 +718,7 @@ pub fn go(x) { let thingy.Box(y) = x y }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/nested@one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/nested@one.erl"),
                 text: "-module(nested@one).
 -compile(no_auto_import).
 
@@ -731,7 +731,7 @@ pub fn go(x) { let thingy.Box(y) = x y }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -782,7 +782,7 @@ go(X) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/nested@one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/nested@one.erl"),
                 text: "-module(nested@one).
 -compile(no_auto_import).
 
@@ -798,7 +798,7 @@ go() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -876,7 +876,7 @@ pub fn x(p) { let one.Point(x, _) = p x }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -889,13 +889,13 @@ pub fn x(p) { let one.Point(x, _) = p x }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_Point.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_Point.hrl"),
                 text: "-record(point, {x :: integer(), y :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -948,7 +948,7 @@ x(P) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -964,7 +964,7 @@ x(P) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1013,7 +1013,7 @@ pub fn make() { one.Empty }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1026,7 +1026,7 @@ pub fn make() { one.Empty }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1071,7 +1071,7 @@ make() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1087,7 +1087,7 @@ id(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1133,7 +1133,7 @@ make() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1149,7 +1149,7 @@ id(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1194,7 +1194,7 @@ make() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1207,7 +1207,7 @@ make() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1252,7 +1252,7 @@ funky() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1265,7 +1265,7 @@ funky() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1311,7 +1311,7 @@ funky() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1324,7 +1324,7 @@ funky() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1374,7 +1374,7 @@ funky() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1387,13 +1387,13 @@ funky() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1443,7 +1443,7 @@ get_name(Person) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1456,13 +1456,13 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).\n".to_string(),
             },
         ]),
@@ -1499,7 +1499,7 @@ get_name(Person) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1510,13 +1510,13 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_Person.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_Person.hrl"),
                 text: "-record(person, {name :: binary(), age :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).\n".to_string(),
             },
         ]),
@@ -1553,7 +1553,7 @@ get_name(Person) ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1564,13 +1564,13 @@ get_name(Person) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_C.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_C.hrl"),
                 text: "-record(c, {a :: integer(), b :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1616,7 +1616,7 @@ main() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1632,13 +1632,13 @@ id(X) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_X.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_X.hrl"),
                 text: "-record(x, {x :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1683,12 +1683,12 @@ make() ->
 ".into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).\n"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: r#"-module(two).
 -compile(no_auto_import).
 
@@ -1734,7 +1734,7 @@ make_list() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1747,13 +1747,13 @@ make_list() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one_C.hrl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one_C.hrl"),
                 text: "-record(c, {a :: integer(), b :: integer()}).
 "
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1889,7 +1889,7 @@ main() ->
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl",),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -1902,7 +1902,7 @@ main() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl",),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -1915,7 +1915,7 @@ main() ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two_Two.hrl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/two_Two.hrl",),
                 text: "-record(two, {thing :: one:one(integer())}).
 "
                 .to_string(),
@@ -1962,7 +1962,7 @@ pub fn main(power: Power) { power.to_int(power) }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/main.erl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/main.erl",),
                 text: "-module(main).
 -compile(no_auto_import).
 
@@ -1975,7 +1975,7 @@ main(Power) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/power.erl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/power.erl",),
                 text: "-module(power).
 -compile(no_auto_import).
 
@@ -1991,7 +1991,7 @@ to_int(P) ->
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/power_Power.hrl",),
+                path: PathBuf::from("_build/default/lib/the_package/build/power_Power.hrl",),
                 text: "-record(power, {value :: integer()}).
 "
                 .to_string(),
@@ -2035,7 +2035,7 @@ pub fn x() { test }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -2048,7 +2048,7 @@ pub fn x() { test }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -2096,7 +2096,7 @@ pub fn x() { test }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -2111,7 +2111,7 @@ pub fn x() { test }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -2194,7 +2194,7 @@ pub fn x() { one.A }"
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
                 text: "-module(one).
 -compile(no_auto_import).
 
@@ -2207,7 +2207,7 @@ pub fn x() { one.A }"
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).
 -compile(no_auto_import).
 
@@ -2528,7 +2528,7 @@ const x = two.A"#
                 .into(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one@two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one@two.erl"),
                 text: "-module(one@two).
 -compile(no_auto_import).
 
@@ -2541,7 +2541,7 @@ const x = two.A"#
                 .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.erl"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
                 text: "-module(two).\n".to_string(),
             }
         ]),
@@ -2569,18 +2569,18 @@ const x = two.A"#
         ],
         Ok(vec![
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/gleam.mjs"),
+                path: PathBuf::from("_build/default/lib/the_package/build/gleam.mjs"),
                 text: javascript::PRELUDE.to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/one/two.mjs"),
+                path: PathBuf::from("_build/default/lib/the_package/build/one/two.mjs"),
                 text: "import { CustomType } from \"../gleam.mjs\";
 
 export class A extends CustomType {}\n"
                     .to_string(),
             },
             OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/gleam_src/two.mjs"),
+                path: PathBuf::from("_build/default/lib/the_package/build/two.mjs"),
                 text: r#"import * as $two from "./one/two.mjs";
 
 const x = new $two.A();

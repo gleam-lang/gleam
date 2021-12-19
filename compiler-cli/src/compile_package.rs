@@ -54,7 +54,7 @@ fn load_libraries(lib: &Path) -> Result<HashMap<String, Module>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {
-        let path = lib.path().join("gleam_src");
+        let path = lib.path().join("build");
         if !path.is_dir() {
             continue;
         }
