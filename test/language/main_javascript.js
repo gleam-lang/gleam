@@ -1,3 +1,3 @@
-import("./target-javascript/build/main.mjs").then((module) => {
+import("./target-javascript/dist/main.mjs").then((module) => {
   process.exit(module.main());
 });
