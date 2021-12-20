@@ -50,8 +50,11 @@ If you have a web browser, you can get a fully pre-configured Gleam development 
 
 ## Local development
 
+If you are using `nix`, lucky you, we have a [nix environment](Nix.md)
+ready for you.
+
 To run the compiler tests. This will require a recent stable version of Rust
-to be installed.
+to be installed. 
 
 ```shell
 cargo test
