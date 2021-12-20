@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- For people using Nix, you can build and run any Gleam commit version using nix.
+  See the Nix.md guide for more on it.
 - You can now remove build artifacts using the new `gleam clean` command.
 - The `compile-package` can now generate `package.app` files and compile source
   modules to `.beam` bytecode files.
