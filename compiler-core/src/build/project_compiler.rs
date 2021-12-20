@@ -40,6 +40,7 @@ where
 {
     pub fn new(
         config: PackageConfig,
+        mode: Mode,
         target: Target,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
@@ -51,11 +52,11 @@ where
             importable_modules: HashMap::with_capacity(estimated_modules),
             defined_modules: HashMap::with_capacity(estimated_modules),
             warnings: Vec::new(),
-            mode: Mode::Dev,
             telemetry,
             packages,
             config,
             target,
+            mode,
             io,
         }
     }
@@ -205,7 +206,7 @@ where
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
-        compiler.read_source_files()?;
+        compiler.read_source_files(self.mode)?;
 
         // Compile project to Erlang source code
         let compiled = compiler.compile(

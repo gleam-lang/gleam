@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
-    build::Package,
+    build::{Mode, Package},
     config::{DocsPage, PackageConfig},
     error::Error,
     hex,
@@ -45,7 +45,7 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
     let out = paths::build_docs(&config.name);
-    let mut compiled = crate::build::main()?;
+    let mut compiled = crate::build::main(Mode::Prod, None)?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
     // Write
@@ -86,7 +86,7 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
-        let mut compiled = crate::build::main()?;
+        let mut compiled = crate::build::main(Mode::Dev, None)?;
         let outputs = build_documentation(&config, &mut compiled)?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })

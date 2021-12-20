@@ -1,6 +1,6 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, Module, Origin, Package, Target},
+    build::{dep_tree, Mode, Module, Origin, Package, Target},
     codegen::{Erlang, ErlangApp, JavaScript},
     config::PackageConfig,
     error,
@@ -213,7 +213,7 @@ where
         Ok(())
     }
 
-    pub fn read_source_files(&mut self) -> Result<()> {
+    pub fn read_source_files(&mut self, mode: Mode) -> Result<()> {
         let span = tracing::info_span!("load", package = %self.config.name.as_str());
         let _enter = span.enter();
         tracing::info!("Reading source files");
@@ -226,7 +226,7 @@ where
         }
 
         // Test
-        if self.io.is_directory(&test) {
+        if mode.is_dev() && self.io.is_directory(&test) {
             for path in self.io.gleam_source_files(&test) {
                 self.add_module(path, &test, Origin::Test)?;
             }

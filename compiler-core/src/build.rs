@@ -54,6 +54,15 @@ pub enum Mode {
     Prod,
 }
 
+impl Mode {
+    /// Returns `true` if the mode is [`Dev`].
+    ///
+    /// [`Dev`]: Mode::Dev
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+}
+
 #[derive(Debug)]
 pub struct Package {
     pub config: PackageConfig,

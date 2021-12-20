@@ -1,4 +1,9 @@
-use gleam_core::{build::PackageCompiler, metadata, type_::Module, Result};
+use gleam_core::{
+    build::{Mode, PackageCompiler},
+    metadata,
+    type_::Module,
+    Result,
+};
 use std::{collections::HashMap, path::Path};
 
 use crate::{
@@ -36,7 +41,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
-    compiler.read_source_files()?;
+    compiler.read_source_files(Mode::Dev)?;
     let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // Print warnings

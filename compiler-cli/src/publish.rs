@@ -29,10 +29,10 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn setup() -> Result<Self> {
         // Reset the build directory so we know the state of the project
-        fs::delete_dir(&paths::build())?;
+        fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
         // Build the project to check that it is valid
-        let mut compiled = build::main()?;
+        let mut compiled = build::main(Mode::Prod, Some(Target::Erlang))?;
         let config = compiled.config.clone();
 
         // These fields are required to publish a Hex package. Hex will reject
@@ -231,11 +231,8 @@ fn project_files() -> Result<Vec<PathBuf>> {
 // TODO: test
 fn generated_files(package: &Package) -> Result<Vec<(PathBuf, String)>> {
     let mut files = vec![];
-    if package.config.target != Target::Erlang {
-        return Ok(files);
-    }
 
-    let dir = paths::build_package(Mode::Dev, Target::Erlang, &package.config.name);
+    let dir = paths::build_package(Mode::Prod, Target::Erlang, &package.config.name);
     let ebin = dir.join("ebin");
     let build = dir.join("build");
     let include = dir.join("include");
