@@ -5,3 +5,5 @@
 .idea/
 .idea/*
 erl_crash.dump
+/result-bin # for nix
+/result*
