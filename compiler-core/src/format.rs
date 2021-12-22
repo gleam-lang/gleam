@@ -1223,7 +1223,13 @@ impl<'comments> Formatter<'comments> {
                     elements.iter().map(|e| self.pattern(e)),
                     break_(",", ", "),
                 ));
-                let tail = tail.as_ref().map(|e| self.pattern(e));
+                let tail = tail.as_ref().map(|e| {
+                    if e.is_discard() {
+                        nil()
+                    } else {
+                        self.pattern(e)
+                    }
+                });
                 list(elements, tail)
             }
 

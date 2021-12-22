@@ -806,6 +806,13 @@ impl<A, B> Pattern<A, B> {
             | Pattern::BitString { location, .. } => *location,
         }
     }
+
+    /// Returns `true` if the pattern is [`Discard`].
+    ///
+    /// [`Discard`]: Pattern::Discard
+    pub fn is_discard(&self) -> bool {
+        matches!(self, Self::Discard { .. })
+    }
 }
 impl<A, B> HasLocation for Pattern<A, B> {
     fn location(&self) -> SrcSpan {
