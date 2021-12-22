@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Target},
+    build::{Mode, Options, Target},
     config::PackageConfig,
     error::Error,
     paths,
@@ -22,7 +22,10 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     };
 
     // Build project so we have bytecode to run
-    let _ = crate::build::main(Mode::Dev, None)?;
+    let _ = crate::build::main(&Options {
+        mode: Mode::Dev,
+        target: None,
+    })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

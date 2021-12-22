@@ -6,7 +6,7 @@ use std::{
 
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
-    build::{Mode, Package, Target},
+    build::{Mode, Options, Package, Target},
     config::PackageConfig,
     hex, paths, Error, Result,
 };
@@ -32,7 +32,10 @@ impl PublishCommand {
         fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
         // Build the project to check that it is valid
-        let mut compiled = build::main(Mode::Prod, Some(Target::Erlang))?;
+        let mut compiled = build::main(&Options {
+            mode: Mode::Prod,
+            target: Some(Target::Erlang),
+        })?;
         let config = compiled.config.clone();
 
         // These fields are required to publish a Hex package. Hex will reject

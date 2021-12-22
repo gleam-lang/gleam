@@ -19,6 +19,12 @@ use std::{
 };
 
 #[derive(Debug)]
+pub struct Options {
+    pub mode: Mode,
+    pub target: Option<Target>,
+}
+
+#[derive(Debug)]
 pub struct ProjectCompiler<'a, IO> {
     config: PackageConfig,
     packages: HashMap<String, &'a ManifestPackage>,
@@ -26,8 +32,7 @@ pub struct ProjectCompiler<'a, IO> {
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
-    target: Target,
-    mode: Mode,
+    options: &'a Options,
     io: IO,
 }
 
@@ -40,8 +45,7 @@ where
 {
     pub fn new(
         config: PackageConfig,
-        mode: Mode,
-        target: Target,
+        options: &'a Options,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
@@ -54,11 +58,18 @@ where
             warnings: Vec::new(),
             telemetry,
             packages,
+            options,
             config,
-            target,
-            mode,
             io,
         }
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.options.mode
+    }
+
+    pub fn target(&self) -> Target {
+        self.options.target.unwrap_or(self.config.target)
     }
 
     /// Returns the compiled information from the root package
@@ -80,7 +91,7 @@ where
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        let build_path = paths::build_package(self.mode, self.target, &package.name);
+        let build_path = paths::build_package(self.mode(), self.target(), &package.name);
         if self.io.is_directory(&build_path) {
             tracing::info!(package=%package.name, "loading_precompiled_package");
             return self.load_cached_package(build_path, package);
@@ -95,7 +106,7 @@ where
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
             tracing::debug!(package=%package.name,"removing_failed_build");
-            let dir = paths::build_package(self.mode, self.target, &package.name);
+            let dir = paths::build_package(self.mode(), self.target(), &package.name);
             self.io.delete(&dir)?;
         }
 
@@ -104,8 +115,8 @@ where
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let name = &package.name;
-        let mode = self.mode;
-        let target = self.target;
+        let mode = self.mode();
+        let target = self.target();
 
         let project_dir = paths::build_deps_package(&package.name);
         let up = paths::unnest(&project_dir);
@@ -190,9 +201,9 @@ where
         is_root: bool,
         root_path: PathBuf,
     ) -> Result<Vec<Module>, Error> {
-        let out_path = paths::build_package(self.mode, self.target, &config.name);
+        let out_path = paths::build_package(self.mode(), self.target(), &config.name);
         let artifact_path = out_path.join("build");
-        let erl_libs = paths::build_packages_erl_libs_glob(self.mode, self.target)
+        let erl_libs = paths::build_packages_erl_libs_glob(self.mode(), self.target())
             .to_string_lossy()
             .into_owned();
 
@@ -200,13 +211,13 @@ where
             config,
             &root_path,
             &out_path,
-            self.target,
+            self.target(),
             &erl_libs,
             self.io.clone(),
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
-        compiler.read_source_files(self.mode)?;
+        compiler.read_source_files(self.mode())?;
 
         // Compile project to Erlang source code
         let compiled = compiler.compile(

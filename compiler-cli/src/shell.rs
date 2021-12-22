@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Target},
+    build::{Mode, Options, Target},
     error::Error,
     paths,
 };
@@ -7,7 +7,10 @@ use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
     // Build project
-    let _ = crate::build::main(Mode::Dev, None)?;
+    let _ = crate::build::main(&Options {
+        mode: Mode::Dev,
+        target: None,
+    })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

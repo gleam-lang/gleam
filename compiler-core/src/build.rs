@@ -9,7 +9,7 @@ mod telemetry;
 mod package_compilation_tests;
 
 pub use self::package_compiler::PackageCompiler;
-pub use self::project_compiler::ProjectCompiler;
+pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
 use crate::{

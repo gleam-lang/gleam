@@ -75,7 +75,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{Mode, Target},
+    build::{Mode, Options, Target},
     diagnostic::{self, Severity},
     error::wrap,
     hex::RetirementReason,
@@ -336,7 +336,11 @@ fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> 
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
-        return build::main(Mode::Dev, None).map(|_| ());
+        return build::main(&Options {
+            mode: Mode::Dev,
+            target: None,
+        })
+        .map(|_| ());
     }
 
     diagnostic::write_title(
