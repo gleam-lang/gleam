@@ -11,6 +11,7 @@
 - Published Hex packages now include precompiled Erlang files.
 - Erlang record headers are now written to the `include` directory within the
   package build directory.
+- The format used by the formatter has been improved.
 
 ## v0.18.2 - 2021-12-12
 
