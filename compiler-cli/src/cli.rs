@@ -22,6 +22,10 @@ impl Telemetry for Reporter {
     fn compiling_package(&self, name: &str) {
         print_compiling(name);
     }
+
+    fn checking_package(&self, name: &str) {
+        print_checking(name);
+    }
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {
@@ -79,8 +83,16 @@ pub fn print_compiling(text: &str) {
     print_colourful_prefix("  Compiling", text)
 }
 
+pub fn print_checking(text: &str) {
+    print_colourful_prefix("   Checking", text)
+}
+
 pub fn print_compiled(duration: Duration) {
     print_colourful_prefix("   Compiled", &format!("in {}", seconds(duration)))
+}
+
+pub fn print_checked(duration: Duration) {
+    print_colourful_prefix("    Checked", &format!("in {}", seconds(duration)))
 }
 
 pub fn print_running(text: &str) {

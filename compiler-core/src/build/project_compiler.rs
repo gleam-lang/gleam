@@ -90,7 +90,11 @@ where
         }
 
         // Read and type check top level package
-        self.telemetry.compiling_package(&self.config.name);
+        if self.options.perform_codegen {
+            self.telemetry.compiling_package(&self.config.name);
+        } else {
+            self.telemetry.checking_package(&self.config.name);
+        }
         let config = std::mem::take(&mut self.config);
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
         Ok(Package { config, modules })

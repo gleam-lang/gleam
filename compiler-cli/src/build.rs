@@ -19,6 +19,10 @@ pub fn main(options: &Options) -> Result<Package> {
     let compiled =
         ProjectCompiler::new(root_config, options, &manifest.packages, telemetry, io).compile()?;
 
-    cli::print_compiled(start.elapsed());
+    if options.perform_codegen {
+        cli::print_compiled(start.elapsed());
+    } else {
+        cli::print_checked(start.elapsed());
+    }
     Ok(compiled)
 }
