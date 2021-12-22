@@ -6,11 +6,11 @@ expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True ->
 import { throwError } from "../gleam.mjs";
 
 export function loop(loop$indentation) {
-  let indentation = loop$indentation;
   while (true) {
+    let indentation = loop$indentation;
     let $ = indentation > 0;
     if ($) {
-      indentation = indentation - 1;
+      loop$indentation = indentation - 1;
     } else if (!$) {
       return undefined;
     } else {

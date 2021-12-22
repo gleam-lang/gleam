@@ -194,6 +194,11 @@ fn tail_call_optimisation_tests() -> List(Test) {
   [
     "10 million recursions doesn't overflow the stack"
     |> example(fn() { assert_equal(Nil, count_down(from: 10_000_000)) }),
+    // https://github.com/gleam-lang/gleam/issues/1214
+    "Arguments correctly reassigned"
+    |> example(fn() {
+      assert_equal([1, 2, 3], tail_recursive_accumulate_down(3, []))
+    }),
   ]
 }
 
@@ -1174,4 +1179,12 @@ pub external fn go(Port) -> Nil =
 
 fn id(x) {
   x
+}
+
+// https://github.com/gleam-lang/gleam/issues/1214
+fn tail_recursive_accumulate_down(x, y) {
+  case x {
+    0 -> y
+    _ -> tail_recursive_accumulate_down(x - 1, [x, ..y])
+  }
 }

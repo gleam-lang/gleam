@@ -6,15 +6,15 @@ expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] ->
 import { throwError } from "../gleam.mjs";
 
 export function count(loop$xs, loop$n) {
-  let xs = loop$xs;
-  let n = loop$n;
   while (true) {
+    let xs = loop$xs;
+    let n = loop$n;
     if (xs.hasLength(0)) {
       return n;
     } else if (xs.atLeastLength(1)) {
       let xs$1 = xs.tail;
-      xs = xs$1;
-      n = n + 1;
+      loop$xs = xs$1;
+      loop$n = n + 1;
     } else {
       throwError(
         "case_no_match",
