@@ -59,6 +59,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Erik Terpstra](https://github.com/eterps)
  - [Florian Kraft](https://github.com/floriank)
  - [Gitpod](https://github.com/gitpod-io)
+ - [Henry Warren](https://github.com/henrysdev)
  - [Herdy Handoko](https://github.com/hhandoko)
  - [Ian González](https://github.com/Ian-GL)
  - [Ingmar Gagen](https://github.com/igagen)
