@@ -22,6 +22,12 @@ use std::{
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
+    /// Whether to perform codegen for the root project. Dependencies always
+    /// have codegen run. Use for the `gleam check` command.
+    /// If future when we have per-module incremental builds we will need to
+    /// track both whether type metadata has been produced and also whether
+    /// codegen has been performed. As such there will be 2 kinds of caching.
+    pub perform_codegen: bool,
 }
 
 #[derive(Debug)]
@@ -217,6 +223,7 @@ where
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
+        compiler.compile_erlang = !is_root || self.options.perform_codegen;
         compiler.read_source_files(self.mode())?;
 
         // Compile project to Erlang source code

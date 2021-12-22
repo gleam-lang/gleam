@@ -102,6 +102,9 @@ enum Command {
         warnings_as_errors: bool,
     },
 
+    /// Type check the project
+    Check,
+
     /// Publish the project to the Hex package manager
     Publish,
 
@@ -262,6 +265,8 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
 
+        Command::Check => command_check(),
+
         Command::Docs(Docs::Build) => docs::build(),
 
         Command::Docs(Docs::Publish) => docs::PublishCommand::publish(),
@@ -330,6 +335,15 @@ compile-package` API with your existing build tool.
 
 ";
 
+fn command_check() -> Result<(), Error> {
+    let _ = build::main(&Options {
+        perform_codegen: false,
+        mode: Mode::Dev,
+        target: None,
+    })?;
+    Ok(())
+}
+
 fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> Result<(), Error> {
     let mut buffer = stderr.buffer();
     let root = Path::new("./");
@@ -337,6 +351,7 @@ fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
         return build::main(&Options {
+            perform_codegen: true,
             mode: Mode::Dev,
             target: None,
         })

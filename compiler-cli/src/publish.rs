@@ -35,6 +35,7 @@ impl PublishCommand {
         let mut compiled = build::main(&Options {
             mode: Mode::Prod,
             target: Some(Target::Erlang),
+            perform_codegen: true,
         })?;
         let config = compiled.config.clone();
 

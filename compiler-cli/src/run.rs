@@ -23,6 +23,7 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
 
     // Build project so we have bytecode to run
     let _ = crate::build::main(&Options {
+        perform_codegen: true,
         mode: Mode::Dev,
         target: None,
     })?;

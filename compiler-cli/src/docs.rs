@@ -48,6 +48,7 @@ pub fn build() -> Result<()> {
     let mut compiled = crate::build::main(&Options {
         mode: Mode::Prod,
         target: None,
+        perform_codegen: true,
     })?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
@@ -90,6 +91,7 @@ impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
         let mut compiled = crate::build::main(&Options {
+            perform_codegen: true,
             mode: Mode::Dev,
             target: None,
         })?;

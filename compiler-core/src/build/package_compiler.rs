@@ -27,6 +27,7 @@ pub struct PackageCompiler<'a, IO> {
     pub erl_libs: &'a str,
     pub write_metadata: bool,
     pub compile_erlang: bool,
+    pub perform_codegen: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
 }
@@ -57,6 +58,7 @@ where
             erl_libs,
             compile_erlang: true,
             write_metadata: true,
+            perform_codegen: true,
             write_entrypoint: false,
             copy_native_files: true,
         }
@@ -247,39 +249,55 @@ where
     }
 
     fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
-        let mut written = vec![];
+        if !self.perform_codegen {
+            tracing::info!("skipping_codegen");
+            return Ok(());
+        }
 
         match self.target {
-            Target::JavaScript => {
-                let artifact_dir = self.out.join("dist");
-                JavaScript::new(&artifact_dir).render(&self.io, modules)?;
+            Target::JavaScript => self.perform_javascript_codegen(modules),
+            Target::Erlang => self.perform_erlang_codegen(modules),
+        }
+    }
 
-                if self.copy_native_files {
-                    self.copy_project_native_files(&artifact_dir, &mut written)?;
-                }
-            }
+    fn perform_erlang_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+        let mut written = vec![];
+        let build_dir = self.out.join("build");
+        let include_dir = self.out.join("include");
+        let io = self.io.clone();
 
-            Target::Erlang => {
-                let build_dir = self.out.join("build");
-                let include_dir = self.out.join("include");
-                let io = self.io.clone();
+        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
+        ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
 
-                Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
-                ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
+        if self.write_entrypoint {
+            self.render_entrypoint_module(&build_dir, &mut written)?;
+        } else {
+            tracing::info!("skipping_entrypoint_generation");
+        }
 
-                if self.write_entrypoint {
-                    self.render_entrypoint_module(&build_dir, &mut written)?;
-                }
+        if self.copy_native_files {
+            self.copy_project_native_files(&build_dir, &mut written)?;
+        } else {
+            tracing::info!("skipping_native_file_copying");
+        }
 
-                if self.copy_native_files {
-                    self.copy_project_native_files(&build_dir, &mut written)?;
-                }
+        if self.compile_erlang {
+            written.extend(modules.iter().map(Module::compiled_erlang_path));
+            self.compile_erlang_to_beam(&written)?;
+        } else {
+            tracing::info!("skipping_erlang_bytecode_compilation");
+        }
+        Ok(())
+    }
 
-                if self.compile_erlang {
-                    written.extend(modules.iter().map(Module::compiled_erlang_path));
-                    self.compile_erlang_to_beam(&written)?;
-                }
-            }
+    fn perform_javascript_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+        let mut written = vec![];
+        let artifact_dir = self.out.join("dist");
+
+        JavaScript::new(&artifact_dir).render(&self.io, modules)?;
+
+        if self.copy_native_files {
+            self.copy_project_native_files(&artifact_dir, &mut written)?;
         }
         Ok(())
     }
