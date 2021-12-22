@@ -2,8 +2,11 @@
 
 ## Unreleased
 
-- `true` and `false` can no longer be used as pattern matching variables.
-  A syntax error will hint about using Gleam's `True` and `False` values instead.
+- The `gleam check` command has been introduced for rapidly verifying the types
+  of Gleam code without performing codegen.
+- `true` and `false` can no longer be used as pattern matching variables, to
+  avoid accidental uses of incorrect syntax that is popular in other languages.
+  An error will hint about using Gleam's `True` and `False` values instead.
 - You can now remove build artifacts using the new `gleam clean` command.
 - The `compile-package` can now generate `package.app` files and compile source
   modules to `.beam` bytecode files.
