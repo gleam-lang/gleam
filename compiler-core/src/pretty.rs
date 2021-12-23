@@ -139,7 +139,7 @@ enum Mode {
     Unbroken,
 }
 
-fn fits(mut limit: isize, mut docs: im::Vector<Document<'_>>) -> bool {
+fn fits(mut limit: isize, mut docs: im::Vector<&Document<'_>>) -> bool {
     loop {
         if limit < 0 {
             return false;
@@ -155,19 +155,19 @@ fn fits(mut limit: isize, mut docs: im::Vector<Document<'_>>) -> bool {
 
             Document::ForceBreak => return false,
 
-            Document::Nest(_, doc) => docs.push_front(*doc),
+            Document::Nest(_, doc) => docs.push_front(&doc),
 
             // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front(*doc),
+            Document::NestCurrent(doc) => docs.push_front(&doc),
 
-            Document::Group(doc) => docs.push_front(*doc),
+            Document::Group(doc) => docs.push_front(&doc),
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => limit -= unbroken.len() as isize,
 
-            Document::FlexBreak(doc) => docs.push_front(*doc),
+            Document::FlexBreak(doc) => docs.push_front(&doc),
 
             Document::Vec(vec) => {
                 for doc in vec.into_iter().rev() {
@@ -240,8 +240,7 @@ fn fmt(
             }
 
             Document::Group(doc) | Document::FlexBreak(doc) => {
-                // TODO: don't clone the doc
-                let group_docs = im::vector![(*doc).clone()];
+                let group_docs = im::vector![doc.as_ref()];
                 if fits(limit - width, group_docs) {
                     docs.push_front((indent, Mode::Unbroken, *doc));
                 } else {

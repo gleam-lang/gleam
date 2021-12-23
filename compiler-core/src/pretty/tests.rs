@@ -13,12 +13,12 @@ fn fits_test() {
     assert!(fits(0, vector![]));
 
     // ForceBreak never fits
-    assert!(!fits(100, vector![ForceBreak]));
+    assert!(!fits(100, vector![&ForceBreak]));
 
     // Break in Broken fits always
     assert!(fits(
         1,
-        vector![Break {
+        vector![&Break {
             broken: "12",
             unbroken: "",
         }]
@@ -27,55 +27,45 @@ fn fits_test() {
     // Break in Unbroken mode fits if `unbroken` fits
     assert!(fits(
         3,
-        vector![Break {
+        vector![&Break {
             broken: "",
             unbroken: "123",
         }]
     ));
     assert!(!fits(
         2,
-        vector![Break {
+        vector![&Break {
             broken: "",
             unbroken: "123",
         }]
     ));
 
     // Line always fits
-    assert!(fits(0, vector![Line(100)]));
+    assert!(fits(0, vector![&Line(100)]));
 
     // String fits if smaller than limit
-    assert!(fits(5, vector![String("Hello".to_string())]));
-    assert!(!fits(4, vector![String("Hello".to_string())]));
+    let doc = String("Hello".to_string());
+    assert!(fits(5, vector![&doc]));
+    let doc = String("Hello".to_string());
+    assert!(!fits(4, vector![&doc]));
 
     // Cons fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![String("1".to_string()).append(String("2".to_string()))]
-    ));
-    assert!(!fits(
-        1,
-        vector![String("1".to_string()).append(String("2".to_string()))]
-    ));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(fits(2, vector![&doc]));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(!fits(1, vector![&doc]));
 
     // Nest fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![Nest(1, Box::new(String("12".to_string())),)]
-    ));
-    assert!(!fits(
-        1,
-        vector![Nest(1, Box::new(String("12".to_string())))]
-    ));
+    let doc = Nest(1, Box::new(String("12".to_string())));
+    assert!(fits(2, vector![&doc]));
+    let doc = Nest(1, Box::new(String("12".to_string())));
+    assert!(!fits(1, vector![&doc]));
 
     // Nest fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![NestCurrent(Box::new(String("12".to_string())),)]
-    ));
-    assert!(!fits(
-        1,
-        vector![NestCurrent(Box::new(String("12".to_string())))]
-    ));
+    let doc = NestCurrent(Box::new(String("12".to_string())));
+    assert!(fits(2, vector![&doc]));
+    let doc = NestCurrent(Box::new(String("12".to_string())));
+    assert!(!fits(1, vector![&doc]));
 }
 
 #[test]
