@@ -20,7 +20,10 @@ use im::hashset;
 #[derive(Debug)]
 pub struct Hydrator {
     created_type_variables: im::HashMap<String, Arc<Type>>,
-    created_type_variable_ids: im::HashSet<usize>,
+    /// A rigid type is a generic type that was specified as being generic in
+    /// an annotation. As such it should never be instantiated into an unbound
+    /// variable.
+    rigid_type_ids: im::HashSet<usize>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
@@ -41,7 +44,7 @@ impl Hydrator {
     pub fn new() -> Self {
         Self {
             created_type_variables: hashmap![],
-            created_type_variable_ids: hashset![],
+            rigid_type_ids: hashset![],
             permit_new_type_variables: true,
             permit_holes: false,
         }
@@ -49,7 +52,7 @@ impl Hydrator {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let created_type_variables = self.created_type_variables.clone();
-        let created_type_variable_ids = self.created_type_variable_ids.clone();
+        let created_type_variable_ids = self.rigid_type_ids.clone();
         ScopeResetData {
             created_type_variables,
             created_type_variable_ids,
@@ -58,7 +61,7 @@ impl Hydrator {
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
         self.created_type_variables = data.created_type_variables;
-        self.created_type_variable_ids = data.created_type_variable_ids;
+        self.rigid_type_ids = data.created_type_variable_ids;
     }
 
     pub fn disallow_new_type_variables(&mut self) {
@@ -69,8 +72,11 @@ impl Hydrator {
         self.permit_holes = flag
     }
 
-    pub fn is_created_generic_type(&self, id: &usize) -> bool {
-        self.created_type_variable_ids.contains(id)
+    /// A rigid type is a generic type that was specified as being generic in
+    /// an annotation. As such it should never be instantiated into an unbound
+    /// variable.
+    pub fn is_rigid(&self, id: &usize) -> bool {
+        self.rigid_type_ids.contains(id)
     }
 
     pub fn type_from_option_ast<'a, 'b>(
@@ -180,9 +186,7 @@ impl Hydrator {
 
                 None if self.permit_new_type_variables => {
                     let var = environment.new_generic_var();
-                    let _ = self
-                        .created_type_variable_ids
-                        .insert(environment.previous_uid());
+                    let _ = self.rigid_type_ids.insert(environment.previous_uid());
                     let _ = self
                         .created_type_variables
                         .insert(name.clone(), var.clone());
