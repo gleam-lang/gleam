@@ -182,14 +182,14 @@ fn fmt(
     writer: &mut impl Utf8Writer,
     limit: isize,
     mut width: isize,
-    mut docs: im::Vector<(isize, Mode, Document<'_>)>,
+    mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
 ) -> Result<()> {
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
             Document::ForceBreak => (),
 
             Document::Line(i) => {
-                for _ in 0..i {
+                for _ in 0..*i {
                     writer.str_write("\n")?;
                 }
                 for _ in 0..indent {
@@ -232,19 +232,19 @@ fn fmt(
             }
 
             Document::Nest(i, doc) => {
-                docs.push_front((indent + i, mode, *doc));
+                docs.push_front((indent + i, mode, doc));
             }
 
             Document::NestCurrent(doc) => {
-                docs.push_front((width, mode, *doc));
+                docs.push_front((width, mode, doc));
             }
 
             Document::Group(doc) | Document::FlexBreak(doc) => {
                 let group_docs = im::vector![doc.as_ref()];
                 if fits(limit - width, group_docs) {
-                    docs.push_front((indent, Mode::Unbroken, *doc));
+                    docs.push_front((indent, Mode::Unbroken, doc));
                 } else {
-                    docs.push_front((indent, Mode::Broken, *doc));
+                    docs.push_front((indent, Mode::Broken, doc));
                 }
             }
         }
@@ -310,8 +310,8 @@ impl<'a> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn pretty_print(self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
-        let docs = im::vector![(0, Mode::Unbroken, Document::Group(Box::new(self)))];
+    pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
+        let docs = im::vector![(0, Mode::Unbroken, self)];
         fmt(writer, limit, 0, docs)?;
         Ok(())
     }

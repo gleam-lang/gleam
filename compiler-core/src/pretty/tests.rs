@@ -105,7 +105,7 @@ fn format_test() {
         broken: "broken",
         unbroken: "unbroken",
     });
-    assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
+    assert_eq!("unbroken\n".to_string(), doc.to_pretty_string(100));
 }
 
 #[test]
