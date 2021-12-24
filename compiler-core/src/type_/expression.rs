@@ -1255,7 +1255,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         } = value_constructor
         {
             if let Type::Fn { retrn, .. } = value_constructor.type_.as_ref() {
-                let spread = self.infer_var(spread.name, spread.location)?;
+                let spread = self.infer(*spread.base)?;
                 let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
 
                 // Check that the spread variable unifies with the return type of the constructor

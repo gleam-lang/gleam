@@ -4,10 +4,10 @@ expression: "\npub type Person {\n  Person(name: String, age: Int)\n};\npub fn u
 
 ---
 error: Unknown variable
-  ┌─ /src/one/two.gleam:6:10
+  ┌─ /src/one/two.gleam:6:12
   │
 6 │   Person(..person)
-  │          ^^^^^^^^ did you mean `Person`?
+  │            ^^^^^^ did you mean `Person`?
 
 The name `person` is not in scope here.
 

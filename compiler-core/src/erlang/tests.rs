@@ -2205,6 +2205,70 @@ main() ->
     New_p.
 "#,
     );
+
+    // Record updates when record is returned from function
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let new_p = Person(..return_person(), age: 28)
+    new_p
+}
+
+fn return_person() {
+    Person("Quinn", 27)
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export_type([person/0]).
+
+-type person() :: {person, binary(), integer()}.
+
+-spec main() -> person().
+main() ->
+    New_p = erlang:setelement(3, return_person(), 28),
+    New_p.
+
+-spec return_person() -> person().
+return_person() ->
+    {person, <<"Quinn"/utf8>>, 27}.
+"#,
+    );
+
+    // Record updates when record is field on another record
+    assert_erl!(
+        r#"
+pub type Car { Car(make: String, model: String, driver: Person) }
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let car = Car(make: "Amphicar", model: "Model 770", driver: Person(name: "John Doe", age: 27))
+    let new_p = Person(..car.driver, age: 28)
+    new_p
+}
+"#,
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export_type([car/0, person/0]).
+
+-type car() :: {car, binary(), binary(), person()}.
+
+-type person() :: {person, binary(), integer()}.
+
+-spec main() -> person().
+main() ->
+    Car = {car,
+           <<"Amphicar"/utf8>>,
+           <<"Model 770"/utf8>>,
+           {person, <<"John Doe"/utf8>>, 27}},
+    New_p = erlang:setelement(3, erlang:element(4, Car), 28),
+    New_p.
+"#,
+    );
 }
 
 #[test]
