@@ -593,12 +593,13 @@ where
                 let start = expr.location().start;
                 if let Some((dot_s, _)) = self.maybe_one(&Token::DotDot) {
                     // Record update
-                    let (_, name, name_e) = self.expect_name()?;
+                    let base = self.expect_expression()?;
+                    let base_e = base.location().end;
                     let spread = RecordUpdateSpread {
-                        name,
+                        base: Box::new(base),
                         location: SrcSpan {
                             start: dot_s,
-                            end: name_e,
+                            end: base_e,
                         },
                     };
                     let mut args = vec![];

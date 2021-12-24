@@ -189,6 +189,10 @@ type Cat {
   Cat(name: String, cuteness: Int)
 }
 
+type Box {
+  Box(occupant: Cat)
+}
+
 const felix = Cat("Felix", 12)
 const tom = Cat(cuteness: 1, name: "Tom")
 
@@ -201,10 +205,17 @@ fn go() {
 fn update(cat) {
   Cat(..cat, name: "Sid")
   Cat(..cat, name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!")
+  Cat(..new_cat(), name: "Molly")
+  let box = Box(occupant: cat)
+  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)
 }
 
 fn access(cat: Cat) {
   cat.cuteness
+}
+
+fn new_cat() {
+  Cat(name: "Beau", cuteness: 11)
 }
 "#,
     );

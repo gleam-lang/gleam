@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nconst felix = Cat(\"Felix\", 12)\nconst tom = Cat(cuteness: 1, name: \"Tom\")\n\nfn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\nfn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n}\n\nfn access(cat: Cat) {\n  cat.cuteness\n}\n"
+expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\ntype Box {\n  Box(occupant: Cat)\n}\n\nconst felix = Cat(\"Felix\", 12)\nconst tom = Cat(cuteness: 1, name: \"Tom\")\n\nfn go() {\n  Cat(\"Nubi\", 1)\n  Cat(2, name: \"Nubi\")\n  Cat(cuteness: 3, name: \"Nubi\")\n}\n\nfn update(cat) {\n  Cat(..cat, name: \"Sid\")\n  Cat(..cat, name: \"Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!\")\n  Cat(..new_cat(), name: \"Molly\")\n  let box = Box(occupant: cat)\n  Cat(..box.occupant, cuteness: box.occupant.cuteness + 1)\n}\n\nfn access(cat: Cat) {\n  cat.cuteness\n}\n\nfn new_cat() {\n  Cat(name: \"Beau\", cuteness: 11)\n}\n"
 
 ---
 import { CustomType } from "../gleam.mjs";
@@ -17,6 +17,13 @@ class Cat extends CustomType {
   }
 }
 
+class Box extends CustomType {
+  constructor(occupant) {
+    super();
+    this.occupant = occupant;
+  }
+}
+
 function go() {
   new Cat("Nubi", 1);
   new Cat("Nubi", 2);
@@ -25,12 +32,17 @@ function go() {
 
 function update(cat) {
   cat.withFields({ name: "Sid" });
-  return cat.withFields({
-    name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!"
-  });
+  cat.withFields({ name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!" });
+  new_cat().withFields({ name: "Molly" });
+  let box = new Box(cat);
+  return box.occupant.withFields({ cuteness: box.occupant.cuteness + 1 });
 }
 
 function access(cat) {
   return cat.cuteness;
+}
+
+function new_cat() {
+  return new Cat("Beau", 11);
 }
 

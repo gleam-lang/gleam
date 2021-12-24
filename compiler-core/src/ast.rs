@@ -518,7 +518,7 @@ pub struct CallArg<A> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct RecordUpdateSpread {
-    pub name: String,
+    pub base: Box<UntypedExpr>,
     pub location: SrcSpan,
 }
 
