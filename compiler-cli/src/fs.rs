@@ -1,4 +1,3 @@
-// use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
