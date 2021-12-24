@@ -1,6 +1,9 @@
 use std::time::Instant;
 
-use gleam_core::{Result, build::{Package, ProjectCompiler, Target}};
+use gleam_core::{
+    build::{Options, Package, ProjectCompiler},
+    Result,
+};
 
 use crate::{cli, fs};
 

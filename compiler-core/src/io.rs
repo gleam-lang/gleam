@@ -76,18 +76,22 @@ impl Iterator for ReadDir {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DirEntry {
     pub pathbuf: PathBuf,
 }
 
 impl DirEntry {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> DirEntry {
+      DirEntry { pathbuf: path.as_ref().to_path_buf() }
+    }
+
     pub fn from_pathbuf(pathbuf: PathBuf) -> DirEntry {
         DirEntry { pathbuf }
     }
 
-    pub fn path(&self) -> PathBuf {
-        self.pathbuf.clone()
+    pub fn as_path(&self) -> &Path {
+      self.pathbuf.as_path()
     }
 
     pub fn into_path(self) -> PathBuf {

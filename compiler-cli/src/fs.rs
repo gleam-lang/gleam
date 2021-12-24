@@ -1,5 +1,12 @@
 // use flate2::{write::GzEncoder, Compression};
-use gleam_core::{Result, error::{Error, FileIoAction, FileKind}, io::{CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir, WrappedReader, WrappedWriter}};
+use gleam_core::{
+    error::{Error, FileIoAction, FileKind},
+    io::{
+        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir,
+        WrappedReader, WrappedWriter,
+    },
+    Result,
+};
 use lazy_static::lazy_static;
 use std::{
     ffi::OsStr,
@@ -67,16 +74,13 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        read_dir(path).map(|res| {
-            let mut blah = Vec::new();
+        read_dir(path).map(|entries| {
+            let entries: Vec<_> = entries
+                .filter_map(|res| res.ok())
+                .map(|entry| Ok(DirEntry { pathbuf: entry.path() }))
+                .collect();
 
-            for item in res {
-                if let Ok(a) = item {
-                    blah.push(Ok(DirEntry { pathbuf: a.path() }))
-                }
-            }
-
-            ReadDir::from_entries(blah)
+            ReadDir::from_entries(entries)
         })
     }
 }

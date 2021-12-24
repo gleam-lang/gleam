@@ -79,7 +79,7 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(mut self, target: Target) -> Result<Package> {
+    pub fn compile(mut self) -> Result<Package> {
         // Determine package processing order
         let sequence = order_packages(&self.packages)?;
 
@@ -123,10 +123,7 @@ where
         Ok(())
     }
 
-    fn compile_rebar3_dep_package(
-        &mut self,
-        package: &ManifestPackage
-    ) -> Result<(), Error> {
+    fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let name = &package.name;
         let mode = self.mode();
         let target = self.target();
@@ -182,10 +179,7 @@ where
         }
     }
 
-    fn compile_gleam_dep_package(
-        &mut self,
-        package: &ManifestPackage
-    ) -> Result<(), Error> {
+    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         println!("compile_gleam_dep_package");
         let config_path = paths::build_deps_package_config(&package.name);
         let config = PackageConfig::read(config_path, &self.io)?;

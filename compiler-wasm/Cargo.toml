@@ -1,9 +1,9 @@
 [package]
+name = "gleam-wasm"
+version = "0.18.2"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
-name = "gleam-wasm"
-version = "0.18.0-rc2"
 
 [lib]
 # This package compiles to wasm

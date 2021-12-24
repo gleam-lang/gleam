@@ -172,7 +172,7 @@ where
         self.io.mkdir(&out)?;
 
         for entry in self.io.read_dir(src_path)? {
-            let path = entry.expect("copy_native_files dir_entry").path();
+            let path = entry.expect("copy_native_files dir_entry").pathbuf;
 
             let extension = path
                 .extension()
