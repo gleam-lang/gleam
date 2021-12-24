@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 use hexpm::version::{Range, Version};
 
-use gleam_core::build::{Options, Package, ProjectCompiler, Target, Mode};
+use gleam_core::build::{Mode, Options, Package, ProjectCompiler, Target};
 use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Repository};
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
@@ -75,9 +75,9 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
     }];
 
     let options = Options {
-      mode: Mode::Dev,
-      target: Some(target),
-      perform_codegen: true,
+        mode: Mode::Dev,
+        target: Some(target),
+        perform_codegen: true,
     };
 
     let pcompiler = ProjectCompiler::new(
@@ -201,56 +201,4 @@ fn test_erlang_project_stdlib() {
         Target::Erlang,
     )
     .unwrap();
-
-    // assert_eq!(
-    //     result.get("gleam-packages/gleam-wasm/main.js"),
-    //     Some(&String::from("import * as $io from \"gleam-packages/gleam_stdlib/gleam/io.js\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
-    // );
-
-    //let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
-
-    // for key in result.keys() {
-    //     println!("{:?}", key);
-    // }
-
-    //println!("{:?}", result);
 }
-
-// #[test]
-// fn test_compile_library() {
-//     let mut wfs = WasmFileSystem::new();
-
-//     let _result = compile_std_library(&mut wfs, Target::JavaScript).unwrap();
-
-//     // Writes JS files to the build folder.
-//     assert!(wfs.read(Path::new("build/gleam/order.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/order.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/int.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/pair.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/list.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/option.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/result.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/map.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/iterator.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/queue.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/bit_string.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/dynamic.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/function.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/regex.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/string.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/uri.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/set.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/float.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/io.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/bool.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/bit_builder.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/base.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam/string_builder.js")).is_ok());
-//     assert!(wfs.read(Path::new("build/gleam.js")).is_ok());
-
-//     let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
-
-//     for key in gathered_files.keys() {
-//         //println!("{:?}", key);
-//     }
-// }

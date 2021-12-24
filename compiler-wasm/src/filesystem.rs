@@ -39,7 +39,7 @@ impl CommandExecutor for WasmFileSystem {
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
     ) -> Result<i32, Error> {
-      Ok(0) // Always succeed.
+        Ok(0) // Always succeed.
     }
 }
 
