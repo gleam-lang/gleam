@@ -1,17 +1,12 @@
-use std::{
-    ffi::OsStr,
-    io,
-    path::{Path, PathBuf},
-};
-
 use gleam_core::{
     io::{
-        memory::InMemoryFileSystem, CommandExecutor, DirEntry, FileSystemIO, FileSystemReader,
+        memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
         FileSystemWriter, ReadDir, WrappedReader, WrappedWriter,
     },
     Error, Result,
 };
 use rust_embed::RustEmbed;
+use std::path::{Path, PathBuf};
 
 use crate::static_files::StaticFiles;
 
@@ -73,12 +68,10 @@ impl FileSystemWriter for WasmFileSystem {
 impl FileSystemReader for WasmFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
         println!("gleam_source_files {:?}", dir);
-        let mut files1: Vec<PathBuf> = self.imfs.gleam_source_files(dir).collect();
-        let mut files2: Vec<PathBuf> = self.static_files.gleam_source_files(dir).collect();
-
-        files1.append(&mut files2);
-
-        Box::new(files1.into_iter())
+        Box::new(itertools::merge(
+            self.imfs.gleam_source_files(dir),
+            self.static_files.gleam_source_files(dir),
+        ))
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {

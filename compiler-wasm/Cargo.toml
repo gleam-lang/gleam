@@ -18,6 +18,7 @@ rust-embed = {version = "6.2.0", features = ["debug-embed"]}
 serde = {version = "1.0", features = ["derive"]}
 wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
 wasm-logger = "0.2.0"
+itertools = "0.10.1"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.28"

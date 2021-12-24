@@ -709,6 +709,7 @@ dependencies = [
  "console_error_panic_hook",
  "gleam-core",
  "hexpm",
+ "itertools",
  "log",
  "rust-embed",
  "serde",
