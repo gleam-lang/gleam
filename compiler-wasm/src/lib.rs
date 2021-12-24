@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 use hexpm::version::{Range, Version};
 
-use gleam_core::build::{Options, Package, ProjectCompiler, Target, Telemetry, Mode};
+use gleam_core::build::{Options, Package, ProjectCompiler, Target, Mode};
 use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Repository};
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
@@ -15,20 +15,10 @@ use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource
 mod filesystem;
 use filesystem::WasmFileSystem;
 
+mod log_telemetry;
+use log_telemetry::LogTelemetry;
+
 const PROJECT_NAME: &str = "gleam-wasm";
-
-#[derive(Debug)]
-struct LogTelemetry;
-
-impl Telemetry for LogTelemetry {
-    fn compiling_package(&self, name: &str) {
-      log::info!("Compiling package: {}", name);
-    }
-
-    fn checking_package(&self, name: &str) {
-      log::info!("Checking package: {}", name);
-    }
-}
 
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
@@ -42,7 +32,7 @@ pub fn compile(
 ) -> Result<HashMap<String, String>, String> {
     let mut wfs = WasmFileSystem::new();
 
-    write_source_file(main_source, "src/main.gleam", &mut wfs);
+    write_source_file(main_source, "./src/main.gleam", &mut wfs);
 
     for (path, source) in additional_source_files.into_iter() {
         write_source_file(&source, &path, &mut wfs);
@@ -121,7 +111,7 @@ fn gather_compiled_files(
 
     let extension_to_search_for = match target {
         Target::Erlang => Some(OsStr::new("erl")),
-        Target::JavaScript => Some(OsStr::new("js")),
+        Target::JavaScript => Some(OsStr::new("mjs")),
     };
 
     for file in wfs.read_dir(&Path::new("build")).unwrap() {
@@ -186,17 +176,13 @@ fn test_javascript_project_stdlib() {
     .unwrap();
 
     assert_eq!(
-        result.get("gleam-packages/gleam-wasm/main.js"),
-        Some(&String::from("import * as $io from \"gleam-packages/gleam_stdlib/gleam/io.js\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
+        result.get("gleam-packages/gleam-wasm/dist/main.mjs"),
+        Some(&String::from("import * as $io from \"../../gleam_stdlib/dist/gleam/io.mjs\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
     );
 
-    //let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
-
-    for key in result.keys() {
-        println!("{:?}", key);
-    }
-
-    //println!("{:?}", result);
+    // for key in result.keys() {
+    //     println!("{:?}", key);
+    // }
 }
 
 #[test]

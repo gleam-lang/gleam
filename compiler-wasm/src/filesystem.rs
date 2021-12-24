@@ -39,12 +39,7 @@ impl CommandExecutor for WasmFileSystem {
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
     ) -> Result<i32, Error> {
-        // Err(Error::ShellCommand {
-        //     command: "blah".to_string(),
-        //     err: None,
-        // })
-
-        unimplemented!();
+      Ok(0) // Always succeed.
     }
 }
 
@@ -90,6 +85,8 @@ impl FileSystemReader for WasmFileSystem {
             .collect();
 
         files1.append(&mut files2);
+
+        println!("{:?}", &files1);
 
         Box::new(files1.into_iter())
     }
