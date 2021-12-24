@@ -75,7 +75,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{package_compiler, Target},
+    build::{Mode, Options, Target},
     diagnostic::{self, Severity},
     error::wrap,
     hex::RetirementReason,
@@ -101,6 +101,9 @@ enum Command {
         #[structopt(long)]
         warnings_as_errors: bool,
     },
+
+    /// Type check the project
+    Check,
 
     /// Publish the project to the Hex package manager
     Publish,
@@ -159,6 +162,9 @@ enum Command {
         #[structopt(long)]
         dev: bool,
     },
+
+    /// Clean build artifacts
+    Clean,
 }
 
 #[derive(StructOpt, Debug, Clone)]
@@ -191,43 +197,25 @@ pub struct CompilePackage {
     #[structopt(long, case_insensitive = true, default_value = "erlang")]
     target: Target,
 
-    /// The name of the package being compiler
-    #[structopt(long = "name")]
-    package_name: String,
+    /// The directory of the Gleam package
+    #[structopt(long = "in", default_value = ".")]
+    package_directory: PathBuf,
 
-    /// A directory of source Gleam code
-    #[structopt(long = "src")]
-    src_directory: PathBuf,
-
-    /// A directory of test Gleam code
-    #[structopt(long = "test")]
-    test_directory: Option<PathBuf>,
-
-    /// A directory to write compiled code to
-    #[structopt(long = "out")]
+    /// A directory to write compiled package to
+    #[structopt(long = "out", default_value = ".")]
     output_directory: PathBuf,
 
-    /// A path to a compiled dependency library
-    #[structopt(long = "lib")]
-    libraries: Vec<PathBuf>,
-}
-
-impl CompilePackage {
-    pub fn into_package_compiler_options(self) -> package_compiler::Options {
-        package_compiler::Options {
-            target: self.target,
-            name: self.package_name,
-            src_path: self.src_directory,
-            test_path: self.test_directory,
-            out_path: self.output_directory,
-            write_metadata: true,
-        }
-    }
+    /// A directories of precompiled Gleam projects
+    #[structopt(long = "lib", default_value = ".")]
+    libraries_directory: PathBuf,
 }
 
 #[derive(StructOpt, Debug)]
 enum Dependencies {
-    /// Download packages to the local cache
+    /// List all dependency packages
+    List,
+
+    /// Download all dependency packages
     Download,
 }
 
@@ -277,6 +265,8 @@ fn main() {
     let result = match Command::from_args() {
         Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
 
+        Command::Check => command_check(),
+
         Command::Docs(Docs::Build) => docs::build(),
 
         Command::Docs(Docs::Publish) => docs::PublishCommand::publish(),
@@ -288,6 +278,8 @@ fn main() {
             files,
             check,
         } => format::run(stdin, check, files),
+
+        Command::Deps(Dependencies::List) => dependencies::list(),
 
         Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
 
@@ -317,6 +309,8 @@ fn main() {
         }
 
         Command::Add { package, dev } => add::command(package, dev),
+
+        Command::Clean => clean(),
     };
 
     match result {
@@ -341,13 +335,27 @@ compile-package` API with your existing build tool.
 
 ";
 
+fn command_check() -> Result<(), Error> {
+    let _ = build::main(&Options {
+        perform_codegen: false,
+        mode: Mode::Dev,
+        target: None,
+    })?;
+    Ok(())
+}
+
 fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> Result<(), Error> {
     let mut buffer = stderr.buffer();
     let root = Path::new("./");
 
     // Use new build tool if not in a rebar or mix project
     if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
-        return build::main().map(|_| ());
+        return build::main(&Options {
+            perform_codegen: true,
+            mode: Mode::Dev,
+            target: None,
+        })
+        .map(|_| ());
     }
 
     diagnostic::write_title(
@@ -394,6 +402,10 @@ fn print_config() -> Result<()> {
     let config = root_config()?;
     println!("{:#?}", config);
     Ok(())
+}
+
+fn clean() -> Result<()> {
+    fs::delete_dir(&gleam_core::paths::build())
 }
 
 fn initialise_logger() {

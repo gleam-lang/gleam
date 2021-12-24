@@ -33,8 +33,8 @@ fn same_name_global_external() {
 #[test]
 fn same_module_multiple_imports() {
     assert_js!(
-        r#"pub external fn one() -> Nil = "./the/module.js" "one"
-pub external fn two() -> Nil = "./the/module.js" "two"
+        r#"pub external fn one() -> Nil = "./the/module.mjs" "one"
+pub external fn two() -> Nil = "./the/module.mjs" "two"
 "#,
     );
 }
@@ -42,8 +42,8 @@ pub external fn two() -> Nil = "./the/module.js" "two"
 #[test]
 fn duplicate_import() {
     assert_js!(
-        r#"pub external fn one() -> Nil = "./the/module.js" "dup"
-pub external fn two() -> Nil = "./the/module.js" "dup"
+        r#"pub external fn one() -> Nil = "./the/module.mjs" "dup"
+pub external fn two() -> Nil = "./the/module.mjs" "dup"
 "#,
     );
 }
@@ -51,7 +51,7 @@ pub external fn two() -> Nil = "./the/module.js" "dup"
 #[test]
 fn name_to_escape() {
     assert_js!(
-        r#"pub external fn class() -> Nil = "./the/module.js" "one"
+        r#"pub external fn class() -> Nil = "./the/module.mjs" "one"
 "#,
     );
 }

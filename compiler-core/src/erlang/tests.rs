@@ -1,101 +1,8 @@
-use super::*;
-use crate::type_;
-
+mod assert;
+mod records;
 mod statement_if;
-
-#[test]
-fn record_definition_test() {
-    let module_name = vec!["name".to_string()];
-    assert_eq!(
-        record_definition(
-            "PetCat",
-            &[
-                ("name", type_::tuple(vec![])),
-                ("is_cute", type_::tuple(vec![]))
-            ]
-        ),
-        "-record(pet_cat, {name :: {}, is_cute :: {}}).\n".to_string()
-    );
-
-    // Reserved words are escaped in record names and fields
-    assert_eq!(
-        record_definition(
-            "div",
-            &[
-                ("receive", type_::int()),
-                ("catch", type_::tuple(vec![])),
-                ("unreserved", type_::tuple(vec![]))
-            ]
-        ),
-        "-record(\'div\', {\'receive\' :: integer(), \'catch\' :: {}, unreserved :: {}}).\n"
-            .to_string()
-    );
-
-    // Type vars are printed as `any()` because records don't support generics
-    assert_eq!(
-        record_definition(
-            "PetCat",
-            &[
-                ("name", type_::generic_var(1)),
-                ("is_cute", type_::unbound_var(1)),
-                ("linked", type_::link(type_::int()))
-            ]
-        ),
-        "-record(pet_cat, {name :: any(), is_cute :: any(), linked :: integer()}).\n".to_string()
-    );
-
-    // Types are printed with module qualifiers
-    assert_eq!(
-        record_definition(
-            "PetCat",
-            &[(
-                "name",
-                Arc::new(type_::Type::App {
-                    public: true,
-                    module: module_name,
-                    name: "my_type".to_string(),
-                    args: vec![]
-                })
-            )]
-        ),
-        "-record(pet_cat, {name :: name:my_type()}).\n".to_string()
-    );
-
-    // Long definition formatting
-    assert_eq!(
-        record_definition(
-            "PetCat",
-            &[
-                ("name", type_::generic_var(1)),
-                ("is_cute", type_::unbound_var(1)),
-                ("linked", type_::link(type_::int())),
-                (
-                    "whatever",
-                    type_::list(type_::tuple(vec![
-                        type_::nil(),
-                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
-                        type_::nil(),
-                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
-                        type_::nil(),
-                        type_::list(type_::tuple(vec![type_::nil(), type_::nil(), type_::nil()])),
-                    ]))
-                ),
-            ]
-        ),
-        "-record(pet_cat, {
-    name :: any(),
-    is_cute :: any(),
-    linked :: integer(),
-    whatever :: list({nil,
-                      list({nil, nil, nil}),
-                      nil,
-                      list({nil, nil, nil}),
-                      nil,
-                      list({nil, nil, nil})})
-}).\n"
-            .to_string()
-    );
-}
+mod todo;
+mod variables;
 
 #[macro_export]
 macro_rules! assert_erl {
@@ -131,116 +38,40 @@ macro_rules! assert_erl {
         module(&ast, &line_numbers, &mut output).unwrap();
         assert_eq!(($src, output), ($src, $erl.to_string()));
     }};
-}
 
-#[test]
-fn variable_rewrite() {
-    // https://github.com/gleam-lang/gleam/issues/333
-    assert_erl!(
-        r#"
-pub fn go(a) {
-  case a {
-    99 -> {
-      let a = a
-      1
-    }
-    _ -> a
-  }
-}
-
-                    "#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/1]).
-
--spec go(integer()) -> integer().
-go(A) ->
-    case A of
-        99 ->
-            A@1 = A,
-            1;
-
-        _@1 ->
-            A
-    end.
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/772
-    assert_erl!(
-        "pub fn main(board) {
-fn(board) { board }
-  board
-}",
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(A) -> A.
-main(Board) ->
-    fun(Board@1) -> Board@1 end,
-    Board.
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/762
-    assert_erl!(
-        r#"
-pub fn main(x) {
-  fn(x) { x }(x)
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(A) -> A.
-main(X) ->
-    (fun(X@1) -> X@1 end)(X).
-"#,
-    );
-
-    assert_erl!(
-        r#"
-pub fn main(x) {
-  x
-  |> fn(x) { x }
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/1]).
-
--spec main(D) -> D.
-main(X) ->
-    _pipe = X,
-    (fun(X@1) -> X@1 end)(_pipe).
-"#,
-    );
-
-    // https://github.com/gleam-lang/gleam/issues/788
-    assert_erl!(
-        r#"pub fn go() {
-  let _r = 1
-  let _r = 2
-  Nil
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/0]).
-
--spec go() -> nil.
-go() ->
-    _@1 = 1,
-    _@2 = 2,
-    nil.
-"#,
-    );
+    // Insta snapshot variation
+    ($src:expr $(,)?) => {{
+        use crate::{
+            build::Origin,
+            erlang::module,
+            line_numbers::LineNumbers,
+            type_::{build_prelude, infer_module},
+        };
+        use std::collections::HashMap;
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["the_app".to_string()];
+        let mut modules = HashMap::new();
+        let mut uid = 0;
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let ast = infer_module(
+            crate::build::Target::Erlang,
+            &mut 0,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut vec![],
+        )
+        .expect("should successfully infer");
+        let mut output = String::new();
+        let line_numbers = LineNumbers::new($src);
+        module(&ast, &line_numbers, &mut output).unwrap();
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
 }
 
 #[test]
@@ -1590,51 +1421,6 @@ main(Args) ->
 }
 
 #[test]
-fn todo_expr() {
-    assert_erl!(
-        r#"
-pub fn main() {
-  todo
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/0]).
-
--spec main() -> any().
-main() ->
-    erlang:error(#{gleam_error => todo,
-                   message => <<"This has not yet been implemented"/utf8>>,
-                   module => <<"the_app"/utf8>>,
-                   function => <<"main"/utf8>>,
-                   line => 3}).
-"#,
-    );
-
-    assert_erl!(
-        r#"
-pub fn main() {
-  todo("testing")
-}
-"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([main/0]).
-
--spec main() -> any().
-main() ->
-    erlang:error(#{gleam_error => todo,
-                   message => <<"testing"/utf8>>,
-                   module => <<"the_app"/utf8>>,
-                   function => <<"main"/utf8>>,
-                   line => 3}).
-"#,
-    );
-}
-
-#[test]
 fn record_accessors() {
     // We can use record accessors for types with only one constructor
     assert_erl!(
@@ -2821,130 +2607,6 @@ main() ->
     );
 }
 
-#[test]
-fn assert() {
-    // One var
-    assert_erl!(
-        r#"pub fn go() {
-  assert Ok(y) = Ok(1)
-  y
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/0]).
-
--spec go() -> integer().
-go() ->
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y} -> {ok, Y};
-        _try ->
-            erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 2})
-    end,
-    Y@1.
-"#,
-    );
-
-    // More vars
-    assert_erl!(
-        r#"pub fn go(x) {
-  assert [1, a, b, c] = x
-  [a, b, c]
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/1]).
-
--spec go(list(integer())) -> list(integer()).
-go(X) ->
-    [1, A@1, B@1, C@1] = case X of
-        [1, A, B, C] -> [1, A, B, C];
-        _try ->
-            erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 2})
-    end,
-    [A@1, B@1, C@1].
-"#,
-    );
-
-    // Pattern::Let
-    assert_erl!(
-        r#"pub fn go(x) {
-  assert [1 as a, b, c] = x
-  [a, b, c]
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/1]).
-
--spec go(list(integer())) -> list(integer()).
-go(X) ->
-    [1 = A@1, B@1, C@1] = case X of
-        [1 = A, B, C] -> [1 = A, B, C];
-        _try ->
-            erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 2})
-    end,
-    [A@1, B@1, C@1].
-"#,
-    );
-
-    // Following asserts use appropriate variable rewrites
-    assert_erl!(
-        r#"pub fn go() {
-  assert Ok(y) = Ok(1)
-  assert Ok(y) = Ok(1)
-  y
-}"#,
-        r#"-module(the_app).
--compile(no_auto_import).
-
--export([go/0]).
-
--spec go() -> integer().
-go() ->
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y} -> {ok, Y};
-        _try ->
-            erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 2})
-    end,
-    {ok, Y@3} = case {ok, 1} of
-        {ok, Y@2} -> {ok, Y@2};
-        _try@1 ->
-            erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try@1,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 3})
-    end,
-    Y@3.
-"#,
-    );
-
-    // TODO: patterns that are just vars don't render a case expression
-}
-
 // https://github.com/gleam-lang/gleam/issues/1006
 #[test]
 fn keyword_constructors() {
@@ -3131,6 +2793,77 @@ x(Y) ->
                            line => 2})
     end,
     1.
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1379
+#[test]
+fn pipe_in_spread() {
+    assert_erl!(
+        "pub type X {
+  X(a: Int, b: Int)
+}
+
+fn id(x) {
+  x
+}
+        
+pub fn main(x) {
+  X(..x, a: 1 |> id)
+}",
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+-export_type([x/0]).
+
+-type x() :: {x, integer(), integer()}.
+
+-spec id(A) -> A.
+id(X) ->
+    X.
+
+-spec main(x()) -> x().
+main(X) ->
+    erlang:setelement(
+        2,
+        X,
+        begin
+            _pipe = 1,
+            id(_pipe)
+        end
+    ).
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1385
+#[test]
+fn pipe_in_eq() {
+    assert_erl!(
+        "fn id(x) {
+  x
+}
+        
+pub fn main() {
+    1 == 1 |> id
+}",
+        r#"-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec id(A) -> A.
+id(X) ->
+    X.
+
+-spec main() -> boolean().
+main() ->
+    1 =:= begin
+        _pipe = 1,
+        id(_pipe)
+    end.
 "#
     );
 }

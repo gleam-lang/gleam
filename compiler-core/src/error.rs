@@ -61,8 +61,8 @@ pub enum Error {
         second: PathBuf,
     },
 
-    #[error("duplicate Erlang file {file}")]
-    DuplicateErlangFile { file: String },
+    #[error("duplicate source file {file}")]
+    DuplicateSourceFile { file: String },
 
     #[error("test module {test_module} imported into application module {src_module}")]
     SrcImportingTest {
@@ -266,12 +266,14 @@ pub enum InvalidProjectNameReason {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum StandardIoAction {
     Read,
+    Write,
 }
 
 impl StandardIoAction {
     fn text(&self) -> &'static str {
         match self {
             StandardIoAction::Read => "read from",
+            StandardIoAction::Write => "write to",
         }
     }
 }
@@ -569,9 +571,9 @@ Second: {}",
                 write_project(buf, diagnostic);
             }
 
-            Error::DuplicateErlangFile { file } => {
+            Error::DuplicateSourceFile { file } => {
                 let diagnostic = ProjectErrorDiagnostic {
-                    title: "Duplicate Erlang file".to_string(),
+                    title: "Duplicate Source file".to_string(),
                     label: format!("The file `{}` is defined multiple times.", file),
                 };
                 write_project(buf, diagnostic);
@@ -1696,6 +1698,10 @@ Try a different name for this module.",
                         "This is a reserved word.",
                         vec!["Hint: I was expecting to see a name here.".to_string(), "See: https://gleam.run/book/tour/reserved-words".to_string()]
                     ),
+                    ParseErrorType::LowcaseBooleanPattern => (
+                        "Did you want a Bool instead of a variable?",
+                        vec!["Hint: In Gleam boolean literals are True and False".to_string(), "See: https://gleam.run/book/tour/bools.html".to_string()]
+                    ),
                     ParseErrorType::UnexpectedToken { expected } => {
                         let mut messages = expected.clone();
                         if let Some(s) = messages.first_mut() {
@@ -1906,7 +1912,7 @@ Fix the warnings and try again!",
                         ),
                 };
                 write_project(buf, diagnostic);
-                writeln!(buf, "\n{}", error).unwrap();
+                writeln!(buf, "\n{}", wrap(&error.to_string())).unwrap();
             }
 
             Error::DuplicateDependency(name) => {

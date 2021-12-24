@@ -4,7 +4,7 @@ use gleam_core::{Result, build::{Package, ProjectCompiler, Target}};
 
 use crate::{cli, fs};
 
-pub fn main() -> Result<Package> {
+pub fn main(options: &Options) -> Result<Package> {
     let manifest = crate::dependencies::download(None)?;
 
     let root_config = crate::config::root_config()?;
@@ -13,9 +13,13 @@ pub fn main() -> Result<Package> {
     let start = Instant::now();
 
     tracing::info!("Compiling packages");
-    let compiled = ProjectCompiler::new(root_config, &manifest.packages, telemetry, io)
-        .compile(Target::JavaScript)?;
+    let compiled =
+        ProjectCompiler::new(root_config, options, &manifest.packages, telemetry, io).compile()?;
 
-    cli::print_compiled(start.elapsed());
+    if options.perform_codegen {
+        cli::print_compiled(start.elapsed());
+    } else {
+        cli::print_checked(start.elapsed());
+    }
     Ok(compiled)
 }

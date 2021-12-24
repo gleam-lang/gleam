@@ -8,14 +8,12 @@ clean:
 .phony: erlang
 erlang:
 	@echo test/language on Erlang
-	@cargo run --quiet -- compile-package --name language --src src --out target-erlang --target erlang
-	@cp src/*.erl target-erlang/
-	@cd target-erlang && erlc *.erl
+	@cargo run --quiet -- compile-package --in . --out target-erlang --target erlang
 	@escript main_erlang.erl
 
 .phony: javascript
 javascript:
 	@echo test/language on JavaScript
-	@cargo run --quiet -- compile-package --name language --src src --out target-javascript --target javascript
-	@cp src/*.js target-javascript/
+	@cargo run --quiet -- compile-package --in . --out target-javascript --target javascript
+	@cp src/*.mjs target-javascript/dist
 	@node main_javascript.js

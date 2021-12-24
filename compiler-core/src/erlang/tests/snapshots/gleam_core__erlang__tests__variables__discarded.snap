@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+expression: "pub fn go() {\n  let _r = 1\n  let _r = 2\n  Nil\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec go() -> nil.
+go() ->
+    _@1 = 1,
+    _@2 = 2,
+    nil.
+

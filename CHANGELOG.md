@@ -1,5 +1,55 @@
 # Changelog
 
+## Unreleased
+
+- The `gleam check` command has been introduced for rapidly verifying the types
+  of Gleam code without performing codegen.
+- `true` and `false` can no longer be used as pattern matching variables, to
+  avoid accidental uses of incorrect syntax that is popular in other languages.
+  An error will hint about using Gleam's `True` and `False` values instead.
+- You can now remove build artifacts using the new `gleam clean` command.
+- The `compile-package` can now generate `package.app` files and compile source
+  modules to `.beam` bytecode files.
+- The flags that `compile-package` accepts have changed.
+- Published Hex packages now include precompiled Erlang files.
+- Erlang record headers are now written to the `include` directory within the
+  package build directory.
+- The format used by the formatter has been improved.
+- Fixed a bug where tail recursion could sometimes generated incorrect
+  JavaScript code.
+- Performance of code generators has been slightly improved.
+
+## v0.18.2 - 2021-12-12
+
+- Erlang applications are now automatically started when the VM is started by
+  `gleam run` and `gleam test`.
+
+## v0.18.1 - 2021-12-12
+
+- Fixed a bug where pipe expressions in record updates and operator expressions
+  could geneate incorrect Erlang code.
+- The `priv` directory is now copied to the output directory for rebar3 packages
+  prior to compilation. This is required for some packages to compile.
+- Fixed a bug where deps that fail to compile would be skipped when compilation
+  would next be attempted, resulting the project being in an invalid state.
+
+## v0.18.0 - 2021-12-06
+
+- New projects now include `gleeunit`.
+
+## v0.18.0-rc3 - 2021-12-05
+
+- URL format in gleam.toml is now validated.
+- The `gleam deps list` command has been added.
+- Fixed a bug where changing requirements in `gleam.toml` would not cause deps
+  to be re-resolved.
+- Fixed a bug where locked deps would cause incompatible package requirements to
+  be discarded.
+- Development dependencies are now included in the applications listed in the
+  generated OTP `.app` file.
+- `gleam.toml` now includes an `erlang.extra_applications` key to specify extra
+  OTP applications that need to be started.
+
 ## v0.18.0-rc2 - 2021-11-26
 
 - Fixed a bug where OTP .app files would be generated with invalid syntax.

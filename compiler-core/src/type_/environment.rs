@@ -323,7 +323,7 @@ impl<'a, 'b> Environment<'a, 'b> {
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
                         None => {
-                            if !hydrator.is_created_generic_type(id) {
+                            if !hydrator.is_rigid(id) {
                                 // Check this in the hydrator, i.e. is it a created type
                                 let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());

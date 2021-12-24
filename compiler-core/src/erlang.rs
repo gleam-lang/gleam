@@ -771,12 +771,12 @@ fn bin_op<'a>(
 
     let left_expr = match left {
         TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
-        _ => expr(left, env),
+        _ => maybe_block_expr(left, env),
     };
 
     let right_expr = match right {
         TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
-        _ => expr(right, env),
+        _ => maybe_block_expr(right, env),
     };
 
     let div = |left: Document<'a>, right: Document<'a>| {
@@ -1299,7 +1299,7 @@ fn record_update<'a>(
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
         let index_doc = (arg.index + 2).to_doc();
-        let value_doc = expr(&arg.value, env);
+        let value_doc = maybe_block_expr(&arg.value, env);
 
         "erlang:setelement"
             .to_doc()

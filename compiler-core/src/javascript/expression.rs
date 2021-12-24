@@ -87,9 +87,8 @@ impl<'module> Generator<'module> {
             docvec!["let ", var, " = loop$", name, ";", line()]
         }));
         Ok(docvec!(
-            loop_assignments,
             "while (true) {",
-            docvec!(line(), body).nest(INDENT),
+            docvec!(line(), loop_assignments, body).nest(INDENT),
             line(),
             "}"
         ))
@@ -700,6 +699,7 @@ impl<'module> Generator<'module> {
                     }
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
+                        docs.push("loop$".to_doc());
                         docs.push(Document::String(maybe_escape_identifier_string(name)));
                         docs.push(" = ".to_doc());
                     }

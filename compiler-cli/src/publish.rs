@@ -5,7 +5,11 @@ use std::{
 };
 
 use flate2::{write::GzEncoder, Compression};
-use gleam_core::{config::PackageConfig, hex, Error, Result};
+use gleam_core::{
+    build::{Mode, Options, Package, Target},
+    config::PackageConfig,
+    hex, paths, Error, Result,
+};
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
@@ -24,7 +28,16 @@ pub struct PublishCommand {
 
 impl PublishCommand {
     pub fn setup() -> Result<Self> {
-        let config = crate::config::root_config()?;
+        // Reset the build directory so we know the state of the project
+        fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
+
+        // Build the project to check that it is valid
+        let mut compiled = build::main(&Options {
+            mode: Mode::Prod,
+            target: Some(Target::Erlang),
+            perform_codegen: true,
+        })?;
+        let config = compiled.config.clone();
 
         // These fields are required to publish a Hex package. Hex will reject
         // packages without them.
@@ -35,25 +48,31 @@ impl PublishCommand {
             });
         }
 
-        // Build the project to check that it is valid
-        let mut compiled = build::main()?;
+        // Build the package release tarball
+        let Tarball {
+            data: package_tarball,
+            src_files_added,
+            generated_files_added,
+        } = build_hex_tarball(&compiled)?;
 
         // Build HTML documentation
         let docs_tarball =
             fs::create_tar_archive(docs::build_documentation(&config, &mut compiled)?)?;
 
-        // Build the package release tarball
-        let (package_tarball, added_files) = build_hex_tarball(&config)?;
-
-        cli::print_publishing(&config.name, &config.version);
-
         // Ask user if this is correct
-        println!("\nFiles:");
-        for file in added_files.iter().sorted() {
+        if !generated_files_added.is_empty() {
+            println!("\nGenerated files:");
+            for file in generated_files_added.iter().sorted() {
+                println!("  - {}", file.0.to_string_lossy());
+            }
+        }
+        println!("\nSource files:");
+        for file in src_files_added.iter().sorted() {
             println!("  - {}", file.to_string_lossy());
         }
-        println!("Name: {}", config.name);
+        println!("\nName: {}", config.name);
         println!("Version: {}", config.version.to_string());
+
         if cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
             println!("Not publishing.");
             std::process::exit(0);
@@ -75,12 +94,15 @@ impl ApiKeyCommand for PublishCommand {
         api_key: &str,
     ) -> Result<()> {
         let start = Instant::now();
+        cli::print_publishing(&self.config.name, &self.config.version);
+
         runtime.block_on(hex::publish_package(
             std::mem::take(&mut self.package_tarball),
             api_key,
             hex_config,
             &HttpClient::new(),
         ))?;
+
         cli::print_publishing_documentation();
         runtime.block_on(hex::publish_documentation(
             &self.config.name,
@@ -99,11 +121,18 @@ impl ApiKeyCommand for PublishCommand {
     }
 }
 
-fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> {
-    let files = project_files()?;
-    let contents_tar_gz = contents_tarball(&files)?;
+struct Tarball {
+    data: Vec<u8>,
+    src_files_added: Vec<PathBuf>,
+    generated_files_added: Vec<(PathBuf, String)>,
+}
+
+fn build_hex_tarball(package: &Package) -> Result<Tarball> {
+    let generated_files = generated_files(package)?;
+    let src_files = project_files()?;
+    let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
-    let metadata = metadata_config(config, &files);
+    let metadata = metadata_config(&package.config, &src_files, &generated_files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -124,20 +153,29 @@ fn build_hex_tarball(config: &PackageConfig) -> Result<(Vec<u8>, Vec<PathBuf>)> 
         tarball.finish().map_err(Error::finish_tar)?;
     }
     tracing::info!("Generated package Hex release tarball");
-    Ok((tarball, files))
+    Ok(Tarball {
+        data: tarball,
+        src_files_added: src_files,
+        generated_files_added: generated_files,
+    })
 }
 
-fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> String {
+fn metadata_config(
+    config: &PackageConfig,
+    source_files: &[PathBuf],
+    generated_files: &[(PathBuf, String)],
+) -> String {
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
         description: &config.description,
-        files,
+        source_files,
+        generated_files,
         licenses: &config.licences,
         links: config
             .links
             .iter()
-            .map(|l| (l.title.as_str(), l.href.as_str()))
+            .map(|l| (l.title.as_str(), &l.href))
             .collect(),
         requirements: config
             .dependencies
@@ -151,13 +189,16 @@ fn metadata_config(config: &PackageConfig, files: &[PathBuf]) -> String {
     metadata
 }
 
-fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
+fn contents_tarball(files: &[PathBuf], data_files: &[(PathBuf, String)]) -> Result<Vec<u8>, Error> {
     let mut contents_tar_gz = Vec::new();
     {
         let mut tarball =
             tar::Builder::new(GzEncoder::new(&mut contents_tar_gz, Compression::default()));
         for path in files {
             add_path_to_tar(&mut tarball, path)?;
+        }
+        for (path, contents) in data_files {
+            add_to_tar(&mut tarball, path, contents.as_bytes())?;
         }
         tarball.finish().map_err(Error::finish_tar)?;
     }
@@ -166,11 +207,11 @@ fn contents_tarball(files: &[PathBuf]) -> Result<Vec<u8>, Error> {
 }
 
 // TODO: test
-// TODO: Don't include git-ignored Erlang files
+// TODO: Don't include git-ignored native files
 fn project_files() -> Result<Vec<PathBuf>> {
     let src = Path::new("src");
     let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(src)
-        .chain(fs::erlang_files(src)?)
+        .chain(fs::native_files(src)?)
         .collect();
     let mut add = |path| {
         let path = PathBuf::from(path);
@@ -188,6 +229,43 @@ fn project_files() -> Result<Vec<PathBuf>> {
     add("LICENCE.md");
     add("LICENSE.txt");
     add("LICENCE.txt");
+    Ok(files)
+}
+
+// TODO: test
+fn generated_files(package: &Package) -> Result<Vec<(PathBuf, String)>> {
+    let mut files = vec![];
+
+    let dir = paths::build_package(Mode::Prod, Target::Erlang, &package.config.name);
+    let ebin = dir.join("ebin");
+    let build = dir.join("build");
+    let include = dir.join("include");
+
+    let tar_src = Path::new("src");
+    let tar_include = Path::new("include");
+
+    // Erlang modules
+    for module in &package.modules {
+        if module.is_test() {
+            continue;
+        }
+        let name = module.compiled_erlang_path();
+        files.push((tar_src.join(&name), fs::read(build.join(name))?));
+    }
+
+    // Erlang headers
+    if include.is_dir() {
+        for file in fs::erlang_files(&include)? {
+            let name = file.file_name().expect("generated_files include file name");
+            files.push((tar_include.join(&name), fs::read(file)?));
+        }
+    }
+
+    // src/package.app.src file
+    let app = format!("{}.app", &package.config.name);
+    let appsrc = format!("{}.src", &app);
+    files.push((tar_src.join(&appsrc), fs::read(ebin.join(app))?));
+
     Ok(files)
 }
 
@@ -224,9 +302,10 @@ pub struct ReleaseMetadata<'a> {
     name: &'a str,
     version: &'a Version,
     description: &'a str,
-    files: &'a [PathBuf],
+    source_files: &'a [PathBuf],
+    generated_files: &'a [(PathBuf, String)],
     licenses: &'a [String],
-    links: Vec<(&'a str, &'a str)>, // TODO: use http::Uri type to ensure correct format
+    links: Vec<(&'a str, &'a http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
@@ -235,7 +314,7 @@ pub struct ReleaseMetadata<'a> {
 
 impl<'a> ReleaseMetadata<'a> {
     pub fn as_erlang(&self) -> String {
-        fn link(link: &(&str, &str)) -> String {
+        fn link(link: &(&str, &http::Uri)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
                 name = link.0,
@@ -263,7 +342,13 @@ impl<'a> ReleaseMetadata<'a> {
             name = self.name,
             version = self.version,
             description = self.description,
-            files = self.files.iter().map(file).join(","),
+            files = self
+                .source_files
+                .iter()
+                .chain(self.generated_files.iter().map(|(p, _)| p))
+                .map(file)
+                .sorted()
+                .join(","),
             links = self.links.iter().map(link).join(","),
             licenses = self.licenses.iter().map(|l| quotes(l)).join(", "),
             build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
@@ -303,22 +388,26 @@ impl<'a> ReleaseRequirement<'a> {
 fn release_metadata_as_erlang() {
     let licences = vec!["MIT".to_string(), "MPL-2.0".to_string()];
     let version = "1.2.3".try_into().unwrap();
+    let homepage = "https://gleam.run".parse().unwrap();
+    let github = "https://github.com/lpil/myapp".parse().unwrap();
     let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
     let req2 = Range::new("~> 1.2".to_string());
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
         description: "description goes here",
-        files: &[
+        source_files: &[
             PathBuf::from("gleam.toml"),
             PathBuf::from("src/thingy.gleam"),
             PathBuf::from("src/whatever.gleam"),
         ],
-        licenses: &licences,
-        links: vec![
-            ("homepage", "https://gleam.run"),
-            ("github", "https://github.com/lpil/myapp"),
+        generated_files: &[
+            (PathBuf::from("src/myapp.app"), "".into()),
+            (PathBuf::from("src/thingy.erl"), "".into()),
+            (PathBuf::from("src/whatever.erl"), "".into()),
         ],
+        licenses: &licences,
+        links: vec![("homepage", &homepage), ("github", &github)],
         requirements: vec![
             ReleaseRequirement {
                 name: "wibble",
@@ -340,7 +429,7 @@ fn release_metadata_as_erlang() {
 {<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
 {<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
 {<<"links">>, [
-  {<<"homepage">>, <<"https://gleam.run">>},
+  {<<"homepage">>, <<"https://gleam.run/">>},
   {<<"github">>, <<"https://github.com/lpil/myapp">>}
 ]}.
 {<<"requirements">>, [
@@ -357,7 +446,10 @@ fn release_metadata_as_erlang() {
 ]}.
 {<<"files">>, [
   <<"gleam.toml">>,
+  <<"src/myapp.app">>,
+  <<"src/thingy.erl">>,
   <<"src/thingy.gleam">>,
+  <<"src/whatever.erl">>,
   <<"src/whatever.gleam">>
 ]}.
 "#

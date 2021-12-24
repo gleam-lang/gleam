@@ -9,7 +9,7 @@ mod telemetry;
 mod package_compilation_tests;
 
 pub use self::package_compiler::PackageCompiler;
-pub use self::project_compiler::ProjectCompiler;
+pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
 use crate::{
@@ -33,7 +33,9 @@ use strum::{Display, EnumString, EnumVariantNames, VariantNames};
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
+    #[serde(rename = "erlang")]
     Erlang,
+    #[serde(rename = "javascript")]
     JavaScript,
 }
 
@@ -52,9 +54,18 @@ pub enum Mode {
     Prod,
 }
 
+impl Mode {
+    /// Returns `true` if the mode is [`Dev`].
+    ///
+    /// [`Dev`]: Mode::Dev
+    pub fn is_dev(&self) -> bool {
+        matches!(self, Self::Dev)
+    }
+}
+
 #[derive(Debug)]
 pub struct Package {
-    pub name: String,
+    pub config: PackageConfig,
     pub modules: Vec<Module>,
 }
 

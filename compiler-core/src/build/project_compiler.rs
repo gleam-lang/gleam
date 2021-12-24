@@ -19,6 +19,18 @@ use std::{
 };
 
 #[derive(Debug)]
+pub struct Options {
+    pub mode: Mode,
+    pub target: Option<Target>,
+    /// Whether to perform codegen for the root project. Dependencies always
+    /// have codegen run. Use for the `gleam check` command.
+    /// If future when we have per-module incremental builds we will need to
+    /// track both whether type metadata has been produced and also whether
+    /// codegen has been performed. As such there will be 2 kinds of caching.
+    pub perform_codegen: bool,
+}
+
+#[derive(Debug)]
 pub struct ProjectCompiler<'a, IO> {
     config: PackageConfig,
     packages: HashMap<String, &'a ManifestPackage>,
@@ -26,6 +38,7 @@ pub struct ProjectCompiler<'a, IO> {
     defined_modules: HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
+    options: &'a Options,
     io: IO,
 }
 
@@ -38,6 +51,7 @@ where
 {
     pub fn new(
         config: PackageConfig,
+        options: &'a Options,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
@@ -48,11 +62,20 @@ where
             importable_modules: HashMap::with_capacity(estimated_modules),
             defined_modules: HashMap::with_capacity(estimated_modules),
             warnings: Vec::new(),
-            config,
             telemetry,
             packages,
+            options,
+            config,
             io,
         }
+    }
+
+    pub fn mode(&self) -> Mode {
+        self.options.mode
+    }
+
+    pub fn target(&self) -> Target {
+        self.options.target.unwrap_or(self.config.target)
     }
 
     /// Returns the compiled information from the root package
@@ -63,43 +86,50 @@ where
         // Read and type check deps packages
         for name in sequence {
             let package = self.packages.remove(&name).expect("Missing package config");
-            self.load_cache_or_compile_package(package, target)?;
+            self.load_cache_or_compile_package(package)?;
         }
 
         // Read and type check top level package
-        self.telemetry.compiling_package(&self.config.name);
+        if self.options.perform_codegen {
+            self.telemetry.compiling_package(&self.config.name);
+        } else {
+            self.telemetry.checking_package(&self.config.name);
+        }
         let config = std::mem::take(&mut self.config);
-        self.compile_gleam_package(&config, paths::src(), Some(paths::test()), target)
+        let modules = self.compile_gleam_package(&config, true, paths::root())?;
+        Ok(Package { config, modules })
     }
 
-    fn load_cache_or_compile_package(
-        &mut self,
-        package: &ManifestPackage,
-        target: Target,
-    ) -> Result<(), Error> {
-        println!("load_cache_or_compile_package");
-
-        let build_path = paths::build_package(Mode::Dev, target, &package.name);
+    fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        let build_path = paths::build_package(self.mode(), self.target(), &package.name);
         if self.io.is_directory(&build_path) {
-            tracing::info!(package=%package.name, "Loading precompiled package");
+            tracing::info!(package=%package.name, "loading_precompiled_package");
             return self.load_cached_package(build_path, package);
         }
 
         self.telemetry.compiling_package(&package.name);
-        match usable_build_tool(package)? {
-            BuildTool::Gleam => self.compile_gleam_dep_package(package, target)?,
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package, target)?,
+        let result = match usable_build_tool(package)? {
+            BuildTool::Gleam => self.compile_gleam_dep_package(package),
+            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
+        };
+
+        // TODO: test. This one is not covered by the integration tests.
+        if result.is_err() {
+            tracing::debug!(package=%package.name,"removing_failed_build");
+            let dir = paths::build_package(self.mode(), self.target(), &package.name);
+            self.io.delete(&dir)?;
         }
+
         Ok(())
     }
 
     fn compile_rebar3_dep_package(
         &mut self,
-        package: &ManifestPackage,
-        target: Target,
+        package: &ManifestPackage
     ) -> Result<(), Error> {
         let name = &package.name;
-        let mode = Mode::Dev;
+        let mode = self.mode();
+        let target = self.target();
 
         let project_dir = paths::build_deps_package(&package.name);
         let up = paths::unnest(&project_dir);
@@ -112,11 +142,20 @@ where
         // we may need to copy the include directory into there
         self.io.mkdir(&dest)?;
 
+        // TODO: unit test
         let src_include = project_dir.join("include");
         if self.io.is_directory(&src_include) {
             tracing::debug!("copying_include_to_build");
             // TODO: This could be a symlink
             self.io.copy_dir(&src_include, &dest)?;
+        }
+
+        // TODO: unit test
+        let src_priv = project_dir.join("priv");
+        if self.io.is_directory(&src_priv) {
+            tracing::debug!("copying_priv_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&src_priv, &dest)?;
         }
 
         let env = [
@@ -133,7 +172,7 @@ where
         ];
         let status = self.io.exec("rebar3", &args, &env, Some(&project_dir))?;
 
-        if status.success() {
+        if status == 0 {
             Ok(())
         } else {
             Err(Error::ShellCommand {
@@ -145,14 +184,13 @@ where
 
     fn compile_gleam_dep_package(
         &mut self,
-        package: &ManifestPackage,
-        target: Target,
+        package: &ManifestPackage
     ) -> Result<(), Error> {
         println!("compile_gleam_dep_package");
         let config_path = paths::build_deps_package_config(&package.name);
         let config = PackageConfig::read(config_path, &self.io)?;
-        let src = paths::build_deps_package_src(&package.name);
-        self.compile_gleam_package(&config, src, None, target)
+        let root = paths::build_deps_package(&package.name);
+        self.compile_gleam_package(&config, false, root)
             .map(|_| ())?;
         Ok(())
     }
@@ -177,24 +215,27 @@ where
     fn compile_gleam_package(
         &mut self,
         config: &PackageConfig,
-        src_path: PathBuf,
-        test_path: Option<PathBuf>,
-        target: Target,
-    ) -> Result<Package, Error> {
-        let out_path = paths::build_package(Mode::Dev, target, &config.name);
+        is_root: bool,
+        root_path: PathBuf,
+    ) -> Result<Vec<Module>, Error> {
+        let out_path = paths::build_package(self.mode(), self.target(), &config.name);
+        let artifact_path = out_path.join("build");
+        let erl_libs = paths::build_packages_erl_libs_glob(self.mode(), self.target())
+            .to_string_lossy()
+            .into_owned();
 
-        println!("compile_gleam_package: {:?}", out_path);
-
-        let options = package_compiler::Options {
-            target: target,
-            src_path: src_path.clone(),
-            out_path: out_path.clone(),
-            test_path: test_path.clone(),
-            name: config.name.to_string(),
-            write_metadata: true,
-        };
-
-        let mut compiler = options.into_compiler(self.io.clone())?;
+        let mut compiler = PackageCompiler::new(
+            config,
+            &root_path,
+            &out_path,
+            self.target(),
+            &erl_libs,
+            self.io.clone(),
+        );
+        compiler.write_metadata = true;
+        compiler.write_entrypoint = is_root;
+        compiler.compile_erlang = !is_root || self.options.perform_codegen;
+        compiler.read_source_files(self.mode())?;
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
@@ -203,124 +244,7 @@ where
             &mut self.defined_modules,
         )?;
 
-        if (target == Target::Erlang) {
-            // Write an Erlang .app file
-            ErlangApp::new(&out_path.join("ebin")).render(
-                self.io.clone(),
-                config,
-                &compiled.modules,
-            )?;
-
-            let mut modules: Vec<_> = compiled
-                .modules
-                .iter()
-                .map(Module::compiled_erlang_path)
-                .collect();
-
-            // If we're the dev package render the entrypoint module used by the
-            // `gleam run` and `gleam test` commands
-            // TODO: Pass this config in in a better way rather than attaching extra
-            // meaning to this flag.
-            if test_path.is_some() {
-                let name = "gleam@@main.erl";
-                self.io
-                    .writer(&out_path.join(name))?
-                    .write(std::include_bytes!("../../templates/gleam@@main.erl"))?;
-                modules.push(PathBuf::from(name));
-            }
-
-            // Copy across any Erlang files from src and test
-            self.copy_project_erlang_files(src_path, &mut modules, &out_path, test_path)?;
-
-            // Compile Erlang to .beam files
-            self.compile_erlang_to_beam(&out_path, &modules)?;
-        }
-
         Ok(compiled)
-    }
-
-    fn copy_project_erlang_files(
-        &mut self,
-        src_path: PathBuf,
-        modules: &mut Vec<PathBuf>,
-        out_path: &PathBuf,
-        test_path: Option<PathBuf>,
-    ) -> Result<(), Error> {
-        tracing::info!("copying_erlang_source_files");
-        let mut copied = HashSet::new();
-        self.copy_erlang_files(&src_path, &mut copied, modules, out_path)?;
-        Ok(if let Some(test_path) = test_path {
-            self.copy_erlang_files(&test_path, &mut copied, modules, out_path)?;
-        })
-    }
-
-    fn compile_erlang_to_beam(&self, out_path: &Path, modules: &[PathBuf]) -> Result<(), Error> {
-        tracing::info!("compiling_erlang");
-
-        let erl_libs = paths::build_packages_erl_libs_glob(Mode::Dev, Target::Erlang);
-        let env = [
-            ("ERL_LIBS", erl_libs.to_string_lossy().to_string()),
-            ("TERM", "dumb".into()),
-        ];
-        let mut args = vec![
-            "-o".into(),
-            out_path.join("ebin").to_string_lossy().to_string(),
-        ];
-        for module in modules {
-            args.push(out_path.join(module).to_string_lossy().to_string());
-        }
-        let status = self.io.exec("erlc", &args, &env, None)?;
-
-        if status.success() {
-            Ok(())
-        } else {
-            Err(Error::ShellCommand {
-                command: "erlc".to_string(),
-                err: None,
-            })
-        }
-    }
-
-    fn copy_erlang_files(
-        &self,
-        src_path: &Path,
-        copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut Vec<PathBuf>,
-        out_path: &Path,
-    ) -> Result<()> {
-        for entry in self.io.read_dir(src_path)? {
-            let full_path = entry.expect("copy_erlang_files dir_entry").path();
-
-            let extension = full_path
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-
-            // Copy any Erlang modules or header files
-            if extension == "erl" || extension == "hrl" {
-                let relative_path = full_path
-                    .strip_prefix(src_path)
-                    .expect("copy_erlang_files strip prefix")
-                    .to_path_buf();
-                let destination = out_path.join(&relative_path);
-
-                // TODO: test
-                if !copied.insert(relative_path.clone()) {
-                    return Err(Error::DuplicateErlangFile {
-                        file: relative_path.to_string_lossy().to_string(),
-                    });
-                }
-
-                self.io.copy(&full_path, &destination)?;
-
-                // Track the new module to compile
-                if extension == "erl" {
-                    to_compile_modules.push(relative_path);
-                }
-            }
-        }
-        Ok(())
     }
 }
 

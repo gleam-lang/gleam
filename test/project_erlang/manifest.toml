@@ -2,17 +2,16 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "accept", version = "0.3.5", build_tools = ["rebar3"], requirements = [], otp_app = "accept", source = "hex", outer_checksum = "11B18C220BCC2EAB63B5470C038EF10EB6783BCB1FCDB11AA4137DEFA5AC1BB8" },
+  { name = "certifi", version = "2.8.0", build_tools = ["rebar3"], requirements = [], otp_app = "certifi", source = "hex", outer_checksum = "6AC7EFC1C6F8600B08D625292D4BBF584E14847CE1B6B5C44D983D273E1097EA" },
   { name = "first_gleam_publish_package", version = "2.2.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "5C8F611B3B8A2F640F7668A710759F549D6104AC1D5E702465E001A73DBCF2D4" },
-  { name = "gleam_erlang", version = "0.2.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "B183BA07519354B4C27AD7F000E6CC8DF4F1B853FB940EC84E14F907EFFBA777" },
-  { name = "gleam_otp", version = "0.3.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_erlang"], otp_app = "gleam_otp", source = "hex", outer_checksum = "95F86E34A3D7DD5064270C72461E7BDBB92221D975F68F85D0D5549313B89CBA" },
+  { name = "gleam_erlang", version = "0.5.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "6DC8D506127BF332A48DBE1A286ACAAA0F2C7BF84B33BD9E6F3A8002EC9F649C" },
   { name = "gleam_stdlib", version = "0.18.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "2938F996BBB25D75E973226846CDDFA33AB5590AFC8A9D043A356EA85272510D" },
   { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "E8FDD4E31E0BBB87F625B0BB4DEABDE780180F1C2B15A4534442823066468638" },
 ]
 
 [requirements]
-accept = "~> 0.3"
+certifi = "~> 2.8"
 first_gleam_publish_package = "> 0.0.0"
-gleam_otp = "~> 0.3"
+gleam_erlang = "~> 0.5"
 gleam_stdlib = "~> 0.18"
 gleeunit = "~> 0.1"

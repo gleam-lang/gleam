@@ -1,3 +1,3 @@
-import { main } from "./target-javascript/main.js";
-
-process.exit(main());
+import("./target-javascript/dist/main.mjs").then((module) => {
+  process.exit(module.main());
+});

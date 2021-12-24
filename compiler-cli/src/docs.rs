@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
-    build::Package,
+    build::{Mode, Options, Package},
     config::{DocsPage, PackageConfig},
     error::Error,
     hex,
@@ -45,7 +45,11 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
     let out = paths::build_docs(&config.name);
-    let mut compiled = crate::build::main()?;
+    let mut compiled = crate::build::main(&Options {
+        mode: Mode::Prod,
+        target: None,
+        perform_codegen: true,
+    })?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
     // Write
@@ -73,7 +77,7 @@ pub(crate) fn build_documentation(
         path: "index.html".to_string(),
         source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
-    pages.extend(config.docs.pages.iter().cloned());
+    pages.extend(config.documentation.pages.iter().cloned());
     let outputs = gleam_core::docs::generate_html(config, compiled.modules.as_slice(), &pages);
     Ok(outputs)
 }
@@ -86,7 +90,11 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
-        let mut compiled = crate::build::main()?;
+        let mut compiled = crate::build::main(&Options {
+            perform_codegen: true,
+            mode: Mode::Dev,
+            target: None,
+        })?;
         let outputs = build_documentation(&config, &mut compiled)?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })

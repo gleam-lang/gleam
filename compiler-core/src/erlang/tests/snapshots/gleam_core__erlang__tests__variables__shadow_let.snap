@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+expression: "\npub fn go(a) {\n  case a {\n    99 -> {\n      let a = a\n      1\n    }\n    _ -> a\n  }\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(integer()) -> integer().
+go(A) ->
+    case A of
+        99 ->
+            A@1 = A,
+            1;
+
+        _@1 ->
+            A
+    end.
+

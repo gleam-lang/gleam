@@ -3273,3 +3273,17 @@ fn try_empty_line() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1390
+#[test]
+fn list_spread_pattern() {
+    assert_format!(
+        "pub fn main(x) {
+  case x {
+    [y, ..] -> y
+    _ -> 0
+  }
+}
+"
+    );
+}

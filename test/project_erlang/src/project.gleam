@@ -1,7 +1,7 @@
 import gleam/io
 
 pub fn main() {
-  io.println("Hello, from the Gleam module!")
+  io.println("Hello, from Gleam compiled to Erlang!")
   io.println(erlang_function())
 }
 

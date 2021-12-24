@@ -2,7 +2,6 @@ use std::{
     ffi::OsStr,
     io,
     path::{Path, PathBuf},
-    process::ExitStatus,
 };
 
 use gleam_core::{
@@ -39,7 +38,7 @@ impl CommandExecutor for WasmFileSystem {
         _args: &[String],
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
-    ) -> Result<ExitStatus, Error> {
+    ) -> Result<i32, Error> {
         // Err(Error::ShellCommand {
         //     command: "blah".to_string(),
         //     err: None,

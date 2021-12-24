@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+expression: "\npub fn main(x) {\n  x\n  |> fn(x) { x }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main(D) -> D.
+main(X) ->
+    _pipe = X,
+    (fun(X@1) -> X@1 end)(_pipe).
+

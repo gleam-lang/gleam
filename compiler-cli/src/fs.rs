@@ -110,13 +110,14 @@ impl CommandExecutor for ProjectIO {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
-    ) -> Result<std::process::ExitStatus, Error> {
+    ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
         std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
             .status()
+            .map(|s| s.code().unwrap_or_default())
             .map_err(|e| Error::ShellCommand {
                 command: program.to_ascii_uppercase(),
                 err: Some(e.kind()),
@@ -302,6 +303,20 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
         .map(ignore::DirEntry::into_path)
         .filter(move |d| is_gleam_path(d, dir))
+}
+
+pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
+    Ok(read_dir(dir)?
+        .flat_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|path| {
+            let extension = path
+                .extension()
+                .unwrap_or_default()
+                .to_str()
+                .unwrap_or_default();
+            extension == "erl" || extension == "hrl" || extension == "js" || extension == "mjs"
+        }))
 }
 
 pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {

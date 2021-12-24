@@ -7,7 +7,7 @@ use wasm_bindgen::prelude::*;
 
 use hexpm::version::{Range, Version};
 
-use gleam_core::build::{Package, ProjectCompiler, Target, Telemetry};
+use gleam_core::build::{Options, Package, ProjectCompiler, Target, Telemetry, Mode};
 use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Repository};
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
@@ -18,11 +18,15 @@ use filesystem::WasmFileSystem;
 const PROJECT_NAME: &str = "gleam-wasm";
 
 #[derive(Debug)]
-struct VoidTelemetry;
+struct LogTelemetry;
 
-impl Telemetry for VoidTelemetry {
+impl Telemetry for LogTelemetry {
     fn compiling_package(&self, name: &str) {
-        log::info!("Compiling package: {}", name);
+      log::info!("Compiling package: {}", name);
+    }
+
+    fn checking_package(&self, name: &str) {
+      log::info!("Checking package: {}", name);
     }
 }
 
@@ -80,21 +84,29 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
         },
     }];
 
+    let options = Options {
+      mode: Mode::Dev,
+      target: Some(target),
+      perform_codegen: true,
+    };
+
     let pcompiler = ProjectCompiler::new(
         PackageConfig {
+            target: target,
             name: PROJECT_NAME.to_string(),
             version: Version::new(1, 0, 0),
             licences: vec![],
             description: "".to_string(),
-            docs: Docs::default(),
+            documentation: Docs::default(),
             dependencies: deps,
             dev_dependencies: Dependencies::default(),
             repository: Repository::default(),
             links: vec![],
             erlang: ErlangConfig::default(),
         },
+        &options,
         &packages,
-        Box::new(VoidTelemetry),
+        Box::new(LogTelemetry),
         wfs.clone(),
     );
 

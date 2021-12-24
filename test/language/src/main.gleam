@@ -194,6 +194,12 @@ fn tail_call_optimisation_tests() -> List(Test) {
   [
     "10 million recursions doesn't overflow the stack"
     |> example(fn() { assert_equal(Nil, count_down(from: 10_000_000)) }),
+    // https://github.com/gleam-lang/gleam/issues/1214
+    // https://github.com/gleam-lang/gleam/issues/1380
+    "Arguments correctly reassigned"
+    |> example(fn() {
+      assert_equal([1, 2, 3], tail_recursive_accumulate_down(3, []))
+    }),
   ]
 }
 
@@ -338,9 +344,9 @@ fn make_error(reason) {
 // same result
 fn clause_guard_tests() -> List(Test) {
   // Testing that the name reuse is valid
-  let true = true()
+  let true_ = true()
   // Testing that the name reuse is valid
-  let false = false()
+  let false_ = false()
   let int_zero = make_int_zero()
   let int_one = make_int_zero() + 1
   let float_zero = make_float_zero()
@@ -355,7 +361,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true -> 0
+          _ if true_ -> 0
           _ -> 1
         },
       )
@@ -365,7 +371,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false -> 0
+          _ if false_ -> 0
           _ -> 1
         },
       )
@@ -455,7 +461,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true && true -> 0
+          _ if true_ && true_ -> 0
           _ -> 1
         },
       )
@@ -465,7 +471,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if true && false -> 0
+          _ if true_ && false_ -> 0
           _ -> 1
         },
       )
@@ -475,7 +481,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false && true -> 0
+          _ if false_ && true_ -> 0
           _ -> 1
         },
       )
@@ -485,7 +491,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false && false -> 0
+          _ if false_ && false_ -> 0
           _ -> 1
         },
       )
@@ -495,7 +501,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true || true -> 0
+          _ if true_ || true_ -> 0
           _ -> 1
         },
       )
@@ -505,7 +511,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if true || false -> 0
+          _ if true_ || false_ -> 0
           _ -> 1
         },
       )
@@ -515,7 +521,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         0,
         case Nil {
-          _ if false || true -> 0
+          _ if false_ || true_ -> 0
           _ -> 1
         },
       )
@@ -525,7 +531,7 @@ fn clause_guard_tests() -> List(Test) {
       assert_equal(
         1,
         case Nil {
-          _ if false || false -> 0
+          _ if false_ || false_ -> 0
           _ -> 1
         },
       )
@@ -1128,6 +1134,18 @@ fn record_update_tests() {
       let updated = record_update.Box(..module_box, value: 6)
       assert_equal(record_update.Box("a", 6), updated)
     }),
+    // https://github.com/gleam-lang/gleam/issues/1379
+    "pipe in record update"
+    |> example(fn() {
+      let module_box = record_update.Box("a", 5)
+      let updated =
+        record_update.Box(
+          ..module_box,
+          value: 6
+          |> id,
+        )
+      assert_equal(record_update.Box("a", 6), updated)
+    }),
   ]
 }
 
@@ -1159,3 +1177,16 @@ type PortMonitorFlag {
 
 pub external fn go(Port) -> Nil =
   "" ""
+
+fn id(x) {
+  x
+}
+
+// https://github.com/gleam-lang/gleam/issues/1214
+// https://github.com/gleam-lang/gleam/issues/1380
+fn tail_recursive_accumulate_down(x, y) {
+  case x {
+    0 -> y
+    _ -> tail_recursive_accumulate_down(x - 1, [x, ..y])
+  }
+}

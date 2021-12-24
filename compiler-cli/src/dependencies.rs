@@ -8,7 +8,7 @@ use futures::future;
 use gleam_core::{
     build::Mode,
     config::PackageConfig,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, Utf8Writer, WrappedReader},
     paths,
@@ -23,6 +23,73 @@ use crate::{
     fs::{self, ProjectIO},
     http::HttpClient,
 };
+
+pub fn list() -> Result<()> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+
+    let config = crate::config::root_config()?;
+    let (_, manifest) = get_manifest(runtime.handle().clone(), Mode::Dev, &config)?;
+    list_manifest_packages(std::io::stdout(), manifest)
+}
+
+fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+    manifest
+        .packages
+        .into_iter()
+        .try_for_each(|package| writeln!(buffer, "{} {}", package.name, package.version))
+        .map_err(|e| Error::StandardIo {
+            action: StandardIoAction::Write,
+            err: Some(e.kind()),
+        })
+}
+
+#[test]
+fn list_manifest_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "root".to_string(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "aaa".to_string(),
+                version: Version::new(0, 4, 2),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec!["zzz".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "zzz".to_string(),
+                version: Version::new(0, 4, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    list_manifest_packages(&mut buffer, manifest).unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"root 1.0.0
+aaa 0.4.2
+zzz 0.4.0
+"#
+    )
+}
 
 pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
@@ -129,7 +196,7 @@ fn write_manifest_to_disc(manifest: &Manifest) -> Result<()> {
     let path = paths::manifest();
     let mut file = fs::writer(&path)?;
     let result = manifest.write_to(&mut file);
-    file.wrap_result(result)?;
+    result.map_err(|e| file.convert_err(e))?;
     Ok(())
 }
 
@@ -323,7 +390,7 @@ fn get_manifest(
     // If there's no manifest then resolve the versions anew
     if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
-        let manifest = resolve_versions(runtime, mode, config, &[])?;
+        let manifest = resolve_versions(runtime, mode, config, None)?;
         return Ok((true, manifest));
     }
 
@@ -336,7 +403,7 @@ fn get_manifest(
         Ok((false, manifest))
     } else {
         tracing::info!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, config, &manifest.packages)?;
+        let manifest = resolve_versions(runtime, mode, config, Some(&manifest))?;
         Ok((true, manifest))
     }
 }
@@ -345,19 +412,14 @@ fn resolve_versions(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
-    locked: &[ManifestPackage],
+    manifest: Option<&Manifest>,
 ) -> Result<Manifest, Error> {
     cli::print_resolving_versions();
-    let locked = locked
-        .iter()
-        // TODO: remove clones. Will require library modification.
-        .map(|p| (p.name.to_string(), p.version.clone()))
-        .collect();
     let resolved = hex::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         mode,
         config,
-        &locked,
+        manifest,
     )?;
     let packages = runtime.block_on(future::try_join_all(
         resolved
@@ -432,7 +494,7 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
-        tracing::info!(package = package, "Looking up package in Hex API");
+        tracing::info!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
         let response = self

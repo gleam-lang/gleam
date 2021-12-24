@@ -9,7 +9,7 @@ tasks:
 # See: https://www.gitpod.io/docs/prebuilds/#configure-the-github-app
 github:
   prebuilds:
-    master: true
-    pullRequests: true
-    pullRequestsFromForks: true
-    addCheck: true
+    master: false
+    pullRequests: false
+    pullRequestsFromForks: false
+    addCheck: false

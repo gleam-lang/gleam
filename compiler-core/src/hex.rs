@@ -2,7 +2,7 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
 use hexpm::version::{PackageVersions, Version};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 use tar::Archive;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     config::PackageConfig,
     io::{FileSystemIO, HttpClient, TarUnpacker},
     paths,
-    project::{ManifestPackage, ManifestPackageSource},
+    project::{Manifest, ManifestPackage, ManifestPackageSource},
     Error, Result,
 };
 
@@ -29,14 +29,16 @@ pub fn resolve_versions(
     package_fetcher: Box<dyn hexpm::version::PackageFetcher>,
     mode: Mode,
     config: &PackageConfig,
-    locked: &HashMap<String, Version>,
+    manifest: Option<&Manifest>,
 ) -> Result<PackageVersions> {
     let specified_dependencies = config.dependencies_for(mode)?.into_iter();
+    let locked = config.locked(manifest)?;
+    tracing::info!("resolving_versions");
     hexpm::version::resolve_versions(
         package_fetcher,
         config.name.clone(),
         specified_dependencies,
-        locked,
+        &locked,
     )
     .map_err(Error::dependency_resolution_failed)
 }
@@ -171,14 +173,14 @@ impl Downloader {
             tracing::info!(
                 package = package.name.as_str(),
                 version = %package.version,
-                "Package already in cache"
+                "package_in_cache"
             );
             return Ok(false);
         }
         tracing::info!(
             package = &package.name.as_str(),
             version = %package.version,
-            "Downloading package to cache"
+            "downloading_package_to_cache"
         );
 
         let request = hexpm::get_package_tarball_request(
@@ -223,7 +225,7 @@ impl Downloader {
             return Ok(false);
         }
 
-        tracing::info!(package = name, "Writing package to target");
+        tracing::info!(package = name, "writing_package_to_target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
         let reader = self.fs.reader(&tarball)?;
         let mut archive = Archive::new(reader);
@@ -297,8 +299,13 @@ pub async fn get_package_release<Http: HttpClient>(
     config: &hexpm::Config,
     http: &Http,
 ) -> Result<hexpm::Release<hexpm::ReleaseMeta>> {
-    tracing::info!("getting_package_release");
-    let request = hexpm::get_package_release_request(name, &version.to_string(), None, config);
+    let version = version.to_string();
+    tracing::info!(
+        name = name,
+        version = version.as_str(),
+        "looking_up_package_release"
+    );
+    let request = hexpm::get_package_release_request(name, &version, None, config);
     let response = http.send(request).await?;
     hexpm::get_package_release_response(response).map_err(Error::hex)
 }

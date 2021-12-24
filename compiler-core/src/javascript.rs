@@ -264,20 +264,21 @@ impl<'a> Generator<'a> {
     fn import_path(&self, package: &'a str, module: &'a [String]) -> String {
         let path = module.join("/");
 
+        // TODO: strip shared prefixed between current module and imported
+        // module to avoid decending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
-            // Same package uses relative paths
-            // TODO: strip shared prefixed between current module and imported
-            // module to avoid decending and climbing back out again
+            // Same package
             match self.module.name.len() {
-                1 => format!("./{}.js", path),
+                1 => format!("./{}.mjs", path),
                 _ => {
                     let prefix = "../".repeat(self.module.name.len() - 1);
-                    format!("{}{}.js", prefix, path)
+                    format!("{}{}.mjs", prefix, path)
                 }
             }
         } else {
-            // Different packages uses absolute imports
-            format!("gleam-packages/{}/{}.js", package, path)
+            // Different package
+            let prefix = "../".repeat(self.module.name.len() + 1);
+            format!("{}{}/dist/{}.mjs", prefix, package, path)
         }
     }
 

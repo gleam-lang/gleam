@@ -12,6 +12,7 @@ use strum::{Display, EnumString, EnumVariantNames};
 use crate::NewOptions;
 
 const GLEAM_STDLIB_VERSION: &str = "0.18";
+const GLEEUNIT_VERSION: &str = "0.5";
 const ERLANG_OTP_VERSION: &str = "23.2";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
@@ -116,12 +117,10 @@ gleam shell # Run an Erlang shell
 
 ## Installation
 
-If available on Hex this package can be installed by adding `{name}` 
-to your `gleam.toml` dependencies:
+If available on Hex this package can be added to your Gleam project.
 
-```toml
-[dependencies]
-{name} = "~> 0.1"
+```sh
+gleam add {name}
 ```
 "#,
                 name = self.project_name,
@@ -150,10 +149,10 @@ jobs:
       - uses: actions/checkout@v2.0.0
       - uses: gleam-lang/setup-erlang@v1.1.2
         with:
-          otp-version: {}
+          otp-version: "{}"
       - uses: gleam-lang/setup-gleam@v1.0.2
         with:
-          gleam-version: {}
+          gleam-version: "{}"
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
@@ -182,10 +181,11 @@ version = "0.1.0"
 gleam_stdlib = "~> {gleam_stdlib}"
 
 [dev-dependencies]
-# some_test_package = "~> 1.0"
+gleeunit = "~> {gleeunit}"
 "#,
                 name = self.project_name,
                 gleam_stdlib = GLEAM_STDLIB_VERSION,
+                gleeunit = GLEEUNIT_VERSION,
             ),
         )
     }
@@ -193,10 +193,17 @@ gleam_stdlib = "~> {gleam_stdlib}"
     fn test_module(&self) -> Result<()> {
         write(
             self.test.join(format!("{}_test.gleam", self.project_name)),
-            r#"import gleam/io
+            r#"import gleeunit
+import gleeunit/should
 
 pub fn main() {
-  io.println("TODO: Write some tests")
+  gleeunit.main()
+}
+
+// gleeunit test functions end in `_test`
+pub fn hello_world_test() {
+  1
+  |> should.equal(1)
 }
 "#,
         )
