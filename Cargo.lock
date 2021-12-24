@@ -704,7 +704,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.18.0-rc2"
+version = "0.18.2"
 dependencies = [
  "console_error_panic_hook",
  "gleam-core",

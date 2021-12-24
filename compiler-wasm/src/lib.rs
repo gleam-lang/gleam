@@ -12,11 +12,13 @@ use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Reposi
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
 
-mod filesystem;
-use filesystem::WasmFileSystem;
+mod wasm_filesystem;
+use wasm_filesystem::WasmFileSystem;
 
 mod log_telemetry;
 use log_telemetry::LogTelemetry;
+
+mod static_files;
 
 const PROJECT_NAME: &str = "gleam-wasm";
 
