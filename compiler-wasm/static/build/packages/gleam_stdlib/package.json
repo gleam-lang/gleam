@@ -1,6 +1,0 @@
-{
-  "type": "module",
-  "scripts": {
-    "test": "sh bin/test.sh"
-  }
-}
