@@ -69,6 +69,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
 
       - name: Link to predefined musl toolchain
         run: |
