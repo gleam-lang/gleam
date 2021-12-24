@@ -115,22 +115,22 @@ fn gather_compiled_files(
     };
 
     wfs.read_dir(&Path::new("build"))
-      .expect("expect the build directory to exist")
-      .filter_map(|result| result.ok())
-      .filter(|dir_entry| dir_entry.as_path().extension() == Some(extension_to_search_for))
-      .for_each(|dir_entry| {
-          println!("gathering: {:?}", dir_entry.as_path());
+        .expect("expect the build directory to exist")
+        .filter_map(|result| result.ok())
+        .filter(|dir_entry| dir_entry.as_path().extension() == Some(extension_to_search_for))
+        .for_each(|dir_entry| {
+            println!("gathering: {:?}", dir_entry.as_path());
 
-          let path = dir_entry.as_path();
-          let contents: String = wfs.read(path).expect("iterated dir entries should exist");
-          let path = path
-              .to_str()
-              .unwrap()
-              .replace("\\", "/")
-              .replace("build/packages/", "gleam-packages/")
-              .replace("build/dev/javascript/", "gleam-packages/");
+            let path = dir_entry.as_path();
+            let contents: String = wfs.read(path).expect("iterated dir entries should exist");
+            let path = path
+                .to_str()
+                .unwrap()
+                .replace("\\", "/")
+                .replace("build/packages/", "gleam-packages/")
+                .replace("build/dev/javascript/", "gleam-packages/");
 
-          files.insert(path, contents);
+            files.insert(path, contents);
         });
 
     Ok(files)

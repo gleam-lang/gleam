@@ -83,7 +83,9 @@ pub struct DirEntry {
 
 impl DirEntry {
     pub fn from_path<P: AsRef<Path>>(path: P) -> DirEntry {
-      DirEntry { pathbuf: path.as_ref().to_path_buf() }
+        DirEntry {
+            pathbuf: path.as_ref().to_path_buf(),
+        }
     }
 
     pub fn from_pathbuf(pathbuf: PathBuf) -> DirEntry {
@@ -91,7 +93,7 @@ impl DirEntry {
     }
 
     pub fn as_path(&self) -> &Path {
-      self.pathbuf.as_path()
+        self.pathbuf.as_path()
     }
 
     pub fn into_path(self) -> PathBuf {
