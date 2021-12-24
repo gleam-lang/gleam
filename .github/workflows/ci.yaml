@@ -67,6 +67,12 @@ jobs:
     runs-on: ubuntu-latest
     container: clux/muslrust:stable
     steps:
+      - name: Install Git
+        run: |
+          add-apt-repository ppa:git-core/ppa -y
+          apt-get update
+          apt-get install git -y
+
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
