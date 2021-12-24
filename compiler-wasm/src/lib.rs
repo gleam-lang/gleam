@@ -121,8 +121,6 @@ fn gather_compiled_files(
         .filter_map(|result| result.ok())
         .filter(|dir_entry| dir_entry.as_path().extension() == Some(extension_to_search_for))
         .for_each(|dir_entry| {
-            println!("gathering: {:?}", dir_entry.as_path());
-
             let path = dir_entry.as_path();
             let contents: String = wfs.read(path).expect("iterated dir entries should exist");
             let path = path
@@ -182,10 +180,6 @@ fn test_javascript_project_stdlib() {
         result.get("gleam-packages/gleam-wasm/dist/main.mjs"),
         Some(&String::from("import * as $io from \"../../gleam_stdlib/dist/gleam/io.mjs\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
     );
-
-    for key in result.keys() {
-        println!("{:?}", key);
-    }
 }
 
 #[test]
@@ -202,4 +196,9 @@ fn test_erlang_project_stdlib() {
         Target::Erlang,
     )
     .unwrap();
+
+    assert_eq!(
+      result.get("build/dev/erlang/gleam-wasm/build/main.erl"),
+      Some(&String::from("-module(main).\n-compile(no_auto_import).\n\n-export([main/0]).\n\n-spec main() -> nil.\nmain() ->\n    gleam@io:println(<<\"Hello, world!\"/utf8>>).\n"))
+    );
 }

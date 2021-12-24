@@ -180,7 +180,6 @@ where
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
-        println!("compile_gleam_dep_package");
         let config_path = paths::build_deps_package_config(&package.name);
         let config = PackageConfig::read(config_path, &self.io)?;
         let root = paths::build_deps_package(&package.name);

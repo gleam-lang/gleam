@@ -45,7 +45,6 @@ impl FileSystemIO for WasmFileSystem {}
 
 impl FileSystemWriter for WasmFileSystem {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        println!("wrote to {:?}", path);
         self.imfs.writer(path)
     }
 
@@ -67,7 +66,6 @@ impl FileSystemWriter for WasmFileSystem {
 
 impl FileSystemReader for WasmFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        println!("gleam_source_files {:?}", dir);
         Box::new(itertools::merge(
             self.imfs.gleam_source_files(dir),
             self.static_files.gleam_source_files(dir),
@@ -75,12 +73,10 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        println!("gleam_metadata_files {:?}", dir);
         self.static_files.gleam_metadata_files(dir)
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
-        println!("read {:?}", path);
         self.imfs
             .read(path)
             .or_else(|_error| self.static_files.read(path))
@@ -99,8 +95,6 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        println!("read_dir {:?}", path);
-
         let read_dir_imfs = self.imfs.read_dir(path)?;
         let read_dir_sf = self.static_files.read_dir(path)?;
 
