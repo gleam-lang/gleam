@@ -29,7 +29,7 @@ impl WasmFileSystem {
     pub fn new() -> WasmFileSystem {
         WasmFileSystem {
             imfs: InMemoryFileSystem::new(),
-            static_files: StaticFiles
+            static_files: StaticFiles,
         }
     }
 }
@@ -88,7 +88,9 @@ impl FileSystemReader for WasmFileSystem {
 
     fn read(&self, path: &Path) -> Result<String, Error> {
         println!("read {:?}", path);
-        self.imfs.read(path).or_else(|_error| self.static_files.read(path) )
+        self.imfs
+            .read(path)
+            .or_else(|_error| self.static_files.read(path))
     }
 
     fn is_file(&self, path: &Path) -> bool {

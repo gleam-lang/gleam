@@ -52,16 +52,16 @@ impl FileSystemReader for StaticFiles {
             Ok(unicode)
         } else {
             Err(Error::FileIo {
-              kind: FileKind::File,
-              action: FileIoAction::Read,
-              path: path.to_owned(),
-              err: Some(String::from("File not found")),
+                kind: FileKind::File,
+                action: FileIoAction::Read,
+                path: path.to_owned(),
+                err: Some(String::from("File not found")),
             })
         }
     }
 
     fn is_file(&self, path: &Path) -> bool {
-      self.read(path).is_ok()
+        self.read(path).is_ok()
     }
 
     fn is_directory(&self, _path: &Path) -> bool {

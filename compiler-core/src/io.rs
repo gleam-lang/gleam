@@ -68,12 +68,14 @@ impl ReadDir {
     }
 
     pub fn extend(self, other: ReadDir) -> Self {
-      let mut entries: Vec<io::Result<DirEntry>> = Vec::new();
-      
-      entries.append(&mut self.entries.into_iter().collect::<Vec<_>>());
-      entries.append(&mut other.into_iter().collect::<Vec<_>>());
+        let mut entries: Vec<io::Result<DirEntry>> = Vec::new();
 
-      ReadDir { entries: Box::new(entries.into_iter()) }      
+        entries.append(&mut self.entries.into_iter().collect::<Vec<_>>());
+        entries.append(&mut other.into_iter().collect::<Vec<_>>());
+
+        ReadDir {
+            entries: Box::new(entries.into_iter()),
+        }
     }
 }
 
