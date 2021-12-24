@@ -84,7 +84,7 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
 
     let pcompiler = ProjectCompiler::new(
         PackageConfig {
-            target: target,
+            target,
             name: PROJECT_NAME.to_string(),
             version: Version::new(1, 0, 0),
             licences: vec![],
@@ -116,7 +116,7 @@ fn gather_compiled_files(
         Target::JavaScript => OsStr::new("mjs"),
     };
 
-    wfs.read_dir(&Path::new("build"))
+    wfs.read_dir(Path::new("build"))
         .expect("expect the build directory to exist")
         .filter_map(|result| result.ok())
         .filter(|dir_entry| dir_entry.as_path().extension() == Some(extension_to_search_for))

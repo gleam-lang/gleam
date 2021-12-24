@@ -17,33 +17,29 @@ pub struct StaticFiles;
 
 impl FileSystemReader for StaticFiles {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        let files: Vec<PathBuf> = self
-            .read_dir(dir)
-            .unwrap()
-            .filter_map(|x| x.ok())
-            .map(|x| x.pathbuf)
-            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam")))
-            .collect();
-
-        Box::new(files.into_iter())
+        Box::new(
+            self.read_dir(dir)
+                .unwrap()
+                .filter_map(|x| x.ok())
+                .map(|x| x.pathbuf)
+                .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam"))),
+        )
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        let files: Vec<PathBuf> = self
-            .read_dir(dir)
-            .unwrap()
-            .filter_map(|x| x.ok())
-            .map(|x| x.pathbuf)
-            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam_module")))
-            .collect();
-
-        Box::new(files.into_iter())
+        Box::new(
+            self.read_dir(dir)
+                .unwrap()
+                .filter_map(|x| x.ok())
+                .map(|x| x.pathbuf)
+                .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam_module"))),
+        )
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
         if let Some(package) = StaticFiles::get(path.to_str().unwrap()) {
             let bytes = package.data.to_vec();
-            let unicode = String::from_utf8(bytes.clone()).map_err(|err| Error::FileIo {
+            let unicode = String::from_utf8(bytes).map_err(|err| Error::FileIo {
                 kind: FileKind::File,
                 action: FileIoAction::Read,
                 path: path.to_owned(),

@@ -117,8 +117,8 @@ impl FileSystemReader for InMemoryFileSystem {
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(path))
-            .map(|pathbuf| DirEntry { pathbuf })
-            .map(|entry| Ok(entry))
+            .map(DirEntry::from_pathbuf)
+            .map(Ok)
             .collect();
 
         Ok(ReadDir::from_entries(entries))

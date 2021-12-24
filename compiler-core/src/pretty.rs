@@ -155,22 +155,22 @@ fn fits(mut limit: isize, mut docs: im::Vector<&Document<'_>>) -> bool {
 
             Document::ForceBreak => return false,
 
-            Document::Nest(_, doc) => docs.push_front(&doc),
+            Document::Nest(_, doc) => docs.push_front(doc),
 
             // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front(&doc),
+            Document::NestCurrent(doc) => docs.push_front(doc),
 
-            Document::Group(doc) => docs.push_front(&doc),
+            Document::Group(doc) => docs.push_front(doc),
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => limit -= unbroken.len() as isize,
 
-            Document::FlexBreak(doc) => docs.push_front(&doc),
+            Document::FlexBreak(doc) => docs.push_front(doc),
 
             Document::Vec(vec) => {
-                for doc in vec.into_iter().rev() {
+                for doc in vec.iter().rev() {
                     docs.push_front(doc);
                 }
             }
@@ -217,7 +217,7 @@ fn fmt(
 
             Document::String(s) => {
                 width += s.len() as isize;
-                writer.str_write(&s)?;
+                writer.str_write(s)?;
             }
 
             Document::Str(s) => {
@@ -226,7 +226,7 @@ fn fmt(
             }
 
             Document::Vec(vec) => {
-                for doc in vec.into_iter().rev() {
+                for doc in vec.iter().rev() {
                     docs.push_front((indent, mode.clone(), doc));
                 }
             }
