@@ -128,6 +128,7 @@ fn gather_compiled_files(
                 .unwrap()
                 .replace("\\", "/")
                 //.replace("build/dev/", "./build/dev/");
+                .replace("build/packages/", "gleam-packages/")
                 .replace("build/dev/javascript/", "gleam-packages/");
             files.insert(path, contents);
         }

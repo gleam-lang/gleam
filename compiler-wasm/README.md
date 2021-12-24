@@ -8,5 +8,5 @@ cargo install wasm-pack
 wasm-pack build
 
 # Or, build and copy to a directory
-wasm-pack build --out-dir /home/user/projects/gleam-playground/gleam-wasm
+wasm-pack build --out-dir /home/${USER}/projects/gleam-playground/gleam-wasm
 ```

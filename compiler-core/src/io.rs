@@ -55,6 +55,7 @@ pub struct OutputFile {
     pub path: PathBuf,
 }
 
+#[allow(missing_debug_implementations)]
 pub struct ReadDir {
     entries: Box<dyn Iterator<Item = io::Result<DirEntry>>>,
 }
