@@ -3,7 +3,7 @@
 
 import gleam/list
 
-/// Checks whether the result is an Ok value.
+/// Checks whether the result is an `Ok` value.
 ///
 /// ## Examples
 ///
@@ -20,7 +20,7 @@ pub fn is_ok(result: Result(a, e)) -> Bool {
   }
 }
 
-/// Checks whether the result is an Error value.
+/// Checks whether the result is an `Error` value.
 ///
 /// ## Examples
 ///
@@ -37,10 +37,10 @@ pub fn is_error(result: Result(a, e)) -> Bool {
   }
 }
 
-/// Updates a value held within the Ok of a result by calling a given function
+/// Updates a value held within the `Ok` of a result by calling a given function
 /// on it.
 ///
-/// If the result is an Error rather than OK the function is not called and the
+/// If the result is an `Error` rather than `Ok` the function is not called and the
 /// result stays the same.
 ///
 /// ## Examples
@@ -58,10 +58,10 @@ pub fn map(over result: Result(a, e), with fun: fn(a) -> b) -> Result(b, e) {
   }
 }
 
-/// Updates a value held within the Error of a result by calling a given function
+/// Updates a value held within the `Error` of a result by calling a given function
 /// on it.
 ///
-/// If the result is Ok rather than Error the function is not called and the
+/// If the result is `Ok` rather than `Error` the function is not called and the
 /// result stays the same.
 ///
 /// ## Examples
@@ -82,7 +82,7 @@ pub fn map_error(
   }
 }
 
-/// Merges a nested Result into a single layer.
+/// Merges a nested `Result` into a single layer.
 ///
 /// ## Examples
 ///
@@ -102,11 +102,11 @@ pub fn flatten(result: Result(Result(a, e), e)) -> Result(a, e) {
   }
 }
 
-/// Updates a value held within the Ok of a result by calling a given function
+/// Updates a value held within the `Ok` of a result by calling a given function
 /// on it, where the given function also returns a result. The two results are
 /// then merged together into one result.
 ///
-/// If the result is an Error rather than OK the function is not called and the
+/// If the result is an `Error` rather than `Ok` the function is not called and the
 /// result stays the same.
 ///
 /// This function is the equivalent of calling `map` followed by `flatten`, and
@@ -136,8 +136,8 @@ pub fn then(
   }
 }
 
-/// Extracts the Ok value from a result, returning a default value if the result
-/// is an Error.
+/// Extracts the `Ok` value from a result, returning a default value if the result
+/// is an `Error`.
 ///
 /// ## Examples
 ///
@@ -154,8 +154,8 @@ pub fn unwrap(result: Result(a, e), or default: a) -> a {
   }
 }
 
-/// Extracts the Ok value from a result, evaluating the default function if the result
-/// is an Error.
+/// Extracts the `Ok` value from a result, evaluating the default function if the result
+/// is an `Error`.
 ///
 /// ## Examples
 ///
@@ -172,7 +172,7 @@ pub fn lazy_unwrap(result: Result(a, e), or default: fn() -> a) -> a {
   }
 }
 
-/// Transforms any error into Error(Nil)
+/// Transforms any error into `Error(Nil)`.
 ///
 /// ## Examples
 ///
@@ -186,7 +186,7 @@ pub fn nil_error(result: Result(a, e)) -> Result(a, Nil) {
   map_error(result, fn(_) { Nil })
 }
 
-/// Returns the first value if it is Ok, otherwise return the second value.
+/// Returns the first value if it is `Ok`, otherwise returns the second value.
 ///
 /// ## Examples
 ///
@@ -209,7 +209,7 @@ pub fn or(first: Result(a, e), second: Result(a, e)) -> Result(a, e) {
   }
 }
 
-/// Returns the first value if it is Ok, otherwise evaluates the given function for a fallback value.
+/// Returns the first value if it is `Ok`, otherwise evaluates the given function for a fallback value.
 ///
 /// ## Examples
 ///
@@ -236,8 +236,8 @@ pub fn lazy_or(
 }
 
 /// Combines a list of results into a single result.
-/// If all elements in the list are Ok then returns an Ok holding the list of values.
-/// If any element is Error then returns the first error.
+/// If all elements in the list are `Ok` then returns an `Ok` holding the list of values.
+/// If any element is `Error` then returns the first error.
 ///
 /// ## Examples
 ///    > all([Ok(1), Ok(2)])
@@ -254,8 +254,7 @@ pub fn replace_error(result: Result(a, e1), error: e2) -> Result(a, e2) {
   |> map_error(fn(_) { error })
 }
 
-/// Given a list of results
-/// Return only the values inside Ok
+/// Given a list of results, returns only the values inside `Ok`.
 ///
 /// ## Examples
 ///

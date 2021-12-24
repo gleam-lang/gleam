@@ -1,11 +1,11 @@
-/// StringBuilder is a type used for efficiently building strings.
+/// `StringBuilder` is a type used for efficiently building strings.
 ///
 /// When we append one string to another the strings must be copied to a
 /// new location in memory so that they can sit together. This behaviour
 /// enables efficient reading of the string but copying can be expensive,
 /// especially if we want to join many strings together.
 ///
-/// StringBuilder is different in that it can be joined together in constant time
+/// `StringBuilder` is different in that it can be joined together in constant time
 /// using minimal memory, and then can be efficiently converted to a string
 /// using the `to_string` function.
 ///
@@ -14,7 +14,7 @@
 ///
 pub external type StringBuilder
 
-/// Prepends a String onto the start of some StringBuilder.
+/// Prepends a `String` onto the start of some `StringBuilder`.
 ///
 /// Runs in constant time.
 ///
@@ -25,7 +25,7 @@ pub fn prepend(
   append_builder(from_string(prefix), builder)
 }
 
-/// Appends a String onto the end of some StringBuilder.
+/// Appends a `String` onto the end of some `StringBuilder`.
 ///
 /// Runs in constant time.
 ///
@@ -33,7 +33,7 @@ pub fn append(to builder: StringBuilder, suffix second: String) -> StringBuilder
   append_builder(builder, from_string(second))
 }
 
-/// Prepends some StringBuilder onto the start of another.
+/// Prepends some `StringBuilder` onto the start of another.
 ///
 /// Runs in constant time.
 ///
@@ -44,7 +44,7 @@ pub fn prepend_builder(
   do_append(prefix, builder)
 }
 
-/// Appends some StringBuilder onto the end of another.
+/// Appends some `StringBuilder` onto the end of another.
 ///
 /// Runs in constant time.
 ///
@@ -62,7 +62,7 @@ if erlang {
 
 if javascript {
   external fn do_append(StringBuilder, StringBuilder) -> StringBuilder =
-    "../gleam_stdlib.js" "add"
+    "../gleam_stdlib.mjs" "add"
 }
 
 /// Converts a list of strings into a builder.
@@ -80,7 +80,7 @@ if erlang {
 
 if javascript {
   external fn do_from_strings(List(String)) -> StringBuilder =
-    "../gleam_stdlib.js" "join"
+    "../gleam_stdlib.mjs" "join"
 }
 
 /// Joins a list of builders into a single builder.
@@ -98,7 +98,7 @@ if erlang {
 
 if javascript {
   external fn do_concat(List(StringBuilder)) -> StringBuilder =
-    "../gleam_stdlib.js" "join"
+    "../gleam_stdlib.mjs" "join"
 }
 
 /// Converts a string into a builder.
@@ -116,7 +116,7 @@ if erlang {
 
 if javascript {
   external fn do_from_string(String) -> StringBuilder =
-    "../gleam_stdlib.js" "identity"
+    "../gleam_stdlib.mjs" "identity"
 }
 
 /// Turns an `StringBuilder` into a `String`
@@ -135,10 +135,10 @@ if erlang {
 
 if javascript {
   external fn do_to_string(StringBuilder) -> String =
-    "../gleam_stdlib.js" "identity"
+    "../gleam_stdlib.mjs" "identity"
 }
 
-/// Returns the size of the StringBuilder in bytes.
+/// Returns the size of the `StringBuilder` in bytes.
 ///
 pub fn byte_size(builder: StringBuilder) -> Int {
   do_byte_size(builder)
@@ -151,7 +151,7 @@ if erlang {
 
 if javascript {
   external fn do_byte_size(StringBuilder) -> Int =
-    "../gleam_stdlib.js" "length"
+    "../gleam_stdlib.mjs" "length"
 }
 
 /// Creates a builder containing the textual representation of a given float.
@@ -167,7 +167,7 @@ if erlang {
 
 if javascript {
   external fn do_from_float(Float) -> StringBuilder =
-    "../gleam_stdlib.js" "float_to_string"
+    "../gleam_stdlib.mjs" "float_to_string"
 }
 
 /// Converts a builder to a new builder where the contents have been
@@ -184,7 +184,7 @@ if erlang {
 
 if javascript {
   external fn do_lowercase(StringBuilder) -> StringBuilder =
-    "../gleam_stdlib.js" "lowercase"
+    "../gleam_stdlib.mjs" "lowercase"
 }
 
 /// Converts a builder to a new builder where the contents have been
@@ -201,7 +201,7 @@ if erlang {
 
 if javascript {
   external fn do_uppercase(StringBuilder) -> StringBuilder =
-    "../gleam_stdlib.js" "uppercase"
+    "../gleam_stdlib.mjs" "uppercase"
 }
 
 /// Converts a builder to a new builder with the contents reversed.
@@ -217,7 +217,7 @@ if erlang {
 
 if javascript {
   external fn do_reverse(StringBuilder) -> StringBuilder =
-    "../gleam_stdlib.js" "string_reverse"
+    "../gleam_stdlib.mjs" "string_reverse"
 }
 
 /// Splits a builder on a given pattern into a list of builders.
@@ -244,7 +244,7 @@ if javascript {
     builder: StringBuilder,
     pattern: String,
   ) -> List(StringBuilder) =
-    "../gleam_stdlib.js" "split"
+    "../gleam_stdlib.mjs" "split"
 }
 
 /// Replaces all instances of a pattern with a given string substitute.
@@ -277,12 +277,12 @@ if erlang {
 
 if javascript {
   external fn do_replace(StringBuilder, String, String) -> StringBuilder =
-    "../gleam_stdlib.js" "string_replace"
+    "../gleam_stdlib.mjs" "string_replace"
 }
 
 /// Compares two builders to determine if they have the same textual content.
 ///
-/// Comparing two iodata using the `==` operator may return False even if they
+/// Comparing two iodata using the `==` operator may return `False` even if they
 /// have the same content as they may have been build in different ways, so
 /// using this function is often preferred.
 ///
@@ -306,7 +306,7 @@ if erlang {
 
 if javascript {
   external fn do_is_equal(StringBuilder, StringBuilder) -> Bool =
-    "../gleam_stdlib.js" "equal"
+    "../gleam_stdlib.mjs" "equal"
 }
 
 /// Inspects a builder to determine if it is equivalent to an empty string.

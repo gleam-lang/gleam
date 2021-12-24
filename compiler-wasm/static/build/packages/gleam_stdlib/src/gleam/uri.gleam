@@ -206,7 +206,7 @@ if erlang {
 
 if javascript {
   external fn do_parse_query(String) -> Result(List(#(String, String)), Nil) =
-    "../gleam_stdlib.js" "parse_query"
+    "../gleam_stdlib.mjs" "parse_query"
 }
 
 /// Encodes a list of key value pairs as a URI query string.
@@ -258,7 +258,7 @@ if erlang {
 
 if javascript {
   external fn do_percent_encode(String) -> String =
-    "../gleam_stdlib.js" "percent_encode"
+    "../gleam_stdlib.mjs" "percent_encode"
 }
 
 /// Decodes a percent encoded string.
@@ -282,7 +282,7 @@ if erlang {
 
 if javascript {
   external fn do_percent_decode(String) -> Result(String, Nil) =
-    "../gleam_stdlib.js" "percent_decode"
+    "../gleam_stdlib.mjs" "percent_decode"
 }
 
 fn do_remove_dot_segments(
@@ -366,13 +366,13 @@ pub fn to_string(uri: Uri) -> String {
   string.concat(parts)
 }
 
-/// Fetches the origin of a uri
+/// Fetches the origin of a URI.
 ///
-/// Return the origin of a uri as defined in
+/// Returns the origin of a uri as defined in
 /// https://tools.ietf.org/html/rfc6454
 ///
-/// The supported uri schemes are `http` and `https`
-/// Urls without a scheme will return Error
+/// The supported URI schemes are `http` and `https`.
+/// URLs without a scheme will return `Error`.
 ///
 /// ## Examples
 ///
@@ -410,10 +410,11 @@ fn join_segments(segments: List(String)) -> String {
   string.join(["", ..segments], "/")
 }
 
-/// Resolves a uri with respect to the given base uri
+/// Resolves a URI with respect to the given base URI.
 ///
-/// The base uri must be an absolute uri or this function will return an error.
+/// The base URI must be an absolute URI or this function will return an error.
 /// The algorithm for merging uris is described in [RFC 3986](https://tools.ietf.org/html/rfc3986#section-5.2)
+///
 pub fn merge(base: Uri, relative: Uri) -> Result(Uri, Nil) {
   case base {
     Uri(scheme: Some(_), host: Some(_), ..) ->

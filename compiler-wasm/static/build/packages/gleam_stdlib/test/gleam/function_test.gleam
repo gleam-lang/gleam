@@ -2,6 +2,7 @@ import gleam/should
 import gleam/dynamic
 import gleam/function
 import gleam/int
+import gleam/pair
 import gleam/list
 import gleam/result
 import gleam/string
@@ -106,4 +107,10 @@ pub fn identity_test() {
   #(1, 2.0)
   |> function.identity
   |> should.equal(#(1, 2.0))
+}
+
+pub fn always_test() {
+  #(1, 2)
+  |> pair.map_first(function.constant(42))
+  |> should.equal(#(42, 2))
 }

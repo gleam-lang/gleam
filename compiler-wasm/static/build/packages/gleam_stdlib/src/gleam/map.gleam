@@ -42,7 +42,7 @@ if erlang {
 
 if javascript {
   external fn do_size(Map(k, v)) -> Int =
-    "../gleam_stdlib.js" "map_size"
+    "../gleam_stdlib.mjs" "map_size"
 }
 
 /// Converts the map to a list of 2-element tuples `#(key, value)`, one for
@@ -69,7 +69,7 @@ if erlang {
 
 if javascript {
   external fn do_to_list(Map(key, value)) -> List(#(key, value)) =
-    "../gleam_stdlib.js" "map_to_list"
+    "../gleam_stdlib.mjs" "map_to_list"
 }
 
 /// Converts a list of 2-element tuples `#(key, value)` to a map.
@@ -130,13 +130,13 @@ if erlang {
 
 if javascript {
   external fn do_new() -> Map(key, value) =
-    "../gleam_stdlib.js" "new_map"
+    "../gleam_stdlib.mjs" "new_map"
 }
 
 /// Fetches a value from a map for a given key.
 ///
 /// The map may not have a value for the key, so the value is wrapped in a
-/// Result.
+/// `Result`.
 ///
 /// ## Examples
 ///
@@ -157,7 +157,7 @@ if erlang {
 
 if javascript {
   external fn do_get(Map(key, value), key) -> Result(value, Nil) =
-    "../gleam_stdlib.js" "map_get"
+    "../gleam_stdlib.mjs" "map_get"
 }
 
 /// Inserts a value into the map with the given key.
@@ -184,7 +184,7 @@ if erlang {
 
 if javascript {
   external fn do_insert(key, value, Map(key, value)) -> Map(key, value) =
-    "../gleam_stdlib.js" "map_insert"
+    "../gleam_stdlib.mjs" "map_insert"
 }
 
 /// Updates all values in a given map by calling a given function on each key
@@ -272,7 +272,7 @@ if javascript {
 }
 
 /// Creates a new map from a given map, minus any entries that a given function
-/// returns False for.
+/// returns `False` for.
 ///
 /// ## Examples
 ///
@@ -401,7 +401,7 @@ if erlang {
 
 if javascript {
   external fn do_delete(k, Map(k, v)) -> Map(k, v) =
-    "../gleam_stdlib.js" "map_remove"
+    "../gleam_stdlib.mjs" "map_remove"
 }
 
 /// Creates a new map from a given map with all the same entries except any with
@@ -472,11 +472,11 @@ fn do_fold(list: List(#(k, v)), initial: acc, fun: fn(acc, k, v) -> acc) -> acc 
 /// # Examples
 ///
 ///    > let map = from_list([#("a", 1), #("b", 3), #("c", 9)])
-///    > fold(map, 0, fn(key, value, accumulator) { accumulator + value })
+///    > fold(map, 0, fn(accumulator, key, value) { accumulator + value })
 ///    13
 ///
 ///    > import gleam/string.{append}
-///    > fold(map, "", fn(key, value, accumulator) { append(accumulator, value) })
+///    > fold(map, "", fn(accumulator, key, value) { append(accumulator, key) })
 ///    "abc"
 ///
 pub fn fold(

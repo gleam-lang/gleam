@@ -13,7 +13,7 @@ pub type Match {
   Match(
     /// The full string of the match.
     content: String,
-    /// A Regex can have subpatterns, sup-parts that are in parentheses.
+    /// A `Regex` can have subpatterns, sup-parts that are in parentheses.
     submatches: List(Option(String)),
   )
 }
@@ -34,7 +34,7 @@ pub type Options {
   Options(case_insensitive: Bool, multi_line: Bool)
 }
 
-/// Creates a Regex with some additional options.
+/// Creates a `Regex` with some additional options.
 ///
 /// ## Examples
 ///
@@ -62,10 +62,10 @@ if erlang {
 
 if javascript {
   external fn do_compile(String, with: Options) -> Result(Regex, CompileError) =
-    "../gleam_stdlib.js" "compile_regex"
+    "../gleam_stdlib.mjs" "compile_regex"
 }
 
-/// Creates a new Regex.
+/// Creates a new `Regex`.
 ///
 /// ## Examples
 ///
@@ -110,10 +110,10 @@ if erlang {
 
 if javascript {
   external fn do_check(Regex, String) -> Bool =
-    "../gleam_stdlib.js" "regex_check"
+    "../gleam_stdlib.mjs" "regex_check"
 }
 
-/// Splits a string
+/// Splits a string.
 ///
 /// ## Examples
 ///
@@ -136,7 +136,7 @@ if javascript {
   }
 
   external fn js_split(String, Regex) -> List(String) =
-    "../gleam_stdlib.js" "split"
+    "../gleam_stdlib.mjs" "split"
 }
 
 /// Collects all matches of the regular expression.
@@ -167,5 +167,5 @@ if erlang {
 
 if javascript {
   external fn do_scan(Regex, String) -> List(Match) =
-    "../gleam_stdlib.js" "regex_scan"
+    "../gleam_stdlib.mjs" "regex_scan"
 }

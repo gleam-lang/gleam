@@ -1,7 +1,7 @@
 import gleam/list
 
-/// Option represents a value that may be present or not. Some means the value is
-/// present, None means the value is not.
+/// `Option` represents a value that may be present or not. `Some` means the value is
+/// present, `None` means the value is not.
 ///
 /// This is Gleam's alternative to having a value that could be Null, as is
 /// possible in some other languages.
@@ -11,9 +11,9 @@ pub type Option(a) {
   None
 }
 
-/// Combines a list of options into a single option.
-/// If all elements in the list are Some then returns a Some holding the list of values.
-/// If any element is None then returns None.
+/// Combines a list of `Option`s into a single `Option`.
+/// If all elements in the list are `Some` then returns a `Some` holding the list of values.
+/// If any element is `None` then returns`None`.
 ///
 /// ## Examples
 ///
@@ -38,7 +38,7 @@ pub fn all(list: List(Option(a))) -> Option(List(a)) {
   )
 }
 
-/// Checks whether the option is a Some value.
+/// Checks whether the `Option` is a `Some` value.
 ///
 /// ## Examples
 ///
@@ -52,7 +52,7 @@ pub fn is_some(option: Option(a)) -> Bool {
   option != None
 }
 
-/// Checks whether the option is a None value.
+/// Checks whether the `Option` is a `None` value.
 ///
 /// ## Examples
 ///
@@ -66,7 +66,7 @@ pub fn is_none(option: Option(a)) -> Bool {
   option == None
 }
 
-/// Converts an Option type to a Result type
+/// Converts an `Option` type to a `Result` type.
 ///
 /// ## Examples
 ///
@@ -82,7 +82,7 @@ pub fn to_result(option: Option(a), e) -> Result(a, e) {
   }
 }
 
-/// Converts a Result type to an Option type
+/// Converts a `Result` type to an `Option` type.
 ///
 /// ## Examples
 ///
@@ -98,7 +98,7 @@ pub fn from_result(result: Result(a, e)) -> Option(a) {
   }
 }
 
-/// Extracts the value from an option, returning a default value if there is none.
+/// Extracts the value from an `Option`, returning a default value if there is none.
 ///
 /// ## Examples
 ///
@@ -115,11 +115,11 @@ pub fn unwrap(option: Option(a), or default: a) -> a {
   }
 }
 
-/// Updates a value held within the Some of an Option by calling a given function
+/// Updates a value held within the `Some` of an `Option` by calling a given function
 /// on it.
 ///
-/// If the option is a None rather than Some the function is not called and the
-/// option stays the same.
+/// If the `Option` is a `None` rather than `Some`, the function is not called and the
+/// `Option` stays the same.
 ///
 /// ## Examples
 ///
@@ -136,7 +136,7 @@ pub fn map(over option: Option(a), with fun: fn(a) -> b) -> Option(b) {
   }
 }
 
-/// Merges a nested Option into a single layer.
+/// Merges a nested `Option` into a single layer.
 ///
 /// ## Examples
 ///
@@ -156,15 +156,15 @@ pub fn flatten(option: Option(Option(a))) -> Option(a) {
   }
 }
 
-/// Updates a value held within the Some of an Option by calling a given function
-/// on it, where the given function also returns an Option. The two Options are
-/// then merged together into one Option.
+/// Updates a value held within the `Some` of an `Option` by calling a given function
+/// on it, where the given function also returns an `Option`. The two options are
+/// then merged together into one `Option`.
 ///
-/// If the Option is a None rather than Some the function is not called and the
-/// Option stays the same.
+/// If the `Option` is a `None` rather than `Some` the function is not called and the
+/// option stays the same.
 ///
 /// This function is the equivalent of calling `map` followed by `flatten`, and
-/// it is useful for chaining together multiple functions that return Options.
+/// it is useful for chaining together multiple functions that return `Option`.
 ///
 /// ## Examples
 ///
@@ -187,7 +187,7 @@ pub fn then(option: Option(a), apply fun: fn(a) -> Option(b)) -> Option(b) {
   }
 }
 
-/// Returns the first value if it is Some, otherwise return the second value.
+/// Returns the first value if it is `Some`, otherwise returns the second value.
 ///
 /// ## Examples
 ///
@@ -210,8 +210,8 @@ pub fn or(first: Option(a), second: Option(a)) -> Option(a) {
   }
 }
 
-/// Given a list of options
-/// Return only the values inside Some
+/// Given a list of `Option`s,
+/// returns only the values inside `Some`.
 ///
 /// ## Examples
 ///

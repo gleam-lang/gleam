@@ -23,7 +23,7 @@ if erlang {
 
 if javascript {
   external fn do_print(String) -> Nil =
-    "../gleam_stdlib.js" "print"
+    "../gleam_stdlib.mjs" "print"
 }
 
 /// Writes a string to standard output, appending a newline to the end.
@@ -47,7 +47,7 @@ if erlang {
 
 if javascript {
   external fn do_println(String) -> Nil =
-    "../gleam_stdlib.js" "log"
+    "../gleam_stdlib.mjs" "log"
 }
 
 /// Prints a value to standard output using Erlang syntax.
@@ -85,7 +85,7 @@ if erlang {
 
 if javascript {
   external fn debug_print(anything) -> Nil =
-    "../gleam_stdlib.js" "debug"
+    "../gleam_stdlib.mjs" "debug"
 }
 
 if erlang {

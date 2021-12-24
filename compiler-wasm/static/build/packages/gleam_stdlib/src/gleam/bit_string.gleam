@@ -1,8 +1,8 @@
 //// Working with raw bit string data.
-//// The BitString type should be used instead of a String type when not utf8
+//// The `BitString` type should be used instead of a String type when not utf8
 //// encoded.
 
-/// Converts a UTF-8 String type into a raw BitString type.
+/// Converts a UTF-8 `String` type into a raw `BitString` type.
 ///
 pub fn from_string(x: String) -> BitString {
   do_from_string(x)
@@ -15,7 +15,7 @@ if erlang {
 
 if javascript {
   external fn do_from_string(String) -> BitString =
-    "../gleam_stdlib.js" "bit_string_from_string"
+    "../gleam_stdlib.mjs" "bit_string_from_string"
 }
 
 /// Returns an integer which is the number of bytes in the bit string.
@@ -31,7 +31,7 @@ if erlang {
 
 if javascript {
   external fn do_byte_size(BitString) -> Int =
-    "../gleam_stdlib.js" "length"
+    "../gleam_stdlib.mjs" "length"
 }
 
 /// Creates a new bit string by joining two binaries.
@@ -76,7 +76,7 @@ if javascript {
     position: Int,
     length: Int,
   ) -> Result(BitString, Nil) =
-    "../gleam_stdlib.js" "bit_string_slice"
+    "../gleam_stdlib.mjs" "bit_string_slice"
 }
 
 /// Tests to see whether a bit string is valid UTF-8.
@@ -126,7 +126,7 @@ if erlang {
 
 if javascript {
   external fn do_to_string(BitString) -> Result(String, Nil) =
-    "../gleam_stdlib.js" "bit_string_to_string"
+    "../gleam_stdlib.mjs" "bit_string_to_string"
 }
 
 /// Creates a new bit string by joining multiple binaries.
@@ -147,5 +147,5 @@ if erlang {
 
 if javascript {
   external fn do_concat(List(BitString)) -> BitString =
-    "../gleam_stdlib.js" "bit_string_concat"
+    "../gleam_stdlib.mjs" "bit_string_concat"
 }

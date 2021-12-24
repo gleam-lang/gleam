@@ -234,7 +234,7 @@ pub fn try_fold_test() {
   [1, 2, 3]
   |> list.try_fold(
     0,
-    fn(i, acc) {
+    fn(acc, i) {
       case i < 4 {
         True -> Ok(acc + i)
         False -> Error(Nil)
@@ -246,7 +246,7 @@ pub fn try_fold_test() {
   [1, 2, 3]
   |> list.try_fold(
     0,
-    fn(i, acc) {
+    fn(acc, i) {
       case i < 3 {
         True -> Ok(acc + i)
         False -> Error(Nil)

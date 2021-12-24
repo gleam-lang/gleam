@@ -1,40 +1,26 @@
+//// BitBuilder is a type used for efficiently concatenating bits to create bit
+//// strings.
+////
+//// If we append one bit string to another the bit strings must be copied to a
+//// new location in memory so that they can sit together. This behaviour
+//// enables efficient reading of the string but copying can be expensive,
+//// especially if we want to join many bit strings together.
+////
+//// BitBuilder is different in that it can be joined together in constant
+//// time using minimal memory, and then can be efficiently converted to a
+//// bit string using the `to_bit_string` function.
+////
+//// On Erlang this type is compatible with Erlang's iolists.
+
 import gleam/string_builder.{StringBuilder}
 import gleam/bit_string
 import gleam/list
 
 if erlang {
-  /// BitBuilder is a type used for efficiently concatenating bits to create bit
-  /// strings.
-  ///
-  /// If we append one bit string to another the bit strings must be copied to a
-  /// new location in memory so that they can sit together. This behaviour
-  /// enables efficient reading of the string but copying can be expensive,
-  /// especially if we want to join many bit strings together.
-  ///
-  /// BitBuilder is different in that it can be joined together in constant
-  /// time using minimal memory, and then can be efficiently converted to a
-  /// bit string using the `to_bit_string` function.
-  ///
-  /// On Erlang this type is compatible with Erlang's iolists.
-  ///
   pub external type BitBuilder
 }
 
 if javascript {
-  /// BitBuilder is a type used for efficiently concatenating bits to create bit
-  /// strings.
-  ///
-  /// If we append one bit string to another the bit strings must be copied to a
-  /// new location in memory so that they can sit together. This behaviour
-  /// enables efficient reading of the string but copying can be expensive,
-  /// especially if we want to join many bit strings together.
-  ///
-  /// BitBuilder is different in that it can be joined together in constant
-  /// time using minimal memory, and then can be efficiently converted to a
-  /// bit string using the `to_bit_string` function.
-  ///
-  /// On Erlang this type is compatible with Erlang's iolists.
-  ///
   pub opaque type BitBuilder {
     Bits(BitString)
     Text(StringBuilder)

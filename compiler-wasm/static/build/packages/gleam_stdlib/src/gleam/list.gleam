@@ -179,7 +179,7 @@ pub fn first(list: List(a)) -> Result(a, Nil) {
   }
 }
 
-/// Gets the list minus the first element. If the list is empty `Error(Nil)` is
+/// Returns the list minus the first element. If the list is empty, `Error(Nil)` is
 /// returned.
 ///
 /// This function runs in constant time and does not make a copy of the list.
@@ -281,7 +281,7 @@ pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) {
   do_map(list, fun, [])
 }
 
-/// Similar to map but also lets you pass around an accumulated value.
+/// Similar to `map` but also lets you pass around an accumulated value.
 ///
 /// ## Examples
 ///
@@ -289,7 +289,7 @@ pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) {
 /// > map_fold(
 ///     over: [1, 2, 3],
 ///     from: 100,
-///     with: fn(i, memo) { #(i * 2, memo + i) }
+///     with: fn(memo, i) { #(i * 2, memo + i) }
 ///  )
 ///  #([2, 4, 6], 106)
 /// ```
@@ -356,8 +356,8 @@ fn do_try_map(
   }
 }
 
-/// Takes a function that returns a Result applies it to each element in a
-/// given list in tern.
+/// Takes a function that returns a `Result` and applies it to each element in a
+/// given list in turn.
 ///
 /// If the function returns `Ok(new_value)` for all elements in the list then a
 /// list of the new values is returned.
@@ -509,7 +509,7 @@ pub fn flatten(lists: List(List(a))) -> List(a) {
   do_flatten(lists, [])
 }
 
-/// Map and flatten the result
+/// Maps the list with the given function and then flattens the result.
 ///
 /// ## Examples
 ///
@@ -526,7 +526,7 @@ pub fn flat_map(over list: List(a), with fun: fn(a) -> List(b)) -> List(b) {
 /// Reduces a list of elements into a single value by calling a given function
 /// on each element, going from left to right.
 ///
-/// `fold([1, 2, 3], 0, add)` is the equivalent of `add(3, add(2, add(1, 0)))`.
+/// `fold(0, [1, 2, 3], add)` is the equivalent of `add(3, add(2, add(1, 0)))`.
 ///
 /// This function runs in linear time.
 ///
@@ -544,7 +544,7 @@ pub fn fold(
 /// Reduces a list of elements into a single value by calling a given function
 /// on each element, going from right to left.
 ///
-/// `fold_right([1, 2, 3], 0, add)` is the equivalent of
+/// `fold_right(0, [1, 2, 3], add)` is the equivalent of
 /// `add(1, add(2, add(3, 0)))`.
 ///
 /// This function runs in linear time.
@@ -582,7 +582,7 @@ fn do_index_fold(
 ///
 /// ```
 /// ["a", "b", "c"]
-/// |> list.index_fold([], fn(index, item, acc) { ... })
+/// |> list.index_fold([], fn(acc, item, index) { ... })
 /// ```
 ///
 pub fn index_fold(
@@ -595,7 +595,7 @@ pub fn index_fold(
 
 /// A variant of fold that might fail.
 ///
-/// The folding function should return `Result(accumulator, error)
+/// The folding function should return `Result(accumulator, error)`.
 /// If the returned value is `Ok(accumulator)` try_fold will try the next value in the list.
 /// If the returned value is `Error(error)` try_fold will stop and return that error.
 ///
@@ -603,7 +603,7 @@ pub fn index_fold(
 ///
 /// ```
 /// [1, 2, 3, 4]
-/// |> try_fold(0, fn(i, acc) {
+/// |> try_fold(0, fn(acc, i) {
 ///   case i < 3 {
 ///     True -> Ok(acc + i)
 ///     False -> Error(Nil)
@@ -632,7 +632,7 @@ pub type ContinueOrStop(a) {
 
 /// A variant of fold that allows to stop folding earlier.
 ///
-/// The folding function should return `ContinueOrStop(accumulator)
+/// The folding function should return `ContinueOrStop(accumulator)`.
 /// If the returned value is `Continue(accumulator)` fold_until will try the next value in the list.
 /// If the returned value is `Stop(accumulator)` fold_until will stop and return that accumulator.
 ///
@@ -640,7 +640,7 @@ pub type ContinueOrStop(a) {
 ///
 /// ```
 /// [1, 2, 3, 4]
-/// |> fold_until(0, fn(i, acc) {
+/// |> fold_until(0, fn(acc, i) {
 ///   case i < 3 {
 ///     True -> Continue(acc + i)
 ///     False -> Stop(acc)
@@ -664,10 +664,9 @@ pub fn fold_until(
 }
 
 /// Finds the first element in a given list for which the given function returns
-/// True.
+/// `True`.
 ///
-/// Returns `Error(Nil)` if no the function does not return True for any of the
-/// elements.
+/// Returns `Error(Nil)` if no such element is found.
 ///
 /// ## Examples
 ///
@@ -695,10 +694,9 @@ pub fn find(
 }
 
 /// Finds the first element in a given list for which the given function returns
-/// `Ok(new_value)` and return the new value for that element.
+/// `Ok(new_value)`, then returns the wrapped `new_value`.
 ///
-/// Returns `Error(Nil)` if no the function does not return Ok for any of the
-/// elements.
+/// Returns `Error(Nil)` if no such element is found.
 ///
 /// ## Examples
 ///
@@ -725,9 +723,9 @@ pub fn find_map(
   }
 }
 
-/// Returns True if the given function returns True for all the elements in
-/// the given list. If the function returns False for any of the elements it
-/// immediately returns False without checking the rest of the list.
+/// Returns `True` if the given function returns `True` for all the elements in
+/// the given list. If the function returns `False` for any of the elements it
+/// immediately returns `False` without checking the rest of the list.
 ///
 /// ## Examples
 ///
@@ -747,9 +745,9 @@ pub fn all(in list: List(a), satisfying predicate: fn(a) -> Bool) -> Bool {
   }
 }
 
-/// Returns True if the given function returns True for any the elements in
-/// the given list. If the function returns True for any of the elements it
-/// immediately returns True without checking the rest of the list.
+/// Returns `True` if the given function returns `True` for any the elements in
+/// the given list. If the function returns `True` for any of the elements it
+/// immediately returns `True` without checking the rest of the list.
 ///
 /// ## Examples
 ///
@@ -779,9 +777,9 @@ fn do_zip(xs: List(a), ys: List(b), acc: List(#(a, b))) -> List(#(a, b)) {
   }
 }
 
-/// Takes two lists and returns a single list of 2 item tuples.
+/// Takes two lists and returns a single list of 2-element tuples.
 ///
-/// If one of the lists is longer than the other the remaining elements from
+/// If one of the lists is longer than the other, the remaining elements from
 /// the longer list are not used.
 ///
 /// ## Examples
@@ -802,9 +800,9 @@ pub fn zip(xs: List(a), ys: List(b)) -> List(#(a, b)) {
   do_zip(xs, ys, [])
 }
 
-/// Takes two lists and returns a single list of 2 item tuples.
+/// Takes two lists and returns a single list of 2-element tuples.
 ///
-/// If one of the lists is longer than the other an Error is returned.
+/// If one of the lists is longer than the other, an `Error` is returned.
 ///
 /// ## Examples
 ///
@@ -837,7 +835,7 @@ fn do_unzip(input, xs, ys) {
   }
 }
 
-/// Takes a single list of 2 item tuples and returns two lists.
+/// Takes a single list of 2-element tuples and returns two lists.
 ///
 /// ## Examples
 ///
@@ -880,7 +878,7 @@ pub fn intersperse(list: List(a), with elem: a) -> List(a) {
 /// Returns the element in the Nth position in the list, with 0 being the first
 /// position.
 ///
-/// Error(Nil) is returned if the list is not long enough for the given index.
+/// `Error(Nil)` is returned if the list is not long enough for the given index.
 ///
 /// For any `index` less than 0 this function behaves as if it was set to 0.
 ///
@@ -900,7 +898,7 @@ pub fn at(in list: List(a), get index: Int) -> Result(a, Nil) {
 
 /// Removes any duplicate elements from a given list.
 ///
-/// This function returns in log-linear time (n log n).
+/// This function returns in loglinear time.
 ///
 /// ## Examples
 ///
@@ -1048,9 +1046,9 @@ fn do_split_while(
 }
 
 /// Splits a list in two before the first element that a given function returns
-/// False for.
+/// `False` for.
 ///
-/// If the function returns True for all elements the first list will be the
+/// If the function returns `True` for all elements the first list will be the
 /// input list, and the second list will be empty.
 ///
 /// ## Examples
@@ -1068,7 +1066,7 @@ pub fn split_while(
   do_split_while(list, predicate, [])
 }
 
-/// Given a list of 2 element tuples, finds the first tuple that has a given
+/// Given a list of 2-element tuples, finds the first tuple that has a given
 /// key as the first element and returns the second element.
 ///
 /// If no tuple is found with the given key then `Error(Nil)` is returned.
@@ -1116,8 +1114,7 @@ fn do_pop(haystack, predicate, checked) {
 
 /// Removes the first element in a given list for which the predicate funtion returns `True`.
 ///
-/// Returns `Error(Nil)` if no the function does not return True for any of the
-/// elements.
+/// Returns `Error(Nil)` if no such element is found.
 ///
 /// ## Examples
 ///
@@ -1149,10 +1146,9 @@ fn do_pop_map(haystack, mapper, checked) {
 }
 
 /// Removes the first element in a given list for which the given function returns
-/// `Ok(new_value)` and return the new value as well as list with the value removed.
+/// `Ok(new_value)`, then returns the wrapped `new_value` as well as list with the value removed.
 ///
-/// Returns `Error(Nil)` if no the function does not return Ok for any of the
-/// elements.
+/// Returns `Error(Nil)` if no such element is found.
 ///
 /// ## Examples
 ///
@@ -1172,7 +1168,7 @@ pub fn pop_map(
   do_pop_map(haystack, is_desired, [])
 }
 
-/// Given a list of 2 element tuples, finds the first tuple that has a given
+/// Given a list of 2-element tuples, finds the first tuple that has a given
 /// key as the first element. This function will return the second element
 /// of the found tuple and list with tuple removed.
 ///
@@ -1205,7 +1201,7 @@ pub fn key_pop(
   )
 }
 
-/// Given a list of 2 element tuples, inserts a key and value into the list.
+/// Given a list of 2-element tuples, inserts a key and value into the list.
 ///
 /// If there was already a tuple with the key then it is replaced, otherwise it
 /// is added to the end of the list.
@@ -1257,8 +1253,8 @@ pub fn partition(
   do_partition(list, categorise, [], [])
 }
 
-/// Returns all the permutations of a list
-/// All values must be unique
+/// Returns all the permutations of a list.
+/// All values must be unique.
 ///
 /// ## Examples
 ///
@@ -1290,7 +1286,7 @@ fn do_window(acc: List(List(a)), l: List(a), n: Int) -> List(List(a)) {
   }
 }
 
-/// Returns a list of sliding window
+/// Returns a list of sliding windows.
 ///
 /// ## Examples
 ///
@@ -1307,7 +1303,7 @@ pub fn window(l: List(a), by n: Int) -> List(List(a)) {
   |> reverse
 }
 
-/// Returns a list of tuples containing two contiguous elements
+/// Returns a list of tuples containing two contiguous elements.
 ///
 /// ## Examples
 ///
@@ -1455,16 +1451,16 @@ pub fn sized_chunk(in list: List(a), into count: Int) -> List(List(a)) {
 /// This function acts similar to fold, but does not take an initial state.
 /// Instead, it starts from the first element in the list
 /// and combines it with each subsequent element in turn using the given function.
-/// The function is called as fun(current_element, accumulator).
+/// The function is called as `fun(accumulator, current_element)`.
 ///
 /// Returns `Ok` to indicate a successful run, and `Error` if called on an empty list.
 ///
 /// ## Examples
 ///
-///    > [] |> reduce(fn(x, y) { x + y })
+///    > [] |> reduce(fn(acc, x) { acc + x })
 ///    Error(Nil)
 ///
-///    > [1, 2, 3, 4, 5] |> reduce(fn(x, y) { x + y })
+///    > [1, 2, 3, 4, 5] |> reduce(fn(acc, x) { acc + x })
 ///    Ok(15)
 ///
 pub fn reduce(over list: List(a), with fun: fn(a, a) -> a) -> Result(a, Nil) {
@@ -1493,7 +1489,7 @@ fn do_scan(
 ///
 /// ## Examples
 ///
-///    > scan(over: [1, 2, 3], from: 100, with: fn(i, acc) { acc + i })
+///    > scan(over: [1, 2, 3], from: 100, with: fn(acc, i) { acc + i })
 ///    [101, 103, 106]
 ///
 pub fn scan(
@@ -1525,7 +1521,7 @@ pub fn last(list: List(a)) -> Result(a, Nil) {
   |> reduce(fn(_, elem) { elem })
 }
 
-/// Return unique combinations of elements in the list
+/// Return unique combinations of elements in the list.
 ///
 /// ## Examples
 ///

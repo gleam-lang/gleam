@@ -55,7 +55,7 @@ pub fn to_int(order: Order) -> Int {
   }
 }
 
-/// Compares two Order values to one another, producing a new Order.
+/// Compares two `Order` values to one another, producing a new `Order`.
 ///
 /// ## Examples
 ///

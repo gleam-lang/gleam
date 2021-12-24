@@ -127,6 +127,7 @@ fn gather_compiled_files(
                 .to_str()
                 .unwrap()
                 .replace("\\", "/")
+                //.replace("build/dev/", "./build/dev/");
                 .replace("build/dev/javascript/", "gleam-packages/");
             files.insert(path, contents);
         }
@@ -180,9 +181,9 @@ fn test_javascript_project_stdlib() {
         Some(&String::from("import * as $io from \"../../gleam_stdlib/dist/gleam/io.mjs\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
     );
 
-    // for key in result.keys() {
-    //     println!("{:?}", key);
-    // }
+    for key in result.keys() {
+        println!("{:?}", key);
+    }
 }
 
 #[test]
@@ -207,9 +208,9 @@ fn test_erlang_project_stdlib() {
 
     //let gathered_files = gather_compiled_files(&wfs, Target::JavaScript).unwrap();
 
-    for key in result.keys() {
-        println!("{:?}", key);
-    }
+    // for key in result.keys() {
+    //     println!("{:?}", key);
+    // }
 
     //println!("{:?}", result);
 }

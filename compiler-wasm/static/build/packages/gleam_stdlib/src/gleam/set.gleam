@@ -77,7 +77,7 @@ pub fn contains(in set: Set(member), this member: member) -> Bool {
   |> result.is_ok
 }
 
-/// Removes an member from a set. If the set does not contain the member then
+/// Removes a member from a set. If the set does not contain the member then
 /// the set is returned unchanged.
 ///
 /// This function runs in logarithmic time.
@@ -149,7 +149,7 @@ pub fn fold(
 }
 
 /// Creates a new set from an existing set, minus any members that a given
-/// function returns False for.
+/// function returns `False` for.
 ///
 /// This function runs in loglinear time.
 ///

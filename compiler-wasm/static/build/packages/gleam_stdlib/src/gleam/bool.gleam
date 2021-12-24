@@ -1,10 +1,10 @@
-//// A type with two possible values, True and False. Used to indicate whether
+//// A type with two possible values, `True` and `False`. Used to indicate whether
 //// things are... true or false!
 ////
 //// Often is it clearer and offers more type safety to define a custom type
-//// than to use Bool. For example, rather than having a `is_teacher: Bool`
-//// field consider having a `role: SchoolRole` field where SchoolRole is a custom
-//// type that can be either Student or Teacher.
+//// than to use `Bool`. For example, rather than having a `is_teacher: Bool`
+//// field consider having a `role: SchoolRole` field where `SchoolRole` is a custom
+//// type that can be either `Student` or `Teacher`.
 
 import gleam/order.{Order}
 
@@ -27,7 +27,7 @@ pub fn negate(bool: Bool) -> Bool {
   }
 }
 
-/// Returns the nor of two bools
+/// Returns the nor of two bools.
 ///
 /// ## Examples
 ///
@@ -52,7 +52,7 @@ pub fn nor(a: Bool, b: Bool) -> Bool {
   }
 }
 
-/// Returns the nand of two bools
+/// Returns the nand of two bools.
 ///
 /// ## Examples
 ///
@@ -77,7 +77,7 @@ pub fn nand(a: Bool, b: Bool) -> Bool {
   }
 }
 
-/// Returns the exclusive or of two bools
+/// Returns the exclusive or of two bools.
 ///
 /// ## Examples
 ///
@@ -102,7 +102,7 @@ pub fn exclusive_or(a: Bool, b: Bool) -> Bool {
   }
 }
 
-/// Returns the exclusive nor of two bools
+/// Returns the exclusive nor of two bools.
 ///
 /// ## Examples
 ///
@@ -127,7 +127,7 @@ pub fn exclusive_nor(a: Bool, b: Bool) -> Bool {
   }
 }
 
-/// Compares two bools and returns the first values Order to the second.
+/// Compares two bools and returns the first value's `Order` to the second.
 ///
 /// ## Examples
 ///
@@ -144,7 +144,7 @@ pub fn compare(a: Bool, with b: Bool) -> Order {
   }
 }
 
-/// Returns True if either bool value is True.
+/// Returns `True` if either argument's value is `True`.
 ///
 /// ## Examples
 ///
@@ -164,7 +164,7 @@ pub fn max(a: Bool, b: Bool) -> Bool {
   }
 }
 
-/// Returns False if either bool value is False.
+/// Returns `False` if either bool value is `False`.
 ///
 /// ## Examples
 ///

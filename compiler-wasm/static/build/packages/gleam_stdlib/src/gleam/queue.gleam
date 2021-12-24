@@ -1,6 +1,6 @@
 import gleam/list
 
-/// A queue is an order collection of elements. It is similar to a list, but
+/// A queue is an ordered collection of elements. It is similar to a list, but
 /// unlike a list elements can be added to or removed from either the front or
 /// the back in a performant fashion.
 ///

@@ -138,7 +138,7 @@ fn do_fold(
 ///
 ///    > [1, 2, 3, 4]
 ///    > |> from_list
-///    > |> fold(from: 0, with: fn(element, acc) { element + acc })
+///    > |> fold(from: 0, with: fn(acc, element) { element + acc })
 ///    10
 ///
 pub fn fold(
@@ -166,8 +166,10 @@ pub fn run(iterator: Iterator(e)) -> Nil {
 ///
 /// ## Examples
 ///
-///   > [1, 2, 3] |> from_list |> map(fn(x) { x * 2 }) |> to_list
-///   [2, 4, 6]
+/// ```
+/// > [1, 2, 3] |> from_list |> map(fn(x) { x * 2 }) |> to_list
+/// [2, 4, 6]
+/// ```
 ///
 pub fn to_list(iterator: Iterator(element)) -> List(element) {
   iterator
@@ -452,9 +454,9 @@ fn do_find(continuation: fn() -> Action(a), f: fn(a) -> Bool) -> Result(a, Nil) 
 }
 
 /// Finds the first element in a given iterator for which the given function returns
-/// True.
+/// `True`.
 ///
-/// Returns `Error(Nil)` if the function does not return True for any of the
+/// Returns `Error(Nil)` if the function does not return `True` for any of the
 /// elements.
 ///
 /// ## Examples
@@ -601,7 +603,7 @@ fn do_scan(
 /// ## Examples
 ///
 ///    Generate a sequence of partial sums:
-///    > from_list([1, 2, 3, 4, 5]) |> scan(from: 0, with: fn(el, acc) { acc + el }) |> to_list
+///    > from_list([1, 2, 3, 4, 5]) |> scan(from: 0, with: fn(acc, el) { acc + el }) |> to_list
 ///    [1, 3, 6, 10, 15]
 ///
 pub fn scan(
@@ -781,7 +783,7 @@ fn do_intersperse(
   }
 }
 
-/// Creates an iterator that yields the given element
+/// Creates an iterator that yields the given `elem` element
 /// between elements emitted by the underlying iterator.
 ///
 /// ## Examples
@@ -920,16 +922,16 @@ pub fn group(
 /// This function acts similar to fold, but does not take an initial state.
 /// Instead, it starts from the first yielded element
 /// and combines it with each subsequent element in turn using the given function.
-/// The function is called as f(current_element, accumulator).
+/// The function is called as `f(accumulator, current_element)`.
 ///
 /// Returns `Ok` to indicate a successful run, and `Error` if called on an empty iterator.
 ///
 /// ## Examples
 ///
-///    > from_list([]) |> reduce(fn(x, y) { x + y })
+///    > from_list([]) |> reduce(fn(acc, x) { acc + x })
 ///    Error(Nil)
 ///
-///    > from_list([1, 2, 3, 4, 5]) |> reduce(fn(x, y) { x + y })
+///    > from_list([1, 2, 3, 4, 5]) |> reduce(fn(acc, x) { acc + x })
 ///    Ok(15)
 ///
 pub fn reduce(
@@ -1043,15 +1045,15 @@ fn do_fold_until(
 }
 
 /// Like `fold`, `fold_until` reduces an iterator of elements into a single value by calling a given
-/// function on each element in turn, but uses a `list.ContinueOrStop` to determine 
+/// function on each element in turn, but uses `list.ContinueOrStop` to determine
 /// whether or not to keep iterating.
 ///
 /// If called on an iterator of infinite length then this function will only ever
-/// return if the give function returns list.Stop.
+/// return if the function returns `list.Stop`.
 ///
 ///
 /// ## Examples
-///    > let f = fn(e, acc) {
+///    > let f = fn(acc, e) {
 ///    >   case e {
 ///    >     _ if e < 4 -> list.Continue(e + acc)
 ///    >     _ -> list.Stop(acc)
@@ -1089,7 +1091,7 @@ fn do_try_fold(
 /// A variant of fold that might fail.
 /// 
 ///
-/// The folding function should return `Result(accumulator, error)
+/// The folding function should return `Result(accumulator, error)`.
 /// If the returned value is `Ok(accumulator)` try_fold will try the next value in the iterator.
 /// If the returned value is `Error(error)` try_fold will stop and return that error.
 ///
@@ -1097,7 +1099,7 @@ fn do_try_fold(
 /// 
 ///    > [1, 2, 3, 4]
 ///    > |> iterator.from_list()
-///    > |> try_fold(0, fn(i, acc) {
+///    > |> try_fold(0, fn(acc, i) {
 ///    >   case i < 3 {
 ///    >     True -> Ok(acc + i)
 ///    >     False -> Error(Nil)

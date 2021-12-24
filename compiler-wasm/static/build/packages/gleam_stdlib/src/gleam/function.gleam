@@ -7,14 +7,14 @@ pub fn compose(fun1: fn(a) -> b, fun2: fn(b) -> c) -> fn(a) -> c {
 
 /// Takes a function with arity two
 /// and returns a curried equivalent.
-/// fn(a, b) -> c becomes fn(a) -> fn(b) -> c
+/// `fn(a, b) -> c` becomes `fn(a) -> fn(b) -> c`.
 pub fn curry2(fun: fn(a, b) -> value) {
   fn(a) { fn(b) { fun(a, b) } }
 }
 
 /// Takes a function with arity three
 /// and returns a curried equivalent.
-/// fn(a, b, c) -> d becomes fn(a) -> fn(b) -> fn(c) -> d
+/// `fn(a, b, c) -> d` becomes `fn(a) -> fn(b) -> fn(c) -> d`.
 pub fn curry3(fun: fn(a, b, c) -> value) {
   fn(a) { fn(b) { fn(c) { fun(a, b, c) } } }
 }
@@ -50,4 +50,11 @@ pub fn flip(fun: fn(a, b) -> c) -> fn(b, a) -> c {
 ///
 pub fn identity(x: a) -> a {
   x
+}
+
+/// A function that takes a single argument and returns a new function that
+/// ignores its argument and always returns the input value.
+///
+pub fn constant(value: a) -> fn(b) -> a {
+  fn(_) { value }
 }

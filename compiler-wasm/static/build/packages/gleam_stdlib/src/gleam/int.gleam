@@ -38,7 +38,7 @@ if erlang {
 
 if javascript {
   external fn do_parse(String) -> Result(Int, Nil) =
-    "../gleam_stdlib.js" "parse_int"
+    "../gleam_stdlib.mjs" "parse_int"
 }
 
 /// Prints a given int to a string.
@@ -59,17 +59,17 @@ if erlang {
 
 if javascript {
   external fn do_to_string(Int) -> String =
-    "../gleam_stdlib.js" "to_string"
+    "../gleam_stdlib.mjs" "to_string"
 }
 
-/// For use in to_base_string when base is outside of the allowed range.
+/// For use in `to_base_string` when base is outside of the allowed range.
 pub type InvalidBase {
   InvalidBase
 }
 
 /// Prints a given int to a string using the base number provided.
-/// Supports only bases 2 to 36, for values outside of which this function returns an Error(InvalidBase).
-/// For common bases (2, 8, 16, 36), use the to_baseN functions.
+/// Supports only bases 2 to 36, for values outside of which this function returns an `Error(InvalidBase)`.
+/// For common bases (2, 8, 16, 36), use the `to_baseN` functions.
 ///
 /// ## Examples
 ///
@@ -102,7 +102,7 @@ if erlang {
 
 if javascript {
   external fn do_to_base_string(Int, Int) -> String =
-    "../gleam_stdlib.js" "int_to_base_string"
+    "../gleam_stdlib.mjs" "int_to_base_string"
 }
 
 /// Prints a given int to a string using base2.
@@ -149,18 +149,20 @@ pub fn to_base36(int) {
   do_to_base_string(int, 36)
 }
 
-/// Takes an int and returns its value as a float
+/// Takes an int and returns its value as a float.
 ///
 /// ## Examples
 ///
-///   > to_float(5)
-///   5.
+/// ```
+/// > to_float(5)
+/// 5.
 ///
-///   > to_float(0)
-///   0.
+/// > to_float(0)
+/// 0.
 ///
-///   > to_float(-3)
-///   -3.
+/// > to_float(-3)
+/// -3.
+/// ```
 ///
 pub fn to_float(int) {
   do_to_float(int)
@@ -173,10 +175,10 @@ if erlang {
 
 if javascript {
   external fn do_to_float(a: Int) -> Float =
-    "../gleam_stdlib.js" "identity"
+    "../gleam_stdlib.mjs" "identity"
 }
 
-/// Restricts an Int between a lower and upper bound
+/// Restricts an int between a lower and upper bound.
 ///
 /// ## Examples
 ///
@@ -215,7 +217,7 @@ pub fn compare(a: Int, with b: Int) -> Order {
   }
 }
 
-/// Compares two int, returning the smaller of the two.
+/// Compares two ints, returning the smaller of the two.
 ///
 /// ## Examples
 ///
@@ -229,7 +231,7 @@ pub fn min(a: Int, b: Int) -> Int {
   }
 }
 
-/// Compares two int, returning the larger of the two.
+/// Compares two ints, returning the larger of the two.
 ///
 /// ## Examples
 ///
@@ -271,7 +273,7 @@ pub fn is_odd(x: Int) -> Bool {
   x % 2 != 0
 }
 
-/// Returns the negative of the value provided
+/// Returns the negative of the value provided.
 ///
 /// ## Examples
 ///
@@ -282,7 +284,7 @@ pub fn negate(x: Int) -> Int {
   -1 * x
 }
 
-/// Sums a list of Ints.
+/// Sums a list of ints.
 ///
 /// ## Example
 ///
@@ -301,7 +303,7 @@ fn do_sum(numbers: List(Int), initial: Int) -> Int {
   }
 }
 
-/// Multiplies a list of Ints and returns the product.
+/// Multiplies a list of ints and returns the product.
 ///
 /// ## Example
 ///

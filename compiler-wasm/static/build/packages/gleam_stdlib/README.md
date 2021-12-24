@@ -9,11 +9,10 @@ Documentation available on [HexDocs](https://hexdocs.pm/gleam_stdlib/).
 
 ## Installation
 
-Add `gleam_stdlib` to the dependencies section of your `gleam.toml`
+Add `gleam_stdlib` to your Gleam project
 
-```toml
-[dependencies]
-gleam_stdlib = "~> 0.18"
+```shell
+gleam add gleam_stdlib
 ```
 
 ## Usage

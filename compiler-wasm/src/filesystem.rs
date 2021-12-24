@@ -86,8 +86,6 @@ impl FileSystemReader for WasmFileSystem {
 
         files1.append(&mut files2);
 
-        println!("{:?}", &files1);
-
         Box::new(files1.into_iter())
     }
 
