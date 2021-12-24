@@ -1,9 +1,3 @@
-[submodule "compiler-wasm/packages/stdlib"]
-	path = compiler-wasm/packages/stdlib
-	url = https://github.com/gleam-lang/stdlib
-[submodule "compiler-wasm/static/stdlib"]
-	path = compiler-wasm/static/stdlib
-	url = https://github.com/gleam-lang/stdlib.git
 [submodule "compiler-wasm/static/build/packages/gleam_stdlib"]
 	path = compiler-wasm/static/build/packages/gleam_stdlib
 	url = git@github.com:gleam-lang/stdlib.git
