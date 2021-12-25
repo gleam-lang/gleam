@@ -65,29 +65,25 @@ jobs:
 
   test-musl:
     runs-on: ubuntu-latest
-    container: clux/muslrust:stable
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
-      - name: Clone stdlib submodule manually
-        working-directory: compiler-wasm/static/build/packages
-        run: |
-          rm -rf gleam_stdlib
-          git clone https://github.com/gleam-lang/stdlib.git gleam_stdlib
-          cd gleam_stdlib
-          git checkout 284b9f0ff406d40a8eaf2b6d8faaef8813594153
-
-      - name: Link to predefined musl toolchain
-        run: |
-          ln -s /root/.cargo $HOME/.cargo
-          ln -s /root/.rustup $HOME/.rustup
+        with:
+          submodules: recursive
 
       - name: Build binary
-        run: cargo build --release
+        run: |
+          docker run --rm -t \
+            --mount type=bind,source=${{ github.workspace }},target=/volume \
+            clux/muslrust:stable \
+            cargo build --release
       
       - name: Run tests
-        run: cargo test --workspace
+        run: |
+          docker run --rm -t \
+            --mount type=bind,source=${{ github.workspace }},target=/volume \
+            clux/muslrust:stable \
+            cargo test --workspace
 
   rustfmt:
     name: rustfmt
