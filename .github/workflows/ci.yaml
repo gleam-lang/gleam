@@ -67,18 +67,16 @@ jobs:
     runs-on: ubuntu-latest
     container: clux/muslrust:stable
     steps:
-      - name: Install Git Latest
-        run: |
-          apt-get install -y software-properties-common
-          apt-get update
-          add-apt-repository -y ppa:git-core/ppa
-          apt-get update
-          apt-get install -y git
-
       - name: Checkout repository
         uses: actions/checkout@v2
-        with:
-          submodules: recursive
+
+      - name: Clone stdlib submodule manually
+        working-directory: compiler-wasm/static/build/packages
+        run: |
+          rm -rf gleam_stdlib
+          git clone https://github.com/gleam-lang/stdlib.git gleam_stdlib
+          cd gleam_stdlib
+          git checkout 284b9f0ff406d40a8eaf2b6d8faaef8813594153
 
       - name: Link to predefined musl toolchain
         run: |
