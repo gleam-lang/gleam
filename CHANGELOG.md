@@ -18,6 +18,8 @@
 - Fixed a bug where tail recursion could sometimes generated incorrect
   JavaScript code.
 - Performance of code generators has been slightly improved.
+- Allow the record in a record expansion to be an expression that returns a
+  record.
 
 ## v0.18.2 - 2021-12-12
 
