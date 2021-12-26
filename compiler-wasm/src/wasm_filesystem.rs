@@ -5,14 +5,9 @@ use gleam_core::{
     },
     Error, Result,
 };
-use rust_embed::RustEmbed;
 use std::path::{Path, PathBuf};
 
 use crate::static_files::StaticFiles;
-
-#[derive(RustEmbed)]
-#[folder = "static/"]
-struct Packages;
 
 #[derive(Clone, Debug)]
 pub struct WasmFileSystem {
