@@ -8,6 +8,7 @@ use std::{
     fmt::Debug,
     io,
     path::{Path, PathBuf},
+    vec::IntoIter,
 };
 use tar::{Archive, Entry};
 
@@ -55,35 +56,35 @@ pub struct OutputFile {
     pub path: PathBuf,
 }
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct ReadDir {
-    entries: Box<dyn Iterator<Item = io::Result<DirEntry>>>,
+    entries: Vec<io::Result<DirEntry>>,
+}
+
+impl FromIterator<io::Result<DirEntry>> for ReadDir {
+    fn from_iter<I: IntoIterator<Item = io::Result<DirEntry>>>(iter: I) -> Self {
+        ReadDir {
+            entries: iter.into_iter().collect(),
+        }
+    }
 }
 
 impl ReadDir {
-    pub fn from_entries(entries: Vec<io::Result<DirEntry>>) -> Self {
-        ReadDir {
-            entries: Box::new(entries.into_iter()),
-        }
-    }
-
-    pub fn extend(self, other: ReadDir) -> Self {
-        let mut entries: Vec<io::Result<DirEntry>> = Vec::new();
-
-        entries.append(&mut self.entries.into_iter().collect::<Vec<_>>());
-        entries.append(&mut other.into_iter().collect::<Vec<_>>());
+    pub fn extend(mut self, other: ReadDir) -> Self {
+        self.entries.extend(other.into_iter());
 
         ReadDir {
-            entries: Box::new(entries.into_iter()),
+            entries: self.entries,
         }
     }
 }
 
-impl Iterator for ReadDir {
+impl IntoIterator for ReadDir {
     type Item = io::Result<DirEntry>;
+    type IntoIter = IntoIter<Self::Item>;
 
-    fn next(&mut self) -> Option<io::Result<DirEntry>> {
-        self.entries.next()
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
     }
 }
 

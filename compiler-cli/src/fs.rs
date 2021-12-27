@@ -74,11 +74,9 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
         read_dir(path).map(|entries| {
-            let entries: Vec<_> = entries
+            entries
                 .map(|result| result.map(|entry| DirEntry::from_path(entry.path())))
-                .collect();
-
-            ReadDir::from_entries(entries)
+                .collect()
         })
     }
 }

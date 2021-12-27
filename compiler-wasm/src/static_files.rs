@@ -20,6 +20,7 @@ impl FileSystemReader for StaticFiles {
         Box::new(
             self.read_dir(dir)
                 .unwrap()
+                .into_iter()
                 .filter_map(|x| x.ok())
                 .map(|x| x.pathbuf)
                 .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam"))),
@@ -30,6 +31,7 @@ impl FileSystemReader for StaticFiles {
         Box::new(
             self.read_dir(dir)
                 .unwrap()
+                .into_iter()
                 .filter_map(|x| x.ok())
                 .map(|x| x.pathbuf)
                 .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam_module"))),
@@ -70,13 +72,13 @@ impl FileSystemReader for StaticFiles {
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        let files: Vec<io::Result<DirEntry>> = StaticFiles::iter()
+        let read_dir: ReadDir = StaticFiles::iter()
             .map(|x| PathBuf::from(x.as_ref()))
             .filter(|file_path| file_path.starts_with(path))
             .map(DirEntry::from_pathbuf)
             .map(Ok)
             .collect();
 
-        Ok(ReadDir::from_entries(files))
+        Ok(read_dir)
     }
 }

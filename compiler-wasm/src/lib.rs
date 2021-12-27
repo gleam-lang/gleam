@@ -118,6 +118,7 @@ fn gather_compiled_files(
 
     wfs.read_dir(Path::new("build"))
         .expect("expect the build directory to exist")
+        .into_iter()
         .filter_map(|result| result.ok())
         .filter(|dir_entry| dir_entry.as_path().extension() == Some(extension_to_search_for))
         .for_each(|dir_entry| {

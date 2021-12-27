@@ -112,16 +112,17 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        let entries: Vec<io::Result<DirEntry>> = (*self.files)
-            .borrow()
-            .iter()
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(path))
-            .map(DirEntry::from_pathbuf)
-            .map(Ok)
-            .collect();
+        let read_dir = ReadDir::from_iter(
+            (*self.files)
+                .borrow()
+                .iter()
+                .map(|(file_path, _)| file_path.to_path_buf())
+                .filter(|file_path| file_path.starts_with(path))
+                .map(DirEntry::from_pathbuf)
+                .map(Ok),
+        );
 
-        Ok(ReadDir::from_entries(entries))
+        Ok(read_dir)
     }
 }
 
