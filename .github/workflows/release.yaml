@@ -83,7 +83,7 @@ jobs:
             7z x "$ASSET" -o .
             gleam.exe --version
           else
-            tar -xvzf "$ASSET" .
+            tar -xvzf "$ASSET"
             ./gleam --version
           fi
 
@@ -126,7 +126,7 @@ jobs:
       - name: Ensure binary sucessfully boots
         shell: bash
         run: |
-          tar -xvzf "$ASSET" .
+          tar -xvzf "$ASSET"
           ./gleam --version
 
       - name: Upload release archive
