@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub fn main(x: something) -> Int {\n  let y = x\n  y\n}"
+
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   y
+  │   ^
+
+The type of this returned value doesn't match the return type 
+annotation of this function.
+
+Expected type:
+
+    Int
+
+Found type:
+
+    something
+
+

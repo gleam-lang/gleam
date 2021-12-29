@@ -1765,7 +1765,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         body: UntypedExpr,
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
-        let body = self.in_new_scope(|body_typer| {
+        let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
@@ -1785,14 +1785,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            body_typer.infer(body)
-        })?;
+            (body_typer.hydrator.rigid_names(), body_typer.infer(body))
+        });
+
+        let body = body_infer.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
 
         // Check that any return type is accurate.
         if let Some(return_type) = return_type {
             self.unify(return_type, body.type_()).map_err(|e| {
                 e.return_annotation_mismatch()
                     .into_error(body.type_defining_location())
+                    .with_unify_error_rigid_names(&body_rigid_names)
             })?;
         }
 

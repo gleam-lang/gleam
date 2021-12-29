@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn foo(x: List(Int)) { x }\nfn main(y: List(something)) {\n  foo(y)\n}"
+
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:7
+  │
+4 │   foo(y)
+  │       ^
+
+Expected type:
+
+    List(Int)
+
+Found type:
+
+    List(something)
+
+

@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn foo(x: String) { x }\nfn multi_result(x: some_name) {\n  foo(x)\n}"
+
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:7
+  │
+3 │   foo(x)
+  │       ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    some_name
+
+

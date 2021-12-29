@@ -24,6 +24,10 @@ impl Printer {
         Default::default()
     }
 
+    pub fn with_names(&mut self, names: im::HashMap<u64, String>) {
+        self.names = names;
+    }
+
     /// Render a Type as a well formatted string.
     ///
     pub fn pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
