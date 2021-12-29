@@ -936,6 +936,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     expected,
                     given,
                     situation: Some(UnifyErrorSituation::Operator(op)),
+                    rigid_type_names: annotated_names,
                 } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
@@ -946,6 +947,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     };
                     write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
+                    printer.with_names(annotated_names.clone());
                     writeln!(
                         buf,
                         "The {op} operator expects arguments of this type:
@@ -970,6 +972,7 @@ But this argument has this type:
                     expected,
                     given,
                     situation: Some(UnifyErrorSituation::PipeTypeMismatch),
+                    rigid_type_names: annotated_names,
                 } => {
                     let diagnostic = Diagnostic {
                         title:
@@ -994,6 +997,7 @@ But this argument has this type:
 
                     write(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
+                    printer.with_names(annotated_names.clone());
                     writeln!(
                         buf,
                         "The argument is:
@@ -1018,6 +1022,7 @@ But (|>) is piping it to a function that expects:
                     expected,
                     given,
                     situation,
+                    rigid_type_names: annotated_names,
                 } => {
                     let diagnostic = Diagnostic {
                         title: "Type mismatch".to_string(),
@@ -1031,6 +1036,7 @@ But (|>) is piping it to a function that expects:
                         writeln!(buf, "{}\n", description).unwrap();
                     }
                     let mut printer = Printer::new();
+                    printer.with_names(annotated_names.clone());
                     writeln!(
                         buf,
                         "Expected type:

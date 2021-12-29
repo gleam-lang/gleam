@@ -96,6 +96,7 @@ pub enum Error {
         situation: Option<UnifyErrorSituation>,
         expected: Arc<Type>,
         given: Arc<Type>,
+        rigid_type_names: im::HashMap<u64, String>,
     },
 
     RecursiveType {
@@ -281,6 +282,19 @@ impl Error {
                 ref mut situation, ..
             } => {
                 *situation = Some(new_situation);
+                self
+            }
+            _ => self,
+        }
+    }
+
+    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, String>) -> Self {
+        match self {
+            Error::CouldNotUnify {
+                rigid_type_names: ref mut annotated_names,
+                ..
+            } => {
+                *annotated_names = new_names.clone();
                 self
             }
             _ => self,
@@ -620,6 +634,7 @@ impl UnifyError {
                 expected,
                 given,
                 situation: note,
+                rigid_type_names: im::hashmap![],
             },
 
             Self::ExtraVarInAlternativePattern { name } => {

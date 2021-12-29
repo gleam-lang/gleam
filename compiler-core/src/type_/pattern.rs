@@ -313,6 +313,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     expected: type_.clone(),
                     situation: None,
                     location,
+                    rigid_type_names: hashmap![],
                 }),
             },
 
@@ -360,6 +361,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         expected: type_,
                         situation: None,
                         location,
+                        rigid_type_names: hashmap![],
                     })
                 }
             },

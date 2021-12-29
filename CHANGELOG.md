@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Type unification errors involving user annotated types now refer to the names
+  specified by the user instead of internal rigid-type ids.
 - The build tool now validates that listed licenses are valid SPDX expressions.
 - A WebAssembly version of the compile is now available for use in JavaScript
   and other WebAssembly environments.

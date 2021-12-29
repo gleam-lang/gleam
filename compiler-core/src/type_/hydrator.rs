@@ -3,7 +3,6 @@ use crate::ast::TypeAst;
 use std::sync::Arc;
 
 use im::hashmap;
-use im::hashset;
 
 /// The Hydrator takes an AST representing a type (i.e. a type annotation
 /// for a function argument) and returns a Type for that annotation.
@@ -22,8 +21,9 @@ pub struct Hydrator {
     created_type_variables: im::HashMap<String, Arc<Type>>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
-    /// variable.
-    rigid_type_ids: im::HashSet<u64>,
+    /// variable. This type_id => name map is used for reporting the original
+    /// annotated name on error.
+    rigid_type_names: im::HashMap<u64, String>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
@@ -31,7 +31,7 @@ pub struct Hydrator {
 #[derive(Debug)]
 pub struct ScopeResetData {
     created_type_variables: im::HashMap<String, Arc<Type>>,
-    created_type_variable_ids: im::HashSet<u64>,
+    rigid_type_names: im::HashMap<u64, String>,
 }
 
 impl Default for Hydrator {
@@ -44,7 +44,7 @@ impl Hydrator {
     pub fn new() -> Self {
         Self {
             created_type_variables: hashmap![],
-            rigid_type_ids: hashset![],
+            rigid_type_names: hashmap![],
             permit_new_type_variables: true,
             permit_holes: false,
         }
@@ -52,16 +52,16 @@ impl Hydrator {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let created_type_variables = self.created_type_variables.clone();
-        let created_type_variable_ids = self.rigid_type_ids.clone();
+        let rigid_type_names = self.rigid_type_names.clone();
         ScopeResetData {
             created_type_variables,
-            created_type_variable_ids,
+            rigid_type_names,
         }
     }
 
     pub fn close_scope(&mut self, data: ScopeResetData) {
         self.created_type_variables = data.created_type_variables;
-        self.rigid_type_ids = data.created_type_variable_ids;
+        self.rigid_type_names = data.rigid_type_names;
     }
 
     pub fn disallow_new_type_variables(&mut self) {
@@ -76,7 +76,11 @@ impl Hydrator {
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable.
     pub fn is_rigid(&self, id: &u64) -> bool {
-        self.rigid_type_ids.contains(id)
+        self.rigid_type_names.contains_key(id)
+    }
+
+    pub fn rigid_names(&self) -> im::HashMap<u64, String> {
+        self.rigid_type_names.clone()
     }
 
     pub fn type_from_option_ast<'a>(
@@ -186,7 +190,9 @@ impl Hydrator {
 
                 None if self.permit_new_type_variables => {
                     let var = environment.new_generic_var();
-                    let _ = self.rigid_type_ids.insert(environment.previous_uid());
+                    let _ = self
+                        .rigid_type_names
+                        .insert(environment.previous_uid(), name.clone());
                     let _ = self
                         .created_type_variables
                         .insert(name.clone(), var.clone());
