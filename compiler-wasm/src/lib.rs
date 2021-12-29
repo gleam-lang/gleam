@@ -3,12 +3,13 @@ use std::ffi::OsStr;
 use std::path::Path;
 
 use gleam_core::Error;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-use hexpm::version::{Range, Version};
+use hexpm::version::Version;
 
 use gleam_core::build::{Mode, Options, Package, ProjectCompiler, Target};
-use gleam_core::config::{Dependencies, Docs, ErlangConfig, PackageConfig, Repository};
+use gleam_core::config::PackageConfig;
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
 
@@ -18,31 +19,43 @@ use wasm_filesystem::WasmFileSystem;
 mod log_telemetry;
 use log_telemetry::LogTelemetry;
 
-mod static_files;
-
 const PROJECT_NAME: &str = "gleam-wasm";
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CompileOptions {
+    target: Target,
+    source_files: HashMap<String, String>,
+    dependencies: Vec<String>,
+    mode: Mode,
+}
+
+impl Default for CompileOptions {
+    fn default() -> Self {
+        CompileOptions {
+            target: Target::JavaScript,
+            mode: Mode::Dev,
+            source_files: HashMap::default(),
+            dependencies: Vec::default(),
+        }
+    }
+}
 
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
-///
-/// The `main_source` file is required.
-/// The `additional_source_files` are optional.
-pub fn compile(
-    main_source: &str,
-    additional_source_files: HashMap<String, String>,
-    target: Target,
-) -> Result<HashMap<String, String>, String> {
+pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+    log::info!("{:?}", &options);
+
     let mut wfs = WasmFileSystem::new();
 
-    write_source_file(main_source, "./src/main.gleam", &mut wfs);
-
-    for (path, source) in additional_source_files.into_iter() {
-        write_source_file(&source, &path, &mut wfs);
+    for (path, source) in options.source_files.iter() {
+        write_source_file(source, path, &mut wfs);
     }
 
-    let _package = compile_project(&mut wfs, target).map_err(|e| e.pretty_string())?;
+    let _package =
+        compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
 
-    Ok(gather_compiled_files(&wfs, target).unwrap())
+    Ok(gather_compiled_files(&wfs, options.target).unwrap())
 }
 
 fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
@@ -52,29 +65,35 @@ fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSy
         .expect("should always succeed with the virtual file system");
 }
 
-fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, Error> {
-    let mut deps = HashMap::new();
-    deps.insert("gleam_stdlib".to_string(), Range::new("*".to_string()));
-
-    let packages = vec![ManifestPackage {
-        name: "gleam_stdlib".to_string(),
+fn manifest_from_name(name: &str) -> ManifestPackage {
+    ManifestPackage {
+        name: name.to_string(),
         version: Version {
             major: 0,
-            minor: 18,
+            minor: 0,
             patch: 0,
             pre: vec![],
             build: None,
         },
         build_tools: vec!["gleam".to_string()],
-        otp_app: Some("gleam_stdlib".to_string()),
+        otp_app: None,
         requirements: vec![],
         source: ManifestPackageSource::Hex {
-            outer_checksum: Base16Checksum(vec![
-                41, 56, 249, 150, 187, 178, 93, 117, 233, 115, 34, 104, 70, 205, 223, 163, 58, 181,
-                89, 10, 252, 138, 157, 4, 58, 53, 110, 168, 82, 114, 81, 13,
-            ]),
+            outer_checksum: Base16Checksum(vec![]),
         },
-    }];
+    }
+}
+
+fn compile_project(
+    wfs: &mut WasmFileSystem,
+    target: Target,
+    compile_options: &CompileOptions,
+) -> Result<Package, Error> {
+    let packages: Vec<ManifestPackage> = compile_options
+        .dependencies
+        .iter()
+        .map(|s| manifest_from_name(s.as_str()))
+        .collect();
 
     let options = Options {
         mode: Mode::Dev,
@@ -86,15 +105,7 @@ fn compile_project(wfs: &mut WasmFileSystem, target: Target) -> Result<Package, 
         PackageConfig {
             target,
             name: PROJECT_NAME.to_string(),
-            version: Version::new(1, 0, 0),
-            licences: vec![],
-            description: "".to_string(),
-            documentation: Docs::default(),
-            dependencies: deps,
-            dev_dependencies: Dependencies::default(),
-            repository: Repository::default(),
-            links: vec![],
-            erlang: ErlangConfig::default(),
+            ..Default::default()
         },
         &options,
         &packages,
@@ -139,6 +150,7 @@ fn gather_compiled_files(
 
 /// Should be called once to setup any state that persists across compilation
 /// cycles.
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn init() {
     console_error_panic_hook::set_once();
@@ -148,58 +160,119 @@ pub fn init() {
     }
 }
 
+#[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn compile_to_js(gleam_source: &str) -> JsValue {
-    let result = compile(gleam_source, HashMap::new(), Target::JavaScript);
-
-    JsValue::from_serde(&result).expect("should never fail")
-}
-
-#[wasm_bindgen]
-pub fn compile_to_erlang(erlang_source: &str) -> JsValue {
-    let result = compile(erlang_source, HashMap::new(), Target::Erlang);
-
-    JsValue::from_serde(&result).expect("should never fail")
-}
-
-#[test]
-fn test_javascript_project_stdlib() {
-    let result = compile(
-        r#"
-    import gleam/io
-
-    pub fn main() {
-        io.println("Hello, world!")
+pub fn compile(options: JsValue) -> JsValue {
+    match options.into_serde() {
+        Ok(compile_options) => {
+            let result = compile_(compile_options);
+            JsValue::from_serde(&result)
+        }
+        Err(error) => JsValue::from_serde::<Result<HashMap<String, String>, String>>(&Err(
+            format!("Invalid options passed to `compile`: `{}`", error),
+        )),
     }
-    "#,
-        HashMap::new(),
-        Target::JavaScript,
-    )
-    .unwrap();
-
-    assert_eq!(
-        result.get("gleam-packages/gleam-wasm/dist/main.mjs"),
-        Some(&String::from("import * as $io from \"../../gleam_stdlib/dist/gleam/io.mjs\";\n\nexport function main() {\n  return $io.println(\"Hello, world!\");\n}\n"))
-    );
+    .expect("should never fail")
 }
 
-#[test]
-fn test_erlang_project_stdlib() {
-    let result = compile(
-        r#"
-    import gleam/io
+#[cfg(target_arch = "wasm32")]
+#[cfg(test)]
+mod test {
+    use super::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
 
-    pub fn main() {
-        io.println("Hello, world!")
+    fn source(source: &str) -> HashMap<String, String> {
+        let mut source_files = HashMap::new();
+        source_files.insert("./src/main.gleam".to_string(), source.to_string());
+        source_files
     }
-    "#,
-        HashMap::new(),
-        Target::Erlang,
-    )
-    .unwrap();
 
-    assert_eq!(
-      result.get("build/dev/erlang/gleam-wasm/build/main.erl"),
-      Some(&String::from("-module(main).\n-compile(no_auto_import).\n\n-export([main/0]).\n\n-spec main() -> nil.\nmain() ->\n    gleam@io:println(<<\"Hello, world!\"/utf8>>).\n"))
-    );
+    fn compile_wrapper(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+        init();
+
+        compile(JsValue::from_serde(&options).unwrap())
+            .into_serde()
+            .unwrap()
+    }
+
+    #[wasm_bindgen_test]
+    fn import_library_compile_javascript_test_wasm() {
+        let mut source_files = source(
+            r#"
+            import some_library
+
+            pub fn main() {
+                some_library.function("Hello, world!")
+            }
+            "#,
+        );
+
+        source_files.insert(
+            "build/packages/some_library/src/some_library.gleam".to_string(),
+            r#"
+            pub fn function(string: String) -> Nil {
+                Nil
+            }
+        "#
+            .to_string(),
+        );
+
+        source_files.insert(
+            "build/packages/some_library/gleam.toml".to_string(),
+            "name = \"some_library\"".to_string(),
+        );
+
+        let result = compile_wrapper(CompileOptions {
+            source_files,
+            dependencies: vec![String::from("some_library")],
+            ..Default::default()
+        })
+        .unwrap();
+
+        assert_eq!(
+            result.get("gleam-packages/gleam-wasm/dist/main.mjs"),
+            Some(&String::from("import * as $some_library from \"../../some_library/dist/some_library.mjs\";\n\nexport function main() {\n  return $some_library.function$(\"Hello, world!\");\n}\n"))
+        );
+    }
+
+    #[wasm_bindgen_test]
+    fn import_library_compile_erlang_test_wasm() {
+        let mut source_files = source(
+            r#"
+            import some_library
+
+            pub fn main() {
+                some_library.function("Hello, world!")
+            }
+            "#,
+        );
+
+        source_files.insert(
+            "build/packages/some_library/src/some_library.gleam".to_string(),
+            r#"
+            pub fn function(string: String) -> Nil {
+                Nil
+            }
+        "#
+            .to_string(),
+        );
+
+        source_files.insert(
+            "build/packages/some_library/gleam.toml".to_string(),
+            "name = \"some_library\"".to_string(),
+        );
+
+        let result = compile_wrapper(CompileOptions {
+            source_files,
+            target: Target::Erlang,
+            dependencies: vec![String::from("some_library")],
+            ..Default::default()
+        })
+        .unwrap();
+
+        assert_eq!(
+            result.get("build/dev/erlang/gleam-wasm/build/main.erl"),
+            Some(&String::from("-module(main).\n-compile(no_auto_import).\n\n-export([main/0]).\n\n-spec main() -> nil.\nmain() ->\n    some_library:function(<<\"Hello, world!\"/utf8>>).\n"))
+        );
+    }
 }

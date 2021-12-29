@@ -7,19 +7,15 @@ use gleam_core::{
 };
 use std::path::{Path, PathBuf};
 
-use crate::static_files::StaticFiles;
-
 #[derive(Clone, Debug)]
 pub struct WasmFileSystem {
     imfs: InMemoryFileSystem,
-    static_files: StaticFiles,
 }
 
 impl WasmFileSystem {
     pub fn new() -> WasmFileSystem {
         WasmFileSystem {
             imfs: InMemoryFileSystem::new(),
-            static_files: StaticFiles,
         }
     }
 }
@@ -40,10 +36,12 @@ impl FileSystemIO for WasmFileSystem {}
 
 impl FileSystemWriter for WasmFileSystem {
     fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
+        log::info!("\x1b[93mwrite\x1b[0m                {:?}", path);
         self.imfs.writer(path)
     }
 
     fn delete(&self, path: &Path) -> Result<(), Error> {
+        log::info!("\x1b[31mdelete\x1b[0m               {:?}", path);
         self.imfs.delete(path)
     }
 
@@ -61,38 +59,37 @@ impl FileSystemWriter for WasmFileSystem {
 
 impl FileSystemReader for WasmFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        Box::new(itertools::merge(
-            self.imfs.gleam_source_files(dir),
-            self.static_files.gleam_source_files(dir),
-        ))
+        log::info!("\x1b[32mgleam_source_files\x1b[0m   {:?}", dir);
+        self.imfs.gleam_source_files(dir)
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        self.static_files.gleam_metadata_files(dir)
+        log::info!("\x1b[32mgleam_metadata_files\x1b[0m {:?}", dir);
+        self.imfs.gleam_metadata_files(dir)
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
-        self.imfs
-            .read(path)
-            .or_else(|_error| self.static_files.read(path))
+        log::info!("\x1b[32mread\x1b[0m                 {:?}", path);
+        self.imfs.read(path)
     }
 
     fn is_file(&self, path: &Path) -> bool {
-        self.imfs.is_file(path) || self.static_files.is_file(path)
+        log::info!("\x1b[32mis_file\x1b[0m              {:?}", path);
+        self.imfs.is_file(path)
     }
 
-    fn is_directory(&self, _path: &Path) -> bool {
+    fn is_directory(&self, path: &Path) -> bool {
+        log::info!("\x1b[32mis_directory\x1b[0m         {:?}", path);
         false
     }
 
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
-        self.static_files.reader(path)
+        log::info!("\x1b[93mreader\x1b[0m               {:?}", path);
+        self.imfs.reader(path)
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
-        let read_dir_imfs = self.imfs.read_dir(path)?;
-        let read_dir_sf = self.static_files.read_dir(path)?;
-
-        Ok(read_dir_imfs.extend(read_dir_sf))
+        log::info!("\x1b[93mread_dir\x1b[0m             {:?}", path);
+        self.imfs.read_dir(path)
     }
 }

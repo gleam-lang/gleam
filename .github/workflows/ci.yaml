@@ -38,6 +38,9 @@ jobs:
           profile: minimal
           override: true
 
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Build binary
         uses: actions-rs/cargo@v1
         with:
@@ -55,6 +58,10 @@ jobs:
         with:
           command: test
           args: --workspace --target ${{ matrix.target }}
+
+      - name: Run wasm tests
+        working-directory: ./compiler-wasm
+        run: wasm-pack test --node
 
       - name: Upload artifact (Ubuntu)
         if: matrix.build == 'linux-amd64'
@@ -77,7 +84,7 @@ jobs:
             --mount type=bind,source=${{ github.workspace }},target=/volume \
             clux/muslrust:stable \
             cargo build --release
-      
+
       - name: Run tests
         run: |
           docker run --rm -t \

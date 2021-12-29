@@ -14,11 +14,11 @@ console_error_panic_hook = "0.1.7"
 gleam-core = {path = "../compiler-core"}
 hexpm = "1.4.0"
 log = "*"
-rust-embed = {version = "6.2.0", features = ["debug-embed"]}
 serde = {version = "1.0", features = ["derive"]}
 wasm-bindgen = {version = "0.2", features = ["serde-serialize"]}
 wasm-logger = "0.2.0"
 itertools = "0.10.1"
+wasm-bindgen-test = "0.3.28"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.28"
