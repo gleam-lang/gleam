@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> C)) -> {C}.
+x(F) ->
+    {begin
+         _pipe = 1,
+         F(_pipe)
+     end}.
+

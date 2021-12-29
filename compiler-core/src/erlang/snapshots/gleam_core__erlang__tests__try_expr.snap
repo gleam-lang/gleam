@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub fn main() {\n    try a = Ok(1)\n    try b = Ok(2)\n    Ok(a + b)\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> {ok, integer()} | {error, any()}.
+main() ->
+    case {ok, 1} of
+        {error, _try} -> {error, _try};
+        {ok, A} ->
+            case {ok, 2} of
+                {error, _try@1} -> {error, _try@1};
+                {ok, B} ->
+                    {ok, A + B}
+            end
+    end.
+

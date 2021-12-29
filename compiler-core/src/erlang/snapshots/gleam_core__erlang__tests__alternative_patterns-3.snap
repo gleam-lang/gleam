@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub fn test() {\n    let duplicate_name = 1\n\n    case 1 {\n        1 | 2 if duplicate_name == 1 -> duplicate_name\n    }\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([test/0]).
+
+-spec test() -> integer().
+test() ->
+    Duplicate_name = 1,
+    case 1 of
+        1 when Duplicate_name =:= 1 ->
+            Duplicate_name;
+
+        2 when Duplicate_name =:= 1 ->
+            Duplicate_name
+    end.
+

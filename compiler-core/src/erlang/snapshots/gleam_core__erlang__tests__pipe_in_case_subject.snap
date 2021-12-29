@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> D)) -> D.
+x(F) ->
+    case begin
+        _pipe = 1,
+        F(_pipe)
+    end of
+        X ->
+            X
+    end.
+

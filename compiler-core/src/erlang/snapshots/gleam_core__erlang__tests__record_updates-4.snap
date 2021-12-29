@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub type Person { Person(name: String, age: Int) }\n\nfn main() {\n    let new_p = Person(..return_person(), age: 28)\n    new_p\n}\n\nfn return_person() {\n    Person(\"Quinn\", 27)\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export_type([person/0]).
+
+-type person() :: {person, binary(), integer()}.
+
+-spec main() -> person().
+main() ->
+    New_p = erlang:setelement(3, return_person(), 28),
+    New_p.
+
+-spec return_person() -> person().
+return_person() ->
+    {person, <<"Quinn"/utf8>>, 27}.
+

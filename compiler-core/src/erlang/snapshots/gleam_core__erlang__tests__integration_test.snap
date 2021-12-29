@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)\n  x\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec go() -> {integer(),
+               {integer(), integer(), integer()},
+               integer(),
+               integer()}.
+go() ->
+    X = {100000000000000000,
+         {2000000000, 3000000000000, 40000000000},
+         50000,
+         6000000000},
+    X.
+
