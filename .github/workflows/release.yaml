@@ -57,8 +57,8 @@ jobs:
             tar -czvf "$ARCHIVE" "gleam"
           fi
 
-          openssl dgst -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
-          openssl dgst -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
+          openssl dgst -r -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
+          openssl dgst -r -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release archive
@@ -98,8 +98,8 @@ jobs:
           ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
           cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
           tar -czvf "$ARCHIVE" "gleam"
-          openssl dgst -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
-          openssl dgst -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
+          openssl dgst -r -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
+          openssl dgst -r -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release archive
