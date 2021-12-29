@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: 
+        build:
           - macos
           - macos-arm64
           - windows-64bit
@@ -76,6 +76,17 @@ jobs:
             echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           fi
 
+      - name: Ensure binary sucessfully boots
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows.latest" ]; then
+            7z x "$ASSET" -o .
+            gleam.exe --version
+          else
+            tar -xvzf "$ASSET" .
+            ./gleam --version
+          fi
+
       - name: Upload release archive
         uses: actions/upload-release-asset@v1
         env:
@@ -111,6 +122,12 @@ jobs:
           cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
           tar -czvf "$ARCHIVE" "gleam"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Ensure binary sucessfully boots
+        shell: bash
+        run: |
+          tar -xvzf "$ASSET" .
+          ./gleam --version
 
       - name: Upload release archive
         uses: actions/upload-release-asset@v1
