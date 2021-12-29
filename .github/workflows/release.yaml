@@ -26,7 +26,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: 
+        build:
           - macos
           - macos-arm64
           - windows-64bit
@@ -68,13 +68,15 @@ jobs:
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
-            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
-            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           fi
+
+          openssl dgst -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
+          openssl dgst -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release archive
         uses: actions/upload-release-asset@v1
@@ -85,6 +87,26 @@ jobs:
           asset_path: ${{ env.ASSET }}
           asset_name: ${{ env.ASSET }}
           asset_content_type: application/gzip
+
+      - name: Upload sha256 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}.sha256
+          asset_name: ${{ env.ASSET }}.sha256
+          asset_content_type: text/plain
+
+      - name: Upload sha512 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}.sha512
+          asset_name: ${{ env.ASSET }}.sha512
+          asset_content_type: text/plain
 
   build-release-musl:
     needs: create-release
@@ -110,6 +132,8 @@ jobs:
           ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
           cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
           tar -czvf "$ARCHIVE" "gleam"
+          openssl dgst -sha256 "$ARCHIVE" > "$ARCHIVE".sha256
+          openssl dgst -sha512 "$ARCHIVE" > "$ARCHIVE".sha512
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release archive
@@ -121,3 +145,23 @@ jobs:
           asset_path: ${{ env.ASSET }}
           asset_name: ${{ env.ASSET }}
           asset_content_type: application/gzip
+
+      - name: Upload sha256 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}.sha256
+          asset_name: ${{ env.ASSET }}.sha256
+          asset_content_type: text/plain
+
+      - name: Upload sha512 checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ${{ env.ASSET }}.sha512
+          asset_name: ${{ env.ASSET }}.sha512
+          asset_content_type: text/plain
