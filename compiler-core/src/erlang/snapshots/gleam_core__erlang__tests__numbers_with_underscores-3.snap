@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "\npub fn main() {\n  let 100_000 = 1\n  let 100_000.00101 = 1.\n  1\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    100000 = 1,
+    100000.00101 = 1.0,
+    1.
+

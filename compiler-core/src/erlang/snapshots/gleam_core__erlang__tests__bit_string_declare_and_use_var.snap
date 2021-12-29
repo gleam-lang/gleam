@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "pub fn go(x) {\n  let <<name_size:8, name:binary-size(name_size)>> = x\n  name\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(bitstring()) -> bitstring().
+go(X) ->
+    <<Name_size:8, Name:Name_size/binary>> = X,
+    Name.
+
