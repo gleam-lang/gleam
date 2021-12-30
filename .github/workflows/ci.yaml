@@ -38,9 +38,6 @@ jobs:
           profile: minimal
           override: true
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-
       - name: Build binary
         uses: actions-rs/cargo@v1
         with:
@@ -58,10 +55,6 @@ jobs:
         with:
           command: test
           args: --workspace --target ${{ matrix.target }}
-
-      - name: Run wasm tests
-        working-directory: ./compiler-wasm
-        run: wasm-pack test --node
 
       - name: Upload artifact (Ubuntu)
         if: matrix.build == 'linux-amd64'
@@ -91,6 +84,37 @@ jobs:
             --mount type=bind,source=${{ github.workspace }},target=/volume \
             clux/muslrust:stable \
             cargo test --workspace
+
+  test-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          profile: minimal
+          override: true
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+
+      - name: Install wasm-pack
+        run: |
+          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
+          && chmod +x wasm-pack-init \
+          && ./wasm-pack-init \
+          && rm wasm-pack-init
+
+      - name: Run wasm tests
+        working-directory: ./compiler-wasm
+        run: wasm-pack test --node
 
   rustfmt:
     name: rustfmt
