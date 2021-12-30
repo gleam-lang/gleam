@@ -228,3 +228,12 @@ fn main() {
 "#
     );
 }
+
+#[test]
+fn record_constants() {
+    assert_erl!(
+        "pub type Test { A }
+const test = A
+pub fn a() { A }"
+    );
+}

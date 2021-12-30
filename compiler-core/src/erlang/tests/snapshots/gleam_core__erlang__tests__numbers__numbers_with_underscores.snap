@@ -1,6 +1,6 @@
 ---
-source: compiler-core/src/erlang/tests.rs
-expression: "\nconst i = 100_000\nconst f = 100_000.00101\npub fn main() {\n  i\n  f\n}\n"
+source: compiler-core/src/erlang/tests/numbers.rs
+expression: "\npub fn main() {\n  100_000\n  100_000.00101\n}\n"
 
 ---
 -module(the_app).
