@@ -17,6 +17,9 @@ use wasm_filesystem::WasmFileSystem;
 mod log_telemetry;
 use log_telemetry::LogTelemetry;
 
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
+
 const PROJECT_NAME: &str = "gleam-wasm";
 
 #[derive(Debug, Serialize, Deserialize)]
