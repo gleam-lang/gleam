@@ -2,16 +2,14 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::path::Path;
 
-use gleam_core::Error;
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-
-use hexpm::version::Version;
-
 use gleam_core::build::{Mode, Options, Package, ProjectCompiler, Target};
 use gleam_core::config::PackageConfig;
 use gleam_core::io::{FileSystemReader, FileSystemWriter};
 use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
+use gleam_core::Error;
+
+use hexpm::version::Version;
+use serde::{Deserialize, Serialize};
 
 mod wasm_filesystem;
 use wasm_filesystem::WasmFileSystem;
