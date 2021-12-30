@@ -45,7 +45,7 @@ impl Default for CompileOptions {
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
 pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
-    log::info!("{:?}", &options);
+    tracing::info!("{:?}", &options);
 
     let mut wfs = WasmFileSystem::new();
 
@@ -153,11 +153,11 @@ fn gather_compiled_files(
 /// cycles.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
-pub fn init() {
+pub fn init(debug: bool) {
     console_error_panic_hook::set_once();
 
-    if cfg!(debug_assertions) {
-        wasm_logger::init(wasm_logger::Config::new(log::Level::Debug))
+    if debug {
+        let _ = tracing_wasm::try_set_as_global_default();
     }
 }
 
