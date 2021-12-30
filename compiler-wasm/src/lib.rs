@@ -45,8 +45,6 @@ impl Default for CompileOptions {
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
 pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
-    tracing::info!("{:?}", &options);
-
     let mut wfs = WasmFileSystem::new();
 
     for (path, source) in options.source_files.iter() {
@@ -136,12 +134,7 @@ fn gather_compiled_files(
         .for_each(|dir_entry| {
             let path = dir_entry.as_path();
             let contents: String = wfs.read(path).expect("iterated dir entries should exist");
-            let path = path
-                .to_str()
-                .unwrap()
-                .replace("\\", "/")
-                .replace("build/packages/", "gleam-packages/")
-                .replace("build/dev/javascript/", "gleam-packages/");
+            let path = path.to_str().unwrap().replace("\\", "/");
 
             files.insert(path, contents);
         });
@@ -189,7 +182,7 @@ mod test {
     }
 
     fn compile_wrapper(options: CompileOptions) -> Result<HashMap<String, String>, String> {
-        init();
+        init(false);
 
         compile(JsValue::from_serde(&options).unwrap())
             .into_serde()
@@ -231,7 +224,7 @@ mod test {
         .unwrap();
 
         assert_eq!(
-            result.get("gleam-packages/gleam-wasm/dist/main.mjs"),
+            result.get("build/dev/javascript/gleam-wasm/dist/main.mjs"),
             Some(&String::from("import * as $some_library from \"../../some_library/dist/some_library.mjs\";\n\nexport function main() {\n  return $some_library.function$(\"Hello, world!\");\n}\n"))
         );
     }
