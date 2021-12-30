@@ -1,10 +1,14 @@
 mod assert;
 mod bit_strings;
 mod guards;
+mod numbers;
+mod patterns;
 mod pipes;
 mod records;
+mod reserved;
 mod statement_if;
 mod todo;
+mod try_;
 mod variables;
 
 #[macro_export]
@@ -259,19 +263,6 @@ pub fn main() {
 }
 
 #[test]
-fn try_expr() {
-    assert_erl!(
-        r#"
-pub fn main() {
-    try a = Ok(1)
-    try b = Ok(2)
-    Ok(a + b)
-}
-"#
-    );
-}
-
-#[test]
 fn field_access_function_call() {
     // Parentheses are added when calling functions returned by record access
     assert_erl!(
@@ -293,93 +284,6 @@ pub fn main() {
     let t = #(fn(x) { x })
 
     t.0(5)
-}
-"#
-    );
-}
-
-#[test]
-fn alternative_patterns() {
-    // reassigning name in alternative patterns
-    assert_erl!(
-        r#"
-pub fn test() {
-  let duplicate_name = 1
-
-  case 1 {
-    1 | 2 -> {
-      let duplicate_name = duplicate_name + 1
-      duplicate_name
-    }
-  }
-}"#
-    );
-
-    // Alternative patterns with a clause containing vars
-    assert_erl!(
-        r#"
-pub fn test() {
-  case Ok(1) {
-    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
-  }
-}"#
-    );
-
-    // Alternative patterns with a guard clause containing vars
-    assert_erl!(
-        r#"
-pub fn test() {
-    let duplicate_name = 1
-
-    case 1 {
-        1 | 2 if duplicate_name == 1 -> duplicate_name
-    }
-}"#
-    );
-
-    assert_erl!(
-        r#"
-pub const constant = Ok(1)
-
-pub fn main(arg) {
-  let _ = constant
-  case arg {
-    _ if arg == constant -> 1
-    _ -> 0
-  }
-}
-"#
-    );
-}
-
-#[test]
-fn numbers_with_underscores() {
-    assert_erl!(
-        r#"
-pub fn main() {
-  100_000
-  100_000.00101
-}
-"#
-    );
-
-    assert_erl!(
-        r#"
-const i = 100_000
-const f = 100_000.00101
-pub fn main() {
-  i
-  f
-}
-"#
-    );
-
-    assert_erl!(
-        r#"
-pub fn main() {
-  let 100_000 = 1
-  let 100_000.00101 = 1.
-  1
 }
 "#
     );
@@ -436,15 +340,6 @@ pub fn main() {
 }
 
 #[test]
-fn record_constants() {
-    assert_erl!(
-        "pub type Test { A }
-const test = A
-pub fn a() { A }"
-    );
-}
-
-#[test]
 fn variable_name_underscores_preserved() {
     assert_erl!(
         "pub fn a(name_: String) -> String {
@@ -454,59 +349,6 @@ fn variable_name_underscores_preserved() {
     let one1 = one_1
     name
 }"
-    );
-}
-
-#[test]
-fn pattern_as() {
-    assert_erl!(
-        "pub fn a(x) {
-  case x {
-    Ok(1 as y) -> 1
-    _ -> 0
-  }
-}"
-    );
-}
-
-#[test]
-fn build_in_erlang_type_escaping() {
-    assert_erl!("pub external type Map");
-}
-
-#[test]
-fn escape_erlang_reserved_keywords_in_type_names() {
-    // list of all reserved words in erlang
-    // http://erlang.org/documentation/doc-5.8/doc/reference_manual/introduction.html
-    assert_erl!(
-        r#"pub type After { TestAfter }
-pub type And { TestAnd }
-pub type Andalso { TestAndAlso }
-pub type Band { TestBAnd }
-pub type Begin { TestBegin }
-pub type Bnot { TestBNot }
-pub type Bor { TestBOr }
-pub type Bsl { TestBsl }
-pub type Bsr { TestBsr }
-pub type Bxor { TestBXor }
-pub type Case { TestCase }
-pub type Catch { TestCatch }
-pub type Cond { TestCond }
-pub type Div { TestDiv }
-pub type End { TestEnd }
-pub type Fun { TestFun }
-pub type If { TestIf }
-pub type Let { TestLet }
-pub type Not { TestNot }
-pub type Of { TestOf }
-pub type Or { TestOr }
-pub type Orelse { TestOrElse }
-pub type Query { TestQuery }
-pub type Receive { TestReceive }
-pub type Rem { TestRem }
-pub type Try { TestTry }
-pub type When { TestWhen }
-pub type Xor { TestXor }"#
     );
 }
 
@@ -522,32 +364,6 @@ fn keyword_constructors() {
 
     assert_erl!("pub type X { Fun(Int) }");
 }
-
-#[test]
-fn qualified_prelude() {
-    assert_erl!(
-        "import gleam
-pub type X { X(gleam.Int) }
-"
-    );
-
-    assert_erl!(
-        "import gleam
-pub fn x() { gleam.Ok(1) }
-"
-    );
-}
-
-#[test]
-fn try_in_case_subject() {
-    assert_erl!(
-        "pub fn x(f) {
-  try x = 1 |> f
-  Ok(x)
-}"
-    );
-}
-
 #[test]
 fn discard_in_assert() {
     assert_erl!(

@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/patterns.rs
 expression: "pub fn a(x) {\n  case x {\n    Ok(1 as y) -> 1\n    _ -> 0\n  }\n}"
 
 ---

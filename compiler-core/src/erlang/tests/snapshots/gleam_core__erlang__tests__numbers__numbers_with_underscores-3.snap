@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/numbers.rs
 expression: "\npub fn main() {\n  let 100_000 = 1\n  let 100_000.00101 = 1.\n  1\n}\n"
 
 ---

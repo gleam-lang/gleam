@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/try_.rs
 expression: "\npub fn main() {\n    try a = Ok(1)\n    try b = Ok(2)\n    Ok(a + b)\n}\n"
 
 ---

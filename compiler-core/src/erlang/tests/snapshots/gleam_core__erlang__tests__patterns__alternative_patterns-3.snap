@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/patterns.rs
 expression: "\npub fn test() {\n    let duplicate_name = 1\n\n    case 1 {\n        1 | 2 if duplicate_name == 1 -> duplicate_name\n    }\n}"
 
 ---

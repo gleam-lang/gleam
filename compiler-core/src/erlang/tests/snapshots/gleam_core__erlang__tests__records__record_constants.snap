@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/records.rs
 expression: "pub type Test { A }\nconst test = A\npub fn a() { A }"
 
 ---

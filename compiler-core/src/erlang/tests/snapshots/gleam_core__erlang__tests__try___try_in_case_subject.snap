@@ -1,5 +1,5 @@
 ---
-source: compiler-core/src/erlang/tests.rs
+source: compiler-core/src/erlang/tests/try_.rs
 expression: "pub fn x(f) {\n  try x = 1 |> f\n  Ok(x)\n}"
 
 ---
