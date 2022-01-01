@@ -155,6 +155,12 @@ where
             self.io.copy_dir(&src_priv, &dest)?;
         }
 
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!("skipping_rebar3_build_for_non_erlang_target");
+            return Ok(());
+        }
+
         let env = [
             ("ERL_LIBS", rebar3_path(&erl_libs)),
             ("REBAR_BARE_COMPILER_OUTPUT_DIR", rebar3_path(&dest)),
