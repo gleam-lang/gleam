@@ -95,7 +95,7 @@ where
         } else {
             self.telemetry.checking_package(&self.config.name);
         }
-        let config = std::mem::take(&mut self.config);
+        let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
         Ok(Package { config, modules })
     }
@@ -239,12 +239,6 @@ where
 
         Ok(compiled)
     }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum SourceLocations {
-    Src,
-    SrcAndTest,
 }
 
 fn order_packages(packages: &HashMap<String, &ManifestPackage>) -> Result<Vec<String>, Error> {
