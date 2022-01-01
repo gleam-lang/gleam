@@ -1474,8 +1474,8 @@ where
     // examples:
     //   type A { A }
     //   type A { A(String) }
-    //   type A(a) { A(a: b) }
-    //   type A(a) { A(String, a: b) }
+    //   type Box(inner_type) { Box(inner: inner_type) }
+    //   type NamedBox(inner_type) { Box(String, inner: inner_type) }
     fn parse_custom_type(
         &mut self,
         start: usize,
