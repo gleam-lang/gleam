@@ -429,7 +429,8 @@ fn parse_sources(
         })?;
 
         // Store the name
-        ast.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
+        // TODO: store the module name as a string
+        ast.name = name.split("/").map(String::from).collect();
 
         let module = Parsed {
             package: package_name.to_string(),

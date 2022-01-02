@@ -95,7 +95,7 @@ where
         } else {
             self.telemetry.checking_package(&self.config.name);
         }
-        let config = std::mem::take(&mut self.config);
+        let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
         Ok(Package { config, modules })
     }
@@ -153,6 +153,12 @@ where
             tracing::debug!("copying_priv_to_build");
             // TODO: This could be a symlink
             self.io.copy_dir(&src_priv, &dest)?;
+        }
+
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!("skipping_rebar3_build_for_non_erlang_target");
+            return Ok(());
         }
 
         let env = [
@@ -239,12 +245,6 @@ where
 
         Ok(compiled)
     }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum SourceLocations {
-    Src,
-    SrcAndTest,
 }
 
 fn order_packages(packages: &HashMap<String, &ManifestPackage>) -> Result<Vec<String>, Error> {

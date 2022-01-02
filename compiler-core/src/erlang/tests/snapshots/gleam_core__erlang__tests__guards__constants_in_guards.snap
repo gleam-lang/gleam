@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+expression: "\npub const string_value = \"constant value\"\npub const float_value = 3.14\npub const int_value = 42\npub const tuple_value = #(1, 2.0, \"3\")\npub const list_value = [1, 2, 3]\n\npub fn main(arg) {\n  let _ = list_value\n  case arg {\n    #(w, x, y, z) if w == tuple_value && x == string_value && y >. float_value && z == int_value -> 1\n    _ -> 0\n  }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
+main(Arg) ->
+    _@1 = [1, 2, 3],
+    case Arg of
+        {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
+            1;
+
+        _@2 ->
+            0
+    end.
+

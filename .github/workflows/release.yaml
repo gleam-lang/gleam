@@ -4,25 +4,8 @@ on:
     tags:
       - "v*"
 jobs:
-  create-release:
-    name: create-release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.release.outputs.upload_url }}
-    steps:
-      - name: Create GitHub release
-        id: release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          draft: true
-
   build-release:
     name: build-release
-    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -68,13 +51,15 @@ jobs:
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
-            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
-            echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
           fi
+
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Ensure binary sucessfully boots
         shell: bash
@@ -88,17 +73,20 @@ jobs:
           fi
 
       - name: Upload release archive
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.ASSET }}
-          asset_name: ${{ env.ASSET }}
-          asset_content_type: application/gzip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref }}
+          draft: true
+          prelease: false
+          fail_on_unmatched_files: true
+          files: |
+            "$ASSET"
+            "$ASSET".sha256
+            "$ASSET".sha512
 
   build-release-musl:
-    needs: create-release
     runs-on: ubuntu-latest
     container: clux/muslrust:stable
     steps:
@@ -121,6 +109,8 @@ jobs:
           ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
           cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
           tar -czvf "$ARCHIVE" "gleam"
+          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Ensure binary sucessfully boots
@@ -130,11 +120,15 @@ jobs:
           ./gleam --version
 
       - name: Upload release archive
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          upload_url: ${{ needs.create-release.outputs.upload_url }}
-          asset_path: ${{ env.ASSET }}
-          asset_name: ${{ env.ASSET }}
-          asset_content_type: application/gzip
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          name: ${{ github.ref }}
+          draft: true
+          prelease: false
+          fail_on_unmatched_files: true
+          files: |
+            "$ASSET"
+            "$ASSET".sha256
+            "$ASSET".sha512

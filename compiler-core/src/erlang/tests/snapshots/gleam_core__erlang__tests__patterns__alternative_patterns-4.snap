@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/patterns.rs
+expression: "\npub const constant = Ok(1)\n\npub fn main(arg) {\n  let _ = constant\n  case arg {\n    _ if arg == constant -> 1\n    _ -> 0\n  }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main({ok, integer()} | {error, any()}) -> integer().
+main(Arg) ->
+    _@1 = {ok, 1},
+    case Arg of
+        _@2 when Arg =:= {ok, 1} ->
+            1;
+
+        _@3 ->
+            0
+    end.
+
