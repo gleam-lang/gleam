@@ -608,7 +608,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
             self.unify(ann_typ, value_typ)
-                .map_err(|e| convert_unify_error(e, value.location()))?;
+                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
         Ok(TypedExpr::Assignment {
@@ -1760,10 +1760,12 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             body_typer.infer(body)
         })?;
 
-        // Check that any return type type is accurate.
+        // Check that any return type is accurate.
         if let Some(return_type) = return_type {
-            self.unify(return_type, body.type_())
-                .map_err(|e| e.return_annotation_mismatch().into_error(body.location()))?;
+            self.unify(return_type, body.type_()).map_err(|e| {
+                e.return_annotation_mismatch()
+                    .into_error(body.type_defining_location())
+            })?;
         }
 
         Ok((args, body))

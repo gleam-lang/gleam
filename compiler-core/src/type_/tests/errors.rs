@@ -395,6 +395,54 @@ fn function_arg_and_return_annotation() {
 }
 
 #[test]
+fn function_return_annotation_mismatch_with_try() {
+    assert_error!(
+        "fn() -> Result(Nil, Nil) {
+            let a = 1
+            try _ = Error(1)
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            // comments
+            Ok(Nil)
+        }"
+    );
+}
+
+#[test]
+fn function_return_annotation_mismatch_with_try_nested() {
+    assert_error!(
+        "fn() -> Result(Nil, Nil) {
+          try _ = {
+            try _ = {
+                try _ = Error(1)
+                Ok(Nil)
+            }
+            Ok(Nil)
+          }
+          Ok(Nil)
+        }"
+    );
+}
+
+#[test]
+fn variable_annotation_with_try() {
+    assert_error!(
+        "let x: Result(Nil, Nil) = {
+            let a_var = 1
+            try _ = Error(1)
+            Ok(Nil)
+        }"
+    );
+}
+
+#[test]
 fn pipe_mismatch_error() {
     assert_module_error!(
         "pub fn main() -> String {

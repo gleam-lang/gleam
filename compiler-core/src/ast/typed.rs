@@ -151,6 +151,21 @@ impl TypedExpr {
         )
     }
 
+    fn find_try(&self) -> Option<&Self> {
+        match self {
+            Self::Try { .. } => Some(self),
+            Self::Sequence { expressions, .. } => {
+                let last_expression = expressions.last();
+                if let Some(Self::Try { .. }) = last_expression {
+                    last_expression
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Try { then, .. } => then.location(),
@@ -172,6 +187,18 @@ impl TypedExpr {
             | Self::ModuleSelect { location, .. }
             | Self::RecordAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
+        }
+    }
+
+    pub fn type_defining_location(&self) -> SrcSpan {
+        // In the presence of try the type is defined by `value`
+        // and `then` so we take everything in between
+        match self.find_try() {
+            Some(Self::Try { location, then, .. }) => SrcSpan {
+                start: location.start,
+                end: then.location().end,
+            },
+            _ => self.location(),
         }
     }
 
