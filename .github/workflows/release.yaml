@@ -65,7 +65,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.os }}" = "windows.latest" ]; then
-            7z x "$ASSET" -o .
+            7z x "$ASSET"
             gleam.exe --version
           else
             tar -xvzf "$ASSET"
