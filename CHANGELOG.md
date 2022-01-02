@@ -3,6 +3,7 @@
 ## Unreleased
 
 - New projects include Hex badges and a link to Hexdocs.
+- Enhance type mismatch errors in the presence of try.
 
 ## v0.19.0 - 2022-01-12
 
