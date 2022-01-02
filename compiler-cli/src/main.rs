@@ -87,18 +87,19 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::{clap::AppSettings, StructOpt};
+
+use clap::{AppSettings, Args, Parser, Subcommand};
 use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(StructOpt, Debug)]
-#[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
+#[derive(Parser, Debug)]
+#[clap(version)]
 enum Command {
     /// Build the project
     Build {
         /// Emit compile time warnings as errors
-        #[structopt(long)]
+        #[clap(long)]
         warnings_as_errors: bool,
     },
 
@@ -109,12 +110,15 @@ enum Command {
     Publish,
 
     /// Render HTML documentation
+    #[clap(subcommand)]
     Docs(Docs),
 
     /// Work with dependency packages
+    #[clap(subcommand)]
     Deps(Dependencies),
 
     /// Work with the Hex package manager
+    #[clap(subcommand)]
     Hex(Hex),
 
     /// Create a new project
@@ -123,15 +127,15 @@ enum Command {
     /// Format source code
     Format {
         /// Files to format
-        #[structopt(default_value = ".")]
+        #[clap(default_value = ".")]
         files: Vec<String>,
 
         /// Read source from STDIN
-        #[structopt(long)]
+        #[clap(long)]
         stdin: bool,
 
         /// Check if inputs are formatted without changing them
-        #[structopt(long)]
+        #[clap(long)]
         check: bool,
     },
 
@@ -139,19 +143,19 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[structopt(settings = &[AppSettings::TrailingVarArg])]
+    #[clap(setting = AppSettings::TrailingVarArg)]
     Run { arguments: Vec<String> },
 
     /// Run the project tests
-    #[structopt(settings = &[AppSettings::TrailingVarArg])]
+    #[clap(setting = AppSettings::TrailingVarArg)]
     Test { arguments: Vec<String> },
 
     /// Compile a single Gleam package
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(setting = AppSettings::Hidden)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(setting = AppSettings::Hidden)]
     PrintConfig,
 
     /// Add a new project dependency
@@ -167,50 +171,48 @@ enum Command {
     Clean,
 }
 
-#[derive(StructOpt, Debug, Clone)]
-#[structopt(flatten)]
+#[derive(Args, Debug, Clone)]
 pub struct NewOptions {
     /// Location of the project root
     pub project_root: String,
 
     /// Name of the project
-    #[structopt(long)]
+    #[clap(long)]
     pub name: Option<String>,
 
     /// Description of the project
-    #[structopt(long, default_value = "A Gleam project")]
+    #[clap(long, default_value = "A Gleam project")]
     pub description: String,
 
-    #[structopt(
+    #[clap(
         long,
-        possible_values = &new::Template::VARIANTS,
-        case_insensitive = true,
+        possible_values = new::Template::VARIANTS,
+        ignore_case = true,
         default_value = "lib"
     )]
     pub template: new::Template,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(flatten)]
+#[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[structopt(long, case_insensitive = true, default_value = "erlang")]
+    #[clap(long, ignore_case = true, default_value = "erlang")]
     target: Target,
 
     /// The directory of the Gleam package
-    #[structopt(long = "in", default_value = ".")]
+    #[clap(long = "in", default_value = ".")]
     package_directory: PathBuf,
 
     /// A directory to write compiled package to
-    #[structopt(long = "out", default_value = ".")]
+    #[clap(long = "out", default_value = ".")]
     output_directory: PathBuf,
 
     /// A directories of precompiled Gleam projects
-    #[structopt(long = "lib", default_value = ".")]
+    #[clap(long = "lib", default_value = ".")]
     libraries_directory: PathBuf,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Dependencies {
     /// List all dependency packages
     List,
@@ -219,7 +221,7 @@ enum Dependencies {
     Download,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Hex {
     /// Retire a release from Hex
     Retire {
@@ -227,7 +229,7 @@ enum Hex {
 
         version: String,
 
-        #[structopt(possible_values = &RetirementReason::VARIANTS)]
+        #[clap(possible_values = RetirementReason::VARIANTS)]
         reason: RetirementReason,
 
         message: Option<String>,
@@ -237,7 +239,7 @@ enum Hex {
     Unretire { package: String, version: String },
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Docs {
     /// Render HTML docs locally
     Build,
@@ -248,11 +250,11 @@ enum Docs {
     /// Remove HTML docs from HexDocs
     Remove {
         /// The name of the package
-        #[structopt(long)]
+        #[clap(long)]
         package: String,
 
         /// The version of the docs to remove
-        #[structopt(long)]
+        #[clap(long)]
         version: String,
     },
 }
@@ -262,7 +264,7 @@ fn main() {
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
 
-    let result = match Command::from_args() {
+    let result = match Command::parse() {
         Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
 
         Command::Check => command_check(),
