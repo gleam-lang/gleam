@@ -196,22 +196,22 @@ pub struct NewOptions {
 #[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[clap(long, ignore_case = true, default_value = "erlang")]
+    #[clap(long, ignore_case = true)]
     target: Target,
 
     /// The directory of the Gleam package
-    #[clap(long = "in", default_value = ".")]
+    #[clap(long = "package")]
     package_directory: PathBuf,
 
     /// A directory to write compiled package to
-    #[clap(long = "out", default_value = ".")]
+    #[clap(long = "out")]
     output_directory: PathBuf,
 
     /// A directories of precompiled Gleam projects
-    #[clap(long = "lib", default_value = ".")]
+    #[clap(long = "lib")]
     libraries_directory: PathBuf,
 
-    /// Whether to skip compiling Erlang to BEAM bytecode
+    /// Skip Erlang to BEAM bytecode compilation if given
     #[clap(long = "no-beam")]
     skip_beam_compilation: bool,
 }
