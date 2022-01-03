@@ -23,6 +23,7 @@
 - Fixed a bug where external function module names would not be escaped
   correctly if they contained special characters and were assigned to a
   variable.
+- A helpful error message is shown if Erlang is not installed.
 
 ## v0.18.2 - 2021-12-12
 
