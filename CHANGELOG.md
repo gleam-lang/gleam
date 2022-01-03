@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.19.0-rc1 - 2022-01-03
 
 - The build tool now supports the JavaScript target. The target can be specified
   in either `gleam.toml` or using the `--target` flag.
