@@ -428,6 +428,20 @@ in your app.src file \"{}\"",
                     label: format!("The program `{}` was not found. Is it installed?", program),
                 };
                 write_project(buf, diagnostic);
+
+                match program.as_str() {
+                    "erl" | "erlc" | "escript" => {
+                        writeln!(
+                            buf,
+                            "
+Documentation for installing Erlang can be viewed here:
+https://gleam.run/getting-started/
+",
+                        )
+                        .unwrap();
+                    }
+                    _ => (),
+                };
             }
 
             Error::ShellCommand {
