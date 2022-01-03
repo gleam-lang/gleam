@@ -56,7 +56,7 @@ jobs:
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
-            rm gleam.exe
+            rm gleam
           fi
 
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
