@@ -82,9 +82,9 @@ jobs:
           prelease: false
           fail_on_unmatched_files: true
           files: |
-            "$ASSET"
-            "$ASSET".sha256
-            "$ASSET".sha512
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+            ${{ env.ASSET }}.sha512
 
   build-release-musl:
     runs-on: ubuntu-latest
@@ -129,6 +129,6 @@ jobs:
           prelease: false
           fail_on_unmatched_files: true
           files: |
-            "$ASSET"
-            "$ASSET".sha256
-            "$ASSET".sha512
+            ${{ env.ASSET }}
+            ${{ env.ASSET }}.sha256
+            ${{ env.ASSET }}.sha512
