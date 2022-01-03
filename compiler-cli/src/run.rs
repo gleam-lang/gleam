@@ -12,7 +12,7 @@ pub enum Which {
     Test,
 }
 
-pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
+pub fn command(arguments: &[String], target: Option<Target>, which: Which) -> Result<(), Error> {
     let config = crate::config::root_config()?;
 
     // Determine which module to run
@@ -25,14 +25,14 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     let _ = crate::build::main(&Options {
         perform_codegen: true,
         mode: Mode::Dev,
-        target: None,
+        target,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     // Prepare the Erlang shell command
-    let mut command = match config.target {
+    let mut command = match target.unwrap_or(config.target) {
         Target::Erlang => erlang_command(&config, &module, arguments),
         Target::JavaScript => javascript_command(&config, &module, arguments),
     }?;

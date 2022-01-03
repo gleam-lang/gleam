@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The build tool now supports the JavaScript target. The target can be specified
+  in either `gleam.toml` or using the `--target` flag.
 - The `gleam check` command has been introduced for rapidly verifying the types
   of Gleam code without performing codegen.
 - `true` and `false` can no longer be used as pattern matching variables, to

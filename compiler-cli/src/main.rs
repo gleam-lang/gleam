@@ -101,6 +101,10 @@ enum Command {
         /// Emit compile time warnings as errors
         #[clap(long)]
         warnings_as_errors: bool,
+
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
     },
 
     /// Type check the project
@@ -144,11 +148,23 @@ enum Command {
 
     /// Run the project
     #[clap(setting = AppSettings::TrailingVarArg)]
-    Run { arguments: Vec<String> },
+    Run {
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
+
+        arguments: Vec<String>,
+    },
 
     /// Run the project tests
     #[clap(setting = AppSettings::TrailingVarArg)]
-    Test { arguments: Vec<String> },
+    Test {
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
+
+        arguments: Vec<String>,
+    },
 
     /// Compile a single Gleam package
     #[clap(setting = AppSettings::Hidden)]
@@ -269,7 +285,10 @@ fn main() {
     let stderr = cli::stderr_buffer_writer();
 
     let result = match Command::parse() {
-        Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
+        Command::Build {
+            target,
+            warnings_as_errors,
+        } => command_build(&stderr, target, warnings_as_errors),
 
         Command::Check => command_check(),
 
@@ -293,9 +312,9 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run { arguments } => run::command(&arguments, run::Which::Src),
+        Command::Run { target, arguments } => run::command(&arguments, target, run::Which::Src),
 
-        Command::Test { arguments } => run::command(&arguments, run::Which::Test),
+        Command::Test { target, arguments } => run::command(&arguments, target, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
@@ -350,7 +369,11 @@ fn command_check() -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(
+    stderr: &termcolor::BufferWriter,
+    target: Option<Target>,
+    warnings_as_errors: bool,
+) -> Result<(), Error> {
     let mut buffer = stderr.buffer();
     let root = Path::new("./");
 
@@ -359,7 +382,7 @@ fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> 
         return build::main(&Options {
             perform_codegen: true,
             mode: Mode::Dev,
-            target: None,
+            target,
         })
         .map(|_| ());
     }
