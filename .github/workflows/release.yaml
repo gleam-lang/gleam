@@ -79,7 +79,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: ${{ github.ref }}
           draft: true
-          prelease: false
+          prerelease: false
           fail_on_unmatched_files: true
           files: |
             ${{ env.ASSET }}
@@ -126,7 +126,7 @@ jobs:
           tag_name: ${{ github.ref }}
           name: ${{ github.ref }}
           draft: true
-          prelease: false
+          prerelease: false
           fail_on_unmatched_files: true
           files: |
             ${{ env.ASSET }}
