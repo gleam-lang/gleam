@@ -64,7 +64,7 @@ jobs:
       - name: Ensure binary successfully boots
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows.latest" ]; then
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
             7z x "$ASSET"
             gleam.exe --version
           else
