@@ -42,7 +42,7 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     // Run the shell
     tracing::info!("Running OS process {:?}", command);
     let status = command.status().map_err(|e| Error::ShellCommand {
-        command: "erl".to_string(),
+        program: "erl".to_string(),
         err: Some(e.kind()),
     })?;
 

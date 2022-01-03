@@ -111,9 +111,12 @@ pub enum Error {
     #[error("{0}")]
     Gzip(String),
 
-    #[error("command failed")]
+    #[error("shell program `{program}` not found")]
+    ShellProgramNotFound { program: String },
+
+    #[error("shell program `{program}` failed")]
     ShellCommand {
-        command: String,
+        program: String,
         err: Option<std::io::ErrorKind>,
     },
 
@@ -419,7 +422,18 @@ in your app.src file \"{}\"",
                 write_project(buf, diagnostic);
             }
 
-            Error::ShellCommand { command, err: None } => {
+            Error::ShellProgramNotFound { program } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Program not found".to_string(),
+                    label: format!("The program `{}` was not found. Is it installed?", program),
+                };
+                write_project(buf, diagnostic);
+            }
+
+            Error::ShellCommand {
+                program: command,
+                err: None,
+            } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Shell command failure".to_string(),
                     label: format!(
@@ -431,7 +445,7 @@ in your app.src file \"{}\"",
             }
 
             Error::ShellCommand {
-                command,
+                program: command,
                 err: Some(err),
             } => {
                 let diagnostic = ProjectErrorDiagnostic {

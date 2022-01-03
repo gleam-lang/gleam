@@ -137,7 +137,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                command: "erlc".to_string(),
+                program: "erlc".to_string(),
                 err: None,
             })
         }

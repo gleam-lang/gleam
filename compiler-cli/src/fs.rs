@@ -11,7 +11,7 @@ use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::File,
-    io::{BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, Write},
     path::{Path, PathBuf},
 };
 
@@ -108,16 +108,26 @@ impl CommandExecutor for ProjectIO {
         cwd: Option<&Path>,
     ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
-        std::process::Command::new(program)
+        let result = std::process::Command::new(program)
             .args(args)
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
-            .status()
-            .map(|s| s.code().unwrap_or_default())
-            .map_err(|e| Error::ShellCommand {
-                command: program.to_ascii_uppercase(),
-                err: Some(e.kind()),
-            })
+            .status();
+
+        match result {
+            Ok(status) => Ok(status.code().unwrap_or_default()),
+
+            Err(error) => Err(match error.kind() {
+                io::ErrorKind::NotFound => Error::ShellProgramNotFound {
+                    program: program.to_string(),
+                },
+
+                other => Error::ShellCommand {
+                    program: program.to_string(),
+                    err: Some(other),
+                },
+            }),
+        }
     }
 }
 

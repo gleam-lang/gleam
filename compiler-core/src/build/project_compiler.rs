@@ -179,7 +179,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                command: "rebar3".to_string(),
+                program: "rebar3".to_string(),
                 err: None,
             })
         }

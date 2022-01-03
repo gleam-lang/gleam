@@ -33,7 +33,7 @@ pub fn command() -> Result<(), Error> {
     // Run the shell
     tracing::info!("Running OS process {:?}", command);
     let _ = command.status().map_err(|e| Error::ShellCommand {
-        command: "erl".to_string(),
+        program: "erl".to_string(),
         err: Some(e.kind()),
     })?;
     Ok(())
