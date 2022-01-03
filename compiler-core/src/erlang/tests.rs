@@ -364,12 +364,27 @@ fn keyword_constructors() {
 
     assert_erl!("pub type X { Fun(Int) }");
 }
+
 #[test]
 fn discard_in_assert() {
     assert_erl!(
         "pub fn x(y) {
   assert Ok(_) = y
   1
+}"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1424
+#[test]
+fn operator_pipe_right_hand_side() {
+    assert_erl!(
+        "fn id(x) {
+  x
+}
+        
+pub fn bool_expr(x, y) {
+  y || x |> id 
 }"
     );
 }
