@@ -165,6 +165,7 @@ fn metadata_config(
     source_files: &[PathBuf],
     generated_files: &[(PathBuf, String)],
 ) -> String {
+    let repo_url = http::Uri::try_from(config.repository.url().unwrap_or_default()).ok();
     let metadata = ReleaseMetadata {
         name: &config.name,
         version: &config.version,
@@ -175,7 +176,8 @@ fn metadata_config(
         links: config
             .links
             .iter()
-            .map(|l| (l.title.as_str(), &l.href))
+            .map(|l| (l.title.as_str(), l.href.clone()))
+            .chain(repo_url.into_iter().map(|u| ("Repository", u)))
             .collect(),
         requirements: config
             .dependencies
@@ -305,7 +307,7 @@ pub struct ReleaseMetadata<'a> {
     source_files: &'a [PathBuf],
     generated_files: &'a [(PathBuf, String)],
     licenses: &'a [String],
-    links: Vec<(&'a str, &'a http::Uri)>,
+    links: Vec<(&'a str, http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
     // What should this be? I can't find it in the API anywhere.
@@ -314,7 +316,7 @@ pub struct ReleaseMetadata<'a> {
 
 impl<'a> ReleaseMetadata<'a> {
     pub fn as_erlang(&self) -> String {
-        fn link(link: &(&str, &http::Uri)) -> String {
+        fn link(link: &(&str, http::Uri)) -> String {
             format!(
                 "\n  {{<<\"{name}\">>, <<\"{url}\">>}}",
                 name = link.0,
@@ -407,7 +409,7 @@ fn release_metadata_as_erlang() {
             (PathBuf::from("src/whatever.erl"), "".into()),
         ],
         licenses: &licences,
-        links: vec![("homepage", &homepage), ("github", &github)],
+        links: vec![("homepage", homepage), ("github", github)],
         requirements: vec![
             ReleaseRequirement {
                 name: "wibble",
