@@ -312,9 +312,9 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run { target, arguments } => run::command(&arguments, target, run::Which::Src),
+        Command::Run { target, arguments } => run::command(arguments, target, run::Which::Src),
 
-        Command::Test { target, arguments } => run::command(&arguments, target, run::Which::Test),
+        Command::Test { target, arguments } => run::command(arguments, target, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
