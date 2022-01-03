@@ -26,10 +26,10 @@ pub struct PackageCompiler<'a, IO> {
     pub sources: Vec<Source>,
     pub erl_libs: &'a str,
     pub write_metadata: bool,
-    pub compile_erlang: bool,
     pub perform_codegen: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
+    pub compile_beam_bytecode: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -56,11 +56,11 @@ where
             target,
             sources: vec![],
             erl_libs,
-            compile_erlang: true,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
             copy_native_files: true,
+            compile_beam_bytecode: true,
         }
     }
 
@@ -281,7 +281,7 @@ where
             tracing::info!("skipping_native_file_copying");
         }
 
-        if self.compile_erlang {
+        if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
             self.compile_erlang_to_beam(&written)?;
         } else {

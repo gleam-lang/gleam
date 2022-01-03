@@ -42,7 +42,7 @@ macro_rules! assert_erlang_compile {
             PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -93,7 +93,7 @@ macro_rules! assert_javascript_compile {
         );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -139,7 +139,7 @@ macro_rules! assert_no_warnings {
             PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -2293,7 +2293,7 @@ fn config_compilation_test() {
                 PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;
-            compiler.compile_erlang = false;
+            compiler.compile_beam_bytecode = false;
             compiler.copy_native_files = false;
             compiler.sources = $sources;
             let compiled = compiler

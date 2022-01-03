@@ -210,6 +210,10 @@ pub struct CompilePackage {
     /// A directories of precompiled Gleam projects
     #[clap(long = "lib", default_value = ".")]
     libraries_directory: PathBuf,
+
+    /// Whether to skip compiling Erlang to BEAM bytecode
+    #[clap(long = "no-beam")]
+    skip_beam_compilation: bool,
 }
 
 #[derive(Subcommand, Debug)]
