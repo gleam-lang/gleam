@@ -8,12 +8,12 @@ clean:
 .phony: erlang
 erlang:
 	@echo test/language on Erlang
-	@cargo run --quiet -- compile-package --in . --out target-erlang --target erlang
+	@cargo run --quiet -- compile-package --package . --out target-erlang --target erlang --lib .
 	@escript main_erlang.erl
 
 .phony: javascript
 javascript:
 	@echo test/language on JavaScript
-	@cargo run --quiet -- compile-package --in . --out target-javascript --target javascript
+	@cargo run --quiet -- compile-package --package . --out target-javascript --target javascript --lib .
 	@cp src/*.mjs target-javascript/dist
 	@node main_javascript.js
