@@ -61,6 +61,17 @@ jobs:
           openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
 
+      - name: Ensure binary successfully boots
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows.latest" ]; then
+            7z x "$ASSET"
+            gleam.exe --version
+          else
+            tar -xvzf "$ASSET"
+            ./gleam --version
+          fi
+
       - name: Upload release archive
         uses: softprops/action-gh-release@v1
         with:
@@ -101,6 +112,12 @@ jobs:
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
           openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+
+      - name: Ensure binary successfully boots
+        shell: bash
+        run: |
+          tar -xvzf "$ASSET"
+          ./gleam --version
 
       - name: Upload release archive
         uses: softprops/action-gh-release@v1
