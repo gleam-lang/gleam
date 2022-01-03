@@ -20,6 +20,9 @@
 - Performance of code generators has been slightly improved.
 - Allow the record in a record expansion to be an expression that returns a
   record.
+- Fixed a bug where external function module names would not be escaped
+  correctly if they contained special characters and were assigned to a
+  variable.
 
 ## v0.18.2 - 2021-12-12
 
