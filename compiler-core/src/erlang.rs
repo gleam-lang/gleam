@@ -67,14 +67,14 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
 }
 
 fn module_name_join(module: &[String]) -> Document<'_> {
-    let mut name = Vec::with_capacity(module.len() * 2);
+    let mut name = String::new();
     for (i, segment) in module.iter().enumerate() {
         if i != 0 {
-            name.push("@".to_doc())
+            name.push('@')
         }
-        name.push(segment.to_doc())
+        name.push_str(segment)
     }
-    name.to_doc()
+    atom(name)
 }
 
 #[derive(Debug, Clone)]
