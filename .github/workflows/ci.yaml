@@ -35,6 +35,12 @@ jobs:
           target: ${{ matrix.target }}
           profile: minimal
           override: true
+          default: true
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.target }}
 
       - name: Build binary
         uses: actions-rs/cargo@v1
@@ -72,6 +78,11 @@ jobs:
         run: |
           ln -s /root/.cargo $HOME/.cargo
           ln -s /root/.rustup $HOME/.rustup
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: linux-musl
 
       - name: Build binary
         run: cargo build --release
