@@ -42,12 +42,6 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Build binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-
       - name: Run linter
         uses: actions-rs/cargo@v1
         with:
@@ -59,13 +53,6 @@ jobs:
         with:
           command: test
           args: --workspace --target ${{ matrix.target }}
-
-      - name: Upload artifact (Ubuntu)
-        if: matrix.build == 'linux-amd64'
-        uses: actions/upload-artifact@v2
-        with:
-          name: gleam
-          path: target/${{ matrix.target }}/release/gleam
 
   test-musl:
     runs-on: ubuntu-latest
@@ -89,6 +76,48 @@ jobs:
       
       - name: Run tests
         run: cargo test --workspace
+
+  build-linux-release:
+    env:
+      RUSTFLAGS: "-D warnings"
+    name: build-linux-release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain: [stable]
+        build: [linux-amd64]
+        include:
+          - build: linux-amd64
+            target: x86_64-unknown-linux-gnu
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          target: ${{ matrix.target }}
+          profile: minimal
+          override: true
+          default: true
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Upload artifact (Ubuntu)
+        uses: actions/upload-artifact@v2
+        with:
+          name: gleam
+          path: target/${{ matrix.target }}/release/gleam
 
   rustfmt:
     name: rustfmt
@@ -130,7 +159,7 @@ jobs:
 
   test-projects:
     name: test-projects
-    needs: test
+    needs: build-linux-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
