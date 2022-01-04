@@ -42,12 +42,6 @@ jobs:
         with:
           key: ${{ matrix.target }}
 
-      - name: Run linter
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --target ${{ matrix.target }} -- -D warnings
-
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
@@ -70,56 +64,13 @@ jobs:
         uses: Swatinem/rust-cache@v1
         with:
           key: linux-musl
-
-      - name: Build binary
-        run: cargo build --release
       
       - name: Run tests
         run: cargo test --workspace
 
-  build-linux-release:
+  rustfmt:
     env:
       RUSTFLAGS: "-D warnings"
-    name: build-linux-release
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        toolchain: [stable]
-        build: [linux-amd64]
-        include:
-          - build: linux-amd64
-            target: x86_64-unknown-linux-gnu
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          target: ${{ matrix.target }}
-          profile: minimal
-          override: true
-          default: true
-
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
-        with:
-          key: ${{ matrix.target }}
-
-      - name: Build binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-
-      - name: Upload artifact (Ubuntu)
-        uses: actions/upload-artifact@v2
-        with:
-          name: gleam
-          path: target/${{ matrix.target }}/release/gleam
-
-  rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
@@ -133,9 +84,13 @@ jobs:
           override: true
           profile: minimal
           components: rustfmt
+          default: true
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
   validate-deps:
     name: validate-deps
@@ -157,9 +112,50 @@ jobs:
           echo `pwd` >> $GITHUB_PATH
       - run: cargo deny check
 
+  lint-build:
+    env:
+      RUSTFLAGS: "-D warnings"
+    name: lint-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: clippy
+          default: true
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: linux-gnu
+
+      - name: Run linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --target x86_64-unknown-linux-gnu --workspace -- -D warnings
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --target x86_64-unknown-linux-gnu
+
+      - name: Upload artifact (Ubuntu)
+        uses: actions/upload-artifact@v2
+        with:
+          name: gleam
+          path: target/x86_64-unknown-linux-gnu/debug/gleam
+
   test-projects:
     name: test-projects
-    needs: build-linux-release
+    needs: lint-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
