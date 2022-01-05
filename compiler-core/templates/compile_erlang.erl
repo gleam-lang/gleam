@@ -1,6 +1,5 @@
 #!/usr/bin/env escript
 
-% TODO: Let other workers finish when an error occurs
 % TODO: Don't concurrently print warnings and errors
 
 -record(arguments, {
@@ -22,28 +21,30 @@ main(Args) ->
     #arguments{out = Out, lib = Lib, modules = Modules} = parse(Args),
     ok = add_lib_to_erlang_path(Lib),
     ok = filelib:ensure_dir([Out, $/]),
-    WorkerCount = start_compiler_workers(Out),
-    ok = producer_loop(Modules, WorkerCount),
-    ok.
+    Workers = start_compiler_workers(Out),
+    ok = producer_loop(Modules, Workers),
+    case any_failures() of
+        true -> erlang:halt(1);
+        false -> ok
+    end.
 
-% No more modules and all the workers have finished
 producer_loop([], 0) ->
     ok;
-% No more modules, wait for workers to finish
-producer_loop([], NumWorkers) ->
+producer_loop([], Workers) ->
     receive
-        {work_please, _Worker} ->
-            producer_loop([], NumWorkers - 1);
-        Other ->
-            error({unexpected_message, Other})
+        {work_please, _} -> producer_loop([], Workers - 1)
     end;
-producer_loop([Module | Modules], NumWorkers) ->
+producer_loop([Module | Modules], Workers) ->
     receive
         {work_please, Worker} ->
             erlang:send(Worker, {module, Module}),
-            producer_loop(Modules, NumWorkers);
-        Other ->
-            error({unexpected_message, Other})
+            producer_loop(Modules, Workers)
+    end.
+
+any_failures() ->
+    receive
+        failed -> true
+        after 0 -> false
     end.
 
 start_compiler_workers(Out) ->
@@ -58,10 +59,14 @@ start_compiler_workers(Out) ->
     NumSchedulers.
 
 worker_loop(Parent, Out) ->
+    Options = [report_errors, report_warnings, debug_info, {outdir, Out}],
     erlang:send(Parent, {work_please, self()}),
     receive
         {module, Module} -> 
-            compile_module(Module, Out),
+            case compile:file(Module, Options) of
+                {ok, _} -> ok;
+                error -> erlang:send(Parent, failed)
+            end,
             worker_loop(Parent, Out)
     end.
 
@@ -69,13 +74,6 @@ add_lib_to_erlang_path(Lib) ->
     Ebins = filelib:wildcard([Lib, "/*/ebin"]),
     ok = code:add_paths(Ebins),
     ok.
-
-compile_module(Module, Out) ->
-    Options = [report_errors, report_warnings, debug_info, {outdir, Out}],
-    case compile:file(Module, Options) of
-        {ok, _} -> ok;
-        error -> erlang:halt(1)
-    end.
 
 parse(Args) ->
     parse(Args, #arguments{}).
