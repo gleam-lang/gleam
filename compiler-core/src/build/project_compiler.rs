@@ -120,7 +120,7 @@ where
             self.io.delete(&dir)?;
         }
 
-        Ok(())
+        result
     }
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
