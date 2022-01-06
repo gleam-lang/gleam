@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.19.0-rc2
 
 - New projects are created with `erlef/setup-beam` v1.9.0 instead of
   `gleam-lang/setup-erlang` and `gleam-lang/setup-gleam`.
