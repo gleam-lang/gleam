@@ -8,6 +8,8 @@
   the function has argument names that are JavaScript keywords.
 - Fixed a bug where the build would continue when dependency packages failed to
   compile.
+- Fixed a bug where `include` directories would not be accessible by the Erlang
+  compiler during Gleam compilation.
 
 ## v0.19.0-rc1 - 2022-01-03
 

@@ -23,8 +23,8 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut compiler = PackageCompiler::new(
         &config,
         &options.package_directory,
-        &options.libraries_directory,
         &options.output_directory,
+        &options.libraries_directory,
         options.target,
         ProjectIO::new(),
     );
