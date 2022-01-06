@@ -2,6 +2,7 @@
 
 ## v0.19.0-rc2
 
+- Erlang modules are now compiled in a multi-core fashion.
 - New projects are created with `erlef/setup-beam` v1.9.0 instead of
   `gleam-lang/setup-erlang` and `gleam-lang/setup-gleam`.
 - Fixed a bug where tail call optimisation could generate incorrect code when
