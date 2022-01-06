@@ -218,17 +218,14 @@ where
         root_path: PathBuf,
     ) -> Result<Vec<Module>, Error> {
         let out_path = paths::build_package(self.mode(), self.target(), &config.name);
+        let lib_path = paths::build_packages(self.mode(), self.target());
         let artifact_path = out_path.join("build");
-        let erl_libs = paths::build_packages_erl_libs_glob(self.mode(), self.target())
-            .to_string_lossy()
-            .into_owned();
-
         let mut compiler = PackageCompiler::new(
             config,
             &root_path,
             &out_path,
+            &lib_path,
             self.target(),
-            &erl_libs,
             self.io.clone(),
         );
         compiler.write_metadata = true;

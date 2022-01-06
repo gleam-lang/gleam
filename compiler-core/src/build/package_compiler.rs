@@ -20,11 +20,11 @@ use std::{
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
     pub out: &'a Path,
+    pub lib: &'a Path,
     pub root: &'a Path,
     pub target: Target,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
-    pub erl_libs: &'a str,
     pub write_metadata: bool,
     pub perform_codegen: bool,
     pub write_entrypoint: bool,
@@ -44,18 +44,18 @@ where
         config: &'a PackageConfig,
         root: &'a Path,
         out: &'a Path,
+        lib: &'a Path,
         target: Target,
-        erl_libs: &'a str,
         io: IO,
     ) -> Self {
         Self {
             io,
             out,
+            lib,
             root,
             config,
             target,
             sources: vec![],
-            erl_libs,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -110,34 +110,41 @@ where
     fn compile_erlang_to_beam(&self, modules: &[PathBuf]) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
-        let env = [
-            ("ERL_LIBS", self.erl_libs.to_string()),
-            ("TERM", "dumb".into()),
-        ];
+        let escript_path = self.out.join("build").join("gleam@@compile.erl");
+        if !escript_path.exists() {
+            let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
+            self.io
+                .writer(&escript_path)?
+                .write(escript_source.as_bytes())?;
+        }
+
         let mut args = vec![
-            // Use a compile server to avoid repeatedly starting VM
-            "-server".into(),
+            escript_path.to_string_lossy().to_string(),
+            // Tell the compiler where to find other libraries
+            "--lib".into(),
+            self.lib.to_string_lossy().to_string(),
             // Write compiled .beam to ./ebin
-            "-o".into(),
+            "--out".into(),
             self.out.join("ebin").to_string_lossy().to_string(),
         ];
         // Add the list of modules to compile
         for module in modules {
-            args.push(
-                self.out
-                    .join("build")
-                    .join(module)
-                    .to_string_lossy()
-                    .to_string(),
-            );
+            let path = self
+                .out
+                .join("build")
+                .join(module)
+                .with_extension("erl")
+                .to_string_lossy()
+                .to_string();
+            args.push(path);
         }
-        let status = self.io.exec("erlc", &args, &env, None)?;
+        let status = self.io.exec("escript", &args, &[], None)?;
 
         if status == 0 {
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                program: "erlc".to_string(),
+                program: "escript".to_string(),
                 err: None,
             })
         }

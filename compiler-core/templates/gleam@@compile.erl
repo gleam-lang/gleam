@@ -1,6 +1,7 @@
 #!/usr/bin/env escript
 
 % TODO: Don't concurrently print warnings and errors
+% TODO: Some tests
 
 -record(arguments, {lib = "./", out = "./", modules = []}).
 
