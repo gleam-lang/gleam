@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where precompiled packages would fail to compile due to Erlang
+  files being compiled twice concurrently.
+
 ## v0.19.0-rc2
 
 - Erlang modules are now compiled in a multi-core fashion.
