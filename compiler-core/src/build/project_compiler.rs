@@ -12,6 +12,7 @@ use crate::{
     uid::UniqueIdGenerator,
     warning, Error, Result, Warning,
 };
+use spdx::Expression;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -84,6 +85,16 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(mut self) -> Result<Package> {
+        // Validate that the licenses are valid SPDX expressions
+        for license in &self.config.licences {
+            if let Err(spdx::error::ParseError { reason, .. }) = Expression::parse(&license) {
+                return Err(Error::InvalidLicense {
+                    license: license.to_string(),
+                    reason,
+                });
+            }
+        }
+
         // Determine package processing order
         let sequence = order_packages(&self.packages)?;
 

@@ -63,6 +63,8 @@ textwrap = { version = "0.14.2", features = ["terminal_size"] }
 base16 = "0.2.1"
 # toml config file parsing
 toml = "0.5.8"
+# SPDX license parsing
+spdx = "0.8.0"
 
 [build-dependencies]
 # Data (de)serialisation

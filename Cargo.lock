@@ -706,6 +706,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_derive",
+ "spdx",
  "strsim",
  "strum",
  "tar",
@@ -1818,6 +1819,15 @@ checksum = "5dc90fe6c7be1a323296982db1836d1ea9e47b6839496dde9a541bc496df3516"
 dependencies = [
  "libc",
  "winapi",
+]
+
+[[package]]
+name = "spdx"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31283ed7fe3bca10f3e5ec2fe2787f16764a4275949606fd48d4fc919a760e3"
+dependencies = [
+ "smallvec",
 ]
 
 [[package]]
