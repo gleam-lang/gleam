@@ -107,7 +107,7 @@ where
         Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&self, modules: &[PathBuf]) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
         let escript_path = self.out.join("build").join("gleam@@compile.erl");
@@ -153,7 +153,7 @@ where
     fn copy_project_native_files(
         &mut self,
         out: &Path,
-        modules: &mut Vec<PathBuf>,
+        modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
         let src = self.root.join("src");
@@ -171,7 +171,7 @@ where
         src_path: &Path,
         out: &Path,
         copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut Vec<PathBuf>,
+        to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<()> {
         self.io.mkdir(&out)?;
 
@@ -191,7 +191,7 @@ where
             match extension {
                 "mjs" | "js" | "hrl" => (),
                 "erl" => {
-                    to_compile_modules.push(relative_path.clone());
+                    let _ = to_compile_modules.insert(relative_path.clone());
                 }
                 _ => continue,
             };
@@ -268,7 +268,7 @@ where
     }
 
     fn perform_erlang_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
-        let mut written = vec![];
+        let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
         let io = self.io.clone();
@@ -298,7 +298,7 @@ where
     }
 
     fn perform_javascript_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
-        let mut written = vec![];
+        let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
 
         JavaScript::new(&artifact_dir).render(&self.io, modules)?;
@@ -312,7 +312,7 @@ where
     fn render_entrypoint_module(
         &self,
         out: &Path,
-        modules_to_compile: &mut Vec<PathBuf>,
+        modules_to_compile: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         let name = "gleam@@main.erl";
         let module = ErlangEntrypointModule {
@@ -321,7 +321,7 @@ where
         .render()
         .expect("Erlang entrypoint rendering");
         self.io.writer(&out.join(name))?.write(module.as_bytes())?;
-        modules_to_compile.push(name.into());
+        let _ = modules_to_compile.insert(name.into());
         Ok(())
     }
 }
