@@ -401,39 +401,31 @@ numbers and underscores.",
             }
 
             Error::InvalidLicense { license, reason } => {
-                let msg;
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid license".to_string(),
                     label: format!(
                         "The license \"{}\" {}.",
                         license,
                         match reason {
-                            spdx::error::Reason::UnknownLicense => "is not a SPDX license",
-                            spdx::error::Reason::UnknownException => "contains non-SPDX exception",
-                            spdx::error::Reason::InvalidCharacters => "contains invalid characters",
+                            spdx::error::Reason::UnknownLicense => "is not a SPDX license".to_string(),
+                            spdx::error::Reason::UnknownException => "contains non-SPDX exception".to_string(),
+                            spdx::error::Reason::InvalidCharacters => "contains invalid characters".to_string(),
                             spdx::error::Reason::UnclosedParens =>
-                                "contains an opening parenthesis without a closing parenthesis",
+                                "contains an opening parenthesis without a closing parenthesis".to_string(),
                             spdx::error::Reason::UnopenedParens =>
-                                "contains a closing parenthesis without an opening parenthesis",
+                                "contains a closing parenthesis without an opening parenthesis".to_string(),
                             spdx::error::Reason::Empty =>
-                                "contains no terms that are valid in SPDX expressions",
-                            spdx::error::Reason::Unexpected(expected) => match expected.len() {
-                                0 => "contains an unexpected term",
-                                1 => {
-                                    msg = String::from("contains an unexpected term, expected ") + expected.first().unwrap();
-                                    msg.as_str()
-                                },
-                                _ => {
-                                    msg = String::from("contains an unexpected term, expected ") + &expected.join(" or ");
-                                    msg.as_str()
-                                }
+                                "contains no terms that are valid in SPDX expressions".to_string(),
+                            spdx::error::Reason::Unexpected(expected) => match expected {
+                                [] => "contains an unexpected term".to_string(),
+                                expected => "contains an unexpected term, expected \"".to_string() + &expected.join("\" or \"") + "\""
                             },
                             spdx::error::Reason::SeparatedPlus =>
-                                "contains a '+' after whitespace, which is not allowed in SPDX expressions",
+                                "contains a '+' after whitespace, which is not allowed in SPDX expressions".to_string(),
                             spdx::error::Reason::UnknownTerm =>
-                                "contains a term that is not valid in SPDX expresssions",
+                                "contains a term that is not valid in SPDX expresssions".to_string(),
                             spdx::error::Reason::GnuNoPlus =>
-                                "contains a '+' after a GNU license. Please use '-or-later' instead.",
+                                "contains a '+' after a GNU license. Please use '-or-later' instead.".to_string(),
                         }
                     ),
                 };
