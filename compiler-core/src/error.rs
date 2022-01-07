@@ -129,6 +129,12 @@ pub enum Error {
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
 
+    #[error("invalid license")]
+    InvalidLicense {
+        license: String,
+        reason: spdx::error::Reason,
+    },
+
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
 
@@ -388,6 +394,46 @@ Please try again with a different project name.",
                                 "does not have the correct format. Project names must start
 with a lowercase letter and may only contain lowercase letters,
 numbers and underscores.",
+                        }
+                    ),
+                };
+                write_project(buf, diagnostic);
+            }
+
+            Error::InvalidLicense { license, reason } => {
+                let msg;
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Invalid license".to_string(),
+                    label: format!(
+                        "The license \"{}\" {}.",
+                        license,
+                        match reason {
+                            spdx::error::Reason::UnknownLicense => "is not a SPDX license",
+                            spdx::error::Reason::UnknownException => "contains non-SPDX exception",
+                            spdx::error::Reason::InvalidCharacters => "contains invalid characters",
+                            spdx::error::Reason::UnclosedParens =>
+                                "contains an opening parenthesis without a closing parenthesis",
+                            spdx::error::Reason::UnopenedParens =>
+                                "contains a closing parenthesis without an opening parenthesis",
+                            spdx::error::Reason::Empty =>
+                                "contains no terms that are valid in SPDX expressions",
+                            spdx::error::Reason::Unexpected(expected) => match expected.len() {
+                                0 => "contains an unexpected term",
+                                1 => {
+                                    msg = String::from("contains an unexpected term, expected ") + expected.first().unwrap();
+                                    msg.as_str()
+                                },
+                                _ => {
+                                    msg = String::from("contains an unexpected term, expected ") + &expected.join(" or ");
+                                    msg.as_str()
+                                }
+                            },
+                            spdx::error::Reason::SeparatedPlus =>
+                                "contains a '+' after whitespace, which is not allowed in SPDX expressions",
+                            spdx::error::Reason::UnknownTerm =>
+                                "contains a term that is not valid in SPDX expresssions",
+                            spdx::error::Reason::GnuNoPlus =>
+                                "contains a '+' after a GNU license. Please use '-or-later' instead.",
                         }
                     ),
                 };

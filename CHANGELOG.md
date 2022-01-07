@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The build tool now validates that listed licenses are valid SPDX expressions.
 - A WebAssembly version of the compile is now available for use in JavaScript
   and other WebAssembly environments.
 - New projects include Hex badges and a link to Hexdocs.
