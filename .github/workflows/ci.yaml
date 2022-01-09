@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - main
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+
 jobs:
   test:
-    env:
-      RUSTFLAGS: "-D warnings"
     name: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -33,20 +39,20 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          profile: minimal
           override: true
           default: true
+          profile: minimal
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
         with:
-          key: ${{ matrix.target }}
+          key: v1-${{ matrix.target }}
 
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --target ${{ matrix.target }}
+          args: --workspace
 
   test-musl:
     runs-on: ubuntu-latest
@@ -63,14 +69,15 @@ jobs:
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
         with:
-          key: linux-musl
+          key: v1-linux-musl
       
       - name: Run tests
-        run: cargo test --workspace
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --workspace
 
   rustfmt:
-    env:
-      RUSTFLAGS: "-D warnings"
     name: rustfmt
     runs-on: ubuntu-latest
     steps:
@@ -82,9 +89,9 @@ jobs:
         with:
           toolchain: stable
           override: true
+          default: true
           profile: minimal
           components: rustfmt
-          default: true
 
       - name: Check formatting
         uses: actions-rs/cargo@v1
@@ -104,17 +111,23 @@ jobs:
         with:
           toolchain: stable
           override: true
+          default: true
           profile: minimal
-      - run: |
+
+      - name: Install cargo-deny
+        run: |
           set -e
           curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
           mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
           echo `pwd` >> $GITHUB_PATH
-      - run: cargo deny check
+
+      - name: Validate deps
+        uses: actions-rs/cargo@v1
+        with:
+          command: deny
+          args: check
 
   lint-build:
-    env:
-      RUSTFLAGS: "-D warnings"
     name: lint-build
     runs-on: ubuntu-latest
     steps:
@@ -126,32 +139,31 @@ jobs:
         with:
           toolchain: stable
           override: true
+          default: true
           profile: minimal
           components: clippy
-          default: true
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
         with:
-          key: linux-gnu
+          key: v1-linux-gnu
 
       - name: Run linter
         uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --target x86_64-unknown-linux-gnu --workspace -- -D warnings
+          args: --workspace
 
       - name: Build binary
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --target x86_64-unknown-linux-gnu
 
       - name: Upload artifact (Ubuntu)
         uses: actions/upload-artifact@v2
         with:
           name: gleam
-          path: target/x86_64-unknown-linux-gnu/debug/gleam
+          path: target/debug/gleam
 
   test-projects:
     name: test-projects
