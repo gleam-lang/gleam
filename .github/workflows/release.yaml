@@ -3,6 +3,11 @@ on:
   push:
     tags:
       - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
 jobs:
   build-release:
     name: build-release
@@ -33,20 +38,20 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          profile: minimal
           override: true
           default: true
+          profile: minimal
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
         with:
-          key: ${{ matrix.target }}
+          key: v1-${{ matrix.target }}
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --target ${{ matrix.target }}
+          args: --release
 
       - name: Build archive
         shell: bash
@@ -55,12 +60,12 @@ jobs:
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
-            cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
+            cp "target/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
             rm gleam.exe
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
-            cp "target/${{ matrix.target }}/release/gleam" "gleam"
+            cp "target/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
             rm gleam
           fi
@@ -108,10 +113,13 @@ jobs:
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
         with:
-          key: linux-musl
+          key: v1-linux-musl
 
       - name: Build release binary
-        run: cargo build --release
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release
 
       - name: Build archive
         shell: bash
