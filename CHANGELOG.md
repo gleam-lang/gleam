@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects are created with `gleam_stdlib` v0.19 and `gleeunit` v0.6.
+
 ## v0.19.0-rc3
 
 - Fixed a bug where precompiled packages would fail to compile due to Erlang
