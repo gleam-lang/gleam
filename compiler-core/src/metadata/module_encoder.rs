@@ -176,7 +176,7 @@ impl<'a> ModuleEncoder<'a> {
                 builder.set_name(name);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 {
-                    let mut builder = builder.reborrow().init_module(self.data.name.len() as u32);
+                    let mut builder = builder.reborrow().init_module(module.len() as u32);
                     for (i, s) in module.iter().enumerate() {
                         builder.set(i as u32, s);
                     }
