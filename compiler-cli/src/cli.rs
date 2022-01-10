@@ -1,6 +1,7 @@
 use gleam_core::{
     build::Telemetry,
     error::{Error, StandardIoAction},
+    Warning,
 };
 use hexpm::version::Version;
 use std::{
@@ -8,6 +9,8 @@ use std::{
     time::{Duration, Instant},
 };
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
+
+use crate::print_warning;
 
 #[derive(Debug, Default, Clone)]
 pub struct Reporter;
@@ -25,6 +28,10 @@ impl Telemetry for Reporter {
 
     fn checking_package(&self, name: &str) {
         print_checking(name);
+    }
+
+    fn warning(&self, warning: &Warning) {
+        print_warning(warning)
     }
 }
 

@@ -97,6 +97,12 @@ where
         }
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
+
+        // Print warnings
+        for warning in self.warnings {
+            self.telemetry.warning(&warning);
+        }
+
         Ok(Package { config, modules })
     }
 
