@@ -3,6 +3,10 @@
 ## Unreleased
 
 - New projects are created with `gleam_stdlib` v0.19 and `gleeunit` v0.6.
+- Fixed a bug where external functions could be specified with the wrong module
+  name in generated Erlang when imported from a nested module in another
+  package.
+  
 
 ## v0.19.0-rc3
 
