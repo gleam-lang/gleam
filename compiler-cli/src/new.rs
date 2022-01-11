@@ -105,6 +105,9 @@ erl_crash.dump
             &format!(
                 r#"# {name}
 
+[![Package Version](https://img.shields.io/hexpm/v/{name})](https://hex.pm/packages/{name})
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{name}/)
+
 {description}
 
 ## Quick start
