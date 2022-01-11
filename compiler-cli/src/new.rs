@@ -117,11 +117,13 @@ gleam shell # Run an Erlang shell
 
 ## Installation
 
-If available on Hex this package can be added to your Gleam project.
+If available on Hex this package can be added to your Gleam project:
 
 ```sh
 gleam add {name}
 ```
+
+and its documentation can be found at <https://hexdocs.pm/{name}>.
 "#,
                 name = self.project_name,
                 description = self.options.description,
