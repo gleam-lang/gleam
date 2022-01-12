@@ -1,6 +1,8 @@
 # Changelog
 
-## v0.19.0-rc4
+## v0.19.0 - 2022-01-12
+
+## v0.19.0-rc4 - 2022-01-10
 
 - New projects are created with `gleam_stdlib` v0.19 and `gleeunit` v0.6.
 - Fixed a bug where external functions could be specified with the wrong module
@@ -8,12 +10,12 @@
   package.
 - Fixed a bug where warnings wouldn't get printed.
 
-## v0.19.0-rc3
+## v0.19.0-rc3 - 2022-01-07
 
 - Fixed a bug where precompiled packages would fail to compile due to Erlang
   files being compiled twice concurrently.
 
-## v0.19.0-rc2
+## v0.19.0-rc2 - 2022-01-06
 
 - Erlang modules are now compiled in a multi-core fashion.
 - New projects are created with `erlef/setup-beam` v1.9.0 instead of
