@@ -503,7 +503,7 @@ This was error from the tar library:
 
     {}",
                         path.to_str().unwrap(),
-                        err.to_string()
+                        err
                     ),
                 };
                 write_project(buf, diagnostic);
@@ -518,7 +518,7 @@ This was error from the tar library:
 This was error from the tar library:
 
     {}",
-                        error.to_string()
+                        error
                     ),
                 };
                 write_project(buf, diagnostic);
@@ -1094,7 +1094,7 @@ Found type:
                 TypeError::UnnecessarySpreadOperator { location, arity } => {
                     let diagnostic = Diagnostic {
                         title: "Unnecessary spread operator".to_string(),
-                        label: format!(""),
+                        label: String::new(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,

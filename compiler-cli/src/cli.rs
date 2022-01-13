@@ -59,7 +59,7 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
-    print_colourful_prefix(" Publishing", &format!("{} v{}", name, version.to_string()))
+    print_colourful_prefix(" Publishing", &format!("{} v{}", name, version))
 }
 
 pub fn print_published(duration: Duration) {

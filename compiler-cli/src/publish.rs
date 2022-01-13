@@ -71,7 +71,7 @@ impl PublishCommand {
             println!("  - {}", file.to_string_lossy());
         }
         println!("\nName: {}", config.name);
-        println!("Version: {}", config.version.to_string());
+        println!("Version: {}", config.version);
 
         if cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
             println!("Not publishing.");
