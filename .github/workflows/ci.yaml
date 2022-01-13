@@ -76,6 +76,34 @@ jobs:
           command: test
           args: --workspace
 
+  test-wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          profile: minimal
+          override: true
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+
+      - name: Install wasm-pack
+        run: |
+          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
+          && chmod +x wasm-pack-init \
+          && ./wasm-pack-init \
+          && rm wasm-pack-init
+      - name: Run wasm tests
+        working-directory: ./compiler-wasm
+        run: wasm-pack test --node
+
   rustfmt:
     name: rustfmt
     runs-on: ubuntu-latest
