@@ -642,7 +642,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.19.0"
+version = "0.20.0-dev"
 dependencies = [
  "async-trait",
  "atty",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.19.0"
+version = "0.20.0-dev"
 dependencies = [
  "askama",
  "async-trait",
@@ -719,7 +719,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.19.0"
+version = "0.20.0-dev"
 dependencies = [
  "gleam-core",
  "wasm-bindgen",
