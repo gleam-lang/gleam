@@ -18,29 +18,19 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut warnings = Vec::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
 
-    let erl_libs = std::env::vars()
-        .find(|(name, _)| name == "ERL_LIBS")
-        .map(|(_, value)| value)
-        .unwrap_or_else(|| {
-            options
-                .libraries_directory
-                .join("*")
-                .to_string_lossy()
-                .to_string()
-        });
-
     tracing::info!("Compiling package");
 
     let mut compiler = PackageCompiler::new(
         &config,
         &options.package_directory,
         &options.output_directory,
+        &options.libraries_directory,
         options.target,
-        &erl_libs,
         ProjectIO::new(),
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
+    compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     compiler.read_source_files(Mode::Dev)?;
     let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 

@@ -2,9 +2,11 @@ use gleam_core::{
     build::{Mode, Options, Target},
     config::PackageConfig,
     error::Error,
+    io::CommandExecutor,
     paths,
 };
-use std::process::Command;
+
+use crate::fs::ProjectIO;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -12,7 +14,7 @@ pub enum Which {
     Test,
 }
 
-pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
+pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> Result<(), Error> {
     let config = crate::config::root_config()?;
 
     // Determine which module to run
@@ -25,80 +27,72 @@ pub fn command(arguments: &[String], which: Which) -> Result<(), Error> {
     let _ = crate::build::main(&Options {
         perform_codegen: true,
         mode: Mode::Dev,
-        target: None,
+        target,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
-    // Prepare the Erlang shell command
-    let mut command = match config.target {
-        Target::Erlang => erlang_command(&config, &module, arguments),
-        Target::JavaScript => javascript_command(&config, &module, arguments),
-    }?;
-
     crate::cli::print_running(&format!("{}.main", module));
 
-    // Run the shell
-    tracing::info!("Running OS process {:?}", command);
-    let status = command.status().map_err(|e| Error::ShellCommand {
-        command: "erl".to_string(),
-        err: Some(e.kind()),
-    })?;
+    // Run the command
+    let status = match target.unwrap_or(config.target) {
+        Target::Erlang => run_erlang(&config, &module, arguments),
+        Target::JavaScript => run_javascript(&config, &module, arguments),
+    }?;
 
-    std::process::exit(status.code().unwrap_or_default());
+    std::process::exit(status);
 }
 
-fn erlang_command(
-    config: &PackageConfig,
-    module: &str,
-    arguments: &[String],
-) -> Result<Command, Error> {
-    let mut command = Command::new("erl");
+fn run_erlang(config: &PackageConfig, module: &str, arguments: Vec<String>) -> Result<i32, Error> {
+    let mut args = vec![];
 
     // Specify locations of .beam files
     let packages = paths::build_packages(Mode::Dev, config.target);
 
     for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
-        let _ = command.arg("-pa").arg(entry.path().join("ebin"));
+        args.push("-pa".into());
+        args.push(entry.path().join("ebin").to_string_lossy().into());
     }
 
-    let _ = command.arg("-eval");
-    let _ = command.arg(format!("gleam@@main:run({})", &module));
+    args.push("-eval".into());
+    args.push(format!("gleam@@main:run({})", &module));
 
     // Don't run the Erlang shell
-    let _ = command.arg("-noshell");
+    args.push("-noshell".into());
 
     // Tell the BEAM that any following argument are for the program
-    let _ = command.arg("-extra");
-    for argument in arguments {
-        let _ = command.arg(argument);
+    args.push("-extra".into());
+    for argument in arguments.into_iter() {
+        args.push(argument);
     }
-    Ok(command)
+
+    ProjectIO::new().exec("erl", &args, &[], None)
 }
 
-fn javascript_command(
+fn run_javascript(
     config: &PackageConfig,
     module: &str,
-    arguments: &[String],
-) -> Result<Command, Error> {
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
+    let mut args = vec![];
+
     let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
         .join("dist")
         .join(module);
-    let mut command = Command::new("node");
 
     // Run the main function.
-    let _ = command.arg("-e");
-    let _ = command.arg(&format!(
+    args.push("-e".into());
+    args.push(format!(
         "import('./{}.mjs').then(module => module.main())",
         module.to_string_lossy()
     ));
 
     // Tell Node that any following argument are for the program
-    let _ = command.arg("--");
-    for argument in arguments {
-        let _ = command.arg(argument);
+    args.push("--".into());
+    for argument in arguments.into_iter() {
+        args.push(argument);
     }
 
-    Ok(command)
+    ProjectIO::new().exec("node", &args, &[], None)
 }

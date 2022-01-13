@@ -47,7 +47,7 @@ pub fn command(to_add: String, dev: bool) -> Result<()> {
     // Write the updated config
     fs::write(Path::new("gleam.toml"), &toml.to_string())?;
 
-    cli::print_added(&format!("{} v{}", to_add, version.to_string()));
+    cli::print_added(&format!("{} v{}", to_add, version));
 
     Ok(())
 }

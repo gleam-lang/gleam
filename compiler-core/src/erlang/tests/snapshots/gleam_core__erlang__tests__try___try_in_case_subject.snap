@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests/try_.rs
+expression: "pub fn x(f) {\n  try x = 1 |> f\n  Ok(x)\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/1]).
+
+-spec x(fun((integer()) -> {ok, D} | {error, G})) -> {ok, D} | {error, G}.
+x(F) ->
+    case begin
+        _pipe = 1,
+        F(_pipe)
+    end of
+        {error, _try} -> {error, _try};
+        {ok, X} ->
+            {ok, X}
+    end.
+

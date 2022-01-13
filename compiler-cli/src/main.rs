@@ -87,19 +87,24 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use structopt::{clap::AppSettings, StructOpt};
+
+use clap::{AppSettings, Args, Parser, Subcommand};
 use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(StructOpt, Debug)]
-#[structopt(global_settings = &[AppSettings::ColoredHelp, AppSettings::VersionlessSubcommands])]
+#[derive(Parser, Debug)]
+#[clap(version)]
 enum Command {
     /// Build the project
     Build {
         /// Emit compile time warnings as errors
-        #[structopt(long)]
+        #[clap(long)]
         warnings_as_errors: bool,
+
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
     },
 
     /// Type check the project
@@ -109,12 +114,15 @@ enum Command {
     Publish,
 
     /// Render HTML documentation
+    #[clap(subcommand)]
     Docs(Docs),
 
     /// Work with dependency packages
+    #[clap(subcommand)]
     Deps(Dependencies),
 
     /// Work with the Hex package manager
+    #[clap(subcommand)]
     Hex(Hex),
 
     /// Create a new project
@@ -123,15 +131,15 @@ enum Command {
     /// Format source code
     Format {
         /// Files to format
-        #[structopt(default_value = ".")]
+        #[clap(default_value = ".")]
         files: Vec<String>,
 
         /// Read source from STDIN
-        #[structopt(long)]
+        #[clap(long)]
         stdin: bool,
 
         /// Check if inputs are formatted without changing them
-        #[structopt(long)]
+        #[clap(long)]
         check: bool,
     },
 
@@ -139,19 +147,31 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[structopt(settings = &[AppSettings::TrailingVarArg])]
-    Run { arguments: Vec<String> },
+    #[clap(setting = AppSettings::TrailingVarArg)]
+    Run {
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
+
+        arguments: Vec<String>,
+    },
 
     /// Run the project tests
-    #[structopt(settings = &[AppSettings::TrailingVarArg])]
-    Test { arguments: Vec<String> },
+    #[clap(setting = AppSettings::TrailingVarArg)]
+    Test {
+        /// The platform to target
+        #[clap(long, ignore_case = true)]
+        target: Option<Target>,
+
+        arguments: Vec<String>,
+    },
 
     /// Compile a single Gleam package
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(setting = AppSettings::Hidden)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[structopt(setting = AppSettings::Hidden)]
+    #[clap(setting = AppSettings::Hidden)]
     PrintConfig,
 
     /// Add a new project dependency
@@ -167,50 +187,52 @@ enum Command {
     Clean,
 }
 
-#[derive(StructOpt, Debug, Clone)]
-#[structopt(flatten)]
+#[derive(Args, Debug, Clone)]
 pub struct NewOptions {
     /// Location of the project root
     pub project_root: String,
 
     /// Name of the project
-    #[structopt(long)]
+    #[clap(long)]
     pub name: Option<String>,
 
     /// Description of the project
-    #[structopt(long, default_value = "A Gleam project")]
+    #[clap(long, default_value = "A Gleam project")]
     pub description: String,
 
-    #[structopt(
+    #[clap(
         long,
-        possible_values = &new::Template::VARIANTS,
-        case_insensitive = true,
+        possible_values = new::Template::VARIANTS,
+        ignore_case = true,
         default_value = "lib"
     )]
     pub template: new::Template,
 }
 
-#[derive(StructOpt, Debug)]
-#[structopt(flatten)]
+#[derive(Args, Debug)]
 pub struct CompilePackage {
     /// The compilation target for the generated project
-    #[structopt(long, case_insensitive = true, default_value = "erlang")]
+    #[clap(long, ignore_case = true)]
     target: Target,
 
     /// The directory of the Gleam package
-    #[structopt(long = "in", default_value = ".")]
+    #[clap(long = "package")]
     package_directory: PathBuf,
 
     /// A directory to write compiled package to
-    #[structopt(long = "out", default_value = ".")]
+    #[clap(long = "out")]
     output_directory: PathBuf,
 
     /// A directories of precompiled Gleam projects
-    #[structopt(long = "lib", default_value = ".")]
+    #[clap(long = "lib")]
     libraries_directory: PathBuf,
+
+    /// Skip Erlang to BEAM bytecode compilation if given
+    #[clap(long = "no-beam")]
+    skip_beam_compilation: bool,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Dependencies {
     /// List all dependency packages
     List,
@@ -219,7 +241,7 @@ enum Dependencies {
     Download,
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Hex {
     /// Retire a release from Hex
     Retire {
@@ -227,7 +249,7 @@ enum Hex {
 
         version: String,
 
-        #[structopt(possible_values = &RetirementReason::VARIANTS)]
+        #[clap(possible_values = RetirementReason::VARIANTS)]
         reason: RetirementReason,
 
         message: Option<String>,
@@ -237,7 +259,7 @@ enum Hex {
     Unretire { package: String, version: String },
 }
 
-#[derive(StructOpt, Debug)]
+#[derive(Subcommand, Debug)]
 enum Docs {
     /// Render HTML docs locally
     Build,
@@ -248,11 +270,11 @@ enum Docs {
     /// Remove HTML docs from HexDocs
     Remove {
         /// The name of the package
-        #[structopt(long)]
+        #[clap(long)]
         package: String,
 
         /// The version of the docs to remove
-        #[structopt(long)]
+        #[clap(long)]
         version: String,
     },
 }
@@ -262,8 +284,11 @@ fn main() {
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
 
-    let result = match Command::from_args() {
-        Command::Build { warnings_as_errors } => command_build(&stderr, warnings_as_errors),
+    let result = match Command::parse() {
+        Command::Build {
+            target,
+            warnings_as_errors,
+        } => command_build(&stderr, target, warnings_as_errors),
 
         Command::Check => command_check(),
 
@@ -287,9 +312,9 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run { arguments } => run::command(&arguments, run::Which::Src),
+        Command::Run { target, arguments } => run::command(arguments, target, run::Which::Src),
 
-        Command::Test { arguments } => run::command(&arguments, run::Which::Test),
+        Command::Test { target, arguments } => run::command(arguments, target, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
@@ -344,7 +369,11 @@ fn command_check() -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(
+    stderr: &termcolor::BufferWriter,
+    target: Option<Target>,
+    warnings_as_errors: bool,
+) -> Result<(), Error> {
     let mut buffer = stderr.buffer();
     let root = Path::new("./");
 
@@ -353,7 +382,7 @@ fn command_build(stderr: &termcolor::BufferWriter, warnings_as_errors: bool) -> 
         return build::main(&Options {
             perform_codegen: true,
             mode: Mode::Dev,
-            target: None,
+            target,
         })
         .map(|_| ());
     }

@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - main
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_DEV_DEBUG: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+
 jobs:
   test:
-    env:
-      RUSTFLAGS: "-D warnings"
     name: test
     runs-on: ${{ matrix.os }}
     strategy:
@@ -33,33 +39,20 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-          profile: minimal
           override: true
+          default: true
+          profile: minimal
 
-      - name: Build binary
-        uses: actions-rs/cargo@v1
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
         with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-
-      - name: Run linter
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --target ${{ matrix.target }} -- -D warnings
+          key: v1-${{ matrix.target }}
 
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --target ${{ matrix.target }}
-
-      - name: Upload artifact (Ubuntu)
-        if: matrix.build == 'linux-amd64'
-        uses: actions/upload-artifact@v2
-        with:
-          name: gleam
-          path: target/${{ matrix.target }}/release/gleam
+          args: --workspace
 
   test-musl:
     runs-on: ubuntu-latest
@@ -67,48 +60,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Build binary
+      - name: Link to predefined musl toolchain
         run: |
-          docker run --rm -t \
-            --mount type=bind,source=${{ github.workspace }},target=/volume \
-            clux/muslrust:stable \
-            cargo build --release
+          ln -s /root/.cargo $HOME/.cargo
+          ln -s /root/.rustup $HOME/.rustup
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: v1-linux-musl
 
       - name: Run tests
-        run: |
-          docker run --rm -t \
-            --mount type=bind,source=${{ github.workspace }},target=/volume \
-            clux/muslrust:stable \
-            cargo test --workspace
-
-  test-wasm:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/cargo@v1
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          profile: minimal
-          override: true
-
-      - uses: actions/setup-node@v2
-        with:
-          node-version: "16"
-
-      - name: Install wasm-pack
-        run: |
-          curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
-          && chmod +x wasm-pack-init \
-          && ./wasm-pack-init \
-          && rm wasm-pack-init
-
-      - name: Run wasm tests
-        working-directory: ./compiler-wasm
-        run: wasm-pack test --node
+          command: test
+          args: --workspace
 
   rustfmt:
     name: rustfmt
@@ -122,11 +88,15 @@ jobs:
         with:
           toolchain: stable
           override: true
+          default: true
           profile: minimal
           components: rustfmt
 
       - name: Check formatting
-        run: cargo fmt --all -- --check
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
 
   validate-deps:
     name: validate-deps
@@ -140,24 +110,70 @@ jobs:
         with:
           toolchain: stable
           override: true
+          default: true
           profile: minimal
-      - run: |
+
+      - name: Install cargo-deny
+        run: |
           set -e
           curl -L https://github.com/EmbarkStudios/cargo-deny/releases/download/0.8.5/cargo-deny-0.8.5-x86_64-unknown-linux-musl.tar.gz | tar xzf -
           mv cargo-deny-*-x86_64-unknown-linux-musl/cargo-deny cargo-deny
           echo `pwd` >> $GITHUB_PATH
-      - run: cargo deny check
+
+      - name: Validate deps
+        uses: actions-rs/cargo@v1
+        with:
+          command: deny
+          args: check
+
+  lint-build:
+    name: lint-build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          default: true
+          profile: minimal
+          components: clippy
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v1
+        with:
+          key: v1-linux-gnu
+
+      - name: Run linter
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: --workspace
+
+      - name: Build binary
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Upload artifact (Ubuntu)
+        uses: actions/upload-artifact@v2
+        with:
+          name: gleam
+          path: target/debug/gleam
 
   test-projects:
     name: test-projects
-    needs: test
+    needs: lint-build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2.0.0
 
       - name: Install Erlang
-        uses: gleam-lang/setup-erlang@v1.1.2
+        uses: erlef/setup-beam@v1.9.0
         with:
           otp-version: 23.2
 
@@ -182,14 +198,13 @@ jobs:
           gleam docs build
         working-directory: ./test/project_erlang
 
-      # TODO: This will not work until we release a version of the build tool
-      # that outputs mjs modules and then we update the stdlib imports to match.
-      # - name: test/project_javascript
-      #   run: |
-      #     gleam run
-      #     gleam test
-      #     gleam docs build
-      #   working-directory: ./test/project_javascript
+      # TODO: Add the stdlib to this project once it uses .mjs imports
+      - name: test/project_javascript
+        run: |
+          gleam run
+          gleam test
+          gleam docs build
+        working-directory: ./test/project_javascript
 
       - name: test/language Erlang
         run: make clean erlang

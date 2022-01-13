@@ -228,6 +228,35 @@ fn module_fn_value() {
     assert_eq!(roundtrip(&module), module);
 }
 
+// https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c
+#[test]
+fn module_fn_value_regression() {
+    let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
+        name: vec!["a".into(), "b".into(), "c".into()],
+        types: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".to_string(),
+            ValueConstructor {
+                public: true,
+                origin: Default::default(),
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    name: "one".to_string(),
+                    field_map: None,
+                    module: vec!["a".to_string()],
+                    arity: 5,
+                },
+            },
+        )]
+        .into(),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
 #[test]
 fn module_fn_value_with_field_map() {
     let module = Module {

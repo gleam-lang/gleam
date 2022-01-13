@@ -11,8 +11,8 @@ use strum::{Display, EnumString, EnumVariantNames};
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.18";
-const GLEEUNIT_VERSION: &str = "0.5";
+const GLEAM_STDLIB_VERSION: &str = "0.19";
+const GLEEUNIT_VERSION: &str = "0.6";
 const ERLANG_OTP_VERSION: &str = "23.2";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
@@ -105,6 +105,9 @@ erl_crash.dump
             &format!(
                 r#"# {name}
 
+[![Package Version](https://img.shields.io/hexpm/v/{name})](https://hex.pm/packages/{name})
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/{name}/)
+
 {description}
 
 ## Quick start
@@ -117,11 +120,13 @@ gleam shell # Run an Erlang shell
 
 ## Installation
 
-If available on Hex this package can be added to your Gleam project.
+If available on Hex this package can be added to your Gleam project:
 
 ```sh
 gleam add {name}
 ```
+
+and its documentation can be found at <https://hexdocs.pm/{name}>.
 "#,
                 name = self.project_name,
                 description = self.options.description,
@@ -147,11 +152,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2.0.0
-      - uses: gleam-lang/setup-erlang@v1.1.2
+      - uses: erlef/setup-beam@v1.9.0
         with:
           otp-version: "{}"
-      - uses: gleam-lang/setup-gleam@v1.0.2
-        with:
           gleam-version: "{}"
       - run: gleam format --check src test
       - run: gleam deps download

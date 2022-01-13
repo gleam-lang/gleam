@@ -2,6 +2,43 @@
 
 ## Unreleased
 
+- New projects include Hex badges and a link to Hexdocs.
+
+## v0.19.0 - 2022-01-12
+
+Dedicated to the memory of Muhammad Shaheer, a good and caring man.
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.19-released/)
+
+## v0.19.0-rc4 - 2022-01-10
+
+- New projects are created with `gleam_stdlib` v0.19 and `gleeunit` v0.6.
+- Fixed a bug where external functions could be specified with the wrong module
+  name in generated Erlang when imported from a nested module in another
+  package.
+- Fixed a bug where warnings wouldn't get printed.
+
+## v0.19.0-rc3 - 2022-01-07
+
+- Fixed a bug where precompiled packages would fail to compile due to Erlang
+  files being compiled twice concurrently.
+
+## v0.19.0-rc2 - 2022-01-06
+
+- Erlang modules are now compiled in a multi-core fashion.
+- New projects are created with `erlef/setup-beam` v1.9.0 instead of
+  `gleam-lang/setup-erlang` and `gleam-lang/setup-gleam`.
+- Fixed a bug where tail call optimisation could generate incorrect code when
+  the function has argument names that are JavaScript keywords.
+- Fixed a bug where the build would continue when dependency packages failed to
+  compile.
+- Fixed a bug where `include` directories would not be accessible by the Erlang
+  compiler during Gleam compilation.
+
+## v0.19.0-rc1 - 2022-01-03
+
+- The build tool now supports the JavaScript target. The target can be specified
+  in either `gleam.toml` or using the `--target` flag.
 - The `gleam check` command has been introduced for rapidly verifying the types
   of Gleam code without performing codegen.
 - `true` and `false` can no longer be used as pattern matching variables, to
@@ -18,6 +55,12 @@
 - Fixed a bug where tail recursion could sometimes generated incorrect
   JavaScript code.
 - Performance of code generators has been slightly improved.
+- Allow the record in a record expansion to be an expression that returns a
+  record.
+- Fixed a bug where external function module names would not be escaped
+  correctly if they contained special characters and were assigned to a
+  variable.
+- A helpful error message is shown if Erlang is not installed.
 
 ## v0.18.2 - 2021-12-12
 
@@ -34,6 +77,8 @@
   would next be attempted, resulting the project being in an invalid state.
 
 ## v0.18.0 - 2021-12-06
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.18-released/)
 
 - New projects now include `gleeunit`.
 
@@ -73,6 +118,9 @@
 - New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
+
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.17-released/)
 
 - Functions now get special handling when being printed from JavaScript.
 
@@ -167,6 +215,8 @@
   JavaScript.
 
 ## v0.16.0 - 2021-06-17
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.16-released/)
 
 ## v0.16.0-rc4 - 2021-06-17
 

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "pub type Test { A }\nconst test = A\npub fn a() { A }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([a/0]).
+-export_type([test/0]).
+
+-type test() :: a.
+
+-spec a() -> test().
+a() ->
+    a.
+

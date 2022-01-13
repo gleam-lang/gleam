@@ -38,11 +38,12 @@ macro_rules! assert_erlang_compile {
         let (file_writer, file_receiver) = FilesChannel::new();
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
+        let lib = PathBuf::from("_build/default/lib");
         let mut compiler =
-            PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
+            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -83,17 +84,12 @@ macro_rules! assert_javascript_compile {
         let (file_writer, file_receiver) = FilesChannel::new();
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
-        let mut compiler = PackageCompiler::new(
-            &config,
-            &root,
-            &out,
-            Target::JavaScript,
-            "erl/libs/*",
-            file_writer,
-        );
+        let lib = PathBuf::from("_build/default/lib");
+        let mut compiler =
+            PackageCompiler::new(&config, &root, &out, &lib, Target::JavaScript, file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -135,11 +131,12 @@ macro_rules! assert_no_warnings {
         let (file_writer, file_receiver) = FilesChannel::new();
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
+        let lib = PathBuf::from("_build/default/lib");
         let mut compiler =
-            PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
+            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
-        compiler.compile_erlang = false;
+        compiler.compile_beam_bytecode = false;
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
@@ -2289,11 +2286,12 @@ fn config_compilation_test() {
             let (file_writer, file_receiver) = FilesChannel::new();
             let root = PathBuf::from("some/build/path/root");
             let out = PathBuf::from("_build/default/lib/the_package");
+            let lib = PathBuf::from("_build/default/lib");
             let mut compiler =
-                PackageCompiler::new(&config, &root, &out, Target::Erlang, "", file_writer);
+                PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;
-            compiler.compile_erlang = false;
+            compiler.compile_beam_bytecode = false;
             compiler.copy_native_files = false;
             compiler.sources = $sources;
             let compiled = compiler

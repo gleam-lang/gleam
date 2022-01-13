@@ -691,7 +691,7 @@ impl<'module> Generator<'module> {
 
                 for (i, (element, argument)) in arguments
                     .into_iter()
-                    .zip(self.function_arguments.clone())
+                    .zip(&self.function_arguments)
                     .enumerate()
                 {
                     if i != 0 {
@@ -700,7 +700,7 @@ impl<'module> Generator<'module> {
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
                         docs.push("loop$".to_doc());
-                        docs.push(Document::String(maybe_escape_identifier_string(name)));
+                        docs.push(Document::String((*name).to_string()));
                         docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not

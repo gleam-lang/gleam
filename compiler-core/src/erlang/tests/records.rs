@@ -1,3 +1,4 @@
+use crate::assert_erl;
 use crate::erlang::*;
 use crate::type_;
 
@@ -78,4 +79,161 @@ fn long_definition_formatting() {
             ),
         ]
     ));
+}
+
+#[test]
+fn record_accessors() {
+    // We can use record accessors for types with only one constructor
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+pub fn get_age(person: Person) { person.age }
+pub fn get_name(person: Person) { person.name }
+"#
+    );
+}
+
+#[test]
+fn record_spread() {
+    // Test binding to a record field with the spread operator
+    assert_erl!(
+        r#"
+type Triple {
+    Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(the_a, ..) = triple
+  the_a
+}
+"#
+    );
+
+    // Test binding to a record field with the spread operator and a labelled argument
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(b: the_b, ..) = triple
+  the_b
+}
+"#
+    );
+
+    // Test binding to a record field with the spread operator with both a labelled argument and a positional argument
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  let Triple(the_a, c: the_c, ..) = triple
+  the_c
+}
+"#
+    );
+
+    // Test binding to a record field with the spread operator in a match
+    assert_erl!(
+        r#"
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  case triple {
+    Triple(b: the_b, ..) -> the_b
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn record_updates() {
+    // Record updates
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: 28)
+    new_p
+}
+"#
+    );
+
+    // Record updates with field accesses
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: p.age + 1)
+    new_p
+}
+"#
+    );
+
+    // Record updates with multiple fields
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let p = Person("Quinn", 27)
+    let new_p = Person(..p, age: 28, name: "Riley")
+    new_p
+}
+"#
+    );
+
+    // Record updates when record is returned from function
+    assert_erl!(
+        r#"
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let new_p = Person(..return_person(), age: 28)
+    new_p
+}
+
+fn return_person() {
+    Person("Quinn", 27)
+}
+"#
+    );
+
+    // Record updates when record is field on another record
+    assert_erl!(
+        r#"
+pub type Car { Car(make: String, model: String, driver: Person) }
+pub type Person { Person(name: String, age: Int) }
+
+fn main() {
+    let car = Car(make: "Amphicar", model: "Model 770", driver: Person(name: "John Doe", age: 27))
+    let new_p = Person(..car.driver, age: 28)
+    new_p
+}
+"#
+    );
+}
+
+#[test]
+fn record_constants() {
+    assert_erl!(
+        "pub type Test { A }
+const test = A
+pub fn a() { A }"
+    );
 }

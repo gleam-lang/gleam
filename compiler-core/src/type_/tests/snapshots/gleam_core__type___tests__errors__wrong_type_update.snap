@@ -4,10 +4,10 @@ expression: "\n pub type Person {\n   Person(name: String, age: Int)\n };\n pub 
 
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:9:11
+  ┌─ /src/one/two.gleam:9:13
   │
 9 │    Person(..box)
-  │           ^^^^^
+  │             ^^^
 
 Expected type:
 

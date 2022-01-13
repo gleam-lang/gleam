@@ -23,16 +23,16 @@ use std::{
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
     pub out: &'a Path,
+    pub lib: &'a Path,
     pub root: &'a Path,
     pub target: Target,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
-    pub erl_libs: &'a str,
     pub write_metadata: bool,
-    pub compile_erlang: bool,
     pub perform_codegen: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
+    pub compile_beam_bytecode: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -47,23 +47,23 @@ where
         config: &'a PackageConfig,
         root: &'a Path,
         out: &'a Path,
+        lib: &'a Path,
         target: Target,
-        erl_libs: &'a str,
         io: IO,
     ) -> Self {
         Self {
             io,
             out,
+            lib,
             root,
             config,
             target,
             sources: vec![],
-            erl_libs,
-            compile_erlang: true,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
             copy_native_files: true,
+            compile_beam_bytecode: true,
         }
     }
 
@@ -110,37 +110,44 @@ where
         Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&self, modules: &[PathBuf]) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
-        let env = [
-            ("ERL_LIBS", self.erl_libs.to_string()),
-            ("TERM", "dumb".into()),
-        ];
+        let escript_path = self.out.join("build").join("gleam@@compile.erl");
+        if !escript_path.exists() {
+            let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
+            self.io
+                .writer(&escript_path)?
+                .write(escript_source.as_bytes())?;
+        }
+
         let mut args = vec![
-            // Use a compile server to avoid repeatedly starting VM
-            "-server".into(),
+            escript_path.to_string_lossy().to_string(),
+            // Tell the compiler where to find other libraries
+            "--lib".into(),
+            self.lib.to_string_lossy().to_string(),
             // Write compiled .beam to ./ebin
-            "-o".into(),
+            "--out".into(),
             self.out.join("ebin").to_string_lossy().to_string(),
         ];
         // Add the list of modules to compile
         for module in modules {
-            args.push(
-                self.out
-                    .join("build")
-                    .join(module)
-                    .to_string_lossy()
-                    .to_string(),
-            );
+            let path = self
+                .out
+                .join("build")
+                .join(module)
+                .with_extension("erl")
+                .to_string_lossy()
+                .to_string();
+            args.push(path);
         }
-        let status = self.io.exec("erlc", &args, &env, None)?;
+        let status = self.io.exec("escript", &args, &[], None)?;
 
         if status == 0 {
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                command: "erlc".to_string(),
+                program: "escript".to_string(),
                 err: None,
             })
         }
@@ -149,7 +156,7 @@ where
     fn copy_project_native_files(
         &mut self,
         out: &Path,
-        modules: &mut Vec<PathBuf>,
+        modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
         let src = self.root.join("src");
@@ -167,7 +174,7 @@ where
         src_path: &Path,
         out: &Path,
         copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut Vec<PathBuf>,
+        to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<()> {
         self.io.mkdir(&out)?;
 
@@ -187,7 +194,7 @@ where
             match extension {
                 "mjs" | "js" | "hrl" => (),
                 "erl" => {
-                    to_compile_modules.push(relative_path.clone());
+                    let _ = to_compile_modules.insert(relative_path.clone());
                 }
                 _ => continue,
             };
@@ -264,7 +271,7 @@ where
     }
 
     fn perform_erlang_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
-        let mut written = vec![];
+        let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
         let io = self.io.clone();
@@ -284,7 +291,7 @@ where
             tracing::info!("skipping_native_file_copying");
         }
 
-        if self.compile_erlang {
+        if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
             self.compile_erlang_to_beam(&written)?;
         } else {
@@ -294,7 +301,7 @@ where
     }
 
     fn perform_javascript_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
-        let mut written = vec![];
+        let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
 
         JavaScript::new(&artifact_dir).render(&self.io, modules)?;
@@ -308,7 +315,7 @@ where
     fn render_entrypoint_module(
         &self,
         out: &Path,
-        modules_to_compile: &mut Vec<PathBuf>,
+        modules_to_compile: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         let name = "gleam@@main.erl";
         let module = ErlangEntrypointModule {
@@ -317,7 +324,7 @@ where
         .render()
         .expect("Erlang entrypoint rendering");
         self.io.writer(&out.join(name))?.write(module.as_bytes())?;
-        modules_to_compile.push(name.into());
+        let _ = modules_to_compile.insert(name.into());
         Ok(())
     }
 }
@@ -432,7 +439,8 @@ fn parse_sources(
         })?;
 
         // Store the name
-        ast.name = name.split("/").map(String::from).collect(); // TODO: store the module name as a string
+        // TODO: store the module name as a string
+        ast.name = name.split("/").map(String::from).collect();
 
         let module = Parsed {
             package: package_name.to_string(),

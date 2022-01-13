@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "pub fn a() { \"\\n\" \"\\r\" \"\\t\" \"\\\\\" \"\\\"\" \"\\e\" \"\\\\^\" }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([a/0]).
+
+-spec a() -> binary().
+a() ->
+    <<"\n"/utf8>>,
+    <<"\r"/utf8>>,
+    <<"\t"/utf8>>,
+    <<"\\"/utf8>>,
+    <<"\""/utf8>>,
+    <<"\e"/utf8>>,
+    <<"\\^"/utf8>>.
+

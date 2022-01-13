@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/erlang/tests/statement_if.rs
+expression: "if javascript {\n  pub fn main() { 1 }\n}"
+
+---
+-module(the_app).
+

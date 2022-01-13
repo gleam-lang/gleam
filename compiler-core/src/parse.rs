@@ -593,12 +593,13 @@ where
                 let start = expr.location().start;
                 if let Some((dot_s, _)) = self.maybe_one(&Token::DotDot) {
                     // Record update
-                    let (_, name, name_e) = self.expect_name()?;
+                    let base = self.expect_expression()?;
+                    let base_e = base.location().end;
                     let spread = RecordUpdateSpread {
-                        name,
+                        base: Box::new(base),
                         location: SrcSpan {
                             start: dot_s,
-                            end: name_e,
+                            end: base_e,
                         },
                     };
                     let mut args = vec![];
@@ -1473,8 +1474,8 @@ where
     // examples:
     //   type A { A }
     //   type A { A(String) }
-    //   type A(a) { A(a: b) }
-    //   type A(a) { A(String, a: b) }
+    //   type Box(inner_type) { Box(inner: inner_type) }
+    //   type NamedBox(inner_type) { Box(String, inner: inner_type) }
     fn parse_custom_type(
         &mut self,
         start: usize,

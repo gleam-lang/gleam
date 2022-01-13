@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |> id \n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([bool_expr/2]).
+
+-spec id(A) -> A.
+id(X) ->
+    X.
+
+-spec bool_expr(boolean(), boolean()) -> boolean().
+bool_expr(X, Y) ->
+    Y orelse begin
+        _pipe = X,
+        id(_pipe)
+    end.
+

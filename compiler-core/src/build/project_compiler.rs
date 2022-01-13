@@ -95,8 +95,14 @@ where
         } else {
             self.telemetry.checking_package(&self.config.name);
         }
-        let config = std::mem::take(&mut self.config);
+        let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
+
+        // Print warnings
+        for warning in self.warnings {
+            self.telemetry.warning(&warning);
+        }
+
         Ok(Package { config, modules })
     }
 
@@ -120,7 +126,7 @@ where
             self.io.delete(&dir)?;
         }
 
-        Ok(())
+        result
     }
 
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
@@ -155,6 +161,12 @@ where
             self.io.copy_dir(&src_priv, &dest)?;
         }
 
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!("skipping_rebar3_build_for_non_erlang_target");
+            return Ok(());
+        }
+
         let env = [
             ("ERL_LIBS", rebar3_path(&erl_libs)),
             ("REBAR_BARE_COMPILER_OUTPUT_DIR", rebar3_path(&dest)),
@@ -173,7 +185,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                command: "rebar3".to_string(),
+                program: "rebar3".to_string(),
                 err: None,
             })
         }
@@ -212,22 +224,19 @@ where
         root_path: PathBuf,
     ) -> Result<Vec<Module>, Error> {
         let out_path = paths::build_package(self.mode(), self.target(), &config.name);
+        let lib_path = paths::build_packages(self.mode(), self.target());
         let artifact_path = out_path.join("build");
-        let erl_libs = paths::build_packages_erl_libs_glob(self.mode(), self.target())
-            .to_string_lossy()
-            .into_owned();
-
         let mut compiler = PackageCompiler::new(
             config,
             &root_path,
             &out_path,
+            &lib_path,
             self.target(),
-            &erl_libs,
             self.io.clone(),
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
-        compiler.compile_erlang = !is_root || self.options.perform_codegen;
+        compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.read_source_files(self.mode())?;
 
         // Compile project to Erlang or JavaScript source code
@@ -239,12 +248,6 @@ where
 
         Ok(compiled)
     }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum SourceLocations {
-    Src,
-    SrcAndTest,
 }
 
 fn order_packages(packages: &HashMap<String, &ManifestPackage>) -> Result<Vec<String>, Error> {

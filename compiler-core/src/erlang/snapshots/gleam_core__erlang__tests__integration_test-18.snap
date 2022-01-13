@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests.rs
+expression: "type Null { Null } fn x() { Null }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export_type([null/0]).
+
+-type null() :: null.
+
+-spec x() -> null().
+x() ->
+    null.
+
