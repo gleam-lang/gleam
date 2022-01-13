@@ -2,8 +2,7 @@
 
 ## v0.19.0 - 2022-01-12
 
-Dedicated to the memory of Muhammad Shaheer.
-
+Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 
 [Release Blog Post](https://gleam.run/news/gleam-v0.19-released/)
 
