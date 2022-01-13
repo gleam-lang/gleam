@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects include Hex badges and a link to Hexdocs.
+
 ## v0.19.0 - 2022-01-12
 
 Dedicated to the memory of Muhammad Shaheer, a good and caring man.
