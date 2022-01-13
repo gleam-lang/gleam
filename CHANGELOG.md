@@ -2,6 +2,11 @@
 
 ## v0.19.0 - 2022-01-12
 
+Dedicated to the memory of Muhammad Shaheer.
+
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.19-released/)
+
 ## v0.19.0-rc4 - 2022-01-10
 
 - New projects are created with `gleam_stdlib` v0.19 and `gleeunit` v0.6.
@@ -70,6 +75,8 @@
 
 ## v0.18.0 - 2021-12-06
 
+[Release Blog Post](https://gleam.run/news/gleam-v0.18-released/)
+
 - New projects now include `gleeunit`.
 
 ## v0.18.0-rc3 - 2021-12-05
@@ -108,6 +115,9 @@
 - New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
+
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.17-released/)
 
 - Functions now get special handling when being printed from JavaScript.
 
@@ -202,6 +212,8 @@
   JavaScript.
 
 ## v0.16.0 - 2021-06-17
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.16-released/)
 
 ## v0.16.0-rc4 - 2021-06-17
 
