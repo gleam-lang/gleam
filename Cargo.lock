@@ -726,6 +726,7 @@ dependencies = [
  "hexpm",
  "itertools",
  "serde",
+ "termcolor",
  "tracing",
  "tracing-wasm",
  "wasm-bindgen",

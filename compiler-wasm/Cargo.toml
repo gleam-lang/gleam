@@ -18,6 +18,7 @@ serde = { version = "1.0", features = ["derive"] }
 wasm-bindgen = { version = "0.2", features = ["serde-serialize"] }
 tracing-wasm = "*"
 tracing = "*"
+termcolor = "1.1.2"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.28"
