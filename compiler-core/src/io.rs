@@ -6,9 +6,9 @@ use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use std::{
     fmt::Debug,
-    fs::ReadDir,
     io,
     path::{Path, PathBuf},
+    vec::IntoIter,
 };
 use tar::{Archive, Entry};
 
@@ -54,6 +54,63 @@ pub trait Writer: std::io::Write + Utf8Writer {
 pub struct OutputFile {
     pub text: String,
     pub path: PathBuf,
+}
+
+#[derive(Debug)]
+pub struct ReadDir {
+    entries: Vec<io::Result<DirEntry>>,
+}
+
+impl FromIterator<io::Result<DirEntry>> for ReadDir {
+    fn from_iter<I: IntoIterator<Item = io::Result<DirEntry>>>(iter: I) -> Self {
+        ReadDir {
+            entries: iter.into_iter().collect(),
+        }
+    }
+}
+
+impl ReadDir {
+    pub fn extend(mut self, other: ReadDir) -> Self {
+        self.entries.extend(other.into_iter());
+
+        ReadDir {
+            entries: self.entries,
+        }
+    }
+}
+
+impl IntoIterator for ReadDir {
+    type Item = io::Result<DirEntry>;
+    type IntoIter = IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct DirEntry {
+    pub pathbuf: PathBuf,
+}
+
+impl DirEntry {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> DirEntry {
+        DirEntry {
+            pathbuf: path.as_ref().to_path_buf(),
+        }
+    }
+
+    pub fn from_pathbuf(pathbuf: PathBuf) -> DirEntry {
+        DirEntry { pathbuf }
+    }
+
+    pub fn as_path(&self) -> &Path {
+        self.pathbuf.as_path()
+    }
+
+    pub fn into_path(self) -> PathBuf {
+        self.pathbuf
+    }
 }
 
 /// A trait used to read files.

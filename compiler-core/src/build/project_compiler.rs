@@ -239,7 +239,7 @@ where
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.read_source_files(self.mode())?;
 
-        // Compile project to Erlang source code
+        // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
             &mut self.warnings,
             &mut self.importable_modules,
