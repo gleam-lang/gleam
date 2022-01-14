@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A WebAssembly version of the compile is now available for use in JavaScript
+  and other WebAssembly environments.
 - New projects include Hex badges and a link to Hexdocs.
 - Enhance type mismatch errors in the presence of try.
 - Enhance type mismatch error for an inconsistent try.
