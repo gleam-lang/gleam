@@ -718,7 +718,24 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             typed_clauses.push(typed_clause);
         }
 
-        // TODO_EXH_CHECK
+        for i in 0..subjects_count {
+            let t = collapse_links(subject_types[i].clone());
+            let mut patterns: Vec<Pattern<PatternConstructor, Arc<Type>>> = Vec::new();
+            for c in &typed_clauses {
+                patterns.push(c.pattern[i].clone());
+                for a in &c.alternative_patterns {
+                    patterns.push(a[i].clone());
+                }
+            }
+            if !self.environment.exhaustive(patterns, t) {
+                return Err(Error::IncorrectNumClausePatterns {
+                    // TODO_EXH_CHECK add and return a new kind of error here
+                    location,
+                    expected: 9000,
+                    given: 1,
+                });
+            }
+        }
 
         Ok(TypedExpr::Case {
             location,

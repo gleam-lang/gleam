@@ -1702,6 +1702,12 @@ fn module_name_validation() {
 //     assert_infer!("fn(r) { let Ok(_) = r }", "fn(Result(a, b)) -> Result(a, b)");
 // }
 
+// this test now fails :)
+// #[test]
+// fn exh_check1c() {
+//     assert_infer!("fn(b1, b2) { case b1, b2 { True, True | False, True -> b1 } }", "fn(Bool, Bool) -> Bool");
+// }
+
 // this test still passes
 #[test]
 fn exh_check2a() {
@@ -1755,7 +1761,7 @@ pub fn main(b) {
 //     );
 // }
 
-// TODO_EXH_CHECK this should still pass
+// this test still passes
 #[test]
 fn exh_check6() {
     assert_no_warnings!(
@@ -1770,3 +1776,20 @@ pub fn main(m) {
 }"
     );
 }
+
+// this test now fails :)
+// #[test]
+// fn exh_check7() {
+//     assert_no_warnings!(
+//         "
+// pub type Media {
+//     Video(BitString)
+//     Text(String)
+// }
+// pub fn main(m) {
+//     case m {
+//         Video(_) -> Nil
+//     }
+// }"
+//     );
+// }
