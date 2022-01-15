@@ -57,9 +57,9 @@ fn shadowed_bools_and_nil() {
         r#"
 pub type True { True False Nil }
 fn go(x, y) {
-  let True = x
-  let False = x
-  let Nil = y
+  assert True = x
+  assert False = x
+  assert Nil = y
 }
 "#,
     );
