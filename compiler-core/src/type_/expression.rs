@@ -619,7 +619,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } = pattern
             {
-                let pattern_type = Arc::clone(&pattern_type);
+                let pattern_type = Arc::clone(pattern_type);
                 if let Type::App {
                     name: type_name, ..
                 } = &*pattern_type
@@ -633,8 +633,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // println!("constructors: {:?}", constructors);
                         let constructors_n = constructors.len();
                         if constructors_n != 1 {
-                            return Err(Error::IncorrectNumClausePatterns { // TODO_EXH_CHECK add and return a new kind of error here
-                                location: location,
+                            return Err(Error::IncorrectNumClausePatterns {
+                                // TODO_EXH_CHECK add and return a new kind of error here
+                                location,
                                 expected: 1,
                                 given: constructors_n,
                             });

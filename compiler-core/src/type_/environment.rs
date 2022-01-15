@@ -255,13 +255,12 @@ impl<'a> Environment<'a> {
         name: &str,
     ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
         match module_alias {
-            None => self
-                .module_types_constructors
-                .get(name)
-                .ok_or_else(|| UnknownTypeConstructorError::Type {
+            None => self.module_types_constructors.get(name).ok_or_else(|| {
+                UnknownTypeConstructorError::Type {
                     name: name.to_string(),
                     type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
-                }),
+                }
+            }),
 
             Some(m) => {
                 let module = self.imported_modules.get(m).ok_or_else(|| {
@@ -274,14 +273,13 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
-                module
-                    .types_constructors
-                    .get(name)
-                    .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
+                module.types_constructors.get(name).ok_or_else(|| {
+                    UnknownTypeConstructorError::ModuleType {
                         name: name.to_string(),
                         module_name: module.name.clone(),
                         type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
-                    })
+                    }
+                })
             }
         }
     }
