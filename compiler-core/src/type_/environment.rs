@@ -18,10 +18,10 @@ pub struct Environment<'a> {
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<String, TypeConstructor>,
 
-    /// Mapping from types to constructor names
+    /// Mapping from types to constructor names in the current module (or the prelude)
     pub module_types_constructors: HashMap<String, Vec<String>>,
 
-    /// Values defined in the current module
+    /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<String, ValueConstructor>,
 
     /// Accessors defined in the current module
@@ -206,6 +206,14 @@ impl<'a> Environment<'a> {
                 previous_location: previous.origin,
             }),
         }
+    }
+
+    /// Map a type to constructors in the current scope.
+    ///
+    pub fn insert_type_to_constructors(&mut self, type_name: String, constructors: Vec<String>) {
+        let _ = self
+            .module_types_constructors
+            .insert(type_name, constructors);
     }
 
     /// Lookup a type in the current scope.
@@ -627,5 +635,62 @@ impl<'a> Environment<'a> {
             .filter(|&t| PIPE_VARIABLE != t)
             .map(|t| t.to_string())
             .collect()
+    }
+
+    pub fn exhaustive(
+        &mut self,
+        patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
+        value_typ: Arc<Type>,
+    ) -> bool {
+        // println!("patterns: {:?}", patterns);
+        // println!("value_typ: {:?}", value_typ);
+        match &*value_typ {
+            Type::App {
+                name: type_name,
+                module: module_vec,
+                ..
+            } => {
+                let m = if module_vec.is_empty() {
+                    None
+                } else {
+                    Some(module_vec.join("/"))
+                };
+                // TODO_EXH_CHECK this doesn't work for the current module.
+                // Probably doesn't work for other modules either.
+                // But I would prefer to not need to keep track of imported type names to imported constructor names.
+                // (because the imports can be named and usage can be a mix of qualified and imported constructor and type names)
+                if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
+                    // println!("constructors: {:?}", constructors);
+                    fn covers_constructor(
+                        pattern: &Pattern<PatternConstructor, Arc<Type>>,
+                        constructor: &str,
+                    ) -> bool {
+                        match pattern {
+                            Pattern::Discard { .. } => true,
+                            Pattern::Var { .. } => true,
+                            Pattern::Constructor {
+                                constructor: PatternConstructor::Record { name, .. },
+                                ..
+                            } => constructor.eq(name),
+                            Pattern::Assign { pattern, .. } => {
+                                covers_constructor(&*pattern, constructor)
+                            }
+                            _ => false,
+                        }
+                    }
+                    'constructors_loop: for c in constructors {
+                        for p in &patterns {
+                            if covers_constructor(p, c) {
+                                continue 'constructors_loop;
+                            }
+                        }
+                        return false;
+                    }
+                }
+                true
+            }
+            // For now only type constructors are checked, and only their
+            _ => true,
+        }
     }
 }

@@ -1552,8 +1552,6 @@ pub fn register_types<'a>(
                 },
             )?;
 
-            // TODO_EXH_CHECK do we insert type to constructor mapping here? (probably not because can't match on external types?)
-
             // Keep track of private types so we can tell if they are later unused
             if !public {
                 let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
@@ -1565,7 +1563,7 @@ pub fn register_types<'a>(
             public,
             parameters,
             location,
-            constructors: _,
+            constructors,
             ..
         } => {
             assert_unique_type_name(names, name, location)?;
@@ -1592,7 +1590,8 @@ pub fn register_types<'a>(
                 },
             )?;
 
-            // TODO_EXH_CHECK insert type to constructor mapping
+            let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
+            environment.insert_type_to_constructors(name.clone(), constructor_names);
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
@@ -1629,8 +1628,6 @@ pub fn register_types<'a>(
                     typ,
                 },
             )?;
-
-            // TODO_EXH_CHECK insert type to constructor mapping, I think
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
@@ -1722,8 +1719,6 @@ pub fn register_import(
                         Ok(_) => (),
                         Err(e) => return Err(e),
                     };
-
-                    // TODO_EXH_CHECK insert type to constructor mapping, I think
 
                     type_imported = true;
                 }

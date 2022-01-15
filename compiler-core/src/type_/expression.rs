@@ -611,40 +611,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
-        if kind != AssignmentKind::Assert {
-            if let Pattern::Constructor {
-                constructor: PatternConstructor::Record { .. },
-                module: ref m,
-                ..
-            } = pattern
-            {
-                if let Type::App {
-                    name: type_name, ..
-                } = &*collapse_links(value_typ)
-                {
-                    // println!("m: {:?}", m);
-                    // println!("type_name: {:?}", type_name);
-                    if let Ok(constructors) =
-                        self.environment.get_constructors_for_type(m, type_name)
-                    {
-                        // println!("constructors: {:?}", constructors);
-                        let constructors_n = constructors.len();
-                        if constructors_n != 1 {
-                            return Err(Error::IncorrectNumClausePatterns {
-                                // TODO_EXH_CHECK add and return a new kind of error here
-                                location,
-                                expected: 1,
-                                given: constructors_n,
-                            });
-                        }
-                    }
-                }
-            }
+        if kind != AssignmentKind::Assert
+            && !self
+                .environment
+                .exhaustive(vec![pattern.clone()], collapse_links(value_typ.clone()))
+        {
+            return Err(Error::IncorrectNumClausePatterns {
+                // TODO_EXH_CHECK add and return a new kind of error here
+                location,
+                expected: 9000,
+                given: 1,
+            });
         }
 
         Ok(TypedExpr::Assignment {
             location,
-            typ: value.type_(),
+            typ: value_typ,
             kind,
             pattern,
             value: Box::new(value),
