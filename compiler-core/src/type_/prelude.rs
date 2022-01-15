@@ -148,7 +148,7 @@ pub fn build_prelude(uid: &mut usize) -> Module {
 
     let _ = prelude.types_constructors.insert(
         "Bool".to_string(),
-        vec!["True".to_string(), "False".to_string()]
+        vec!["True".to_string(), "False".to_string()],
     );
 
     let _ = prelude.values.insert(

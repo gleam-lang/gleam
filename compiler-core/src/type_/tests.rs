@@ -279,9 +279,10 @@ fn infer_module_type_retention_test() {
             package: "thepackage".to_string(),
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
-            types_constructors: HashMap::from([
-                ("Bool".to_string(), vec!["True".to_string(), "False".to_string()])
-            ]),
+            types_constructors: HashMap::from([(
+                "Bool".to_string(),
+                vec!["True".to_string(), "False".to_string()]
+            )]),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
