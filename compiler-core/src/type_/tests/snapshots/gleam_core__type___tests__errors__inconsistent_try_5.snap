@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 725
 expression: "try x = Error(1) Error(\"Not this one\") Error(\"This one\")"
 
 ---
@@ -8,6 +9,10 @@ error: Type mismatch
   │
 1 │ try x = Error(1) Error("Not this one") Error("This one")
   │                                        ^^^^^^^^^^^^^^^^^
+
+This returned value has a type incompatible with the previous try expression.
+All the try expressions in a block and the final result value must have
+the same error type.
 
 Expected type:
 

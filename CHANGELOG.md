@@ -4,6 +4,7 @@
 
 - New projects include Hex badges and a link to Hexdocs.
 - Enhance type mismatch errors in the presence of try.
+- Enhance type mismatch error for an inconsistent try.
 
 ## v0.19.0 - 2022-01-12
 
