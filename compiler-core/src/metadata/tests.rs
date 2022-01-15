@@ -31,6 +31,7 @@ fn constant_module(constant: TypedConstant) -> Module {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -67,6 +68,7 @@ fn empty_module() {
         origin: Origin::Src,
         name: vec!["one".to_string(), "two".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -90,6 +92,7 @@ fn module_with_app_type() {
             },
         )]
         .into(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -113,6 +116,7 @@ fn module_with_fn_type() {
             },
         )]
         .into(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -136,6 +140,7 @@ fn module_with_tuple_type() {
             },
         )]
         .into(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -165,6 +170,7 @@ fn module_with_generic_type() {
                 },
             )]
             .into(),
+            types_constructors: HashMap::new(), // TODO_EXH_CHECK
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -194,6 +200,7 @@ fn module_with_type_links() {
                 },
             )]
             .into(),
+            types_constructors: HashMap::new(), // TODO_EXH_CHECK
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -209,6 +216,7 @@ fn module_fn_value() {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -238,6 +246,7 @@ fn module_fn_value_regression() {
         origin: Origin::Src,
         name: vec!["a".into(), "b".into(), "c".into()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -266,6 +275,7 @@ fn module_fn_value_with_field_map() {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -297,6 +307,7 @@ fn record_value() {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -324,6 +335,7 @@ fn record_value_with_field_map() {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         accessors: HashMap::new(),
         values: [(
             "one".to_string(),
@@ -354,6 +366,7 @@ fn accessors() {
         origin: Origin::Src,
         name: vec!["a".to_string()],
         types: HashMap::new(),
+        types_constructors: HashMap::new(), // TODO_EXH_CHECK
         values: HashMap::new(),
         accessors: [
             (

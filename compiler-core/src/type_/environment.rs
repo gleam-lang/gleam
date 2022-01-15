@@ -18,6 +18,9 @@ pub struct Environment<'a> {
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<String, TypeConstructor>,
 
+    /// Mapping from types to constructor names
+    pub module_types_constructors: HashMap<String, Vec<String>>,
+
     /// Values defined in the current module
     pub module_values: HashMap<String, ValueConstructor>,
 
@@ -68,6 +71,7 @@ impl<'a> Environment<'a> {
             ids,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
+            module_types_constructors: prelude.types_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             accessors: prelude.accessors.clone(),
@@ -233,6 +237,45 @@ impl<'a> Environment<'a> {
                 })?;
                 module
                     .types
+                    .get(name)
+                    .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
+                        name: name.to_string(),
+                        module_name: module.name.clone(),
+                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
+                    })
+            }
+        }
+    }
+
+    /// Lookup constructors for type in the current scope.
+    ///
+    pub fn get_constructors_for_type(
+        &self,
+        module_alias: &Option<String>,
+        name: &str,
+    ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
+        match module_alias {
+            None => self
+                .module_types_constructors
+                .get(name)
+                .ok_or_else(|| UnknownTypeConstructorError::Type {
+                    name: name.to_string(),
+                    type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
+                }),
+
+            Some(m) => {
+                let module = self.imported_modules.get(m).ok_or_else(|| {
+                    UnknownTypeConstructorError::Module {
+                        name: name.to_string(),
+                        imported_modules: self
+                            .importable_modules
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    }
+                })?;
+                module
+                    .types_constructors
                     .get(name)
                     .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
                         name: name.to_string(),
