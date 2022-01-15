@@ -130,6 +130,7 @@ pub fn build_prelude(uid: &mut usize) -> Module {
         package: "".to_string(),
         origin: Origin::Src,
         types: HashMap::new(),
+        types_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
     };
@@ -143,6 +144,11 @@ pub fn build_prelude(uid: &mut usize) -> Module {
             module: vec![],
             public: true,
         },
+    );
+
+    let _ = prelude.types_constructors.insert(
+        "Bool".to_string(),
+        vec!["True".to_string(), "False".to_string()]
     );
 
     let _ = prelude.values.insert(

@@ -279,6 +279,9 @@ fn infer_module_type_retention_test() {
             package: "thepackage".to_string(),
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
+            types_constructors: HashMap::from([
+                ("Bool".to_string(), vec!["True".to_string(), "False".to_string()])
+            ]),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -1678,4 +1681,70 @@ fn module_name_validation() {
     assert!(validate_module_name(&["ok".to_string(), "type".to_string()]).is_err());
 
     assert!(validate_module_name(&["ok".to_string(), "pub".to_string()]).is_err());
+}
+
+// this test now fails :)
+// #[test]
+// fn exh_check1() {
+//     assert_infer!("fn(b) { let True = b }", "fn(Bool) -> Bool");
+// }
+
+// this test still passes
+#[test]
+fn exh_check2() {
+    assert_infer!("fn(b) { assert True = b }", "fn(Bool) -> Bool");
+}
+
+// this test now fails :)
+// #[test]
+// fn exh_check3() {
+//     assert_no_warnings!(
+//         "
+// pub fn main(b) {
+//     let True = b
+// }"
+//     );
+// }
+
+// this test still passes
+#[test]
+fn exh_check4() {
+    assert_no_warnings!(
+        "
+pub fn main(b) {
+    assert True = b
+}"
+    );
+}
+
+// TODO_EXH_CHECK this should fail
+#[test]
+fn exh_check5() {
+    assert_no_warnings!(
+        "
+pub type Media {
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    let Video(_) = m
+    Nil
+}"
+    );
+}
+
+// TODO_EXH_CHECK this should still pass
+#[test]
+fn exh_check6() {
+    assert_no_warnings!(
+        "
+pub type Media {
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    assert Video(_) = m
+    Nil
+}"
+    );
 }

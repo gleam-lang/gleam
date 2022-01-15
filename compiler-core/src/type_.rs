@@ -321,6 +321,7 @@ pub struct Module {
     pub origin: Origin,
     pub package: String,
     pub types: HashMap<String, TypeConstructor>,
+    pub types_constructors: HashMap<String, Vec<String>>,
     pub values: HashMap<String, ValueConstructor>,
     pub accessors: HashMap<String, AccessorsMap>,
 }
@@ -516,6 +517,7 @@ pub fn infer_module(
 
     let Environment {
         module_types: types,
+        module_types_constructors: types_constructors,
         module_values: values,
         accessors,
         ..
@@ -528,6 +530,7 @@ pub fn infer_module(
         type_info: Module {
             name,
             types,
+            types_constructors,
             values,
             accessors,
             origin,
@@ -1548,6 +1551,8 @@ pub fn register_types<'a>(
                 },
             )?;
 
+            // TODO_EXH_CHECK do we insert type to constructor mapping here? (probably not because can't match on external types?)
+
             // Keep track of private types so we can tell if they are later unused
             if !public {
                 let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
@@ -1559,6 +1564,7 @@ pub fn register_types<'a>(
             public,
             parameters,
             location,
+            constructors: _,
             ..
         } => {
             assert_unique_type_name(names, name, location)?;
@@ -1584,6 +1590,9 @@ pub fn register_types<'a>(
                     typ,
                 },
             )?;
+
+            // TODO_EXH_CHECK insert type to constructor mapping
+
             // Keep track of private types so we can tell if they are later unused
             if !public {
                 let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
@@ -1619,6 +1628,8 @@ pub fn register_types<'a>(
                     typ,
                 },
             )?;
+
+            // TODO_EXH_CHECK insert type to constructor mapping, I think
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
@@ -1710,6 +1721,8 @@ pub fn register_import(
                         Ok(_) => (),
                         Err(e) => return Err(e),
                     };
+
+                    // TODO_EXH_CHECK insert type to constructor mapping, I think
 
                     type_imported = true;
                 }

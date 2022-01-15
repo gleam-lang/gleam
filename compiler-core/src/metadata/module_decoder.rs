@@ -63,6 +63,7 @@ impl ModuleDecoder {
             package: reader.get_package()?.to_string(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
+            types_constructors: HashMap::new(), // TODO_EXH_CHECK encode/decode this information
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
         })
