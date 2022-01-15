@@ -257,10 +257,10 @@ impl<'a, 'b> Environment<'a, 'b> {
     ///
     pub fn get_constructors_for_type(
         &self,
-        module_alias: &Option<String>,
+        full_module_name: &Option<String>,
         name: &str,
     ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
-        match module_alias {
+        match full_module_name {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
                     name: name.to_string(),
@@ -269,7 +269,7 @@ impl<'a, 'b> Environment<'a, 'b> {
             }),
 
             Some(m) => {
-                let module = self.imported_modules.get(m).ok_or_else(|| {
+                let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
@@ -646,15 +646,14 @@ impl<'a, 'b> Environment<'a, 'b> {
                 module: module_vec,
                 ..
             } => {
-                let m = if module_vec.is_empty() {
+                // TODO_EXH_CHECK this is bad.
+                // But I would prefer to not need to keep track of imported type names to imported constructor names.
+                // (because the imports can be named and usage can be a mix of qualified and imported constructor and type names)
+                let m = if module_vec.is_empty() || module_vec == self.current_module {
                     None
                 } else {
                     Some(module_vec.join("/"))
                 };
-                // TODO_EXH_CHECK this doesn't work for the current module.
-                // Probably doesn't work for other modules either.
-                // But I would prefer to not need to keep track of imported type names to imported constructor names.
-                // (because the imports can be named and usage can be a mix of qualified and imported constructor and type names)
                 if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
                     // println!("constructors: {:?}", constructors);
                     fn covers_constructor(

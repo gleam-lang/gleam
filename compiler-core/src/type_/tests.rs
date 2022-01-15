@@ -1739,21 +1739,21 @@ pub fn main(b) {
     );
 }
 
-// TODO_EXH_CHECK this should fail
-#[test]
-fn exh_check5() {
-    assert_no_warnings!(
-        "
-pub type Media {
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    let Video(_) = m
-    Nil
-}"
-    );
-}
+// this test now fails :)
+// #[test]
+// fn exh_check5() {
+//     assert_no_warnings!(
+//         "
+// pub type Media {
+//     Video(BitString)
+//     Text(String)
+// }
+// pub fn main(m) {
+//     let Video(_) = m
+//     Nil
+// }"
+//     );
+// }
 
 // TODO_EXH_CHECK this should still pass
 #[test]
