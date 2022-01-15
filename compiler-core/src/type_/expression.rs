@@ -616,12 +616,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .exhaustive(vec![pattern.clone()], collapse_links(value_typ.clone()))
         {
-            return Err(Error::IncorrectNumClausePatterns {
-                // TODO_EXH_CHECK add and return a new kind of error here
-                location,
-                expected: 9000,
-                given: 1,
-            });
+            return Err(Error::NotExhaustivePatternMatch { location });
         }
 
         Ok(TypedExpr::Assignment {
@@ -731,12 +726,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
             if !self.environment.exhaustive(patterns, t) {
-                return Err(Error::IncorrectNumClausePatterns {
-                    // TODO_EXH_CHECK add and return a new kind of error here
-                    location,
-                    expected: 9000,
-                    given: 1,
-                });
+                return Err(Error::NotExhaustivePatternMatch { location });
             }
         }
 
