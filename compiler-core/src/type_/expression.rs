@@ -653,7 +653,10 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         {
             let t = self.new_unbound_var();
             self.unify(result(t, try_error_type), typ.clone())
-                .map_err(|e| convert_unify_error(e, then.location()))?;
+                .map_err(|e| {
+                    e.inconsistent_try(typ.is_result())
+                        .into_error(then.type_defining_location())
+                })?;
         }
 
         // Check that any type annotation is accurate.
