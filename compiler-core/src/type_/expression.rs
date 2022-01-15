@@ -607,7 +607,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             let ann_typ = self
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            self.unify(ann_typ, value_typ)
+            self.unify(ann_typ, value_typ.clone())
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
@@ -615,16 +615,13 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             if let Pattern::Constructor {
                 constructor: PatternConstructor::Record { .. },
                 module: ref m,
-                type_: ref pattern_type,
                 ..
             } = pattern
             {
-                let pattern_type = Arc::clone(pattern_type);
                 if let Type::App {
                     name: type_name, ..
-                } = &*pattern_type
+                } = &*collapse_links(value_typ)
                 {
-                    // println!("pattern_type: {:?}", pattern_type);
                     // println!("m: {:?}", m);
                     // println!("type_name: {:?}", type_name);
                     if let Ok(constructors) =

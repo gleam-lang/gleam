@@ -231,6 +231,11 @@ pub fn build_prelude(uid: &mut usize) -> Module {
         },
     );
 
+    let _ = prelude.types_constructors.insert(
+        "Result".to_string(),
+        vec!["Ok".to_string(), "Error".to_string()],
+    );
+
     let _ = prelude.values.insert(
         "Nil".to_string(),
         value(

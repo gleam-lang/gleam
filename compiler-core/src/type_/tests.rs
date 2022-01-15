@@ -279,10 +279,16 @@ fn infer_module_type_retention_test() {
             package: "thepackage".to_string(),
             name: vec!["ok".to_string()],
             types: HashMap::new(), // Core type constructors like String and Int are not included
-            types_constructors: HashMap::from([(
-                "Bool".to_string(),
-                vec!["True".to_string(), "False".to_string()]
-            )]),
+            types_constructors: HashMap::from([
+                (
+                    "Bool".to_string(),
+                    vec!["True".to_string(), "False".to_string()]
+                ),
+                (
+                    "Result".to_string(),
+                    vec!["Ok".to_string(), "Error".to_string()]
+                )
+            ]),
             values: HashMap::new(),
             accessors: HashMap::new(),
         }
@@ -1686,14 +1692,29 @@ fn module_name_validation() {
 
 // this test now fails :)
 // #[test]
-// fn exh_check1() {
+// fn exh_check1a() {
 //     assert_infer!("fn(b) { let True = b }", "fn(Bool) -> Bool");
+// }
+
+// this test now fails :)
+// #[test]
+// fn exh_check1b() {
+//     assert_infer!("fn(r) { let Ok(_) = r }", "fn(Result(a, b)) -> Result(a, b)");
 // }
 
 // this test still passes
 #[test]
-fn exh_check2() {
+fn exh_check2a() {
     assert_infer!("fn(b) { assert True = b }", "fn(Bool) -> Bool");
+}
+
+// this test still passes
+#[test]
+fn exh_check2b() {
+    assert_infer!(
+        "fn(r) { assert Ok(_) = r }",
+        "fn(Result(a, b)) -> Result(a, b)"
+    );
 }
 
 // this test now fails :)
