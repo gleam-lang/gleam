@@ -18,7 +18,8 @@ fn roundtrip(input: &Module) -> Module {
     let buffer = InMemoryFile::new();
     ModuleEncoder::new(input).write(buffer.clone()).unwrap();
     let buffer = buffer.into_contents().unwrap();
-    ModuleDecoder::new()
+    let mut id = 0;
+    ModuleDecoder::new(&mut id)
         .read(BufReader::new(buffer.as_slice()))
         .unwrap()
 }

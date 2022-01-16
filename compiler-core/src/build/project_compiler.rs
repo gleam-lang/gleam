@@ -36,6 +36,7 @@ pub struct ProjectCompiler<'a, IO> {
     packages: HashMap<String, &'a ManifestPackage>,
     importable_modules: HashMap<String, type_::Module>,
     defined_modules: HashMap<String, PathBuf>,
+    next_uid: usize,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
     options: &'a Options,
@@ -62,6 +63,7 @@ where
             importable_modules: HashMap::with_capacity(estimated_modules),
             defined_modules: HashMap::with_capacity(estimated_modules),
             warnings: Vec::new(),
+            next_uid: 0,
             telemetry,
             packages,
             options,
@@ -207,7 +209,7 @@ where
     ) -> Result<(), Error> {
         for path in self.io.gleam_metadata_files(&build_dir) {
             let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::ModuleDecoder::new().read(reader)?;
+            let module = metadata::ModuleDecoder::new(&mut self.next_uid).read(reader)?;
             let _ = self
                 .importable_modules
                 .insert(module.name.join("/"), module)
@@ -226,18 +228,20 @@ where
         let out_path = paths::build_package(self.mode(), self.target(), &config.name);
         let lib_path = paths::build_packages(self.mode(), self.target());
         let artifact_path = out_path.join("build");
+        let mode = self.mode();
         let mut compiler = PackageCompiler::new(
             config,
             &root_path,
             &out_path,
             &lib_path,
             self.target(),
+            &mut self.next_uid,
             self.io.clone(),
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
-        compiler.read_source_files(self.mode())?;
+        compiler.read_source_files(mode)?;
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(

@@ -42,15 +42,18 @@ macro_rules! read_hashmap {
     }};
 }
 
-#[derive(Debug, Default)]
-pub struct ModuleDecoder {
-    next_type_var_id: usize,
+#[derive(Debug)]
+pub struct ModuleDecoder<'id> {
+    next_type_var_id: &'id mut usize,
     type_var_id_map: HashMap<usize, usize>,
 }
 
-impl ModuleDecoder {
-    pub fn new() -> Self {
-        Default::default()
+impl<'id> ModuleDecoder<'id> {
+    pub fn new(next_type_var_id: &'id mut usize) -> Self {
+        Self {
+            next_type_var_id,
+            type_var_id_map: Default::default(),
+        }
     }
 
     pub fn read(&mut self, reader: impl BufRead) -> Result<Module> {
@@ -121,8 +124,8 @@ impl ModuleDecoder {
         let id = match self.type_var_id_map.get(&serialized_id) {
             Some(&id) => id,
             None => {
-                let new_id = self.next_type_var_id;
-                self.next_type_var_id += 1;
+                let new_id = *self.next_type_var_id;
+                *self.next_type_var_id += 1;
                 let _ = self.type_var_id_map.insert(serialized_id, new_id);
                 new_id
             }

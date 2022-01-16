@@ -28,6 +28,7 @@ pub struct PackageCompiler<'a, IO> {
     pub target: Target,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
+    pub next_uid: &'a mut usize,
     pub write_metadata: bool,
     pub perform_codegen: bool,
     pub write_entrypoint: bool,
@@ -49,6 +50,7 @@ where
         out: &'a Path,
         lib: &'a Path,
         target: Target,
+        next_uid: &'a mut usize,
         io: IO,
     ) -> Self {
         Self {
@@ -59,6 +61,7 @@ where
             config,
             target,
             sources: vec![],
+            next_uid,
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -96,6 +99,7 @@ where
         let mut modules = type_check(
             &self.config.name,
             self.target,
+            &mut self.next_uid,
             sequence,
             parsed_modules,
             existing_modules,
@@ -332,20 +336,20 @@ where
 fn type_check(
     package_name: &str,
     target: Target,
+    uid: &mut usize,
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
     module_types: &mut HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
-    let mut uid = 0;
 
     // Insert the prelude
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = module_types.insert("gleam".to_string(), type_::build_prelude(&mut uid));
+    let _ = module_types.insert("gleam".to_string(), type_::build_prelude(uid));
 
     for name in sequence {
         let Parsed {
@@ -364,7 +368,7 @@ fn type_check(
         let mut type_warnings = Vec::new();
         let ast = type_::infer_module(
             target,
-            &mut uid,
+            uid,
             ast,
             origin,
             package_name,

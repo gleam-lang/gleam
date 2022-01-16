@@ -18,6 +18,7 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
+        let mut uid = 0;
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -39,8 +40,15 @@ macro_rules! assert_erlang_compile {
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
-        let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+        let mut compiler = PackageCompiler::new(
+            &config,
+            &root,
+            &out,
+            &lib,
+            Target::Erlang,
+            &mut uid,
+            file_writer,
+        );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -64,6 +72,7 @@ macro_rules! assert_erlang_compile {
 
 macro_rules! assert_javascript_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
+        let mut uid = 0;
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -85,8 +94,15 @@ macro_rules! assert_javascript_compile {
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
-        let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::JavaScript, file_writer);
+        let mut compiler = PackageCompiler::new(
+            &config,
+            &root,
+            &out,
+            &lib,
+            Target::JavaScript,
+            &mut uid,
+            file_writer,
+        );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -110,6 +126,7 @@ macro_rules! assert_javascript_compile {
 
 macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
+        let mut uid = 0;
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -132,8 +149,15 @@ macro_rules! assert_no_warnings {
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
-        let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+        let mut compiler = PackageCompiler::new(
+            &config,
+            &root,
+            &out,
+            &lib,
+            Target::Erlang,
+            &mut uid,
+            file_writer,
+        );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -2281,14 +2305,22 @@ pub external fn use_type(Port) -> Nil =
 fn config_compilation_test() {
     macro_rules! assert_config_compile {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
+            let mut uid = 0;
             let config = $config;
             let mut modules = HashMap::new();
             let (file_writer, file_receiver) = FilesChannel::new();
             let root = PathBuf::from("some/build/path/root");
             let out = PathBuf::from("_build/default/lib/the_package");
             let lib = PathBuf::from("_build/default/lib");
-            let mut compiler =
-                PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+            let mut compiler = PackageCompiler::new(
+                &config,
+                &root,
+                &out,
+                &lib,
+                Target::Erlang,
+                &mut uid,
+                file_writer,
+            );
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;
             compiler.compile_beam_bytecode = false;
