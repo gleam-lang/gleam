@@ -498,17 +498,22 @@ fn unify_enclosed_type_test() {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
+    /// Clauses in a case expression were found to return different types.
     CaseClauseMismatch,
+
+    /// A function was found to return a value that did not match its return
+    /// annotation.
     ReturnAnnotationMismatch,
+
     PipeTypeMismatch,
 
-    /// The operands of a binary operator were incorrect
+    /// The operands of a binary operator were incorrect.
     Operator(BinOp),
 
-    /// A try expression returned a different error type to the previous try
+    /// A try expression returned a different error type to the previous try.
     TryErrorMismatch,
 
-    /// The final value of a try expression was not a Result
+    /// The final value of a try expression was not a Result.
     TryReturnResult,
 }
 
