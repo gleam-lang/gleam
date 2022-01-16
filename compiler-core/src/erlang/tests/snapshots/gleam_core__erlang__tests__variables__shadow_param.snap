@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 23
 expression: "pub fn main(board) {\nfn(board) { board }\n  board\n}"
 
 ---
@@ -8,7 +9,7 @@ expression: "pub fn main(board) {\nfn(board) { board }\n  board\n}"
 
 -export([main/1]).
 
--spec main(A) -> A.
+-spec main(I) -> I.
 main(Board) ->
     fun(Board@1) -> Board@1 end,
     Board.

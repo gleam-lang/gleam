@@ -14,8 +14,8 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 #[derive(Debug)]
 pub struct ModuleEncoder<'a> {
     data: &'a type_::Module,
-    next_type_var_id: u16,
-    type_var_id_map: HashMap<usize, u16>,
+    next_type_var_id: u64,
+    type_var_id_map: HashMap<u64, u64>,
 }
 
 impl<'a> ModuleEncoder<'a> {
@@ -354,7 +354,7 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: usize) {
+    fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: u64) {
         let serialised_id = match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {

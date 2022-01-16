@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 129
+expression: "pub fn x() { let x = 1 let x = x + 1 x }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+
+-spec x() -> integer().
+x() ->
+    X = 1,
+    X@1 = X + 1,
+    X@1.
+

@@ -8,7 +8,9 @@ use crate::{
     io::{CommandExecutor, FileSystemIO, FileSystemWriter},
     metadata, paths,
     project::ManifestPackage,
-    type_, warning, Error, Result, Warning,
+    type_,
+    uid::UniqueIdGenerator,
+    warning, Error, Result, Warning,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -36,10 +38,10 @@ pub struct ProjectCompiler<'a, IO> {
     packages: HashMap<String, &'a ManifestPackage>,
     importable_modules: HashMap<String, type_::Module>,
     defined_modules: HashMap<String, PathBuf>,
-    next_uid: usize,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
     options: &'a Options,
+    ids: UniqueIdGenerator,
     io: IO,
 }
 
@@ -62,8 +64,8 @@ where
         Self {
             importable_modules: HashMap::with_capacity(estimated_modules),
             defined_modules: HashMap::with_capacity(estimated_modules),
+            ids: UniqueIdGenerator::new(),
             warnings: Vec::new(),
-            next_uid: 0,
             telemetry,
             packages,
             options,
@@ -209,7 +211,7 @@ where
     ) -> Result<(), Error> {
         for path in self.io.gleam_metadata_files(&build_dir) {
             let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::ModuleDecoder::new(&mut self.next_uid).read(reader)?;
+            let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
             let _ = self
                 .importable_modules
                 .insert(module.name.join("/"), module)
@@ -235,7 +237,7 @@ where
             &out_path,
             &lib_path,
             self.target(),
-            &mut self.next_uid,
+            self.ids.clone(),
             self.io.clone(),
         );
         compiler.write_metadata = true;

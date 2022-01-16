@@ -25,6 +25,7 @@ use crate::{
     },
     bit_string,
     build::{Origin, Target},
+    uid::UniqueIdGenerator,
 };
 use expression::*;
 
@@ -147,7 +148,7 @@ impl Type {
         module: &[String],
         name: &str,
         arity: usize,
-        environment: &mut Environment<'_, '_>,
+        environment: &mut Environment<'_>,
     ) -> Option<Vec<Arc<Self>>> {
         match self {
             Self::App {
@@ -335,9 +336,9 @@ pub enum PatternConstructor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeVar {
-    Unbound { id: usize },
+    Unbound { id: u64 },
     Link { type_: Arc<Type> },
-    Generic { id: usize },
+    Generic { id: u64 },
 }
 
 impl TypeVar {
@@ -428,7 +429,7 @@ impl ValueConstructor {
 ///
 pub fn infer_module(
     target: Target,
-    uid: &mut usize,
+    ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
     package: &str,
@@ -437,7 +438,7 @@ pub fn infer_module(
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let mut environment = Environment::new(uid, &name, modules, warnings);
+    let mut environment = Environment::new(ids.clone(), &name, modules, warnings);
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.statements.len());
@@ -603,7 +604,7 @@ fn register_values<'a>(
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
         Statement::Fn {
@@ -845,7 +846,7 @@ fn register_values<'a>(
 fn generalise_statement(
     s: TypedStatement,
     module_name: &[String],
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
         Statement::Fn {
@@ -915,7 +916,7 @@ fn infer_statement(
     s: UntypedStatement,
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     match s {
         Statement::Fn {
@@ -1327,7 +1328,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
 /// could cause naively-implemented type checking to diverge.
 /// While traversing the type tree.
 ///
-fn unify_unbound_type(typ: Arc<Type>, own_id: usize) -> Result<(), UnifyError> {
+fn unify_unbound_type(typ: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => return unify_unbound_type(typ.clone(), own_id),
@@ -1378,7 +1379,7 @@ fn unify_unbound_type(typ: Arc<Type>, own_id: usize) -> Result<(), UnifyError> {
 fn match_fun_type(
     typ: Arc<Type>,
     arity: usize,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
@@ -1466,7 +1467,7 @@ fn make_type_vars(
     args: &[String],
     location: &SrcSpan,
     hydrator: &mut Hydrator,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
@@ -1480,7 +1481,7 @@ fn make_type_vars(
 fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
     // Get the constructor for this custom type.
     let args = match constructors {
@@ -1514,7 +1515,7 @@ pub fn register_types<'a>(
     module: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match statement {
         Statement::ExternalType {
@@ -1637,7 +1638,7 @@ pub fn register_types<'a>(
 
 pub fn register_import(
     s: &UntypedStatement,
-    environment: &mut Environment<'_, '_>,
+    environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
         Statement::Import {

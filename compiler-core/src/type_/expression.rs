@@ -13,8 +13,8 @@ use crate::ast::{
 use im::hashmap;
 
 #[derive(Debug)]
-pub(crate) struct ExprTyper<'a, 'b, 'c> {
-    pub(crate) environment: &'a mut Environment<'b, 'c>,
+pub(crate) struct ExprTyper<'a, 'b> {
+    pub(crate) environment: &'a mut Environment<'b>,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
@@ -25,8 +25,8 @@ pub(crate) struct ExprTyper<'a, 'b, 'c> {
     pub(crate) ungeneralised_function_used: bool,
 }
 
-impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
-    pub fn new(environment: &'a mut Environment<'b, 'c>) -> Self {
+impl<'a, 'b> ExprTyper<'a, 'b> {
+    pub fn new(environment: &'a mut Environment<'b>) -> Self {
         let mut hydrator = Hydrator::new();
         hydrator.permit_holes(true);
         Self {
@@ -54,7 +54,7 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
         self.hydrator.type_from_ast(ast, self.environment)
     }
 
-    fn instantiate(&mut self, t: Arc<Type>, ids: &mut im::HashMap<usize, Arc<Type>>) -> Arc<Type> {
+    fn instantiate(&mut self, t: Arc<Type>, ids: &mut im::HashMap<u64, Arc<Type>>) -> Arc<Type> {
         self.environment.instantiate(t, ids, &self.hydrator)
     }
 

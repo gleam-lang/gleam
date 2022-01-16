@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 131
+expression: "pub external fn receive() -> Int = \"try\" \"and\"\n                    pub fn catch(x) { receive() }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export(['receive'/0, 'catch'/1]).
+
+-spec 'receive'() -> integer().
+'receive'() ->
+    'try':'and'().
+
+-spec 'catch'(any()) -> integer().
+'catch'(X) ->
+    'try':'and'().
+

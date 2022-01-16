@@ -23,7 +23,7 @@ pub struct Hydrator {
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable.
-    rigid_type_ids: im::HashSet<usize>,
+    rigid_type_ids: im::HashSet<u64>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
@@ -31,7 +31,7 @@ pub struct Hydrator {
 #[derive(Debug)]
 pub struct ScopeResetData {
     created_type_variables: im::HashMap<String, Arc<Type>>,
-    created_type_variable_ids: im::HashSet<usize>,
+    created_type_variable_ids: im::HashSet<u64>,
 }
 
 impl Default for Hydrator {
@@ -75,14 +75,14 @@ impl Hydrator {
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable.
-    pub fn is_rigid(&self, id: &usize) -> bool {
+    pub fn is_rigid(&self, id: &u64) -> bool {
         self.rigid_type_ids.contains(id)
     }
 
-    pub fn type_from_option_ast<'a, 'b>(
+    pub fn type_from_option_ast<'a>(
         &mut self,
         ast: &Option<TypeAst>,
-        environment: &mut Environment<'a, 'b>,
+        environment: &mut Environment<'a>,
     ) -> Result<Arc<Type>, Error> {
         match ast {
             Some(ast) => self.type_from_ast(ast, environment),
@@ -92,10 +92,10 @@ impl Hydrator {
 
     /// Construct a Type from an AST Type annotation.
     ///
-    pub fn type_from_ast<'a, 'b>(
+    pub fn type_from_ast<'a>(
         &mut self,
         ast: &TypeAst,
-        environment: &mut Environment<'a, 'b>,
+        environment: &mut Environment<'a>,
     ) -> Result<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {

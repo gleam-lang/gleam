@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 185
+expression: "external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\npub fn x() { go }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+
+-spec x() -> fun((integer(), integer()) -> integer()).
+x() ->
+    fun m:f/2.
+

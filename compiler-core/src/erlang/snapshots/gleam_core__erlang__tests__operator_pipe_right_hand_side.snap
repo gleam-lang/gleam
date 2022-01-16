@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 382
 expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |> id \n}"
 
 ---
@@ -8,7 +9,7 @@ expression: "fn id(x) {\n  x\n}\n        \npub fn bool_expr(x, y) {\n  y || x |>
 
 -export([bool_expr/2]).
 
--spec id(A) -> A.
+-spec id(I) -> I.
 id(X) ->
     X.
 

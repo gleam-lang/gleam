@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 100
+expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> inc |> inc }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec inc(integer()) -> integer().
+inc(X) ->
+    X + 1.
+
+-spec go() -> integer().
+go() ->
+    _pipe = 1,
+    _pipe@1 = inc(_pipe),
+    _pipe@2 = inc(_pipe@1),
+    inc(_pipe@2).
+

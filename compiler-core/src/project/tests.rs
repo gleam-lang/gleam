@@ -672,7 +672,7 @@ make() ->
 
 -type empty() :: empty.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 ".to_string(),
@@ -719,7 +719,7 @@ make() ->
 
 -type empty() :: empty.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 ".to_string(),
@@ -849,7 +849,7 @@ funky() ->
 
 -export([\'receive\'/1]).
 
--spec \'receive\'(H) -> H.
+-spec \'receive\'(I) -> I.
 'receive\'(X) ->
     X.
 ".to_string(),
@@ -1038,7 +1038,7 @@ pub fn main() { C }"
 
 -export_type([t/1]).
 
--type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+-type t(I) :: {c, integer(), integer()} | {gleam_phantom, I}.
 
 
 ".to_string(),
@@ -1090,7 +1090,7 @@ main() ->
 
 -type t() :: {x, integer()}.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 ".to_string(),
@@ -1140,7 +1140,7 @@ pub fn main() { one.C }"
 
 -export_type([t/1]).
 
--type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+-type t(I) :: {c, integer(), integer()} | {gleam_phantom, I}.
 
 
 ".to_string(),
@@ -1364,7 +1364,7 @@ main(Arg1, Arg2, Arg3) ->
 
 -export_type([one/1]).
 
--type one(H) :: {one, H}.
+-type one(I) :: {one, I}.
 
 
 ".to_string(),
@@ -1381,7 +1381,7 @@ main(Arg1, Arg2, Arg3) ->
 
 -export_type([two/1]).
 
--type two(I) :: {two, one:one(integer())} | {gleam_phantom, I}.
+-type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
 
 
 ".to_string(),

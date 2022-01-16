@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 134
 expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }"
 
 ---
@@ -9,7 +10,7 @@ expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pa
 -export([x/0]).
 -export_type([pair/2]).
 
--type pair(A, B) :: {pair, A, B}.
+-type pair(I, J) :: {pair, I, J}.
 
 -spec x() -> pair(float(), float()).
 x() ->

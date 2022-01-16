@@ -1,12 +1,13 @@
-use crate::ast::PIPE_VARIABLE;
+use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator};
 
 use super::*;
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct Environment<'a, 'b> {
+pub struct Environment<'a> {
     pub current_module: &'a [String],
-    pub uid: &'b mut usize,
+    pub ids: UniqueIdGenerator,
+    previous_id: u64,
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
     pub imported_types: HashSet<String>,
@@ -52,9 +53,9 @@ pub enum EntityKind {
     Variable,
 }
 
-impl<'a, 'b> Environment<'a, 'b> {
+impl<'a> Environment<'a> {
     pub fn new(
-        uid: &'b mut usize,
+        ids: UniqueIdGenerator,
         current_module: &'a [String],
         importable_modules: &'a HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
@@ -63,7 +64,8 @@ impl<'a, 'b> Environment<'a, 'b> {
             .get("gleam")
             .expect("Unable to find prelude in importable modules");
         Self {
-            uid,
+            previous_id: ids.next(),
+            ids,
             ungeneralised_functions: HashSet::new(),
             module_types: prelude.types.clone(),
             module_values: HashMap::new(),
@@ -84,7 +86,7 @@ pub struct ScopeResetData {
     local_values: im::HashMap<String, ValueConstructor>,
 }
 
-impl<'a, 'b> Environment<'a, 'b> {
+impl<'a> Environment<'a> {
     pub fn in_new_scope<T>(&mut self, process_scope: impl FnOnce(&mut Self) -> T) -> T {
         // Record initial scope state
         let initial = self.open_new_scope();
@@ -113,14 +115,14 @@ impl<'a, 'b> Environment<'a, 'b> {
         self.local_values = data.local_values;
     }
 
-    pub fn next_uid(&mut self) -> usize {
-        let i = *self.uid;
-        *self.uid += 1;
-        i
+    pub fn next_uid(&mut self) -> u64 {
+        let id = self.ids.next();
+        self.previous_id = id;
+        id
     }
 
-    pub fn previous_uid(&self) -> usize {
-        *self.uid - 1
+    pub fn previous_uid(&self) -> u64 {
+        self.previous_id
     }
 
     /// Create a new unbound type that is a specific type, we just don't
@@ -290,7 +292,7 @@ impl<'a, 'b> Environment<'a, 'b> {
     pub fn instantiate(
         &mut self,
         t: Arc<Type>,
-        ids: &mut im::HashMap<usize, Arc<Type>>,
+        ids: &mut im::HashMap<u64, Arc<Type>>,
         hydrator: &Hydrator,
     ) -> Arc<Type> {
         match t.deref() {

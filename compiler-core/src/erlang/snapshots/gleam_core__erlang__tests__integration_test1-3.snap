@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 96
+expression: "pub fn loop() { loop() }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([loop/0]).
+
+-spec loop() -> any().
+loop() ->
+    loop().
+

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 208
+expression: "type X { X(x: Int, y: Float) }\n                    fn x() { X(x: 1, y: 2.) X(y: 3., x: 4) }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export_type([x/0]).
+
+-type x() :: {x, integer(), float()}.
+
+-spec x() -> x().
+x() ->
+    {x, 1, 2.0},
+    {x, 4, 3.0}.
+

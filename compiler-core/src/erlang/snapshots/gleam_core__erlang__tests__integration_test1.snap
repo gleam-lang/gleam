@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 89
+expression: "pub fn t() { True }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([t/0]).
+
+-spec t() -> boolean().
+t() ->
+    true.
+

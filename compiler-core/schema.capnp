@@ -61,7 +61,7 @@ struct Type {
     }
 
     var :group {
-      id @5 :UInt16;
+      id @5 :UInt64;
     }
 
     tuple :group {

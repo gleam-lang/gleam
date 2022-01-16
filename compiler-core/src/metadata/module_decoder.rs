@@ -13,6 +13,7 @@ use crate::{
         self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
         ValueConstructor, ValueConstructorVariant,
     },
+    uid::UniqueIdGenerator,
     Result,
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
@@ -43,15 +44,15 @@ macro_rules! read_hashmap {
 }
 
 #[derive(Debug)]
-pub struct ModuleDecoder<'id> {
-    next_type_var_id: &'id mut usize,
-    type_var_id_map: HashMap<usize, usize>,
+pub struct ModuleDecoder {
+    ids: UniqueIdGenerator,
+    type_var_id_map: HashMap<u64, u64>,
 }
 
-impl<'id> ModuleDecoder<'id> {
-    pub fn new(next_type_var_id: &'id mut usize) -> Self {
+impl ModuleDecoder {
+    pub fn new(ids: UniqueIdGenerator) -> Self {
         Self {
-            next_type_var_id,
+            ids,
             type_var_id_map: Default::default(),
         }
     }
@@ -120,12 +121,11 @@ impl<'id> ModuleDecoder<'id> {
     }
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
-        let serialized_id = reader.get_id() as usize;
+        let serialized_id = reader.get_id();
         let id = match self.type_var_id_map.get(&serialized_id) {
             Some(&id) => id,
             None => {
-                let new_id = *self.next_type_var_id;
-                *self.next_type_var_id += 1;
+                let new_id = self.ids.next();
                 let _ = self.type_var_id_map.insert(serialized_id, new_id);
                 new_id
             }
