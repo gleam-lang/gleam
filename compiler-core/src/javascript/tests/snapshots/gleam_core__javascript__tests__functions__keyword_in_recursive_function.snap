@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 254
 expression: "pub fn main(with: Int) -> Nil {\n  main(with - 1)\n}\n"
 
 ---

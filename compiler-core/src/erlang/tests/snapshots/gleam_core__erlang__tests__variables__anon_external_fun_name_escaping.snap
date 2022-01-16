@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 70
 expression: "external fn func() -> Nil = \"one.two\" \"three.four\"\n\npub fn main() {\n  func\n}"
 
 ---

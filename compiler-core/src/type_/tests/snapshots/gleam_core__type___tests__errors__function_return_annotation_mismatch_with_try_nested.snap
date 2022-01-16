@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 420
 expression: "fn() -> Result(Nil, Nil) {\n          try _ = {\n            try _ = {\n                try _ = Error(1)\n                Ok(Nil)\n            }\n            Ok(Nil)\n          }\n          Ok(Nil)\n        }"
 
 ---

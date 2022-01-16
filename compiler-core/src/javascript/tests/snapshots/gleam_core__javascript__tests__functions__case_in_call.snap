@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 162
 expression: "pub fn main(f, x) {\n  f(case x {\n    1 -> 2\n    _ -> 0\n  })\n}\n"
 
 ---

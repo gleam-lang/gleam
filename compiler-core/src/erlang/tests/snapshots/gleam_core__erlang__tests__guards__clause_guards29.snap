@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-expression: "\npub fn main() {\n  case 0.1, 1.0 {\n    x, y if x <=. y -> 1\n    _, _ -> 0\n  }\n}\n"
+assertion_line: 273
+expression: "\npub fn main() {\n  case 0.1, 1.0 {\n    x, y if x <. y -> 1\n    _, _ -> 0\n  }\n}\n"
 
 ---
 -module(the_app).
@@ -11,7 +12,7 @@ expression: "\npub fn main() {\n  case 0.1, 1.0 {\n    x, y if x <=. y -> 1\n   
 -spec main() -> integer().
 main() ->
     case {0.1, 1.0} of
-        {X, Y} when X =< Y ->
+        {X, Y} when X < Y ->
             1;
 
         {_@1, _@2} ->

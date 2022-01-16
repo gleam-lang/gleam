@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 53
 expression: "pub external fn class() -> Nil = \"./the/module.mjs\" \"one\"\n"
 
 ---

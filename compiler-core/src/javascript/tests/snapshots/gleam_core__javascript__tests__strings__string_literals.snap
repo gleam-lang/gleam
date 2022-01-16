@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
+assertion_line: 5
 expression: "\nfn go() {\n  \"Hello, Gleam!\"\n}\n"
 
 ---

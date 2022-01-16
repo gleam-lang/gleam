@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/reserved.rs
+assertion_line: 12
 expression: "pub type After { TestAfter }\npub type And { TestAnd }\npub type Andalso { TestAndAlso }\npub type Band { TestBAnd }\npub type Begin { TestBegin }\npub type Bnot { TestBNot }\npub type Bor { TestBOr }\npub type Bsl { TestBsl }\npub type Bsr { TestBsr }\npub type Bxor { TestBXor }\npub type Case { TestCase }\npub type Catch { TestCatch }\npub type Cond { TestCond }\npub type Div { TestDiv }\npub type End { TestEnd }\npub type Fun { TestFun }\npub type If { TestIf }\npub type Let { TestLet }\npub type Not { TestNot }\npub type Of { TestOf }\npub type Or { TestOr }\npub type Orelse { TestOrElse }\npub type Query { TestQuery }\npub type Receive { TestReceive }\npub type Rem { TestRem }\npub type Try { TestTry }\npub type When { TestWhen }\npub type Xor { TestXor }"
 
 ---

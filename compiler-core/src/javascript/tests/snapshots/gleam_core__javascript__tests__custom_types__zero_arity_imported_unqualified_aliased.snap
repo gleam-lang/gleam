@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 70
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 167
 expression: "case <<1>> { <<_:binary, _:bit_string>> -> 1 }"
 
 ---

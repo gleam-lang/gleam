@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 175
 expression: "\npub fn main() {\n  let x = #(1, 2, 3)\n  case x {\n    _ if x == #(1, 2, 3) -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

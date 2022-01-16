@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 5
 expression: "\nfn go() {\n    1\n    2\n    -3\n    4001\n    0b00001111\n    0o17\n    0xF\n    1_000\n}\n"
 
 ---

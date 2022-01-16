@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 5
 expression: "\nfn go() {\n    True\n    False\n    Nil\n}\n"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1108
 expression: "fn x(x, y) { x }\nfn main() { 1 |> x() }"
 
 ---

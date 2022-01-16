@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 957
 expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  let Triple(a, b, c, ..) = triple\n  a\n}"
 
 ---

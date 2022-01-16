@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 995
 expression: "type X { X(a: Int, b: Float) }\nfn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"
 
 ---

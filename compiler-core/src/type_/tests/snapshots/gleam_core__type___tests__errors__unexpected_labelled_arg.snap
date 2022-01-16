@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 892
 expression: "fn id(x) { x } fn y() { id(x: 4) }"
 
 ---

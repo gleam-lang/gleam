@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 45
 expression: "\npub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {\nx + y\n}"
 
 ---

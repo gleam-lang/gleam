@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 660
 expression: "case #(1, 2) { #(1, _, _, _) -> 1 }"
 
 ---

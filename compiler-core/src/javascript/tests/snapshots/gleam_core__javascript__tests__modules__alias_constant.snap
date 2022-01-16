@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
+assertion_line: 71
 expression: "\nimport rocket_ship as boop\npub fn go() { boop.x }\n"
 
 ---

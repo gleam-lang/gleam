@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 20
 expression: "external fn down(Float) -> Float = \"\" \"Math.floor\""
 
 ---

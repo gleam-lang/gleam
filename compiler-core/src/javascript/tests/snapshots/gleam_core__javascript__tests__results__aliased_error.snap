@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/results.rs
+assertion_line: 65
 expression: "import gleam.{Error as Thing}\npub fn main() { Thing(1) }"
 
 ---

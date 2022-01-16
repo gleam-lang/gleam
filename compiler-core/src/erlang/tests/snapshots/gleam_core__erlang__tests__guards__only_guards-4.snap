@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 352
 expression: "\npub const float_value = 3.14\n\npub fn main(arg) {\n  case arg {\n    _ if arg >. float_value -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

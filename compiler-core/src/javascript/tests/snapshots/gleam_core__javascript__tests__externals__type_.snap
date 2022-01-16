@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 5
 expression: pub external type Thing
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 830
 expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        }\n\n        pub fn create_person(age: Float) {\n            let x: Person = Person(name: \"Quinn\", age: age)\n            x\n        }"
 
 ---

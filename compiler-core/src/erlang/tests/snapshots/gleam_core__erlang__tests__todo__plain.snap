@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
+assertion_line: 5
 expression: "\npub fn main() {\n  todo\n}\n"
 
 ---

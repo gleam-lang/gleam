@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 897
 expression: "type X { X(a: Int, b: Int, c: Int) }\nfn x() { X(b: 1, a: 1, 1) }"
 
 ---

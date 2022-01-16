@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1272
 expression: "\npub type Box(a) {\n  Box(value: a, i: Int)\n};\npub fn update_box(box: Box(Int), value: String) {\n  Box(..box, value: value)\n};"
 
 ---

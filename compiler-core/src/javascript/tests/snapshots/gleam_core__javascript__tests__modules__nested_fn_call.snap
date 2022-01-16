@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
+assertion_line: 101
 expression: "import one/two\npub fn go() { two.go() }"
 
 ---

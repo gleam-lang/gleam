@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 172
 expression: "let x = <<1:int-binary>> x"
 
 ---

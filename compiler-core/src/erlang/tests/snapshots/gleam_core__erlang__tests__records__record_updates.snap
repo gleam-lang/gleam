@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 163
 expression: "\npub type Person { Person(name: String, age: Int) }\n\nfn main() {\n    let p = Person(\"Quinn\", 27)\n    let new_p = Person(..p, age: 28)\n    new_p\n}\n"
 
 ---

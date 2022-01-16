@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 795
 expression: "fn main() { let x: #(x, x) = #(5, 5.0) x }"
 
 ---

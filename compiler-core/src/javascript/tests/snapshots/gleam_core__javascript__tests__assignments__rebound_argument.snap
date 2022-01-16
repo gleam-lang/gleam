@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 85
 expression: "pub fn main(x) {\n  let x = False\n  x\n}\n"
 
 ---

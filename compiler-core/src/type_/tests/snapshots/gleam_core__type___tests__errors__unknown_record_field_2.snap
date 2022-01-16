@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 948
 expression: "\npub type Box(a) { Box(inner: a) }\npub fn main(box: Box(Box(Int))) { box.inner.unknown }"
 
 ---

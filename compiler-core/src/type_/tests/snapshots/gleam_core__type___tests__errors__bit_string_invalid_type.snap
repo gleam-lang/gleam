@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 110
 expression: "fn x() { \"test\" }\n\nfn main() {\n    let a = <<1:size(x())>>\n    a\n}"
 
 ---

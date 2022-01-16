@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 85
 expression: "import other\nconst x = other.Two\n"
 
 ---

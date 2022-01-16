@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 60
 expression: "pub fn go() {\n  let y = 1\n  let y = 2\n  y\n}"
 
 ---

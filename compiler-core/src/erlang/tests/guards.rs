@@ -124,7 +124,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards20() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -135,7 +138,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards21() {
     assert_erl!(
         r#"
 pub fn main(x) {
@@ -145,7 +151,10 @@ pub fn main(x) {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards22() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -157,7 +166,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards23() {
     // Tuple literals in guards
 
     assert_erl!(
@@ -171,7 +183,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards24() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -184,7 +199,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards25() {
     // Int literals in guards
 
     assert_erl!(
@@ -197,7 +215,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards26() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -208,7 +229,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards27() {
     // String literals in guards
 
     assert_erl!(
@@ -220,7 +244,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards28() {
     // Record literals in guards
 
     assert_erl!(
@@ -237,7 +264,10 @@ pub fn main() {
     }
 "#
     );
+}
 
+#[test]
+fn clause_guards29() {
     // Float vars in guards
 
     assert_erl!(
@@ -250,7 +280,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards30() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -261,7 +294,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards31() {
     assert_erl!(
         r#"
 pub fn main(args) {

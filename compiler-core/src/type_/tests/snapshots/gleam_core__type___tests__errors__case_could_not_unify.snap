@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 379
 expression: "case 1, 2.0 { a, b -> a 1, 2 -> 0 }"
 
 ---

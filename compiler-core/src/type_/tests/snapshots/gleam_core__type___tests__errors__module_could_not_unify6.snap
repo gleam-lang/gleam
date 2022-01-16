@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 785
 expression: "fn main() { let x: String = 5 x }"
 
 ---

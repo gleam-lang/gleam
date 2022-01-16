@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 7
 expression: "\npub fn add(x, y) {\n    x + y\n}"
 
 ---

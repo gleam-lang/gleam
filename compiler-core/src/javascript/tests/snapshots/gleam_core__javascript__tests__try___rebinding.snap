@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/try_.rs
+assertion_line: 16
 expression: "pub fn main(x) {\n  try x = x\n  try x = x\n  Ok(x)\n}"
 
 ---

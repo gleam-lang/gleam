@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 354
 expression: "let id = fn(x) { x } id(1, 2)"
 
 ---

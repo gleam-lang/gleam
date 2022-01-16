@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 185
 expression: "import for.{class}\n\npub fn export() {\n  class()\n}\n"
 
 ---

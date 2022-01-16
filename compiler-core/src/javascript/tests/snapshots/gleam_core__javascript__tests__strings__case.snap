@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
+assertion_line: 40
 expression: "\nfn go(a) {\n  case a {\n    \"\" -> 0\n    \"one\" -> 1\n    \"two\" -> 2\n    _ -> 3\n  }\n}\n"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 138
 expression: "\npub fn debug(x) {\n  let x = x\n  fn(x) { x + 1 }\n}\n"
 
 ---

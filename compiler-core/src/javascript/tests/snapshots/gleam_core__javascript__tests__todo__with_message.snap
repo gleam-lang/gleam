@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/todo.rs
+assertion_line: 16
 expression: "\nfn go() {\n  todo(\"I should do this\")\n};\n"
 
 ---

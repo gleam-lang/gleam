@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 749
 expression: "\nfn bar() -> Int {\n    5\n}\n\nfn run(one: fn() -> String) {\n    one()\n}\n\nfn demo() {\n    run(bar)\n}"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1116
 expression: "pub const group_id: Int = \"42\""
 
 ---

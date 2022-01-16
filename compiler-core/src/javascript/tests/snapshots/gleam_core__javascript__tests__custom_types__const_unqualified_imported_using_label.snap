@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 493
 expression: "import other.{Two}\npub const main = Two(field: 1)\n"
 
 ---

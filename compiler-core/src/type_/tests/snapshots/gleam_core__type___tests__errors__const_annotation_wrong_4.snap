@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1131
 expression: "pub const pair: #(Int, Float) = #(4.1, 1)"
 
 ---
