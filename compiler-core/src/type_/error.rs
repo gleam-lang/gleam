@@ -501,8 +501,15 @@ pub enum UnifyErrorSituation {
     CaseClauseMismatch,
     ReturnAnnotationMismatch,
     PipeTypeMismatch,
+
+    /// The operands of a binary operator were incorrect
     Operator(BinOp),
-    InconsistentTry(bool),
+
+    /// A try expression returned a different error type to the previous try
+    TryErrorMismatch,
+
+    /// The final value of a try expression was not a Result
+    TryReturnResult,
 }
 
 impl UnifyErrorSituation {
@@ -520,17 +527,17 @@ annotation of this function.",
                 Some("This function cannot handle the argument sent through the (|>) pipe:")
             }
             Self::Operator(_op) => None,
-            Self::InconsistentTry(return_value_is_at_least_result) => {
-                if *return_value_is_at_least_result {
-                    Some("This returned value has a type incompatible with the previous try expression.
+
+            UnifyErrorSituation::TryErrorMismatch => Some(
+                "This returned value has a type incompatible with the previous try expression.
 All the try expressions in a block and the final result value must have
-the same error type.")
-                } else {
-                    Some("This returned value has a type incompatible with the previous try expression.
-The returned value after a try must be of type Result."
-                    )
-                }
-            }
+the same error type.",
+            ),
+
+            UnifyErrorSituation::TryReturnResult => Some(
+                "This returned value has a type incompatible with the previous try expression.
+The returned value after a try must be of type Result.",
+            ),
         }
     }
 }
@@ -584,10 +591,12 @@ impl UnifyError {
         self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
     }
 
-    pub fn inconsistent_try(self, return_value_is_at_least_result: bool) -> Self {
-        self.with_unify_error_situation(UnifyErrorSituation::InconsistentTry(
-            return_value_is_at_least_result,
-        ))
+    pub fn inconsistent_try(self, return_value_is_result: bool) -> Self {
+        self.with_unify_error_situation(if return_value_is_result {
+            UnifyErrorSituation::TryErrorMismatch
+        } else {
+            UnifyErrorSituation::TryReturnResult
+        })
     }
 
     pub fn into_error(self, location: SrcSpan) -> Error {
