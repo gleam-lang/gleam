@@ -633,29 +633,26 @@ impl<'a, 'b> Environment<'a, 'b> {
             .collect()
     }
 
+    /// Checks that the given patterns are exhaustive for given type.
+    /// Currently only performs exhaustiveness checking for custom types,
+    /// only at the top level (without recursing into constructor arguments).
     pub fn exhaustive(
         &mut self,
         patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
         value_typ: Arc<Type>,
     ) -> bool {
-        // println!("patterns: {:?}", patterns);
-        // println!("value_typ: {:?}", value_typ);
         match &*value_typ {
             Type::App {
                 name: type_name,
                 module: module_vec,
                 ..
             } => {
-                // TODO_EXH_CHECK this is bad.
-                // But I would prefer to not need to keep track of imported type names to imported constructor names.
-                // (because the imports can be named and usage can be a mix of qualified and imported constructor and type names)
                 let m = if module_vec.is_empty() || module_vec == self.current_module {
                     None
                 } else {
                     Some(module_vec.join("/"))
                 };
                 if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
-                    // println!("constructors: {:?}", constructors);
                     fn covers_constructor(
                         pattern: &Pattern<PatternConstructor, Arc<Type>>,
                         constructor: &str,
@@ -684,7 +681,6 @@ impl<'a, 'b> Environment<'a, 'b> {
                 }
                 true
             }
-            // For now only type constructors are checked, and only their
             _ => true,
         }
     }

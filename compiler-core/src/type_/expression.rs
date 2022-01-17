@@ -713,17 +713,27 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
             typed_clauses.push(typed_clause);
         }
 
-        for i in 0..subjects_count {
-            let t = collapse_links(subject_types[i].clone());
-            let mut patterns: Vec<Pattern<PatternConstructor, Arc<Type>>> = Vec::new();
-            for c in &typed_clauses {
-                patterns.push(c.pattern[i].clone());
-                for a in &c.alternative_patterns {
-                    patterns.push(a[i].clone());
+        // Because exhaustiveness checking in presence of multiple subjects is similar
+        // to full exhaustiveness checking of tuples or other nested record patterns,
+        // and we currently only do only limited exhaustiveness checking of custom types
+        // at the top level of patterns, only consider case expressions with one subject.
+        if subjects_count == 1 {
+            if let Some(subject_type) = subject_types.get(0) {
+                let value_typ = collapse_links(subject_type.clone());
+                let mut patterns = Vec::new();
+                for clause in &typed_clauses {
+                    if let Some(pattern) = clause.pattern.get(0) {
+                        patterns.push(pattern.clone());
+                    }
+                    for alternative_pattern in &clause.alternative_patterns {
+                        if let Some(pattern) = alternative_pattern.get(0) {
+                            patterns.push(pattern.clone());
+                        }
+                    }
                 }
-            }
-            if !self.environment.exhaustive(patterns, t) {
-                return Err(Error::NotExhaustivePatternMatch { location });
+                if !self.environment.exhaustive(patterns, value_typ) {
+                    return Err(Error::NotExhaustivePatternMatch { location });
+                }
             }
         }
 
