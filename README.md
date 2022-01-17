@@ -76,6 +76,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [jiangplus](https://github.com/jiangplus)
  - [Joe Corkerton](https://github.com/joecorkerton)
  - [John Palgut](https://github.com/Jwsonic)
+ - [Jonathan Arnett](https://github.com/J3RN)
  - [José Valim](https://github.com/josevalim)
  - [João Veiga](https://github.com/jveiga)
  - [Kapp Technology](https://github.com/kapp-technology)
