@@ -1605,7 +1605,10 @@ Try a different name for this module.",
                     write_project(buf, diagnostic);
                 }
 
-                TypeError::NotExhaustivePatternMatch { location } => {
+                TypeError::NotExhaustivePatternMatch {
+                    location,
+                    unmatched,
+                } => {
                     let diagnostic = Diagnostic {
                         title: "Not exhaustive pattern match".to_string(),
                         label: "".to_string(),
@@ -1617,7 +1620,8 @@ Try a different name for this module.",
                     wrap_writeln!(
                         buf,
                         "This expression does not cover all possibilities.
-Each constructor must have a pattern that can match.",
+Each constructor must have a pattern that can match.\n\nNot matched constructors: {}",
+                        unmatched.join(", "),
                     )
                     .unwrap();
                 }

@@ -611,12 +611,16 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
-        if kind != AssignmentKind::Assert
-            && !self
+        if kind != AssignmentKind::Assert {
+            if let Some(unmatched) = self
                 .environment
                 .exhaustive(vec![pattern.clone()], collapse_links(value_typ.clone()))
-        {
-            return Err(Error::NotExhaustivePatternMatch { location });
+            {
+                return Err(Error::NotExhaustivePatternMatch {
+                    location,
+                    unmatched,
+                });
+            }
         }
 
         Ok(TypedExpr::Assignment {
@@ -731,8 +735,11 @@ impl<'a, 'b, 'c> ExprTyper<'a, 'b, 'c> {
                         }
                     }
                 }
-                if !self.environment.exhaustive(patterns, value_typ) {
-                    return Err(Error::NotExhaustivePatternMatch { location });
+                if let Some(unmatched) = self.environment.exhaustive(patterns, value_typ) {
+                    return Err(Error::NotExhaustivePatternMatch {
+                        location,
+                        unmatched,
+                    });
                 }
             }
         }
