@@ -1357,3 +1357,106 @@ pub fn parse(input: BitString) -> String {
 }"#
     );
 }
+
+#[test]
+fn let_exhaustiveness1() {
+    assert_module_error!(
+        r#"
+pub fn main(b) {
+    let True = b
+    Nil
+}
+"#
+);
+}
+
+#[test]
+fn let_exhaustiveness2() {
+    assert_module_error!(
+        r#"
+pub fn main(r) {
+    let Error(_) = r
+    Nil
+}
+"#
+);
+}
+
+#[test]
+fn let_exhaustiveness3() {
+    assert_module_error!(
+        r#"
+pub type Media {
+    Audio(BitString)
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    let Video(_) = m
+    Nil
+}
+"#
+);
+}
+
+#[test]
+fn let_exhaustiveness4() {
+    assert_module_error!(
+        r#"
+pub type Media {
+    Audio(BitString)
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    let Video(_) as v = m
+    v
+}
+"#
+);
+}
+
+#[test]
+fn case_exhaustiveness1() {
+    assert_module_error!(
+        r#"
+pub fn main(b) {
+    case b {
+        True -> Nil
+    }
+}
+"#
+);
+}
+
+#[test]
+fn case_exhaustiveness2() {
+    assert_module_error!(
+        r#"
+pub fn main(r) {
+    case r {
+        Error(_) -> Nil
+    }
+}
+"#
+);
+}
+
+#[test]
+fn case_exhaustiveness3() {
+    assert_module_error!(
+        r#"
+pub type Media {
+    Audio(BitString)
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    case m {
+        Audio(_) as a -> a
+        Video(_) -> m
+    }
+}
+"#
+);
+}

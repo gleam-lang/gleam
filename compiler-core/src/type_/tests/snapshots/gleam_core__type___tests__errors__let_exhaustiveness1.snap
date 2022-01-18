@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1363
+expression: "\npub fn main(b) {\n    let True = b\n    Nil\n}\n"
+
+---
+error: Not exhaustive pattern match
+  ┌─ /src/one/two.gleam:3:5
+  │
+3 │     let True = b
+  │     ^^^^^^^^^^^^
+
+This expression does not cover all possibilities.
+Each constructor must have a pattern that can match.
+
+Not matched constructors: False
+

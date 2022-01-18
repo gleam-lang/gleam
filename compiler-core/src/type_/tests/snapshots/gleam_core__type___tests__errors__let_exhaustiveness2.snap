@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1375
+expression: "\npub fn main(r) {\n    let Error(_) = r\n    Nil\n}\n"
+
+---
+error: Not exhaustive pattern match
+  ┌─ /src/one/two.gleam:3:5
+  │
+3 │     let Error(_) = r
+  │     ^^^^^^^^^^^^^^^^
+
+This expression does not cover all possibilities.
+Each constructor must have a pattern that can match.
+
+Not matched constructors: Ok
+
