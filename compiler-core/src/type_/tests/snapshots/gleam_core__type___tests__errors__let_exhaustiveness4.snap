@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1404
+expression: "\npub type Media {\n    Audio(BitString)\n    Video(BitString)\n    Text(String)\n}\npub fn main(m) {\n    let Video(_) as v = m\n    v\n}\n"
+
+---
+error: Not exhaustive pattern match
+  ┌─ /src/one/two.gleam:8:5
+  │
+8 │     let Video(_) as v = m
+  │     ^^^^^^^^^^^^^^^^^^^^^
+
+This expression does not cover all possibilities.
+Each constructor must have a pattern that can match.
+
+Not matched constructors: Audio, Text
+

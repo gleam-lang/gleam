@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1417
+expression: "\npub fn main(r) {\n    case r {\n        Error(_) -> Nil\n    }\n}\n"
+
+---
+error: Not exhaustive pattern match
+  ┌─ /src/one/two.gleam:3:5
+  │  
+3 │ ╭     case r {
+4 │ │         Error(_) -> Nil
+5 │ │     }
+  │ ╰─────^
+
+This expression does not cover all possibilities.
+Each constructor must have a pattern that can match.
+
+Not matched constructors: Ok
+
