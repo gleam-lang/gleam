@@ -1382,7 +1382,7 @@ pub fn main(b) {
     Nil
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1394,7 +1394,7 @@ pub fn main(r) {
     Nil
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1411,7 +1411,7 @@ pub fn main(m) {
     Nil
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1428,7 +1428,7 @@ pub fn main(m) {
     v
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1441,7 +1441,7 @@ pub fn main(b) {
     }
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1454,7 +1454,7 @@ pub fn main(r) {
     }
 }
 "#
-);
+    );
 }
 
 #[test]
@@ -1473,5 +1473,5 @@ pub fn main(m) {
     }
 }
 "#
-);
+    );
 }
