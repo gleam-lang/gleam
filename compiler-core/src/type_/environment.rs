@@ -644,7 +644,7 @@ impl<'a> Environment<'a> {
         &mut self,
         patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
         value_typ: Arc<Type>,
-    ) -> bool {
+    ) -> Option<Vec<String>> {
         match &*value_typ {
             Type::App {
                 name: type_name,
@@ -656,36 +656,50 @@ impl<'a> Environment<'a> {
                 } else {
                     Some(module_vec.join("/"))
                 };
+                let mut matched_constructors = Vec::new();
+
                 if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
-                    fn covers_constructor(
-                        pattern: &Pattern<PatternConstructor, Arc<Type>>,
-                        constructor: &str,
-                    ) -> bool {
+                    for p in &patterns {
+                        // ignore Assign patterns
+                        let mut pattern = p;
+                        while let Pattern::Assign {
+                            pattern: assign_pattern,
+                            ..
+                        } = pattern
+                        {
+                            pattern = assign_pattern;
+                        }
+
                         match pattern {
-                            Pattern::Discard { .. } => true,
-                            Pattern::Var { .. } => true,
+                            // If the pattern is a Discard or Var, all constructors are covered by it
+                            Pattern::Discard { .. } => return None,
+                            Pattern::Var { .. } => return None,
+                            // If the pattern is a constructor, add it to list of matched patterns
                             Pattern::Constructor {
                                 constructor: PatternConstructor::Record { name, .. },
                                 ..
-                            } => constructor.eq(name),
-                            Pattern::Assign { pattern, .. } => {
-                                covers_constructor(&*pattern, constructor)
+                            } => {
+                                matched_constructors.push(name.clone());
                             }
-                            _ => false,
+                            _ => return None,
                         }
                     }
-                    'constructors_loop: for c in constructors {
-                        for p in &patterns {
-                            if covers_constructor(p, c) {
-                                continue 'constructors_loop;
-                            }
+
+                    let mut not_matched_constructors = Vec::new();
+
+                    for c in constructors {
+                        if !matched_constructors.iter().any(|m| (*m).eq(c)) {
+                            not_matched_constructors.push((*c).clone());
                         }
-                        return false;
+                    }
+
+                    if !not_matched_constructors.is_empty() {
+                        return Some(not_matched_constructors);
                     }
                 }
-                true
+                None
             }
-            _ => true,
+            _ => None,
         }
     }
 }

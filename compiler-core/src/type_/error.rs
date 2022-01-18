@@ -214,6 +214,7 @@ pub enum Error {
 
     NotExhaustivePatternMatch {
         location: SrcSpan,
+        unmatched: Vec<String>,
     },
 }
 
