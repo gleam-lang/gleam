@@ -9,6 +9,9 @@
 - Enhance type mismatch error for an inconsistent try.
 - Fixed a bug where sometimes type variable could be reused result in incorrect
   non-deterministic type errors.
+- Introduce a limited form of exhaustiveness checking for pattern matching
+  of custom types, which only checks that all constructor tags are covered
+  at the top level of patterns.
 
 ## v0.19.0 - 2022-01-12
 

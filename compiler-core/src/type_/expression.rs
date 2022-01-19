@@ -731,7 +731,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             if let Some(subject_type) = subject_types.get(0) {
                 let value_typ = collapse_links(subject_type.clone());
                 // Currently guards are not considered in exhaustiveness checking,
-                // so we go through all of them and pluck out only the patterns.
+                // so we go through all clauses and pluck out only the patterns.
                 let mut patterns = Vec::new();
                 for clause in &typed_clauses {
                     // clause.pattern is a list of patterns for all subjects
@@ -739,7 +739,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         patterns.push(pattern.clone());
                     }
                     // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
-                    // We're interested in a flattened list of all patterns so we .
+                    // We're interested in all patterns so we build a flattened list.
                     for alternative_pattern in &clause.alternative_patterns {
                         // clause.alternative_pattern is a list of patterns for all subjects
                         if let Some(pattern) = alternative_pattern.get(0) {
