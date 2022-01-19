@@ -13,6 +13,9 @@
   non-deterministic type errors.
 - Built in support for the Mix build tool has been removed. The `mix_gleam`
   plugin is to be used instead.
+- Introduce a limited form of exhaustiveness checking for pattern matching
+  of custom types, which only checks that all constructor tags are covered
+  at the top level of patterns.
 
 ## v0.19.0 - 2022-01-12
 
