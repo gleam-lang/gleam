@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 35
 expression: "pub external fn one() -> Nil = \"./the/module.mjs\" \"one\"\npub external fn two() -> Nil = \"./the/module.mjs\" \"two\"\n"
 
 ---

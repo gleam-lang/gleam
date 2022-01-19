@@ -70,6 +70,7 @@ pub mod paths;
 pub mod pretty;
 pub mod project;
 pub mod type_;
+pub mod uid;
 pub mod warning;
 
 pub use error::{Error, Result};

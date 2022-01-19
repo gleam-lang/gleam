@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 554
 expression: "case 1, 2.22, \"three\" { x, _, y if x > y -> 1 }"
 
 ---

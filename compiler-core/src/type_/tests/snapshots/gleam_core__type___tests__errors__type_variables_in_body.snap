@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1004
 expression: "\npub type Box(a) {\n  Box(value: a)\n}\npub fn go(box1: Box(a), box2: Box(b)) {\n  let _: Box(a) = box2\n  let _: Box(b) = box1\n  5\n}"
 
 ---

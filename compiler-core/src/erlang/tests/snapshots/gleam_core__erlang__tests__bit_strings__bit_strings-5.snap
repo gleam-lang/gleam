@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
+assertion_line: 47
 expression: "fn x() { 1 }\npub fn main() {\n  let a = <<x():int>>\n  a\n}\n"
 
 ---

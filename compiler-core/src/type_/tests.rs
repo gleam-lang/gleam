@@ -7,18 +7,17 @@ mod statement_if;
 #[macro_export]
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
-        println!("\n{}\n", $src);
         let mut printer = pretty::Printer::new();
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let mut modules = HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
-        let result = ExprTyper::new(&mut Environment::new(&mut uid, &[], &modules, &mut vec![]))
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let result = ExprTyper::new(&mut Environment::new(ids, &[], &modules, &mut vec![]))
             .infer(ast)
             .expect("should successfully infer");
         assert_eq!(
@@ -32,19 +31,20 @@ macro_rules! assert_infer {
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
         use crate::type_::{build_prelude, infer_module};
+        use crate::uid::UniqueIdGenerator;
         use itertools::Itertools;
         use std::collections::HashMap;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let ast = infer_module(
             crate::build::Target::Erlang,
-            &mut uid,
+            &ids,
             ast,
             crate::build::Origin::Src,
             "thepackage",
@@ -75,16 +75,16 @@ macro_rules! assert_warning {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let _ = infer_module(
             Target::Erlang,
-            &mut uid,
+            &ids,
             ast,
             Origin::Src,
             "thepackage",
@@ -104,16 +104,16 @@ macro_rules! assert_no_warnings {
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let _ = infer_module(
             Target::Erlang,
-            &mut uid,
+            &ids,
             ast,
             Origin::Src,
             "thepackage",
@@ -254,16 +254,16 @@ fn infer_module_type_retention_test() {
         statements: vec![],
         type_info: (),
     };
-    let mut uid = 0;
+    let ids = UniqueIdGenerator::new();
     let mut modules = HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+    let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
     let module = infer_module(
         Target::Erlang,
-        &mut uid,
+        &ids,
         module,
         Origin::Src,
         "thepackage",

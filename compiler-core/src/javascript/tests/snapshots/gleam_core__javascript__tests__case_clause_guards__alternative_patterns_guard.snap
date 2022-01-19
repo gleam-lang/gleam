@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 189
 expression: "pub fn main(xs) -> Int {\n  case xs {\n    [x] | [_, x] if x == 1 -> x\n    _ -> 0\n  }\n}   \n"
 
 ---

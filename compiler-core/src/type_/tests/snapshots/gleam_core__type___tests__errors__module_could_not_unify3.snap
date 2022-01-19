@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 740
 expression: "\nfn id(x: a, y: a) { x }\npub fn x() { id(1, 1.0) }"
 
 ---

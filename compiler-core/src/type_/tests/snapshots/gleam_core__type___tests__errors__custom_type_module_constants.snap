@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1149
 expression: "type X { X }\nconst x = unknown.X"
 
 ---

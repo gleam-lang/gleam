@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 23
 expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  |> id\n}"
 
 ---
@@ -8,7 +9,7 @@ expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  
 
 -export([main/0]).
 
--spec id(A) -> A.
+-spec id(I) -> I.
 id(A) ->
     A.
 

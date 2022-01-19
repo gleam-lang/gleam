@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 237
+expression: "\npub fn factory(f, i) {\n  f(i)\n}\n\npub type Box {\n  Box(i: Int)\n}\n\npub fn main() {\n  factory(Box, 0)\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([factory/2, main/0]).
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+-spec factory(fun((J) -> N), J) -> N.
+factory(F, I) ->
+    F(I).
+
+-spec main() -> box().
+main() ->
+    factory(fun(A) -> {box, A} end, 0).
+

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 384
 expression: "let f = fn(x: Int) { x } f(1.0)"
 
 ---

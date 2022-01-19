@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 805
 expression: "fn main() {\n            let #(y, [..x]): #(x, List(x)) = #(\"one\", [1,2,3])\n            x\n        }"
 
 ---

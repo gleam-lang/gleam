@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
+assertion_line: 72
 expression: "\npub fn bitstring_discard(x) -> Bool {\n case x {\n  <<_discardme:utf8, rest:binary>> -> True\n   _ -> False\n }\n}\n                    "
 
 ---

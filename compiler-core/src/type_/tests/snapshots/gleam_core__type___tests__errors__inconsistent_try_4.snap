@@ -1,13 +1,18 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 720
 expression: try y = Error(1) try z = Error(1.) Ok(1)
 
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:1:36
+  ┌─ /src/one/two.gleam:1:18
   │
 1 │ try y = Error(1) try z = Error(1.) Ok(1)
-  │                                    ^^^^^
+  │                  ^^^^^^^^^^^^^^^^^^^^^^^
+
+This returned value has a type incompatible with the previous try expression.
+All the try expressions in a block and the final result value must have
+the same error type.
 
 Expected type:
 

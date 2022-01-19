@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 6
 expression: "\npub fn go(a) {\n  case a {\n    99 -> {\n      let a = a\n      1\n    }\n    _ -> a\n  }\n}"
 
 ---

@@ -1270,7 +1270,7 @@ pub mod type_ {
     #[inline]
     pub fn init_var(self, ) -> crate::schema_capnp::type_::var::Builder<'a> {
       self.builder.set_data_field::<u16>(0, 2);
-      self.builder.set_data_field::<u16>(1, 0u16);
+      self.builder.set_data_field::<u64>(1, 0u64);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -1317,7 +1317,7 @@ pub mod type_ {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
     pub const TYPE_ID: u64 = 0x82f6_802e_4097_0700;
   }
   pub enum Which<A0,A1,A2,A3> {
@@ -1503,7 +1503,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
       pub const TYPE_ID: u64 = 0xd41c_0e5a_6b35_9470;
     }
   }
@@ -1663,7 +1663,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
       pub const TYPE_ID: u64 = 0x82f2_798c_7760_b76b;
     }
   }
@@ -1715,8 +1715,8 @@ pub mod type_ {
         self.reader.total_size()
       }
       #[inline]
-      pub fn get_id(self) -> u16 {
-        self.reader.get_data_field::<u16>(1)
+      pub fn get_id(self) -> u64 {
+        self.reader.get_data_field::<u64>(1)
       }
     }
 
@@ -1769,12 +1769,12 @@ pub mod type_ {
         self.builder.into_reader().total_size()
       }
       #[inline]
-      pub fn get_id(self) -> u16 {
-        self.builder.get_data_field::<u16>(1)
+      pub fn get_id(self) -> u64 {
+        self.builder.get_data_field::<u64>(1)
       }
       #[inline]
-      pub fn set_id(&mut self, value: u16)  {
-        self.builder.set_data_field::<u16>(1, value);
+      pub fn set_id(&mut self, value: u64)  {
+        self.builder.set_data_field::<u64>(1, value);
       }
     }
 
@@ -1788,7 +1788,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
       pub const TYPE_ID: u64 = 0xccda_0e73_1fe2_8436;
     }
   }
@@ -1923,7 +1923,7 @@ pub mod type_ {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 2, pointers: 3 };
       pub const TYPE_ID: u64 = 0x8c17_e20c_8015_d83d;
     }
   }

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 25
 expression: "\ntype Mine {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n\nconst this = This;\nconst that = ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant;\n"
 
 ---

@@ -3,18 +3,18 @@ use crate::ast::{AssignmentKind, UntypedExpr, PIPE_VARIABLE};
 use vec1::Vec1;
 
 #[derive(Debug)]
-pub(crate) struct PipeTyper<'a, 'b, 'c, 'd> {
+pub(crate) struct PipeTyper<'a, 'b, 'c> {
     size: usize,
     argument_type: Arc<Type>,
     argument_location: SrcSpan,
     location: SrcSpan,
     expressions: Vec<TypedExpr>,
-    expr_typer: &'a mut ExprTyper<'b, 'c, 'd>,
+    expr_typer: &'a mut ExprTyper<'b, 'c>,
 }
 
-impl<'a, 'b, 'c, 'd> PipeTyper<'a, 'b, 'c, 'd> {
+impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     pub fn infer(
-        expr_typer: &'a mut ExprTyper<'b, 'c, 'd>,
+        expr_typer: &'a mut ExprTyper<'b, 'c>,
         expressions: Vec1<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let size = expressions.len();

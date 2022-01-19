@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 147
 expression: "case <<1>> { <<a:binary>> if a > 1 -> 1 }"
 
 ---

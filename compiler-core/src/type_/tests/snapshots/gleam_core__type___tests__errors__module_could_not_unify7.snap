@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 790
 expression: "fn main() { assert 5: Int = \"\" 5 }"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 609
 expression: "case [3], 1.1 { x, y if x <. y -> 1 }"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 98
 expression: "pub fn main(x, xs: #(Bool, Bool, Bool)) {\n  case x {\n    _ if xs.2 -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 304
 expression: "import other\npub fn main() {\n  other.Two(b: 2, c: 3, a: 1)\n}"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 242
 expression: "case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }"
 
 ---

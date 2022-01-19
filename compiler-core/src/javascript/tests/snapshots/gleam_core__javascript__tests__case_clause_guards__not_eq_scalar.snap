@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
+assertion_line: 85
 expression: "pub fn main(xs, y: Int) {\n  case xs {\n    #(x) if x != y -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

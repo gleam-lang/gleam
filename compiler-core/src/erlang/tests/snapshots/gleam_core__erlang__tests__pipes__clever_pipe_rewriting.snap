@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 6
 expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 
 ---
@@ -8,7 +9,7 @@ expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 
 -export([apply/2]).
 
--spec apply(fun((A) -> B), A) -> B.
+-spec apply(fun((I) -> J), I) -> J.
 apply(F, A) ->
     _pipe = A,
     F(_pipe).

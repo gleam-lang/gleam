@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 850
 expression: "external type PrivateType\npub external fn leak_type() -> PrivateType = \"\" \"\""
 
 ---

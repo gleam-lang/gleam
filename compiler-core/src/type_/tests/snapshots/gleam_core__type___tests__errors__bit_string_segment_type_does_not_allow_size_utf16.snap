@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 267
 expression: "let x = <<1:utf16-size(5)>> x"
 
 ---

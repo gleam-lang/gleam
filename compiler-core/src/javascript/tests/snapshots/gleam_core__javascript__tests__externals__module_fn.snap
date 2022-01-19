@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 10
 expression: "external fn show(anything) -> Nil = \"utils\" \"inspect\""
 
 ---

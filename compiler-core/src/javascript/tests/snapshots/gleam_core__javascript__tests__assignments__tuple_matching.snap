@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 5
 expression: "\nfn go(x) {\n  let #(1, 2) = x\n}\n"
 
 ---

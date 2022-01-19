@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/try_.rs
+assertion_line: 17
 expression: "pub fn x(f) {\n  try x = 1 |> f\n  Ok(x)\n}"
 
 ---
@@ -8,7 +9,7 @@ expression: "pub fn x(f) {\n  try x = 1 |> f\n  Ok(x)\n}"
 
 -export([x/1]).
 
--spec x(fun((integer()) -> {ok, D} | {error, G})) -> {ok, D} | {error, G}.
+-spec x(fun((integer()) -> {ok, L} | {error, O})) -> {ok, L} | {error, O}.
 x(F) ->
     case begin
         _pipe = 1,

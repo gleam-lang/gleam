@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
+assertion_line: 28
 expression: "\nfn go() {\n  #(1, 2).0\n}\n"
 
 ---

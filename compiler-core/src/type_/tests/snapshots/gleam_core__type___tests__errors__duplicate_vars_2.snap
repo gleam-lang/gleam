@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 670
 expression: "case [3.33], 1 { x, x if x > x -> 1 }"
 
 ---

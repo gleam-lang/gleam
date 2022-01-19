@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 140
+expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+-export_type([pair/2]).
+
+-type pair(I, J) :: {pair, I, J}.
+
+-spec x() -> pair(float(), float()).
+x() ->
+    {pair, 1, 2},
+    {pair, 3.0, 4.0}.
+

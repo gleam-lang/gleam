@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1054
 expression: "external fn dupe(x) -> x = \"\" \"\"\nfn dupe() { 1 }"
 
 ---

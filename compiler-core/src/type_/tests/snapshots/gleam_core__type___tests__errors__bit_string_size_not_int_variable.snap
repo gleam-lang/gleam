@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 287
 expression: "let a = 2.0 case <<1>> { <<1:size(a)>> -> a }"
 
 ---

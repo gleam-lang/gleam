@@ -22,20 +22,20 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        use crate::javascript::*;
+        use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = std::collections::HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
         let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             $dep_package,
@@ -48,7 +48,7 @@ macro_rules! assert_js {
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             CURRENT_PACKAGE,
@@ -63,20 +63,19 @@ macro_rules! assert_js {
     }};
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
-        use crate::javascript::*;
         use std::path::Path;
         let mut modules = std::collections::HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
         let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             $dep_package,
@@ -89,7 +88,7 @@ macro_rules! assert_js {
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             CURRENT_PACKAGE,
@@ -104,21 +103,21 @@ macro_rules! assert_js {
     }};
 
     ($src:expr $(,)?) => {{
-        use crate::javascript::*;
+        use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = std::collections::HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             "thepackage",
@@ -133,21 +132,21 @@ macro_rules! assert_js {
     }};
 
     ($src:expr, $erl:expr $(,)?) => {{
-        use crate::javascript::*;
+        use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = std::collections::HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
-            &mut 0,
+            &ids,
             ast,
             crate::build::Origin::Src,
             "thepackage",

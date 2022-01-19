@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 162
+expression: "pub type State{ Start(Int) End(Int) }\n            pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }\n            pub fn main() { build(End) }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([build/1, main/0]).
+-export_type([state/0]).
+
+-type state() :: {start, integer()} | {'end', integer()}.
+
+-spec build(fun((integer()) -> I)) -> I.
+build(Constructor) ->
+    Constructor(1).
+
+-spec main() -> state().
+main() ->
+    build(fun(A) -> {'end', A} end).
+

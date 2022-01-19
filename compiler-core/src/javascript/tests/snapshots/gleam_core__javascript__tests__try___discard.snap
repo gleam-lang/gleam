@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/try_.rs
+assertion_line: 27
 expression: "pub fn main(x, y) {\n  try _ = x\n  try _ = y\n  x\n}"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 60
 expression: "\nconst a = True\n\nfn go() {\n  a\n  let a = 10\n  a + 20\n}\n\nfn second() {\n  let a = 10\n  a + 20\n}\n"
 
 ---

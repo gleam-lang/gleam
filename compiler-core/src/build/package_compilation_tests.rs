@@ -18,6 +18,7 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
+        let ids = crate::uid::UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -40,7 +41,7 @@ macro_rules! assert_erlang_compile {
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
         let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, ids, file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -64,6 +65,7 @@ macro_rules! assert_erlang_compile {
 
 macro_rules! assert_javascript_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
+        let ids = crate::uid::UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -85,8 +87,15 @@ macro_rules! assert_javascript_compile {
         let root = PathBuf::from("some/build/path/root");
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
-        let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::JavaScript, file_writer);
+        let mut compiler = PackageCompiler::new(
+            &config,
+            &root,
+            &out,
+            &lib,
+            Target::JavaScript,
+            ids,
+            file_writer,
+        );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -110,6 +119,7 @@ macro_rules! assert_javascript_compile {
 
 macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
+        let ids = crate::uid::UniqueIdGenerator::new();
         let mut modules = HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
@@ -133,7 +143,7 @@ macro_rules! assert_no_warnings {
         let out = PathBuf::from("_build/default/lib/the_package");
         let lib = PathBuf::from("_build/default/lib");
         let mut compiler =
-            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+            PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, ids, file_writer);
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
         compiler.compile_beam_bytecode = false;
@@ -1088,7 +1098,7 @@ make() ->
 
 -type empty() :: empty.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 "
@@ -1150,7 +1160,7 @@ make() ->
 
 -type empty() :: empty.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 "
@@ -1325,7 +1335,7 @@ funky() ->
 
 -export(['receive'/1]).
 
--spec \'receive\'(H) -> H.
+-spec \'receive\'(I) -> I.
 'receive'(X) ->
     X.
 "
@@ -1565,7 +1575,7 @@ get_name(Person) ->
                 text: "-module(one).
 -compile(no_auto_import).
 
--export_type([t/1]).\n\n-type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+-export_type([t/1]).\n\n-type t(I) :: {c, integer(), integer()} | {gleam_phantom, I}.
 
 
 "
@@ -1633,7 +1643,7 @@ main() ->
 
 -type t() :: {x, integer()}.
 
--spec id(H) -> H.
+-spec id(I) -> I.
 id(X) ->
     X.
 "
@@ -1748,7 +1758,7 @@ make_list() ->
 
 -export_type([t/1]).
 
--type t(H) :: {c, integer(), integer()} | {gleam_phantom, H}.
+-type t(I) :: {c, integer(), integer()} | {gleam_phantom, I}.
 
 
 "
@@ -1865,7 +1875,10 @@ main() ->
             modules: vec!["one".to_string(), "three".to_string(), "two".to_string()],
         }),
     );
+}
 
+#[test]
+fn bug_752() {
     // Bug: https://github.com/gleam-lang/gleam/issues/752
     assert_erlang_compile!(
         vec![
@@ -1903,7 +1916,7 @@ main() ->
 
 -export_type([one/1]).
 
--type one(H) :: {one, H}.
+-type one(I) :: {one, I}.
 
 
 "
@@ -1916,7 +1929,7 @@ main() ->
 
 -export_type([two/1]).
 
--type two(I) :: {two, one:one(integer())} | {gleam_phantom, I}.
+-type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
 
 
 "
@@ -2281,6 +2294,7 @@ pub external fn use_type(Port) -> Nil =
 fn config_compilation_test() {
     macro_rules! assert_config_compile {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
+            let ids = crate::uid::UniqueIdGenerator::new();
             let config = $config;
             let mut modules = HashMap::new();
             let (file_writer, file_receiver) = FilesChannel::new();
@@ -2288,7 +2302,7 @@ fn config_compilation_test() {
             let out = PathBuf::from("_build/default/lib/the_package");
             let lib = PathBuf::from("_build/default/lib");
             let mut compiler =
-                PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, file_writer);
+                PackageCompiler::new(&config, &root, &out, &lib, Target::Erlang, ids, file_writer);
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;
             compiler.compile_beam_bytecode = false;

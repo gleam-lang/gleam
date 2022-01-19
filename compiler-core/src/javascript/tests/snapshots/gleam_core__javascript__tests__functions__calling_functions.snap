@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 17
 expression: "\npub fn twice(f: fn(t) -> t, x: t) -> t {\n  f(f(x))\n}\npub fn add_one(x: Int) -> Int {\n  x + 1\n}\npub fn add_two(x: Int) -> Int {\n  twice(add_one, x)\n}\n\npub fn take_two(x: Int) -> Int {\n  twice(fn(y) {y - 1}, x)\n}\n"
 
 ---

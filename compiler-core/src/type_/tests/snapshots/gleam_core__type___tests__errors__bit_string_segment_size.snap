@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 202
 expression: "let x = <<1:8-size(5)>> x"
 
 ---

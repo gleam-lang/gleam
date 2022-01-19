@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1257
 expression: "\npub type Person {\n  Person(name: String, age: Int)\n};\npub fn update_person(person: Person) {\n  let constructor = Person\n  constructor(..person)\n}"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 105
 expression: "\npub fn main() {\n  let x = 0.123\n  case x {\n    99.9854 -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

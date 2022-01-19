@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 5
 expression: "\nfn go() {\n  let x = {\n    1\n    2\n  }\n  x\n}\n"
 
 ---

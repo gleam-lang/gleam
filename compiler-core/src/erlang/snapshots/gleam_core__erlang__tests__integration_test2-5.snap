@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 137
+expression: "pub fn x() { 1. <. 2.3 }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+
+-spec x() -> boolean().
+x() ->
+    1.0 < 2.3.
+

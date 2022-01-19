@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/assert.rs
+assertion_line: 28
 expression: "pub fn go(x) {\n  assert [1 as a, b, c] = x\n  [a, b, c]\n}"
 
 ---

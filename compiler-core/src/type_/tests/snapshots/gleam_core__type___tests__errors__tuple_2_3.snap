@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 509
 expression: "#(1, 2) == #(1, 2, 3)"
 
 ---

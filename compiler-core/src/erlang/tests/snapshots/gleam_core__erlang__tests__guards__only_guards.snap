@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 313
 expression: "\npub const string_value = \"constant value\"\n\npub fn main(arg) {\n  case arg {\n    _ if arg == string_value -> 1\n    _ -> 0\n  }\n}\n"
 
 ---

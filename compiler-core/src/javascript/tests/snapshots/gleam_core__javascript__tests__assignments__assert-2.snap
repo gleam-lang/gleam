@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 18
 expression: "fn go(x) { assert #(1, 2) = x }"
 
 ---

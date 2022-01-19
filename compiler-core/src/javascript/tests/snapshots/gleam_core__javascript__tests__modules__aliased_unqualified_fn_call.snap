@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
+assertion_line: 26
 expression: "import rocket_ship.{launch as boom_time}\npub fn go() { boom_time() }\n"
 
 ---

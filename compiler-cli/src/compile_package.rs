@@ -2,6 +2,7 @@ use gleam_core::{
     build::{Mode, PackageCompiler},
     metadata,
     type_::Module,
+    uid::UniqueIdGenerator,
     Result,
 };
 use std::{collections::HashMap, path::Path};
@@ -13,7 +14,8 @@ use crate::{
 };
 
 pub fn command(options: CompilePackage) -> Result<()> {
-    let mut type_manifests = load_libraries(&options.libraries_directory)?;
+    let ids = UniqueIdGenerator::new();
+    let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = HashMap::new();
     let mut warnings = Vec::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
@@ -26,6 +28,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &options.output_directory,
         &options.libraries_directory,
         options.target,
+        ids,
         ProjectIO::new(),
     );
     compiler.write_entrypoint = false;
@@ -45,7 +48,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     Ok(())
 }
 
-fn load_libraries(lib: &Path) -> Result<HashMap<String, Module>> {
+fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<HashMap<String, Module>> {
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {
@@ -55,7 +58,7 @@ fn load_libraries(lib: &Path) -> Result<HashMap<String, Module>> {
         }
         for module in fs::gleam_modules_metadata_paths(path)? {
             let reader = fs::buffered_reader(module)?;
-            let module = metadata::ModuleDecoder::new().read(reader)?;
+            let module = metadata::ModuleDecoder::new(ids.clone()).read(reader)?;
             let _ = manifests.insert(module.name.join("/"), module);
         }
     }

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 301
+expression: "\npub fn main(args) {\n  case args {\n    [x] | [x, _] if x -> 1\n    _ -> 0\n  }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main(list(boolean())) -> integer().
+main(Args) ->
+    case Args of
+        [X] when X ->
+            1;
+
+        [X, _@1] when X ->
+            1;
+
+        _@2 ->
+            0
+    end.
+

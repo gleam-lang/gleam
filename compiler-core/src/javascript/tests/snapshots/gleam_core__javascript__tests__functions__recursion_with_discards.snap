@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 140
 expression: "pub fn main(f, _) {\n  f()\n  main(f, 1)\n}\n"
 
 ---

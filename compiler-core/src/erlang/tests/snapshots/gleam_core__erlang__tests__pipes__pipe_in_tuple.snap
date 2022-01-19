@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 48
 expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 
 ---
@@ -8,7 +9,7 @@ expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 
 -export([x/1]).
 
--spec x(fun((integer()) -> C)) -> {C}.
+-spec x(fun((integer()) -> K)) -> {K}.
 x(F) ->
     {begin
          _pipe = 1,

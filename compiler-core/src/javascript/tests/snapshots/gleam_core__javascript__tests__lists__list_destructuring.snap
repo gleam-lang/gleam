@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
+assertion_line: 52
 expression: "\nfn go(x, y) {\n  let [] = x\n  let [a] = x\n  let [1, 2] = x\n  let [_, #(3, b)] = y\n  let [head, ..tail] = y\n}\n"
 
 ---

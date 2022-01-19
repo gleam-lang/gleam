@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
+assertion_line: 68
 expression: "\nconst a = \"Hello\"\nconst b = 1;\nconst c = 2.0;\nconst e = #(\"bob\", \"dug\")\n        "
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 38
 expression: "\npub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {\n  the_first_variable_that_should_be_added + the_second_variable_that_should_be_added\n}"
 
 ---

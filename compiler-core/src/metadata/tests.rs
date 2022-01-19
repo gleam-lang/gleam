@@ -9,6 +9,7 @@ use crate::{
     build::Origin,
     io::test::InMemoryFile,
     type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
+    uid::UniqueIdGenerator,
 };
 use std::{collections::HashMap, io::BufReader, sync::Arc};
 
@@ -18,7 +19,8 @@ fn roundtrip(input: &Module) -> Module {
     let buffer = InMemoryFile::new();
     ModuleEncoder::new(input).write(buffer.clone()).unwrap();
     let buffer = buffer.into_contents().unwrap();
-    ModuleDecoder::new()
+    let ids = UniqueIdGenerator::new();
+    ModuleDecoder::new(ids)
         .read(BufReader::new(buffer.as_slice()))
         .unwrap()
 }

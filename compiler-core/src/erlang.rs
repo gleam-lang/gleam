@@ -1568,7 +1568,7 @@ fn variable_name(name: &str) -> String {
 // When rendering a type variable to an erlang type spec we need all type variables with the
 // same id to end up with the same name in the generated erlang.
 // This function converts a usize into base 26 A-Z for this purpose.
-fn id_to_type_var(id: usize) -> Document<'static> {
+fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
         name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
@@ -1700,16 +1700,16 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
 //     fn() -> Result(a, b)  // `a` and `b` are `any()`
 //     fn(a) -> a            // `a` is a type var
 fn collect_type_var_usages<'a>(
-    mut ids: HashMap<usize, usize>,
+    mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
-) -> HashMap<usize, usize> {
+) -> HashMap<u64, u64> {
     for typ in types {
         type_var_ids(typ, &mut ids);
     }
     ids
 }
 
-fn type_var_ids(type_: &Type, ids: &mut HashMap<usize, usize>) {
+fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
         Type::Var { type_: typ } => match typ.borrow().deref() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
@@ -1789,7 +1789,7 @@ fn erl_safe_type_name(mut name: String) -> String {
 struct TypePrinter<'a> {
     var_as_any: bool,
     current_module: &'a [String],
-    var_usages: Option<&'a HashMap<usize, usize>>,
+    var_usages: Option<&'a HashMap<u64, u64>>,
 }
 
 impl<'a> TypePrinter<'a> {
@@ -1801,7 +1801,7 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    pub fn with_var_usages(mut self, var_usages: &'a HashMap<usize, usize>) -> Self {
+    pub fn with_var_usages(mut self, var_usages: &'a HashMap<u64, u64>) -> Self {
         self.var_usages = Some(var_usages);
         self
     }

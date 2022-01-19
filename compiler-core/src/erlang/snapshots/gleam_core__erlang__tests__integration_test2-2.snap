@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 127
+expression: "pub fn tail(list) { case list { [x, ..] -> x } }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([tail/1]).
+
+-spec tail(list(L)) -> L.
+tail(List) ->
+    case List of
+        [X | _@1] ->
+            X
+    end.
+

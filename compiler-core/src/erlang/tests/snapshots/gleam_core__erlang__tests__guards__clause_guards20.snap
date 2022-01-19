@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 131
+expression: "\npub fn main() {\n  let x = 0.123\n  case x {\n    _ if 0.123 <. x -> 1\n  }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> integer().
+main() ->
+    X = 0.123,
+    case X of
+        _@1 when 0.123 < X ->
+            1
+    end.
+

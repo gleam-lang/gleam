@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 126
 expression: "\nfn go(y) {\n  let x = 1.0\n  x == y\n}\n"
 
 ---

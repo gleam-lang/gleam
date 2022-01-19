@@ -503,10 +503,23 @@ fn unify_enclosed_type_test() {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
+    /// Clauses in a case expression were found to return different types.
     CaseClauseMismatch,
+
+    /// A function was found to return a value that did not match its return
+    /// annotation.
     ReturnAnnotationMismatch,
+
     PipeTypeMismatch,
+
+    /// The operands of a binary operator were incorrect.
     Operator(BinOp),
+
+    /// A try expression returned a different error type to the previous try.
+    TryErrorMismatch,
+
+    /// The final value of a try expression was not a Result.
+    TryReturnResult,
 }
 
 impl UnifyErrorSituation {
@@ -524,6 +537,17 @@ annotation of this function.",
                 Some("This function cannot handle the argument sent through the (|>) pipe:")
             }
             Self::Operator(_op) => None,
+
+            UnifyErrorSituation::TryErrorMismatch => Some(
+                "This returned value has a type incompatible with the previous try expression.
+All the try expressions in a block and the final result value must have
+the same error type.",
+            ),
+
+            UnifyErrorSituation::TryReturnResult => Some(
+                "This returned value has a type incompatible with the previous try expression.
+The returned value after a try must be of type Result.",
+            ),
         }
     }
 }
@@ -575,6 +599,14 @@ impl UnifyError {
 
     pub fn operator_situation(self, binop: BinOp) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
+    }
+
+    pub fn inconsistent_try(self, return_value_is_result: bool) -> Self {
+        self.with_unify_error_situation(if return_value_is_result {
+            UnifyErrorSituation::TryErrorMismatch
+        } else {
+            UnifyErrorSituation::TryReturnResult
+        })
     }
 
     pub fn into_error(self, location: SrcSpan) -> Error {

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 77
 expression: "\nfn go() {\n  case True, False {\n    True, True -> 1\n    _, _ -> 0\n  }\n}\n"
 
 ---

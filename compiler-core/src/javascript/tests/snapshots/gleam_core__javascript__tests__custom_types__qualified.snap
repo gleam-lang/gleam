@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 552
 expression: "import other\n\npub fn main() {\n  other.One\n}\n"
 
 ---

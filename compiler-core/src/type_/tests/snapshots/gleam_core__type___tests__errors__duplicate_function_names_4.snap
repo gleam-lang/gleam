@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1046
 expression: "fn dupe() { 1 }\nexternal fn dupe(x) -> x = \"\" \"\""
 
 ---

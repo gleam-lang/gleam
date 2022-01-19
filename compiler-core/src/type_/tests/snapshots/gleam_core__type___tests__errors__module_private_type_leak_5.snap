@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 884
 expression: "external type PrivateType\npub type LeakType { Variant(PrivateType) }"
 
 ---

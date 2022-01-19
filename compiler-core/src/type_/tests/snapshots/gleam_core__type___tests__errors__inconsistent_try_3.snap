@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 715
 expression: try x = Error(1) 1
 
 ---
@@ -8,6 +9,9 @@ error: Type mismatch
   │
 1 │ try x = Error(1) 1
   │                  ^
+
+This returned value has a type incompatible with the previous try expression.
+The returned value after a try must be of type Result.
 
 Expected type:
 

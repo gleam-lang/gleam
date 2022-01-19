@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
+assertion_line: 86
 expression: "pub fn go(x) {\n  let <<name_size:8, name:binary-size(name_size)>> = x\n  name\n}"
 
 ---

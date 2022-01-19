@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 329
 expression: "fn() { 1 } == fn(x) { x + 1 }"
 
 ---

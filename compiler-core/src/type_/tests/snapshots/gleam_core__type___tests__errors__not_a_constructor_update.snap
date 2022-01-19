@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1242
 expression: "\npub type Person {\n  Person(name: String, age: Int)\n};\npub fn identity(a) { a }\npub fn update_person(person: Person) {\n  identity(..person)\n}"
 
 ---

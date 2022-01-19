@@ -8,8 +8,8 @@ use super::*;
 use crate::ast::UntypedPatternBitStringSegment;
 use std::sync::Arc;
 
-pub struct PatternTyper<'a, 'b, 'c> {
-    environment: &'a mut Environment<'b, 'c>,
+pub struct PatternTyper<'a, 'b> {
+    environment: &'a mut Environment<'b>,
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<String>,
@@ -20,8 +20,8 @@ enum PatternMode {
     Alternative(Vec<String>),
 }
 
-impl<'a, 'b, 'c> PatternTyper<'a, 'b, 'c> {
-    pub fn new(environment: &'a mut Environment<'b, 'c>, hydrator: &'a Hydrator) -> Self {
+impl<'a, 'b> PatternTyper<'a, 'b> {
+    pub fn new(environment: &'a mut Environment<'b>, hydrator: &'a Hydrator) -> Self {
         Self {
             environment,
             hydrator,

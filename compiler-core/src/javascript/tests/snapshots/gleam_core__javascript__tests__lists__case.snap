@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
+assertion_line: 79
 expression: "\nfn go(xs) {\n  case xs {\n    [] -> 0\n    [_] -> 1\n    [_, _] -> 2\n    _ -> 9999\n  }\n}\n"
 
 ---

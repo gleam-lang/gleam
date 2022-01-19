@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
+assertion_line: 29
 expression: "pub fn main() {\n  let a = 1\n  let <<b, 1>> = <<1, a>>\n  b\n}\n"
 
 ---

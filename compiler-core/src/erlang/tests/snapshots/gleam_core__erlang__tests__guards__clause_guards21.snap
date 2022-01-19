@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 145
+expression: "\npub fn main(x) {\n  case x {\n    _ if x == [1, 2, 3] -> 1\n  }\n}\n"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+
+-spec main(list(integer())) -> integer().
+main(X) ->
+    case X of
+        _@1 when X =:= [1, 2, 3] ->
+            1
+    end.
+

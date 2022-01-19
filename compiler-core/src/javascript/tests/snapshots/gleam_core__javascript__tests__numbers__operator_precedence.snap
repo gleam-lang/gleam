@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 138
 expression: "\nfn go() {\n  2.4 *. { 3.5 +. 6.0 }\n}\n"
 
 ---

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 117
 expression: "\nfn go() {\n  1.0 != 2.0\n  1.0 == 2.0\n}\n"
 
 ---

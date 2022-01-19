@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 220
 expression: "const in = 1\n\npub fn export() {\n  in\n}\n"
 
 ---

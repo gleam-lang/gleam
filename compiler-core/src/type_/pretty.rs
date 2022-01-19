@@ -15,8 +15,8 @@ const INDENT: isize = 2;
 
 #[derive(Debug, Default)]
 pub struct Printer {
-    names: im::HashMap<usize, String>,
-    uid: usize,
+    names: im::HashMap<u64, String>,
+    uid: u64,
 }
 
 impl Printer {
@@ -78,7 +78,7 @@ impl Printer {
         }
     }
 
-    pub fn generic_type_var<'a>(&mut self, id: usize) -> Document<'a> {
+    pub fn generic_type_var<'a>(&mut self, id: u64) -> Document<'a> {
         match self.names.get(&id) {
             Some(n) => Document::String(n.clone()),
             None => {

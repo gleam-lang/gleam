@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 190
+expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([x/0]).
+
+-spec go(I, any()) -> I.
+go(Xx, Yy) ->
+    Xx.
+
+-spec x() -> integer().
+x() ->
+    go(1, 2),
+    go(4, 3).
+

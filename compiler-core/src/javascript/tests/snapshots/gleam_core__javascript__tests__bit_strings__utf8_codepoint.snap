@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
+assertion_line: 60
 expression: "\nfn go(x) {\n  <<x:utf8_codepoint, \"Gleam\":utf8>>\n}\n"
 
 ---

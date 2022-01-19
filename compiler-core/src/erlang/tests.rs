@@ -19,20 +19,21 @@ macro_rules! assert_erl {
             erlang::module,
             line_numbers::LineNumbers,
             type_::{build_prelude, infer_module},
+            uid::UniqueIdGenerator,
         };
         use std::collections::HashMap;
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let mut modules = HashMap::new();
-        let mut uid = 0;
+        let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&mut uid));
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let ast = infer_module(
             crate::build::Target::Erlang,
-            &mut 0,
+            &ids,
             ast,
             Origin::Src,
             "thepackage",
@@ -81,7 +82,10 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
   y
 }"#
     );
+}
 
+#[test]
+fn integration_test1() {
     assert_erl!(r#"pub fn t() { True }"#);
 
     assert_erl!(
@@ -110,7 +114,10 @@ pub fn modulo(x, y) { x % y }
 pub fn fdiv(x, y) { x /. y }
             "#
     );
+}
 
+#[test]
+fn integration_test2() {
     assert_erl!(
         r#"pub fn second(list) { case list { [x, y] -> y z -> 1 } }
 pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
@@ -135,7 +142,10 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
     );
 
     assert_erl!(r#"type Null { Null } fn x() { Null }"#);
+}
 
+#[test]
+fn integration_test3() {
     assert_erl!(
         r#"type Point { Point(x: Int, y: Int) }
                 fn y() { fn() { Point }()(4, 6) }"#
@@ -160,7 +170,10 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
 pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
     );
+}
 
+#[test]
+fn integration_test4() {
     // Public external function calls are inlined but the wrapper function is
     // also printed in the erlang output and exported
     assert_erl!(
@@ -186,7 +199,10 @@ type User { User(id: Int, name: String, age: Int) }
 fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
                     "#
     );
+}
 
+#[test]
+fn integration_test5() {
     assert_erl!(r#"pub fn run() { case 1, 2 { a, b -> a } }"#);
 
     assert_erl!(
@@ -213,7 +229,10 @@ pub fn go(a) {
 
                     "#
     );
+}
 
+#[test]
+fn integration_test6() {
     // https://github.com/gleam-lang/gleam/issues/358
     assert_erl!(
         r#"
@@ -230,7 +249,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn integration_test7() {
     // https://github.com/gleam-lang/gleam/issues/384
     assert_erl!(
         r#"

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 233
 expression: "pub fn main(with) {\n  with\n}\n"
 
 ---

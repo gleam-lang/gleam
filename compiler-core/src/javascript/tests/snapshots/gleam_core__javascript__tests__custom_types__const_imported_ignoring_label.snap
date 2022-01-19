@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 423
 expression: "import other\npub const main = other.Two(1)\n"
 
 ---

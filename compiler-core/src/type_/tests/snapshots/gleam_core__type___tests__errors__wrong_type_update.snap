@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1169
 expression: "\n pub type Person {\n   Person(name: String, age: Int)\n };\n pub type Box(a) {\n   Box(a)\n };\n pub fn update_person(person: Person, box: Box(a)) {\n   Person(..box)\n }"
 
 ---
