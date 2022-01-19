@@ -450,6 +450,13 @@ pub mod module {
     pub fn has_package(&self) -> bool {
       !self.reader.get_pointer_field(4).is_null()
     }
+    #[inline]
+    pub fn get_types_constructors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(5), ::core::option::Option::None)
+    }
+    pub fn has_types_constructors(&self) -> bool {
+      !self.reader.get_pointer_field(5).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -575,6 +582,21 @@ pub mod module {
     pub fn has_package(&self) -> bool {
       !self.builder.get_pointer_field(4).is_null()
     }
+    #[inline]
+    pub fn get_types_constructors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(5), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_types_constructors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>>) -> ::capnp::Result<()> {
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(5), value, false)
+    }
+    #[inline]
+    pub fn init_types_constructors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(5), size)
+    }
+    pub fn has_types_constructors(&self) -> bool {
+      !self.builder.get_pointer_field(5).is_null()
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -587,7 +609,7 @@ pub mod module {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 5 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 6 };
     pub const TYPE_ID: u64 = 0x9a52_9544_50db_0581;
   }
 }
