@@ -179,7 +179,7 @@ enum Command {
         package: String,
 
         /// Add the package as a dev-only dependency
-        #[structopt(long)]
+        #[clap(long)]
         dev: bool,
     },
 
