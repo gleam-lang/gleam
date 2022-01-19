@@ -18,17 +18,24 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expressions: Vec1<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let size = expressions.len();
-        let mut expressions = expressions.into_iter();
-        let first = expr_typer.infer(
+        let end = expressions
+            .iter()
+            .last()
             // The vec is non-empty, this indexing can never fail
-            expressions.next().expect("Empty pipeline in typer"),
-        )?;
+            .expect("Empty pipeline in typer")
+            .location()
+            .end;
+        let mut expressions = expressions.into_iter();
+        let first = expr_typer.infer(expressions.next().expect("Empty pipeline in typer"))?;
         let mut typer = Self {
             size,
             expr_typer,
             argument_type: first.type_(),
             argument_location: first.location(),
-            location: first.location(),
+            location: SrcSpan {
+                start: first.location().start,
+                end,
+            },
             expressions: Vec::with_capacity(size),
         };
         // No need to update self.argument_* as we set it above

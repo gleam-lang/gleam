@@ -7,6 +7,8 @@
 - New projects include Hex badges and a link to Hexdocs.
 - Enhance type mismatch errors in the presence of try.
 - Enhance type mismatch error for an inconsistent try.
+- Enhance type mismatch error for pipe expressions to show the whole pipeline
+  and not only its first line.
 - Fixed a bug where sometimes type variable could be reused result in incorrect
   non-deterministic type errors.
 
