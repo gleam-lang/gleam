@@ -1460,3 +1460,39 @@ pub fn main(m) {
 "#
     );
 }
+
+#[test]
+fn case_exhaustiveness4() {
+    assert_module_error!(
+        r#"
+pub type Media {
+    Audio(BitString)
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    case m {
+        Video(_) -> m
+    }
+}
+"#
+    );
+}
+
+#[test]
+fn case_exhaustiveness5() {
+    assert_module_error!(
+        r#"
+pub type Media {
+    Audio(BitString)
+    Video(BitString)
+    Text(String)
+}
+pub fn main(m) {
+    case m {
+        Audio(_) | Text(_) -> m
+    }
+}
+"#
+    );
+}

@@ -611,6 +611,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
+        // We currently only do only limited exhaustiveness checking of custom types
+        // at the top level of patterns.
+        // Do not perform exhaustiveness checking if user explicitly used `assert`.
         if kind != AssignmentKind::Assert {
             if let Some(unmatched) = self
                 .environment
@@ -727,12 +730,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if subjects_count == 1 {
             if let Some(subject_type) = subject_types.get(0) {
                 let value_typ = collapse_links(subject_type.clone());
+                // Currently guards are not considered in exhaustiveness checking,
+                // so we go through all of them and pluck out only the patterns.
                 let mut patterns = Vec::new();
                 for clause in &typed_clauses {
+                    // clause.pattern is a list of patterns for all subjects
                     if let Some(pattern) = clause.pattern.get(0) {
                         patterns.push(pattern.clone());
                     }
+                    // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
+                    // We're interested in a flattened list of all patterns so we .
                     for alternative_pattern in &clause.alternative_patterns {
+                        // clause.alternative_pattern is a list of patterns for all subjects
                         if let Some(pattern) = alternative_pattern.get(0) {
                             patterns.push(pattern.clone());
                         }
