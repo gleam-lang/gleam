@@ -39,6 +39,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
         module.set_package(&self.data.package);
+        self.set_module_types_constructors(&mut module);
 
         let result = capnp::serialize_packed::write_message(&mut writer, &message);
         result.map_err(|e| writer.convert_err(e))
@@ -103,6 +104,21 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_module_types_constructors(&mut self, module: &mut module::Builder<'_>) {
+        tracing::trace!("Writing module metadata types to constructors mapping");
+        let mut types_constructors = module
+            .reborrow()
+            .init_types_constructors(self.data.types_constructors.len() as u32);
+        for (i, (name, constructors)) in self.data.types_constructors.iter().enumerate() {
+            let mut property = types_constructors.reborrow().get(i as u32);
+            property.set_key(name);
+            self.build_types_constructors_mapping(
+                property.initn_value(constructors.len() as u32),
+                constructors,
+            )
+        }
+    }
+
     fn set_module_values(&mut self, module: &mut module::Builder<'_>) {
         tracing::trace!("Writing module metadata values");
         let mut values = module.reborrow().init_values(self.data.values.len() as u32);
@@ -130,6 +146,16 @@ impl<'a> ModuleEncoder<'a> {
             builder.init_module(constructor.module.len() as u32),
             &constructor.module,
         );
+    }
+
+    fn build_types_constructors_mapping(
+        &mut self,
+        mut builder: capnp::text_list::Builder<'_>,
+        constructors: &[String],
+    ) {
+        for (i, s) in constructors.iter().enumerate() {
+            builder.set(i as u32, s);
+        }
     }
 
     fn build_value_constructor(

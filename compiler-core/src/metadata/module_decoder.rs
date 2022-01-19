@@ -67,7 +67,11 @@ impl ModuleDecoder {
             package: reader.get_package()?.to_string(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
-            types_constructors: HashMap::new(), // TODO_EXH_CHECK encode/decode this information
+            types_constructors: read_hashmap!(
+                reader.get_types_constructors()?,
+                self,
+                constructors_list
+            ),
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
         })
@@ -132,6 +136,11 @@ impl ModuleDecoder {
             }
         };
         Ok(type_::generic_var(id))
+    }
+
+    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
+        let vec = reader.iter().map_ok(String::from).try_collect()?;
+        Ok(vec)
     }
 
     fn value_constructor(
