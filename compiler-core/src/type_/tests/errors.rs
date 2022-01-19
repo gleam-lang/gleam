@@ -431,6 +431,21 @@ fn function_return_annotation_mismatch_with_try_nested() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1378
+#[test]
+fn function_return_annotation_mismatch_with_pipe() {
+    assert_module_error!(
+        "pub fn main() -> String {
+            1
+            |> add_two
+         }
+          
+         fn add_two(i: Int) -> Int {
+            i + 2
+         }"
+    );
+}
+
 #[test]
 fn variable_annotation_with_try() {
     assert_error!(
