@@ -640,11 +640,11 @@ impl<'a> Environment<'a> {
     /// Checks that the given patterns are exhaustive for given type.
     /// Currently only performs exhaustiveness checking for custom types,
     /// only at the top level (without recursing into constructor arguments).
-    pub fn exhaustive(
+    pub fn check_exhaustiveness(
         &mut self,
         patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
         value_typ: Arc<Type>,
-    ) -> Option<Vec<String>> {
+    ) -> Result<(), Vec<String>> {
         match &*value_typ {
             Type::App {
                 name: type_name,
@@ -672,8 +672,8 @@ impl<'a> Environment<'a> {
 
                         match pattern {
                             // If the pattern is a Discard or Var, all constructors are covered by it
-                            Pattern::Discard { .. } => return None,
-                            Pattern::Var { .. } => return None,
+                            Pattern::Discard { .. } => return Ok(()),
+                            Pattern::Var { .. } => return Ok(()),
                             // If the pattern is a constructor, add it to list of matched patterns
                             Pattern::Constructor {
                                 constructor: PatternConstructor::Record { name, .. },
@@ -681,7 +681,7 @@ impl<'a> Environment<'a> {
                             } => {
                                 matched_constructors.push(name.clone());
                             }
-                            _ => return None,
+                            _ => return Ok(()),
                         }
                     }
 
@@ -694,12 +694,12 @@ impl<'a> Environment<'a> {
                     }
 
                     if !not_matched_constructors.is_empty() {
-                        return Some(not_matched_constructors);
+                        return Err(not_matched_constructors);
                     }
                 }
-                None
+                Ok(())
             }
-            _ => None,
+            _ => Ok(()),
         }
     }
 }

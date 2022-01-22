@@ -615,9 +615,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // at the top level of patterns.
         // Do not perform exhaustiveness checking if user explicitly used `assert`.
         if kind != AssignmentKind::Assert {
-            if let Some(unmatched) = self
+            if let Err(unmatched) = self
                 .environment
-                .exhaustive(vec![pattern.clone()], collapse_links(value_typ.clone()))
+                .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ.clone()))
             {
                 return Err(Error::NotExhaustivePatternMatch {
                     location,
@@ -747,7 +747,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
                     }
                 }
-                if let Some(unmatched) = self.environment.exhaustive(patterns, value_typ) {
+                if let Err(unmatched) = self.environment.check_exhaustiveness(patterns, value_typ) {
                     return Err(Error::NotExhaustivePatternMatch {
                         location,
                         unmatched,
