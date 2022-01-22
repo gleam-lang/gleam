@@ -656,9 +656,11 @@ impl<'a> Environment<'a> {
                 } else {
                     Some(module_vec.join("/"))
                 };
-                let mut matched_constructors = Vec::new();
 
                 if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
+                    let mut unmatched_constructors: HashSet<String> =
+                        constructors.iter().cloned().collect();
+
                     for p in &patterns {
                         // ignore Assign patterns
                         let mut pattern = p;
@@ -679,22 +681,14 @@ impl<'a> Environment<'a> {
                                 constructor: PatternConstructor::Record { name, .. },
                                 ..
                             } => {
-                                matched_constructors.push(name.clone());
+                                let _ = unmatched_constructors.remove(name);
                             }
                             _ => return Ok(()),
                         }
                     }
 
-                    let mut not_matched_constructors = Vec::new();
-
-                    for c in constructors {
-                        if !matched_constructors.iter().any(|m| (*m).eq(c)) {
-                            not_matched_constructors.push((*c).clone());
-                        }
-                    }
-
-                    if !not_matched_constructors.is_empty() {
-                        return Err(not_matched_constructors);
+                    if !unmatched_constructors.is_empty() {
+                        return Err(unmatched_constructors.into_iter().sorted().collect());
                     }
                 }
                 Ok(())
