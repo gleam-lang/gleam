@@ -723,37 +723,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_clauses.push(typed_clause);
         }
 
-        // Because exhaustiveness checking in presence of multiple subjects is similar
-        // to full exhaustiveness checking of tuples or other nested record patterns,
-        // and we currently only do only limited exhaustiveness checking of custom types
-        // at the top level of patterns, only consider case expressions with one subject.
-        if subjects_count == 1 {
-            if let Some(subject_type) = subject_types.get(0) {
-                let value_typ = collapse_links(subject_type.clone());
-                // Currently guards are not considered in exhaustiveness checking,
-                // so we go through all clauses and pluck out only the patterns.
-                let mut patterns = Vec::new();
-                for clause in &typed_clauses {
-                    // clause.pattern is a list of patterns for all subjects
-                    if let Some(pattern) = clause.pattern.get(0) {
-                        patterns.push(pattern.clone());
-                    }
-                    // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
-                    // We're interested in all patterns so we build a flattened list.
-                    for alternative_pattern in &clause.alternative_patterns {
-                        // clause.alternative_pattern is a list of patterns for all subjects
-                        if let Some(pattern) = alternative_pattern.get(0) {
-                            patterns.push(pattern.clone());
-                        }
-                    }
-                }
-                if let Err(unmatched) = self.environment.check_exhaustiveness(patterns, value_typ) {
-                    return Err(Error::NotExhaustivePatternMatch {
-                        location,
-                        unmatched,
-                    });
-                }
-            }
+        if let Err(unmatched) =
+            self.check_case_exhaustiveness(subjects_count, &subject_types, &typed_clauses)
+        {
+            return Err(Error::NotExhaustivePatternMatch {
+                location,
+                unmatched,
+            });
         }
 
         Ok(TypedExpr::Case {
@@ -1821,5 +1797,43 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok((args, body))
+    }
+
+    fn check_case_exhaustiveness(
+        &mut self,
+        subjects_count: usize,
+        subjects: &[Arc<Type>],
+        typed_clauses: &[Clause<TypedExpr, PatternConstructor, Arc<Type>, String>],
+    ) -> Result<(), Vec<String>> {
+        // Because exhaustiveness checking in presence of multiple subjects is similar
+        // to full exhaustiveness checking of tuples or other nested record patterns,
+        // and we currently only do only limited exhaustiveness checking of custom types
+        // at the top level of patterns, only consider case expressions with one subject.
+        if subjects_count != 1 {
+            return Ok(());
+        }
+        let subject_type = subjects
+            .get(0)
+            .expect("Asserted there's one case subject but found none");
+        let value_typ = collapse_links(subject_type.clone());
+
+        // Currently guards are not considered in exhaustiveness checking,
+        // so we go through all clauses and pluck out only the patterns.
+        let mut patterns = Vec::new();
+        for clause in typed_clauses {
+            // clause.pattern is a list of patterns for all subjects
+            if let Some(pattern) = clause.pattern.get(0) {
+                patterns.push(pattern.clone());
+            }
+            // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
+            // We're interested in all patterns so we build a flattened list.
+            for alternative_pattern in &clause.alternative_patterns {
+                // clause.alternative_pattern is a list of patterns for all subjects
+                if let Some(pattern) = alternative_pattern.get(0) {
+                    patterns.push(pattern.clone());
+                }
+            }
+        }
+        self.environment.check_exhaustiveness(patterns, value_typ)
     }
 }
