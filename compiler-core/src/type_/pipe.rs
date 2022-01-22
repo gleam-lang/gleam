@@ -18,8 +18,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expressions: Vec1<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let size = expressions.len();
-        let end = expressions
-            .iter()
+        let end = &expressions[..]
             .last()
             // The vec is non-empty, this indexing can never fail
             .expect("Empty pipeline in typer")
@@ -34,7 +33,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             argument_location: first.location(),
             location: SrcSpan {
                 start: first.location().start,
-                end,
+                end: *end,
             },
             expressions: Vec::with_capacity(size),
         };
