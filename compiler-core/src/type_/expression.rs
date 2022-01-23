@@ -1817,20 +1817,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .expect("Asserted there's one case subject but found none");
         let value_typ = collapse_links(subject_type.clone());
 
-        // Currently guards are not considered in exhaustiveness checking,
-        // so we go through all clauses and pluck out only the patterns.
+        // Currently guards in exhaustiveness checking are assumed that they can fail,
+        // so we go through all clauses and pluck out only the patterns
+        // for clauses that don't have guards.
         let mut patterns = Vec::new();
         for clause in typed_clauses {
-            // clause.pattern is a list of patterns for all subjects
-            if let Some(pattern) = clause.pattern.get(0) {
-                patterns.push(pattern.clone());
-            }
-            // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
-            // We're interested in all patterns so we build a flattened list.
-            for alternative_pattern in &clause.alternative_patterns {
-                // clause.alternative_pattern is a list of patterns for all subjects
-                if let Some(pattern) = alternative_pattern.get(0) {
+            if let Clause { guard: None, .. } = clause {
+                // clause.pattern is a list of patterns for all subjects
+                if let Some(pattern) = clause.pattern.get(0) {
                     patterns.push(pattern.clone());
+                }
+                // A clause can be built with alternative patterns as well, e.g. `Audio(_) | Text(_) ->`.
+                // We're interested in all patterns so we build a flattened list.
+                for alternative_pattern in &clause.alternative_patterns {
+                    // clause.alternative_pattern is a list of patterns for all subjects
+                    if let Some(pattern) = alternative_pattern.get(0) {
+                        patterns.push(pattern.clone());
+                    }
                 }
             }
         }

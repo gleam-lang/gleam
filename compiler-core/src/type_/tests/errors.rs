@@ -1511,3 +1511,17 @@ pub fn main(m) {
 "#
     );
 }
+
+#[test]
+fn case_exhaustiveness6() {
+    assert_module_error!(
+        r#"
+pub fn main(b) {
+    case b {
+        b if b == True -> Nil
+        b if b != True -> Nil
+    }
+}
+"#
+    );
+}
