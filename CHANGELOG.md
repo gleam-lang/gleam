@@ -11,6 +11,8 @@
   and not only its first line.
 - Fixed a bug where sometimes type variable could be reused result in incorrect
   non-deterministic type errors.
+- Built in support for the Mix build tool has been removed. The `mix_gleam`
+  plugin is to be used instead.
 
 ## v0.19.0 - 2022-01-12
 
