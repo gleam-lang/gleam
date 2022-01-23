@@ -1,0 +1,152 @@
+// An idea for how generated docs could contain information on modules within
+// the package in a machine readable format.
+{
+  "publishing-gleam-version": "0.20.0",
+  "name": "my_package",
+  "modules": {
+    "my_module": {
+      "documentation": "...",
+      "types": {
+        // pub type MyType1 { One Two(String) }
+        "MyType1": {
+          "documentation": "...",
+          "parameters": 0,
+          "constructors": ["One", "Two"]
+        },
+        // pub external type MyType2
+        "MyType2": {
+          "documentation": "...",
+          "parameters": 0,
+          "constructors": []
+        },
+        // pub type MyType3(a) { One(a, Int) }
+        "MyType3": {
+          "documentation": "...",
+          "parameters": 1,
+          "constructors": ["One"]
+        },
+        // pub external type MyType4(a, b)
+        "MyType4": {
+          "documentation": "...",
+          "parameters": 2,
+          "constructors": []
+        },
+        // pub opaque type MyType5(a, b) { One Two }
+        "MyType5": {
+          "documentation": "...",
+          "parameters": 2,
+          "constructors": []
+        }
+      },
+      "values": {
+        // pub const nil_constant = Nil
+        "nil_constant": {
+          "documentation": "...",
+          "type": { "kind": "Nil" }
+        },
+        // pub const tuple_constant = #(1, "2", 3.0)
+        "tuple_constant": {
+          "documentation": "...",
+          "type": {
+            "kind": "Tuple",
+            "elements": [
+              { "kind": "Int" },
+              { "kind": "String" },
+              { "kind": "Float" }
+            ]
+          }
+        },
+        // pub const ok_constant = Ok(1)
+        "ok_constant": {
+          "documentation": "...",
+          "type": {
+            "kind": "Result",
+            "ok": { "kind": "Int" },
+            "error": { "kind": "Variable", "id": 0 }
+          }
+        },
+        // pub const error_constant = Error(Nil)
+        "error_constant": {
+          "documentation": "...",
+          "type": {
+            "kind": "Result",
+            "ok": { "kind": "Nil" },
+            "error": { "kind": "Variable", "id": 0 }
+          }
+        },
+        // pub const empty_list_constant = []
+        "empty_list_constant": {
+          "documentation": "...",
+          "type": {
+            "kind": "List",
+            "elements": { "kind": "Variable", "id": 0 }
+          }
+        },
+        // pub const int_list_constant = [1, 2, 3]
+        "int_list_constant": {
+          "documentation": "...",
+          "type": {
+            "kind": "List",
+            "elements": { "kind": "Int" }
+          }
+        },
+        // pub type Wibble { Wobble(String) }
+        // pub const custom_type_constant1 = Wobble("Hi")
+        "custom_type_constant1": {
+          "documentation": "...",
+          "type": {
+            "kind": "Custom",
+            "package": "my_package",
+            "module": "my_module",
+            "parameters": []
+          }
+        },
+        // pub type Blip(a) { Blap(a) }
+        // pub const custom_type_constant2 = Blap(1)
+        "custom_type_constant2": {
+          "documentation": "...",
+          "type": {
+            "kind": "Custom",
+            "package": "my_package",
+            "module": "my_module",
+            "parameters": [
+              { "kind": "Int" }
+            ]
+          }
+        },
+        // import some/module
+        // pub const imported_custom_type: module.Something = module.SomethingConstructor
+        "imported_custom_type": {
+          "documentation": "...",
+          "type": {
+            "kind": "Custom",
+            "package": "other_package",
+            "module": "some/module",
+            "parameters": []
+          }
+        },
+        // pub fn main() -> Nil { ... }
+        "main": {
+          "documentation": "...",
+          "type": {
+            "kind": "Fn",
+            "parameters": [],
+            "return": { "kind": "Nil" }
+          }
+        },
+        // pub fn multiply(x: Int, x: Int) -> Int { ... }
+        "multiply": {
+          "documentation": "...",
+          "type": {
+            "kind": "Fn",
+            "parameters": [
+              { "kind": "Int" },
+              { "kind": "Int" }
+            ],
+            "return": { "kind": "Int" }
+          }
+        }
+      }
+    }
+  }
+}
