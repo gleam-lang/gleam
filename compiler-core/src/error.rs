@@ -1619,9 +1619,13 @@ Try a different name for this module.",
                     write(buf, diagnostic, Severity::Error);
                     wrap_writeln!(
                         buf,
-                        "This expression does not cover all possibilities.
-Each constructor must have a pattern that can match.\n\nNot matched constructors: {}",
-                        unmatched.join(", "),
+                        "This case expression does not match all possibilities. \
+Each constructor must have a pattern that matches it or else it could crash.
+
+These values are not matched:
+
+  - {}",
+                        unmatched.join("\n  - "),
                     )
                     .unwrap();
                 }
