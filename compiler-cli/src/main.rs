@@ -179,7 +179,7 @@ enum Command {
         package: String,
 
         /// Add the package as a dev-only dependency
-        #[structopt(long)]
+        #[clap(long)]
         dev: bool,
     },
 
@@ -377,8 +377,8 @@ fn command_build(
     let mut buffer = stderr.buffer();
     let root = Path::new("./");
 
-    // Use new build tool if not in a rebar or mix project
-    if !root.join("rebar.config").exists() && !root.join("mix.exs").exists() {
+    // Use new build tool if not in a rebar project
+    if !root.join("rebar.config").exists() {
         return build::main(&Options {
             perform_codegen: true,
             mode: Mode::Dev,

@@ -7,8 +7,12 @@
 - New projects include Hex badges and a link to Hexdocs.
 - Enhance type mismatch errors in the presence of try.
 - Enhance type mismatch error for an inconsistent try.
+- Enhance type mismatch error for pipe expressions to show the whole pipeline
+  and not only its first line.
 - Fixed a bug where sometimes type variable could be reused result in incorrect
   non-deterministic type errors.
+- Built in support for the Mix build tool has been removed. The `mix_gleam`
+  plugin is to be used instead.
 - Introduce a limited form of exhaustiveness checking for pattern matching
   of custom types, which only checks that all constructor tags are covered
   at the top level of patterns.

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 437
+expression: "pub fn main() -> String {\n            1\n            |> add_two\n         }\n          \n         fn add_two(i: Int) -> Int {\n            i + 2\n         }"
+
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:13
+  │  
+2 │ ╭             1
+3 │ │             |> add_two
+  │ ╰──────────────────────^
+
+The type of this returned value doesn't match the return type 
+annotation of this function.
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int
+
+
