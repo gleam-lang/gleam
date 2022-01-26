@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1363
+assertion_line: 1378
 expression: "\npub fn main(b) {\n    let True = b\n    Nil\n}\n"
 
 ---
@@ -10,8 +10,10 @@ error: Not exhaustive pattern match
 3 │     let True = b
   │     ^^^^^^^^^^^^
 
-This expression does not cover all possibilities.
-Each constructor must have a pattern that can match.
+This case expression does not match all possibilities. Each constructor
+must have a pattern that matches it or else it could crash.
 
-Not matched constructors: False
+These values are not matched:
+
+  - False
 

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1502
+assertion_line: 1517
 expression: "\npub fn main(b) {\n    case b {\n        b if b == True -> Nil\n        b if b != True -> Nil\n    }\n}\n"
 
 ---
@@ -13,8 +13,11 @@ error: Not exhaustive pattern match
 6 │ │     }
   │ ╰─────^
 
-This expression does not cover all possibilities.
-Each constructor must have a pattern that can match.
+This case expression does not match all possibilities. Each constructor
+must have a pattern that matches it or else it could crash.
 
-Not matched constructors: False, True
+These values are not matched:
+
+  - False
+  - True
 
