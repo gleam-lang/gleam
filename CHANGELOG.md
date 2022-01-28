@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Gleam can now build dependency packages that are managed using Mix.
 - The `gleam publish` command now adds the `priv` directory and any `NOTICE`
   file to the tarball.
 - The `gleam update` command can now be used to update dependency packages to

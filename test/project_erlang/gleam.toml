@@ -6,6 +6,7 @@ gleam_stdlib = "~> 0.18"
 gleam_erlang = "~> 0.5"
 certifi = "~> 2.8" # This is a rebar3 dep that uses files in ./priv
 cowboy = "~> 2.9" # This is a rebar3 dep that uses files in ./ebin
+countries = "~> 1.6" # This is a mix dep that uses files in ./priv
 
 [dev-dependencies]
 first_gleam_publish_package = "> 0.0.0"

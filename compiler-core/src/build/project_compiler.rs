@@ -240,6 +240,7 @@ where
         let result = match usable_build_tool(package)? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package),
             BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
+            BuildTool::Mix => self.compile_mix_dep_package(package),
         };
 
         // TODO: test. This one is not covered by the integration tests.
@@ -257,7 +258,7 @@ where
         let mode = self.mode();
         let target = self.target();
 
-        let project_dir = paths::build_deps_package(&package.name);
+        let project_dir = paths::build_deps_package(name);
         let up = paths::unnest(&project_dir);
         let rebar3_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
         let ebins = paths::build_packages_ebins_glob(mode, target);
@@ -265,7 +266,7 @@ where
         let dest = paths::build_package(mode, target, name);
 
         // rebar3 would make this if it didn't exist, but we make it anyway as
-        // we may need to copy the include directory into there
+        // we may need to copy the include, priv, and/or ebin directory into there
         self.io.mkdir(&dest)?;
 
         // TODO: unit test
@@ -326,6 +327,156 @@ where
                 err: None,
             })
         }
+    }
+
+    fn compile_mix_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        let name = &package.name;
+        let mode = self.mode();
+        let target = self.target();
+        let mix_target = "prod";
+
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!("skipping_mix_build_for_non_erlang_target");
+            return Ok(());
+        }
+
+        let build_dir = paths::build_packages(mode, target);
+        let project_dir = paths::build_deps_package(name);
+        let mix_build_dir = project_dir.join("_build").join(mix_target);
+        // Absolute build path is needed for mix to make accurate symlinks
+        let mix_build_path = std::env::current_dir()
+            .expect("Project root")
+            .join(&mix_build_dir);
+        let mix_build_lib_dir = mix_build_dir.join("lib");
+        let up = paths::unnest(&project_dir);
+        let mix_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
+        let ebins = paths::build_packages_ebins_glob(mode, target);
+        let dest = paths::build_package(mode, target, name);
+
+        // Elixir core libs must be loaded
+        self.maybe_link_elixir_libs(&build_dir)?;
+
+        // Prevent Mix.Compilers.ApplicationTracer warnings
+        // mix would make this if it didn't exist, but we make it anyway as
+        // we need to link the compiled dependencies into there
+        self.io.mkdir(&mix_build_lib_dir)?;
+        let deps = &package.requirements;
+        for dep in deps {
+            // TODO: unit test
+            let dep_source = build_dir.join(&dep);
+            let dep_dest = mix_build_lib_dir.join(&dep);
+            if self.io.is_directory(&dep_source) && !self.io.is_directory(&dep_dest) {
+                tracing::debug!("linking_{}_to_build", dep);
+                self.io.symlink_dir(&dep_source, &dep_dest)?;
+            }
+        }
+
+        let env = [
+            ("MIX_BUILD_PATH", mix_path(&mix_build_path)),
+            ("MIX_ENV", mix_target.into()),
+            ("MIX_QUIET", "1".into()),
+            ("TERM", "dumb".into()),
+        ];
+        let args = [
+            "-pa".into(),
+            mix_path(&ebins),
+            "-S".into(),
+            "mix".into(),
+            "compile".into(),
+            "--no-deps-check".into(),
+            "--no-load-deps".into(),
+            "--no-protocol-consolidation".into(),
+        ];
+        let status = self.io.exec(
+            "elixir",
+            &args,
+            &env,
+            Some(&project_dir),
+            self.silence_subprocess_stdout,
+        )?;
+
+        if status == 0 {
+            // TODO: unit test
+            let source = mix_build_dir.join("lib").join(name);
+            if self.io.is_directory(&source) && !self.io.is_directory(&dest) {
+                tracing::debug!("linking_{}_to_build", name);
+                self.io.symlink_dir(&source, &dest)?;
+            }
+            Ok(())
+        } else {
+            Err(Error::ShellCommand {
+                program: "mix".to_string(),
+                err: None,
+            })
+        }
+    }
+
+    fn maybe_link_elixir_libs(&mut self, build_dir: &PathBuf) -> Result<(), Error> {
+        let elixir_libs = ["elixir", "logger", "mix"];
+
+        let mut update_links = false;
+        let pathfinder_name = "gleam_elixir_paths";
+        let pathfinder = build_dir.join(pathfinder_name);
+        if !self.io.is_file(&pathfinder) {
+            update_links = true;
+            // TODO: test
+            let env = [("TERM", "dumb".into())];
+            let elixir_atoms: Vec<String> =
+                elixir_libs.iter().map(|lib| format!(":{}", lib)).collect();
+            let args = [
+                "--eval".into(),
+                format!(
+                    "File.write!(\"{}\", [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(\"\\n\"))",
+                    pathfinder_name,
+                    elixir_atoms.join(", "),
+                )
+                .into(),
+            ];
+            tracing::debug!("writing_elixir_paths_to_build");
+            let status = self.io.exec(
+                "elixir",
+                &args,
+                &env,
+                Some(&build_dir),
+                self.silence_subprocess_stdout,
+            )?;
+            if status != 0 {
+                return Err(Error::ShellCommand {
+                    program: "elixir".to_string(),
+                    err: None,
+                });
+            }
+        }
+
+        let elixir_paths: Vec<PathBuf> = self
+            .io
+            .read(&pathfinder)?
+            .split('\n')
+            .map(PathBuf::from)
+            .collect();
+        for source in elixir_paths {
+            let name = source
+                .as_path()
+                .file_name()
+                .expect(&format!("Unexpanded path in {}", pathfinder_name));
+            let dest = build_dir.join(name);
+            let ebin = dest.join("ebin");
+            if !update_links || self.io.is_directory(&ebin) {
+                continue;
+            }
+            // TODO: unit test
+            if self.io.is_directory(&dest) {
+                self.io.delete(&dest)?;
+            }
+            tracing::debug!(
+                "linking_{}_to_build",
+                name.to_str().unwrap_or("elixir_core_lib"),
+            );
+            self.io.symlink_dir(&source, &dest)?;
+        }
+
+        Ok(())
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
@@ -423,6 +574,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 enum BuildTool {
     Gleam,
     Rebar3,
+    Mix,
 }
 
 /// Determine the build tool we should use to build this package
@@ -431,6 +583,7 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         match tool.as_str() {
             "gleam" => return Ok(BuildTool::Gleam),
             "rebar3" => return Ok(BuildTool::Rebar3),
+            "mix" => return Ok(BuildTool::Mix),
             _ => (),
         }
     }

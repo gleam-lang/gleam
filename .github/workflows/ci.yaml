@@ -199,7 +199,8 @@ jobs:
       - name: Install Erlang
         uses: erlef/setup-beam@v1.9.0
         with:
-          otp-version: 23.2
+          otp-version: "23.2"
+          elixir-version: "1.13.4"
 
       - name: Download Gleam binary from previous job
         uses: actions/download-artifact@v2
