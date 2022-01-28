@@ -28,6 +28,14 @@ pub fn command() -> Result<(), Error> {
         let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }
 
+    // Start applications
+    //let config = crate::config::root_config()?;
+    //let package = paths::build_package(Mode::Dev, Target::Erlang, &config.name);
+    //let app_file = format!("{}.app", &config.name);
+    //let _ = command.arg("-s").arg(package.join("ebin").join(app_file));
+    //let _ = command.arg("-s").arg(&config.name);
+    //let _ = command.arg("-s").arg("application").arg("ensure_all_started").arg(&config.name).arg("temporary");
+
     crate::cli::print_running("Erlang shell");
 
     // Run the shell

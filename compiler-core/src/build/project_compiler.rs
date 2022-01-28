@@ -5,7 +5,7 @@ use crate::{
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
-    io::{CommandExecutor, FileSystemIO, FileSystemWriter},
+    io::{CommandExecutor, FileSystemIO},
     metadata, paths,
     project::ManifestPackage,
     type_,
@@ -121,6 +121,7 @@ where
         let result = match usable_build_tool(package)? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package),
             BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
+            BuildTool::Mix => self.compile_mix_dep_package(package),
         };
 
         // TODO: test. This one is not covered by the integration tests.
@@ -138,7 +139,7 @@ where
         let mode = self.mode();
         let target = self.target();
 
-        let project_dir = paths::build_deps_package(&package.name);
+        let project_dir = paths::build_deps_package(name);
         let up = paths::unnest(&project_dir);
         let rebar3_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
         let ebins = paths::build_packages_ebins_glob(mode, target);
@@ -190,6 +191,91 @@ where
         } else {
             Err(Error::ShellCommand {
                 program: "rebar3".to_string(),
+                err: None,
+            })
+        }
+    }
+
+    fn compile_mix_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+        let name = &package.name;
+        let mode = self.mode();
+        let target = self.target();
+
+        let project_dir = paths::build_deps_package(name);
+        let up = paths::unnest(&project_dir);
+        let mix_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
+        let ebins = paths::build_packages_ebins_glob(mode, target);
+        let dest = paths::build_package(mode, target, name);
+        let build_dir = paths::build_packages(mode, target);
+
+        // mix would make this if it didn't exist, but we make it anyway as
+        // we may need to copy the priv directory into there
+        self.io.mkdir(&dest)?;
+
+        // TODO: unit test
+        let src_priv = project_dir.join("priv");
+        if self.io.is_directory(&src_priv) {
+            tracing::debug!("copying_priv_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&src_priv, &dest)?;
+        }
+
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!("skipping_mix_build_for_non_erlang_target");
+            return Ok(());
+        }
+
+        let env = [
+            ("MIX_PATH", mix_path(&ebins)),
+            ("MIX_BUILD_PATH", mix_path(&dest)),
+            ("MIX_ENV", "prod".into()),
+            ("MIX_QUIET", "1".into()),
+            ("TERM", "dumb".into()),
+        ];
+        let args = [
+            "compile".into(),
+            "--no-deps-check".into(),
+            "--no-protocol-consolidation".into(),
+        ];
+        let status = self.io.exec("mix", &args, &env, Some(&project_dir))?;
+
+        if status == 0 {
+            // TODO: unit test
+            let lib_ebin = dest.join("lib").join(name).join("ebin");
+            if self.io.is_directory(&lib_ebin) {
+                tracing::debug!("copying_ebin_to_build");
+                // TODO: This could be a symlink
+                self.io.copy_dir(&lib_ebin, &dest)?;
+            }
+            // TODO: unit test
+            if !self.io.is_directory(&build_dir.join("elixir")) {
+                let elixir_pathfinder = "elixir.path";
+                let pathfinder_dest = dest.join(elixir_pathfinder);
+                let env = [("TERM", "dumb".into())];
+                let args = [
+                    "--eval".into(),
+                    format!(
+                        "File.write!(\"{}\", Path.expand(:code.lib_dir(:elixir)))",
+                        elixir_pathfinder
+                    )
+                    .into(),
+                ];
+                let status = self.io.exec("elixir", &args, &env, Some(&dest))?;
+                if status == 0 && self.io.is_file(&pathfinder_dest) {
+                    let src_elixir = PathBuf::from(self.io.read(&pathfinder_dest)?);
+                    // self.io.delete(&pathfinder_dest)?;
+                    if self.io.is_directory(&src_elixir) {
+                        tracing::debug!("copying_elixir_to_build");
+                        // TODO: This could be a symlink
+                        self.io.copy_dir(&src_elixir, &build_dir)?;
+                    }
+                }
+            }
+            Ok(())
+        } else {
+            Err(Error::ShellCommand {
+                program: "mix".to_string(),
                 err: None,
             })
         }
@@ -276,6 +362,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 enum BuildTool {
     Gleam,
     Rebar3,
+    Mix,
 }
 
 /// Determine the build tool we should use to build this package
@@ -284,6 +371,7 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         match tool.as_str() {
             "gleam" => return Ok(BuildTool::Gleam),
             "rebar3" => return Ok(BuildTool::Rebar3),
+            "mix" => return Ok(BuildTool::Mix),
             _ => (),
         }
     }

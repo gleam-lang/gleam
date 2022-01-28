@@ -16,6 +16,8 @@
 - Introduce a limited form of exhaustiveness checking for pattern matching
   of custom types, which only checks that all constructor tags are covered
   at the top level of patterns.
+- Gleam can now build dependency packages that are managed using Mix.
+
 
 ## v0.19.0 - 2022-01-12
 

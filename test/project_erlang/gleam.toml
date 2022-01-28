@@ -4,6 +4,7 @@ version = "0.1.0"
 [dependencies]
 gleam_stdlib = "~> 0.18"
 certifi = "~> 2.8" # This is a rebar3 dep that uses files in ./priv
+countries = "~> 1.6" # This is a mix dep that uses files in ./priv
 gleam_erlang = "~> 0.5"
 
 [dev-dependencies]
