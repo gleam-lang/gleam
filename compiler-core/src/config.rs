@@ -39,7 +39,7 @@ impl<'de> Deserialize<'de> for SpdxLicense {
         D: serde::Deserializer<'de>,
     {
         let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        match spdx::license_id(&s) {
+        match spdx::license_id(s) {
             None => Err(serde::de::Error::custom(format!(
                 "{} is not a valid SPDX License ID",
                 s
