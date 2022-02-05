@@ -22,6 +22,34 @@ fn erlang_target() -> Target {
 }
 
 pub type Dependencies = HashMap<String, Range>;
+#[derive(Clone, Debug, PartialEq)]
+pub struct SpdxLicense {
+    pub license: String,
+}
+
+impl ToString for SpdxLicense {
+    fn to_string(&self) -> String {
+        String::from(&self.license)
+    }
+}
+
+impl<'de> Deserialize<'de> for SpdxLicense {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        match spdx::license_id(&s) {
+            None => Err(serde::de::Error::custom(format!(
+                "{} is not a valid SPDX License ID",
+                s
+            ))),
+            Some(_) => Ok(SpdxLicense {
+                license: String::from(s),
+            }),
+        }
+    }
+}
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
@@ -29,7 +57,7 @@ pub struct PackageConfig {
     #[serde(default = "default_version")]
     pub version: Version,
     #[serde(default, alias = "licenses")]
-    pub licences: Vec<String>,
+    pub licences: Vec<SpdxLicense>,
     #[serde(default)]
     pub description: String,
     #[serde(default, alias = "docs")]

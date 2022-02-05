@@ -7,7 +7,7 @@ use std::{
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     build::{Mode, Options, Package, Target},
-    config::PackageConfig,
+    config::{PackageConfig, SpdxLicense},
     hex, paths, Error, Result,
 };
 use hexpm::version::{Range, Version};
@@ -306,7 +306,7 @@ pub struct ReleaseMetadata<'a> {
     description: &'a str,
     source_files: &'a [PathBuf],
     generated_files: &'a [(PathBuf, String)],
-    licenses: &'a [String],
+    licenses: &'a Vec<SpdxLicense>,
     links: Vec<(&'a str, http::Uri)>,
     requirements: Vec<ReleaseRequirement<'a>>,
     build_tools: Vec<&'a str>,
@@ -352,7 +352,11 @@ impl<'a> ReleaseMetadata<'a> {
                 .sorted()
                 .join(","),
             links = self.links.iter().map(link).join(","),
-            licenses = self.licenses.iter().map(|l| quotes(l)).join(", "),
+            licenses = self
+                .licenses
+                .iter()
+                .map(|l| quotes(&l.to_string()))
+                .join(", "),
             build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
             requirements = self
                 .requirements
@@ -388,7 +392,14 @@ impl<'a> ReleaseRequirement<'a> {
 
 #[test]
 fn release_metadata_as_erlang() {
-    let licences = vec!["MIT".to_string(), "MPL-2.0".to_string()];
+    let licences = vec![
+        SpdxLicense {
+            license: "MIT".to_string(),
+        },
+        SpdxLicense {
+            license: "MPL-2.0".to_string(),
+        },
+    ];
     let version = "1.2.3".try_into().unwrap();
     let homepage = "https://gleam.run".parse().unwrap();
     let github = "https://github.com/lpil/myapp".parse().unwrap();
