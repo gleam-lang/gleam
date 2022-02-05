@@ -130,10 +130,7 @@ pub enum Error {
     InvalidVersionFormat { input: String, error: String },
 
     #[error("invalid license")]
-    InvalidLicense {
-        license: String,
-        reason: spdx::error::Reason,
-    },
+    InvalidLicense { license: String },
 
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
@@ -400,33 +397,12 @@ numbers and underscores.",
                 write_project(buf, diagnostic);
             }
 
-            Error::InvalidLicense { license, reason } => {
+            Error::InvalidLicense { license } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Invalid license".to_string(),
                     label: format!(
-                        "The license \"{}\" {}.",
+                        "The license \"{}\" is not a valid SPDX License ID.",
                         license,
-                        match reason {
-                            spdx::error::Reason::UnknownLicense => "is not a SPDX license".to_string(),
-                            spdx::error::Reason::UnknownException => "contains non-SPDX exception".to_string(),
-                            spdx::error::Reason::InvalidCharacters => "contains invalid characters".to_string(),
-                            spdx::error::Reason::UnclosedParens =>
-                                "contains an opening parenthesis without a closing parenthesis".to_string(),
-                            spdx::error::Reason::UnopenedParens =>
-                                "contains a closing parenthesis without an opening parenthesis".to_string(),
-                            spdx::error::Reason::Empty =>
-                                "contains no terms that are valid in SPDX expressions".to_string(),
-                            spdx::error::Reason::Unexpected(expected) => match expected {
-                                [] => "contains an unexpected term".to_string(),
-                                expected => "contains an unexpected term, expected \"".to_string() + &expected.join("\" or \"") + "\""
-                            },
-                            spdx::error::Reason::SeparatedPlus =>
-                                "contains a '+' after whitespace, which is not allowed in SPDX expressions".to_string(),
-                            spdx::error::Reason::UnknownTerm =>
-                                "contains a term that is not valid in SPDX expresssions".to_string(),
-                            spdx::error::Reason::GnuNoPlus =>
-                                "contains a '+' after a GNU license. Please use '-or-later' instead.".to_string(),
-                        }
                     ),
                 };
                 write_project(buf, diagnostic);
