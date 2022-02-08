@@ -129,9 +129,6 @@ pub enum Error {
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
 
-    #[error("invalid license")]
-    InvalidLicense { license: String },
-
     #[error("project root already exists")]
     ProjectRootAlreadyExist { path: String },
 
@@ -392,17 +389,6 @@ Please try again with a different project name.",
 with a lowercase letter and may only contain lowercase letters,
 numbers and underscores.",
                         }
-                    ),
-                };
-                write_project(buf, diagnostic);
-            }
-
-            Error::InvalidLicense { license } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Invalid license".to_string(),
-                    label: format!(
-                        "The license \"{}\" is not a valid SPDX License ID.",
-                        license,
                     ),
                 };
                 write_project(buf, diagnostic);
