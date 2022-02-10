@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 937
+assertion_line: 952
 expression: "\npub type Box(a) { Box(inner: a) }\npub fn main(box: Box(Int)) { box.unknown }\n"
 
 ---
@@ -10,7 +10,7 @@ error: Unknown record field
 3 │ pub fn main(box: Box(Int)) { box.unknown }
   │                              ^^^^^^^^^^^ did you mean `inner`?
 
-The record being updated has this type:
+The value being accessed has this type:
 
     Box(Int)
 

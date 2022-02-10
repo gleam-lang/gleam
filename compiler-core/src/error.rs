@@ -913,7 +913,7 @@ Once a labelled argument has been supplied all following arguments must also be 
 
                     writeln!(
                         buf,
-                        "The record being updated has this type:
+                        "The value being accessed has this type:
 
 {}
 ",

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1214
+assertion_line: 1229
 expression: "\n pub type Person {\n   Person(name: String, age: Int, size: Int)\n };\n pub fn update_person(person: Person) {\n   Person(..person, size: 66, one: 5, age: 3)\n }"
 
 ---
@@ -10,7 +10,7 @@ error: Unknown record field
 6 │    Person(..person, size: 66, one: 5, age: 3)
   │                               ^^^^^^ did you mean `age`?
 
-The record being updated has this type:
+The value being accessed has this type:
 
     Person
 
