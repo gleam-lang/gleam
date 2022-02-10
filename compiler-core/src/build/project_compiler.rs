@@ -165,6 +165,14 @@ where
             self.io.copy_dir(&src_priv, &dest)?;
         }
 
+        // TODO: unit test
+        let ebin_priv = project_dir.join("ebin");
+        if self.io.is_directory(&ebin_priv) {
+            tracing::debug!("copying_ebin_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&ebin_priv, &dest)?;
+        }
+
         // TODO: test
         if target != Target::Erlang {
             tracing::info!("skipping_rebar3_build_for_non_erlang_target");
