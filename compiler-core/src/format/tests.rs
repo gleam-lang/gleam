@@ -3287,3 +3287,29 @@ fn list_spread_pattern() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1431
+#[test]
+fn first_argument_capture_special_case_list() {
+    assert_format!(
+        r#"pub fn main(x) {
+  wibble(_, [
+    "one argument that is both breakable and long enough to cause it to wrap",
+  ])
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1431
+#[test]
+fn first_argument_capture_special_case_fn() {
+    assert_format!(
+        r#"pub fn main(x) {
+  wibble(_, fn() {
+    "one argument that is both breakable and long enough to cause it to wrap"
+  })
+}
+"#
+    );
+}

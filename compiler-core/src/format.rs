@@ -756,22 +756,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
-        fn is_breakable(expr: &UntypedExpr) -> bool {
-            matches!(
-                expr,
-                UntypedExpr::Fn { .. }
-                    | UntypedExpr::Sequence { .. }
-                    | UntypedExpr::Assignment { .. }
-                    | UntypedExpr::Call { .. }
-                    | UntypedExpr::Case { .. }
-                    | UntypedExpr::List { .. }
-                    | UntypedExpr::Tuple { .. }
-                    | UntypedExpr::BitString { .. }
-            )
-        }
-
         match args {
-            [arg] if is_breakable(&arg.value) => self
+            [arg] if is_breakable_expr(&arg.value) => self
                 .expr(fun)
                 .append("(")
                 .append(self.call_arg(arg))
@@ -918,9 +904,19 @@ impl<'comments> Formatter<'comments> {
                 fun,
                 arguments: args,
                 ..
-            } => self
-                .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
+            } => match args.as_slice() {
+                [first, second] if is_breakable_expr(&second.value) && first.is_capture_hole() => {
+                    self.expr(fun)
+                        .append("(_, ")
+                        .append(self.call_arg(second))
+                        .append(")")
+                        .group()
+                }
+
+                _ => self
+                    .expr(fun)
+                    .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group()),
+            },
 
             // The body of a capture being not a fn shouldn't be possible...
             _ => panic!("Function capture body found not to be a call in the formatter",),
@@ -1589,5 +1585,19 @@ pub fn comments_before<'a>(
     (
         popped,
         comments.get(end..).expect("Comments before slicing"),
+    )
+}
+
+fn is_breakable_expr(expr: &UntypedExpr) -> bool {
+    matches!(
+        expr,
+        UntypedExpr::Fn { .. }
+            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Assignment { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::BitString { .. }
     )
 }

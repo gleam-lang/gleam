@@ -516,6 +516,15 @@ pub struct CallArg<A> {
     pub value: A,
 }
 
+impl CallArg<UntypedExpr> {
+    pub fn is_capture_hole(&self) -> bool {
+        match &self.value {
+            UntypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct RecordUpdateSpread {
     pub base: Box<UntypedExpr>,
