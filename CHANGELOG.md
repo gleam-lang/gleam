@@ -17,6 +17,8 @@
 - Introduce a limited form of exhaustiveness checking for pattern matching
   of custom types, which only checks that all constructor tags are covered
   at the top level of patterns.
+- The `ebin` directory is now copied to the build directory for rebar3 managed
+  dependencies if present before compilation.
 
 ## v0.19.0 - 2022-01-12
 
