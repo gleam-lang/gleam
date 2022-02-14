@@ -1559,3 +1559,19 @@ pub fn main(b) {
 "#
     );
 }
+
+#[test]
+fn pipe_arity_error() {
+    assert_module_error!(
+        r#"
+fn go(x, y) {
+  x + y
+}
+
+fn main(x) {
+  1
+  |> go
+}
+"#
+    );
+}

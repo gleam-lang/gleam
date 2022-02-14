@@ -975,10 +975,8 @@ But this argument has this type:
                     rigid_type_names: annotated_names,
                 } => {
                     let diagnostic = Diagnostic {
-                        title:
-                            "This function cannot handle the argument sent through the (|>) pipe:"
-                                .to_string(),
-                        label: "".to_string(),
+                        title: "Type mismatch".to_string(),
+                        label: "This function does not accept the piped type".to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
                         location: *location,
@@ -1004,11 +1002,11 @@ But this argument has this type:
 
 {given}
 
-But (|>) is piping it to a function that expects:
+But function expects:
 
 {expected}
 
-\n",
+",
                         expected = expected
                             .map(|v| printer.pretty_print(&v, 4))
                             .unwrap_or_else(|| "    No arguments".to_string()),

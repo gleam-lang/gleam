@@ -245,8 +245,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 fn_(vec![self.argument_type.clone()], return_type.clone()),
             )
             .map_err(|e| {
-                convert_unify_error(e, function.location())
-                    .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+                let is_pipe_mismatch = self.is_pipe_type_mismatch(&e);
+                let error = convert_unify_error(e, function.location());
+                if is_pipe_mismatch {
+                    error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+                } else {
+                    error
+                }
             })?;
 
         Ok(TypedExpr::Call {
@@ -255,5 +260,28 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             fun: function,
             args: vec![self.typed_left_hand_value_variable_call_argument()],
         })
+    }
+
+    fn is_pipe_type_mismatch(&mut self, error: &UnifyError) -> bool {
+        let types = match error {
+            UnifyError::CouldNotUnify {
+                expected, given, ..
+            } => (expected.as_ref(), given.as_ref()),
+            _ => return false,
+        };
+
+        match types {
+            (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
+                match (a.get(0), b.get(0)) {
+                    (Some(a), Some(b)) => self
+                        .expr_typer
+                        .environment
+                        .unify(a.clone(), b.clone())
+                        .is_err(),
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
     }
 }
