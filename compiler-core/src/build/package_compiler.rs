@@ -165,6 +165,15 @@ where
         modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
+
+        // TODO: unit test
+        let priv_dir = self.root.join("priv");
+        if self.io.is_directory(&priv_dir) {
+            tracing::debug!("copying_priv_to_build");
+            // TODO: This could be a symlink
+            self.io.copy_dir(&priv_dir, &out)?;
+        }
+
         let src = self.root.join("src");
         let test = self.root.join("test");
         let mut copied = HashSet::new();
@@ -172,6 +181,7 @@ where
         if self.io.is_directory(&test) {
             self.copy_native_files(&test, out, &mut copied, modules)?;
         }
+
         Ok(())
     }
 
