@@ -24,6 +24,7 @@
 - The format used by the formatter has been improved.
 - Package names in `gleam.toml` are validated when the config is read.
 - The `priv` directory is copied for Gleam projects managed by the build tool.
+- Fixed an error where type errors from pipes could show incorrect information.
 
 ## v0.19.0 - 2022-01-12
 
