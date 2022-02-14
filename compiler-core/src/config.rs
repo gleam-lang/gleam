@@ -22,14 +22,15 @@ fn erlang_target() -> Target {
 }
 
 pub type Dependencies = HashMap<String, Range>;
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct SpdxLicense {
-    pub license: String,
+    pub licence: String,
 }
 
 impl ToString for SpdxLicense {
     fn to_string(&self) -> String {
-        String::from(&self.license)
+        String::from(&self.licence)
     }
 }
 
@@ -45,14 +46,21 @@ impl<'de> Deserialize<'de> for SpdxLicense {
                 s
             ))),
             Some(_) => Ok(SpdxLicense {
-                license: String::from(s),
+                licence: String::from(s),
             }),
         }
     }
 }
 
+impl AsRef<str> for SpdxLicense {
+    fn as_ref(&self) -> &str {
+        self.licence.as_str()
+    }
+}
+
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
+    #[serde(with = "package_name")]
     pub name: String,
     #[serde(default = "default_version")]
     pub version: Version,
@@ -490,4 +498,55 @@ mod uri_serde {
         }
         Ok(uri)
     }
+}
+
+mod package_name {
+    use lazy_static::lazy_static;
+    use regex::Regex;
+    use serde::Deserializer;
+
+    lazy_static! {
+        static ref PACKAGE_NAME_PATTERN: Regex =
+            Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        if PACKAGE_NAME_PATTERN.is_match(name) {
+            Ok(name.to_string())
+        } else {
+            let error =
+                "Package names may only container lowercase letters, numbers, and underscores";
+            Err(serde::de::Error::custom(error))
+        }
+    }
+}
+
+#[test]
+fn name_with_dash() {
+    let input = r#"
+name = "one-two"
+"#;
+    assert_eq!(
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string(),
+        "Package names may only container lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+    )
+}
+
+#[test]
+fn name_with_number_start() {
+    let input = r#"
+name = "1"
+"#;
+    assert_eq!(
+        toml::from_str::<PackageConfig>(input)
+            .unwrap_err()
+            .to_string(),
+        "Package names may only container lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+    )
 }

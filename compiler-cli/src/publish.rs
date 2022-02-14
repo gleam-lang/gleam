@@ -394,10 +394,10 @@ impl<'a> ReleaseRequirement<'a> {
 fn release_metadata_as_erlang() {
     let licences = vec![
         SpdxLicense {
-            license: "MIT".to_string(),
+            licence: "MIT".to_string(),
         },
         SpdxLicense {
-            license: "MPL-2.0".to_string(),
+            licence: "MPL-2.0".to_string(),
         },
     ];
     let version = "1.2.3".try_into().unwrap();
