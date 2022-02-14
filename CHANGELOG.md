@@ -22,6 +22,7 @@
 - The `ebin` directory is now copied to the build directory for rebar3 managed
   dependencies if present before compilation.
 - The format used by the formatter has been improved.
+- Package names in `gleam.toml` are validated when the config is read.
 
 ## v0.19.0 - 2022-01-12
 
