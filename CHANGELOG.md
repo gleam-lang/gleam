@@ -23,6 +23,7 @@
   dependencies if present before compilation.
 - The format used by the formatter has been improved.
 - Package names in `gleam.toml` are validated when the config is read.
+- The `priv` directory is copied for Gleam projects managed by the build tool.
 
 ## v0.19.0 - 2022-01-12
 
