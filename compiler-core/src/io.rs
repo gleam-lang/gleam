@@ -312,6 +312,14 @@ pub mod test {
         fn copy_dir(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support copy_dir")
         }
+
+        fn hardlink(&self, _: &Path, _: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support hardlink")
+        }
+
+        fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support symlink")
+        }
     }
 
     impl FileSystemReader for FilesChannel {

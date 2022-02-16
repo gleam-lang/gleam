@@ -55,6 +55,14 @@ impl FileSystemWriter for WasmFileSystem {
     fn mkdir(&self, _: &Path) -> Result<(), Error> {
         Ok(())
     }
+
+    fn hardlink(&self, _: &Path, _: &Path) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 impl FileSystemReader for WasmFileSystem {
