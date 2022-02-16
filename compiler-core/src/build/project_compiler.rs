@@ -166,11 +166,11 @@ where
         }
 
         // TODO: unit test
-        let ebin_priv = project_dir.join("ebin");
-        if self.io.is_directory(&ebin_priv) {
+        let ebin_dir = project_dir.join("ebin");
+        if self.io.is_directory(&ebin_dir) {
             tracing::debug!("copying_ebin_to_build");
             // TODO: This could be a symlink
-            self.io.copy_dir(&ebin_priv, &dest)?;
+            self.io.copy_dir(&ebin_dir, &dest)?;
         }
 
         // TODO: test
