@@ -283,6 +283,7 @@ impl StandardIoAction {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum FileIoAction {
+    Link,
     Open,
     Copy,
     Read,
@@ -290,12 +291,14 @@ pub enum FileIoAction {
     Delete,
     Create,
     WriteTo,
+    Canonicalise,
     FindParent,
 }
 
 impl FileIoAction {
     fn text(&self) -> &'static str {
         match self {
+            FileIoAction::Link => "link",
             FileIoAction::Open => "open",
             FileIoAction::Copy => "copy",
             FileIoAction::Read => "read",
@@ -304,6 +307,7 @@ impl FileIoAction {
             FileIoAction::Create => "create",
             FileIoAction::WriteTo => "write to",
             FileIoAction::FindParent => "find the parent of",
+            FileIoAction::Canonicalise => "Canonicalise",
         }
     }
 }

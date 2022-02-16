@@ -148,6 +148,8 @@ pub trait FileSystemWriter {
     fn delete(&self, path: &Path) -> Result<(), Error>;
     fn copy(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
+    fn hardlink(&self, from: &Path, to: &Path) -> Result<(), Error>;
+    fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]

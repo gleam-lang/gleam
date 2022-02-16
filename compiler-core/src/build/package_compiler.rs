@@ -167,12 +167,11 @@ where
         tracing::info!("copying_native_source_files");
 
         // TODO: unit test
-        let priv_dir = self.root.join("priv");
-        if self.io.is_directory(&priv_dir) {
-            tracing::debug!("copying_priv_to_build");
-            self.io.delete(&self.out.join("priv"))?;
-            // TODO: This could be a symlink
-            self.io.copy_dir(&priv_dir, &self.out)?;
+        let priv_source = self.root.join("priv");
+        let priv_build = self.out.join("priv");
+        if self.io.is_directory(&priv_source) && !self.io.is_directory(&priv_build) {
+            tracing::debug!("linking_priv_to_build");
+            self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
         let src = self.root.join("src");

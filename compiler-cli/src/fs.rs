@@ -101,6 +101,14 @@ impl FileSystemWriter for ProjectIO {
     fn mkdir(&self, path: &Path) -> Result<(), Error> {
         mkdir(path)
     }
+
+    fn hardlink(&self, from: &Path, to: &Path) -> Result<(), Error> {
+        hardlink(from, to)
+    }
+
+    fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error> {
+        symlink_dir(from, to)
+    }
 }
 
 impl CommandExecutor for ProjectIO {
@@ -465,4 +473,41 @@ pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
             err: Some(err.to_string()),
         })
         .map(|_| ())
+}
+
+pub fn symlink_dir(
+    src: impl AsRef<Path> + Debug,
+    dest: impl AsRef<Path> + Debug,
+) -> Result<(), Error> {
+    tracing::debug!(src=?src, dest=?dest, "symlinking");
+    symlink::symlink_dir(&canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
+        Error::FileIo {
+            action: FileIoAction::Link,
+            kind: FileKind::File,
+            path: PathBuf::from(dest.as_ref()),
+            err: Some(err.to_string()),
+        }
+    })?;
+    Ok(())
+}
+
+pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::debug!(from=?from, to=?to, "hardlinking");
+    std::fs::hard_link(&from, &to)
+        .map_err(|err| Error::FileIo {
+            action: FileIoAction::Link,
+            kind: FileKind::File,
+            path: PathBuf::from(from.as_ref()),
+            err: Some(err.to_string()),
+        })
+        .map(|_| ())
+}
+
+fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
+    std::fs::canonicalize(path).map_err(|err| Error::FileIo {
+        action: FileIoAction::Canonicalise,
+        kind: FileKind::File,
+        path: PathBuf::from(path),
+        err: Some(err.to_string()),
+    })
 }

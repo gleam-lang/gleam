@@ -46,11 +46,20 @@ impl FileSystemWriter for InMemoryFileSystem {
     fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
+
     fn copy_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 
     fn mkdir(&self, _: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
+    fn hardlink(&self, _: &Path, _: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
+    fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 }
