@@ -2614,3 +2614,56 @@ const x = new $two.A();
         ]),
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1495
+#[test]
+fn import_error() {
+    assert_erlang_compile!(
+        vec![
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/one.gleam"),
+                name: "one".to_string(),
+                code: "pub type Error { MyError }".to_string(),
+            },
+            Source {
+                origin: Origin::Src,
+                path: PathBuf::from("/src/two.gleam"),
+                name: "two".to_string(),
+                code: r#"import one.{Error}"#.to_string(),
+            },
+        ],
+        Ok(vec![
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
+                text: "{application, the_package, [
+    {vsn, \"1.0.0\"},
+    {applications, []},
+    {description, \"The description\"},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+"
+                .into(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
+                text: "-module(one).
+-compile(no_auto_import).
+
+-export_type([error/0]).
+
+-type error() :: my_error.
+
+
+"
+                .to_string(),
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/build/two.erl"),
+                text: "-module(two).\n".to_string(),
+            }
+        ]),
+    );
+}

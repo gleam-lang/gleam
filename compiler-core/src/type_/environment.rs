@@ -8,6 +8,9 @@ pub struct Environment<'a> {
     pub current_module: &'a [String],
     pub ids: UniqueIdGenerator,
     previous_id: u64,
+    /// Names of types or values that have been imported an unqualified fashion
+    /// from other modules. Used to prevent multiple imports using the same name.
+    pub imported_names: HashMap<String, SrcSpan>,
     pub importable_modules: &'a HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
     pub imported_types: HashSet<String>,
@@ -74,6 +77,7 @@ impl<'a> Environment<'a> {
             module_types_constructors: prelude.types_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
+            imported_names: HashMap::new(),
             accessors: prelude.accessors.clone(),
             local_values: prelude.values.clone().into(),
             importable_modules,

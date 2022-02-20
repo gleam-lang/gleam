@@ -1690,13 +1690,20 @@ pub fn register_import(
                 let imported_name = as_name.as_ref().unwrap_or(name);
 
                 // Check if value already was imported
-                if let Some(value) = environment.local_values.get(imported_name) {
+                if let Some(previous) = environment.imported_names.get(imported_name) {
                     return Err(Error::DuplicateImport {
                         location: *location,
-                        previous_location: value.origin,
+                        previous_location: *previous,
                         name: name.to_string(),
                     });
                 }
+
+                // Register the name as imported so it can't be imported a
+                // second time in future
+                let _ = environment
+                    .imported_names
+                    .insert(imported_name.clone(), *location);
+
                 // Register the unqualified import if it is a value
                 if let Some(value) = module_info.values.get(name) {
                     environment.insert_variable(
