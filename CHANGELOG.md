@@ -25,7 +25,9 @@
 - Package names in `gleam.toml` are validated when the config is read.
 - The `priv` directory is linked into the build directory for Gleam projects
   managed by the build tool.
-- Fixed an error where type errors from pipes could show incorrect information.
+- Fixed a bug where type errors from pipes could show incorrect information.
+- Fixed a bug where types could not be imported if they had the same name as a
+  value in the prelude.
 
 ## v0.19.0 - 2022-01-12
 
