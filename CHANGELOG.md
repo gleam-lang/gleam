@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.20.0-rc1 - 2022-02-20
 
 - Type unification errors involving user annotated types now refer to the names
   specified by the user instead of internal rigid-type ids.
