@@ -296,13 +296,7 @@ where
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Token::NotEqual, tok_end));
                 } else {
-                    return Err(LexicalError {
-                        error: LexicalErrorType::UnrecognizedToken { tok: '!' },
-                        location: SrcSpan {
-                            start: tok_start,
-                            end: tok_start,
-                        },
-                    });
+                    self.eat_single_char(Token::Bang);
                 }
             }
             '(' => {
