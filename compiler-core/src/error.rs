@@ -87,6 +87,9 @@ pub enum Error {
         err: Option<String>,
     },
 
+    #[error("{error}")]
+    GitInitialization { error: String },
+
     #[error("io operation failed")]
     StandardIo {
         action: StandardIoAction,
@@ -636,6 +639,14 @@ Second: {}",
                         path.to_string_lossy(),
                         err,
                     ),
+                };
+                write_project(buf, diagnostic);
+            }
+
+            Error::GitInitialization { error } => {
+                let diagnostic = ProjectErrorDiagnostic {
+                    title: "Failed to initilize git".to_string(),
+                    label: format!("An error occurred while trying to initialize a git repository: {}", error),
                 };
                 write_project(buf, diagnostic);
             }
