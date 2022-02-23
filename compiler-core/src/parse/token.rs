@@ -38,6 +38,7 @@ pub enum Token {
     Colon,
     Comma,
     Hash, // '#'
+    Bang, // '!'
     Equal,
     EqualEqual, // '=='
     NotEqual,   // '!='
@@ -131,6 +132,7 @@ impl fmt::Display for Token {
             Token::Colon => ":",
             Token::Comma => ",",
             Token::Hash => "#",
+            Token::Bang => "!",
             Token::Equal => "=",
             Token::EqualEqual => "==",
             Token::NotEqual => "!=",
