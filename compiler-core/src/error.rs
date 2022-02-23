@@ -1766,12 +1766,13 @@ These values are not matched:
                     ParseErrorType::UnexpectedToken { expected } => {
                         let mut messages = expected.clone();
                         if let Some(s) = messages.first_mut() {
-                            *s = format!("Expected one of: {}", s);
-                        }
+                            *s = match s.as_str() {
+                                "\"->\"" => format!("Expected one of: {}\n\nNOTE: If you are using a case clause with multiple expressions, try surround it with curly braces", s),
+                                _  => format!("Expected one of: {}", s)
+                            }
+                        };
 
-                        ( "I was not expecting this.",
-                          messages
-                        )
+                        ("I was not expecting this.", messages)
                     }
                 };
 
