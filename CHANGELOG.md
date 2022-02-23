@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.0 - 2022-02-23
+
+- New projects are created with `gleam_stdlib` v0.20.
+
 ## v0.20.0-rc1 - 2022-02-20
 
 - Type unification errors involving user annotated types now refer to the names
