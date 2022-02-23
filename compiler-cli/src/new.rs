@@ -58,6 +58,7 @@ impl Creator {
         crate::fs::mkdir(&self.test)?;
         crate::fs::mkdir(&self.github)?;
         crate::fs::mkdir(&self.workflows)?;
+        crate::fs::git_init(&self.root)?;
 
         match self.options.template {
             Template::Lib => {

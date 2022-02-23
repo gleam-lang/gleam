@@ -503,6 +503,14 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
         .map(|_| ())
 }
 
+pub fn git_init(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    tracing::debug!(path=?path, "initializing git");
+
+    git2::Repository::init(path).map_err(|err| Error::GitInitialization {
+        error: err.to_string(),
+    }).map(|_| ())
+}
+
 fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
     std::fs::canonicalize(path).map_err(|err| Error::FileIo {
         action: FileIoAction::Canonicalise,

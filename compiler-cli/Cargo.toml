@@ -70,6 +70,8 @@ base16 = "0.2.1"
 toml_edit = "0.9"
 # Cross platform symlink creation helper
 symlink = "0.1"
+# git utilities
+git2 = "0.13.25"
 
 [dev-dependencies]
 # Test assertion errors with diffs
