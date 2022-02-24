@@ -1760,8 +1760,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let typ = collapse_links(typ);
 
         let value = match (&*typ, value) {
-            // TODO: here we want to pass the type information into the
-            // inference function so that we can tell what the args will be
+            // If the argument is expected to be a function and we are passed a
+            // function literal with the correct number of arguments then we
+            // have special handling of this argument, passing in information
+            // about what the expected arguments are. This extra information
+            // when type checking the function body means that the
+            // `record.field` access syntax can be used, and improves error
+            // messages.
             (
                 Type::Fn {
                     args: expected_arguments,
