@@ -1667,6 +1667,27 @@ fn try_overflow() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1093
+#[test]
+fn fn_contextual_info() {
+    assert_module_infer!(
+        "
+type Box {
+  Box(inner: Int)
+}
+
+fn call(argument: t, function: fn(t) -> tt) -> tt {
+  function(argument)
+}
+
+pub fn main() {
+  call(Box(1), fn(box) { box.inner })
+}
+",
+        vec![("main", "fn() -> Int")],
+    );
+}
+
 #[test]
 fn module_name_validation() {
     assert!(validate_module_name(&["dream".to_string()]).is_ok());
