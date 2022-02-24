@@ -506,9 +506,21 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
 pub fn git_init(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
 
-    git2::Repository::init(path).map_err(|err| Error::GitInitialization {
-        error: err.to_string(),
-    }).map(|_| ())
+    let args = vec![
+        "init".into(),
+        "--quiet".into(),
+        path.as_ref().to_str().unwrap().into(),
+    ];
+
+    match ProjectIO::new().exec("git", &args, &[], None) {
+        Ok(_) => Ok(()),
+        Err(err) => match err {
+            Error::ShellProgramNotFound { .. } => Ok(()),
+            _ => Err(Error::GitInitialization {
+                error: err.to_string(),
+            }),
+        },
+    }
 }
 
 fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
