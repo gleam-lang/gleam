@@ -1789,6 +1789,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location,
             ),
 
+            // Otherwise just perform normal type inference.
             (_, value) => self.infer(value),
         }?;
 
@@ -1800,7 +1801,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn do_infer_fn(
         &mut self,
         args: Vec<UntypedArg>,
-        // If given these must be the same length as the arguments given
         expected_args: &[Arc<Type>],
         body: UntypedExpr,
         return_annotation: &Option<TypeAst>,
