@@ -1,7 +1,7 @@
 // An idea for how generated docs could contain information on modules within
 // the package in a machine readable format.
 {
-  "publishing-gleam-version": "0.21.0-dev",
+  "publishing-gleam-version": "0.20.0",
   "name": "my_package",
   "modules": {
     "my_module": {
