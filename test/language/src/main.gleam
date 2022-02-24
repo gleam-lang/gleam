@@ -34,6 +34,7 @@ pub fn main() -> Int {
       suite("ints", ints_tests()),
       suite("mod with numbers", mod_with_numbers_tests()),
       suite("record update", record_update_tests()),
+      suite("record access", record_access_tests()),
       suite("shadowed module", shadowed_module_tests()),
       suite("unicode overflow", unicode_overflow_tests()),
     ])
@@ -1145,6 +1146,22 @@ fn record_update_tests() {
           |> id,
         )
       assert_equal(record_update.Box("a", 6), updated)
+    }),
+  ]
+}
+
+fn record_access_tests() {
+  let person = Person(name: "Quinn", age: 27, country: "Canada")
+  [
+    "record access 1"
+    |> example(fn() { assert_equal(person.name, "Quinn") }),
+    "record access 2"
+    |> example(fn() { assert_equal(person.age, 27) }),
+    // https://github.com/gleam-lang/gleam/issues/1093
+    "contextual info for access"
+    |> example(fn() {
+      let apply = fn(a, f) { f(a) }
+      assert_equal(apply(person, fn(x) { x.name }), "Quinn")
     }),
   ]
 }
