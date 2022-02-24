@@ -419,8 +419,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             // Potential future optimisation.
                             let index_of_first_labelled_arg = pattern_args
                                 .iter()
-                                .position(|a| a.label.is_some())
-                                .unwrap_or_else(|| pattern_args.len());
+                                .position(|a| a.label.is_some()).unwrap_or(pattern_args.len());
 
                             while pattern_args.len() < field_map.arity {
                                 let new_call_arg = CallArg {

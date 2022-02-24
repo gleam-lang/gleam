@@ -140,7 +140,7 @@ impl SourceTree {
             .to_str()
             .expect("Source tree to_str")
             .to_string()
-            .replace("\\", "/");
+            .replace('\\', "/");
 
         // Parse the source
         let (mut module, module_extra) =

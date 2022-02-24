@@ -355,7 +355,7 @@ impl<'a> ReleaseMetadata<'a> {
             licenses = self
                 .licenses
                 .iter()
-                .map(|l| quotes(&l.to_string()))
+                .map(|l| quotes(l.as_ref()))
                 .join(", "),
             build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
             requirements = self

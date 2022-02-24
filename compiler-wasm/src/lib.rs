@@ -134,7 +134,7 @@ fn gather_compiled_files(
         .for_each(|dir_entry| {
             let path = dir_entry.as_path();
             let contents: String = wfs.read(path).expect("iterated dir entries should exist");
-            let path = path.to_str().unwrap().replace("\\", "/");
+            let path = path.to_str().unwrap().replace('\\', "/");
 
             files.insert(path, contents);
         });

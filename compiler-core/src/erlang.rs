@@ -624,7 +624,7 @@ fn expr_segment<'a>(
 
     let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
         TypedExpr::Int { value, .. } => {
-            let v = value.replace("_", "");
+            let v = value.replace('_', "");
             let v = u64::from_str(&v).unwrap_or(0);
             Some(Document::String(format!(":{}", v)))
         }
@@ -889,7 +889,7 @@ fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> D
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
-    let mut value = value.replace("_", "");
+    let mut value = value.replace('_', "");
     if value.ends_with('.') {
         value.push('0')
     }
@@ -967,7 +967,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
 fn int<'a>(value: &str) -> Document<'a> {
     Document::String(
         value
-            .replace("_", "")
+            .replace('_', "")
             .replace("0x", "16#")
             .replace("0o", "8#")
             .replace("0b", "2#"),

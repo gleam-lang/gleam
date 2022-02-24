@@ -32,7 +32,7 @@ impl<'a> Erlang<'a> {
         modules: &[Module],
     ) -> Result<()> {
         for module in modules {
-            let erl_name = module.name.replace("/", "@");
+            let erl_name = module.name.replace('/', "@");
             self.erlang_module(&writer, module, &erl_name)?;
             self.erlang_record_headers(&writer, module, &erl_name)?;
         }
@@ -98,12 +98,12 @@ impl<'a> ErlangApp<'a> {
             .erlang
             .application_start_module
             .as_ref()
-            .map(|module| tuple("mod", &format!("'{}'", module.replace("/", "@"))))
+            .map(|module| tuple("mod", &format!("'{}'", module.replace('/', "@"))))
             .unwrap_or_default();
 
         let modules = modules
             .iter()
-            .map(|m| m.name.replace("/", "@"))
+            .map(|m| m.name.replace('/', "@"))
             .sorted()
             .join(",\n               ");
 

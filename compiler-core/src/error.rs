@@ -1973,7 +1973,7 @@ Fix the warnings and try again!",
                         ),
                 };
                 write_project(buf, diagnostic);
-                writeln!(buf, "\n{}", wrap(&error.to_string())).unwrap();
+                writeln!(buf, "\n{}", wrap(error)).unwrap();
             }
 
             Error::DuplicateDependency(name) => {

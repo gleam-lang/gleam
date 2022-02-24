@@ -549,7 +549,7 @@ where
                     // tuple access
                     Some((_, Token::Int { value }, end)) => {
                         let _ = self.next_tok();
-                        let v = value.replace("_", "");
+                        let v = value.replace('_', "");
                         if let Ok(index) = u64::from_str(&v) {
                             expr = UntypedExpr::TupleIndex {
                                 location: SrcSpan { start, end },
@@ -1024,7 +1024,7 @@ where
                 if let Some((dot_s, _)) = self.maybe_one(&Token::Dot) {
                     match self.next_tok() {
                         Some((_, Token::Int { value }, int_e)) => {
-                            let v = value.replace("_", "");
+                            let v = value.replace('_', "");
                             if let Ok(index) = u64::from_str(&v) {
                                 Ok(Some(ClauseGuard::TupleIndex {
                                     location: SrcSpan {
@@ -2169,7 +2169,7 @@ where
                             if let Some((int_s, Token::Int { value, .. }, int_e)) = self.next_tok()
                             {
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
-                                let v = value.replace("_", "");
+                                let v = value.replace('_', "");
                                 match u8::from_str(&v) {
                                     Ok(units) if units > 0 => {
                                         Ok(Some(BitStringSegmentOption::Unit {
