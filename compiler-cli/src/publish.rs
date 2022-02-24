@@ -352,11 +352,7 @@ impl<'a> ReleaseMetadata<'a> {
                 .sorted()
                 .join(","),
             links = self.links.iter().map(link).join(","),
-            licenses = self
-                .licenses
-                .iter()
-                .map(|l| quotes(l.as_ref()))
-                .join(", "),
+            licenses = self.licenses.iter().map(|l| quotes(l.as_ref())).join(", "),
             build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
             requirements = self
                 .requirements

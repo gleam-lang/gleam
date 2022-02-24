@@ -868,7 +868,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 match tuple.type_().as_ref() {
                     Type::Tuple { elems } => {
                         let type_ = elems
-                            .get(index as usize).ok_or(Error::OutOfBoundsTupleIndex {
+                            .get(index as usize)
+                            .ok_or(Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,
                                 size: elems.len(),
