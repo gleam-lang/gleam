@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.20.1 - 2022-02-24
+
+- The type checker has been improved to enable use of the record access synax
+  (`record.field`) in anonymous functions passed into higher order functions
+  without additional annotations.
+
+## v0.20.0 - 2022-02-23
+
+- New projects are created with `gleam_stdlib` v0.20.
+
 ## v0.20.0-rc1 - 2022-02-20
 
 - Type unification errors involving user annotated types now refer to the names

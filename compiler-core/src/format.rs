@@ -53,6 +53,7 @@ struct Intermediate<'a> {
     empty_lines: &'a [usize],
 }
 
+/// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
 pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],

@@ -107,7 +107,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } => self.infer_fn(args, *body, is_capture, return_annotation, location),
+            } => self.infer_fn(args, &[], *body, is_capture, return_annotation, location),
 
             UntypedExpr::Assignment {
                 location,
@@ -269,12 +269,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_fn(
         &mut self,
         args: Vec<UntypedArg>,
+        expected_args: &[Arc<Type>],
         body: UntypedExpr,
         is_capture: bool,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (args, body) = self.do_infer_fn(args, body, &return_annotation)?;
+        let (args, body) = self.do_infer_fn(args, expected_args, body, &return_annotation)?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
         let typ = fn_(args_types, body.type_());
         Ok(TypedExpr::Fn {
@@ -287,7 +288,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_arg(&mut self, arg: UntypedArg) -> Result<TypedArg, Error> {
+    fn infer_arg(
+        &mut self,
+        arg: UntypedArg,
+        expected: Option<Arc<Type>>,
+    ) -> Result<TypedArg, Error> {
         let Arg {
             names,
             annotation,
@@ -298,6 +303,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone()
             .map(|t| self.type_from_ast(&t))
             .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
+
+        // If we know the expected type of the argument from its contextual
+        // usage then unify the newly constructed type with the expected type.
+        // We do this here because then there is more type information for the
+        // function being type checked, resulting in better type errors and the
+        // record field access syntax working.
+        if let Some(expected) = expected {
+            self.unify(expected, typ.clone())
+                .map_err(|e| convert_unify_error(e, location))?;
+        }
+
         Ok(Arg {
             names,
             location,
@@ -853,7 +869,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     Type::Tuple { elems } => {
                         let type_ = elems
                             .get(index as usize)
-                            .ok_or_else(|| Error::OutOfBoundsTupleIndex {
+                            .ok_or(Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,
                                 size: elems.len(),
@@ -1725,9 +1741,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     value,
                     location,
                 } = arg;
-                let value = self.infer(value)?;
-                self.unify(typ.clone(), value.type_())
-                    .map_err(|e| convert_unify_error(e, value.location()))?;
+                let value = self.infer_call_argument(value, typ.clone())?;
                 Ok(CallArg {
                     label,
                     value,
@@ -1738,9 +1752,56 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok((fun, args, return_type))
     }
 
+    fn infer_call_argument(
+        &mut self,
+        value: UntypedExpr,
+        typ: Arc<Type>,
+    ) -> Result<TypedExpr, Error> {
+        let typ = collapse_links(typ);
+
+        let value = match (&*typ, value) {
+            // If the argument is expected to be a function and we are passed a
+            // function literal with the correct number of arguments then we
+            // have special handling of this argument, passing in information
+            // about what the expected arguments are. This extra information
+            // when type checking the function body means that the
+            // `record.field` access syntax can be used, and improves error
+            // messages.
+            (
+                Type::Fn {
+                    args: expected_arguments,
+                    ..
+                },
+                UntypedExpr::Fn {
+                    arguments,
+                    body,
+                    return_annotation,
+                    location,
+                    is_capture: false,
+                    ..
+                },
+            ) if expected_arguments.len() == arguments.len() => self.infer_fn(
+                arguments,
+                expected_arguments,
+                *body,
+                false,
+                return_annotation,
+                location,
+            ),
+
+            // Otherwise just perform normal type inference.
+            (_, value) => self.infer(value),
+        }?;
+
+        self.unify(typ, value.type_())
+            .map_err(|e| convert_unify_error(e, value.location()))?;
+        Ok(value)
+    }
+
     pub fn do_infer_fn(
         &mut self,
         args: Vec<UntypedArg>,
+        expected_args: &[Arc<Type>],
         body: UntypedExpr,
         return_annotation: &Option<TypeAst>,
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
@@ -1748,7 +1809,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // type variable or a type provided by an annotation.
         let args: Vec<_> = args
             .into_iter()
-            .map(|arg| self.infer_arg(arg))
+            .enumerate()
+            .map(|(i, arg)| self.infer_arg(arg, expected_args.get(i).cloned()))
             .try_collect()?;
 
         let return_type = match return_annotation {
