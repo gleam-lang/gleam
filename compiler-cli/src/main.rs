@@ -437,7 +437,7 @@ fn command_build(
 fn print_config() -> Result<()> {
     let config = root_config()?;
     println!("{:#?}", config);
-    Ok(()))
+    Ok(())
 }
 
 fn clean() -> Result<()> {
