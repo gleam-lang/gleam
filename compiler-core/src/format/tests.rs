@@ -4,9 +4,8 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
-        // println!("\n\n\n{}", $src);
         let mut writer = String::new();
-        pretty(&mut writer, $src).unwrap();
+        pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
         assert_eq!($src, writer);
     };
 }
@@ -14,7 +13,7 @@ macro_rules! assert_format {
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
         let mut writer = String::new();
-        pretty(&mut writer, $src).unwrap();
+        pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
         assert_eq!(writer, $output);
     };
 }

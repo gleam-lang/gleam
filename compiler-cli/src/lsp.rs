@@ -2,17 +2,16 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
-use gleam_core::{Error, Result};
-use lsp_server::Message;
+use gleam_core::{line_numbers::LineNumbers, Error, Result};
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::Formatting,
-    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidSaveTextDocumentParams,
-    InitializeParams, OneOf, Position, Range, SaveOptions, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
-    TextDocumentSyncSaveOptions, TextEdit,
+    Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
+    DidSaveTextDocumentParams, InitializeParams, OneOf, Position, PublishDiagnosticsParams, Range,
+    SaveOptions, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
 };
 
 pub fn main() -> Result<()> {
@@ -98,21 +97,35 @@ impl LanguageServer {
         for msg in &connection.receiver {
             tracing::debug!("{:?}", msg);
             match msg {
-                Message::Request(request) => {
+                lsp_server::Message::Request(request) => {
                     if connection.handle_shutdown(&request).unwrap() {
                         return Ok(());
                     }
                     let id = request.id.clone();
                     let result = self.handle_request(request);
-                    let response = result_to_response(result, id);
-                    connection.sender.send(Message::Response(response)).unwrap();
+                    let (response, diagnostics) = result_to_response(result, id);
+                    if let Some(diagnostics) = diagnostics {
+                        connection
+                            .sender
+                            .send(lsp_server::Message::Notification(
+                                lsp_server::Notification {
+                                    method: "textDocument/publishDiagnostics".into(),
+                                    params: serde_json::to_value(diagnostics).unwrap(),
+                                },
+                            ))
+                            .unwrap();
+                    }
+                    connection
+                        .sender
+                        .send(lsp_server::Message::Response(response))
+                        .unwrap();
                 }
 
-                Message::Response(_) => {
+                lsp_server::Message::Response(_) => {
                     // Nothing to do here...
                 }
 
-                Message::Notification(notification) => {
+                lsp_server::Message::Notification(notification) => {
                     self.handle_notification(notification).unwrap();
                 }
             }
@@ -138,6 +151,7 @@ impl LanguageServer {
         }
     }
 
+    // TODO: build project
     fn did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
@@ -169,6 +183,7 @@ impl LanguageServer {
         }
     }
 
+    // TODO: clear diagnostics when formatting succeeds
     fn format(&self, params: lsp_types::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
         let path = params.text_document.uri.path();
         let mut new_text = String::new();
@@ -176,13 +191,13 @@ impl LanguageServer {
         match self.edited.get(path) {
             // If we have a cached version of the file in memory format that
             Some(src) => {
-                gleam_core::format::pretty(&mut new_text, src)?;
+                gleam_core::format::pretty(&mut new_text, src, &Path::new(path))?;
             }
 
             // Otherwise format the file from disc
             None => {
                 let src = crate::fs::read(&path)?;
-                gleam_core::format::pretty(&mut new_text, &src)?;
+                gleam_core::format::pretty(&mut new_text, &src, &Path::new(path))?;
             }
         };
 
@@ -229,25 +244,85 @@ fn text_edit_replace(new_text: String) -> TextEdit {
 fn result_to_response(
     result: Result<serde_json::Value>,
     id: lsp_server::RequestId,
-) -> lsp_server::Response {
+) -> (lsp_server::Response, Option<PublishDiagnosticsParams>) {
     match result {
-        Ok(result) => lsp_server::Response {
-            id,
-            error: None,
-            result: Some(result),
-        },
+        Ok(result) => {
+            let response = lsp_server::Response {
+                id,
+                error: None,
+                result: Some(result),
+            };
+            (response, None)
+        }
 
-        Err(error) => lsp_server::Response {
-            id,
-            error: Some(error_to_response_error(error)),
-            result: None,
-        },
+        Err(Error::Parse {
+            path, error, src, ..
+        }) => {
+            let location = error.location;
+            let line_numbers = LineNumbers::new(&src);
+            let start = line_numbers.line_and_column_number(location.start);
+            let end = line_numbers.line_and_column_number(location.end);
+            let response = lsp_server::Response {
+                id,
+                error: None,
+                result: Some(serde_json::json!(null)),
+            };
+            let (detail, extra) = error.details();
+            let mut message = "Parse error: ".to_string();
+            message.push_str(detail);
+            for extra in extra {
+                message.push('\n');
+                message.push('\n');
+                message.push_str(&extra);
+            }
+            message.push('\n');
+            let diagnostic = Diagnostic {
+                range: Range {
+                    start: Position {
+                        line: start.line as u32 - 1,
+                        character: start.column as u32 - 1,
+                    },
+                    end: Position {
+                        line: end.line as u32 - 1,
+                        character: end.column as u32 - 1,
+                    },
+                },
+                severity: Some(DiagnosticSeverity::ERROR),
+                code: None,
+                code_description: None,
+                source: None,
+                message,
+                related_information: None,
+                tags: None,
+                data: None,
+            };
+            tracing::info!("{:?}", path);
+            let path = path.canonicalize().unwrap();
+            let mut file: String = "file://".into();
+            file.push_str(&path.as_os_str().to_string_lossy());
+            let uri = Url::parse(&file).unwrap();
+            let diagnostic_params = PublishDiagnosticsParams {
+                uri,
+                diagnostics: vec![diagnostic],
+                version: None,
+            };
+            (response, Some(diagnostic_params))
+        }
+
+        Err(error) => {
+            let response = lsp_server::Response {
+                id,
+                error: Some(error_to_response_error(error)),
+                result: None,
+            };
+            (response, None)
+        }
     }
 }
 
 fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
     lsp_server::ResponseError {
-        code: 0, // We should assign a code to each error.
+        code: 1, // We should assign a code to each error.
         message: error.pretty_string(),
         data: None,
     }

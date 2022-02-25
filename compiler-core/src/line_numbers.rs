@@ -19,4 +19,16 @@ impl LineNumbers {
             .unwrap_or_else(|next_line| next_line - 1)
             + 1
     }
+
+    pub fn line_and_column_number(&self, byte_index: usize) -> LineColumn {
+        let line = self.line_number(byte_index);
+        let column = byte_index - self.line_starts.get(line - 1).copied().unwrap_or_default() + 1;
+        LineColumn { line, column }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct LineColumn {
+    pub line: usize,
+    pub column: usize,
 }

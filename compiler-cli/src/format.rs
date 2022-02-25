@@ -2,7 +2,11 @@ use gleam_core::{
     error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
     io::OutputFile,
 };
-use std::{io::Read, path::PathBuf, str::FromStr};
+use std::{
+    io::Read,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
     if stdin {
@@ -15,7 +19,7 @@ pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
 fn process_stdin(check: bool) -> Result<()> {
     let src = read_stdin()?;
     let mut out = String::new();
-    gleam_core::format::pretty(&mut out, &src)?;
+    gleam_core::format::pretty(&mut out, &src, Path::new("<stdin>"))?;
 
     if !check {
         print!("{}", out);
@@ -90,7 +94,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
 fn format_file(problem_files: &mut Vec<Unformatted>, path: PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?;
     let mut output = String::new();
-    gleam_core::format::pretty(&mut output, &src)?;
+    gleam_core::format::pretty(&mut output, &src, &path)?;
 
     if src != output {
         problem_files.push(Unformatted {

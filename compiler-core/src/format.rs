@@ -11,14 +11,14 @@ use crate::{
     Error, Result,
 };
 use itertools::Itertools;
-use std::{path::PathBuf, sync::Arc};
+use std::{path::Path, sync::Arc};
 use vec1::Vec1;
 
 const INDENT: isize = 2;
 
-pub fn pretty(writer: &mut impl Utf8Writer, src: &str) -> Result<()> {
+pub fn pretty(writer: &mut impl Utf8Writer, src: &str, path: &Path) -> Result<()> {
     let (module, extra) = crate::parse::parse_module(src).map_err(|error| Error::Parse {
-        path: PathBuf::from("<standard input>"),
+        path: path.to_path_buf(),
         src: src.to_string(),
         error,
     })?;
