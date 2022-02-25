@@ -1,5 +1,6 @@
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
+#![allow(clippy::unimplemented)]
 
 use std::path::PathBuf;
 
