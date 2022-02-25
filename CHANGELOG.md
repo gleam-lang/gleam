@@ -4,6 +4,8 @@
 
 - Initialize `git` repo when creating a new project.
 - Log messages controlled with `GLEAM_LOG` now print to standard error.
+- Log message colours can be disabled by setting the `GLEAM_LOG_NOCOLOUR`
+  environment variable.
 
 ## v0.20.1 - 2022-02-24
 
