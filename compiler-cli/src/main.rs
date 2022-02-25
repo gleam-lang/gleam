@@ -187,7 +187,7 @@ enum Command {
     /// Clean build artifacts
     Clean,
 
-    /// Run the LSP compatible language server
+    /// Run the language server, to be used by editors
     #[clap(name = "lsp", setting = AppSettings::Hidden)]
     LanguageServer,
 }

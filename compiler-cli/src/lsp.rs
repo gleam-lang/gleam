@@ -13,11 +13,15 @@ pub fn main() -> Result<()> {
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(&ServerCapabilities::default()).unwrap();
+    let server_capabilities = ServerCapabilities::default();
+    let server_capabilities_json =
+        serde_json::to_value(&server_capabilities).expect("server_capabilities_serde");
+
     let initialization_params = connection
-        .initialize(server_capabilities)
+        .initialize(server_capabilities_json)
         // TODO: handle protocol error
         .unwrap();
+
     main_loop(connection, initialization_params)?;
     io_threads.join().expect("joining_lsp_threads");
 
@@ -28,7 +32,6 @@ pub fn main() -> Result<()> {
 
 fn main_loop(connection: lsp_server::Connection, params: serde_json::Value) -> Result<()> {
     let _params: InitializeParams = serde_json::from_value(params).unwrap();
-    eprintln!("starting example main loop");
     for msg in &connection.receiver {
         tracing::info!("in {:?}", msg);
         match msg {
