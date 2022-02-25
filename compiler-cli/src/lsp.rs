@@ -17,7 +17,6 @@ pub fn main() -> Result<()> {
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
-    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let server_capabilities = ServerCapabilities {
         text_document_sync: None,
         selection_range_provider: None,
@@ -56,6 +55,7 @@ pub fn main() -> Result<()> {
     let initialization_params: InitializeParams =
         serde_json::from_value(connection.initialize(server_capabilities_json).unwrap()).unwrap();
 
+    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     LanguageServer::new(connection, initialization_params).run()?;
     io_threads.join().expect("joining_lsp_threads");
 
