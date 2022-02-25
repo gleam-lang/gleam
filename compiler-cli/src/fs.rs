@@ -506,11 +506,7 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
 pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
 
-    let args = vec![
-        "init".into(),
-        "--quiet".into(),
-        path.display().to_string(),
-    ];
+    let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
     match ProjectIO::new().exec("git", &args, &[], None) {
         Ok(_) => Ok(()),

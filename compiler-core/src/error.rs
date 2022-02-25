@@ -646,7 +646,10 @@ Second: {}",
             Error::GitInitialization { error } => {
                 let diagnostic = ProjectErrorDiagnostic {
                     title: "Failed to initilize git".to_string(),
-                    label: format!("An error occurred while trying to initialize a git repository: {}", error),
+                    label: format!(
+                        "An error occurred while trying to initialize a git repository: {}",
+                        error
+                    ),
                 };
                 write_project(buf, diagnostic);
             }

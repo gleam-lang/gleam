@@ -906,7 +906,9 @@ fn generalise_statement(
             }
         }
 
-        statement @ (Statement::TypeAlias { .. }
+        statement
+        @
+        (Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
         | Statement::ExternalFn { .. }
         | Statement::ExternalType { .. }
