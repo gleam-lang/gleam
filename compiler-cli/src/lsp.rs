@@ -2,14 +2,17 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
 
-use std::path::PathBuf;
+use std::collections::HashMap;
 
-use gleam_core::Result;
+use gleam_core::{Error, Result};
 use lsp_server::Message;
 use lsp_types::{
-    notification::DidSaveTextDocument, request::Formatting, DidSaveTextDocumentParams,
+    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
+    request::Formatting,
+    DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidSaveTextDocumentParams,
     InitializeParams, OneOf, Position, Range, SaveOptions, ServerCapabilities,
-    TextDocumentSyncCapability, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit,
+    TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncSaveOptions, TextEdit,
 };
 
 pub fn main() -> Result<()> {
@@ -23,7 +26,7 @@ pub fn main() -> Result<()> {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
                 open_close: None,
-                change: None,
+                change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
                 save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
@@ -68,7 +71,7 @@ pub fn main() -> Result<()> {
         serde_json::from_value(connection.initialize(server_capabilities_json).unwrap()).unwrap();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServer::new(connection, initialization_params).run()?;
+    LanguageServer::new(initialization_params).run(connection)?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
@@ -77,43 +80,32 @@ pub fn main() -> Result<()> {
 }
 
 pub struct LanguageServer {
-    connection: lsp_server::Connection,
     _params: InitializeParams,
+
+    /// Files that have been edited in memory
+    edited: HashMap<String, String>,
 }
 
 impl LanguageServer {
-    pub fn new(connection: lsp_server::Connection, params: InitializeParams) -> Self {
+    pub fn new(params: InitializeParams) -> Self {
         Self {
-            connection,
             _params: params,
+            edited: HashMap::new(),
         }
     }
 
-    pub fn run(&self) -> Result<()> {
-        for msg in &self.connection.receiver {
-            tracing::debug!("Got message {:?}", msg);
+    pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
+        for msg in &connection.receiver {
+            tracing::debug!("{:?}", msg);
             match msg {
                 Message::Request(request) => {
-                    if self.connection.handle_shutdown(&request).unwrap() {
+                    if connection.handle_shutdown(&request).unwrap() {
                         return Ok(());
                     }
                     let id = request.id.clone();
-                    let response = match self.handle_request(request) {
-                        Ok(result) => lsp_server::Response {
-                            id,
-                            error: None,
-                            result: Some(result),
-                        },
-                        Err(error) => lsp_server::Response {
-                            id,
-                            error: Some(error),
-                            result: None,
-                        },
-                    };
-                    self.connection
-                        .sender
-                        .send(Message::Response(response))
-                        .unwrap();
+                    let result = self.handle_request(request);
+                    let response = result_to_response(result, id);
+                    connection.sender.send(Message::Response(response)).unwrap();
                 }
 
                 Message::Response(_) => {
@@ -128,28 +120,73 @@ impl LanguageServer {
         Ok(())
     }
 
-    fn handle_notification(&self, request: lsp_server::Notification) -> Result<()> {
+    fn handle_notification(&mut self, request: lsp_server::Notification) -> Result<()> {
         match request.method.as_str() {
             "textDocument/didSave" => {
-                did_save(cast_notification::<DidSaveTextDocument>(request).unwrap())?;
-                Ok(())
+                self.did_save(cast_notification::<DidSaveTextDocument>(request).unwrap())
+            }
+
+            "textDocument/didClose" => {
+                self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
+            }
+
+            "textDocument/didChange" => {
+                self.did_change(cast_notification::<DidChangeTextDocument>(request).unwrap())
             }
 
             _ => Ok(()),
         }
     }
 
-    fn handle_request(
-        &self,
-        request: lsp_server::Request,
-    ) -> Result<serde_json::Value, lsp_server::ResponseError> {
+    fn did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
+        // The file is in sync with the file system, discard our cache of the changes
+        let _ = self.edited.remove(params.text_document.uri.path());
+        Ok(())
+    }
+
+    fn did_close(&mut self, params: DidCloseTextDocumentParams) -> Result<()> {
+        // The file is in sync with the file system, discard our cache of the changes
+        let _ = self.edited.remove(params.text_document.uri.path());
+        Ok(())
+    }
+
+    fn did_change(&mut self, params: DidChangeTextDocumentParams) -> Result<()> {
+        // A file has changed in the editor so store a copy of the new content in memory
+        let path = params.text_document.uri.path().to_string();
+        if let Some(changes) = params.content_changes.into_iter().next() {
+            let _ = self.edited.insert(path, changes.text);
+        }
+        Ok(())
+    }
+
+    fn handle_request(&self, request: lsp_server::Request) -> Result<serde_json::Value> {
         match request.method.as_str() {
             "textDocument/formatting" => {
-                let text_edit = format(cast_request::<Formatting>(request).unwrap())?;
+                let text_edit = self.format(cast_request::<Formatting>(request).unwrap())?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
             _ => unimplemented!("Unsupported LSP request"),
         }
+    }
+
+    fn format(&self, params: lsp_types::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
+        let path = params.text_document.uri.path();
+        let mut new_text = String::new();
+
+        match self.edited.get(path) {
+            // If we have a cached version of the file in memory format that
+            Some(src) => {
+                gleam_core::format::pretty(&mut new_text, src)?;
+            }
+
+            // Otherwise format the file from disc
+            None => {
+                let src = crate::fs::read(&path)?;
+                gleam_core::format::pretty(&mut new_text, &src)?;
+            }
+        };
+
+        Ok(vec![text_edit_replace(new_text)])
     }
 }
 
@@ -173,19 +210,6 @@ where
     Ok(params)
 }
 
-// TODO: handle unable to read file
-// TODO: handle syntax errors
-fn format(
-    params: lsp_types::DocumentFormattingParams,
-) -> Result<Vec<TextEdit>, lsp_server::ResponseError> {
-    let path = PathBuf::from(params.text_document.uri.path());
-    let src = crate::fs::read(&path).unwrap();
-    let mut new_text = String::new();
-    gleam_core::format::pretty(&mut new_text, &src).unwrap();
-
-    Ok(vec![text_edit_replace(new_text)])
-}
-
 fn text_edit_replace(new_text: String) -> TextEdit {
     TextEdit {
         range: Range {
@@ -202,7 +226,29 @@ fn text_edit_replace(new_text: String) -> TextEdit {
     }
 }
 
-fn did_save(params: DidSaveTextDocumentParams) -> Result<()> {
-    tracing::info!("{:?}", params);
-    Ok(())
+fn result_to_response(
+    result: Result<serde_json::Value>,
+    id: lsp_server::RequestId,
+) -> lsp_server::Response {
+    match result {
+        Ok(result) => lsp_server::Response {
+            id,
+            error: None,
+            result: Some(result),
+        },
+
+        Err(error) => lsp_server::Response {
+            id,
+            error: Some(error_to_response_error(error)),
+            result: None,
+        },
+    }
+}
+
+fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
+    lsp_server::ResponseError {
+        code: 0, // We should assign a code to each error.
+        message: error.pretty_string(),
+        data: None,
+    }
 }
