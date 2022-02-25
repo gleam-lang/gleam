@@ -7,7 +7,9 @@ use std::path::PathBuf;
 use gleam_core::Result;
 use lsp_server::Message;
 use lsp_types::{
-    request::Formatting, InitializeParams, OneOf, Position, Range, ServerCapabilities, TextEdit,
+    notification::DidSaveTextDocument, request::Formatting, DidSaveTextDocumentParams,
+    InitializeParams, OneOf, Position, Range, SaveOptions, ServerCapabilities,
+    TextDocumentSyncCapability, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit,
 };
 
 pub fn main() -> Result<()> {
@@ -18,7 +20,17 @@ pub fn main() -> Result<()> {
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
     let server_capabilities = ServerCapabilities {
-        text_document_sync: None,
+        text_document_sync: Some(TextDocumentSyncCapability::Options(
+            TextDocumentSyncOptions {
+                open_close: None,
+                change: None,
+                will_save: None,
+                will_save_wait_until: None,
+                save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
+                    include_text: Some(false),
+                })),
+            },
+        )),
         selection_range_provider: None,
         hover_provider: None,
         completion_provider: None,
@@ -108,12 +120,23 @@ impl LanguageServer {
                     // Nothing to do here...
                 }
 
-                Message::Notification(_) => {
-                    // Nothing to do here...
+                Message::Notification(notification) => {
+                    self.handle_notification(notification).unwrap();
                 }
             }
         }
         Ok(())
+    }
+
+    fn handle_notification(&self, request: lsp_server::Notification) -> Result<()> {
+        match request.method.as_str() {
+            "textDocument/didSave" => {
+                did_save(cast_notification::<DidSaveTextDocument>(request).unwrap())?;
+                Ok(())
+            }
+
+            _ => Ok(()),
+        }
     }
 
     fn handle_request(
@@ -122,7 +145,7 @@ impl LanguageServer {
     ) -> Result<serde_json::Value, lsp_server::ResponseError> {
         match request.method.as_str() {
             "textDocument/formatting" => {
-                let text_edit = format(cast::<Formatting>(request).unwrap())?;
+                let text_edit = format(cast_request::<Formatting>(request).unwrap())?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
             _ => unimplemented!("Unsupported LSP request"),
@@ -130,12 +153,23 @@ impl LanguageServer {
     }
 }
 
-fn cast<R>(req: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
+fn cast_request<R>(request: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
 where
     R: lsp_types::request::Request,
     R::Params: serde::de::DeserializeOwned,
 {
-    let (_, params) = req.extract(R::METHOD)?;
+    let (_, params) = request.extract(R::METHOD)?;
+    Ok(params)
+}
+
+fn cast_notification<N>(
+    notification: lsp_server::Notification,
+) -> Result<N::Params, lsp_server::Notification>
+where
+    N: lsp_types::notification::Notification,
+    N::Params: serde::de::DeserializeOwned,
+{
+    let params = notification.extract::<N::Params>(N::METHOD)?;
     Ok(params)
 }
 
@@ -166,4 +200,9 @@ fn text_edit_replace(new_text: String) -> TextEdit {
         },
         new_text,
     }
+}
+
+fn did_save(params: DidSaveTextDocumentParams) -> Result<()> {
+    tracing::info!("{:?}", params);
+    Ok(())
 }
