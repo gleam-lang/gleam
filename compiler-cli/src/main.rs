@@ -61,6 +61,7 @@ mod format;
 mod fs;
 mod hex;
 mod http;
+mod lsp;
 mod new;
 mod panic;
 mod project;
@@ -185,6 +186,10 @@ enum Command {
 
     /// Clean build artifacts
     Clean,
+
+    /// Run the LSP compatible language server
+    #[clap(name = "lsp", setting = AppSettings::Hidden)]
+    LanguageServer,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -336,6 +341,8 @@ fn main() {
         Command::Add { package, dev } => add::command(package, dev),
 
         Command::Clean => clean(),
+
+        Command::LanguageServer => lsp::main(),
     };
 
     match result {
@@ -430,7 +437,7 @@ fn command_build(
 fn print_config() -> Result<()> {
     let config = root_config()?;
     println!("{:#?}", config);
-    Ok(())
+    Ok(()))
 }
 
 fn clean() -> Result<()> {
@@ -439,6 +446,7 @@ fn clean() -> Result<()> {
 
 fn initialise_logger() {
     tracing_subscriber::fmt()
+        .with_writer(std::io::stderr)
         .with_env_filter(&std::env::var("GLEAM_LOG").unwrap_or_else(|_| "off".to_string()))
         .with_target(false)
         .without_time()

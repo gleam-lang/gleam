@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Initialize `git` repo when creating a new project.
+- Log messages controlled with `GLEAM_LOG` now print to standard error.
 
 ## v0.20.1 - 2022-02-24
 
