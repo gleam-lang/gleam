@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{write, Diagnostic, Severity},
+    diagnostic::{write_old, OldDiagnostic, Severity},
     type_,
     type_::pretty::Printer,
 };
@@ -19,14 +19,14 @@ pub enum Warning {
 }
 
 impl Warning {
-    pub fn to_diagnostic(&self) -> (Diagnostic, String) {
+    pub fn to_diagnostic(&self) -> (OldDiagnostic, String) {
         #[allow(clippy::unwrap_used)]
         match self {
             Self::Type { path, src, warning } => match warning {
                 type_::Warning::Todo { location, typ } => {
                     let mut printer = Printer::new();
                     (
-                        Diagnostic {
+                        OldDiagnostic {
                             title: "Todo found".to_string(),
                             label: "Todo found".to_string(),
                             file: path.to_str().unwrap().to_string(),
@@ -44,7 +44,7 @@ your program.",
                 }
 
                 type_::Warning::ImplicitlyDiscardedResult { location } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused result value".to_string(),
                         label: "The Result value created here is unused".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -55,7 +55,7 @@ your program.",
                 ),
 
                 type_::Warning::UnusedLiteral { location } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused literal".to_string(),
                         label: "This value is never used".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -66,7 +66,7 @@ your program.",
                 ),
 
                 type_::Warning::NoFieldsRecordUpdate { location } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Fieldless record update".to_string(),
                         label: "This record update doesn't change any fields.".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -78,7 +78,7 @@ your program.",
                 ),
 
                 type_::Warning::AllFieldsRecordUpdate { location } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Redundant record update".to_string(),
                         label: "This record update specifies all fields".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -103,7 +103,7 @@ your program.",
                     };
 
                     (
-                        Diagnostic {
+                        OldDiagnostic {
                             title,
                             label,
                             file: path.to_str().unwrap().to_string(),
@@ -129,7 +129,7 @@ your program.",
                     };
 
                     (
-                        Diagnostic {
+                        OldDiagnostic {
                             title,
                             label,
                             file: path.to_str().unwrap().to_string(),
@@ -141,7 +141,7 @@ your program.",
                 }
 
                 type_::Warning::UnusedImportedValue { location, .. } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused imported value".to_string(),
                         label: "This imported value is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -152,7 +152,7 @@ your program.",
                 ),
 
                 type_::Warning::UnusedPrivateModuleConstant { location, .. } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused private constant".to_string(),
                         label: "This private constant is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -163,7 +163,7 @@ your program.",
                 ),
 
                 type_::Warning::UnusedPrivateFunction { location, .. } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused private function".to_string(),
                         label: "This private function is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -174,7 +174,7 @@ your program.",
                 ),
 
                 type_::Warning::UnusedVariable { location, name, .. } => (
-                    Diagnostic {
+                    OldDiagnostic {
                         title: "Unused variable".to_string(),
                         label: "This variable is never used.".to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -193,7 +193,7 @@ your program.",
             .write_all(b"\n")
             .expect("error pretty buffer write space before");
         let (diagnostic, extra) = self.to_diagnostic();
-        write(buffer, diagnostic, Severity::Warning);
+        write_old(buffer, diagnostic, Severity::Warning);
         if !extra.is_empty() {
             writeln!(buffer, "{}", extra).unwrap();
         }

@@ -1,33 +1,63 @@
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
-use codespan_reporting::{diagnostic::Label, files::SimpleFile, term::emit};
+use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFile, term::emit};
 use termcolor::Buffer;
+
+use crate::ast::SrcSpan;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Level {
+    Error,
+    Warning,
+}
+
+#[derive(Debug, Clone)]
+pub struct Label {
+    pub text: Option<String>,
+    pub span: SrcSpan,
+}
+
+#[derive(Debug, Clone)]
+pub struct Location {
+    pub src: String,
+    pub path: PathBuf,
+    pub label: Label,
+    pub extra_labels: Vec<Label>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Diagnostic {
+    pub title: String,
+    pub text: String,
+    pub level: Level,
+    pub location: Option<Location>,
+}
 
 #[derive(Debug)]
 pub struct DiagnosticLabel {
     pub style: LabelStyle,
-    pub location: crate::ast::SrcSpan,
+    pub location: SrcSpan,
     pub label: String,
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub struct Diagnostic {
+pub struct OldDiagnostic {
     pub file: String,
-    pub location: crate::ast::SrcSpan,
+    pub location: SrcSpan,
     pub src: String,
     pub title: String,
     pub label: String,
 }
 
 #[derive(Debug)]
-pub struct MultiLineDiagnostic {
+pub struct OldMultiLineDiagnostic {
     pub file: String,
     pub src: String,
     pub title: String,
     pub labels: Vec<DiagnosticLabel>,
 }
 
-pub fn write(buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
-    let diagnostic = MultiLineDiagnostic {
+pub fn write_old(buffer: &mut Buffer, d: OldDiagnostic, severity: Severity) {
+    let diagnostic = OldMultiLineDiagnostic {
         file: d.file,
         src: d.src,
         title: d.title,
@@ -38,17 +68,21 @@ pub fn write(buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
         }],
     };
 
-    write_diagnostic(buffer, diagnostic, severity)
+    write_diagnostic_old(buffer, diagnostic, severity)
 }
 
-pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severity: Severity) {
+pub fn write_diagnostic_old(
+    mut buffer: &mut Buffer,
+    d: OldMultiLineDiagnostic,
+    severity: Severity,
+) {
     let file = SimpleFile::new(d.file, d.src);
 
     let labels = d
         .labels
         .iter()
         .map(|l| {
-            Label::new(l.style, (), (l.location.start)..(l.location.end))
+            CodespanLabel::new(l.style, (), (l.location.start)..(l.location.end))
                 .with_message(l.label.clone())
         })
         .collect();

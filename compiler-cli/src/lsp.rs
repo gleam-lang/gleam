@@ -9,6 +9,7 @@ use std::{
 };
 
 use gleam_core::{
+    ast::SrcSpan,
     build::{self, Package, ProjectCompiler},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -361,8 +362,6 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
         } => {
             let location = error.location;
             let line_numbers = LineNumbers::new(src);
-            let start = line_numbers.line_and_column_number(location.start);
-            let end = line_numbers.line_and_column_number(location.end);
             let (detail, extra) = error.details();
             let mut message = "Parse error: ".to_string();
             message.push_str(detail);
@@ -373,16 +372,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
             }
             message.push('\n');
             let diagnostic = Diagnostic {
-                range: Range {
-                    start: Position {
-                        line: start.line as u32 - 1,
-                        character: start.column as u32 - 1,
-                    },
-                    end: Position {
-                        line: end.line as u32 - 1,
-                        character: end.column as u32 - 1,
-                    },
-                },
+                range: src_span_to_lsp_range(location, line_numbers),
                 severity: Some(DiagnosticSeverity::ERROR),
                 code: None,
                 code_description: None,
@@ -491,5 +481,20 @@ where
         self.project_compiler.restore(checkpoint);
 
         result
+    }
+}
+
+fn src_span_to_lsp_range(location: SrcSpan, line_numbers: LineNumbers) -> Range {
+    let start = line_numbers.line_and_column_number(location.start);
+    let end = line_numbers.line_and_column_number(location.end);
+    Range {
+        start: Position {
+            line: start.line as u32 - 1,
+            character: start.column as u32 - 1,
+        },
+        end: Position {
+            line: end.line as u32 - 1,
+            character: end.column as u32 - 1,
+        },
     }
 }
