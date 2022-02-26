@@ -107,7 +107,7 @@ fn compile_project(
             ..Default::default()
         },
         options,
-        &packages,
+        packages,
         Box::new(LogTelemetry),
         wfs.clone(),
     );

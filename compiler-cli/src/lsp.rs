@@ -9,11 +9,10 @@ use std::{
 };
 
 use gleam_core::{
-    build::{self, Package, ProjectCompiler, Telemetry},
-    config::PackageConfig,
+    build::{self, Package, ProjectCompiler},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
-    project::ManifestPackage,
+    project::{self},
     Error, Result,
 };
 use lsp_types::{
@@ -24,6 +23,8 @@ use lsp_types::{
     SaveOptions, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
     TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
 };
+
+use crate::cli;
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
@@ -380,27 +381,28 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
 /// compiled dependency packages.
 ///
 #[derive(Debug)]
-pub struct LspProjectCompiler<'a, IO> {
-    project_compiler: ProjectCompiler<'a, IO>,
+pub struct LspProjectCompiler<IO> {
+    project_compiler: ProjectCompiler<IO>,
 }
 
-impl<'a, IO> LspProjectCompiler<'a, IO>
+impl<IO> LspProjectCompiler<IO>
 where
     IO: CommandExecutor + FileSystemIO + Clone,
 {
-    pub fn new(
-        config: PackageConfig,
-        packages: &'a [ManifestPackage],
-        telemetry: Box<dyn Telemetry>,
-        io: IO,
-    ) -> Result<Self, Error> {
+    pub fn load_and_compile_dependencies(io: IO) -> Result<Self> {
+        // TODO: different telemetry that doesn't write to stdout
+        let telemetry = Box::new(cli::Reporter::new());
+        let manifest = crate::dependencies::download(None)?;
+        let config = crate::config::root_config()?;
+
         let options = build::Options {
             mode: build::Mode::Dev,
             target: None,
             perform_codegen: false,
         };
+        let mut project_compiler =
+            ProjectCompiler::new(config, options, manifest.packages, telemetry, io);
 
-        let mut project_compiler = ProjectCompiler::new(config, options, packages, telemetry, io);
         project_compiler.compile_dependencies()?;
         Ok(Self { project_compiler })
     }

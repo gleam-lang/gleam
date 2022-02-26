@@ -33,9 +33,9 @@ pub struct Options {
 }
 
 #[derive(Debug)]
-pub struct ProjectCompiler<'a, IO> {
+pub struct ProjectCompiler<IO> {
     config: PackageConfig,
-    packages: HashMap<String, &'a ManifestPackage>,
+    packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<String, type_::Module>,
     defined_modules: im::HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
@@ -48,18 +48,21 @@ pub struct ProjectCompiler<'a, IO> {
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
-impl<'a, IO> ProjectCompiler<'a, IO>
+impl<IO> ProjectCompiler<IO>
 where
     IO: CommandExecutor + FileSystemIO + Clone,
 {
     pub fn new(
         config: PackageConfig,
         options: Options,
-        packages: &'a [ManifestPackage],
+        packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
         io: IO,
     ) -> Self {
-        let packages = packages.iter().map(|p| (p.name.to_string(), p)).collect();
+        let packages = packages
+            .into_iter()
+            .map(|p| (p.name.to_string(), p))
+            .collect();
         Self {
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),
@@ -126,7 +129,7 @@ where
 
         for name in sequence {
             let package = self.packages.remove(&name).expect("Missing package config");
-            self.load_cache_or_compile_package(package)?;
+            self.load_cache_or_compile_package(&package)?;
         }
 
         Ok(())
@@ -286,7 +289,7 @@ where
     }
 }
 
-fn order_packages(packages: &HashMap<String, &ManifestPackage>) -> Result<Vec<String>, Error> {
+fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<String>, Error> {
     dep_tree::toposort_deps(
         packages
             .values()

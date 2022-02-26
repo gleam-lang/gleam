@@ -18,7 +18,7 @@ pub fn main(options: Options) -> Result<Package> {
 
     tracing::info!("Compiling packages");
     let compiled =
-        ProjectCompiler::new(root_config, options, &manifest.packages, telemetry, io).compile()?;
+        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?;
 
     if perform_codegen {
         cli::print_compiled(start.elapsed());
