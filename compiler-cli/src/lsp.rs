@@ -1,13 +1,21 @@
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
+#![allow(dead_code)]
 
 use std::{
     collections::{HashMap, HashSet},
     path::Path,
 };
 
-use gleam_core::{line_numbers::LineNumbers, Error, Result};
+use gleam_core::{
+    build::{Options, Package, ProjectCompiler, Telemetry},
+    config::PackageConfig,
+    io::{CommandExecutor, FileSystemIO},
+    line_numbers::LineNumbers,
+    project::ManifestPackage,
+    Error, Result,
+};
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::Formatting,
@@ -364,5 +372,46 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
         code: 1, // We should assign a code to each error.
         message: error.pretty_string(),
         data: None,
+    }
+}
+
+/// A wrapper around the project compiler which makes it possible to repeatedly
+/// recompile the top level package, reusing the information about the already
+/// compiled dependency packages.
+///
+#[derive(Debug)]
+pub struct LspProjectCompiler<'a, IO> {
+    project_compiler: ProjectCompiler<'a, IO>,
+}
+
+impl<'a, IO> LspProjectCompiler<'a, IO>
+where
+    IO: CommandExecutor + FileSystemIO + Clone,
+{
+    pub fn new(
+        config: PackageConfig,
+        options: &'a Options,
+        packages: &'a [ManifestPackage],
+        telemetry: Box<dyn Telemetry>,
+        io: IO,
+    ) -> Result<Self, Error> {
+        let mut project_compiler = ProjectCompiler::new(config, options, packages, telemetry, io);
+        project_compiler.compile_dependencies()?;
+        Ok(Self { project_compiler })
+    }
+
+    pub fn compile(&mut self) -> Result<Package, Error> {
+        // Save the state prior to compilation of the root package
+        let checkpoint = self.project_compiler.checkpoint();
+
+        // Do that there compilation. We don't use `?` to return early in the
+        // event of an error because we _always_ want to do the restoration of
+        // state afterwards.
+        let result = self.project_compiler.compile_root_package();
+
+        // Restore the state so that later we can compile the root again
+        self.project_compiler.restore(checkpoint);
+
+        result
     }
 }

@@ -45,6 +45,12 @@ pub struct ProjectCompiler<'a, IO> {
     io: IO,
 }
 
+pub struct CheckpointState {
+    importable_modules: HashMap<String, type_::Module>,
+    defined_modules: HashMap<String, PathBuf>,
+    ids: UniqueIdGenerator,
+}
+
 // TODO: test that tests cannot be imported into src
 // TODO: test that dep cycles are not allowed between packages
 
@@ -74,6 +80,23 @@ where
         }
     }
 
+    // TODO: test
+    pub fn checkpoint(&self) -> CheckpointState {
+        // TODO: use immutable hashmaps to make cloning cheap
+        CheckpointState {
+            importable_modules: self.importable_modules.clone(),
+            defined_modules: self.defined_modules.clone(),
+            ids: self.ids.fork(),
+        }
+    }
+
+    // TODO: test
+    pub fn restore(&mut self, checkpoint: CheckpointState) {
+        self.importable_modules = checkpoint.importable_modules;
+        self.defined_modules = checkpoint.defined_modules;
+        self.ids = checkpoint.ids;
+    }
+
     pub fn mode(&self) -> Mode {
         self.options.mode
     }
@@ -86,12 +109,15 @@ where
     pub fn compile(&mut self) -> Result<Package> {
         self.compile_dependencies()?;
 
-        // Read and type check top level package
         if self.options.perform_codegen {
             self.telemetry.compiling_package(&self.config.name);
         } else {
             self.telemetry.checking_package(&self.config.name);
         }
+        self.compile_root_package()
+    }
+
+    pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
 
