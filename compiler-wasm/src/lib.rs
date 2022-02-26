@@ -100,7 +100,7 @@ fn compile_project(
         perform_codegen: true,
     };
 
-    let pcompiler = ProjectCompiler::new(
+    let mut pcompiler = ProjectCompiler::new(
         PackageConfig {
             target,
             name: PROJECT_NAME.to_string(),

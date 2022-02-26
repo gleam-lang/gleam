@@ -135,16 +135,7 @@ impl LanguageServer {
                     }
                     let (response, diagnostics) = result_to_response(result, id);
                     if let Some(diagnostics) = diagnostics {
-                        let _ = self.active_diagnostics.insert(diagnostics.uri.clone());
-                        connection
-                            .sender
-                            .send(lsp_server::Message::Notification(
-                                lsp_server::Notification {
-                                    method: "textDocument/publishDiagnostics".into(),
-                                    params: serde_json::to_value(diagnostics).unwrap(),
-                                },
-                            ))
-                            .unwrap();
+                        self.publish_diagnostics(diagnostics, &connection);
                     }
                     connection
                         .sender
@@ -162,6 +153,23 @@ impl LanguageServer {
             }
         }
         Ok(())
+    }
+
+    fn publish_diagnostics(
+        &mut self,
+        diagnostics: PublishDiagnosticsParams,
+        connection: &lsp_server::Connection,
+    ) {
+        let _ = self.active_diagnostics.insert(diagnostics.uri.clone());
+        connection
+            .sender
+            .send(lsp_server::Message::Notification(
+                lsp_server::Notification {
+                    method: "textDocument/publishDiagnostics".into(),
+                    params: serde_json::to_value(diagnostics).unwrap(),
+                },
+            ))
+            .unwrap();
     }
 
     fn handle_notification(&mut self, request: lsp_server::Notification) -> Result<()> {

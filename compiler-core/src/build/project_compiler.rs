@@ -83,15 +83,8 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(mut self) -> Result<Package> {
-        // Determine package processing order
-        let sequence = order_packages(&self.packages)?;
-
-        // Read and type check deps packages
-        for name in sequence {
-            let package = self.packages.remove(&name).expect("Missing package config");
-            self.load_cache_or_compile_package(package)?;
-        }
+    pub fn compile(&mut self) -> Result<Package> {
+        self.compile_dependencies()?;
 
         // Read and type check top level package
         if self.options.perform_codegen {
@@ -103,11 +96,22 @@ where
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
 
         // Print warnings
-        for warning in self.warnings {
-            self.telemetry.warning(&warning);
+        for warning in &self.warnings {
+            self.telemetry.warning(warning);
         }
 
         Ok(Package { config, modules })
+    }
+
+    pub fn compile_dependencies(&mut self) -> Result<(), Error> {
+        let sequence = order_packages(&self.packages)?;
+
+        for name in sequence {
+            let package = self.packages.remove(&name).expect("Missing package config");
+            self.load_cache_or_compile_package(package)?;
+        }
+
+        Ok(())
     }
 
     fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
