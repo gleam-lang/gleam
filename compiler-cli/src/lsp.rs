@@ -360,7 +360,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
             path, error, src, ..
         } => {
             let location = error.location;
-            let line_numbers = LineNumbers::new(&src);
+            let line_numbers = LineNumbers::new(src);
             let start = line_numbers.line_and_column_number(location.start);
             let end = line_numbers.line_and_column_number(location.end);
             let (detail, extra) = error.details();
