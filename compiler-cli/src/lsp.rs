@@ -12,7 +12,6 @@ use gleam_core::{
     build::{self, Package, ProjectCompiler},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
-    project::{self},
     Error, Result,
 };
 use lsp_types::{
@@ -24,7 +23,7 @@ use lsp_types::{
     TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
 };
 
-use crate::cli;
+use crate::{cli, fs::ProjectIO};
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
@@ -82,7 +81,7 @@ pub fn main() -> Result<()> {
         serde_json::from_value(connection.initialize(server_capabilities_json).unwrap()).unwrap();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServer::new(initialization_params).run(connection)?;
+    LanguageServer::new(initialization_params)?.run(connection)?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
@@ -98,15 +97,24 @@ pub struct LanguageServer {
 
     /// Files for which there are active diagnostics
     active_diagnostics: HashSet<Url>,
+
+    /// A compiler for the project that supports repeat compilation of the root
+    /// package.
+    /// In the event the the project config changes this will need to be
+    /// discarded and reloaded to handle any changes to dependencies.
+    compiler: LspProjectCompiler<ProjectIO>,
 }
 
 impl LanguageServer {
-    pub fn new(params: InitializeParams) -> Self {
-        Self {
+    pub fn new(params: InitializeParams) -> Result<Self> {
+        let io = ProjectIO::new();
+        let compiler = LspProjectCompiler::load_and_compile_dependencies(io)?;
+        Ok(Self {
             _params: params,
             edited: HashMap::new(),
             active_diagnostics: HashSet::new(),
-        }
+            compiler,
+        })
     }
 
     fn clear_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
@@ -157,7 +165,7 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Notification(notification) => {
-                    self.handle_notification(notification).unwrap();
+                    self.handle_notification(&connection, notification).unwrap();
                 }
             }
         }
@@ -181,11 +189,16 @@ impl LanguageServer {
             .unwrap();
     }
 
-    fn handle_notification(&mut self, request: lsp_server::Notification) -> Result<()> {
+    fn handle_notification(
+        &mut self,
+        connection: &lsp_server::Connection,
+        request: lsp_server::Notification,
+    ) -> Result<()> {
         match request.method.as_str() {
-            "textDocument/didSave" => {
-                self.did_save(cast_notification::<DidSaveTextDocument>(request).unwrap())
-            }
+            "textDocument/didSave" => self.did_save(
+                connection,
+                cast_notification::<DidSaveTextDocument>(request).unwrap(),
+            ),
 
             "textDocument/didClose" => {
                 self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
@@ -200,9 +213,17 @@ impl LanguageServer {
     }
 
     // TODO: build project
-    fn did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
+    fn did_save(
+        &mut self,
+        connection: &lsp_server::Connection,
+        params: DidSaveTextDocumentParams,
+    ) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
+        // Recompile the project to detect any errors
+        let _ = self.compiler.compile()?;
+        // Clear any diagnostics from the previous run
+        self.clear_diagnostics(connection)?;
         Ok(())
     }
 
@@ -232,7 +253,6 @@ impl LanguageServer {
         }
     }
 
-    // TODO: clear diagnostics when formatting succeeds
     fn format(&self, params: lsp_types::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
         let path = params.text_document.uri.path();
         let mut new_text = String::new();
