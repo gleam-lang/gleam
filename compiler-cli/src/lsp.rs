@@ -231,13 +231,13 @@ impl LanguageServer {
         match self.edited.get(path) {
             // If we have a cached version of the file in memory format that
             Some(src) => {
-                gleam_core::format::pretty(&mut new_text, src, &Path::new(path))?;
+                gleam_core::format::pretty(&mut new_text, src, Path::new(path))?;
             }
 
             // Otherwise format the file from disc
             None => {
                 let src = crate::fs::read(&path)?;
-                gleam_core::format::pretty(&mut new_text, &src, &Path::new(path))?;
+                gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
             }
         };
 

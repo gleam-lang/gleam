@@ -1656,7 +1656,7 @@ These values are not matched:
             Error::Parse { path, src, error } => {
                 let (label, extra) = error.details();
 
-                let adjusted_location = if &error.error == &ParseErrorType::UnexpectedEof {
+                let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
                         start: src.len() - 1,
                         end: src.len() - 1,
