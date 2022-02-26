@@ -2,7 +2,10 @@
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
 
-use std::{collections::HashMap, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 use gleam_core::{line_numbers::LineNumbers, Error, Result};
 use lsp_types::{
@@ -83,6 +86,9 @@ pub struct LanguageServer {
 
     /// Files that have been edited in memory
     edited: HashMap<String, String>,
+
+    /// Files for which there are active diagnostics
+    active_diagnostics: HashSet<Url>,
 }
 
 impl LanguageServer {
@@ -90,7 +96,28 @@ impl LanguageServer {
         Self {
             _params: params,
             edited: HashMap::new(),
+            active_diagnostics: HashSet::new(),
         }
+    }
+
+    fn clear_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+        for file in self.active_diagnostics.drain() {
+            connection
+                .sender
+                .send(lsp_server::Message::Notification(
+                    lsp_server::Notification {
+                        method: "textDocument/publishDiagnostics".into(),
+                        params: serde_json::to_value(PublishDiagnosticsParams {
+                            uri: file,
+                            diagnostics: vec![],
+                            version: None,
+                        })
+                        .unwrap(),
+                    },
+                ))
+                .unwrap();
+        }
+        Ok(())
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
@@ -103,8 +130,12 @@ impl LanguageServer {
                     }
                     let id = request.id.clone();
                     let result = self.handle_request(request);
+                    if result.is_ok() {
+                        self.clear_diagnostics(&connection)?;
+                    }
                     let (response, diagnostics) = result_to_response(result, id);
                     if let Some(diagnostics) = diagnostics {
+                        let _ = self.active_diagnostics.insert(diagnostics.uri.clone());
                         connection
                             .sender
                             .send(lsp_server::Message::Notification(
@@ -176,7 +207,8 @@ impl LanguageServer {
     fn handle_request(&self, request: lsp_server::Request) -> Result<serde_json::Value> {
         match request.method.as_str() {
             "textDocument/formatting" => {
-                let text_edit = self.format(cast_request::<Formatting>(request).unwrap())?;
+                let params = cast_request::<Formatting>(request).unwrap();
+                let text_edit = self.format(params)?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
             _ => unimplemented!("Unsupported LSP request"),
@@ -296,7 +328,6 @@ fn result_to_response(
                 tags: None,
                 data: None,
             };
-            tracing::info!("{:?}", path);
             let path = path.canonicalize().unwrap();
             let mut file: String = "file://".into();
             file.push_str(&path.as_os_str().to_string_lossy());
