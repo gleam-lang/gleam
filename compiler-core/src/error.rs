@@ -744,91 +744,78 @@ Second: {}",
                 }
 
                 TypeError::UnexpectedLabelledArg { location, label } => {
-                    OldDiagnostic {
-                        title: "Unexpected labelled argument".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "
-This argument has been given a label but the constructor does not expect any.
+                    let text = format!(
+"This argument has been given a label but the constructor does not expect any.
 Please remove the label `{}`.",
                         label
-                    )
-                    .unwrap();
+                    );
+
+                    Diagnostic {
+                        title: "Unexpected labelled argument".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::PositionalArgumentAfterLabelled { location } => {
-                    OldDiagnostic {
+                    let text =
+                        "This unlabeled argument has been supplied after a labelled argument.
+Once a labelled argument has been supplied all following arguments must 
+also be labelled."
+                            .into();
+                    Diagnostic {
                         title: "Unexpected positional argument".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "This unlablled argument has been supplied after a labelled argument.
-Once a labelled argument has been supplied all following arguments must also be labelled.",
-                    )
-                    .unwrap();
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateName {
                     location,
-                    name: fun,
-                    previous_location,
-                    ..
-                } => {
-                    OldMultiLineDiagnostic {
-                        title: format!("Duplicate function definition with name `{}`", fun),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        labels: vec![
-                            DiagnosticLabel {
-                                text: "redefined here".into(),
-                                location: *location,
-                                style: LabelStyle::Primary,
-                            },
-                            DiagnosticLabel {
-                                text: "previously defined here".into(),
-                                location: *previous_location,
-                                style: LabelStyle::Secondary,
-                            },
-                        ],
-                    };
-                    write_diagnostic_old(buf, diagnostic, Severity::Error);
-                }
-
-                TypeError::DuplicateImport {
-                    location,
-                    previous_location,
                     name,
+                    previous_location,
                     ..
                 } => {
-                    OldMultiLineDiagnostic {
-                        title: format!("Duplicate import with name `{}`", name),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        labels: vec![
-                            DiagnosticLabel {
-                                text: "redefined here".into(),
-                                location: *location,
-                                style: LabelStyle::Primary,
+                    let text = format!(
+                        "{} has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Duplicate definition".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("redefined here".into()),
+                                span: *location,
                             },
-                            DiagnosticLabel {
-                                text: "previously defined here".into(),
-                                location: *previous_location,
-                                style: LabelStyle::Secondary,
-                            },
-                        ],
-                    };
-                    write_diagnostic_old(buf, diagnostic, Severity::Error);
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![Label {
+                                text: Some("previously defined here".into()),
+                                span: *previous_location,
+                            }],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateConstName {
@@ -837,24 +824,28 @@ Once a labelled argument has been supplied all following arguments must also be 
                     previous_location,
                     ..
                 } => {
-                    OldMultiLineDiagnostic {
-                        title: format!("Duplicate const definition with name `{}`", name),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        labels: vec![
-                            DiagnosticLabel {
-                                text: "redefined here".into(),
-                                location: *location,
-                                style: LabelStyle::Primary,
+                    let text = format!(
+                        "{} has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Duplicate constant definition".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("redefined here".into()),
+                                span: *location,
                             },
-                            DiagnosticLabel {
-                                text: "previously defined here".into(),
-                                location: *previous_location,
-                                style: LabelStyle::Secondary,
-                            },
-                        ],
-                    };
-                    write_diagnostic_old(buf, diagnostic, Severity::Error);
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![Label {
+                                text: Some("previously defined here".into()),
+                                span: *previous_location,
+                            }],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateTypeName {
@@ -863,88 +854,114 @@ Once a labelled argument has been supplied all following arguments must also be 
                     previous_location,
                     ..
                 } => {
-                    OldMultiLineDiagnostic {
-                        title: format!("Duplicate type definition with name `{}`", name),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        labels: vec![
-                            DiagnosticLabel {
-                                text: "redefined here".into(),
-                                location: *location,
-                                style: LabelStyle::Primary,
+                    let text = format!(
+                        "The type {} has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Duplicate type definition".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("redefined here".into()),
+                                span: *location,
                             },
-                            DiagnosticLabel {
-                                text: "previously defined here".into(),
-                                location: *previous_location,
-                                style: LabelStyle::Secondary,
-                            },
-                        ],
-                    };
-                    write_diagnostic_old(buf, diagnostic, Severity::Error);
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![Label {
+                                text: Some("previously defined here".into()),
+                                span: *previous_location,
+                            }],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateField { location, label } => {
-                    OldDiagnostic {
-                        title: "Duplicate field".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
+                    let text = format!(
                         "The field `{}` has already been defined. Rename this field.",
                         label
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Duplicate field".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateArgument { location, label } => {
-                    OldDiagnostic {
-                        title: "Duplicate argument".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
+                    let text = format!(
                         "The labelled argument `{}` has already been supplied.",
                         label
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Duplicate argument".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::RecursiveType { location } => {
-                    OldDiagnostic {
+                    let text =
+                        "I've got confused trying to work out what type this is. It seems to be 
+defined in terms of itself.
+Perhaps add some type annotations and try again."
+                            .into();
+                    Diagnostic {
                         title: "Recursive type".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::NotFn { location, typ } => {
-                    OldDiagnostic {
-                        title: "Type mismatch".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
-
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "This value is being called as a function but its type is:\n\n{}",
                         printer.pretty_print(typ, 4)
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownRecordField {
@@ -953,33 +970,34 @@ Once a labelled argument has been supplied all following arguments must also be 
                     label,
                     fields,
                 } => {
-                    OldDiagnostic {
-                        title: "Unknown record field".into(),
-                        text: did_you_mean(label, fields, "This field does not exist"),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
-
-                    writeln!(
-                        buf,
-                        "The value being accessed has this type:
-
-{}
-",
+                    let mut text = format!(
+                        "The value being accessed has this type:\n\n{}\n",
                         printer.pretty_print(typ, 4)
-                    )
-                    .unwrap();
-
+                    );
                     if fields.is_empty() {
-                        writeln!(buf, "It does not have any fields.",).unwrap();
+                        text.push_str("It does not have any fields.");
                     } else {
-                        write!(buf, "It has these fields:\n\n").unwrap();
-                        for field in fields.iter().sorted() {
-                            writeln!(buf, "    .{}", field).unwrap();
-                        }
+                        text.push_str("It has these fields:\n");
+                    }
+                    for field in fields.iter().sorted() {
+                        text.push_str("\n    .");
+                        text.push_str(field);
+                    }
+                    let label = did_you_mean(label, fields, "This field does not exist");
+                    Diagnostic {
+                        title: "Unknown record field".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(label),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
                     }
                 }
 
@@ -990,18 +1008,9 @@ Once a labelled argument has been supplied all following arguments must also be 
                     situation: Some(UnifyErrorSituation::Operator(op)),
                     rigid_type_names: annotated_names,
                 } => {
-                    OldDiagnostic {
-                        title: "Type mismatch".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    writeln!(
-                        buf,
+                    let mut text = format!(
                         "The {op} operator expects arguments of this type:
 
 {expected}
@@ -1012,10 +1021,25 @@ But this argument has this type:
                         op = op.name(),
                         expected = printer.pretty_print(expected, 4),
                         given = printer.pretty_print(given, 4),
-                    )
-                    .unwrap();
-                    if let Some(t) = hint_alternative_operator(op, given) {
-                        writeln!(buf, "Hint: {}\n", t).unwrap();
+                    );
+                    if let Some(hint) = hint_alternative_operator(op, given) {
+                        text.push_str("Hint: ");
+                        text.push_str(hint);
+                        text.push('\n');
+                    }
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
                     }
                 }
 
