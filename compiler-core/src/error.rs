@@ -1721,6 +1721,7 @@ These values are not matched:
                     "The import statements for these modules form a cycle:\n"
                 )
                 .unwrap();
+                let mut buffer = Buffer::ansi();
                 import_cycle(buf, modules);
 
                 wrap_writeln!(
@@ -1731,14 +1732,20 @@ These values are not matched:
             }
 
             Error::PackageCycle { packages } => {
-                crate::diagnostic::write_title(buf, "Dependency cycle", Severity::Error);
-                writeln!(buf, "The dependencies for these packages form a cycle:\n").unwrap();
-                import_cycle(buf, packages);
-                wrap_writeln!(
-                    buf,
-                    "Gleam doesn't support dependency cycles like these, please break the cycle to continue."
-                )
-                .unwrap();
+                let mut text = "The dependencies for these packages form a cycle:
+"
+                .to_string();
+                import_cycle(&mut text, packages);
+                text.push_str(
+                    "Gleam doesn't support dependency cycles like these, please break the
+cycle to continue.",
+                );
+                Diagnostic {
+                    title: "Dependency cycle".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                }
             }
 
             Error::UnknownImport {
@@ -2004,28 +2011,20 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn import_cycle(buffer: &mut Buffer, modules: &[String]) {
-    use std::io::Write;
-    use termcolor::{Color, ColorSpec, WriteColor};
-
-    writeln!(
-        buffer,
+fn import_cycle(buffer: &mut String, modules: &[String]) {
+    buffer.push_str(
         "
-    ┌─────┐"
-    )
-    .unwrap();
+    ┌─────┐\n",
+    );
     for (index, name) in modules.iter().enumerate() {
         if index != 0 {
-            writeln!(buffer, "    │     ↓").unwrap();
+            buffer.push_str("    │     ↓\n");
         }
-        write!(buffer, "    │    ").unwrap();
-        buffer
-            .set_color(ColorSpec::new().set_fg(Some(Color::Cyan)))
-            .unwrap();
-        writeln!(buffer, "{}", name).unwrap();
-        buffer.set_color(&ColorSpec::new()).unwrap();
+        buffer.push_str("    │    ");
+        buffer.push_str(name);
+        buffer.push('\n');
     }
-    writeln!(buffer, "    └─────┘\n").unwrap();
+    buffer.push_str("    └─────┘\n");
 }
 
 fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
