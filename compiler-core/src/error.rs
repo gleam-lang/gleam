@@ -1603,94 +1603,101 @@ e.g. (x, y) if x == y -> ...",
                     }
                 }
 
-                TypeError::RecordUpdateInvalidConstructor { location } => {
-                    OldDiagnostic {
-                        title: "Invalid record constructor".into(),
-                        text: "This is not a record constructor".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
+                TypeError::RecordUpdateInvalidConstructor { location } => Diagnostic {
+                    title: "Invalid record constructor".into(),
+                    text: "Only record constructors can be used with the update syntax.".into(),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some("This is not a record constructor".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
-                    writeln!(
-                        buf,
-                        "Only record constructors can be used with the update syntax.",
-                    )
-                    .unwrap();
-                }
-
-                TypeError::UnexpectedTypeHole { location } => {
-                    OldDiagnostic {
-                        title: "Unexpected type hole".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-
-                    writeln!(
-                        buf,
-                        "We need to know the exact type here so type holes are not permitted.",
-                    )
-                    .unwrap();
-                }
+                TypeError::UnexpectedTypeHole { location } => Diagnostic {
+                    title: "Unexpected type hole".into(),
+                    text: "We need to know the exact type here so type holes cannot be used."
+                        .into(),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::ReservedModuleName { name } => {
+                    let text = format!(
+                        "The module name `{}` is reserved.
+Try a different name for this module.",
+                        name
+                    );
                     Diagnostic {
                         title: "Reserved module name".into(),
-                        text: format!(
-                            "The module name `{}` is reserved.
-Try a different name for this module.",
-                            name
-                        ),
+                        text,
                         location: None,
                         level: Level::Error,
-                    };
+                    }
                 }
 
                 TypeError::KeywordInModuleName { name, keyword } => {
+                    let text = wrap(&format!(
+                        "The module name `{}` contains the keyword `{}`, so importing \
+it would be a syntax error.
+Try a different name for this module.",
+                        name, keyword
+                    ));
                     Diagnostic {
                         title: "Invalid module name".into(),
-                        text: wrap(&format!(
-                            "The module name `{}` contains the keyword `{}`, so importing it would be a syntax error.
-Try a different name for this module.",
-                            name, keyword
-                        )),
-                    location: None,
-                    level: Level::Error,
-                    };
+                        text,
+                        location: None,
+                        level: Level::Error,
+                    }
                 }
 
                 TypeError::NotExhaustivePatternMatch {
                     location,
                     unmatched,
                 } => {
-                    OldDiagnostic {
-                        title: "Not exhaustive pattern match".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "This case expression does not match all possibilities. \
-Each constructor must have a pattern that matches it or else it could crash.
+                    let text = format!(
+                        "This case expression does not match all possibilities.
+Each constructor must have a pattern that matches it or 
+else it could crash.
 
 These values are not matched:
 
   - {}",
                         unmatched.join("\n  - "),
-                    )
-                    .unwrap();
+                    );
+
+                    Diagnostic {
+                        title: "Not exhaustive pattern match".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
             },
 
             Error::Parse { path, src, error } => {
                 let (label, extra) = error.details();
+                let text = extra.join("\n");
 
                 let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
@@ -1701,40 +1708,43 @@ These values are not matched:
                     error.location
                 };
 
-                OldDiagnostic {
+                Diagnostic {
                     title: "Syntax error".into(),
-                    text: label.to_string(),
-                    location: adjusted_location,
-                    file: path.to_str().unwrap().to_string(),
-                    src: src.to_string(),
-                };
-                write_old(buf, diagnostic, Severity::Error);
-                if !extra.is_empty() {
-                    writeln!(buf, "{}", extra.join("\n")).expect("error pretty buffer write");
+                    text,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(label.to_string()),
+                            span: adjusted_location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
                 }
             }
 
             Error::ImportCycle { modules } => {
-                crate::diagnostic::write_title(buf, "Import cycle", Severity::Error);
-                writeln!(
-                    buf,
-                    "The import statements for these modules form a cycle:\n"
-                )
-                .unwrap();
-                let mut buffer = Buffer::ansi();
-                import_cycle(buf, modules);
-
-                wrap_writeln!(
-                    buf,
-                    "Gleam doesn't support import cycles like these, please break the cycle to continue."
-                )
-                .unwrap();
+                let mut text = "The import statements for these modules form a cycle:
+"
+                .into();
+                import_cycle(&mut text, modules);
+                text.push_str(
+                    "Gleam doesn't support dependency cycles like these, please break the
+cycle to continue.",
+                );
+                Diagnostic {
+                    title: "Import cycle".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                }
             }
 
             Error::PackageCycle { packages } => {
                 let mut text = "The dependencies for these packages form a cycle:
 "
-                .to_string();
+                .into();
                 import_cycle(&mut text, packages);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
