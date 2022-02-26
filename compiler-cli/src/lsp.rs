@@ -165,7 +165,15 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Notification(notification) => {
-                    self.handle_notification(&connection, notification).unwrap();
+                    if let Err(error) = self.handle_notification(&connection, notification) {
+                        match error_to_diagnostic(&error) {
+                            Some(diagnostic) => {
+                                self.publish_diagnostics(diagnostic, &connection);
+                            }
+
+                            None => return Err(error),
+                        }
+                    }
                 }
             }
         }
@@ -324,18 +332,37 @@ fn result_to_response(
             (response, None)
         }
 
-        Err(Error::Parse {
+        Err(error) => match error_to_diagnostic(&error) {
+            None => {
+                let response = lsp_server::Response {
+                    id,
+                    error: Some(error_to_response_error(error)),
+                    result: None,
+                };
+                (response, None)
+            }
+
+            Some(diagnostic) => {
+                let response = lsp_server::Response {
+                    id,
+                    error: None,
+                    result: Some(serde_json::json!(null)),
+                };
+                (response, Some(diagnostic))
+            }
+        },
+    }
+}
+
+fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
+    match error {
+        Error::Parse {
             path, error, src, ..
-        }) => {
+        } => {
             let location = error.location;
             let line_numbers = LineNumbers::new(&src);
             let start = line_numbers.line_and_column_number(location.start);
             let end = line_numbers.line_and_column_number(location.end);
-            let response = lsp_server::Response {
-                id,
-                error: None,
-                result: Some(serde_json::json!(null)),
-            };
             let (detail, extra) = error.details();
             let mut message = "Parse error: ".to_string();
             message.push_str(detail);
@@ -374,17 +401,41 @@ fn result_to_response(
                 diagnostics: vec![diagnostic],
                 version: None,
             };
-            (response, Some(diagnostic_params))
+            Some(diagnostic_params)
         }
 
-        Err(error) => {
-            let response = lsp_server::Response {
-                id,
-                error: Some(error_to_response_error(error)),
-                result: None,
-            };
-            (response, None)
-        }
+        Error::Type { .. }
+        | Error::UnknownImport { .. }
+        | Error::DuplicateModule { .. }
+        | Error::DuplicateSourceFile { .. }
+        | Error::SrcImportingTest { .. }
+        | Error::ImportCycle { .. }
+        | Error::PackageCycle { .. }
+        | Error::FileIo { .. }
+        | Error::GitInitialization { .. }
+        | Error::StandardIo { .. }
+        | Error::Format { .. }
+        | Error::Hex(_)
+        | Error::ExpandTar { .. }
+        | Error::AddTar { .. }
+        | Error::TarFinish(_)
+        | Error::Gzip(_)
+        | Error::ShellProgramNotFound { .. }
+        | Error::ShellCommand { .. }
+        | Error::InvalidProjectName { .. }
+        | Error::InvalidVersionFormat { .. }
+        | Error::ProjectRootAlreadyExist { .. }
+        | Error::UnableToFindProjectRoot { .. }
+        | Error::VersionDoesNotMatch { .. }
+        | Error::MetadataDecodeError { .. }
+        | Error::ForbiddenWarnings { .. }
+        | Error::JavaScript { .. }
+        | Error::DownloadPackageError { .. }
+        | Error::Http(_)
+        | Error::DependencyResolutionFailed(_)
+        | Error::DuplicateDependency(_)
+        | Error::MissingHexPublishFields { .. }
+        | Error::UnsupportedBuildTool { .. } => None,
     }
 }
 
