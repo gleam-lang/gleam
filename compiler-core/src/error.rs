@@ -706,7 +706,7 @@ Second: {}",
                         "Unknown label"
                     };
 
-                    let diagnostic = OldMultiLineDiagnostic {
+                    OldMultiLineDiagnostic {
                         title: title.to_string(),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -744,7 +744,7 @@ Second: {}",
                 }
 
                 TypeError::UnexpectedLabelledArg { location, label } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unexpected labelled argument".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -763,7 +763,7 @@ Please remove the label `{}`.",
                 }
 
                 TypeError::PositionalArgumentAfterLabelled { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unexpected positional argument".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -785,7 +785,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     previous_location,
                     ..
                 } => {
-                    let diagnostic = OldMultiLineDiagnostic {
+                    OldMultiLineDiagnostic {
                         title: format!("Duplicate function definition with name `{}`", fun),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -811,7 +811,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     name,
                     ..
                 } => {
-                    let diagnostic = OldMultiLineDiagnostic {
+                    OldMultiLineDiagnostic {
                         title: format!("Duplicate import with name `{}`", name),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -837,7 +837,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     previous_location,
                     ..
                 } => {
-                    let diagnostic = OldMultiLineDiagnostic {
+                    OldMultiLineDiagnostic {
                         title: format!("Duplicate const definition with name `{}`", name),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -863,7 +863,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     previous_location,
                     ..
                 } => {
-                    let diagnostic = OldMultiLineDiagnostic {
+                    OldMultiLineDiagnostic {
                         title: format!("Duplicate type definition with name `{}`", name),
                         file: path.to_str().unwrap().to_string(),
                         src: src.to_string(),
@@ -884,7 +884,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                 }
 
                 TypeError::DuplicateField { location, label } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Duplicate field".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -901,7 +901,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                 }
 
                 TypeError::DuplicateArgument { location, label } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Duplicate argument".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -918,7 +918,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                 }
 
                 TypeError::RecursiveType { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Recursive type".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -929,7 +929,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                 }
 
                 TypeError::NotFn { location, typ } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -953,7 +953,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     label,
                     fields,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown record field".into(),
                         text: did_you_mean(label, fields, "This field does not exist"),
                         file: path.to_str().unwrap().to_string(),
@@ -990,7 +990,7 @@ Once a labelled argument has been supplied all following arguments must also be 
                     situation: Some(UnifyErrorSituation::Operator(op)),
                     rigid_type_names: annotated_names,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1026,7 +1026,7 @@ But this argument has this type:
                     situation: Some(UnifyErrorSituation::PipeTypeMismatch),
                     rigid_type_names: annotated_names,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "This function does not accept the piped type".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1074,7 +1074,7 @@ But function expects:
                     situation,
                     rigid_type_names: annotated_names,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1108,7 +1108,7 @@ Found type:
                     given,
                     ..
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Incorrect arity".into(),
                         text: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -1124,7 +1124,7 @@ Found type:
                     expected,
                     given,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Incorrect arity".into(),
                         text: format!("expected {} arguments, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -1148,7 +1148,7 @@ Found type:
                 }
 
                 TypeError::UnnecessarySpreadOperator { location, arity } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unnecessary spread operator".into(),
                         text: String::new(),
                         file: path.to_str().unwrap().to_string(),
@@ -1170,7 +1170,7 @@ Found type:
                     name,
                     types,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown type".into(),
                         text: did_you_mean(name, types, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1191,7 +1191,7 @@ Found type:
                     variables,
                     name,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown variable".into(),
                         text: did_you_mean(name, variables, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1203,7 +1203,7 @@ Found type:
                 }
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Private type used in public interface".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1235,7 +1235,7 @@ Private types can only be used within the module that defines them.",
                     name,
                     imported_modules,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown module".into(),
                         text: did_you_mean(name, imported_modules, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1252,7 +1252,7 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     type_constructors,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown module type".into(),
                         text: did_you_mean(name, type_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1275,7 +1275,7 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     value_constructors,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown module field".into(),
                         text: did_you_mean(name, value_constructors, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1304,7 +1304,7 @@ Private types can only be used within the module that defines them.",
                         .chain(value_constructors)
                         .map(|s| s.to_string())
                         .collect();
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown module field".into(),
                         text: did_you_mean(name, &options, ""),
                         file: path.to_str().unwrap().to_string(),
@@ -1326,7 +1326,7 @@ Private types can only be used within the module that defines them.",
                     expected,
                     given,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Incorrect number of patterns".into(),
                         text: format!("expected {} patterns, got {}", expected, given),
                         file: path.to_str().unwrap().to_string(),
@@ -1345,7 +1345,7 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 TypeError::NonLocalClauseGuardVariable { location, name } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Invalid guard variable".into(),
                         text: "is not locally defined".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1362,7 +1362,7 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 TypeError::ExtraVarInAlternativePattern { location, name } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Extra alternative pattern variable".into(),
                         text: "has not been previously defined".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1379,7 +1379,7 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 TypeError::MissingVarInAlternativePattern { location, name } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Missing alternative pattern variable".into(),
                         text: "does not define all required variables".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1395,7 +1395,7 @@ Each clause must have a pattern for every subject value.",
                 }
 
                 TypeError::DuplicateVarInPattern { location, name } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Duplicate variable in pattern".into(),
                         text: "has already been used".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1420,7 +1420,7 @@ e.g. (x, y) if x == y -> ...",
                 TypeError::OutOfBoundsTupleIndex {
                     location, size: 0, ..
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Out of bounds tuple index".into(),
                         text: "this index is too large".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1440,7 +1440,7 @@ e.g. (x, y) if x == y -> ...",
                     index,
                     size,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Out of bounds tuple index".into(),
                         text: "this index is too large".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1459,7 +1459,7 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::NotATuple { location, given } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "is not a tuple".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1480,7 +1480,7 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::NotATupleUnbound { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Type mismatch".into(),
                         text: "what type is this?".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1496,7 +1496,7 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::RecordAccessUnknownType { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unknown type for record access".into(),
                         text: "I don't know what type this is".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1589,7 +1589,7 @@ e.g. (x, y) if x == y -> ...",
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
                     };
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "BitString Segment Error".into(),
                         text: label.to_string(),
                         location: *location,
@@ -1604,7 +1604,7 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::RecordUpdateInvalidConstructor { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Invalid record constructor".into(),
                         text: "This is not a record constructor".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1621,7 +1621,7 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::UnexpectedTypeHole { location } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Unexpected type hole".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1638,34 +1638,36 @@ e.g. (x, y) if x == y -> ...",
                 }
 
                 TypeError::ReservedModuleName { name } => {
-                    let diagnostic = ProjectErrorDiagnostic {
+                    Diagnostic {
                         title: "Reserved module name".into(),
                         text: format!(
                             "The module name `{}` is reserved.
 Try a different name for this module.",
                             name
                         ),
+                        location: None,
+                        level: Level::Error,
                     };
-                    write_project(buf, diagnostic);
                 }
 
                 TypeError::KeywordInModuleName { name, keyword } => {
-                    let diagnostic = ProjectErrorDiagnostic {
+                    Diagnostic {
                         title: "Invalid module name".into(),
                         text: wrap(&format!(
                             "The module name `{}` contains the keyword `{}`, so importing it would be a syntax error.
 Try a different name for this module.",
                             name, keyword
                         )),
+                    location: None,
+                    level: Level::Error,
                     };
-                    write_project(buf, diagnostic);
                 }
 
                 TypeError::NotExhaustivePatternMatch {
                     location,
                     unmatched,
                 } => {
-                    let diagnostic = OldDiagnostic {
+                    OldDiagnostic {
                         title: "Not exhaustive pattern match".into(),
                         text: "".into(),
                         file: path.to_str().unwrap().to_string(),
@@ -1699,7 +1701,7 @@ These values are not matched:
                     error.location
                 };
 
-                let diagnostic = OldDiagnostic {
+                OldDiagnostic {
                     title: "Syntax error".into(),
                     text: label.to_string(),
                     location: adjusted_location,
@@ -1747,19 +1749,24 @@ These values are not matched:
                 src,
                 modules,
             } => {
-                let diagnostic = OldDiagnostic {
-                    title: "Unknown import".into(),
-                    text: did_you_mean(import, modules, ""),
-                    file: path.to_str().unwrap().to_string(),
-                    src: src.to_string(),
-                    location: *location,
-                };
-                write_old(buf, diagnostic, Severity::Error);
-                let msg = wrap(&format!(
+                let text = wrap(&format!(
                     "The module `{}` is trying to import the module `{}`, but it cannot be found.",
                     module, import
                 ));
-                writeln!(buf, "{}", msg).expect("error pretty buffer write");
+                Diagnostic {
+                    title: "Unknown import".into(),
+                    text,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some(did_you_mean(import, modules, "")),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                }
             }
 
             Error::StandardIo { action, err } => {
@@ -1770,7 +1777,7 @@ These values are not matched:
                     ),
                     None => "".into(),
                 };
-                let diagnostic = ProjectErrorDiagnostic {
+                Diagnostic {
                     title: "Standard IO failure".into(),
                     text: format!(
                         "An error occurred while trying to {}:
@@ -1779,9 +1786,11 @@ These values are not matched:
                         action.text(),
                         err,
                     ),
-                };
-                write_project(buf, diagnostic);
+                    location: None,
+                    level: Level::Error,
+                }
             }
+
             Error::Format { problem_files } => {
                 let files: Vec<_> = problem_files
                     .iter()
@@ -1789,14 +1798,14 @@ These values are not matched:
                     .map(|p| format!("  - {}", p))
                     .sorted()
                     .collect();
-                let mut label = files.iter().join("\n");
-                label.push('\n');
-                let diagnostic = ProjectErrorDiagnostic {
+                let mut text = files.iter().join("\n");
+                text.push('\n');
+                Diagnostic {
                     title: "These files have not been formatted".into(),
-                    label,
-                };
-
-                write_project(buf, diagnostic);
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::ForbiddenWarnings { count } => {
@@ -1804,114 +1813,126 @@ These values are not matched:
                     1 => "warning",
                     _ => "warnings",
                 };
-                let diagnostic = ProjectErrorDiagnostic {
+                let text = "Your project was compiled with the `--warnings-as-errors` flag.
+Fix the warnings and try again."
+                    .into();
+                Diagnostic {
                     title: format!("{} {} generated.", count, word_warning),
-                    text: wrap(
-                        "Your project was compiled with the `--warnings-as-errors` flag.
-Fix the warnings and try again!",
-                    ),
-                };
-                write_project(buf, diagnostic);
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::JavaScript { src, path, error } => match error {
-                javascript::Error::Unsupported { feature, location } => {
-                    let diagnostic = OldDiagnostic {
-                        title: "Unsupported feature for compilation target".into(),
-                        text: format!("{} is not supported for JavaScript compilation", feature),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                }
+                javascript::Error::Unsupported { feature, location } => Diagnostic {
+                    title: "Unsupported feature for compilation target".into(),
+                    text: format!("{} is not supported for JavaScript compilation", feature),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
+
             Error::DownloadPackageError {
                 package_name,
                 package_version,
                 error,
             } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Failed to download package".into(),
-                    text: format!(
-                        "A problem was encountered when downloading {} {}.",
-                        package_name, package_version
-                    ),
-                };
-                write_project(buf, diagnostic);
-                writeln!(
-                    buf,
-                    "\nThe error from the package manager client was:
+                let text = format!(
+                    "A problem was encountered when downloading {} {}.
+The error from the package manager client was:
 
     {}",
-                    error
-                )
-                .unwrap();
+                    package_name, package_version, error
+                );
+                Diagnostic {
+                    title: "Failed to download package".into(),
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::Http(error) => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "HTTP error".into(),
-                    text: "A HTTP request failed".into(),
-                };
-                write_project(buf, diagnostic);
-                writeln!(
-                    buf,
-                    "\nThe error from the HTTP client was:
+                let text = format!(
+                    "A HTTP request failed.
+The error from the HTTP client was:
 
     {}",
                     error
-                )
-                .unwrap();
+                );
+                Diagnostic {
+                    title: "HTTP error".into(),
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::InvalidVersionFormat { input, error } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Invalid version format".into(),
-                    text: format!("I was unable to parse the version {}.", input),
-                };
-                write_project(buf, diagnostic);
-                writeln!(
-                    buf,
-                    "\nThe error from the parser was:
+                let text = format!(
+                    "I was unable to parse the version {}.
+The error from the parser was:
 
     {}",
-                    error
-                )
-                .unwrap();
+                    input, error
+                );
+                Diagnostic {
+                    title: "Invalid version format".into(),
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::DependencyResolutionFailed(error) => {
-                let diagnostic = ProjectErrorDiagnostic {
+                let text = format!(
+                    "An error occurred while determining what dependency packages and versions
+should be downloaded.
+The error from the version resolver library was:
+
+{}",
+                    wrap(error)
+                );
+                Diagnostic {
                     title: "Dependency resolution failed".into(),
-                    text: wrap("An error occured while determining what dependency packages and versions should be downloaded."
-                        ),
-                };
-                write_project(buf, diagnostic);
-                writeln!(buf, "\n{}", wrap(error)).unwrap();
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::DuplicateDependency(name) => {
-                let label = &format!("The package {name} is specified in both the dependencies and dev-dependencies sections of the gleam.toml file.", name=name);
-                let diagnostic = ProjectErrorDiagnostic {
+                let text = format!(
+                    "The package {} is specified in both the dependencies and
+dev-dependencies sections of the gleam.toml file.",
+                    name
+                );
+                Diagnostic {
                     title: "Dependency duplicated".into(),
-                    text: wrap(label),
-                };
-                write_project(buf, diagnostic);
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::MissingHexPublishFields {
                 description_missing,
                 licence_missing,
             } => {
-                let label =
-                    "Licence information and package description are required to publish a package to Hex.";
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Missing required package fields".into(),
-                    text: wrap(label),
-                };
-                write_project(buf, diagnostic);
-                let msg = if *description_missing && *licence_missing {
+                let mut text =
+                    "Licence information and package description are required to publish a
+package to Hex.\n"
+                        .into();
+                text.push_str(if *description_missing && *licence_missing {
                     r#"Add the licences and description fields to your gleam.toml file.
                 
 description = "A Gleam library"
@@ -1924,26 +1945,34 @@ description = "A Gleam library""#
                     r#"Add the licences field to your gleam.toml file.
                 
 licences = ["Apache-2.0"]"#
-                };
-                wrap_writeln!(buf, "{}", &msg).unwrap();
+                });
+                Diagnostic {
+                    title: "Missing required package fields".into(),
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
 
             Error::UnsupportedBuildTool {
                 package,
                 build_tools,
             } => {
-                let diagnostic = ProjectErrorDiagnostic {
-                    title: "Unsupported build tool".into(),
-                    text: wrap(&format!(
-                        "The package {} cannot be built as it does not use \
+                let text = wrap_format!(
+                    "The package {} cannot be built as it does not use \
 a build tool supported by Gleam. It uses {:?}.
 
 If you would like us to support this package please let us know by opening an \
 issue in our tracker: https://github.com/gleam-lang/gleam/issues",
-                        package, build_tools
-                    )),
-                };
-                write_project(buf, diagnostic);
+                    package,
+                    build_tools
+                );
+                Diagnostic {
+                    title: "Unsupported build tool".into(),
+                    text,
+                    location: None,
+                    level: Level::Error,
+                }
             }
         }
     }
