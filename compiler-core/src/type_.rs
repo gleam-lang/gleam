@@ -434,7 +434,7 @@ pub fn infer_module(
     mut module: UntypedModule,
     origin: Origin,
     package: &str,
-    modules: &HashMap<String, Module>,
+    modules: &im::HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();

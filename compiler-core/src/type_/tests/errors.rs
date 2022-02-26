@@ -4,7 +4,7 @@ macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -27,7 +27,7 @@ macro_rules! assert_module_error {
     ($src:expr) => {
         use std::path::PathBuf;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -58,7 +58,7 @@ macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
@@ -80,7 +80,7 @@ macro_rules! assert_error {
         use std::path::PathBuf;
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each

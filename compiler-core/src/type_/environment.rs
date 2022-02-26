@@ -11,7 +11,7 @@ pub struct Environment<'a> {
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
     pub imported_names: HashMap<String, SrcSpan>,
-    pub importable_modules: &'a HashMap<String, Module>,
+    pub importable_modules: &'a im::HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
     pub imported_types: HashSet<String>,
 
@@ -63,7 +63,7 @@ impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_module: &'a [String],
-        importable_modules: &'a HashMap<String, Module>,
+        importable_modules: &'a im::HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let prelude = importable_modules

@@ -669,6 +669,7 @@ dependencies = [
  "hostname",
  "http",
  "ignore",
+ "im",
  "itertools",
  "lazy_static",
  "lsp-server",

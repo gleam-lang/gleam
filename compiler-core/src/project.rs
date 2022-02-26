@@ -14,7 +14,7 @@ use crate::{
     Error, Result, Warning,
 };
 use source_tree::SourceTree;
-use std::{collections::HashMap, iter::Peekable, path::PathBuf};
+use std::{iter::Peekable, path::PathBuf};
 
 pub use manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource};
 
@@ -139,7 +139,7 @@ pub struct Input {
 pub fn analysed(inputs: Vec<Input>) -> Result<Vec<Analysed>> {
     let module_count = inputs.len();
     let mut source_tree = SourceTree::new(inputs)?;
-    let mut modules_type_infos = HashMap::new();
+    let mut modules_type_infos = im::HashMap::new();
     let mut compiled_modules = Vec::with_capacity(module_count);
     let ids = UniqueIdGenerator::new();
 

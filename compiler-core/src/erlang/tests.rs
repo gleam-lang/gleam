@@ -21,10 +21,9 @@ macro_rules! assert_erl {
             type_::{build_prelude, infer_module},
             uid::UniqueIdGenerator,
         };
-        use std::collections::HashMap;
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better

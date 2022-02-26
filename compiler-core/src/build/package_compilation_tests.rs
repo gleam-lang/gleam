@@ -19,7 +19,7 @@ use pretty_assertions::assert_eq;
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let ids = crate::uid::UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
             version: Version::new(1, 0, 0),
@@ -48,7 +48,7 @@ macro_rules! assert_erlang_compile {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
+            .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
             .map(|_| {
                 let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
@@ -66,7 +66,7 @@ macro_rules! assert_erlang_compile {
 macro_rules! assert_javascript_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
         let ids = crate::uid::UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
             version: Version::new(1, 0, 0),
@@ -102,7 +102,7 @@ macro_rules! assert_javascript_compile {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
+            .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
             .map(|_| {
                 let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
@@ -120,7 +120,7 @@ macro_rules! assert_javascript_compile {
 macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
         let ids = crate::uid::UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let config = PackageConfig {
             name: "the_package".to_string(),
             version: Version::new(1, 0, 0),
@@ -150,7 +150,7 @@ macro_rules! assert_no_warnings {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut warnings, &mut modules, &mut HashMap::with_capacity(4))
+            .compile(&mut warnings, &mut modules, &mut im::HashMap::new())
             .unwrap();
         assert_eq!(vec![] as Vec<crate::Warning>, warnings);
     };
@@ -2296,7 +2296,7 @@ fn config_compilation_test() {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
             let ids = crate::uid::UniqueIdGenerator::new();
             let config = $config;
-            let mut modules = HashMap::new();
+            let mut modules = im::HashMap::new();
             let (file_writer, file_receiver) = FilesChannel::new();
             let root = PathBuf::from("some/build/path/root");
             let out = PathBuf::from("_build/default/lib/the_package");
@@ -2309,7 +2309,7 @@ fn config_compilation_test() {
             compiler.copy_native_files = false;
             compiler.sources = $sources;
             let compiled = compiler
-                .compile(&mut vec![], &mut modules, &mut HashMap::with_capacity(4))
+                .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
                 .expect("Should compile OK");
             let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
             outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());

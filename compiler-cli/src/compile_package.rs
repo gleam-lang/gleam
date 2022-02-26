@@ -5,7 +5,7 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 use crate::{
     config,
@@ -16,7 +16,7 @@ use crate::{
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
-    let mut defined_modules = HashMap::new();
+    let mut defined_modules = im::HashMap::new();
     let mut warnings = Vec::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
 
@@ -48,9 +48,9 @@ pub fn command(options: CompilePackage) -> Result<()> {
     Ok(())
 }
 
-fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<HashMap<String, Module>> {
+fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<String, Module>> {
     tracing::info!("Reading precompiled module metadata files");
-    let mut manifests = HashMap::new();
+    let mut manifests = im::HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {
         let path = lib.path().join("build");
         if !path.is_dir() {

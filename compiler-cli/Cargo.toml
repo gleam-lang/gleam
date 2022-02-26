@@ -8,6 +8,8 @@ license-file = "LICENCE"
 [dependencies]
 # The pure compiler
 gleam-core = { path = "../compiler-core" }
+# Immutable data structures
+im = "15.0.0"
 # OS SIGINT and SIGTERM signal handling
 ctrlc = { version = "3.2.1", features = ["termination"] }
 # Command line interface

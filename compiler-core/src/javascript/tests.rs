@@ -24,7 +24,7 @@ macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
-        let mut modules = std::collections::HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -64,7 +64,7 @@ macro_rules! assert_js {
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
         use std::path::Path;
-        let mut modules = std::collections::HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -105,7 +105,7 @@ macro_rules! assert_js {
     ($src:expr $(,)?) => {{
         use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
-        let mut modules = std::collections::HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -134,7 +134,7 @@ macro_rules! assert_js {
     ($src:expr, $erl:expr $(,)?) => {{
         use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
-        let mut modules = std::collections::HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better

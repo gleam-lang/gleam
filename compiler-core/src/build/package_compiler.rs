@@ -75,8 +75,8 @@ where
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
-        existing_modules: &mut HashMap<String, type_::Module>,
-        already_defined_modules: &mut HashMap<String, PathBuf>,
+        existing_modules: &mut im::HashMap<String, type_::Module>,
+        already_defined_modules: &mut im::HashMap<String, PathBuf>,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -351,7 +351,7 @@ fn type_check(
     ids: &UniqueIdGenerator,
     sequence: Vec<String>,
     mut parsed_modules: HashMap<String, Parsed>,
-    module_types: &mut HashMap<String, type_::Module>,
+    module_types: &mut im::HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
@@ -438,7 +438,7 @@ fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String
 fn parse_sources(
     package_name: &str,
     sources: Vec<Source>,
-    already_defined_modules: &mut HashMap<String, PathBuf>,
+    already_defined_modules: &mut im::HashMap<String, PathBuf>,
 ) -> Result<HashMap<String, Parsed>, Error> {
     let mut parsed_modules = HashMap::with_capacity(sources.len());
     for Source {

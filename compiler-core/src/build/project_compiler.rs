@@ -36,19 +36,13 @@ pub struct Options {
 pub struct ProjectCompiler<'a, IO> {
     config: PackageConfig,
     packages: HashMap<String, &'a ManifestPackage>,
-    importable_modules: HashMap<String, type_::Module>,
-    defined_modules: HashMap<String, PathBuf>,
+    importable_modules: im::HashMap<String, type_::Module>,
+    defined_modules: im::HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
     options: &'a Options,
     ids: UniqueIdGenerator,
     io: IO,
-}
-
-pub struct CheckpointState {
-    importable_modules: HashMap<String, type_::Module>,
-    defined_modules: HashMap<String, PathBuf>,
-    ids: UniqueIdGenerator,
 }
 
 // TODO: test that tests cannot be imported into src
@@ -65,11 +59,10 @@ where
         telemetry: Box<dyn Telemetry>,
         io: IO,
     ) -> Self {
-        let estimated_modules = packages.len() * 5;
         let packages = packages.iter().map(|p| (p.name.to_string(), p)).collect();
         Self {
-            importable_modules: HashMap::with_capacity(estimated_modules),
-            defined_modules: HashMap::with_capacity(estimated_modules),
+            importable_modules: im::HashMap::new(),
+            defined_modules: im::HashMap::new(),
             ids: UniqueIdGenerator::new(),
             warnings: Vec::new(),
             telemetry,
@@ -82,7 +75,6 @@ where
 
     // TODO: test
     pub fn checkpoint(&self) -> CheckpointState {
-        // TODO: use immutable hashmaps to make cloning cheap
         CheckpointState {
             importable_modules: self.importable_modules.clone(),
             defined_modules: self.defined_modules.clone(),
@@ -330,4 +322,10 @@ fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
         package: package.name.to_string(),
         build_tools: package.build_tools.clone(),
     })
+}
+
+pub struct CheckpointState {
+    importable_modules: im::HashMap<String, type_::Module>,
+    defined_modules: im::HashMap<String, PathBuf>,
+    ids: UniqueIdGenerator,
 }

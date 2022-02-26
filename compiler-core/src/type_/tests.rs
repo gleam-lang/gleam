@@ -10,7 +10,7 @@ macro_rules! assert_infer {
         let mut printer = pretty::Printer::new();
         let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
 
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -33,10 +33,9 @@ macro_rules! assert_module_infer {
         use crate::type_::{build_prelude, infer_module};
         use crate::uid::UniqueIdGenerator;
         use itertools::Itertools;
-        use std::collections::HashMap;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
@@ -76,7 +75,7 @@ macro_rules! assert_warning {
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
@@ -105,7 +104,7 @@ macro_rules! assert_no_warnings {
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
-        let mut modules = HashMap::new();
+        let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
@@ -255,7 +254,7 @@ fn infer_module_type_retention_test() {
         type_info: (),
     };
     let ids = UniqueIdGenerator::new();
-    let mut modules = HashMap::new();
+    let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
