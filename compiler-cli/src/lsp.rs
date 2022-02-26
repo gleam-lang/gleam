@@ -9,7 +9,7 @@ use std::{
 };
 
 use gleam_core::{
-    build::{Options, Package, ProjectCompiler, Telemetry},
+    build::{self, Package, ProjectCompiler, Telemetry},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -390,11 +390,16 @@ where
 {
     pub fn new(
         config: PackageConfig,
-        options: &'a Options,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
     ) -> Result<Self, Error> {
+        let options = build::Options {
+            mode: build::Mode::Dev,
+            target: None,
+            perform_codegen: false,
+        };
+
         let mut project_compiler = ProjectCompiler::new(config, options, packages, telemetry, io);
         project_compiler.compile_dependencies()?;
         Ok(Self { project_compiler })

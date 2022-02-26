@@ -32,7 +32,7 @@ impl PublishCommand {
         fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
         // Build the project to check that it is valid
-        let mut compiled = build::main(&Options {
+        let mut compiled = build::main(Options {
             mode: Mode::Prod,
             target: Some(Target::Erlang),
             perform_codegen: true,

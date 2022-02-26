@@ -368,7 +368,7 @@ compile-package` API with your existing build tool.
 ";
 
 fn command_check() -> Result<(), Error> {
-    let _ = build::main(&Options {
+    let _ = build::main(Options {
         perform_codegen: false,
         mode: Mode::Dev,
         target: None,
@@ -386,7 +386,7 @@ fn command_build(
 
     // Use new build tool if not in a rebar project
     if !root.join("rebar.config").exists() {
-        return build::main(&Options {
+        return build::main(Options {
             perform_codegen: true,
             mode: Mode::Dev,
             target,

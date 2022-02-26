@@ -7,7 +7,7 @@ use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
     // Build project
-    let _ = crate::build::main(&Options {
+    let _ = crate::build::main(Options {
         perform_codegen: true,
         mode: Mode::Dev,
         target: Some(Target::Erlang),

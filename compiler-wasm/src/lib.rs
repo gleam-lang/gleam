@@ -106,7 +106,7 @@ fn compile_project(
             name: PROJECT_NAME.to_string(),
             ..Default::default()
         },
-        &options,
+        options,
         &packages,
         Box::new(LogTelemetry),
         wfs.clone(),

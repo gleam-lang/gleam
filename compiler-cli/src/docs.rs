@@ -45,7 +45,7 @@ pub fn remove(package: String, version: String) -> Result<(), Error> {
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
     let out = paths::build_docs(&config.name);
-    let mut compiled = crate::build::main(&Options {
+    let mut compiled = crate::build::main(Options {
         mode: Mode::Prod,
         target: None,
         perform_codegen: true,
@@ -90,7 +90,7 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
-        let mut compiled = crate::build::main(&Options {
+        let mut compiled = crate::build::main(Options {
             perform_codegen: true,
             mode: Mode::Dev,
             target: None,

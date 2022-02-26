@@ -40,7 +40,7 @@ pub struct ProjectCompiler<'a, IO> {
     defined_modules: im::HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
-    options: &'a Options,
+    options: Options,
     ids: UniqueIdGenerator,
     io: IO,
 }
@@ -54,7 +54,7 @@ where
 {
     pub fn new(
         config: PackageConfig,
-        options: &'a Options,
+        options: Options,
         packages: &'a [ManifestPackage],
         telemetry: Box<dyn Telemetry>,
         io: IO,
