@@ -3,10 +3,7 @@ use crate::diagnostic::{Diagnostic, Label, Location};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_string,
-    diagnostic::{
-        write_diagnostic_old, write_old, write_project, DiagnosticLabel, LabelStyle, Level,
-        OldDiagnostic, OldMultiLineDiagnostic, ProjectErrorDiagnostic, Severity,
-    },
+    diagnostic::Level,
     javascript,
     type_::{pretty::Printer, UnifyErrorSituation},
 };
@@ -22,12 +19,6 @@ pub type Src = String;
 pub type Name = String;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
-
-macro_rules! wrap_writeln {
-    ($buf:expr, $($tts:tt)*) => {
-        writeln!($buf, "{}", wrap(&format!($($tts)*)))
-    }
-}
 
 macro_rules! wrap_format {
     ($($tts:tt)*) => {
@@ -355,7 +346,7 @@ impl Error {
     }
 
     pub fn pretty(&self, buffer: &mut Buffer) {
-        write_diagnostic(buffer, &self.to_diagnostic());
+        self.to_diagnostic().write(buffer)
     }
 
     pub fn to_diagnostic(&self) -> Diagnostic {
@@ -703,20 +694,16 @@ Second: {}",
                     } else {
                         "Unknown label"
                     };
-                    OldMultiLineDiagnostic {
-                        title: title.to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        labels: unknown
-                            .iter()
-                            .map(|(label, location)| DiagnosticLabel {
-                                text: did_you_mean(label, &other_labels, "Unexpected label"),
-                                location: *location,
-                                style: LabelStyle::Primary,
-                            })
-                            .collect(),
-                    };
-
+                    let mut labels = unknown.iter().map(|(label, location)| {
+                        let text =
+                            did_you_mean(label, &other_labels).unwrap_or("Unexpected label".into());
+                        Label {
+                            text: Some(text),
+                            span: *location,
+                        }
+                    });
+                    let label = labels.next().expect("Unknown labels first label");
+                    let extra_labels = labels.collect();
                     let text = if valid.is_empty() {
                         "This constructor does not accept any labelled arguments.".into()
                     } else if other_labels.is_empty() {
@@ -734,13 +721,10 @@ constructor accepts."
                         text,
                         level: Level::Error,
                         location: Some(Location {
-                            label: Label {
-                                text: None,
-                                span: *location,
-                            },
+                            label,
                             path: path.clone(),
                             src: src.into(),
-                            extra_labels: vec![],
+                            extra_labels,
                         }),
                     }
                 }
@@ -785,6 +769,35 @@ also be labelled."
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                TypeError::DuplicateImport {
+                    location,
+                    previous_location,
+                    name,
+                } => {
+                    let text = format!(
+                        "{} has been imported multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.",
+                        name
+                    );
+                    Diagnostic {
+                        title: "Duplicate import".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("reimportd here".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![Label {
+                                text: Some("previously imported here".into()),
+                                span: *previous_location,
+                            }],
                         }),
                     }
                 }
@@ -1104,13 +1117,14 @@ But function expects:
                 } => {
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    let text = if let Some(description) = situation.and_then(|s| s.description()) {
-                        let mut text = description.to_string();
-                        text.push('\n');
-                        text
-                    } else {
-                        "".into()
-                    };
+                    let mut text =
+                        if let Some(description) = situation.and_then(|s| s.description()) {
+                            let mut text = description.to_string();
+                            text.push('\n');
+                            text
+                        } else {
+                            "".into()
+                        };
                     text.push_str("Expected type:\n\n");
                     text.push_str(&printer.pretty_print(expected, 4));
                     text.push_str("\n\nFound type:\n\n");
@@ -1170,13 +1184,14 @@ But function expects:
                             labels,
                         )
                     };
+                    let label = format!("expected {} arguments, got {}", expected, given);
                     Diagnostic {
                         title: "Incorrect arity".into(),
-                        text: format!("expected {} arguments, got {}", expected, given),
+                        text,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: None,
+                                text: Some(label),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -2062,7 +2077,7 @@ dev-dependencies sections of the gleam.toml file.",
                 let mut text =
                     "Licence information and package description are required to publish a
 package to Hex.\n"
-                        .into();
+                        .to_string();
                 text.push_str(if *description_missing && *licence_missing {
                     r#"Add the licences and description fields to your gleam.toml file.
                 
@@ -2196,8 +2211,4 @@ pub struct Unformatted {
 
 pub fn wrap(text: &str) -> String {
     textwrap::fill(text, std::cmp::min(75, textwrap::termwidth()))
-}
-
-pub fn write_diagnostic(buffer: &mut Buffer, diagnostic: &Diagnostic) -> () {
-    todo!()
 }
