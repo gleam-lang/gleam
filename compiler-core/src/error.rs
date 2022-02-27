@@ -337,7 +337,7 @@ impl FileKind {
     }
 }
 
-fn did_you_mean(name: &str, options: &[String], alt: &'static str) -> String {
+fn did_you_mean(name: &str, options: &[String]) -> Option<String> {
     // Find best match
     options
         .iter()
@@ -345,7 +345,6 @@ fn did_you_mean(name: &str, options: &[String], alt: &'static str) -> String {
         .sorted()
         .min_by_key(|option| strsim::levenshtein(option, name))
         .map(|option| format!("did you mean `{}`?", option))
-        .unwrap_or_else(|| alt.to_string())
 }
 
 impl Error {
@@ -699,13 +698,11 @@ Second: {}",
                         .cloned()
                         .filter(|label| !supplied.contains(label))
                         .collect();
-
                     let title = if unknown.len() > 1 {
                         "Unknown labels"
                     } else {
                         "Unknown label"
                     };
-
                     OldMultiLineDiagnostic {
                         title: title.to_string(),
                         file: path.to_str().unwrap().to_string(),
@@ -719,27 +716,32 @@ Second: {}",
                             })
                             .collect(),
                     };
-                    write_diagnostic_old(buf, diagnostic, Severity::Error);
 
-                    if valid.is_empty() {
-                        writeln!(
-                            buf,
-                            "This constructor does not accept any labelled arguments."
-                        )
-                        .unwrap();
+                    let text = if valid.is_empty() {
+                        "This constructor does not accept any labelled arguments.".into()
                     } else if other_labels.is_empty() {
-                        wrap_writeln!(
-                                buf,
-                                "You have already supplied all the labelled arguments that this constructor accepts."
-                            )
-                            .unwrap();
+                        "You have already supplied all the labelled arguments that this
+constructor accepts."
+                            .into()
                     } else {
-                        wrap_writeln!(
-                            buf,
+                        wrap_format!(
                             "The other labelled arguments that this constructor accepts are `{}`.",
                             other_labels.iter().join("`, `")
                         )
-                        .unwrap();
+                    };
+                    Diagnostic {
+                        title: "Unexpected labelled argument".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
                     }
                 }
 
@@ -749,7 +751,6 @@ Second: {}",
 Please remove the label `{}`.",
                         label
                     );
-
                     Diagnostic {
                         title: "Unexpected labelled argument".into(),
                         text,
@@ -984,7 +985,8 @@ Perhaps add some type annotations and try again."
                         text.push_str("\n    .");
                         text.push_str(field);
                     }
-                    let label = did_you_mean(label, fields, "This field does not exist");
+                    let label = did_you_mean(label, fields)
+                        .unwrap_or_else(|| "This field does not exist".into());
                     Diagnostic {
                         title: "Unknown record field".into(),
                         text,
@@ -1024,7 +1026,7 @@ But this argument has this type:
                     );
                     if let Some(hint) = hint_alternative_operator(op, given) {
                         text.push_str("Hint: ");
-                        text.push_str(hint);
+                        text.push_str(&hint);
                         text.push('\n');
                     }
                     Diagnostic {
@@ -1050,14 +1052,6 @@ But this argument has this type:
                     situation: Some(UnifyErrorSituation::PipeTypeMismatch),
                     rigid_type_names: annotated_names,
                 } => {
-                    OldDiagnostic {
-                        title: "Type mismatch".into(),
-                        text: "This function does not accept the piped type".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-
                     // Remap the pipe function type into just the type expected by the pipe.
                     let expected = expected
                         .fn_types()
@@ -1069,26 +1063,36 @@ But this argument has this type:
                         .and_then(|(args, _)| args.get(0).cloned())
                         .unwrap_or_else(|| given.clone());
 
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "The argument is:
 
 {given}
 
 But function expects:
 
-{expected}
-
-",
+{expected}",
                         expected = expected
                             .map(|v| printer.pretty_print(&v, 4))
                             .unwrap_or_else(|| "    No arguments".into()),
                         given = printer.pretty_print(&given, 4)
-                    )
-                    .unwrap();
+                    );
+
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("This function does not accept the piped type".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::CouldNotUnify {
@@ -1098,32 +1102,33 @@ But function expects:
                     situation,
                     rigid_type_names: annotated_names,
                 } => {
-                    OldDiagnostic {
-                        title: "Type mismatch".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    if let Some(description) = situation.and_then(|s| s.description()) {
-                        writeln!(buf, "{}\n", description).unwrap();
-                    }
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    writeln!(
-                        buf,
-                        "Expected type:
-
-{}
-
-Found type:
-
-{}\n",
-                        printer.pretty_print(expected, 4),
-                        printer.pretty_print(given, 4),
-                    )
-                    .unwrap();
+                    let text = if let Some(description) = situation.and_then(|s| s.description()) {
+                        let mut text = description.to_string();
+                        text.push('\n');
+                        text
+                    } else {
+                        "".into()
+                    };
+                    text.push_str("Expected type:\n\n");
+                    text.push_str(&printer.pretty_print(expected, 4));
+                    text.push_str("\n\nFound type:\n\n");
+                    text.push_str(&printer.pretty_print(given, 4));
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::IncorrectTypeArity {
@@ -1131,16 +1136,20 @@ Found type:
                     expected,
                     given,
                     ..
-                } => {
-                    OldDiagnostic {
-                        title: "Incorrect arity".into(),
-                        text: format!("expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                }
+                } => Diagnostic {
+                    title: "Incorrect arity".into(),
+                    text: format!("expected {} arguments, got {}", expected, given),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::IncorrectArity {
                     labels,
@@ -1148,45 +1157,55 @@ Found type:
                     expected,
                     given,
                 } => {
-                    OldDiagnostic {
-                        title: "Incorrect arity".into(),
-                        text: format!("expected {} arguments, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    if !labels.is_empty() {
+                    let text = if labels.is_empty() {
+                        "".into()
+                    } else {
                         let labels = labels
                             .iter()
                             .map(|p| format!("  - {}", p))
                             .sorted()
                             .join("\n");
-                        writeln!(
-                            buf,
-                            "This call accepts these additional labelled arguments:\n\n{}\n",
+                        format!(
+                            "This call accepts these additional labelled arguments:\n\n{}",
                             labels,
                         )
-                        .unwrap();
+                    };
+                    Diagnostic {
+                        title: "Incorrect arity".into(),
+                        text: format!("expected {} arguments, got {}", expected, given),
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
                     }
                 }
 
                 TypeError::UnnecessarySpreadOperator { location, arity } => {
-                    OldDiagnostic {
-                        title: "Unnecessary spread operator".into(),
-                        text: String::new(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-
-                    wrap_writeln!(
-                        buf,
-                        "This record has {} fields and you have already assigned variables to all of them.",
+                    let text = wrap_format!(
+                        "This record has {} fields and you have already assigned \
+variables to all of them.",
                         arity
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Unnecessary spread operator".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownType {
@@ -1194,47 +1213,46 @@ Found type:
                     name,
                     types,
                 } => {
-                    OldDiagnostic {
-                        title: "Unknown type".into(),
-                        text: did_you_mean(name, types, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
+                    let text = wrap_format!(
                         "The type `{}` is not defined or imported in this module.",
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Unknown type".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, types),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownVariable {
                     location,
                     variables,
                     name,
-                } => {
-                    OldDiagnostic {
-                        title: "Unknown variable".into(),
-                        text: did_you_mean(name, variables, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(buf, "The name `{}` is not in scope here.", name).unwrap();
-                }
+                } => Diagnostic {
+                    title: "Unknown variable".into(),
+                    text: wrap_format!("The name `{}` is not in scope here.", name),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: did_you_mean(name, variables),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
-                    OldDiagnostic {
-                        title: "Private type used in public interface".into(),
-                        text: "".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
 
                     // TODO: be more precise.
@@ -1242,33 +1260,48 @@ Found type:
                     // - is taken as an argument by this public function
                     // - is taken as an argument by this public enum constructor
                     // etc
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "The following type is private, but is being used by this public export.
 
 {}
 
 Private types can only be used within the module that defines them.",
                         printer.pretty_print(leaked, 4),
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Private type used in public interface".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownModule {
                     location,
                     name,
                     imported_modules,
-                } => {
-                    OldDiagnostic {
-                        title: "Unknown module".into(),
-                        text: did_you_mean(name, imported_modules, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    writeln!(buf, "No module has been found with the name `{}`.", name).unwrap();
-                }
+                } => Diagnostic {
+                    title: "Unknown module".into(),
+                    text: format!("No module has been found with the name `{}`.", name),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: did_you_mean(name, imported_modules),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::UnknownModuleType {
                     location,
@@ -1276,21 +1309,25 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     type_constructors,
                 } => {
-                    OldDiagnostic {
-                        title: "Unknown module type".into(),
-                        text: did_you_mean(name, type_constructors, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "The module `{}` does not have a `{}` type.",
                         module_name.join("/"),
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Unknown module type".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, type_constructors),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownModuleValue {
@@ -1299,21 +1336,25 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     value_constructors,
                 } => {
-                    OldDiagnostic {
-                        title: "Unknown module field".into(),
-                        text: did_you_mean(name, value_constructors, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Unknown module field".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, value_constructors),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::UnknownModuleField {
@@ -1328,21 +1369,25 @@ Private types can only be used within the module that defines them.",
                         .chain(value_constructors)
                         .map(|s| s.to_string())
                         .collect();
-                    OldDiagnostic {
-                        title: "Unknown module field".into(),
-                        text: did_you_mean(name, &options, ""),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "The module `{}` does not have a `{}` field.",
                         module_name.join("/"),
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Unknown module field".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, &options),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::IncorrectNumClausePatterns {
@@ -1350,190 +1395,231 @@ Private types can only be used within the module that defines them.",
                     expected,
                     given,
                 } => {
-                    OldDiagnostic {
-                        title: "Incorrect number of patterns".into(),
-                        text: format!("expected {} patterns, got {}", expected, given),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
+                    let text = wrap_format!(
                         "This case expression has {} subjects, but this pattern matches {}.
 Each clause must have a pattern for every subject value.",
                         expected,
                         given
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Incorrect number of patterns".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(format!(
+                                    "expected {} patterns, got {}",
+                                    expected, given
+                                )),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::NonLocalClauseGuardVariable { location, name } => {
-                    OldDiagnostic {
-                        title: "Invalid guard variable".into(),
-                        text: "is not locally defined".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
+                    let text=wrap_format!(
                         "Variables used in guards must be either defined in the function, or be an argument to the function. The variable `{}` is not defined locally.",
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Invalid guard variable".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("is not locally defined".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::ExtraVarInAlternativePattern { location, name } => {
-                    OldDiagnostic {
-                        title: "Extra alternative pattern variable".into(),
-                        text: "has not been previously defined".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "All alternative patterns must define the same variables as the initial pattern. This variable `{}` has not been previously defined.",
+                    let text = wrap_format!(
+"All alternative patterns must define the same variables as the initial pattern. \
+This variable `{}` has not been previously defined.",
                         name
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Extra alternative pattern variable".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("has not been previously defined".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::MissingVarInAlternativePattern { location, name } => {
-                    OldDiagnostic {
-                        title: "Missing alternative pattern variable".into(),
-                        text: "does not define all required variables".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    buf.write_all(wrap(&format!(
-                        "All alternative patterns must define the same variables as the initial pattern, but the `{}` variable is missing.",
+                    let text = wrap_format!(
+                        "All alternative patterns must define the same variables \
+as the initial pattern, but the `{}` variable is missing.",
                         name
-                    )).as_bytes())
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Missing alternative pattern variable".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("does not define all required variables".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::DuplicateVarInPattern { location, name } => {
-                    OldDiagnostic {
-                        title: "Duplicate variable in pattern".into(),
-                        text: "has already been used".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-
-                    writeln!(
-                        buf,
-                        "{}",
-                        wrap(&format!(
-                            "Variables can only be used once per pattern. This variable {} appears multiple times.
-If you used the same variable twice deliberately in order to check for equality please use a guard clause instead.
+                    let text = wrap_format!(
+                        "Variables can only be used once per pattern. This \
+variable {} appears multiple times.
+If you used the same variable twice deliberately in order to check for equality \
+please use a guard clause instead.
 e.g. (x, y) if x == y -> ...",
-                            name
-                        ))
-                    )
-                    .unwrap();
+                        name
+                    );
+                    Diagnostic {
+                        title: "Duplicate variable in pattern".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("has already been used".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::OutOfBoundsTupleIndex {
                     location, size: 0, ..
-                } => {
-                    OldDiagnostic {
-                        title: "Out of bounds tuple index".into(),
-                        text: "this index is too large".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "This tuple has no elements so it cannot be indexed at all!"
-                    )
-                    .unwrap();
-                }
+                } => Diagnostic {
+                    title: "Out of bounds tuple index".into(),
+                    text: "This tuple has no elements so it cannot be indexed at all.".into(),
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::OutOfBoundsTupleIndex {
                     location,
                     index,
                     size,
                 } => {
-                    OldDiagnostic {
-                        title: "Out of bounds tuple index".into(),
-                        text: "this index is too large".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "The index being accessed for this tuple is {}, but this tuple has {} elements so the highest valid index is {}.",
+                    let text = wrap_format!(
+                        "The index being accessed for this tuple is {}, but this \
+tuple has {} elements so the highest valid index is {}.",
                         index,
                         size,
                         size - 1,
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Out of bounds tuple index".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("this index is too large".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::NotATuple { location, given } => {
-                    OldDiagnostic {
-                        title: "Type mismatch".into(),
-                        text: "is not a tuple".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
                     let mut printer = Printer::new();
-
-                    writeln!(
-                        buf,
+                    let text = format!(
                         "To index into this value it needs to be a tuple, however it has this type:
 
 {}",
                         printer.pretty_print(given, 4),
-                    )
-                    .unwrap();
+                    );
+                    Diagnostic {
+                        title: "Type mismatch".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("is not a tuple".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::NotATupleUnbound { location } => {
-                    OldDiagnostic {
+                    let text = "To index into a tuple we need to know it size, but we don't know
+anything about this type yet. Please add some type annotations so 
+we can continue."
+                        .into();
+                    Diagnostic {
                         title: "Type mismatch".into(),
-                        text: "what type is this?".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-                    wrap_writeln!(
-                        buf,
-                        "To index into a tuple we need to know it size, but we don't know anything about this type yet. Please add some type annotations so we can continue.",
-                    )
-                    .unwrap();
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("what type is this?".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::RecordAccessUnknownType { location } => {
-                    OldDiagnostic {
+                    let text = wrap(
+                        "In order to access a record field we need to know what \
+type it is, but I can't tell the type here. Try adding type annotations to your \
+function and try again.",
+                    );
+                    Diagnostic {
                         title: "Unknown type for record access".into(),
-                        text: "I don't know what type this is".into(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
-                    };
-                    write_old(buf, diagnostic, Severity::Error);
-
-                    wrap_writeln!(
-                        buf,
-                        "In order to access a record field we need to know what type it is, but I can't tell the type here. Try adding type annotations to your function and try again.",
-                    )
-                    .unwrap();
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("I don't know what type this is".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 }
 
                 TypeError::BitStringSegmentError { error, location } => {
@@ -1613,17 +1699,21 @@ e.g. (x, y) if x == y -> ...",
                             vec!["Hint: If you specify unit() you must also specify size().".into()],
                         ),
                     };
-                    OldDiagnostic {
-                        title: "BitString Segment Error".into(),
-                        text: label.to_string(),
-                        location: *location,
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                    };
                     extra.push("See: https://gleam.run/book/tour/bit-strings.html".into());
-                    write_old(buf, diagnostic, Severity::Error);
-                    if !extra.is_empty() {
-                        writeln!(buf, "{}", extra.join("\n")).expect("error pretty buffer write");
+                    let text = extra.join("\n");
+                    Diagnostic {
+                        title: "Invalid bit string segment".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(label.into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
                     }
                 }
 
@@ -1800,7 +1890,7 @@ cycle to continue.",
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: Some(did_you_mean(import, modules, "")),
+                            text: did_you_mean(import, modules),
                             span: *location,
                         },
                         path: path.clone(),
