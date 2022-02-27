@@ -91,7 +91,7 @@ zzz 0.4.0
     )
 }
 
-pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
+pub fn download(new_package: Option<(Vec<String>, bool)>) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
     let mode = Mode::Dev;
@@ -104,14 +104,16 @@ pub fn download(new_package: Option<(&str, bool)>) -> Result<Manifest> {
     let mut config = crate::config::root_config()?;
     let project_name = config.name.clone();
 
-    // Insert the new package to add, if it exists
-    if let Some((package, dev)) = new_package {
-        let version = hexpm::version::Range::new(">= 0.0.0".into());
-        let _ = if dev {
-            config.dev_dependencies.insert(package.to_string(), version)
-        } else {
-            config.dependencies.insert(package.to_string(), version)
-        };
+    // Insert the new packages to add, if it exists
+    if let Some((packages, dev)) = new_package {
+        for package in packages {
+            let version = hexpm::version::Range::new(">= 0.0.0".into());
+            let _ = if dev {
+                config.dev_dependencies.insert(package.to_string(), version)
+            } else {
+                config.dependencies.insert(package.to_string(), version)
+            };
+        }
     }
 
     // Start event loop so we can run async functions to call the Hex API
