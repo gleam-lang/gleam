@@ -177,7 +177,8 @@ enum Command {
 
     /// Add new project dependencies
     Add {
-        #[clap(value_name = "PKG", required = true)]
+        /// The names of Hex packages to add
+        #[clap(required = true)]
         packages: Vec<String>,
 
         /// Add the packages as dev-only dependencies
