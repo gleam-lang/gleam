@@ -175,11 +175,11 @@ enum Command {
     #[clap(setting = AppSettings::Hidden)]
     PrintConfig,
 
-    /// Add a new project dependency
+    /// Add new project dependencies
     Add {
-        package: String,
+        packages: Vec<String>,
 
-        /// Add the package as a dev-only dependency
+        /// Add the packages as dev-only dependencies
         #[clap(long)]
         dev: bool,
     },
@@ -338,7 +338,7 @@ fn main() {
             hex::UnretireCommand::new(package, version).run()
         }
 
-        Command::Add { package, dev } => add::command(package, dev),
+        Command::Add { packages, dev } => add::command(packages, dev),
 
         Command::Clean => clean(),
 
