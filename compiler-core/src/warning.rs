@@ -22,7 +22,7 @@ impl Warning {
     pub fn to_diagnostic(&self) -> (Diagnostic, String) {
         #[allow(clippy::unwrap_used)]
         match self {
-            Self::Type { path, src, warning } => match warning {
+            Self::Type { path, warning, .. } => match warning {
                 type_::Warning::Todo { location, typ } => {
                     let mut printer = Printer::new();
                     (
@@ -54,8 +54,11 @@ your program.",
                         level: crate::diagnostic::Level::Warning,
                         location: None,
                     },
-                    "other warning".to_string()
+                    "This is a hint".to_string()
                 )
+
+                // TODO: Check all this matches. OldDiagnostic does not exists
+
                 // type_::Warning::ImplicitlyDiscardedResult { location } => (
                 //     OldDiagnostic {
                 //         title: "Unused result value".to_string(),
