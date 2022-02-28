@@ -1,0 +1,17 @@
+name: Feature Request
+description: Create a feature request
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: "Please provide a description of the feature or enhancement."
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Gleam Version
+      description: "The Gleam version used"
+      placeholder: "0.20.1"
+    validations:
+      required: false
