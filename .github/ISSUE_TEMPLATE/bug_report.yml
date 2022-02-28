@@ -1,5 +1,5 @@
 name: Bug Report
-title: "[Bug]: "
+title: "Bug: "
 description: Create a bug report
 labels: ["bug"]
 body:
