@@ -3,13 +3,13 @@ contact_links:
   - name: Gleam Community
     url: https://discord.com/invite/Fm8Pwmy
     about: Please ask and answer questions here.
-  - name: Gleam Standard Library
-    url: https://hexdocs.pm/gleam_stdlib/
-    about: Build-In Library Documentation
   - name: Gleam Core Language Reference
     url: https://gleam.run/book/tour/
     about: Gleam Language Tour
+  - name: Gleam Standard Library Documentation
+    url: https://hexdocs.pm/gleam_stdlib/
+    about: Documentation of build-in standard library
   - name: Gleam Playground
     url: https://johndoneth.github.io/gleam-playground/
-    about: Great for sharing small bits of code
+    about: Great for trying gleam code in your browser and for sharing small bits of code
   
