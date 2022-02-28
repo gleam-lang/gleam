@@ -8,7 +8,7 @@ contact_links:
     about: Gleam Language Tour
   - name: Gleam Standard Library Documentation
     url: https://hexdocs.pm/gleam_stdlib/
-    about: Documentation of build-in standard library
+    about: Documentation of built-in standard library
   - name: Gleam Playground
     url: https://johndoneth.github.io/gleam-playground/
     about: Great for trying Gleam code in your browser and for sharing small bits of code
