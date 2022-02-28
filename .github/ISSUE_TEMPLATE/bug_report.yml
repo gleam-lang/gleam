@@ -8,25 +8,10 @@ body:
       label: Description
       description: "Please provide a description and way to reproduce the problem."
       placeholder: |
-        Please use the Gleam's Discord channel for questions.
-
+        Please use the Gleam's Discord channel for questions:
         https://discord.com/invite/Fm8Pwmy
     validations:
       required: true
-  - type: input
-    attributes:
-      label: Gleam Version
-      description: "The Gleam version used"
-      placeholder: "0.20.1"
-    validations:
-      required: true
-  - type: input
-    attributes:
-      label: Erlang/OTP Version
-      description: "The Erlang/OTP version used."
-      placeholder: "24.2.1"
-    validations:
-      required: false
   - type: dropdown
     id: area
     attributes:
@@ -43,5 +28,19 @@ body:
         - area:tooling
         - area:type-analysis
         - area:web-dev 
+    validations:
+      required: false
+  - type: input
+    attributes:
+      label: Gleam Version
+      description: "The Gleam version used"
+      placeholder: "0.20.1"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Erlang/OTP Version
+      description: "The Erlang/OTP version used."
+      placeholder: "24.2.1"
     validations:
       required: false
