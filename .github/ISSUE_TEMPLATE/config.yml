@@ -11,5 +11,5 @@ contact_links:
     about: Documentation of build-in standard library
   - name: Gleam Playground
     url: https://johndoneth.github.io/gleam-playground/
-    about: Great for trying gleam code in your browser and for sharing small bits of code
+    about: Great for trying Gleam code in your browser and for sharing small bits of code
   
