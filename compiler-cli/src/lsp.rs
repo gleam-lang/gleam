@@ -16,12 +16,12 @@ use gleam_core::{
     type_, Error, Result,
 };
 use lsp_types::{
-    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument, DidOpenTextDocument},
+    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::Formatting,
     Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidSaveTextDocumentParams, InitializeParams, OneOf, Position, PublishDiagnosticsParams, Range,
     SaveOptions, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url, DidOpenTextDocumentParams,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
 };
 
 use crate::{cli, fs::ProjectIO};
@@ -213,9 +213,7 @@ impl LanguageServer {
                 self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
             }
 
-            "textDocument/didOpen" => {
-                self.did_open()
-            }
+            "textDocument/didOpen" => self.did_open(),
 
             "textDocument/didChange" => {
                 self.did_change(cast_notification::<DidChangeTextDocument>(request).unwrap())
@@ -417,8 +415,15 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
                 Some(diagnostic_params)
             }
 
-            type_::Error::DuplicateImport { location, name, previous_location } => {
-                let mut message = format!("`{}` is previously defined at line {}", name, previous_location.start);
+            type_::Error::DuplicateImport {
+                location,
+                name,
+                previous_location,
+            } => {
+                let mut message = format!(
+                    "`{}` is previously defined at line {}",
+                    name, previous_location.start
+                );
                 message.push('\n');
                 message.push_str("`{}` must be defined only once in this module.");
 

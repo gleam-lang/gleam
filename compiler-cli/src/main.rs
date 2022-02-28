@@ -77,7 +77,6 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{Mode, Options, Target},
-    diagnostic::{self, Severity},
     error::wrap,
     hex::RetirementReason,
     project::Analysed,

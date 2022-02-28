@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, Severity, Location},
+    diagnostic::{Diagnostic, Location},
     type_,
     type_::pretty::Printer,
 };
@@ -48,7 +48,7 @@ your program.",
                 }
 
                 _ => (
-                    Diagnostic { 
+                    Diagnostic {
                         title: "Other warning".to_string(),
                         text: "Other warning".to_string(),
                         level: crate::diagnostic::Level::Warning,
