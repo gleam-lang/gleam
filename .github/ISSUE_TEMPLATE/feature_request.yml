@@ -1,6 +1,6 @@
 name: Feature Request
 description: Create a feature request
-labels: ["enhancement"]
+labels: ["request"]
 body:
   - type: textarea
     attributes:
@@ -13,5 +13,23 @@ body:
       label: Gleam Version
       description: "The Gleam version used"
       placeholder: "0.20.1"
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: What area does this relate to
+      options:
+        - area:ci
+        - area:codegen
+        - area:documentation
+        - area:errors
+        - area:formatter
+        - area:language-design
+        - area:parser
+        - area:tooling
+        - area:type-analysis
+        - area:web-dev 
     validations:
       required: false
