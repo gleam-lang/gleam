@@ -8,13 +8,6 @@ body:
       description: "Please provide a description of the feature or enhancement."
     validations:
       required: true
-  - type: input
-    attributes:
-      label: Gleam Version
-      description: "The Gleam version used"
-      placeholder: "0.20.1"
-    validations:
-      required: false
   - type: dropdown
     id: area
     attributes:
@@ -31,5 +24,12 @@ body:
         - area:tooling
         - area:type-analysis
         - area:web-dev 
+    validations:
+      required: false
+  - type: input
+    attributes:
+      label: Gleam Version
+      description: "The Gleam version used"
+      placeholder: "0.20.1"
     validations:
       required: false
