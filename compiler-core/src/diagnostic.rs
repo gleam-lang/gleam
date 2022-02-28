@@ -43,8 +43,8 @@ pub struct Diagnostic {
 impl Diagnostic {
     pub fn write(&self, buffer: &mut Buffer) {
         use std::io::Write;
-        match self.location {
-            Some(location) => self.write_span(location, buffer),
+        match &self.location {
+            Some(location) => self.write_span(location.clone(), buffer),
             None => self.write_title(buffer),
         };
 
@@ -52,23 +52,23 @@ impl Diagnostic {
     }
 
     fn write_span(&self, location: Location, buffer: &mut Buffer) {
-        let file = SimpleFile::new(location.path.to_string_lossy().to_string(), location.src);
+        let file = SimpleFile::new(location.path.to_string_lossy().to_string(), &location.src);
         let labels = location
             .labels()
             .map(|l| {
                 let label =
                     CodespanLabel::new(LabelStyle::Primary, (), (l.span.start)..(l.span.end));
-                match l.text {
+                match &l.text {
                     None => label,
                     Some(text) => label.with_message(text.clone()),
                 }
             })
             .collect();
         let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(Severity::Error)
-            .with_message(self.title)
+            .with_message(&self.title)
             .with_labels(labels);
         let config = codespan_reporting::term::Config::default();
-        codespan_reporting::term::emit(&mut buffer, &config, &file, &diagnostic)
+        codespan_reporting::term::emit(buffer, &config, &file, &diagnostic)
             .expect("write_diagnostic");
     }
 

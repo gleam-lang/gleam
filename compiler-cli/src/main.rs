@@ -396,11 +396,11 @@ fn command_build(
         .map(|_| ());
     }
 
-    diagnostic::write_title(
-        &mut buffer,
-        "Deprecated rebar3 build command",
-        Severity::Warning,
-    );
+    // diagnostic::write_title(
+    //     &mut buffer,
+    //     "Deprecated rebar3 build command",
+    //     Severity::Warning,
+    // );
     buffer
         .write_all(wrap(REBAR_DEPRECATION_NOTICE).as_bytes())
         .expect("rebar deprecation message");
