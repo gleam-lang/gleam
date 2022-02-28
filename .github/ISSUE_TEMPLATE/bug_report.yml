@@ -11,24 +11,6 @@ body:
         https://discord.com/invite/Fm8Pwmy
     validations:
       required: true
-  - type: dropdown
-    id: area
-    attributes:
-      label: Area
-      description: What area does this relate to
-      options:
-        - area:ci
-        - area:codegen
-        - area:documentation
-        - area:errors
-        - area:formatter
-        - area:language-design
-        - area:parser
-        - area:tooling
-        - area:type-analysis
-        - area:web-dev 
-    validations:
-      required: false
   - type: input
     attributes:
       label: Gleam Version
