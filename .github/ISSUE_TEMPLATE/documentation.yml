@@ -1,4 +1,5 @@
 name: Documentation Issue
+title: "DOC: "
 description: Create documentation feedback
 labels: ["documentation"]
 body:
