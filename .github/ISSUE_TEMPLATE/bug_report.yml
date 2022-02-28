@@ -30,7 +30,6 @@ body:
 
   - type: dropdown
     id: area
-    labels: ["area"]
     attributes:
       label: Area
       description: What area does this relate to
