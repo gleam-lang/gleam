@@ -1,5 +1,5 @@
 name: Other
-description: Create a feature request, enhancement proposal or suggestion
+description: Create a feature request, enhancement, proposal or suggestion
 body:
   - type: textarea
     attributes:
