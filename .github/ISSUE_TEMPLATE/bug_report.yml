@@ -27,8 +27,6 @@ body:
       placeholder: "24.2.1"
     validations:
       required: false
-
-
   - type: dropdown
     id: area
     attributes:
