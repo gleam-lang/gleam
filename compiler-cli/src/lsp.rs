@@ -391,21 +391,21 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
 
         Error::Type { error, src, path } => {
             let diagnostic = error.to_diagnostic(src.to_string(), path.to_path_buf());
-            let severity = to_severity(diagnostic.level);
+            if let Some(location) = diagnostic.location {
+                let severity = to_severity(diagnostic.level);
 
-            if diagnostic.location.is_none() {
-                return None;
+                let diagnostic_params = new_diagnostic(
+                    src.to_string(),
+                    path.to_path_buf(),
+                    location.label.span,
+                    severity,
+                    diagnostic.text,
+                );
+
+                Some(diagnostic_params)
+            } else {
+                None
             }
-
-            let location = diagnostic.location.unwrap();
-            let diagnostic_params = new_diagnostic(
-                src.to_string(),
-                path.to_path_buf(),
-                location.label.span,
-                severity,
-                diagnostic.text,
-            );
-            Some(diagnostic_params)
         }
 
         Error::UnknownImport { .. }
