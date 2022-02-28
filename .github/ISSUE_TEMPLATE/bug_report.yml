@@ -1,4 +1,5 @@
 name: Bug Report
+title: "[Bug]: "
 description: Create a bug report
 labels: ["bug"]
 body:
