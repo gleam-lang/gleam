@@ -1,4 +1,4 @@
-// TODO: remove thi
+// TODO: remove this
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
 #![allow(dead_code)]
@@ -11,9 +11,10 @@ use std::{
 use gleam_core::{
     ast::SrcSpan,
     build::{self, Package, ProjectCompiler},
+    diagnostic::Level,
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
-    type_, Error, Result,
+    Error, Result,
 };
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
@@ -388,91 +389,24 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
             Some(diagnostic_params)
         }
 
-        Error::Type { error, src, path } => match error {
-            type_::Error::UnknownModule { location, name, .. } => {
-                let mut message = format!("Unresolved module `{}`", name);
-                message.push('\n');
-                message.push_str(&format!("Module `{}` not found", name));
-                let diagnostic_params = new_diagnostic(
-                    src.to_string(),
-                    path.to_path_buf(),
-                    *location,
-                    DiagnosticSeverity::ERROR,
-                    message,
-                );
-                Some(diagnostic_params)
+        Error::Type { error, src, path } => {
+            let diagnostic = error.to_diagnostic(src.to_string(), path.to_path_buf());
+            let severity = to_severity(diagnostic.level);
+
+            if diagnostic.location.is_none() {
+                return None;
             }
 
-            type_::Error::UnknownVariable { name, location, .. } => {
-                let message = format!("Variable `{}` not found in this scope", name);
-                let diagnostic_params = new_diagnostic(
-                    src.to_string(),
-                    path.to_path_buf(),
-                    *location,
-                    DiagnosticSeverity::ERROR,
-                    message,
-                );
-                Some(diagnostic_params)
-            }
-
-            type_::Error::DuplicateImport {
-                location,
-                name,
-                previous_location,
-            } => {
-                let mut message = format!(
-                    "`{}` is previously defined at line {}",
-                    name, previous_location.start
-                );
-                message.push('\n');
-                message.push_str("`{}` must be defined only once in this module.");
-
-                let diagnostic_params = new_diagnostic(
-                    src.to_string(),
-                    path.to_path_buf(),
-                    *location,
-                    DiagnosticSeverity::ERROR,
-                    message,
-                );
-                Some(diagnostic_params)
-            }
-
-            type_::Error::BitStringSegmentError { .. }
-            | type_::Error::UnknownLabels { .. }
-            | type_::Error::UnknownType { .. }
-            | type_::Error::UnknownModuleType { .. }
-            | type_::Error::UnknownModuleValue { .. }
-            | type_::Error::UnknownModuleField { .. }
-            | type_::Error::NotFn { .. }
-            | type_::Error::UnknownRecordField { .. }
-            | type_::Error::IncorrectArity { .. }
-            | type_::Error::UnnecessarySpreadOperator { .. }
-            | type_::Error::IncorrectTypeArity { .. }
-            | type_::Error::CouldNotUnify { .. }
-            | type_::Error::RecursiveType { .. }
-            | type_::Error::DuplicateName { .. }
-            | type_::Error::DuplicateTypeName { .. }
-            | type_::Error::DuplicateConstName { .. }
-            | type_::Error::DuplicateArgument { .. }
-            | type_::Error::DuplicateField { .. }
-            | type_::Error::PrivateTypeLeak { .. }
-            | type_::Error::UnexpectedLabelledArg { .. }
-            | type_::Error::PositionalArgumentAfterLabelled { .. }
-            | type_::Error::IncorrectNumClausePatterns { .. }
-            | type_::Error::NonLocalClauseGuardVariable { .. }
-            | type_::Error::ExtraVarInAlternativePattern { .. }
-            | type_::Error::MissingVarInAlternativePattern { .. }
-            | type_::Error::DuplicateVarInPattern { .. }
-            | type_::Error::OutOfBoundsTupleIndex { .. }
-            | type_::Error::NotATuple { .. }
-            | type_::Error::NotATupleUnbound { .. }
-            | type_::Error::RecordAccessUnknownType { .. }
-            | type_::Error::RecordUpdateInvalidConstructor { .. }
-            | type_::Error::UnexpectedTypeHole { .. }
-            | type_::Error::ReservedModuleName { .. }
-            | type_::Error::KeywordInModuleName { .. }
-            | type_::Error::NotExhaustivePatternMatch { .. } => None,
-        },
+            let location = diagnostic.location.unwrap();
+            let diagnostic_params = new_diagnostic(
+                src.to_string(),
+                path.to_path_buf(),
+                location.label.span,
+                severity,
+                diagnostic.text,
+            );
+            Some(diagnostic_params)
+        }
 
         Error::UnknownImport { .. }
         | Error::DuplicateModule { .. }
@@ -513,6 +447,13 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
         code: 1, // We should assign a code to each error.
         message: error.pretty_string(),
         data: None,
+    }
+}
+
+fn to_severity(level: Level) -> DiagnosticSeverity {
+    match level {
+        Level::Error => DiagnosticSeverity::ERROR,
+        Level::Warning => DiagnosticSeverity::WARNING,
     }
 }
 

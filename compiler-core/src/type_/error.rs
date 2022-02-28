@@ -1,5 +1,6 @@
 use crate::{
     ast::{BinOp, SrcSpan},
+    diagnostic::{Diagnostic, Label, Location},
     type_::Type,
 };
 
@@ -217,6 +218,115 @@ pub enum Error {
         location: SrcSpan,
         unmatched: Vec<String>,
     },
+}
+
+impl Error {
+    pub fn to_diagnostic(&self, src: String, path: PathBuf) -> Diagnostic {
+        match &self {
+            Error::UnknownModule { location, name, .. } => Diagnostic {
+                title: "Unknown module".to_string(),
+                text: format!(
+                    "Unresolved module {name}\nModule {name} not found",
+                    name = name
+                ),
+                level: crate::diagnostic::Level::Error,
+                location: Some(Location {
+                    src,
+                    path,
+                    label: Label {
+                        text: None,
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+            },
+            Error::UnknownVariable { location, name, .. } => Diagnostic {
+                title: "Unknown variable".to_string(),
+                text: format!("Variable `{}` not found in this scope", name),
+                level: crate::diagnostic::Level::Error,
+                location: Some(Location {
+                    src,
+                    path,
+                    label: Label {
+                        text: None,
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+            },
+
+            Error::UnknownType { location, name, .. } => Diagnostic {
+                title: "Unknown type".to_string(),
+                text: format!("Type `{}` not found in this scope", name),
+                level: crate::diagnostic::Level::Error,
+                location: Some(Location {
+                    src,
+                    path,
+                    label: Label {
+                        text: None,
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+            },
+
+            Error::UnknownModuleType { location, name, .. } => Diagnostic {
+                title: "Unknown module type".to_string(),
+                text: format!("Module type `{}` not found in this scope", name),
+                level: crate::diagnostic::Level::Error,
+                location: Some(Location {
+                    src,
+                    path,
+                    label: Label {
+                        text: None,
+                        span: *location,
+                    },
+                    extra_labels: Vec::new(),
+                }),
+            },
+            _ => Diagnostic {
+                title: "TODO".to_string(),
+                text: "TODO".to_string(),
+                level: crate::diagnostic::Level::Error,
+                location: None,
+            },
+            // Error::UnknownModuleValue { location, name, module_name, value_constructors } => todo!(),
+            // Error::UnknownModuleField { location, name, module_name, value_constructors, type_constructors } => todo!(),
+            // Error::NotFn { location, typ } => todo!(),
+            // Error::UnknownRecordField { location, typ, label, fields } => todo!(),
+            // Error::IncorrectArity { location, expected, given, labels } => todo!(),
+            // Error::UnnecessarySpreadOperator { location, arity } => todo!(),
+            // Error::IncorrectTypeArity { location, name, expected, given } => todo!(),
+            // Error::CouldNotUnify { location, situation, expected, given, rigid_type_names } => todo!(),
+            // Error::RecursiveType { location } => todo!(),
+            // Error::DuplicateName { location, previous_location, name } => todo!(),
+            // Error::DuplicateImport { location, previous_location, name } => todo!(),
+            // Error::DuplicateTypeName { location, previous_location, name } => todo!(),
+            // Error::DuplicateConstName { location, previous_location, name } => todo!(),
+            // Error::DuplicateArgument { location, label } => todo!(),
+            // Error::DuplicateField { location, label } => todo!(),
+            // Error::PrivateTypeLeak { location, leaked } => todo!(),
+            // Error::UnexpectedLabelledArg { location, label } => todo!(),
+            // Error::PositionalArgumentAfterLabelled { location } => todo!(),
+            // Error::IncorrectNumClausePatterns { location, expected, given } => todo!(),
+            // Error::NonLocalClauseGuardVariable { location, name } => todo!(),
+            // Error::ExtraVarInAlternativePattern { location, name } => todo!(),
+            // Error::MissingVarInAlternativePattern { location, name } => todo!(),
+            // Error::DuplicateVarInPattern { location, name } => todo!(),
+            // Error::OutOfBoundsTupleIndex { location, index, size } => todo!(),
+            // Error::NotATuple { location, given } => todo!(),
+            // Error::NotATupleUnbound { location } => todo!(),
+            // Error::RecordAccessUnknownType { location } => todo!(),
+            // Error::RecordUpdateInvalidConstructor { location } => todo!(),
+            // Error::UnexpectedTypeHole { location } => todo!(),
+            // Error::ReservedModuleName { name } => todo!(),
+            // Error::KeywordInModuleName { name, keyword } => todo!(),
+            // Error::NotExhaustivePatternMatch { location, unmatched } => todo!(),
+            // Error::BitStringSegmentError { error, location } => todo!(),
+            // Error::UnknownLabels { unknown, valid, supplied } => todo!(),
+            // _ => "".to_string()
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
