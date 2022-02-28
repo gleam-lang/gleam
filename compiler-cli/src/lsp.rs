@@ -396,7 +396,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
                 let diagnostic_params = new_diagnostic(
                     src.to_string(),
                     path.to_path_buf(),
-                    location.clone(),
+                    *location,
                     DiagnosticSeverity::ERROR,
                     message,
                 );
@@ -408,7 +408,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
                 let diagnostic_params = new_diagnostic(
                     src.to_string(),
                     path.to_path_buf(),
-                    location.clone(),
+                    *location,
                     DiagnosticSeverity::ERROR,
                     message,
                 );
@@ -430,7 +430,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
                 let diagnostic_params = new_diagnostic(
                     src.to_string(),
                     path.to_path_buf(),
-                    location.clone(),
+                    *location,
                     DiagnosticSeverity::ERROR,
                     message,
                 );

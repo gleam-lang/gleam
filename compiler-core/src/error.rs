@@ -689,14 +689,14 @@ Second: {}",
                         .cloned()
                         .filter(|label| !supplied.contains(label))
                         .collect();
-                    let title = if unknown.len() > 1 {
+                    let _title = if unknown.len() > 1 {
                         "Unknown labels"
                     } else {
                         "Unknown label"
                     };
                     let mut labels = unknown.iter().map(|(label, location)| {
-                        let text =
-                            did_you_mean(label, &other_labels).unwrap_or("Unexpected label".into());
+                        let text = did_you_mean(label, &other_labels)
+                            .unwrap_or_else(|| "Unexpected label".into());
                         Label {
                             text: Some(text),
                             span: *location,
