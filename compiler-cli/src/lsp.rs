@@ -1,11 +1,11 @@
-// TODO: remove this
+// TODO: remove thi
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::unimplemented)]
 #![allow(dead_code)]
 
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use gleam_core::{
@@ -13,7 +13,7 @@ use gleam_core::{
     build::{self, Package, ProjectCompiler},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
-    Error, Result,
+    type_, Error, Result,
 };
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
@@ -360,8 +360,6 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
         Error::Parse {
             path, error, src, ..
         } => {
-            let location = error.location;
-            let line_numbers = LineNumbers::new(src);
             let (detail, extra) = error.details();
             let mut message = "Parse error: ".to_string();
             message.push_str(detail);
@@ -371,31 +369,97 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
                 message.push_str(&extra);
             }
             message.push('\n');
-            let diagnostic = Diagnostic {
-                range: src_span_to_lsp_range(location, line_numbers),
-                severity: Some(DiagnosticSeverity::ERROR),
-                code: None,
-                code_description: None,
-                source: None,
+
+            let diagnostic_params = new_diagnostic(
+                src.to_string(),
+                path.to_path_buf(),
+                error.location,
+                DiagnosticSeverity::ERROR,
                 message,
-                related_information: None,
-                tags: None,
-                data: None,
-            };
-            let path = path.canonicalize().unwrap();
-            let mut file: String = "file://".into();
-            file.push_str(&path.as_os_str().to_string_lossy());
-            let uri = Url::parse(&file).unwrap();
-            let diagnostic_params = PublishDiagnosticsParams {
-                uri,
-                diagnostics: vec![diagnostic],
-                version: None,
-            };
+            );
             Some(diagnostic_params)
         }
 
-        Error::Type { .. }
-        | Error::UnknownImport { .. }
+        Error::Type { error, src, path } => match error {
+            type_::Error::UnknownModule { location, name, .. } => {
+                let mut message = format!("Unresolved module `{}`", name);
+                message.push('\n');
+                message.push_str(&format!("Module `{}` not found", name));
+                let diagnostic_params = new_diagnostic(
+                    src.to_string(),
+                    path.to_path_buf(),
+                    location.clone(),
+                    DiagnosticSeverity::ERROR,
+                    message,
+                );
+                Some(diagnostic_params)
+            }
+
+            type_::Error::UnknownVariable { name, location, .. } => {
+                let message = format!("Variable `{}` not found in this scope", name);
+                let diagnostic_params = new_diagnostic(
+                    src.to_string(),
+                    path.to_path_buf(),
+                    location.clone(),
+                    DiagnosticSeverity::ERROR,
+                    message,
+                );
+                Some(diagnostic_params)
+            }
+
+            type_::Error::DuplicateImport { location, name, previous_location } => {
+                let mut message = format!("`{}` is previously defined at line {}", name, previous_location.start);
+                message.push('\n');
+                message.push_str("`{}` must be defined only once in this module.");
+
+                let diagnostic_params = new_diagnostic(
+                    src.to_string(),
+                    path.to_path_buf(),
+                    location.clone(),
+                    DiagnosticSeverity::ERROR,
+                    message,
+                );
+                Some(diagnostic_params)
+            }
+
+            type_::Error::BitStringSegmentError { .. }
+            | type_::Error::UnknownLabels { .. }
+            | type_::Error::UnknownType { .. }
+            | type_::Error::UnknownModuleType { .. }
+            | type_::Error::UnknownModuleValue { .. }
+            | type_::Error::UnknownModuleField { .. }
+            | type_::Error::NotFn { .. }
+            | type_::Error::UnknownRecordField { .. }
+            | type_::Error::IncorrectArity { .. }
+            | type_::Error::UnnecessarySpreadOperator { .. }
+            | type_::Error::IncorrectTypeArity { .. }
+            | type_::Error::CouldNotUnify { .. }
+            | type_::Error::RecursiveType { .. }
+            | type_::Error::DuplicateName { .. }
+            | type_::Error::DuplicateTypeName { .. }
+            | type_::Error::DuplicateConstName { .. }
+            | type_::Error::DuplicateArgument { .. }
+            | type_::Error::DuplicateField { .. }
+            | type_::Error::PrivateTypeLeak { .. }
+            | type_::Error::UnexpectedLabelledArg { .. }
+            | type_::Error::PositionalArgumentAfterLabelled { .. }
+            | type_::Error::IncorrectNumClausePatterns { .. }
+            | type_::Error::NonLocalClauseGuardVariable { .. }
+            | type_::Error::ExtraVarInAlternativePattern { .. }
+            | type_::Error::MissingVarInAlternativePattern { .. }
+            | type_::Error::DuplicateVarInPattern { .. }
+            | type_::Error::OutOfBoundsTupleIndex { .. }
+            | type_::Error::NotATuple { .. }
+            | type_::Error::NotATupleUnbound { .. }
+            | type_::Error::RecordAccessUnknownType { .. }
+            | type_::Error::RecordUpdateInvalidConstructor { .. }
+            | type_::Error::UnexpectedTypeHole { .. }
+            | type_::Error::ReservedModuleName { .. }
+            | type_::Error::KeywordInModuleName { .. }
+            | type_::Error::NotExhaustivePatternMatch { .. } => None,
+        },
+
+        Error::UnknownImport { .. }
         | Error::DuplicateModule { .. }
         | Error::DuplicateSourceFile { .. }
         | Error::SrcImportingTest { .. }
@@ -434,6 +498,39 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
         code: 1, // We should assign a code to each error.
         message: error.pretty_string(),
         data: None,
+    }
+}
+
+// Find a better name
+// Maybe it can be moved from here
+fn new_diagnostic(
+    src: String,
+    path: PathBuf,
+    location: SrcSpan,
+    severity: DiagnosticSeverity,
+    message: String,
+) -> PublishDiagnosticsParams {
+    let line_numbers = LineNumbers::new(&src);
+    let diagnostic = Diagnostic {
+        range: src_span_to_lsp_range(location, line_numbers),
+        severity: Some(severity),
+        code: None,
+        code_description: None,
+        source: None,
+        message,
+        related_information: None,
+        tags: None,
+        data: None,
+    };
+    let path = path.canonicalize().unwrap();
+    let mut file: String = "file://".into();
+    file.push_str(&path.as_os_str().to_string_lossy());
+    let uri = Url::parse(&file).unwrap();
+
+    PublishDiagnosticsParams {
+        uri,
+        diagnostics: vec![diagnostic],
+        version: None,
     }
 }
 
