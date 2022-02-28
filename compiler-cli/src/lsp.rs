@@ -16,12 +16,12 @@ use gleam_core::{
     type_, Error, Result,
 };
 use lsp_types::{
-    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
+    notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument, DidOpenTextDocument},
     request::Formatting,
     Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidSaveTextDocumentParams, InitializeParams, OneOf, Position, PublishDiagnosticsParams, Range,
     SaveOptions, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
+    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url, DidOpenTextDocumentParams,
 };
 
 use crate::{cli, fs::ProjectIO};
@@ -36,7 +36,7 @@ pub fn main() -> Result<()> {
     let server_capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
-                open_close: None,
+                open_close: Some(true),
                 change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
@@ -213,6 +213,10 @@ impl LanguageServer {
                 self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
             }
 
+            "textDocument/didOpen" => {
+                self.did_open()
+            }
+
             "textDocument/didChange" => {
                 self.did_change(cast_notification::<DidChangeTextDocument>(request).unwrap())
             }
@@ -233,6 +237,12 @@ impl LanguageServer {
         let _ = self.compiler.compile()?;
         // Clear any diagnostics from the previous run
         self.clear_diagnostics(connection)?;
+        Ok(())
+    }
+
+    fn did_open(&mut self) -> Result<()> {
+        // Recompile the project to detect any errors
+        let _ = self.compiler.compile()?;
         Ok(())
     }
 
