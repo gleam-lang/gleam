@@ -694,7 +694,8 @@ Second: {}",
                         "Unknown labels"
                     } else {
                         "Unknown label"
-                    }.to_string();
+                    }
+                    .to_string();
 
                     let mut labels = unknown.iter().map(|(label, location)| {
                         let text = did_you_mean(label, &other_labels)

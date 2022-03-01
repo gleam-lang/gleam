@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{Diagnostic, Location, self},
+    diagnostic::{self, Diagnostic, Location},
     type_,
     type_::pretty::Printer,
 };
@@ -33,7 +33,10 @@ impl Warning {
                             location: Some(Location {
                                 src: "todo".to_string(),
                                 path: path.to_path_buf(),
-                                label: diagnostic::Label { text: None, span: *location},
+                                label: diagnostic::Label {
+                                    text: None,
+                                    span: *location,
+                                },
                                 extra_labels: Vec::new(),
                             }),
                         },
@@ -55,7 +58,10 @@ your program.",
                         location: Some(Location {
                             path: path.to_path_buf(),
                             src: src.to_string(),
-                            label: diagnostic::Label { text: None, span: *location },
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
                             extra_labels: Vec::new(),
                         }),
                     },
@@ -85,14 +91,14 @@ your program.",
                         title: "Fieldless record update".to_string(),
                         text: "This record update doesn't change any fields.".to_string(),
                         level: diagnostic::Level::Warning,
-                        location: Some(Location{
+                        location: Some(Location {
                             path: path.to_path_buf(),
                             src: src.to_string(),
                             label: diagnostic::Label {
                                 text: None,
-                                span: *location
+                                span: *location,
                             },
-                            extra_labels: Vec::new()
+                            extra_labels: Vec::new(),
                         }),
                     },
                     "Hint: Add some fields to change or replace it with the record itself. "
@@ -107,9 +113,12 @@ your program.",
                         location: Some(Location {
                             src: src.to_string(),
                             path: path.to_path_buf(),
-                            label: diagnostic::Label { text: None, span: *location },
-                            extra_labels: Vec::new()
-                        })
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: It is better style to use the record creation syntax.".to_string(),
                 ),
@@ -137,9 +146,10 @@ your program.",
                                 src: src.to_string(),
                                 path: path.to_path_buf(),
                                 label: diagnostic::Label {
-                                    text: None, span: *location
+                                    text: None,
+                                    span: *location,
                                 },
-                                extra_labels: Vec::new()
+                                extra_labels: Vec::new(),
                             }),
                         },
                         "Hint: You can safely remove it.".to_string(),
@@ -169,9 +179,10 @@ your program.",
                                 src: src.to_string(),
                                 path: path.to_path_buf(),
                                 label: diagnostic::Label {
-                                    text: None, span: *location
+                                    text: None,
+                                    span: *location,
                                 },
-                                extra_labels: Vec::new()
+                                extra_labels: Vec::new(),
                             }),
                         },
                         "Hint: You can safely remove it.".to_string(),
@@ -187,9 +198,10 @@ your program.",
                             src: src.to_string(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: None, span: *location
+                                text: None,
+                                span: *location,
                             },
-                            extra_labels: Vec::new()
+                            extra_labels: Vec::new(),
                         }),
                     },
                     "Hint: You can safely remove it.".to_string(),
@@ -204,9 +216,10 @@ your program.",
                             src: src.to_string(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: None, span: *location
+                                text: None,
+                                span: *location,
                             },
-                            extra_labels: Vec::new()
+                            extra_labels: Vec::new(),
                         }),
                     },
                     "Hint: You can safely remove it.".to_string(),
@@ -221,9 +234,10 @@ your program.",
                             src: src.to_string(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: None, span: *location
+                                text: None,
+                                span: *location,
                             },
-                            extra_labels: Vec::new()
+                            extra_labels: Vec::new(),
                         }),
                     },
                     "Hint: You can safely remove it.".to_string(),
@@ -238,9 +252,10 @@ your program.",
                             src: src.to_string(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: None, span: *location
+                                text: None,
+                                span: *location,
                             },
-                            extra_labels: Vec::new()
+                            extra_labels: Vec::new(),
                         }),
                     },
                     format!("Hint: you can ignore it with an underscore: `_{}`.", name),
@@ -254,8 +269,8 @@ your program.",
         buffer
             .write_all(b"\n")
             .expect("error pretty buffer write space before");
-        let (_diagnostic, extra) = self.to_diagnostic();
-        // write_old(buffer, diagnostic, Severity::Warning);
+        let (diagnostic, extra) = self.to_diagnostic();
+        diagnostic.write(buffer);
         if !extra.is_empty() {
             writeln!(buffer, "{}", extra).unwrap();
         }
