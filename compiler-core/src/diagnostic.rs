@@ -44,14 +44,14 @@ impl Diagnostic {
     pub fn write(&self, buffer: &mut Buffer) {
         use std::io::Write;
         match &self.location {
-            Some(location) => self.write_span(location.clone(), buffer),
+            Some(location) => self.write_span(location, buffer),
             None => self.write_title(buffer),
         };
 
         writeln!(buffer, "{}", self.text).expect("write_project");
     }
 
-    fn write_span(&self, location: Location, buffer: &mut Buffer) {
+    fn write_span(&self, location: &Location, buffer: &mut Buffer) {
         let file = SimpleFile::new(location.path.to_string_lossy().to_string(), &location.src);
         let labels = location
             .labels()

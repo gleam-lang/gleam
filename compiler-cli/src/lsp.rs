@@ -5,7 +5,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use gleam_core::{
@@ -365,80 +365,38 @@ fn result_to_response(
 }
 
 fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
-    match error {
-        Error::Parse {
-            path, error, src, ..
-        } => {
-            let (detail, extra) = error.details();
-            let mut message = "Parse error: ".to_string();
-            message.push_str(detail);
-            for extra in extra {
-                message.push('\n');
-                message.push('\n');
-                message.push_str(&extra);
-            }
-            message.push('\n');
+    let diagnostic = error.to_diagnostic();
 
-            let diagnostic_params = new_diagnostic(
-                src.to_string(),
-                path.to_path_buf(),
-                error.location,
-                DiagnosticSeverity::ERROR,
-                message,
-            );
-            Some(diagnostic_params)
-        }
+    // Skip if diagnostic doesn't have a location
+    if let Some(location) = diagnostic.location {
+        let severity = to_severity(diagnostic.level);
 
-        Error::Type { error, src, path } => {
-            let diagnostic = error.to_diagnostic(src.to_string(), path.to_path_buf());
-            if let Some(location) = diagnostic.location {
-                let severity = to_severity(diagnostic.level);
+        let line_numbers = LineNumbers::new(&location.src);
+        let diagnostic = Diagnostic {
+            range: src_span_to_lsp_range(location.label.span, line_numbers),
+            severity: Some(severity),
+            code: None,
+            code_description: None,
+            source: None,
+            message: diagnostic.text,
+            related_information: None,
+            tags: None,
+            data: None,
+        };
+        let path = location.path.canonicalize().unwrap();
+        let mut file: String = "file://".into();
+        file.push_str(&path.as_os_str().to_string_lossy());
+        let uri = Url::parse(&file).unwrap();
 
-                let diagnostic_params = new_diagnostic(
-                    src.to_string(),
-                    path.to_path_buf(),
-                    location.label.span,
-                    severity,
-                    diagnostic.text,
-                );
+        let diagnostic_params = PublishDiagnosticsParams {
+            uri,
+            diagnostics: vec![diagnostic],
+            version: None,
+        };
 
-                Some(diagnostic_params)
-            } else {
-                None
-            }
-        }
-
-        Error::UnknownImport { .. }
-        | Error::DuplicateModule { .. }
-        | Error::DuplicateSourceFile { .. }
-        | Error::SrcImportingTest { .. }
-        | Error::ImportCycle { .. }
-        | Error::PackageCycle { .. }
-        | Error::FileIo { .. }
-        | Error::GitInitialization { .. }
-        | Error::StandardIo { .. }
-        | Error::Format { .. }
-        | Error::Hex(_)
-        | Error::ExpandTar { .. }
-        | Error::AddTar { .. }
-        | Error::TarFinish(_)
-        | Error::Gzip(_)
-        | Error::ShellProgramNotFound { .. }
-        | Error::ShellCommand { .. }
-        | Error::InvalidProjectName { .. }
-        | Error::InvalidVersionFormat { .. }
-        | Error::ProjectRootAlreadyExist { .. }
-        | Error::UnableToFindProjectRoot { .. }
-        | Error::VersionDoesNotMatch { .. }
-        | Error::MetadataDecodeError { .. }
-        | Error::ForbiddenWarnings { .. }
-        | Error::JavaScript { .. }
-        | Error::DownloadPackageError { .. }
-        | Error::Http(_)
-        | Error::DependencyResolutionFailed(_)
-        | Error::DuplicateDependency(_)
-        | Error::MissingHexPublishFields { .. }
-        | Error::UnsupportedBuildTool { .. } => None,
+        Some(diagnostic_params)
+    } else {
+        None
     }
 }
 
@@ -454,39 +412,6 @@ fn to_severity(level: Level) -> DiagnosticSeverity {
     match level {
         Level::Error => DiagnosticSeverity::ERROR,
         Level::Warning => DiagnosticSeverity::WARNING,
-    }
-}
-
-// Find a better name
-// Maybe it can be moved from here
-fn new_diagnostic(
-    src: String,
-    path: PathBuf,
-    location: SrcSpan,
-    severity: DiagnosticSeverity,
-    message: String,
-) -> PublishDiagnosticsParams {
-    let line_numbers = LineNumbers::new(&src);
-    let diagnostic = Diagnostic {
-        range: src_span_to_lsp_range(location, line_numbers),
-        severity: Some(severity),
-        code: None,
-        code_description: None,
-        source: None,
-        message,
-        related_information: None,
-        tags: None,
-        data: None,
-    };
-    let path = path.canonicalize().unwrap();
-    let mut file: String = "file://".into();
-    file.push_str(&path.as_os_str().to_string_lossy());
-    let uri = Url::parse(&file).unwrap();
-
-    PublishDiagnosticsParams {
-        uri,
-        diagnostics: vec![diagnostic],
-        version: None,
     }
 }
 
