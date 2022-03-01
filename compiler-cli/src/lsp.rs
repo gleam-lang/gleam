@@ -37,7 +37,7 @@ pub fn main() -> Result<()> {
     let server_capabilities = ServerCapabilities {
         text_document_sync: Some(TextDocumentSyncCapability::Options(
             TextDocumentSyncOptions {
-                open_close: Some(true),
+                open_close: None,
                 change: Some(TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
@@ -214,8 +214,6 @@ impl LanguageServer {
                 self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
             }
 
-            "textDocument/didOpen" => self.did_open(),
-
             "textDocument/didChange" => {
                 self.did_change(cast_notification::<DidChangeTextDocument>(request).unwrap())
             }
@@ -236,12 +234,6 @@ impl LanguageServer {
         let _ = self.compiler.compile()?;
         // Clear any diagnostics from the previous run
         self.clear_diagnostics(connection)?;
-        Ok(())
-    }
-
-    fn did_open(&mut self) -> Result<()> {
-        // Recompile the project to detect any errors
-        let _ = self.compiler.compile()?;
         Ok(())
     }
 
