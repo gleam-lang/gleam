@@ -689,11 +689,13 @@ Second: {}",
                         .cloned()
                         .filter(|label| !supplied.contains(label))
                         .collect();
-                    let _title = if unknown.len() > 1 {
+
+                    let title = if unknown.len() > 1 {
                         "Unknown labels"
                     } else {
                         "Unknown label"
-                    };
+                    }.to_string();
+
                     let mut labels = unknown.iter().map(|(label, location)| {
                         let text = did_you_mean(label, &other_labels)
                             .unwrap_or_else(|| "Unexpected label".into());
@@ -717,7 +719,7 @@ constructor accepts."
                         )
                     };
                     Diagnostic {
-                        title: "Unexpected labelled argument".into(),
+                        title,
                         text,
                         level: Level::Error,
                         location: Some(Location {
