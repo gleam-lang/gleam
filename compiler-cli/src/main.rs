@@ -77,9 +77,10 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{Mode, Options, Target},
+    diagnostic::{self, Severity},
     error::wrap,
     hex::RetirementReason,
-    project::Analysed, diagnostic::{Severity, self},
+    project::Analysed,
 };
 use hex::ApiKeyCommand as _;
 
