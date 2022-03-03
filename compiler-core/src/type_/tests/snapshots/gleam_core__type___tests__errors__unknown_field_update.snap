@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1215
+assertion_line: 1249
 expression: "\n pub type Person {\n   Person(name: String)\n };\n pub fn update_person(person: Person) {\n   Person(..person, one: 5)\n }"
 
 ---
@@ -8,7 +8,7 @@ error: Unknown record field
   ┌─ /src/one/two.gleam:6:21
   │
 6 │    Person(..person, one: 5)
-  │                     ^^^^^^ did you mean `name`?
+  │                     ^^^^^^ Did you mean `name`?
 
 The value being accessed has this type:
 

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 974
+assertion_line: 989
 expression: "type X { X(a: Int, b: Int, c: Int) }\nfn x() {\n  case X(1,2,3) { X(x, y, x) -> 1 }\n}"
 
 ---
@@ -8,7 +8,7 @@ error: Duplicate variable in pattern
   ┌─ /src/one/two.gleam:3:27
   │
 3 │   case X(1,2,3) { X(x, y, x) -> 1 }
-  │                           ^ has already been used
+  │                           ^ This has already been used
 
 Variables can only be used once per pattern. This variable x appears
 multiple times.
