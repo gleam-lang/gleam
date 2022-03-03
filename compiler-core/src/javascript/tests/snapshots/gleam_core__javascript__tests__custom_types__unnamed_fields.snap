@@ -31,7 +31,7 @@ function destructure(x) {
       "my/mod",
       18,
       "destructure",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x }
     );
   }

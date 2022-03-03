@@ -17,7 +17,7 @@ function go(x, foo) {
       "my/mod",
       8,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x }
     );
   }

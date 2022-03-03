@@ -18,7 +18,7 @@ export function main(x) {
       "my/mod",
       3,
       "main",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x[0] }
     );
   }
@@ -31,7 +31,7 @@ export function main(x) {
       "my/mod",
       4,
       "main",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: $[0] }
     );
   }
