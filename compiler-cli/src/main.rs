@@ -85,7 +85,7 @@ use hex::ApiKeyCommand as _;
 
 use std::path::{Path, PathBuf};
 
-use clap::{AppSettings, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -144,7 +144,7 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[clap(setting = AppSettings::TrailingVarArg)]
+    #[clap(trailing_var_arg = true)]
     Run {
         /// The platform to target
         #[clap(long, ignore_case = true)]
@@ -154,7 +154,7 @@ enum Command {
     },
 
     /// Run the project tests
-    #[clap(setting = AppSettings::TrailingVarArg)]
+    #[clap(trailing_var_arg = true)]
     Test {
         /// The platform to target
         #[clap(long, ignore_case = true)]
@@ -164,11 +164,11 @@ enum Command {
     },
 
     /// Compile a single Gleam package
-    #[clap(setting = AppSettings::Hidden)]
+    #[clap(hide = true)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[clap(setting = AppSettings::Hidden)]
+    #[clap(hide = true)]
     PrintConfig,
 
     /// Add new project dependencies
@@ -186,7 +186,7 @@ enum Command {
     Clean,
 
     /// Run the language server, to be used by editors
-    #[clap(name = "lsp", setting = AppSettings::Hidden)]
+    #[clap(name = "lsp", hide = true)]
     LanguageServer,
 }
 
