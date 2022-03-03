@@ -1,5 +1,5 @@
 use crate::{
-    diagnostic::{write_old, OldDiagnostic, Severity},
+    diagnostic::{self, Diagnostic, Location},
     type_,
     type_::pretty::Printer,
 };
@@ -19,19 +19,26 @@ pub enum Warning {
 }
 
 impl Warning {
-    pub fn to_diagnostic(&self) -> (OldDiagnostic, String) {
+    pub fn to_diagnostic(&self) -> (Diagnostic, String) {
         #[allow(clippy::unwrap_used)]
         match self {
-            Self::Type { path, src, warning } => match warning {
+            Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo { location, typ } => {
                     let mut printer = Printer::new();
                     (
-                        OldDiagnostic {
+                        Diagnostic {
                             title: "Todo found".to_string(),
-                            label: "Todo found".to_string(),
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: *location,
+                            text: "Todo found".to_string(),
+                            level: diagnostic::Level::Warning,
+                            location: Some(Location {
+                                src: "todo".to_string(),
+                                path: path.to_path_buf(),
+                                label: diagnostic::Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
                         },
                         format!(
                             "Hint: I think its type is `{}`.
@@ -44,46 +51,74 @@ your program.",
                 }
 
                 type_::Warning::ImplicitlyDiscardedResult { location } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused result value".to_string(),
-                        label: "The Result value created here is unused".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "The Result value created here is unused".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.to_string(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: If you are sure you don't need it you can assign it to `_`".to_string(),
                 ),
 
                 type_::Warning::UnusedLiteral { location } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused literal".to_string(),
-                        label: "This value is never used".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This value is never used".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.to_string(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
                 type_::Warning::NoFieldsRecordUpdate { location } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Fieldless record update".to_string(),
-                        label: "This record update doesn't change any fields.".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This record update doesn't change any fields.".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            path: path.to_path_buf(),
+                            src: src.to_string(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: Add some fields to change or replace it with the record itself. "
                         .to_string(),
                 ),
 
                 type_::Warning::AllFieldsRecordUpdate { location } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Redundant record update".to_string(),
-                        label: "This record update specifies all fields".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This record update specifies all fields".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.to_string(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: It is better style to use the record creation syntax.".to_string(),
                 ),
@@ -96,19 +131,26 @@ your program.",
                     } else {
                         "Unused private type".to_string()
                     };
-                    let label = if *imported {
+                    let text = if *imported {
                         "This imported type is never used.".to_string()
                     } else {
                         "This private type is never used.".to_string()
                     };
 
                     (
-                        OldDiagnostic {
+                        Diagnostic {
                             title,
-                            label,
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: *location,
+                            text,
+                            level: diagnostic::Level::Warning,
+                            location: Some(Location {
+                                src: src.to_string(),
+                                path: path.to_path_buf(),
+                                label: diagnostic::Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
                         },
                         "Hint: You can safely remove it.".to_string(),
                     )
@@ -122,64 +164,99 @@ your program.",
                     } else {
                         "Unused private type constructor".to_string()
                     };
-                    let label = if *imported {
+                    let text = if *imported {
                         "This imported type constructor is never used.".to_string()
                     } else {
                         "This private type constructor is never used.".to_string()
                     };
 
                     (
-                        OldDiagnostic {
+                        Diagnostic {
                             title,
-                            label,
-                            file: path.to_str().unwrap().to_string(),
-                            src: src.to_string(),
-                            location: *location,
+                            text,
+                            level: diagnostic::Level::Warning,
+                            location: Some(Location {
+                                src: src.to_string(),
+                                path: path.to_path_buf(),
+                                label: diagnostic::Label {
+                                    text: None,
+                                    span: *location,
+                                },
+                                extra_labels: Vec::new(),
+                            }),
                         },
                         "Hint: You can safely remove it.".to_string(),
                     )
                 }
 
                 type_::Warning::UnusedImportedValue { location, .. } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused imported value".to_string(),
-                        label: "This imported value is never used.".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This imported value is never used.".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.to_string(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
                 type_::Warning::UnusedPrivateModuleConstant { location, .. } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused private constant".to_string(),
-                        label: "This private constant is never used.".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This private constant is never used.".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.to_string(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
                 type_::Warning::UnusedPrivateFunction { location, .. } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused private function".to_string(),
-                        label: "This private function is never used.".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This private function is never used.".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.to_string(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     "Hint: You can safely remove it.".to_string(),
                 ),
 
                 type_::Warning::UnusedVariable { location, name, .. } => (
-                    OldDiagnostic {
+                    Diagnostic {
                         title: "Unused variable".to_string(),
-                        label: "This variable is never used.".to_string(),
-                        file: path.to_str().unwrap().to_string(),
-                        src: src.to_string(),
-                        location: *location,
+                        text: "This variable is never used.".to_string(),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.to_string(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
                     },
                     format!("Hint: you can ignore it with an underscore: `_{}`.", name),
                 ),
@@ -193,7 +270,7 @@ your program.",
             .write_all(b"\n")
             .expect("error pretty buffer write space before");
         let (diagnostic, extra) = self.to_diagnostic();
-        write_old(buffer, diagnostic, Severity::Warning);
+        diagnostic.write(buffer);
         if !extra.is_empty() {
             writeln!(buffer, "{}", extra).unwrap();
         }
