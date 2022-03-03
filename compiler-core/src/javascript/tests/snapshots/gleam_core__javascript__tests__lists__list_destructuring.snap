@@ -13,7 +13,7 @@ function go(x, y) {
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x }
     );
   }
@@ -23,7 +23,7 @@ function go(x, y) {
       "my/mod",
       4,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x }
     );
   }
@@ -34,7 +34,7 @@ function go(x, y) {
       "my/mod",
       5,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: x }
     );
   }
@@ -44,7 +44,7 @@ function go(x, y) {
       "my/mod",
       6,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: y }
     );
   }
@@ -55,7 +55,7 @@ function go(x, y) {
       "my/mod",
       7,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: y }
     );
   }

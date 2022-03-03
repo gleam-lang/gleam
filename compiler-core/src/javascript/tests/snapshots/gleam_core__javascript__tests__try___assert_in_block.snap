@@ -19,7 +19,7 @@ export function main(x) {
       "my/mod",
       2,
       "main",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: $ }
     );
   }

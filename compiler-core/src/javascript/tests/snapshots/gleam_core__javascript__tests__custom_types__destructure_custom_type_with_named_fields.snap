@@ -21,7 +21,7 @@ function go(cat) {
       "my/mod",
       7,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: cat }
     );
   }
@@ -33,7 +33,7 @@ function go(cat) {
       "my/mod",
       8,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: cat }
     );
   }
@@ -44,7 +44,7 @@ function go(cat) {
       "my/mod",
       9,
       "go",
-      "Assignment pattern did not much",
+      "Assignment pattern did not match",
       { value: cat }
     );
   }
