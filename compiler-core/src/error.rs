@@ -335,7 +335,7 @@ fn did_you_mean(name: &str, options: &[String]) -> Option<String> {
         .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
         .sorted()
         .min_by_key(|option| strsim::levenshtein(option, name))
-        .map(|option| format!("did you mean `{}`?", option))
+        .map(|option| format!("Did you mean `{}`?", option))
 }
 
 impl Error {
@@ -792,13 +792,13 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("reimportd here".into()),
+                                text: Some("Reimported here".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("first imported here".into()),
+                                text: Some("First imported here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -822,13 +822,13 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("redefined here".into()),
+                                text: Some("Redefined here".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("first defined here".into()),
+                                text: Some("First defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -852,13 +852,13 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("redefined here".into()),
+                                text: Some("Redefined here".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("first defined here".into()),
+                                text: Some("First defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -882,13 +882,13 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("redefined here".into()),
+                                text: Some("Redefined here".into()),
                                 span: *location,
                             },
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("first defined here".into()),
+                                text: Some("First defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -1158,16 +1158,18 @@ But function expects:
                     let text = "Functions and constructors have to be called with their expected
 number of arguments."
                         .into();
+                    let expected = match expected {
+                        0 => "no arguments".into(),
+                        1 => "1 argument".into(),
+                        _ => format!("{expected} arguments"),
+                    };
                     Diagnostic {
                         title: "Incorrect arity".into(),
                         text,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some(format!(
-                                    "expected {} arguments, got {}",
-                                    expected, given
-                                )),
+                                text: Some(format!("Expected {expected}, got {given}")),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1196,7 +1198,12 @@ number of arguments."
                             labels,
                         )
                     };
-                    let label = format!("expected {} arguments, got {}", expected, given);
+                    let expected = match expected {
+                        0 => "no arguments".into(),
+                        1 => "1 argument".into(),
+                        _ => format!("{expected} arguments"),
+                    };
+                    let label = format!("Expected {expected}, got {given}");
                     Diagnostic {
                         title: "Incorrect arity".into(),
                         text,
@@ -1215,9 +1222,8 @@ number of arguments."
 
                 TypeError::UnnecessarySpreadOperator { location, arity } => {
                     let text = wrap_format!(
-                        "This record has {} fields and you have already assigned \
-variables to all of them.",
-                        arity
+                        "This record has {arity} fields and you have already \
+assigned variables to all of them."
                     );
                     Diagnostic {
                         title: "Unnecessary spread operator".into(),
@@ -1241,8 +1247,7 @@ variables to all of them.",
                     types,
                 } => {
                     let text = wrap_format!(
-                        "The type `{}` is not defined or imported in this module.",
-                        name
+                        "The type `{name}` is not defined or imported in this module."
                     );
                     Diagnostic {
                         title: "Unknown type".into(),
@@ -1266,7 +1271,7 @@ variables to all of them.",
                     name,
                 } => Diagnostic {
                     title: "Unknown variable".into(),
-                    text: wrap_format!("The name `{}` is not in scope here.", name),
+                    text: wrap_format!("The name `{name}` is not in scope here."),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1435,7 +1440,7 @@ Each clause must have a pattern for every subject value.",
                         location: Some(Location {
                             label: Label {
                                 text: Some(format!(
-                                    "expected {} patterns, got {}",
+                                    "Expected {} patterns, got {}",
                                     expected, given
                                 )),
                                 span: *location,
@@ -1458,7 +1463,7 @@ Each clause must have a pattern for every subject value.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("is not locally defined".into()),
+                                text: Some("Is not locally defined".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1480,7 +1485,7 @@ This variable `{}` has not been previously defined.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("has not been previously defined".into()),
+                                text: Some("Has not been previously defined".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1502,7 +1507,7 @@ as the initial pattern, but the `{}` variable is missing.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("does not define all required variables".into()),
+                                text: Some("This does not define all required variables".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1527,7 +1532,7 @@ e.g. (x, y) if x == y -> ...",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("has already been used".into()),
+                                text: Some("This has already been used".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1572,7 +1577,7 @@ tuple has {} elements so the highest valid index is {}.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("this index is too large".into()),
+                                text: Some("This index is too large".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1596,7 +1601,7 @@ tuple has {} elements so the highest valid index is {}.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("is not a tuple".into()),
+                                text: Some("This is not a tuple".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1617,7 +1622,7 @@ we can continue."
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some("what type is this?".into()),
+                                text: Some("What type is this?".into()),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -1691,7 +1696,7 @@ function and try again."
                         ),
 
                         bit_string::ErrorType::InvalidEndianness => (
-                            "this option is invalid here.",
+                            "This option is invalid here.",
                             vec![wrap("Hint: signed and unsigned can only be used with int, float, utf16 and utf32 types.")],
                         ),
 
@@ -1701,19 +1706,19 @@ function and try again."
                         ),
 
                         bit_string::ErrorType::SignednessUsedOnNonInt { typ } => (
-                            "signedness is only valid with int types.",
+                            "Signedness is only valid with int types.",
                             vec![format!("Hint: This segment has a type of {}", typ)],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowSize { typ } => (
-                            "size cannot be specified here",
+                            "Size cannot be specified here",
                             vec![format!("Hint: {} segments have an autoatic size.", typ)],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowUnit { typ } => (
-                            "unit cannot be specified here",
+                            "Unit cannot be specified here",
                             vec![wrap(&format!("Hint: {} segments are sized based on their value and cannot have a unit.", typ))],
                         ),
                         bit_string::ErrorType::VariableUtfSegmentInPattern => (
-                            "this cannot be a variable",
+                            "This cannot be a variable",
                             vec![wrap("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
                         ),
                         bit_string::ErrorType::SegmentMustHaveSize => (

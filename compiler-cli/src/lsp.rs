@@ -363,6 +363,20 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
     if let Some(location) = diagnostic.location {
         let severity = to_severity(diagnostic.level);
 
+        let mut message = format!("Error: {}\n\n", diagnostic.title);
+
+        if let Some(label) = location.label.text {
+            message.push_str(&label);
+            if !label.ends_with(['.', '?']) {
+                message.push('.');
+            }
+            message.push_str("\n\n");
+        }
+
+        if !diagnostic.text.is_empty() {
+            message.push_str(&diagnostic.text);
+        }
+
         let line_numbers = LineNumbers::new(&location.src);
         let diagnostic = Diagnostic {
             range: src_span_to_lsp_range(location.label.span, line_numbers),
@@ -370,7 +384,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
             code: None,
             code_description: None,
             source: None,
-            message: diagnostic.text,
+            message,
             related_information: None,
             tags: None,
             data: None,
