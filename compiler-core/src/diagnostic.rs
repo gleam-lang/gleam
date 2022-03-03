@@ -64,7 +64,13 @@ impl Diagnostic {
                 }
             })
             .collect();
-        let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(Severity::Error)
+
+        let severity = match self.level {
+            Level::Error => Severity::Error,
+            Level::Warning => Severity::Warning,
+        };
+
+        let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(severity)
             .with_message(&self.title)
             .with_labels(labels);
         let config = codespan_reporting::term::Config::default();
