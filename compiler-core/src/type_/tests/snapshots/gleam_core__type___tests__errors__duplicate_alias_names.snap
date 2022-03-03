@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1087
+assertion_line: 1102
 expression: type X = Int type X = Int
 
 ---
-error: Duplicate type definition with name `X`
-  ┌─ /src/one/two.gleam:1:14
+error: Duplicate type definition
+  ┌─ /src/one/two.gleam:1:1
   │
 1 │ type X = Int type X = Int
-  │ ------------ ^^^^^^^^^^^^ redefined here
+  │ ^^^^^^^^^^^^ ^^^^^^^^^^^^ redefined here
   │ │             
-  │ previously defined here
+  │ first defined here
 
+The type `X` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.
 

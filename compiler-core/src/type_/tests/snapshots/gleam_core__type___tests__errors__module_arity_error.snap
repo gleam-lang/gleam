@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 845
+assertion_line: 860
 expression: "external fn go(List(a, b)) -> a = \"\" \"\""
 
 ---
@@ -10,4 +10,6 @@ error: Incorrect arity
 1 │ external fn go(List(a, b)) -> a = "" ""
   │                ^^^^^^^^^^ expected 1 arguments, got 2
 
+Functions and constructors have to be called with their expected
+number of arguments.
 

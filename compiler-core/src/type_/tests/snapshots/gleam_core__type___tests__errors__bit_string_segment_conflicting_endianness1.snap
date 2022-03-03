@@ -4,7 +4,7 @@ assertion_line: 192
 expression: "let x = <<1:big-little>> x"
 
 ---
-error: BitString Segment Error
+error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:17
   │
 1 │ let x = <<1:big-little>> x

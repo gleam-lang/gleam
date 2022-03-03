@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 489
+assertion_line: 504
 expression: "let id = fn(x) { x(x) } 1"
 
 ---
@@ -10,4 +10,8 @@ error: Recursive type
 1 │ let id = fn(x) { x(x) } 1
   │                    ^
 
+I don't know how to work out what type this value has. It seems
+to be defined in terms of itself.
+
+Hint: Add some type annotations and try again.
 
