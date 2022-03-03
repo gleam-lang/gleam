@@ -1,6 +1,6 @@
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
-#![allow(clippy::unimplemented)]
+#![allow(clippy::todo)]
 #![allow(dead_code)]
 
 use std::{
@@ -259,7 +259,7 @@ impl LanguageServer {
                 let text_edit = self.format(params)?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
-            _ => unimplemented!("Unsupported LSP request"),
+            _ => todo!("Unsupported LSP request"),
         }
     }
 
@@ -388,7 +388,7 @@ fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
 
         Some(diagnostic_params)
     } else {
-        None
+        todo!("Locationless diagnostic for LSP")
     }
 }
 
