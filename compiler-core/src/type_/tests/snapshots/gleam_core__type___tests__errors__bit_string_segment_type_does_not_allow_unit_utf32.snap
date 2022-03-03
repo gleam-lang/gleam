@@ -4,7 +4,7 @@ assertion_line: 257
 expression: "case <<1>> { <<1:utf32-unit(2)>> -> a }"
 
 ---
-error: BitString Segment Error
+error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:18
   │
 1 │ case <<1>> { <<1:utf32-unit(2)>> -> a }

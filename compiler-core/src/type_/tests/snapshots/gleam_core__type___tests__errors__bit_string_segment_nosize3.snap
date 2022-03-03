@@ -4,7 +4,7 @@ assertion_line: 167
 expression: "case <<1>> { <<_:binary, _:bit_string>> -> 1 }"
 
 ---
-error: BitString Segment Error
+error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:18
   │
 1 │ case <<1>> { <<_:binary, _:bit_string>> -> 1 }

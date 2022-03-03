@@ -734,8 +734,8 @@ constructor accepts."
 
                 TypeError::UnexpectedLabelledArg { location, label } => {
                     let text = format!(
-"This argument has been given a label but the constructor does not expect any.
-Please remove the label `{}`.",
+                        "This argument has been given a label but the constructor does
+not expect any. Please remove the label `{}`.",
                         label
                     );
                     Diagnostic {
@@ -757,7 +757,7 @@ Please remove the label `{}`.",
                 TypeError::PositionalArgumentAfterLabelled { location } => {
                     let text =
                         "This unlabeled argument has been supplied after a labelled argument.
-Once a labelled argument has been supplied all following arguments must 
+Once a labelled argument has been supplied all following arguments must
 also be labelled."
                             .into();
                     Diagnostic {
@@ -798,7 +798,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("previously imported here".into()),
+                                text: Some("first imported here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -812,7 +812,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "{} has been defined multiple times.
+                        "`{}` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.",
                         name
                     );
@@ -828,7 +828,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("previously defined here".into()),
+                                text: Some("first defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -842,7 +842,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "{} has been defined multiple times.
+                        "`{}` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.",
                         name
                     );
@@ -858,7 +858,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("previously defined here".into()),
+                                text: Some("first defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -872,7 +872,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "The type {} has been defined multiple times.
+                        "The type `{}` has been defined multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.",
                         name
                     );
@@ -888,7 +888,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                             path: path.clone(),
                             src: src.into(),
                             extra_labels: vec![Label {
-                                text: Some("previously defined here".into()),
+                                text: Some("first defined here".into()),
                                 span: *previous_location,
                             }],
                         }),
@@ -938,11 +938,11 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                 }
 
                 TypeError::RecursiveType { location } => {
-                    let text =
-                        "I've got confused trying to work out what type this is. It seems to be 
-defined in terms of itself.
-Perhaps add some type annotations and try again."
-                            .into();
+                    let text = "I don't know how to work out what type this value has. It seems
+to be defined in terms of itself.
+
+Hint: Add some type annotations and try again."
+                        .into();
                     Diagnostic {
                         title: "Recursive type".into(),
                         text,
@@ -993,9 +993,9 @@ Perhaps add some type annotations and try again."
                         printer.pretty_print(typ, 4)
                     );
                     if fields.is_empty() {
-                        text.push_str("It does not have any fields.");
+                        text.push_str("\nIt does not have any fields.");
                     } else {
-                        text.push_str("It has these fields:\n");
+                        text.push_str("\nIt has these fields:\n");
                     }
                     for field in fields.iter().sorted() {
                         text.push_str("\n    .");
@@ -1041,9 +1041,9 @@ But this argument has this type:
                         given = printer.pretty_print(given, 4),
                     );
                     if let Some(hint) = hint_alternative_operator(op, given) {
+                        text.push('\n');
                         text.push_str("Hint: ");
                         text.push_str(&hint);
-                        text.push('\n');
                     }
                     Diagnostic {
                         title: "Type mismatch".into(),
@@ -1124,6 +1124,7 @@ But function expects:
                         if let Some(description) = situation.and_then(|s| s.description()) {
                             let mut text = description.to_string();
                             text.push('\n');
+                            text.push('\n');
                             text
                         } else {
                             "".into()
@@ -1153,20 +1154,28 @@ But function expects:
                     expected,
                     given,
                     ..
-                } => Diagnostic {
-                    title: "Incorrect arity".into(),
-                    text: format!("expected {} arguments, got {}", expected, given),
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: None,
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.into(),
-                        extra_labels: vec![],
-                    }),
-                },
+                } => {
+                    let text = "Functions and constructors have to be called with their expected
+number of arguments."
+                        .into();
+                    Diagnostic {
+                        title: "Incorrect arity".into(),
+                        text,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(format!(
+                                    "expected {} arguments, got {}",
+                                    expected, given
+                                )),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
 
                 TypeError::IncorrectArity {
                     labels,
@@ -1599,7 +1608,7 @@ tuple has {} elements so the highest valid index is {}.",
 
                 TypeError::NotATupleUnbound { location } => {
                     let text = "To index into a tuple we need to know it size, but we don't know
-anything about this type yet. Please add some type annotations so 
+anything about this type yet. Please add some type annotations so
 we can continue."
                         .into();
                     Diagnostic {
@@ -1619,11 +1628,10 @@ we can continue."
                 }
 
                 TypeError::RecordAccessUnknownType { location } => {
-                    let text = wrap(
-                        "In order to access a record field we need to know what \
-type it is, but I can't tell the type here. Try adding type annotations to your \
-function and try again.",
-                    );
+                    let text = "In order to access a record field we need to know what type it is,
+but I can't tell the type here. Try adding type annotations to your
+function and try again."
+                        .into();
                     Diagnostic {
                         title: "Unknown type for record access".into(),
                         text,
@@ -1757,7 +1765,7 @@ function and try again.",
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: None,
+                            text: Some("I need to know what this is".into()),
                             span: *location,
                         },
                         path: path.clone(),
@@ -1801,7 +1809,7 @@ Try a different name for this module.",
                 } => {
                     let text = format!(
                         "This case expression does not match all possibilities.
-Each constructor must have a pattern that matches it or 
+Each constructor must have a pattern that matches it or
 else it could crash.
 
 These values are not matched:
@@ -1809,7 +1817,6 @@ These values are not matched:
   - {}",
                         unmatched.join("\n  - "),
                     );
-
                     Diagnostic {
                         title: "Not exhaustive pattern match".into(),
                         text,

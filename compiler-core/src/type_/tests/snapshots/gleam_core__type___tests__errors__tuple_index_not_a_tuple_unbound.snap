@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 690
+assertion_line: 705
 expression: "fn(a) { a.2 }"
 
 ---
@@ -10,6 +10,7 @@ error: Type mismatch
 1 │ fn(a) { a.2 }
   │         ^ what type is this?
 
-To index into a tuple we need to know it size, but we don't know anything
-about this type yet. Please add some type annotations so we can continue.
+To index into a tuple we need to know it size, but we don't know
+anything about this type yet. Please add some type annotations so
+we can continue.
 

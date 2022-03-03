@@ -1,15 +1,17 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1020
+assertion_line: 1035
 expression: "fn dupe() { 1 }\nfn dupe() { 2 }"
 
 ---
-error: Duplicate function definition with name `dupe`
-  ┌─ /src/one/two.gleam:2:1
+error: Duplicate definition
+  ┌─ /src/one/two.gleam:1:1
   │
 1 │ fn dupe() { 1 }
-  │ --------- previously defined here
+  │ ^^^^^^^^^ first defined here
 2 │ fn dupe() { 2 }
   │ ^^^^^^^^^ redefined here
 
+`dupe` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed.
 

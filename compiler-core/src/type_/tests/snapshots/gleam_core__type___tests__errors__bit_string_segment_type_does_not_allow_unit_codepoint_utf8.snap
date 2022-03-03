@@ -4,7 +4,7 @@ assertion_line: 217
 expression: "let x = <<1:utf8_codepoint-unit(5)>> x"
 
 ---
-error: BitString Segment Error
+error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:13
   │
 1 │ let x = <<1:utf8_codepoint-unit(5)>> x

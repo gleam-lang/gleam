@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1462
+assertion_line: 1496
 expression: "\npub type Media {\n    Audio(BitString)\n    Video(BitString)\n    Text(String)\n}\npub fn main(m) {\n    case m {\n        Audio(_) as a -> a\n        Video(_) -> m\n    }\n}\n"
 
 ---
@@ -13,8 +13,9 @@ error: Not exhaustive pattern match
 11 │ │     }
    │ ╰─────^
 
-This case expression does not match all possibilities. Each constructor
-must have a pattern that matches it or else it could crash.
+This case expression does not match all possibilities.
+Each constructor must have a pattern that matches it or
+else it could crash.
 
 These values are not matched:
 

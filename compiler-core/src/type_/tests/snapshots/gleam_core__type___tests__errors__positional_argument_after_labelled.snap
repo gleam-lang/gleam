@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 897
+assertion_line: 912
 expression: "type X { X(a: Int, b: Int, c: Int) }\nfn x() { X(b: 1, a: 1, 1) }"
 
 ---
@@ -10,7 +10,7 @@ error: Unexpected positional argument
 2 │ fn x() { X(b: 1, a: 1, 1) }
   │                        ^
 
-This unlablled argument has been supplied after a labelled argument.
+This unlabeled argument has been supplied after a labelled argument.
 Once a labelled argument has been supplied all following arguments must
 also be labelled.
 
