@@ -525,12 +525,11 @@ fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>
     ])
 }
 
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
-// And we add `undefined` to avoid any unintentional overriding which could
-// cause bugs.
-fn is_valid_js_identifier(word: &str) -> bool {
+fn is_usable_js_identifier(word: &str) -> bool {
     !matches!(
         word,
+        // Keywords and reserved works
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
         "await"
             | "arguments"
             | "break"
@@ -574,17 +573,23 @@ fn is_valid_js_identifier(word: &str) -> bool {
             | "true"
             | "try"
             | "typeof"
-            | "undefined"
             | "var"
             | "void"
             | "while"
             | "with"
             | "yield"
+            // `undefined` to avoid any unintentional overriding.
+            | "undefined"
+            // `then` to avoid a module that defines a `then` function being
+            // used as a `thenable` in JavaScript when the module is imported
+            // dynamically, which results in unexpected behaviour.
+            // It is rather unfortunate that we have to do this.
+            | "then"
     )
 }
 
 fn maybe_escape_identifier_string(word: &str) -> String {
-    if is_valid_js_identifier(word) {
+    if is_usable_js_identifier(word) {
         word.to_string()
     } else {
         escape_identifier(word)
@@ -596,7 +601,7 @@ fn escape_identifier(word: &str) -> String {
 }
 
 fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
-    if is_valid_js_identifier(word) {
+    if is_usable_js_identifier(word) {
         word.to_doc()
     } else {
         Document::String(escape_identifier(word))
