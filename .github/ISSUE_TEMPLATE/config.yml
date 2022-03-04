@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Gleam Community
+  - name: Gleam GitHub Discussions
+    url: https://github.com/gleam-lang/gleam/discussions
+    about: Discuss proposals, ask and answer questions here.
+  - name: Gleam Community Discord
     url: https://discord.com/invite/Fm8Pwmy
-    about: Please ask and answer questions here.
+    about: Discuss proposals, ask and answer questions here.
   - name: Gleam Core Language Reference
     url: https://gleam.run/book/tour/
     about: Gleam language tour
