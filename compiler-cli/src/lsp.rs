@@ -411,45 +411,45 @@ fn to_lsp_diagnostic(
     diagnostic: gleam_core::diagnostic::Diagnostic,
 ) -> Option<(PathBuf, Diagnostic)> {
     // Skip if diagnostic doesn't have  a location
-    if diagnostic.location.is_none() {
-        return None;
-    }
 
-    let location = diagnostic.location.unwrap();
-    let (prefix, severity) = match diagnostic.level {
-        Level::Error => ("Error", DiagnosticSeverity::ERROR),
-        Level::Warning => ("Warning", DiagnosticSeverity::WARNING),
-    };
+    if let Some(location) = diagnostic.location {
+        let (prefix, severity) = match diagnostic.level {
+            Level::Error => ("Error", DiagnosticSeverity::ERROR),
+            Level::Warning => ("Warning", DiagnosticSeverity::WARNING),
+        };
 
-    let mut message = format!("{}: {}\n\n", prefix, diagnostic.title);
+        let mut message = format!("{}: {}\n\n", prefix, diagnostic.title);
 
-    if let Some(label) = location.label.text {
-        message.push_str(&label);
-        if !label.ends_with(['.', '?']) {
-            message.push('.');
+        if let Some(label) = location.label.text {
+            message.push_str(&label);
+            if !label.ends_with(['.', '?']) {
+                message.push('.');
+            }
+            message.push_str("\n\n");
         }
-        message.push_str("\n\n");
+
+        if !diagnostic.text.is_empty() {
+            message.push_str(&diagnostic.text);
+        }
+
+        let line_numbers = LineNumbers::new(&location.src);
+        let diagnostic = Diagnostic {
+            range: src_span_to_lsp_range(location.label.span, line_numbers),
+            severity: Some(severity),
+            code: None,
+            code_description: None,
+            source: None,
+            message,
+            related_information: None,
+            tags: None,
+            data: None,
+        };
+        let path = location.path.canonicalize().unwrap();
+
+        Some((path, diagnostic))
+    } else {
+        None
     }
-
-    if !diagnostic.text.is_empty() {
-        message.push_str(&diagnostic.text);
-    }
-
-    let line_numbers = LineNumbers::new(&location.src);
-    let diagnostic = Diagnostic {
-        range: src_span_to_lsp_range(location.label.span, line_numbers),
-        severity: Some(severity),
-        code: None,
-        code_description: None,
-        source: None,
-        message,
-        related_information: None,
-        tags: None,
-        data: None,
-    };
-    let path = location.path.canonicalize().unwrap();
-
-    Some((path, diagnostic))
 }
 
 fn path_to_uri(path: PathBuf) -> Url {
