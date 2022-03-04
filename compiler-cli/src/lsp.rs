@@ -5,7 +5,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use gleam_core::{
@@ -167,14 +167,38 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Notification(notification) => {
-                    if let Err(error) = self.handle_notification(&connection, notification) {
-                        match error_to_diagnostic(&error) {
+                    match self.handle_notification(&connection, notification) {
+                        Ok(()) => {
+                            let mut diagnostics: HashMap<PathBuf, Vec<Diagnostic>> = HashMap::new();
+                            let warnings = self.compiler.project_compiler.warnings();
+                            for warn in warnings {
+                                let diagnostic = warn.to_diagnostic();
+                                match to_lsp_diagnostic(diagnostic) {
+                                    Some((path, lsp_diagnostic)) => {
+                                        diagnostics.entry(path).or_default().push(lsp_diagnostic);
+                                    }
+                                    None => continue,
+                                }
+                            }
+
+                            for (path, lsp_diagnostics) in diagnostics {
+                                let uri = path_to_uri(path);
+
+                                let diagnostic_params = PublishDiagnosticsParams {
+                                    uri,
+                                    diagnostics: lsp_diagnostics,
+                                    version: None,
+                                };
+
+                                self.publish_diagnostics(diagnostic_params, &connection);
+                            }
+                        }
+                        Err(error) => match error_to_diagnostic(&error) {
                             Some(diagnostic) => {
                                 self.publish_diagnostics(diagnostic, &connection);
                             }
-
                             None => return Err(error),
-                        }
+                        },
                     }
                 }
             }
@@ -359,50 +383,19 @@ fn result_to_response(
 fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
     let diagnostic = error.to_diagnostic();
 
-    // Skip if diagnostic doesn't have a location
-    if let Some(location) = diagnostic.location {
-        let severity = to_severity(diagnostic.level);
+    match to_lsp_diagnostic(diagnostic) {
+        Some((path, lsp_diagnostic)) => {
+            let uri = path_to_uri(path);
 
-        let mut message = format!("Error: {}\n\n", diagnostic.title);
+            let diagnostic_params = PublishDiagnosticsParams {
+                uri,
+                diagnostics: vec![lsp_diagnostic],
+                version: None,
+            };
 
-        if let Some(label) = location.label.text {
-            message.push_str(&label);
-            if !label.ends_with(['.', '?']) {
-                message.push('.');
-            }
-            message.push_str("\n\n");
+            Some(diagnostic_params)
         }
-
-        if !diagnostic.text.is_empty() {
-            message.push_str(&diagnostic.text);
-        }
-
-        let line_numbers = LineNumbers::new(&location.src);
-        let diagnostic = Diagnostic {
-            range: src_span_to_lsp_range(location.label.span, line_numbers),
-            severity: Some(severity),
-            code: None,
-            code_description: None,
-            source: None,
-            message,
-            related_information: None,
-            tags: None,
-            data: None,
-        };
-        let path = location.path.canonicalize().unwrap();
-        let mut file: String = "file://".into();
-        file.push_str(&path.as_os_str().to_string_lossy());
-        let uri = Url::parse(&file).unwrap();
-
-        let diagnostic_params = PublishDiagnosticsParams {
-            uri,
-            diagnostics: vec![diagnostic],
-            version: None,
-        };
-
-        Some(diagnostic_params)
-    } else {
-        todo!("Locationless diagnostic for LSP")
+        None => todo!("Locationless diagnostic for LSP"),
     }
 }
 
@@ -412,6 +405,57 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
         message: error.pretty_string(),
         data: None,
     }
+}
+
+fn to_lsp_diagnostic(
+    diagnostic: gleam_core::diagnostic::Diagnostic,
+) -> Option<(PathBuf, Diagnostic)> {
+    // Skip if diagnostic doesn't have  a location
+    if diagnostic.location.is_none() {
+        return None;
+    }
+
+    let location = diagnostic.location.unwrap();
+    let (prefix, severity) = match diagnostic.level {
+        Level::Error => ("Error", DiagnosticSeverity::ERROR),
+        Level::Warning => ("Warning", DiagnosticSeverity::WARNING),
+    };
+
+    let mut message = format!("{}: {}\n\n", prefix, diagnostic.title);
+
+    if let Some(label) = location.label.text {
+        message.push_str(&label);
+        if !label.ends_with(['.', '?']) {
+            message.push('.');
+        }
+        message.push_str("\n\n");
+    }
+
+    if !diagnostic.text.is_empty() {
+        message.push_str(&diagnostic.text);
+    }
+
+    let line_numbers = LineNumbers::new(&location.src);
+    let diagnostic = Diagnostic {
+        range: src_span_to_lsp_range(location.label.span, line_numbers),
+        severity: Some(severity),
+        code: None,
+        code_description: None,
+        source: None,
+        message,
+        related_information: None,
+        tags: None,
+        data: None,
+    };
+    let path = location.path.canonicalize().unwrap();
+
+    Some((path, diagnostic))
+}
+
+fn path_to_uri(path: PathBuf) -> Url {
+    let mut file: String = "file://".into();
+    file.push_str(&path.as_os_str().to_string_lossy());
+    Url::parse(&file).unwrap()
 }
 
 fn to_severity(level: Level) -> DiagnosticSeverity {
