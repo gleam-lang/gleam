@@ -1,5 +1,5 @@
 use super::*;
-use crate::type_::{HasType, Type};
+use crate::type_::{bool, HasType, Type};
 
 use lazy_static::lazy_static;
 
@@ -146,6 +146,11 @@ pub enum TypedExpr {
         spread: Box<Self>,
         args: Vec<TypedRecordUpdateArg>,
     },
+
+    Negate {
+        location: SrcSpan,
+        value: Box<Self>,
+    },
 }
 
 impl TypedExpr {
@@ -178,6 +183,8 @@ impl TypedExpr {
                 .iter()
                 .find_map(|e| e.find_node(byte_index))
                 .or(Some(self)),
+
+            Self::Negate { value, .. } => value.find_node(byte_index).or(Some(self)),
 
             Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
 
@@ -256,6 +263,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Negate { location, .. }
             | Self::Sequence { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
@@ -281,6 +289,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Negate { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -317,6 +326,7 @@ impl TypedExpr {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::Tuple { .. }
+            | TypedExpr::Negate { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Sequence { .. }
             | TypedExpr::Pipeline { .. }
@@ -346,6 +356,7 @@ impl TypedExpr {
 
     fn type_(&self) -> Arc<Type> {
         match self {
+            Self::Negate { .. } => bool(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
@@ -358,11 +369,11 @@ impl TypedExpr {
             | Self::BinOp { typ, .. }
             | Self::Tuple { typ, .. }
             | Self::String { typ, .. }
+            | Self::BitString { typ, .. }
             | Self::TupleIndex { typ, .. }
             | Self::Assignment { typ, .. }
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
-            | Self::BitString { typ, .. }
             | Self::RecordUpdate { typ, .. } => typ.clone(),
             Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => expressions
                 .last()

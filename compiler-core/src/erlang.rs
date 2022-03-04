@@ -1403,6 +1403,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Fn { args, body, .. } => fun(args, body, env),
 
+        TypedExpr::Negate { value, .. } => docvec!["not ", expr(value, env)],
+
         TypedExpr::List { elements, tail, .. } => expr_list(elements, tail, env),
 
         TypedExpr::Call { fun, args, .. } => call(fun, args, env),
