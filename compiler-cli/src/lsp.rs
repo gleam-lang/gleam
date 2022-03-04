@@ -167,38 +167,44 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Notification(notification) => {
-                    match self.handle_notification(&connection, notification) {
-                        Ok(()) => {
-                            let mut diagnostics: HashMap<PathBuf, Vec<Diagnostic>> = HashMap::new();
-                            let warnings = self.compiler.project_compiler.take_warnings();
-                            for warn in warnings {
-                                let diagnostic = warn.to_diagnostic();
-                                match to_lsp_diagnostic(diagnostic) {
-                                    Some((path, lsp_diagnostic)) => {
-                                        diagnostics.entry(path).or_default().push(lsp_diagnostic);
-                                    }
-                                    None => continue,
-                                }
-                            }
+                    let mut lsp_diagnostics: HashMap<PathBuf, Vec<Diagnostic>> = HashMap::new();
 
-                            for (path, lsp_diagnostics) in diagnostics {
-                                let uri = path_to_uri(path);
-
-                                let diagnostic_params = PublishDiagnosticsParams {
-                                    uri,
-                                    diagnostics: lsp_diagnostics,
-                                    version: None,
-                                };
-
-                                self.publish_diagnostics(diagnostic_params, &connection);
-                            }
-                        }
-                        Err(error) => match error_to_diagnostic(&error) {
-                            Some(diagnostic) => {
-                                self.publish_diagnostics(diagnostic, &connection);
+                    if let Err(error) = self.handle_notification(&connection, notification) {
+                        match error_to_diagnostic(&error) {
+                            Some((path, err_diagnostic)) => {
+                                lsp_diagnostics
+                                    .entry(path)
+                                    .or_default()
+                                    .push(err_diagnostic);
                             }
                             None => return Err(error),
-                        },
+                        }
+                    }
+
+                    let warnings = self.compiler.project_compiler.take_warnings();
+                    for warn in warnings {
+                        let diagnostic = warn.to_diagnostic();
+                        match to_lsp_diagnostic(diagnostic) {
+                            Some((path, warn_diagnostic)) => {
+                                lsp_diagnostics
+                                    .entry(path)
+                                    .or_default()
+                                    .push(warn_diagnostic);
+                            }
+                            None => continue,
+                        }
+                    }
+
+                    for (path, diagnostics) in lsp_diagnostics {
+                        let uri = path_to_uri(path);
+
+                        let diagnostic_params = PublishDiagnosticsParams {
+                            uri,
+                            diagnostics,
+                            version: None,
+                        };
+
+                        self.publish_diagnostics(diagnostic_params, &connection);
                     }
                 }
             }
@@ -368,34 +374,29 @@ fn result_to_response(
                 (response, None)
             }
 
-            Some(diagnostic) => {
+            Some((path, lsp_diagnostic)) => {
                 let response = lsp_server::Response {
                     id,
                     error: None,
                     result: Some(serde_json::json!(null)),
                 };
-                (response, Some(diagnostic))
+                let diagnostic_params = PublishDiagnosticsParams {
+                    uri: path_to_uri(path),
+                    diagnostics: vec![lsp_diagnostic],
+                    version: None,
+                };
+                (response, Some(diagnostic_params))
             }
         },
     }
 }
 
-fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
+fn error_to_diagnostic(error: &Error) -> Option<(PathBuf, Diagnostic)> {
     let diagnostic = error.to_diagnostic();
 
     match to_lsp_diagnostic(diagnostic) {
-        Some((path, lsp_diagnostic)) => {
-            let uri = path_to_uri(path);
-
-            let diagnostic_params = PublishDiagnosticsParams {
-                uri,
-                diagnostics: vec![lsp_diagnostic],
-                version: None,
-            };
-
-            Some(diagnostic_params)
-        }
-        None => todo!("Locationless diagnostic for LSP"),
+        Some(lsp_diagnostic) => Some(lsp_diagnostic),
+        None => todo!("Locationless error for LSP"),
     }
 }
 
