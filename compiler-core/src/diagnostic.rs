@@ -1,100 +1,100 @@
+use std::path::PathBuf;
+
 pub use codespan_reporting::diagnostic::{LabelStyle, Severity};
-use codespan_reporting::{diagnostic::Label, files::SimpleFile, term::emit};
+use codespan_reporting::{diagnostic::Label as CodespanLabel, files::SimpleFile};
 use termcolor::Buffer;
 
-#[derive(Debug)]
-pub struct DiagnosticLabel {
-    pub style: LabelStyle,
-    pub location: crate::ast::SrcSpan,
-    pub label: String,
+use crate::ast::SrcSpan;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Level {
+    Error,
+    Warning,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone)]
+pub struct Label {
+    pub text: Option<String>,
+    pub span: SrcSpan,
+}
+
+#[derive(Debug, Clone)]
+pub struct Location {
+    pub src: String,
+    pub path: PathBuf,
+    pub label: Label,
+    pub extra_labels: Vec<Label>,
+}
+
+impl Location {
+    fn labels(&self) -> impl Iterator<Item = &Label> {
+        std::iter::once(&self.label).chain(self.extra_labels.iter())
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Diagnostic {
-    pub file: String,
-    pub location: crate::ast::SrcSpan,
-    pub src: String,
     pub title: String,
-    pub label: String,
+    pub text: String,
+    pub level: Level,
+    pub location: Option<Location>,
 }
 
-#[derive(Debug)]
-pub struct MultiLineDiagnostic {
-    pub file: String,
-    pub src: String,
-    pub title: String,
-    pub labels: Vec<DiagnosticLabel>,
-}
+impl Diagnostic {
+    pub fn write(&self, buffer: &mut Buffer) {
+        use std::io::Write;
+        match &self.location {
+            Some(location) => self.write_span(location, buffer),
+            None => self.write_title(buffer),
+        };
 
-pub fn write(buffer: &mut Buffer, d: Diagnostic, severity: Severity) {
-    let diagnostic = MultiLineDiagnostic {
-        file: d.file,
-        src: d.src,
-        title: d.title,
-        labels: vec![DiagnosticLabel {
-            style: LabelStyle::Primary,
-            location: d.location,
-            label: d.label,
-        }],
-    };
+        writeln!(buffer, "{}", self.text).expect("write_project");
+    }
 
-    write_diagnostic(buffer, diagnostic, severity)
-}
+    fn write_span(&self, location: &Location, buffer: &mut Buffer) {
+        let file = SimpleFile::new(location.path.to_string_lossy().to_string(), &location.src);
+        let labels = location
+            .labels()
+            .map(|l| {
+                let label =
+                    CodespanLabel::new(LabelStyle::Primary, (), (l.span.start)..(l.span.end));
+                match &l.text {
+                    None => label,
+                    Some(text) => label.with_message(text.clone()),
+                }
+            })
+            .collect();
 
-pub fn write_diagnostic(mut buffer: &mut Buffer, d: MultiLineDiagnostic, severity: Severity) {
-    let file = SimpleFile::new(d.file, d.src);
+        let severity = match self.level {
+            Level::Error => Severity::Error,
+            Level::Warning => Severity::Warning,
+        };
 
-    let labels = d
-        .labels
-        .iter()
-        .map(|l| {
-            Label::new(l.style, (), (l.location.start)..(l.location.end))
-                .with_message(l.label.clone())
-        })
-        .collect();
+        let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(severity)
+            .with_message(&self.title)
+            .with_labels(labels);
+        let config = codespan_reporting::term::Config::default();
+        codespan_reporting::term::emit(buffer, &config, &file, &diagnostic)
+            .expect("write_diagnostic");
+    }
 
-    let diagnostic = codespan_reporting::diagnostic::Diagnostic::new(severity)
-        .with_message(d.title)
-        .with_labels(labels);
-
-    let config = codespan_reporting::term::Config::default();
-    emit(&mut buffer, &config, &file, &diagnostic).expect("write_diagnostic");
-}
-
-/// Describes an error encountered while compiling the project (eg. a name collision
-/// between files).
-///
-#[derive(Debug)]
-pub struct ProjectErrorDiagnostic {
-    pub title: String,
-    pub label: String,
-}
-
-pub fn write_title(buffer: &mut Buffer, title: &str, severity: Severity) {
-    use std::io::Write;
-    use termcolor::{Color, ColorSpec, WriteColor};
-    let (kind, colour) = match severity {
-        Severity::Bug => ("bug", Color::Red),
-        Severity::Error => ("error", Color::Red),
-        Severity::Warning => ("warning", Color::Yellow),
-        Severity::Note => ("note", Color::Blue),
-        Severity::Help => ("help", Color::Blue),
-    };
-    buffer
-        .set_color(ColorSpec::new().set_bold(true).set_fg(Some(colour)))
-        .expect("write_title_color1");
-    write!(buffer, "{}", kind).expect("write_title_kind");
-    buffer
-        .set_color(ColorSpec::new().set_bold(true))
-        .expect("write_title_color2");
-    write!(buffer, ": {}\n\n", title).expect("write_title_title");
-    buffer
-        .set_color(&ColorSpec::new())
-        .expect("write_title_reset");
-}
-
-pub fn write_project(buffer: &mut Buffer, d: ProjectErrorDiagnostic) {
-    use std::io::Write;
-    write_title(buffer, &d.title, Severity::Error);
-    writeln!(buffer, "{}", d.label).expect("write_project");
+    fn write_title(&self, buffer: &mut Buffer) {
+        use std::io::Write;
+        use termcolor::{Color, ColorSpec, WriteColor};
+        let (kind, colour) = match self.level {
+            Level::Error => ("error", Color::Red),
+            Level::Warning => ("warning", Color::Yellow),
+        };
+        buffer
+            .set_color(ColorSpec::new().set_bold(true).set_fg(Some(colour)))
+            .expect("write_title_color1");
+        write!(buffer, "{}", kind).expect("write_title_kind");
+        buffer
+            .set_color(ColorSpec::new().set_bold(true))
+            .expect("write_title_color2");
+        write!(buffer, ": {}\n\n", self.title).expect("write_title_title");
+        buffer
+            .set_color(&ColorSpec::new())
+            .expect("write_title_reset");
+    }
 }

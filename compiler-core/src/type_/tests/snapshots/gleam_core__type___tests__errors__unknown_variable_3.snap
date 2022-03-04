@@ -8,7 +8,7 @@ error: Unknown variable
   ┌─ /src/one/two.gleam:1:39
   │
 1 │ let add = fn(x, y) { x + y } 1 |> add(unknown)
-  │                                       ^^^^^^^ did you mean `Error`?
+  │                                       ^^^^^^^ Did you mean `Error`?
 
 The name `unknown` is not in scope here.
 

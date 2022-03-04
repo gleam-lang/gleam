@@ -1,6 +1,6 @@
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
-#![allow(clippy::unimplemented)]
+#![allow(clippy::todo)]
 #![allow(dead_code)]
 
 use std::{
@@ -9,7 +9,9 @@ use std::{
 };
 
 use gleam_core::{
+    ast::SrcSpan,
     build::{self, Package, ProjectCompiler},
+    diagnostic::Level,
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
     Error, Result,
@@ -257,7 +259,7 @@ impl LanguageServer {
                 let text_edit = self.format(params)?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
-            _ => unimplemented!("Unsupported LSP request"),
+            _ => todo!("Unsupported LSP request"),
         }
     }
 
@@ -355,87 +357,52 @@ fn result_to_response(
 }
 
 fn error_to_diagnostic(error: &Error) -> Option<PublishDiagnosticsParams> {
-    match error {
-        Error::Parse {
-            path, error, src, ..
-        } => {
-            let location = error.location;
-            let line_numbers = LineNumbers::new(src);
-            let start = line_numbers.line_and_column_number(location.start);
-            let end = line_numbers.line_and_column_number(location.end);
-            let (detail, extra) = error.details();
-            let mut message = "Parse error: ".to_string();
-            message.push_str(detail);
-            for extra in extra {
-                message.push('\n');
-                message.push('\n');
-                message.push_str(&extra);
+    let diagnostic = error.to_diagnostic();
+
+    // Skip if diagnostic doesn't have a location
+    if let Some(location) = diagnostic.location {
+        let severity = to_severity(diagnostic.level);
+
+        let mut message = format!("Error: {}\n\n", diagnostic.title);
+
+        if let Some(label) = location.label.text {
+            message.push_str(&label);
+            if !label.ends_with(['.', '?']) {
+                message.push('.');
             }
-            message.push('\n');
-            let diagnostic = Diagnostic {
-                range: Range {
-                    start: Position {
-                        line: start.line as u32 - 1,
-                        character: start.column as u32 - 1,
-                    },
-                    end: Position {
-                        line: end.line as u32 - 1,
-                        character: end.column as u32 - 1,
-                    },
-                },
-                severity: Some(DiagnosticSeverity::ERROR),
-                code: None,
-                code_description: None,
-                source: None,
-                message,
-                related_information: None,
-                tags: None,
-                data: None,
-            };
-            let path = path.canonicalize().unwrap();
-            let mut file: String = "file://".into();
-            file.push_str(&path.as_os_str().to_string_lossy());
-            let uri = Url::parse(&file).unwrap();
-            let diagnostic_params = PublishDiagnosticsParams {
-                uri,
-                diagnostics: vec![diagnostic],
-                version: None,
-            };
-            Some(diagnostic_params)
+            message.push_str("\n\n");
         }
 
-        Error::Type { .. }
-        | Error::UnknownImport { .. }
-        | Error::DuplicateModule { .. }
-        | Error::DuplicateSourceFile { .. }
-        | Error::SrcImportingTest { .. }
-        | Error::ImportCycle { .. }
-        | Error::PackageCycle { .. }
-        | Error::FileIo { .. }
-        | Error::GitInitialization { .. }
-        | Error::StandardIo { .. }
-        | Error::Format { .. }
-        | Error::Hex(_)
-        | Error::ExpandTar { .. }
-        | Error::AddTar { .. }
-        | Error::TarFinish(_)
-        | Error::Gzip(_)
-        | Error::ShellProgramNotFound { .. }
-        | Error::ShellCommand { .. }
-        | Error::InvalidProjectName { .. }
-        | Error::InvalidVersionFormat { .. }
-        | Error::ProjectRootAlreadyExist { .. }
-        | Error::UnableToFindProjectRoot { .. }
-        | Error::VersionDoesNotMatch { .. }
-        | Error::MetadataDecodeError { .. }
-        | Error::ForbiddenWarnings { .. }
-        | Error::JavaScript { .. }
-        | Error::DownloadPackageError { .. }
-        | Error::Http(_)
-        | Error::DependencyResolutionFailed(_)
-        | Error::DuplicateDependency(_)
-        | Error::MissingHexPublishFields { .. }
-        | Error::UnsupportedBuildTool { .. } => None,
+        if !diagnostic.text.is_empty() {
+            message.push_str(&diagnostic.text);
+        }
+
+        let line_numbers = LineNumbers::new(&location.src);
+        let diagnostic = Diagnostic {
+            range: src_span_to_lsp_range(location.label.span, line_numbers),
+            severity: Some(severity),
+            code: None,
+            code_description: None,
+            source: None,
+            message,
+            related_information: None,
+            tags: None,
+            data: None,
+        };
+        let path = location.path.canonicalize().unwrap();
+        let mut file: String = "file://".into();
+        file.push_str(&path.as_os_str().to_string_lossy());
+        let uri = Url::parse(&file).unwrap();
+
+        let diagnostic_params = PublishDiagnosticsParams {
+            uri,
+            diagnostics: vec![diagnostic],
+            version: None,
+        };
+
+        Some(diagnostic_params)
+    } else {
+        todo!("Locationless diagnostic for LSP")
     }
 }
 
@@ -444,6 +411,13 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
         code: 1, // We should assign a code to each error.
         message: error.pretty_string(),
         data: None,
+    }
+}
+
+fn to_severity(level: Level) -> DiagnosticSeverity {
+    match level {
+        Level::Error => DiagnosticSeverity::ERROR,
+        Level::Warning => DiagnosticSeverity::WARNING,
     }
 }
 
@@ -491,5 +465,20 @@ where
         self.project_compiler.restore(checkpoint);
 
         result
+    }
+}
+
+fn src_span_to_lsp_range(location: SrcSpan, line_numbers: LineNumbers) -> Range {
+    let start = line_numbers.line_and_column_number(location.start);
+    let end = line_numbers.line_and_column_number(location.end);
+    Range {
+        start: Position {
+            line: start.line as u32 - 1,
+            character: start.column as u32 - 1,
+        },
+        end: Position {
+            line: end.line as u32 - 1,
+            character: end.column as u32 - 1,
+        },
     }
 }

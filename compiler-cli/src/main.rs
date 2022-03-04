@@ -77,19 +77,15 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{Mode, Options, Target},
-    diagnostic::{self, Severity},
-    error::wrap,
+    diagnostic::{Diagnostic, Level},
     hex::RetirementReason,
     project::Analysed,
 };
 use hex::ApiKeyCommand as _;
 
-use std::{
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
-use clap::{AppSettings, Args, Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -148,7 +144,7 @@ enum Command {
     Shell,
 
     /// Run the project
-    #[clap(setting = AppSettings::TrailingVarArg)]
+    #[clap(trailing_var_arg = true)]
     Run {
         /// The platform to target
         #[clap(long, ignore_case = true)]
@@ -158,7 +154,7 @@ enum Command {
     },
 
     /// Run the project tests
-    #[clap(setting = AppSettings::TrailingVarArg)]
+    #[clap(trailing_var_arg = true)]
     Test {
         /// The platform to target
         #[clap(long, ignore_case = true)]
@@ -168,11 +164,11 @@ enum Command {
     },
 
     /// Compile a single Gleam package
-    #[clap(setting = AppSettings::Hidden)]
+    #[clap(hide = true)]
     CompilePackage(CompilePackage),
 
     /// Read and print gleam.toml for debugging
-    #[clap(setting = AppSettings::Hidden)]
+    #[clap(hide = true)]
     PrintConfig,
 
     /// Add new project dependencies
@@ -190,7 +186,7 @@ enum Command {
     Clean,
 
     /// Run the language server, to be used by editors
-    #[clap(name = "lsp", setting = AppSettings::Hidden)]
+    #[clap(name = "lsp", hide = true)]
     LanguageServer,
 }
 
@@ -361,13 +357,12 @@ fn main() {
     }
 }
 
-const REBAR_DEPRECATION_NOTICE: &str = "The built-in rebar3 support is deprecated and will \
-be removed in a future version of Gleam.
+const REBAR_DEPRECATION_NOTICE: &str =
+    "The built-in rebar3 support is deprecated and will be removed in a
+future version of Gleam.
 
-Please switch to the new Gleam build tool or update your project to use the new `gleam \
-compile-package` API with your existing build tool.
-
-";
+Please switch to the new Gleam build tool or update your project to
+use the new `gleam compile-package` API with your existing build tool.";
 
 fn command_check() -> Result<(), Error> {
     let _ = build::main(Options {
@@ -396,18 +391,13 @@ fn command_build(
         .map(|_| ());
     }
 
-    diagnostic::write_title(
-        &mut buffer,
-        "Deprecated rebar3 build command",
-        Severity::Warning,
-    );
-    buffer
-        .write_all(wrap(REBAR_DEPRECATION_NOTICE).as_bytes())
-        .expect("rebar deprecation message");
-    buffer.flush().expect("flush");
-    stderr
-        .print(&buffer)
-        .expect("command_build_rebar_deprecated_write");
+    Diagnostic {
+        title: "Deprecated rebar3 build command".into(),
+        text: REBAR_DEPRECATION_NOTICE.into(),
+        level: Level::Warning,
+        location: None,
+    }
+    .write(&mut buffer);
 
     // Read and type check project
     let (_config, analysed) = project::read_and_analyse(&root)?;

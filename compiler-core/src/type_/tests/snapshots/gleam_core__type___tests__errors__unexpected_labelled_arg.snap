@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 892
+assertion_line: 907
 expression: "fn id(x) { x } fn y() { id(x: 4) }"
 
 ---
@@ -10,8 +10,6 @@ error: Unexpected labelled argument
 1 │ fn id(x) { x } fn y() { id(x: 4) }
   │                            ^^^^
 
-
-This argument has been given a label but the constructor does not expect
-any.
-Please remove the label `x`.
+This argument has been given a label but the constructor does
+not expect any. Please remove the label `x`.
 

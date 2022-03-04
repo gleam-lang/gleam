@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1449
+assertion_line: 1483
 expression: "\npub fn main(r) {\n    case r {\n        Error(_) -> Nil\n    }\n}\n"
 
 ---
@@ -12,8 +12,9 @@ error: Not exhaustive pattern match
 5 │ │     }
   │ ╰─────^
 
-This case expression does not match all possibilities. Each constructor
-must have a pattern that matches it or else it could crash.
+This case expression does not match all possibilities.
+Each constructor must have a pattern that matches it or
+else it could crash.
 
 These values are not matched:
 
