@@ -7,7 +7,7 @@ body:
       label: Description
       description: "Please provide a description and way to reproduce the problem."
       placeholder: |
-        Please use the Gleam's Community Discord https://discord.com/invite/Fm8Pwmy or Gleam GitHub Discussions https://github.com/gleam-lang/gleam/discussions for questions!
+        Please use the Gleam's Community Discord https://discord.com/invite/Fm8Pwmy or Gleam's GitHub Discussions https://github.com/gleam-lang/gleam/discussions for questions!
     validations:
       required: true
   - type: input
