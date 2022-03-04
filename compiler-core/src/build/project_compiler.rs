@@ -96,6 +96,11 @@ where
         self.options.mode
     }
 
+    pub fn warnings(&mut self) -> Vec<Warning> {
+        // self.warnings.clone()
+        std::mem::take(&mut self.warnings)
+    }
+
     pub fn target(&self) -> Target {
         self.options.target.unwrap_or(self.config.target)
     }
@@ -109,17 +114,19 @@ where
         } else {
             self.telemetry.checking_package(&self.config.name);
         }
-        self.compile_root_package()
-    }
-
-    pub fn compile_root_package(&mut self) -> Result<Package, Error> {
-        let config = self.config.clone();
-        let modules = self.compile_gleam_package(&config, true, paths::root())?;
+        let result = self.compile_root_package();
 
         // Print warnings
         for warning in &self.warnings {
             self.telemetry.warning(warning);
         }
+
+        result
+    }
+
+    pub fn compile_root_package(&mut self) -> Result<Package, Error> {
+        let config = self.config.clone();
+        let modules = self.compile_gleam_package(&config, true, paths::root())?;
 
         Ok(Package { config, modules })
     }
