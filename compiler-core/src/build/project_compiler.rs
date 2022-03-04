@@ -96,7 +96,7 @@ where
         self.options.mode
     }
 
-    pub fn warnings(&mut self) -> Vec<Warning> {
+    pub fn take_warnings(&mut self) -> Vec<Warning> {
         std::mem::take(&mut self.warnings)
     }
 

@@ -170,7 +170,7 @@ impl LanguageServer {
                     match self.handle_notification(&connection, notification) {
                         Ok(()) => {
                             let mut diagnostics: HashMap<PathBuf, Vec<Diagnostic>> = HashMap::new();
-                            let warnings = self.compiler.project_compiler.warnings();
+                            let warnings = self.compiler.project_compiler.take_warnings();
                             for warn in warnings {
                                 let diagnostic = warn.to_diagnostic();
                                 match to_lsp_diagnostic(diagnostic) {
@@ -448,7 +448,7 @@ fn to_lsp_diagnostic(
 
         Some((path, diagnostic))
     } else {
-        None
+        todo!("Locationless warning for LSP")
     }
 }
 
