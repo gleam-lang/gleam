@@ -7,8 +7,12 @@ body:
       label: Description
       description: "Please provide a description and way to reproduce the problem."
       placeholder: |
-        Please use the Gleam's Discord channel for questions:
-        https://discord.com/invite/Fm8Pwmy
+        Please use the [Gleam's Community Discord](https://discord.com/invite/Fm8Pwmy) or [Gleam GitHub Discussions](https://github.com/gleam-lang/gleam/discussions) for questions!
+    about: Discuss proposals, ask and answer questions here.
+  - name: Gleam Community Discord
+    url: https://discord.com/invite/Fm8Pwmy
+    about: Discuss proposals, ask and answer questions here.
+
     validations:
       required: true
   - type: input
