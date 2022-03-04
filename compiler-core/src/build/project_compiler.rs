@@ -97,7 +97,6 @@ where
     }
 
     pub fn warnings(&mut self) -> Vec<Warning> {
-        // self.warnings.clone()
         std::mem::take(&mut self.warnings)
     }
 
