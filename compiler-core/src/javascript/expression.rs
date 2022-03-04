@@ -161,6 +161,8 @@ impl<'module> Generator<'module> {
                 constructor,
                 ..
             } => Ok(self.module_select(module_alias, label, constructor)),
+
+            TypedExpr::Negate { value, .. } => Ok(docvec!["!", self.expression(value)?]),
         }?;
         Ok(if expression.handles_own_return() {
             document

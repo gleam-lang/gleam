@@ -1587,5 +1587,5 @@ fn negate_string() {
         "pub fn negate(x) {
     !\"Hello Gleam\"
 }"
-    )
+    );
 }
