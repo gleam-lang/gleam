@@ -528,6 +528,7 @@ fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
 // And we add `undefined` to avoid any unintentional overriding which could
 // cause bugs.
+// We also add `then` to avoid dynamic module import errors.
 fn is_valid_js_identifier(word: &str) -> bool {
     !matches!(
         word,
@@ -569,6 +570,7 @@ fn is_valid_js_identifier(word: &str) -> bool {
             | "static"
             | "super"
             | "switch"
+            | "then"
             | "this"
             | "throw"
             | "true"
