@@ -865,7 +865,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
                     ValueConstructorVariant::ModuleConstant { literal, .. } => {
@@ -1305,7 +1305,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             constructor => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
-                })
+                });
             }
         };
 
@@ -1344,7 +1344,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             let spread_field = self.infer_known_record_access(
                                 spread.clone(),
                                 label.to_string(),
-                               *location,
+                                *location,
                             )?;
 
                             // Check that the update argument unifies with the corresponding
@@ -1359,7 +1359,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                     "Failed to lookup record field after successfully inferring that field",
                                 ),
                                 Some(p) => Ok(TypedRecordUpdateArg {
-                                    location:*location,
+                                    location: *location,
                                     label: label.to_string(),
                                     value,
                                     index: *p,
