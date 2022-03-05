@@ -143,7 +143,7 @@ impl UntypedExpr {
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
             | Self::RecordUpdate { location, .. }
-            | Self::Negate {location, .. } => *location,
+            | Self::Negate { location, .. } => *location,
             Self::Sequence {
                 location,
                 expressions,
