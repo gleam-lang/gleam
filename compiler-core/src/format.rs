@@ -77,14 +77,14 @@ impl<'comments> Formatter<'comments> {
     }
 
     // Pop comments that occur before a byte-index in the source
-    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item=&'comments str> {
+    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = &'comments str> {
         let (popped, rest) = comments_before(self.comments, limit);
         self.comments = rest;
         popped
     }
 
     // Pop doc comments that occur before a byte-index in the source
-    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item=&'comments str> {
+    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = &'comments str> {
         let (popped, rest) = comments_before(self.doc_comments, limit);
         self.doc_comments = rest;
         popped
@@ -389,8 +389,8 @@ impl<'comments> Formatter<'comments> {
                 comments.map(|c| "///".to_doc().append(Document::String(c.to_string()))),
                 line(),
             ))
-                .append(force_break())
-                .append(line()),
+            .append(force_break())
+            .append(line()),
         }
     }
 
@@ -438,7 +438,7 @@ impl<'comments> Formatter<'comments> {
 
             TypeAst::Tuple { elems, .. } => "#".to_doc().append(self.type_arguments(elems)),
         }
-            .group()
+        .group()
     }
 
     fn type_arguments<'a>(&mut self, args: &'a [TypeAst]) -> Document<'a> {
@@ -470,7 +470,7 @@ impl<'comments> Formatter<'comments> {
             None => arg.names.to_doc(),
             Some(a) => arg.names.to_doc().append(": ").append(self.type_ast(a)),
         }
-            .group();
+        .group();
         commented(doc, comments)
     }
 
@@ -494,7 +494,7 @@ impl<'comments> Formatter<'comments> {
             Some(anno) => head.append(" -> ").append(self.type_ast(anno)),
             None => head,
         }
-            .group();
+        .group();
 
         // Format body
         let body = self.expr(body);
@@ -601,9 +601,9 @@ impl<'comments> Formatter<'comments> {
         } else {
             keyword.to_doc()
         }
-            .append(pattern.append(annotation).group())
-            .append(" =")
-            .append(self.assigned_value(value));
+        .append(pattern.append(annotation).group())
+        .append(" =")
+        .append(self.assigned_value(value));
 
         if let Some(then) = then {
             doc.append(if self.pop_empty_lines(then.start_byte_index()) {
@@ -611,7 +611,7 @@ impl<'comments> Formatter<'comments> {
             } else {
                 line()
             })
-                .append(self.expr(then))
+            .append(self.expr(then))
         } else {
             doc
         }
@@ -922,7 +922,7 @@ impl<'comments> Formatter<'comments> {
             },
 
             // The body of a capture being not a fn shouldn't be possible...
-            _ => panic!("Function capture body found not to be a call in the formatter", ),
+            _ => panic!("Function capture body found not to be a call in the formatter",),
         }
     }
 
@@ -991,9 +991,9 @@ impl<'comments> Formatter<'comments> {
                 } else {
                     line()
                 }
-                    .append(self.record_constructor(c))
-                    .nest(INDENT)
-                    .group()
+                .append(self.record_constructor(c))
+                .nest(INDENT)
+                .group()
             })))
             .append(line())
             .append("}")
@@ -1082,7 +1082,7 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-            .append(self.wrap_expr(&arg.value))
+        .append(self.wrap_expr(&arg.value))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1097,8 +1097,8 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
             _ => self.expr(tuple),
         }
-            .append(".")
-            .append(index)
+        .append(".")
+        .append(index)
     }
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -1159,8 +1159,8 @@ impl<'comments> Formatter<'comments> {
         } else {
             lines(1).append(clause_doc)
         }
-            .append(" ->")
-            .append(self.case_clause_value(&clause.then))
+        .append(" ->")
+        .append(self.case_clause_value(&clause.then))
     }
 
     pub fn external_type<'a>(
@@ -1403,13 +1403,13 @@ impl<'a> Documentable<'a> for &'a BinOp {
             BinOp::DivFloat => " /. ",
             BinOp::ModuloInt => " % ",
         }
-            .to_doc()
+        .to_doc()
     }
 }
 
 pub fn wrap_args<'a, I>(args: I) -> Document<'a>
-    where
-        I: IntoIterator<Item=Document<'a>>,
+where
+    I: IntoIterator<Item = Document<'a>>,
 {
     let mut args = args.into_iter().peekable();
     if args.peek().is_none() {
@@ -1423,8 +1423,8 @@ pub fn wrap_args<'a, I>(args: I) -> Document<'a>
 }
 
 pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
-    where
-        I: IntoIterator<Item=Document<'a>>,
+where
+    I: IntoIterator<Item = Document<'a>>,
 {
     let mut args = args.into_iter().peekable();
     if args.peek().is_none() {
@@ -1442,7 +1442,7 @@ pub fn wrap_args_with_spread<'a, I>(args: I) -> Document<'a>
 }
 
 fn bit_string<'a>(
-    segments: impl IntoIterator<Item=Document<'a>>,
+    segments: impl IntoIterator<Item = Document<'a>>,
     is_simple: bool,
 ) -> Document<'a> {
     let comma = if is_simple {
@@ -1478,12 +1478,12 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
             .nest(INDENT)
             .append(break_("", "")),
     }
-        .append("]")
-        .group()
+    .append("]")
+    .group()
 }
 
 fn printed_comments<'a, 'comments>(
-    comments: impl IntoIterator<Item=&'comments str>,
+    comments: impl IntoIterator<Item = &'comments str>,
 ) -> Option<Document<'a>> {
     let mut comments = comments.into_iter().peekable();
     let _ = comments.peek()?;
@@ -1495,7 +1495,7 @@ fn printed_comments<'a, 'comments>(
 
 fn commented<'a, 'comments>(
     doc: Document<'a>,
-    comments: impl IntoIterator<Item=&'comments str>,
+    comments: impl IntoIterator<Item = &'comments str>,
 ) -> Document<'a> {
     match printed_comments(comments) {
         Some(comments) => comments.append(force_break()).append(line()).append(doc),
@@ -1507,8 +1507,8 @@ fn bit_string_segment<Value, Type, ToDoc>(
     segment: &BitStringSegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document<'_>
-    where
-        ToDoc: FnMut(&Value) -> Document<'_>,
+where
+    ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match segment {
         BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
@@ -1528,8 +1528,8 @@ fn segment_option<ToDoc, Value>(
     option: &BitStringSegmentOption<Value>,
     mut to_doc: ToDoc,
 ) -> Document<'_>
-    where
-        ToDoc: FnMut(&Value) -> Document<'_>,
+where
+    ToDoc: FnMut(&Value) -> Document<'_>,
 {
     match option {
         BitStringSegmentOption::Binary { .. } => "binary".to_doc(),
@@ -1575,7 +1575,7 @@ fn segment_option<ToDoc, Value>(
 pub fn comments_before<'a>(
     comments: &'a [Comment<'a>],
     limit: usize,
-) -> (impl Iterator<Item=&'a str>, &'a [Comment<'a>]) {
+) -> (impl Iterator<Item = &'a str>, &'a [Comment<'a>]) {
     let end = comments
         .iter()
         .position(|c| c.start > limit)
