@@ -138,8 +138,8 @@ where
     /// before continuing. This will ensure that upgrading gleam will not leave
     /// one with confusing or hard to debug states.
     pub fn check_gleam_version(&self) -> Result<(), Error> {
-        let build_path = paths::build();
-        let version_path = paths::build_gleam_version();
+        let build_path = paths::build_packages(self.mode(), self.target());
+        let version_path = paths::build_gleam_version(self.mode(), self.target());
         if self.io.is_file(&version_path) {
             let version = self.io.read(&version_path)?;
             if version == COMPILER_VERSION {
