@@ -183,15 +183,14 @@ impl LanguageServer {
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
-        // TODO: compile the project here and return errors
-        // // Compile the project once so we have all the state and any initial errors
-        // project_compiler.compile_dependencies()?;
-        // let mut compiler = Self::new(project_compiler);
-        // let _ = compiler.compile()?;
+        // Compile the project once so we have all the state and any initial errors
+        let result = self.compiler.compile();
+        self.store_result_diagnostics(result)?;
+        self.publish_stored_diagnostics(&connection);
 
-        for msg in &connection.receiver {
-            tracing::debug!("{:?}", msg);
-            match msg {
+        // Enter the message loop, handling each message that comes in from the client
+        for message in &connection.receiver {
+            match message {
                 lsp_server::Message::Request(request) => {
                     if connection.handle_shutdown(&request).expect("LSP error") {
                         return Ok(());
@@ -211,7 +210,7 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Response(_) => {
-                    // Nothing to do here...
+                    todo!("Unexpected response message")
                 }
 
                 lsp_server::Message::Notification(notification) => {
