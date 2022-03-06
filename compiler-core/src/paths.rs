@@ -45,13 +45,6 @@ pub fn build_deps_package_test(package: &str) -> PathBuf {
     build_deps_package(package).join("test")
 }
 
-/// A path to a special file that contains the version of gleam that last built
-/// the artifacts. If this file does not match the current version of gleam we
-/// will rebuild from scratch
-pub fn build_gleam_version() -> PathBuf {
-    build().join("gleam_version")
-}
-
 pub fn packages() -> PathBuf {
     build().join("packages")
 }
@@ -110,6 +103,13 @@ pub fn build_docs(package: &str) -> PathBuf {
 
 pub fn build_package(mode: Mode, target: Target, package: &str) -> PathBuf {
     build_packages(mode, target).join(package)
+}
+
+/// A path to a special file that contains the version of gleam that last built
+/// the artifacts. If this file does not match the current version of gleam we
+/// will rebuild from scratch
+pub fn build_gleam_version(mode: Mode, target: Target) -> PathBuf {
+    build_packages(mode, target).join("gleam_version")
 }
 
 #[test]
