@@ -92,13 +92,16 @@ pub fn main() -> Result<()> {
 }
 
 pub struct LanguageServer {
-    _params: InitializeParams,
+    _initialise_params: InitializeParams,
 
     /// Files that have been edited in memory
     edited: HashMap<String, String>,
 
+    /// Diagnostics that hae been emitted by the compiler but not yet published
+    /// to the client
+    stored_diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
     /// Files for which there are active diagnostics
-    active_diagnostics: HashSet<Url>,
+    published_diagnostics: HashSet<Url>,
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
@@ -108,54 +111,99 @@ pub struct LanguageServer {
 }
 
 impl LanguageServer {
-    pub fn new(params: InitializeParams) -> Result<Self> {
+    pub fn new(initialise_params: InitializeParams) -> Result<Self> {
         let io = ProjectIO::new();
-        let compiler = LspProjectCompiler::load_and_compile_dependencies(io)?;
+        let compiler = LspProjectCompiler::new(io)?;
         Ok(Self {
-            _params: params,
+            _initialise_params: initialise_params,
             edited: HashMap::new(),
-            active_diagnostics: HashSet::new(),
+            stored_diagnostics: HashMap::new(),
+            published_diagnostics: HashSet::new(),
             compiler,
         })
     }
 
-    fn clear_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
-        for file in self.active_diagnostics.drain() {
+    /// Publish all stored diagnostics to the client.
+    /// Any previously publish diagnostics are cleared before the new set are
+    /// published to the client.
+    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) {
+        self.clear_all_diagnostics(&connection).unwrap();
+
+        for (path, diagnostics) in self.stored_diagnostics.drain() {
+            let uri = path_to_uri(path);
+
+            // Record that we have published diagnostics to this file so we can
+            // clear it later when they are outdated.
+            let _ = self.published_diagnostics.insert(uri.clone());
+
+            // Publish the diagnostics
+            let diagnostic_params = PublishDiagnosticsParams {
+                uri,
+                diagnostics,
+                version: None,
+            };
+            let notification = lsp_server::Notification {
+                method: "textDocument/publishDiagnostics".into(),
+                params: serde_json::to_value(diagnostic_params).unwrap(),
+            };
             connection
                 .sender
-                .send(lsp_server::Message::Notification(
-                    lsp_server::Notification {
-                        method: "textDocument/publishDiagnostics".into(),
-                        params: serde_json::to_value(PublishDiagnosticsParams {
-                            uri: file,
-                            diagnostics: vec![],
-                            version: None,
-                        })
-                        .unwrap(),
-                    },
-                ))
+                .send(lsp_server::Message::Notification(notification))
+                .unwrap();
+        }
+    }
+
+    /// Store a diagnostic locally so that it can later be published to the
+    /// client with `publish_stored_diagnostics`
+    fn store_diagnostic(&mut self, path: PathBuf, diagnostic: Diagnostic) {
+        self.stored_diagnostics
+            .entry(path)
+            .or_default()
+            .push(diagnostic);
+    }
+
+    /// Clear all diagnostics that have been previously published to the client
+    fn clear_all_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+        for file in self.published_diagnostics.drain() {
+            let notification = lsp_server::Notification {
+                method: "textDocument/publishDiagnostics".into(),
+                params: serde_json::to_value(PublishDiagnosticsParams {
+                    uri: file,
+                    diagnostics: vec![],
+                    version: None,
+                })
+                .unwrap(),
+            };
+            connection
+                .sender
+                .send(lsp_server::Message::Notification(notification))
                 .unwrap();
         }
         Ok(())
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
+        // TODO: compile the project here and return errors
+        // // Compile the project once so we have all the state and any initial errors
+        // project_compiler.compile_dependencies()?;
+        // let mut compiler = Self::new(project_compiler);
+        // let _ = compiler.compile()?;
+
         for msg in &connection.receiver {
             tracing::debug!("{:?}", msg);
             match msg {
                 lsp_server::Message::Request(request) => {
-                    if connection.handle_shutdown(&request).unwrap() {
+                    if connection.handle_shutdown(&request).expect("LSP error") {
                         return Ok(());
                     }
                     let id = request.id.clone();
                     let result = self.handle_request(request);
-                    if result.is_ok() {
-                        self.clear_diagnostics(&connection)?;
-                    }
                     let (response, diagnostics) = result_to_response(result, id);
-                    if let Some(diagnostics) = diagnostics {
-                        self.publish_diagnostics(diagnostics, &connection);
+                    if let Some((path, diagnostics)) = diagnostics {
+                        self.store_diagnostic(path, diagnostics);
                     }
+                    self.take_and_store_warning_diagnostics();
+                    self.publish_stored_diagnostics(&connection);
                     connection
                         .sender
                         .send(lsp_server::Message::Response(response))
@@ -167,66 +215,47 @@ impl LanguageServer {
                 }
 
                 lsp_server::Message::Notification(notification) => {
-                    let mut lsp_diagnostics: HashMap<PathBuf, Vec<Diagnostic>> = HashMap::new();
-
-                    if let Err(error) = self.handle_notification(&connection, notification) {
-                        match error_to_diagnostic(&error) {
-                            Some((path, err_diagnostic)) => {
-                                lsp_diagnostics
-                                    .entry(path)
-                                    .or_default()
-                                    .push(err_diagnostic);
-                            }
-                            None => return Err(error),
-                        }
-                    }
-
-                    let warnings = self.compiler.project_compiler.take_warnings();
-                    for warn in warnings {
-                        let diagnostic = warn.to_diagnostic();
-                        match to_lsp_diagnostic(diagnostic) {
-                            Some((path, warn_diagnostic)) => {
-                                lsp_diagnostics
-                                    .entry(path)
-                                    .or_default()
-                                    .push(warn_diagnostic);
-                            }
-                            None => continue,
-                        }
-                    }
-
-                    for (path, diagnostics) in lsp_diagnostics {
-                        let uri = path_to_uri(path);
-
-                        let diagnostic_params = PublishDiagnosticsParams {
-                            uri,
-                            diagnostics,
-                            version: None,
-                        };
-
-                        self.publish_diagnostics(diagnostic_params, &connection);
-                    }
+                    self.handle_notification(&connection, notification).unwrap();
                 }
             }
         }
         Ok(())
     }
 
-    fn publish_diagnostics(
+    fn take_and_store_warning_diagnostics(&mut self) {
+        let warnings = self.compiler.project_compiler.take_warnings();
+        for warn in warnings {
+            let diagnostic = warn.to_diagnostic();
+            match to_lsp_diagnostic(diagnostic) {
+                Some((path, diagnostic)) => self.store_diagnostic(path, diagnostic),
+                None => todo!("Locationless diagnostic"),
+            }
+        }
+    }
+
+    fn publish_result_diagnostics<T>(
         &mut self,
-        diagnostics: PublishDiagnosticsParams,
+        result: Result<T>,
         connection: &lsp_server::Connection,
-    ) {
-        let _ = self.active_diagnostics.insert(diagnostics.uri.clone());
-        connection
-            .sender
-            .send(lsp_server::Message::Notification(
-                lsp_server::Notification {
-                    method: "textDocument/publishDiagnostics".into(),
-                    params: serde_json::to_value(diagnostics).unwrap(),
-                },
-            ))
-            .unwrap();
+    ) -> Result<()> {
+        self.store_result_diagnostics(result)?;
+        self.publish_stored_diagnostics(connection);
+        Ok(())
+    }
+
+    fn store_result_diagnostics<T>(&mut self, result: Result<T>) -> Result<()> {
+        // Store warning diagnostics
+        self.take_and_store_warning_diagnostics();
+
+        // Store error diagnostics, if there are any
+        if let Err(error) = result {
+            match error_to_diagnostic(&error) {
+                Some((path, diagnostic)) => self.store_diagnostic(path, diagnostic),
+                None => return Err(error),
+            }
+        }
+
+        Ok(())
     }
 
     fn handle_notification(
@@ -235,35 +264,31 @@ impl LanguageServer {
         request: lsp_server::Notification,
     ) -> Result<()> {
         match request.method.as_str() {
-            "textDocument/didSave" => self.did_save(
-                connection,
-                cast_notification::<DidSaveTextDocument>(request).unwrap(),
-            ),
+            "textDocument/didSave" => {
+                let params = cast_notification::<DidSaveTextDocument>(request).unwrap();
+                let result = self.did_save(params);
+                self.publish_result_diagnostics(result, connection)
+            }
 
             "textDocument/didClose" => {
-                self.did_close(cast_notification::<DidCloseTextDocument>(request).unwrap())
+                let params = cast_notification::<DidCloseTextDocument>(request).unwrap();
+                self.did_close(params)
             }
 
             "textDocument/didChange" => {
-                self.did_change(cast_notification::<DidChangeTextDocument>(request).unwrap())
+                let params = cast_notification::<DidChangeTextDocument>(request).unwrap();
+                self.did_change(params)
             }
 
             _ => Ok(()),
         }
     }
 
-    // TODO: build project
-    fn did_save(
-        &mut self,
-        connection: &lsp_server::Connection,
-        params: DidSaveTextDocumentParams,
-    ) -> Result<()> {
+    fn did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
-        // Recompile the project to detect any errors
+        // The files on disc have changed, so compile the project with the new changes
         let _ = self.compiler.compile()?;
-        // Clear any diagnostics from the previous run
-        self.clear_diagnostics(connection)?;
         Ok(())
     }
 
@@ -353,7 +378,7 @@ fn text_edit_replace(new_text: String) -> TextEdit {
 fn result_to_response(
     result: Result<serde_json::Value>,
     id: lsp_server::RequestId,
-) -> (lsp_server::Response, Option<PublishDiagnosticsParams>) {
+) -> (lsp_server::Response, Option<(PathBuf, Diagnostic)>) {
     match result {
         Ok(result) => {
             let response = lsp_server::Response {
@@ -374,18 +399,13 @@ fn result_to_response(
                 (response, None)
             }
 
-            Some((path, lsp_diagnostic)) => {
+            Some(diagnostic_information) => {
                 let response = lsp_server::Response {
                     id,
                     error: None,
                     result: Some(serde_json::json!(null)),
                 };
-                let diagnostic_params = PublishDiagnosticsParams {
-                    uri: path_to_uri(path),
-                    diagnostics: vec![lsp_diagnostic],
-                    version: None,
-                };
-                (response, Some(diagnostic_params))
+                (response, Some(diagnostic_information))
             }
         },
     }
@@ -471,13 +491,16 @@ fn to_severity(level: Level) -> DiagnosticSeverity {
 #[derive(Debug)]
 pub struct LspProjectCompiler<IO> {
     project_compiler: ProjectCompiler<IO>,
+
+    /// Whether the dependencies have been compiled previously
+    dependencies_compiled: bool,
 }
 
 impl<IO> LspProjectCompiler<IO>
 where
     IO: CommandExecutor + FileSystemIO + Clone,
 {
-    pub fn load_and_compile_dependencies(io: IO) -> Result<Self> {
+    pub fn new(io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = Box::new(cli::Reporter::new());
         let manifest = crate::dependencies::download(None)?;
@@ -488,14 +511,21 @@ where
             target: None,
             perform_codegen: false,
         };
-        let mut project_compiler =
+        let project_compiler =
             ProjectCompiler::new(config, options, manifest.packages, telemetry, io);
 
-        project_compiler.compile_dependencies()?;
-        Ok(Self { project_compiler })
+        Ok(Self {
+            project_compiler,
+            dependencies_compiled: false,
+        })
     }
 
     pub fn compile(&mut self) -> Result<Package, Error> {
+        if !self.dependencies_compiled {
+            self.project_compiler.compile_dependencies()?;
+            self.dependencies_compiled = true;
+        }
+
         // Save the state prior to compilation of the root package
         let checkpoint = self.project_compiler.checkpoint();
 
