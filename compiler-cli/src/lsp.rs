@@ -127,7 +127,7 @@ impl LanguageServer {
     /// Any previously publish diagnostics are cleared before the new set are
     /// published to the client.
     fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) {
-        self.clear_all_diagnostics(&connection).unwrap();
+        self.clear_all_diagnostics(connection).unwrap();
 
         for (path, diagnostics) in self.stored_diagnostics.drain() {
             let uri = path_to_uri(path);
