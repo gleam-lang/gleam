@@ -411,8 +411,6 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
 fn to_lsp_diagnostic(
     diagnostic: gleam_core::diagnostic::Diagnostic,
 ) -> Option<(PathBuf, Diagnostic)> {
-    // Skip if diagnostic doesn't have  a location
-
     if let Some(location) = diagnostic.location {
         let (prefix, severity) = match diagnostic.level {
             Level::Error => ("Error", DiagnosticSeverity::ERROR),
