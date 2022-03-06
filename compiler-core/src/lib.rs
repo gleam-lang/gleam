@@ -71,6 +71,7 @@ pub mod pretty;
 pub mod project;
 pub mod type_;
 pub mod uid;
+pub mod version;
 pub mod warning;
 
 pub use error::{Error, Result};
