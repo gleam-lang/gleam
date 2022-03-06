@@ -10,6 +10,8 @@
 - You can now specify multiple packages when using `gleam add`
 - If the compiler version changes we now rebuild the project from scratch on
   next build command (#1547)
+- Updated the "Unknown label" error message to match other error messages
+  (#1548)
 
 ## v0.20.1 - 2022-02-24
 
