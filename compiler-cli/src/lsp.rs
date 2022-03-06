@@ -18,11 +18,11 @@ use gleam_core::{
 };
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::Formatting,
+    request::{Formatting, HoverRequest},
     Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidSaveTextDocumentParams, InitializeParams, OneOf, Position, PublishDiagnosticsParams, Range,
-    SaveOptions, ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind,
-    TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
+    DidSaveTextDocumentParams, Hover, HoverProviderCapability, InitializeParams, OneOf, Position,
+    PublishDiagnosticsParams, Range, SaveOptions, ServerCapabilities, TextDocumentSyncCapability,
+    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
 };
 
 use crate::{cli, fs::ProjectIO};
@@ -47,7 +47,7 @@ pub fn main() -> Result<()> {
             },
         )),
         selection_range_provider: None,
-        hover_provider: None,
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
         completion_provider: None,
         signature_help_provider: None,
         definition_provider: None,
@@ -329,8 +329,20 @@ impl LanguageServer {
                 let text_edit = self.format(params)?;
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
+
+            "textDocument/hover" => {
+                let params = cast_request::<HoverRequest>(request).unwrap();
+                let text_edit = self.hover(params)?;
+                Ok(serde_json::to_value(text_edit).unwrap())
+            }
+
             _ => todo!("Unsupported LSP request"),
         }
+    }
+
+    fn hover(&self, params: lsp_types::HoverParams) -> Result<Option<Hover>> {
+        eprintln!("{:?}", params);
+        Ok(None)
     }
 
     fn format(&self, params: lsp_types::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
