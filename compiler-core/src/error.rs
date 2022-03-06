@@ -714,10 +714,12 @@ Second: {}",
 constructor accepts."
                             .into()
                     } else {
-                        wrap_format!(
-                            "The other labelled arguments that this constructor accepts are `{}`.",
-                            other_labels.iter().join("`, `")
-                        )
+                        let mut label_text = String::from("It accepts these labels:\n");
+                        for label in other_labels.iter().sorted() {
+                            label_text.push_str("\n    ");
+                            label_text.push_str(label);
+                        }
+                        label_text
                     };
                     Diagnostic {
                         title,
