@@ -1687,6 +1687,17 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1519
+#[test]
+fn permit_holes_in_fn_args_and_returns() {
+    assert_module_infer!(
+        "pub fn run(args: List(_)) -> Option(_) {
+  todo
+}",
+        vec![("run", "fn(List(_)) -> Option(_) { todo }")],
+    );
+}
+
 #[test]
 fn module_name_validation() {
     assert!(validate_module_name(&["dream".to_string()]).is_ok());
