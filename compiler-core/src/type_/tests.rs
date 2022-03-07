@@ -1691,10 +1691,10 @@ pub fn main() {
 #[test]
 fn permit_holes_in_fn_args_and_returns() {
     assert_module_infer!(
-        "pub fn run(args: List(_)) -> Option(_) {
+        "pub fn run(args: List(_)) -> List(_) {
   todo
 }",
-        vec![("run", "fn(List(_)) -> Option(_) { todo }")],
+        vec![("run", "fn(List(a)) -> List(b)")],
     );
 }
 

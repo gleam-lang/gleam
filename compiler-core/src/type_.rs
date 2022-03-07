@@ -639,6 +639,7 @@ fn register_values<'a>(
 
             // Construct type from annotations
             let mut hydrator = Hydrator::new();
+            hydrator.permit_holes(true);
             let arg_types = args
                 .iter()
                 .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
