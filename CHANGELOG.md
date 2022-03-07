@@ -12,6 +12,7 @@
   next build command (#1547)
 - Updated the "Unknown label" error message to match other error messages
   (#1548)
+- Permit type holes in function arguments and return annotations (#1519)
 
 ## v0.20.1 - 2022-02-24
 
