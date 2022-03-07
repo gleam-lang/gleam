@@ -1,7 +1,6 @@
 use crate::{
     diagnostic::{self, Diagnostic, Location},
     type_,
-    type_::pretty::Printer,
 };
 use std::io::Write;
 use std::path::PathBuf;
@@ -23,18 +22,12 @@ impl Warning {
         #[allow(clippy::unwrap_used)]
         match self {
             Self::Type { path, warning, src } => match warning {
-                type_::Warning::Todo { location, typ } => {
-                    let mut printer = Printer::new();
-                    let text = format!(
-                        "Hint: I think its type is `{}`.
-
-This code will crash if it is run. Be sure to remove this todo before running
-your program.",
-                        printer.pretty_print(typ, 0)
-                    );
+                type_::Warning::Todo { location, .. } => {
+                    let text = "This code will crash if it is run. Be sure to remove this todo before running your program.".into();
                     Diagnostic {
                         title: "Todo found".into(),
                         text,
+                        hint: None,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: "todo".into(),
@@ -50,7 +43,8 @@ your program.",
 
                 type_::Warning::ImplicitlyDiscardedResult { location } => Diagnostic {
                     title: "Unused result value".into(),
-                    text: "Hint: If you are sure you don't need it you can assign it to `_`".into(),
+                    text: "".into(),
+                    hint: Some("If you are sure you don't need it you can assign it to `_`".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
@@ -65,7 +59,8 @@ your program.",
 
                 type_::Warning::UnusedLiteral { location } => Diagnostic {
                     title: "Unused literal".into(),
-                    text: "Hint: You can safely remove it.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
@@ -80,8 +75,10 @@ your program.",
 
                 type_::Warning::NoFieldsRecordUpdate { location } => Diagnostic {
                     title: "Fieldless record update".into(),
-                    text: "Hint: Add some fields to change or replace it with the record itself."
-                        .into(),
+                    text: "".into(),
+                    hint: Some(
+                        "Add some fields to change or replace it with the record itself.".into(),
+                    ),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
@@ -96,7 +93,8 @@ your program.",
 
                 type_::Warning::AllFieldsRecordUpdate { location } => Diagnostic {
                     title: "Redundant record update".into(),
-                    text: "Hint: It is better style to use the record creation syntax.".into(),
+                    text: "".into(),
+                    hint: Some("It is better style to use the record creation syntax.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),
@@ -124,7 +122,8 @@ your program.",
                     };
                     Diagnostic {
                         title,
-                        text: "Hint: You can safely remove it.".into(),
+                        text: "".into(),
+                        hint: Some("You can safely remove it.".into()),
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: src.to_string(),
@@ -153,7 +152,8 @@ your program.",
                     };
                     Diagnostic {
                         title,
-                        text: "Hint: You can safely remove it.".into(),
+                        text: "".into(),
+                        hint: Some("You can safely remove it.".into()),
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             src: src.to_string(),
@@ -184,7 +184,8 @@ your program.",
 
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),
-                    text: "Hint: You can safely remove it.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),
@@ -199,7 +200,8 @@ your program.",
 
                 type_::Warning::UnusedPrivateModuleConstant { location, .. } => Diagnostic {
                     title: "Unused private constant".into(),
-                    text: "Hint: You can safely remove it.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),
@@ -214,7 +216,8 @@ your program.",
 
                 type_::Warning::UnusedPrivateFunction { location, .. } => Diagnostic {
                     title: "Unused private function".into(),
-                    text: "Hint: You can safely remove it.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),
@@ -229,7 +232,11 @@ your program.",
 
                 type_::Warning::UnusedVariable { location, name, .. } => Diagnostic {
                     title: "Unused variable".into(),
-                    text: format!("Hint: you can ignore it with an underscore: `_{}`.", name),
+                    text: "".into(),
+                    hint: Some(format!(
+                        "you can ignore it with an underscore: `_{}`.",
+                        name
+                    )),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),

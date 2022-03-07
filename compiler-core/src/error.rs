@@ -366,6 +366,7 @@ of the Gleam dependency modules."
                     text,
                     level: Level::Error,
                     location: None,
+                    hint: None,
                 }
             }
 
@@ -395,6 +396,7 @@ numbers and underscores.",
                 Diagnostic {
                     title: "Invalid project name".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -404,12 +406,14 @@ numbers and underscores.",
                 title: "Project folder already exists".into(),
                 text: format!("Project folder root:\n\n  {}", path),
                 level: Level::Error,
+                hint: None,
                 location: None,
             },
 
             Error::UnableToFindProjectRoot { path } => Diagnostic {
                 title: "Invalid project root".into(),
                 text: format!("We were unable to find the project root:\n\n  {}", path),
+                hint: None,
                 level: Level::Error,
                 location: None,
             },
@@ -422,6 +426,7 @@ your app.src file \"{}\"",
                 );
                 Diagnostic {
                     title: "Version does not match".into(),
+                    hint: None,
                     text,
                     level: Level::Error,
                     location: None,
@@ -443,6 +448,7 @@ https://gleam.run/getting-started/",
                 Diagnostic {
                     title: "Program not found".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -459,6 +465,7 @@ https://gleam.run/getting-started/",
                 Diagnostic {
                     title: "Shell command failure".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -480,6 +487,7 @@ The error from the shell command library was:
                 Diagnostic {
                     title: "Shell command failure".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -497,6 +505,7 @@ This was error from the gzip library:
                 Diagnostic {
                     title: "Gzip compression failure".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -516,6 +525,7 @@ This was error from the tar library:
                 Diagnostic {
                     title: "Failure creating tar archive".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -533,6 +543,7 @@ This was error from the tar library:
                 Diagnostic {
                     title: "Failure opening tar archive".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -550,6 +561,7 @@ This was error from the tar library:
                 Diagnostic {
                     title: "Failure creating tar archive".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -567,6 +579,7 @@ This was error from the Hex client library:
                 Diagnostic {
                     title: "Hex API failure".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -589,6 +602,7 @@ Test modules are not included in production builds so test modules cannot import
                 Diagnostic {
                     title: "App importing test module".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -620,6 +634,7 @@ Second: {}",
                 Diagnostic {
                     title: "Duplicate module".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -628,6 +643,7 @@ Second: {}",
             Error::DuplicateSourceFile { file } => Diagnostic {
                 title: "Duplicate Source file".into(),
                 text: format!("The file `{}` is defined multiple times.", file),
+                hint: None,
                 level: Level::Error,
                 location: None,
             },
@@ -658,6 +674,7 @@ Second: {}",
                 Diagnostic {
                     title: "File IO failure".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -673,6 +690,7 @@ Second: {}",
                 Diagnostic {
                     title: "Failed to initialize git repository".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -724,6 +742,7 @@ constructor accepts."
                     Diagnostic {
                         title,
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label,
@@ -743,6 +762,7 @@ not expect any. Please remove the label `{}`.",
                     Diagnostic {
                         title: "Unexpected labelled argument".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -765,6 +785,7 @@ also be labelled."
                     Diagnostic {
                         title: "Unexpected positional argument".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -791,6 +812,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate import".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -821,6 +843,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate definition".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -851,6 +874,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate constant definition".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -881,6 +905,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate type definition".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -905,6 +930,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate field".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -926,6 +952,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     Diagnostic {
                         title: "Duplicate argument".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -948,6 +975,7 @@ Hint: Add some type annotations and try again."
                     Diagnostic {
                         title: "Recursive type".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -970,6 +998,7 @@ Hint: Add some type annotations and try again."
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1008,6 +1037,7 @@ Hint: Add some type annotations and try again."
                     Diagnostic {
                         title: "Unknown record field".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1050,6 +1080,7 @@ But this argument has this type:
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1100,6 +1131,7 @@ But function expects:
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1138,6 +1170,7 @@ But function expects:
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1168,6 +1201,7 @@ number of arguments."
                     Diagnostic {
                         title: "Incorrect arity".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1209,6 +1243,7 @@ number of arguments."
                     Diagnostic {
                         title: "Incorrect arity".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1230,6 +1265,7 @@ assigned variables to all of them."
                     Diagnostic {
                         title: "Unnecessary spread operator".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1254,6 +1290,7 @@ assigned variables to all of them."
                     Diagnostic {
                         title: "Unknown type".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1274,6 +1311,7 @@ assigned variables to all of them."
                 } => Diagnostic {
                     title: "Unknown variable".into(),
                     text: wrap_format!("The name `{name}` is not in scope here."),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1305,6 +1343,7 @@ Private types can only be used within the module that defines them.",
                     Diagnostic {
                         title: "Private type used in public interface".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1325,6 +1364,7 @@ Private types can only be used within the module that defines them.",
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{}`.", name),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1351,6 +1391,7 @@ Private types can only be used within the module that defines them.",
                     Diagnostic {
                         title: "Unknown module type".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1378,6 +1419,7 @@ Private types can only be used within the module that defines them.",
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1411,6 +1453,7 @@ Private types can only be used within the module that defines them.",
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1438,6 +1481,7 @@ Each clause must have a pattern for every subject value.",
                     Diagnostic {
                         title: "Incorrect number of patterns".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1462,6 +1506,7 @@ Each clause must have a pattern for every subject value.",
                     Diagnostic {
                         title: "Invalid guard variable".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1484,6 +1529,7 @@ This variable `{}` has not been previously defined.",
                     Diagnostic {
                         title: "Extra alternative pattern variable".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1506,6 +1552,7 @@ as the initial pattern, but the `{}` variable is missing.",
                     Diagnostic {
                         title: "Missing alternative pattern variable".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1531,6 +1578,7 @@ e.g. (x, y) if x == y -> ...",
                     Diagnostic {
                         title: "Duplicate variable in pattern".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1549,6 +1597,7 @@ e.g. (x, y) if x == y -> ...",
                 } => Diagnostic {
                     title: "Out of bounds tuple index".into(),
                     text: "This tuple has no elements so it cannot be indexed at all.".into(),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1576,6 +1625,7 @@ tuple has {} elements so the highest valid index is {}.",
                     Diagnostic {
                         title: "Out of bounds tuple index".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1600,6 +1650,7 @@ tuple has {} elements so the highest valid index is {}.",
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1621,6 +1672,7 @@ we can continue."
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1642,6 +1694,7 @@ function and try again."
                     Diagnostic {
                         title: "Unknown type for record access".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1737,6 +1790,7 @@ function and try again."
                     Diagnostic {
                         title: "Invalid bit string segment".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1753,6 +1807,7 @@ function and try again."
                 TypeError::RecordUpdateInvalidConstructor { location } => Diagnostic {
                     title: "Invalid record constructor".into(),
                     text: "Only record constructors can be used with the update syntax.".into(),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1769,6 +1824,7 @@ function and try again."
                     title: "Unexpected type hole".into(),
                     text: "We need to know the exact type here so type holes cannot be used."
                         .into(),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1790,6 +1846,7 @@ Try a different name for this module.",
                     Diagnostic {
                         title: "Reserved module name".into(),
                         text,
+                        hint: None,
                         location: None,
                         level: Level::Error,
                     }
@@ -1805,6 +1862,7 @@ Try a different name for this module.",
                     Diagnostic {
                         title: "Invalid module name".into(),
                         text,
+                        hint: None,
                         location: None,
                         level: Level::Error,
                     }
@@ -1827,6 +1885,7 @@ These values are not matched:
                     Diagnostic {
                         title: "Not exhaustive pattern match".into(),
                         text,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1857,6 +1916,7 @@ These values are not matched:
                 Diagnostic {
                     title: "Syntax error".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1882,6 +1942,7 @@ cycle to continue.",
                 Diagnostic {
                     title: "Import cycle".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -1899,6 +1960,7 @@ cycle to continue.",
                 Diagnostic {
                     title: "Dependency cycle".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: None,
                 }
@@ -1919,6 +1981,7 @@ cycle to continue.",
                 Diagnostic {
                     title: "Unknown import".into(),
                     text,
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -1949,6 +2012,7 @@ cycle to continue.",
                         action.text(),
                         err,
                     ),
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -1966,6 +2030,7 @@ cycle to continue.",
                 Diagnostic {
                     title: "These files have not been formatted".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -1982,6 +2047,7 @@ Fix the warnings and try again."
                 Diagnostic {
                     title: format!("{} {} generated.", count, word_warning),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -1991,6 +2057,7 @@ Fix the warnings and try again."
                 javascript::Error::Unsupported { feature, location } => Diagnostic {
                     title: "Unsupported feature for compilation target".into(),
                     text: format!("{} is not supported for JavaScript compilation", feature),
+                    hint: None,
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
@@ -2019,6 +2086,7 @@ The error from the package manager client was:
                 Diagnostic {
                     title: "Failed to download package".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2035,6 +2103,7 @@ The error from the HTTP client was:
                 Diagnostic {
                     title: "HTTP error".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2051,6 +2120,7 @@ The error from the parser was:
                 Diagnostic {
                     title: "Invalid version format".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2068,6 +2138,7 @@ The error from the version resolver library was:
                 Diagnostic {
                     title: "Dependency resolution failed".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2082,6 +2153,7 @@ dev-dependencies sections of the gleam.toml file.",
                 Diagnostic {
                     title: "Dependency duplicated".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2112,6 +2184,7 @@ licences = ["Apache-2.0"]"#
                 Diagnostic {
                     title: "Missing required package fields".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
@@ -2133,6 +2206,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 Diagnostic {
                     title: "Unsupported build tool".into(),
                     text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }

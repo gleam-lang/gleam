@@ -100,6 +100,7 @@ pub struct LanguageServer {
     /// Diagnostics that hae been emitted by the compiler but not yet published
     /// to the client
     stored_diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
+
     /// Files for which there are active diagnostics
     published_diagnostics: HashSet<Url>,
 
@@ -225,8 +226,19 @@ impl LanguageServer {
         let warnings = self.compiler.project_compiler.take_warnings();
         for warn in warnings {
             let diagnostic = warn.to_diagnostic();
-            match to_lsp_diagnostic(diagnostic) {
-                Some((path, diagnostic)) => self.store_diagnostic(path, diagnostic),
+            match to_lsp_diagnostic(diagnostic.clone()) {
+                Some((path, lsp_diagnostic)) => {
+                    self.store_diagnostic(path.clone(), lsp_diagnostic.clone());
+
+                    if let Some(hint) = diagnostic.hint {
+                        let lsp_hint = Diagnostic {
+                            severity: Some(DiagnosticSeverity::HINT),
+                            message: hint,
+                            ..lsp_diagnostic
+                        };
+                        self.store_diagnostic(path, lsp_hint);
+                    };
+                }
                 None => todo!("Locationless diagnostic"),
             }
         }
