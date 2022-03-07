@@ -394,6 +394,7 @@ fn command_build(
     Diagnostic {
         title: "Deprecated rebar3 build command".into(),
         text: REBAR_DEPRECATION_NOTICE.into(),
+        hint: None,
         level: Level::Warning,
         location: None,
     }

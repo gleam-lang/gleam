@@ -38,6 +38,7 @@ pub struct Diagnostic {
     pub text: String,
     pub level: Level,
     pub location: Option<Location>,
+    pub hint: Option<String>,
 }
 
 impl Diagnostic {
@@ -48,7 +49,13 @@ impl Diagnostic {
             None => self.write_title(buffer),
         };
 
-        writeln!(buffer, "{}", self.text).expect("write_project");
+        let mut text = self.text.clone();
+        if let Some(hint) = &self.hint {
+            text.push_str("\n\n");
+            text.push_str(&format!("Hint: {}", hint));
+        }
+
+        writeln!(buffer, "{}", text).expect("write_project");
     }
 
     fn write_span(&self, location: &Location, buffer: &mut Buffer) {
