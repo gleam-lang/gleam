@@ -360,11 +360,20 @@ impl LanguageServer {
 
     fn hover(&self, params: lsp_types::HoverParams) -> Result<Option<Hover>> {
         let params = params.text_document_position_params;
-        let module = self.get_module_for_uri(&params.text_document.uri);
-        // let location = params.position;
-        if let Some(module) = module {
-            eprintln!("found compiled module {}", module.name);
-        }
+
+        // Look up the type information for the module being hovered in
+        let module = match self.get_module_for_uri(&params.text_document.uri) {
+            Some(module) => module,
+            // If we don't have a compiled version of the module for this URI
+            // then there's nothing to show, so return None.
+            None => return Ok(None),
+        };
+
+        let position = LineNumbers::new(&module.code)
+            .byte_index(params.position.line, params.position.character);
+
+        eprintln!("found compiled module {}", module.name);
+        eprintln!("position {}", position);
         Ok(None)
     }
 
