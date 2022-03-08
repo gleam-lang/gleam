@@ -16,6 +16,7 @@ use gleam_core::{
     line_numbers::LineNumbers,
     Error, Result,
 };
+use itertools::Itertools;
 use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{Formatting, HoverRequest},
@@ -94,6 +95,9 @@ pub fn main() -> Result<()> {
 pub struct LanguageServer {
     _initialise_params: InitializeParams,
 
+    /// A cached copy of the absolute path of the project root
+    project_root: PathBuf,
+
     /// Files that have been edited in memory
     edited: HashMap<String, String>,
 
@@ -115,11 +119,13 @@ impl LanguageServer {
     pub fn new(initialise_params: InitializeParams) -> Result<Self> {
         let io = ProjectIO::new();
         let compiler = LspProjectCompiler::new(io)?;
+        let project_root = PathBuf::from("./").canonicalize().expect("Absolute root");
         Ok(Self {
             _initialise_params: initialise_params,
             edited: HashMap::new(),
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
+            project_root,
             compiler,
         })
     }
@@ -341,7 +347,12 @@ impl LanguageServer {
     }
 
     fn hover(&self, params: lsp_types::HoverParams) -> Result<Option<Hover>> {
-        eprintln!("{:?}", params);
+        let params = params.text_document_position_params;
+        let root = &self.project_root;
+        let uri = params.text_document.uri;
+        let module_name = uri_to_module_name(&uri, root).unwrap();
+        let location = params.position;
+        eprintln!("{} {:?}", module_name, location);
         Ok(None)
     }
 
@@ -364,6 +375,21 @@ impl LanguageServer {
 
         Ok(vec![text_edit_replace(new_text)])
     }
+}
+
+fn uri_to_module_name(uri: &Url, root: &PathBuf) -> Option<String> {
+    let path = PathBuf::from(uri.path());
+    let components = path
+        .strip_prefix(&root)
+        .ok()?
+        .components()
+        .skip(1)
+        .map(|c| c.as_os_str().to_string_lossy());
+    let module_name = Itertools::intersperse(components, "/".into())
+        .collect::<String>()
+        .strip_suffix(".gleam")?
+        .to_string();
+    Some(module_name)
 }
 
 fn cast_request<R>(request: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
