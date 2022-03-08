@@ -10,7 +10,7 @@ use std::{
 
 use gleam_core::{
     ast::SrcSpan,
-    build::{self, Package, ProjectCompiler},
+    build::{self, Module, Package, ProjectCompiler},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -113,6 +113,9 @@ pub struct LanguageServer {
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
     compiler: LspProjectCompiler<ProjectIO>,
+
+    /// The result of the previous succesful compilation
+    modules: HashMap<String, Module>,
 }
 
 impl LanguageServer {
@@ -123,6 +126,7 @@ impl LanguageServer {
         Ok(Self {
             _initialise_params: initialise_params,
             edited: HashMap::new(),
+            modules: HashMap::new(),
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
             project_root,
@@ -209,8 +213,7 @@ impl LanguageServer {
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
         // Compile the project once so we have all the state and any initial errors
-        let result = self.compiler.compile();
-        self.store_result_diagnostics(result)?;
+        self.compile()?;
         self.publish_stored_diagnostics(&connection);
 
         // Enter the message loop, handling each message that comes in from the client
@@ -243,6 +246,15 @@ impl LanguageServer {
                 }
             }
         }
+        Ok(())
+    }
+
+    fn compile(&mut self) -> Result<(), Error> {
+        let result = self.compiler.compile().map(|compiled| {
+            self.modules = compiled.into_modules_hashmap();
+        });
+
+        self.store_result_diagnostics(result)?;
         Ok(())
     }
 
@@ -309,7 +321,7 @@ impl LanguageServer {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
-        let _ = self.compiler.compile()?;
+        self.compile()?;
         Ok(())
     }
 
@@ -348,12 +360,17 @@ impl LanguageServer {
 
     fn hover(&self, params: lsp_types::HoverParams) -> Result<Option<Hover>> {
         let params = params.text_document_position_params;
-        let root = &self.project_root;
-        let uri = params.text_document.uri;
-        let module_name = uri_to_module_name(&uri, root).unwrap();
-        let location = params.position;
-        eprintln!("{} {:?}", module_name, location);
+        let module = self.get_module_for_uri(&params.text_document.uri);
+        // let location = params.position;
+        if let Some(module) = module {
+            eprintln!("found compiled module {}", module.name);
+        }
         Ok(None)
+    }
+
+    fn get_module_for_uri(&self, uri: &Url) -> Option<&Module> {
+        let module_name = uri_to_module_name(uri, &self.project_root).unwrap();
+        self.modules.get(&module_name)
     }
 
     fn format(&self, params: lsp_types::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
