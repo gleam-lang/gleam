@@ -377,7 +377,7 @@ impl LanguageServer {
     }
 }
 
-fn uri_to_module_name(uri: &Url, root: &PathBuf) -> Option<String> {
+fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
     let path = PathBuf::from(uri.path());
     let components = path
         .strip_prefix(&root)
@@ -390,6 +390,31 @@ fn uri_to_module_name(uri: &Url, root: &PathBuf) -> Option<String> {
         .strip_suffix(".gleam")?
         .to_string();
     Some(module_name)
+}
+
+#[test]
+fn uri_to_module_name_test() {
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
+    assert_eq!(
+        uri_to_module_name(&uri, &root),
+        Some("one/two/three".into())
+    );
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/test/one/two/three.gleam").unwrap();
+    assert_eq!(
+        uri_to_module_name(&uri, &root),
+        Some("one/two/three".into())
+    );
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///somewhere/else/src/one/two/three.gleam").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
 fn cast_request<R>(request: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
