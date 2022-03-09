@@ -226,7 +226,7 @@ impl<'a> Environment<'a> {
     /// Lookup a type in the current scope.
     ///
     pub fn get_type_constructor(
-        &self,
+        &mut self,
         module_alias: &Option<String>,
         name: &str,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
@@ -250,6 +250,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module
                     .types
                     .get(name)
@@ -265,7 +266,7 @@ impl<'a> Environment<'a> {
     /// Lookup constructors for type in the current scope.
     ///
     pub fn get_constructors_for_type(
-        &self,
+        &mut self,
         full_module_name: &Option<String>,
         name: &str,
     ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
@@ -288,6 +289,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module.types_constructors.get(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.to_string(),
@@ -302,7 +304,7 @@ impl<'a> Environment<'a> {
     /// Lookup a value constructor in the current scope.
     ///
     pub fn get_value_constructor(
-        &self,
+        &mut self,
         module: Option<&String>,
         name: &str,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
@@ -327,6 +329,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module
                     .values
                     .get(name)
@@ -597,6 +600,11 @@ impl<'a> Environment<'a> {
             .pop()
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused(unused);
+
+        for (name, location) in self.unused_modules.clone().into_iter() {
+            self.warnings
+                .push(Warning::UnusedImportedModule { name, location });
+        }
     }
 
     fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
