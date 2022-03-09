@@ -1777,6 +1777,14 @@ pub fn register_import(
                 }
             }
 
+            if unqualified.is_empty() {
+                // When the module has no unqualified imports, we track its usage
+                // so we can warn if not used by the end of the type checking
+                let _ = environment
+                    .unused_modules
+                    .insert(module_name.clone(), *location);
+            }
+
             // Insert imported module into scope
             // TODO: use a refernce to the module to avoid copying
             let _ = environment
