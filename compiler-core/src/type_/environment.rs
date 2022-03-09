@@ -316,8 +316,8 @@ impl<'a> Environment<'a> {
                     })
             }
 
-            Some(module) => {
-                let module = self.imported_modules.get(module).ok_or_else(|| {
+            Some(m) => {
+                let module = self.imported_modules.get(m).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
