@@ -1585,6 +1585,17 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
 }
 
 #[test]
+fn module_access_registers_import_usage() {
+    assert_no_warnings!(
+        (
+            vec!["gleam".to_string(), "bibble".to_string()],
+            "pub const bobble = 1"
+        ),
+        "import gleam/bibble pub fn main() { bibble.bobble }",
+    );
+}
+
+#[test]
 fn functions_used_before_definition() {
     assert_module_infer!(
         "pub fn a() { b() }
