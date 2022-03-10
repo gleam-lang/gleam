@@ -225,12 +225,11 @@ impl LanguageServer {
                     }
                     let id = request.id.clone();
                     let result = self.handle_request(request);
-                    let (response, diagnostics) = result_to_response(result, id);
-                    if let Some(diagnostics) = diagnostics {
-                        self.store_diagnostic(diagnostics);
+                    let (response, diagnostic) = result_to_response(result, id);
+                    if let Some(diagnostic) = diagnostic {
+                        self.store_diagnostic(diagnostic);
+                        self.publish_stored_diagnostics(&connection);
                     }
-                    self.take_and_store_warning_diagnostics();
-                    self.publish_stored_diagnostics(&connection);
                     connection
                         .sender
                         .send(lsp_server::Message::Response(response))
