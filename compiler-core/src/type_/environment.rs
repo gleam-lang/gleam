@@ -13,6 +13,7 @@ pub struct Environment<'a> {
     pub imported_names: HashMap<String, SrcSpan>,
     pub importable_modules: &'a im::HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
+    pub unused_modules: HashMap<String, SrcSpan>,
     pub imported_types: HashSet<String>,
 
     /// Values defined in the current function (or the prelude)
@@ -41,6 +42,7 @@ pub struct Environment<'a> {
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
+    /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, bool)>>,
 }
 
@@ -77,6 +79,7 @@ impl<'a> Environment<'a> {
             module_types_constructors: prelude.types_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
+            unused_modules: HashMap::new(),
             imported_names: HashMap::new(),
             accessors: prelude.accessors.clone(),
             local_values: prelude.values.clone().into(),
@@ -223,7 +226,7 @@ impl<'a> Environment<'a> {
     /// Lookup a type in the current scope.
     ///
     pub fn get_type_constructor(
-        &self,
+        &mut self,
         module_alias: &Option<String>,
         name: &str,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
@@ -247,6 +250,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module
                     .types
                     .get(name)
@@ -262,7 +266,7 @@ impl<'a> Environment<'a> {
     /// Lookup constructors for type in the current scope.
     ///
     pub fn get_constructors_for_type(
-        &self,
+        &mut self,
         full_module_name: &Option<String>,
         name: &str,
     ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
@@ -285,6 +289,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module.types_constructors.get(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.to_string(),
@@ -299,7 +304,7 @@ impl<'a> Environment<'a> {
     /// Lookup a value constructor in the current scope.
     ///
     pub fn get_value_constructor(
-        &self,
+        &mut self,
         module: Option<&String>,
         name: &str,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
@@ -313,8 +318,8 @@ impl<'a> Environment<'a> {
                     })
             }
 
-            Some(module) => {
-                let module = self.imported_modules.get(module).ok_or_else(|| {
+            Some(m) => {
+                let module = self.imported_modules.get(m).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
@@ -324,6 +329,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
+                let _ = self.unused_modules.remove(m);
                 module
                     .values
                     .get(name)
@@ -594,6 +600,11 @@ impl<'a> Environment<'a> {
             .pop()
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused(unused);
+
+        for (name, location) in self.unused_modules.clone().into_iter() {
+            self.warnings
+                .push(Warning::UnusedImportedModule { name, location });
+        }
     }
 
     fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {

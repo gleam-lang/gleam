@@ -167,6 +167,21 @@ impl Warning {
                     }
                 }
 
+                type_::Warning::UnusedImportedModule { location, .. } => Diagnostic {
+                    title: "Unused imported module".into(),
+                    text: "Hint: You can safely remove it.".into(),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.to_string(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("This imported module is never used.".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),
                     text: "".into(),

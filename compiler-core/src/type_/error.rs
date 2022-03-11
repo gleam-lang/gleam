@@ -259,6 +259,11 @@ pub enum Warning {
         name: String,
     },
 
+    UnusedImportedModule {
+        location: SrcSpan,
+        name: String,
+    },
+
     UnusedPrivateModuleConstant {
         location: SrcSpan,
         name: String,

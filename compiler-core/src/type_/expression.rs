@@ -1161,6 +1161,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     })?;
 
+            // Register this imported module as having been used, to inform
+            // warnings of unused imports later
+            let _ = self.environment.unused_modules.remove(module_alias);
+
             (module.name.clone(), constructor.clone())
         };
 
