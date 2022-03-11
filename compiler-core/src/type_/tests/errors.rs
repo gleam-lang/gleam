@@ -335,6 +335,11 @@ fn unknown_variable() {
 }
 
 #[test]
+fn unknown_module() {
+    assert_module_error!("import xpto");
+}
+
+#[test]
 fn unknown_variable_2() {
     assert_error!("case 1 { x -> 1 1 -> x }");
 }
