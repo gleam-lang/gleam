@@ -197,3 +197,24 @@ fn lowcase_bool_in_pattern() {
         }
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1404
+#[test]
+fn clause_mutiple_expressions() {
+    assert_error!(
+        "case True {
+True ->
+  let a = 1
+  a + 1
+False -> 0
+}
+",
+        ParseError {
+            location: SrcSpan { start: 36, end: 37 },
+            error: ParseErrorType::UnexpectedToken {
+                expected: vec!["\"->\"".to_string()],
+                hint: Some("Did you mean to wrap a multi line clause in curly braces?".to_string())
+            },
+        }
+    );
+}
