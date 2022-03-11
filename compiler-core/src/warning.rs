@@ -169,7 +169,8 @@ impl Warning {
 
                 type_::Warning::UnusedImportedModule { location, .. } => Diagnostic {
                     title: "Unused imported module".into(),
-                    text: "Hint: You can safely remove it.".into(),
+                    text: "".into(),
+                    hint: Some("You can safely remove it.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.to_string(),
