@@ -14,6 +14,7 @@
   (#1548)
 - Permit type holes in function arguments and return annotations (#1519)
 - Report unused module imports (#1553)
+- Add parse error hint for multi line clauses without curly braces (#1555)
 
 ## v0.20.1 - 2022-02-24
 
