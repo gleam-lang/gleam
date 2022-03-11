@@ -1294,6 +1294,23 @@ pub fn main() { let five = foo() }"
 }
 
 #[test]
+fn warning_private_function_never_used() {
+    assert_warning!(
+        "
+fn main() { 5 }"
+    );
+}
+
+#[test]
+fn warning_many_at_same_time() {
+    assert_warning!(
+        "
+fn foo() { todo }
+fn main() { let five = 5 }"
+    );
+}
+
+#[test]
 fn result_discard_warning_test() {
     // Implicitly discarded Results emit warnings
     assert_warning!(
