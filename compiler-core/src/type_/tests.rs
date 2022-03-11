@@ -3,6 +3,7 @@ use crate::ast::UntypedExpr;
 
 mod errors;
 mod statement_if;
+use std::path::PathBuf;
 
 #[macro_export]
 macro_rules! assert_infer {
@@ -70,6 +71,39 @@ macro_rules! assert_module_infer {
 }
 
 macro_rules! assert_warning {
+    ($src:expr) => {
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let mut warnings: Vec<Warning> = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        let mut nocolor = termcolor::Buffer::no_color();
+        for w in warnings {
+            let warning = w.into_warning(PathBuf::from("/src/warning/wrn.gleam"), $src.to_string());
+            warning.pretty(&mut nocolor)
+        }
+
+        let output = String::from_utf8(nocolor.into_inner())
+            .expect("Error printing produced invalid utf8");
+
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
     ($src:expr, $warning:expr $(,)?) => {
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
@@ -1247,6 +1281,15 @@ fn todo_warning_test() {
                 type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
             }),
         },
+    );
+}
+
+#[test]
+fn warning_variable_never_used_test() {
+    assert_warning!(
+        "
+pub fn foo() { Ok(5) }
+pub fn main() { let five = foo() }"
     );
 }
 

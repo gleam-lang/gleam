@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn foo() { Ok(5) }\npub fn main() { let five = foo() }"
+---
+
+warning: Unused variable
+  ┌─ /src/warning/wrn.gleam:3:21
+  │
+3 │ pub fn main() { let five = foo() }
+  │                     ^^^^ This variable is never used.
+
+Hint: You can ignore it with an underscore: `_five`.
+
