@@ -49,7 +49,10 @@ impl Diagnostic {
             None => self.write_title(buffer),
         };
 
-        writeln!(buffer, "{}", self.text).expect("write text");
+        if !self.text.is_empty() {
+            writeln!(buffer, "{}", self.text).expect("write text");
+        }
+
         if let Some(hint) = &self.hint {
             writeln!(buffer, "Hint: {}", hint).expect("write hint");
         }
