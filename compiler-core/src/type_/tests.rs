@@ -1301,7 +1301,7 @@ fn warning_private_function_never_used() {
 #[test]
 fn warning_many_at_same_time() {
     assert_warning!(
-    "
+        "
 fn main() { let five = 5 }"
     );
 }
