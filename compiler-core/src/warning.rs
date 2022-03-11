@@ -234,7 +234,7 @@ impl Warning {
                     title: "Unused variable".into(),
                     text: "".into(),
                     hint: Some(format!(
-                        "you can ignore it with an underscore: `_{}`.",
+                        "You can ignore it with an underscore: `_{}`.",
                         name
                     )),
                     level: diagnostic::Level::Warning,

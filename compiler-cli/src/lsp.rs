@@ -448,17 +448,18 @@ fn to_lsp_diagnostic(
             Level::Warning => ("Warning", DiagnosticSeverity::WARNING),
         };
 
-        let mut message = format!("{}: {}\n\n", prefix, diagnostic.title);
+        let mut message = format!("{}: {}", prefix, diagnostic.title);
 
         if let Some(label) = location.label.text {
+            message.push_str("\n\n");
             message.push_str(&label);
             if !label.ends_with(['.', '?']) {
                 message.push('.');
             }
-            message.push_str("\n\n");
         }
 
         if !diagnostic.text.is_empty() {
+            message.push_str("\n\n");
             message.push_str(&diagnostic.text);
         }
 

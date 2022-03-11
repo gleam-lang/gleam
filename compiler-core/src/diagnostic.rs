@@ -49,13 +49,10 @@ impl Diagnostic {
             None => self.write_title(buffer),
         };
 
-        let mut text = self.text.clone();
+        writeln!(buffer, "{}", self.text).expect("write text");
         if let Some(hint) = &self.hint {
-            text.push_str("\n\n");
-            text.push_str(&format!("Hint: {}", hint));
+            writeln!(buffer, "Hint: {}", hint).expect("write hint");
         }
-
-        writeln!(buffer, "{}", text).expect("write_project");
     }
 
     fn write_span(&self, location: &Location, buffer: &mut Buffer) {
