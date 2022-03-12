@@ -280,6 +280,16 @@ pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
+    /// A function definition
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// // Public function
+    /// pub fn bar() -> String { ... }
+    /// // Private function
+    /// fn foo(x: Int) -> Int { ... }
+    /// ```
     Fn {
         end_location: usize,
         location: SrcSpan,
@@ -292,6 +302,14 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<String>,
     },
 
+    /// A new name for an existing type
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// pub type Headers =
+    ///   List(#(String, String))
+    /// ```
     TypeAlias {
         location: SrcSpan,
         alias: String,
@@ -302,6 +320,21 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<String>,
     },
 
+    /// A newly defined type with one or more constructors.
+    /// Each variant of the custom type can contain different types, so the type is
+    /// the product of the types contained by each variant.
+    ///
+    /// This might be called an algebraic data type (ADT) or tagged union in other
+    /// languages and type systems.
+    ///
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// pub type Cat {
+    ///   Cat(name: String, cuteness: Int)
+    /// }
+    /// ```
     CustomType {
         location: SrcSpan,
         name: String,
@@ -313,6 +346,16 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         typed_parameters: Vec<T>,
     },
 
+    /// Import a function defined outside of Gleam code.
+    /// When compiling to Erlang the function could be implemented in Erlang
+    /// or Elixir, when compiling to JavaScript it might be implemented in
+    /// JavaScript or TypeScript.
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// pub external fn random_float() -> Float = "rand" "uniform"
+    /// ```
     ExternalFn {
         location: SrcSpan,
         public: bool,
@@ -325,6 +368,15 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<String>,
     },
 
+    /// Import a type defined in another language.
+    /// Nothing is known about the runtime characteristics of the type, we only
+    /// know that it exists and that we have given it this name.
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// pub external type Queue(a)
+    /// ```
     ExternalType {
         location: SrcSpan,
         public: bool,
@@ -333,6 +385,16 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<String>,
     },
 
+    /// Import another Gleam module so the current module can use the types and
+    /// values it defines.
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// import unix/cat
+    /// // Import with alias
+    /// import animal/cat as kitty
+    /// ```
     Import {
         location: SrcSpan,
         module: Vec<String>,
@@ -341,6 +403,14 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         package: PackageName,
     },
 
+    /// A certain fixed value that can be used in multiple places
+    ///
+    /// # Example(s)
+    ///
+    /// ```gleam
+    /// pub const start_year = 2101
+    /// pub const end_year = 2111
+    /// ```
     ModuleConstant {
         doc: Option<String>,
         location: SrcSpan,
