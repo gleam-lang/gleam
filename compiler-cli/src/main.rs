@@ -188,6 +188,9 @@ enum Command {
     /// Run the language server, to be used by editors
     #[clap(name = "lsp", hide = true)]
     LanguageServer,
+
+    #[clap(external_subcommand)]
+    Task(Vec<String>),
 }
 
 #[derive(Args, Debug, Clone)]
@@ -341,6 +344,8 @@ fn main() {
         Command::Clean => clean(),
 
         Command::LanguageServer => lsp::main(),
+
+        Command::Task(arguments) => run::command(arguments, None, run::Which::Task),
     };
 
     match result {

@@ -12,23 +12,61 @@ use crate::fs::ProjectIO;
 pub enum Which {
     Src,
     Test,
+    Task,
 }
 
 pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> Result<(), Error> {
     let config = crate::config::root_config()?;
 
-    // Determine which module to run
-    let module = match which {
-        Which::Src => config.name.to_string(),
-        Which::Test => format!("{}_test", &config.name),
-    };
-
     // Build project so we have bytecode to run
-    let _ = crate::build::main(Options {
+    let compiled = crate::build::main(Options {
         perform_codegen: true,
         mode: Mode::Dev,
         target,
     })?;
+
+    // Determine which module to run
+    let module = match which {
+        Which::Src => config.name.to_string(),
+        Which::Test => format!("{}_test", &config.name),
+        Which::Task => match arguments.get(1) {
+            None => {
+                let task = arguments.get(0).unwrap();
+
+                let mut exists = false;
+                for module in compiled.modules {
+                    if module.name == format!("tasks/{}", &task) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if !exists {
+                    return Err(Error::TaskNotFound {
+                        task: String::from(task.as_str()),
+                    });
+                }
+
+                format!("tasks@{}", &task)
+            }
+
+            Some(task) => {
+                let task_path = format!("{}/{}", &arguments.get(0).unwrap(), &task);
+
+                let mut exists = false;
+                for module in compiled.modules {
+                    if module.name == format!("tasks/{}", &task_path) {
+                        exists = true;
+                        break;
+                    }
+                }
+                if !exists {
+                    return Err(Error::TaskNotFound { task: task_path });
+                }
+
+                format!("tasks@{}@{}", &arguments.get(0).unwrap(), task)
+            }
+        },
+    };
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");

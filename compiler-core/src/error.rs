@@ -115,6 +115,9 @@ pub enum Error {
     #[error("shell program `{program}` not found")]
     ShellProgramNotFound { program: String },
 
+    #[error("task `{task}` not found")]
+    TaskNotFound { task: String },
+
     #[error("shell program `{program}` failed")]
     ShellCommand {
         program: String,
@@ -442,6 +445,17 @@ https://gleam.run/getting-started/",
 
                 Diagnostic {
                     title: "Program not found".into(),
+                    text,
+                    level: Level::Error,
+                    location: None,
+                }
+            }
+
+            Error::TaskNotFound { task } => {
+                let text = format!("The task `{}` was not found", task);
+
+                Diagnostic {
+                    title: "Task not found".into(),
                     text,
                     level: Level::Error,
                     location: None,
