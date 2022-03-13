@@ -373,6 +373,7 @@ impl LanguageServer {
 
         eprintln!("found compiled module {}", module.name);
         eprintln!("position {}", position);
+        eprintln!("found node {:?}", module.find_node(position));
         Ok(None)
     }
 

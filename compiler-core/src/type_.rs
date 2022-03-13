@@ -861,7 +861,7 @@ fn generalise_statement(
             arguments: args,
             body,
             return_annotation,
-            end_location,
+            end_position: end_location,
             return_type,
         } => {
             // Lookup the inferred function information
@@ -900,7 +900,7 @@ fn generalise_statement(
                 name,
                 public,
                 arguments: args,
-                end_location,
+                end_position: end_location,
                 return_annotation,
                 return_type,
                 body,
@@ -931,7 +931,7 @@ fn infer_statement(
             arguments: args,
             body,
             return_annotation,
-            end_location,
+            end_position: end_location,
             ..
         } => {
             let preregistered_fn = environment
@@ -994,7 +994,7 @@ fn infer_statement(
                 name,
                 public,
                 arguments: args,
-                end_location,
+                end_position: end_location,
                 return_annotation,
                 return_type: typ
                     .return_type()

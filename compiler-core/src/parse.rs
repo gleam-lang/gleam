@@ -1238,7 +1238,7 @@ where
             Ok(Some(Statement::Fn {
                 doc: None,
                 location: SrcSpan { start, end },
-                end_location: rbr_e - 1,
+                end_position: rbr_e - 1,
                 public,
                 name,
                 arguments: args,
