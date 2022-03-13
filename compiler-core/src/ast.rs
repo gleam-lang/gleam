@@ -2,6 +2,9 @@ mod constant;
 mod typed;
 mod untyped;
 
+#[cfg(test)]
+mod tests;
+
 pub use self::typed::TypedExpr;
 pub use self::untyped::UntypedExpr;
 
@@ -33,6 +36,12 @@ pub struct Module<Info, Statements> {
     pub documentation: Vec<String>,
     pub type_info: Info,
     pub statements: Vec<Statements>,
+}
+
+impl TypedModule {
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        self.statements.iter().find_map(|s| s.find_node(byte_index))
+    }
 }
 
 /// An if is a grouping of statements that will only be compiled if
@@ -281,8 +290,8 @@ pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Fn {
-        end_location: usize,
         location: SrcSpan,
+        end_position: usize,
         name: String,
         arguments: Vec<Arg<T>>,
         body: Expr,
@@ -350,6 +359,21 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         value: Box<Constant<T, ConstantRecordTag>>,
         type_: T,
     },
+}
+
+impl TypedStatement {
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        match self {
+            Statement::Fn { body, .. } => body.find_node(byte_index),
+
+            Statement::TypeAlias { .. }
+            | Statement::CustomType { .. }
+            | Statement::ExternalFn { .. }
+            | Statement::ExternalType { .. }
+            | Statement::Import { .. }
+            | Statement::ModuleConstant { .. } => None,
+        }
+    }
 }
 
 impl<A, B, C, E> Statement<A, B, C, E> {
@@ -719,6 +743,12 @@ impl TypedClauseGuard {
 pub struct SrcSpan {
     pub start: usize,
     pub end: usize,
+}
+
+impl SrcSpan {
+    pub fn contains(&self, position: usize) -> bool {
+        position >= self.start && position < self.end
+    }
 }
 
 pub type UntypedPattern = Pattern<(), ()>;

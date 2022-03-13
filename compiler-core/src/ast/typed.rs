@@ -139,6 +139,143 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
+    pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
+        match self {
+            TypedExpr::Int { location, .. }
+            | TypedExpr::Float { location, .. }
+            | TypedExpr::String { location, .. }
+            | TypedExpr::Var { location, .. } => {
+                if location.contains(byte_index) {
+                    return Some(self);
+                } else {
+                    None
+                }
+            }
+
+            // TODO: test
+            TypedExpr::Sequence { expressions, .. } => {
+                expressions.iter().find_map(|e| e.find_node(byte_index))
+            }
+
+            // TODO
+            TypedExpr::Fn {
+                location,
+                typ,
+                is_capture,
+                args,
+                body,
+                return_annotation,
+            } => None,
+
+            // TODO
+            TypedExpr::List {
+                location,
+                typ,
+                elements,
+                tail,
+            } => None,
+
+            // TODO
+            TypedExpr::Call {
+                location,
+                typ,
+                fun,
+                args,
+            } => None,
+
+            // TODO
+            TypedExpr::BinOp {
+                location,
+                typ,
+                name,
+                left,
+                right,
+            } => None,
+
+            // TODO
+            TypedExpr::Assignment {
+                location,
+                typ,
+                value,
+                pattern,
+                kind,
+            } => None,
+
+            // TODO
+            TypedExpr::Try {
+                location,
+                typ,
+                value,
+                then,
+                pattern,
+            } => None,
+
+            // TODO
+            TypedExpr::Case {
+                location,
+                typ,
+                subjects,
+                clauses,
+            } => None,
+
+            // TODO
+            TypedExpr::RecordAccess {
+                location,
+                typ,
+                label,
+                index,
+                record,
+            } => None,
+
+            // TODO
+            TypedExpr::ModuleSelect {
+                location,
+                typ,
+                label,
+                module_name,
+                module_alias,
+                constructor,
+            } => None,
+
+            // TODO
+            TypedExpr::Tuple {
+                location,
+                typ,
+                elems,
+            } => None,
+
+            // TODO
+            TypedExpr::TupleIndex {
+                location,
+                typ,
+                index,
+                tuple,
+            } => None,
+
+            // TODO
+            TypedExpr::Todo {
+                location,
+                label,
+                typ,
+            } => None,
+
+            // TODO
+            TypedExpr::BitString {
+                location,
+                typ,
+                segments,
+            } => None,
+
+            // TODO
+            TypedExpr::RecordUpdate {
+                location,
+                typ,
+                spread,
+                args,
+            } => None,
+        }
+    }
+
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;
         lazy_static! {

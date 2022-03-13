@@ -197,9 +197,9 @@ impl<'comments> Formatter<'comments> {
                 body,
                 public,
                 return_annotation,
-                end_location,
+                end_position,
                 ..
-            } => self.statement_fn(public, name, args, return_annotation, body, *end_location),
+            } => self.statement_fn(public, name, args, return_annotation, body, *end_position),
 
             Statement::TypeAlias {
                 alias,
