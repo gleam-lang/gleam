@@ -3312,3 +3312,12 @@ fn first_argument_capture_special_case_fn() {
 "#
     );
 }
+
+
+#[test]
+fn negation() {
+  assert_format!("pub fn negate(x) {
+    !x
+}"
+  );
+}
