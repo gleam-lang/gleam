@@ -536,7 +536,23 @@ where
             // helpful error on possibly trying to group with "("
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
+            },
+
+            // Bang
+            Some((start, Token::Bang, end)) => {
+                let _ = self.next_tok();
+                let value = self.parse_expression_unit()?;
+
+                if value.is_none() {
+                    return parse_error(ParseErrorType::ExpectedBoolean, SrcSpan { start, end: start });
+                }
+
+                UntypedExpr::Negate {
+                    location: SrcSpan { start, end },
+                    value: Box::from(value.unwrap()),
+                }
             }
+
             t0 => {
                 self.tok0 = t0;
                 return Ok(None);
