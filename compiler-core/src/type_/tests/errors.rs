@@ -1583,9 +1583,5 @@ fn main(x) {
 
 #[test]
 fn negate_string() {
-    assert_error!(
-        "pub fn negate(x) {
-    !\"Hello Gleam\"
-}"
-    );
+    assert_error!(r#"!"Hello Gleam""#);
 }
