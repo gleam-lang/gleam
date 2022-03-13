@@ -296,7 +296,8 @@ where
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Token::NotEqual, tok_end));
                 } else {
-                    self.eat_single_char(Token::Bang);
+                    let tok_end = self.get_pos();
+                    self.emit((tok_start, Token::Bang, tok_end));
                 }
             }
             '(' => {
