@@ -6,12 +6,9 @@ contact_links:
   - name: Gleam Community Discord
     url: https://discord.com/invite/Fm8Pwmy
     about: Discuss proposals, ask and answer questions here.
-  - name: Gleam Core Language Reference
+  - name: The language tour
     url: https://gleam.run/book/tour/
-    about: Gleam language tour
-  - name: Gleam Standard Library Documentation
-    url: https://hexdocs.pm/gleam_stdlib/
-    about: Documentation of built-in standard library
+    about: An introduction to Gleam language features
   - name: Gleam Playground
     url: https://johndoneth.github.io/gleam-playground/
     about: Great for trying Gleam code in your browser and for sharing small bits of code
