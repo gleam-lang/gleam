@@ -1,0 +1,26 @@
+name: Bug Report
+title: "Bug: "
+description: Create a bug report
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: "Please provide a description and way to reproduce the problem."
+      placeholder: |
+        Please use the Gleam's Community Discord https://discord.com/invite/Fm8Pwmy or Gleam's GitHub Discussions https://github.com/gleam-lang/gleam/discussions for questions!
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Gleam Version
+      description: "The Gleam version used"
+      placeholder: "0.20.1"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Erlang/OTP Version
+      description: "The Erlang/OTP version used."
+      placeholder: "24.2.1"
+    validations:
+      required: false
