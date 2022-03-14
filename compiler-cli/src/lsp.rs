@@ -11,7 +11,7 @@ use std::{
 use gleam_core::{
     ast::SrcSpan,
     build::{self, Package, ProjectCompiler},
-    diagnostic::Level,
+    diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
     Error, Result,
@@ -154,13 +154,31 @@ impl LanguageServer {
         }
     }
 
-    /// Store a diagnostic locally so that it can later be published to the
-    /// client with `publish_stored_diagnostics`
-    fn store_diagnostic(&mut self, path: PathBuf, diagnostic: Diagnostic) {
+    fn push_diagnostic(&mut self, path: PathBuf, diagnostic: Diagnostic) {
         self.stored_diagnostics
             .entry(path)
             .or_default()
             .push(diagnostic);
+    }
+
+    /// Store a diagnostic locally so that it can later be published to the
+    /// client with `publish_stored_diagnostics`
+    fn store_diagnostic(&mut self, diagnostic: diagnostic::Diagnostic) {
+        match to_lsp_diagnostic(diagnostic.clone()) {
+            Some((path, lsp_diagnostic)) => {
+                self.push_diagnostic(path.clone(), lsp_diagnostic.clone());
+
+                if let Some(hint) = diagnostic.hint {
+                    let lsp_hint = Diagnostic {
+                        severity: Some(DiagnosticSeverity::HINT),
+                        message: hint,
+                        ..lsp_diagnostic
+                    };
+                    self.push_diagnostic(path, lsp_hint);
+                }
+            }
+            None => todo!("Locationless lsp diagnostic"),
+        }
     }
 
     /// Clear all diagnostics that have been previously published to the client
@@ -199,8 +217,8 @@ impl LanguageServer {
                     let id = request.id.clone();
                     let result = self.handle_request(request);
                     let (response, diagnostics) = result_to_response(result, id);
-                    if let Some((path, diagnostics)) = diagnostics {
-                        self.store_diagnostic(path, diagnostics);
+                    if let Some(diagnostics) = diagnostics {
+                        self.store_diagnostic(diagnostics);
                     }
                     self.take_and_store_warning_diagnostics();
                     self.publish_stored_diagnostics(&connection);
@@ -226,21 +244,7 @@ impl LanguageServer {
         let warnings = self.compiler.project_compiler.take_warnings();
         for warn in warnings {
             let diagnostic = warn.to_diagnostic();
-            match to_lsp_diagnostic(diagnostic.clone()) {
-                Some((path, lsp_diagnostic)) => {
-                    self.store_diagnostic(path.clone(), lsp_diagnostic.clone());
-
-                    if let Some(hint) = diagnostic.hint {
-                        let lsp_hint = Diagnostic {
-                            severity: Some(DiagnosticSeverity::HINT),
-                            message: hint,
-                            ..lsp_diagnostic
-                        };
-                        self.store_diagnostic(path, lsp_hint);
-                    };
-                }
-                None => todo!("Locationless diagnostic"),
-            }
+            self.store_diagnostic(diagnostic);
         }
     }
 
@@ -261,7 +265,7 @@ impl LanguageServer {
         // Store error diagnostics, if there are any
         if let Err(error) = result {
             match error_to_diagnostic(&error) {
-                Some((path, diagnostic)) => self.store_diagnostic(path, diagnostic),
+                Some(diagnostic) => self.store_diagnostic(diagnostic),
                 None => return Err(error),
             }
         }
@@ -389,7 +393,7 @@ fn text_edit_replace(new_text: String) -> TextEdit {
 fn result_to_response(
     result: Result<serde_json::Value>,
     id: lsp_server::RequestId,
-) -> (lsp_server::Response, Option<(PathBuf, Diagnostic)>) {
+) -> (lsp_server::Response, Option<diagnostic::Diagnostic>) {
     match result {
         Ok(result) => {
             let response = lsp_server::Response {
@@ -422,13 +426,17 @@ fn result_to_response(
     }
 }
 
-fn error_to_diagnostic(error: &Error) -> Option<(PathBuf, Diagnostic)> {
+fn error_to_diagnostic(error: &Error) -> Option<diagnostic::Diagnostic> {
     let diagnostic = error.to_diagnostic();
 
-    match to_lsp_diagnostic(diagnostic) {
-        Some(lsp_diagnostic) => Some(lsp_diagnostic),
+    match diagnostic.location {
+        Some(_) => Some(diagnostic),
         None => todo!("Locationless error for LSP"),
     }
+    // match to_lsp_diagnostic(diagnostic) {
+    //     Some(lsp_diagnostic) => Some(lsp_diagnostic),
+    //     None => todo!("Locationless error for LSP"),
+    // }
 }
 
 fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
