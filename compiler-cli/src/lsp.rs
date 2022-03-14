@@ -433,10 +433,6 @@ fn error_to_diagnostic(error: &Error) -> Option<diagnostic::Diagnostic> {
         Some(_) => Some(diagnostic),
         None => todo!("Locationless error for LSP"),
     }
-    // match to_lsp_diagnostic(diagnostic) {
-    //     Some(lsp_diagnostic) => Some(lsp_diagnostic),
-    //     None => todo!("Locationless error for LSP"),
-    // }
 }
 
 fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
