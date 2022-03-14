@@ -163,10 +163,14 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://gleam.run/book/tour/bools.html".to_string(),
                 ],
             ),
-            ParseErrorType::UnexpectedToken { expected } => {
+            ParseErrorType::UnexpectedToken { expected, hint } => {
                 let mut messages = expected.clone();
                 if let Some(s) = messages.first_mut() {
                     *s = format!("Expected one of: {}", s);
+                }
+
+                if let Some(hint_text) = hint {
+                    messages.push(format!("Hint: {}", hint_text));
                 }
 
                 ("I was not expecting this.", messages)
@@ -192,7 +196,9 @@ pub enum ParseErrorType {
     InvalidBitStringUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
     InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
     InvalidTupleAccess,      // only positive int literals for tuple access
-    LexError { error: LexicalError },
+    LexError {
+        error: LexicalError,
+    },
     NestedBitStringPattern,    // <<<<1>>, 2>>, <<1>> is not allowed in there
     NoConstructors,            // A type "A {}" must have at least one constructor
     NoCaseClause,              // a case with no claueses
@@ -206,7 +212,10 @@ pub enum ParseErrorType {
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
-    UnexpectedToken { expected: Vec<String> },
+    UnexpectedToken {
+        expected: Vec<String>,
+        hint: Option<String>,
+    },
 }
 
 impl LexicalError {

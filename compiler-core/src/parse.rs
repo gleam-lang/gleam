@@ -152,7 +152,10 @@ where
             // there are still more tokens
             let expected = vec!["An import, const, type, if block, or function.".to_string()];
             return parse_error(
-                ParseErrorType::UnexpectedToken { expected },
+                ParseErrorType::UnexpectedToken {
+                    expected,
+                    hint: None,
+                },
                 SrcSpan { start, end },
             );
         }
@@ -921,7 +924,14 @@ where
                 alternative_patterns.push(self.parse_patterns()?);
             }
             let guard = self.parse_case_clause_guard(false)?;
-            let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
+            let (arr_s, arr_e) = self.expect_one(&Token::RArrow).map_err(|mut e| {
+                if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = e.error {
+                    *hint = Some(
+                        "Did you mean to wrap a multi line clause in curly braces?".to_string(),
+                    );
+                }
+                e
+            })?;
             let then = self.parse_expression()?;
             if let Some(then) = then {
                 Ok(Some(Clause {
@@ -2425,7 +2435,10 @@ where
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
             Some((start, _, end)) => parse_error(
-                ParseErrorType::UnexpectedToken { expected },
+                ParseErrorType::UnexpectedToken {
+                    expected,
+                    hint: None,
+                },
                 SrcSpan { start, end },
             ),
         }

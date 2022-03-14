@@ -1,0 +1,29 @@
+name: Bug Report
+description: Create a bug report
+labels:
+  - bug
+body:
+  - type: textarea
+    attributes:
+      label: Description
+      description: "Please provide a description and way to reproduce the problem."
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Gleam Version
+      description: "The Gleam version used"
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Erlang/OTP Version
+      description: "The Erlang/OTP version if relating to Erlang"
+    validations:
+      required: false
+  - type: input
+    attributes:
+      label: NodeJS version
+      description: "The NodeJS version if relating to JavaScript"
+    validations:
+      required: false
