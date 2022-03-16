@@ -540,6 +540,12 @@ pub struct CallArg<A> {
     pub value: A,
 }
 
+impl CallArg<TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        self.value.find_node(byte_index)
+    }
+}
+
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {

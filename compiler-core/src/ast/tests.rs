@@ -193,3 +193,33 @@ fn find_node_fn() {
     assert_eq!(expr.find_node(9), Some(&expr));
     assert_eq!(expr.find_node(10), None);
 }
+
+#[test]
+fn find_node_call() {
+    let expr = compile_expression("fn(_, _) { 1 }(1, 2)");
+
+    let retrn = TypedExpr::Int {
+        location: SrcSpan { start: 11, end: 12 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
+
+    let arg1 = TypedExpr::Int {
+        location: SrcSpan { start: 15, end: 16 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
+
+    let arg2 = TypedExpr::Int {
+        location: SrcSpan { start: 18, end: 19 },
+        value: "2".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(expr.find_node(11), Some(&retrn));
+    assert_eq!(expr.find_node(14), Some(&expr));
+    assert_eq!(expr.find_node(15), Some(&arg1));
+    assert_eq!(expr.find_node(16), Some(&expr));
+    assert_eq!(expr.find_node(18), Some(&arg2));
+    assert_eq!(expr.find_node(19), Some(&expr));
+}
