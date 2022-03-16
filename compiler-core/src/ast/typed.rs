@@ -141,13 +141,13 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
         match self {
-            TypedExpr::Todo { location, .. }
+            TypedExpr::Var { location, .. }
             | TypedExpr::Int { location, .. }
+            | TypedExpr::Todo { location, .. }
             | TypedExpr::Float { location, .. }
-            | TypedExpr::String { location, .. }
-            | TypedExpr::Var { location, .. } => {
+            | TypedExpr::String { location, .. } => {
                 if location.contains(byte_index) {
-                    return Some(self);
+                    Some(self)
                 } else {
                     None
                 }
@@ -231,27 +231,24 @@ impl TypedExpr {
                 constructor,
             } => None,
 
-            // TODO
             TypedExpr::TupleIndex {
-                location,
-                typ,
-                index,
-                tuple,
-            } => None,
+                location, tuple, ..
+            } => tuple.find_node(byte_index).or_else(|| {
+                if location.contains(byte_index) {
+                    Some(self)
+                } else {
+                    None
+                }
+            }),
 
-            // TODO
-            TypedExpr::BitString {
-                location,
-                typ,
-                segments,
-            } => None,
+            TypedExpr::BitString { location, .. } => todo!(),
 
             // TODO
             TypedExpr::RecordUpdate {
                 location,
-                typ,
                 spread,
                 args,
+                ..
             } => None,
         }
     }
