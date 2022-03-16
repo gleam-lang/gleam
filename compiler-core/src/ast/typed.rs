@@ -139,6 +139,8 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
+    // This could be optimised in places to exit early if the first of a series
+    // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
         match self {
             Self::Var { location, .. }
@@ -173,13 +175,22 @@ impl TypedExpr {
                 }
             }),
 
-            // TODO
             Self::Call {
                 location,
-                typ,
                 fun,
                 args,
-            } => None,
+                ..
+            } => args
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| fun.find_node(byte_index))
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
 
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
