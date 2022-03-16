@@ -152,7 +152,14 @@ impl TypedExpr {
                 }
             }
 
-            TypedExpr::Sequence { expressions, .. } => {
+            TypedExpr::Tuple {
+                elems: expressions, ..
+            }
+            | TypedExpr::List {
+                elements: expressions,
+                ..
+            }
+            | TypedExpr::Sequence { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }
 
@@ -166,10 +173,6 @@ impl TypedExpr {
                 return_annotation,
             } => None,
 
-            TypedExpr::List { elements, .. } => {
-                elements.iter().find_map(|e| e.find_node(byte_index))
-            }
-
             // TODO
             TypedExpr::Call {
                 location,
@@ -178,14 +181,9 @@ impl TypedExpr {
                 args,
             } => None,
 
-            // TODO
-            TypedExpr::BinOp {
-                location,
-                typ,
-                name,
-                left,
-                right,
-            } => None,
+            TypedExpr::BinOp { left, right, .. } => left
+                .find_node(byte_index)
+                .or_else(|| right.find_node(byte_index)),
 
             // TODO
             TypedExpr::Assignment {
@@ -230,13 +228,6 @@ impl TypedExpr {
                 module_name,
                 module_alias,
                 constructor,
-            } => None,
-
-            // TODO
-            TypedExpr::Tuple {
-                location,
-                typ,
-                elems,
             } => None,
 
             // TODO
