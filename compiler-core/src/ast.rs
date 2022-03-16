@@ -746,8 +746,8 @@ pub struct SrcSpan {
 }
 
 impl SrcSpan {
-    pub fn contains(&self, position: usize) -> bool {
-        position >= self.start && position < self.end
+    pub fn contains(&self, byte_index: usize) -> bool {
+        byte_index >= self.start && byte_index < self.end
     }
 }
 

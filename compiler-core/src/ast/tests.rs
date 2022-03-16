@@ -137,3 +137,21 @@ fn find_node_binop() {
     assert!(expr.find_node(4).is_some());
     assert!(expr.find_node(5).is_none());
 }
+
+#[test]
+fn find_node_tuple_index() {
+    let expr = compile_expression(r#"#(1).0"#);
+
+    let int = TypedExpr::Int {
+        location: SrcSpan { start: 2, end: 3 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(expr.find_node(0), Some(&expr));
+    assert_eq!(expr.find_node(2), Some(&int));
+    assert_eq!(expr.find_node(3), Some(&expr));
+    assert_eq!(expr.find_node(4), Some(&expr));
+    assert_eq!(expr.find_node(5), Some(&expr));
+    assert_eq!(expr.find_node(6), None);
+}
