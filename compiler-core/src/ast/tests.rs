@@ -84,6 +84,7 @@ fn find_node_sequence() {
 #[test]
 fn find_node_list() {
     let expr = compile_expression(r#"[1, 2, 3]"#);
+    assert!(expr.find_node(0).is_none());
     assert!(expr.find_node(1).is_some());
     assert!(expr.find_node(2).is_none());
     assert!(expr.find_node(3).is_none());
@@ -92,4 +93,29 @@ fn find_node_list() {
     assert!(expr.find_node(6).is_none());
     assert!(expr.find_node(7).is_some());
     assert!(expr.find_node(8).is_none());
+}
+
+#[test]
+fn find_node_tuple() {
+    let expr = compile_expression(r#"#(1, 2, 3)"#);
+    assert!(expr.find_node(1).is_none());
+    assert!(expr.find_node(2).is_some());
+    assert!(expr.find_node(3).is_none());
+    assert!(expr.find_node(4).is_none());
+    assert!(expr.find_node(5).is_some());
+    assert!(expr.find_node(6).is_none());
+    assert!(expr.find_node(7).is_none());
+    assert!(expr.find_node(8).is_some());
+    assert!(expr.find_node(9).is_none());
+}
+
+#[test]
+fn find_node_binop() {
+    let expr = compile_expression(r#"1 + 2"#);
+    assert!(expr.find_node(0).is_some());
+    assert!(expr.find_node(1).is_none());
+    assert!(expr.find_node(2).is_none());
+    assert!(expr.find_node(3).is_none());
+    assert!(expr.find_node(4).is_some());
+    assert!(expr.find_node(5).is_none());
 }
