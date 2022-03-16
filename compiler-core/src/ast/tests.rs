@@ -20,6 +20,24 @@ fn compile_expression(src: &str) -> TypedExpr {
 }
 
 #[test]
+fn find_node_todo() {
+    let expr = compile_expression(r#" todo "#);
+    assert_eq!(expr.find_node(0), None);
+    assert_eq!(expr.find_node(1), Some(&expr));
+    assert_eq!(expr.find_node(4), Some(&expr));
+    assert_eq!(expr.find_node(5), None);
+}
+
+#[test]
+fn find_node_todo_with_string() {
+    let expr = compile_expression(r#" todo("ok") "#);
+    assert_eq!(expr.find_node(0), None);
+    assert_eq!(expr.find_node(1), Some(&expr));
+    assert_eq!(expr.find_node(10), Some(&expr));
+    assert_eq!(expr.find_node(11), None);
+}
+
+#[test]
 fn find_node_string() {
     let expr = compile_expression(r#" "ok" "#);
     assert_eq!(expr.find_node(0), None);
