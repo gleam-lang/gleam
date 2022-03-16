@@ -152,7 +152,6 @@ impl TypedExpr {
                 }
             }
 
-            // TODO: test
             TypedExpr::Sequence { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }

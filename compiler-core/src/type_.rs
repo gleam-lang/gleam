@@ -12,6 +12,7 @@ mod tests;
 
 pub use environment::*;
 pub use error::{Error, UnifyErrorSituation, Warning};
+pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
 
@@ -27,7 +28,6 @@ use crate::{
     build::{Origin, Target},
     uid::UniqueIdGenerator,
 };
-use expression::*;
 
 use std::{
     cell::RefCell,
