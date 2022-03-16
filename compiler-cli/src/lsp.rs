@@ -175,12 +175,13 @@ impl LanguageServer {
 
     /// Store a diagnostic locally so that it can later be published to the
     /// client with `publish_stored_diagnostics`
-    fn store_diagnostic(&mut self, diagnostic: diagnostic::Diagnostic) {
-        match to_lsp_diagnostic(diagnostic.clone()) {
+    fn store_diagnostic(&mut self, mut diagnostic: diagnostic::Diagnostic) {
+        let hint = diagnostic.hint.take();
+        match to_lsp_diagnostic(diagnostic) {
             Some((path, lsp_diagnostic)) => {
                 self.push_diagnostic(path.clone(), lsp_diagnostic.clone());
 
-                if let Some(hint) = diagnostic.hint {
+                if let Some(hint) = hint {
                     let lsp_hint = Diagnostic {
                         severity: Some(DiagnosticSeverity::HINT),
                         message: hint,
