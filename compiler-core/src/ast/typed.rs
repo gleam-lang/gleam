@@ -141,12 +141,12 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
         match self {
-            TypedExpr::Var { location, .. }
-            | TypedExpr::Int { location, .. }
-            | TypedExpr::Todo { location, .. }
-            | TypedExpr::Float { location, .. }
-            | TypedExpr::String { location, .. }
-            | TypedExpr::ModuleSelect { location, .. } => {
+            Self::Var { location, .. }
+            | Self::Int { location, .. }
+            | Self::Todo { location, .. }
+            | Self::Float { location, .. }
+            | Self::String { location, .. }
+            | Self::ModuleSelect { location, .. } => {
                 if location.contains(byte_index) {
                     Some(self)
                 } else {
@@ -154,53 +154,46 @@ impl TypedExpr {
                 }
             }
 
-            TypedExpr::Tuple {
+            Self::Tuple {
                 elems: expressions, ..
             }
-            | TypedExpr::List {
+            | Self::List {
                 elements: expressions,
                 ..
             }
-            | TypedExpr::Sequence { expressions, .. } => {
+            | Self::Sequence { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }
 
-            // TODO
-            TypedExpr::Fn {
-                location,
-                typ,
-                is_capture,
-                args,
-                body,
-                return_annotation,
-            } => None,
+            Self::Fn { body, location, .. } => body.find_node(byte_index).or_else(|| {
+                if location.contains(byte_index) {
+                    Some(self)
+                } else {
+                    None
+                }
+            }),
 
             // TODO
-            TypedExpr::Call {
+            Self::Call {
                 location,
                 typ,
                 fun,
                 args,
             } => None,
 
-            TypedExpr::BinOp { left, right, .. } => left
+            Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
 
-            // TODO
-            TypedExpr::Assignment { value, .. } => value.find_node(byte_index),
+            Self::Assignment { value, .. } => value.find_node(byte_index),
+
+            // TODO: test
+            Self::Try { value, then, .. } => value
+                .find_node(byte_index)
+                .or_else(|| then.find_node(byte_index)),
 
             // TODO
-            TypedExpr::Try {
-                location,
-                typ,
-                value,
-                then,
-                pattern,
-            } => None,
-
-            // TODO
-            TypedExpr::Case {
+            Self::Case {
                 location,
                 typ,
                 subjects,
@@ -208,7 +201,7 @@ impl TypedExpr {
             } => None,
 
             // TODO
-            TypedExpr::RecordAccess {
+            Self::RecordAccess {
                 location,
                 typ,
                 label,
@@ -216,7 +209,7 @@ impl TypedExpr {
                 record,
             } => None,
 
-            TypedExpr::TupleIndex {
+            Self::TupleIndex {
                 location, tuple, ..
             } => tuple.find_node(byte_index).or_else(|| {
                 if location.contains(byte_index) {
@@ -226,14 +219,14 @@ impl TypedExpr {
                 }
             }),
 
-            TypedExpr::BitString {
+            Self::BitString {
                 location,
                 typ,
                 segments,
             } => todo!(),
 
             // TODO
-            TypedExpr::RecordUpdate {
+            Self::RecordUpdate {
                 location,
                 spread,
                 args,
