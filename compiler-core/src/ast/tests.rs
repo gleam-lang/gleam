@@ -104,30 +104,67 @@ fn find_node_sequence() {
 
 #[test]
 fn find_node_list() {
-    let expr = compile_expression(r#"[1, 2, 3]"#);
-    assert!(expr.find_node(0).is_none());
-    assert!(expr.find_node(1).is_some());
-    assert!(expr.find_node(2).is_none());
-    assert!(expr.find_node(3).is_none());
-    assert!(expr.find_node(4).is_some());
-    assert!(expr.find_node(5).is_none());
-    assert!(expr.find_node(6).is_none());
-    assert!(expr.find_node(7).is_some());
-    assert!(expr.find_node(8).is_none());
+    let list = compile_expression(r#"[1, 2, 3]"#);
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan { start: 1, end: 2 },
+        typ: type_::int(),
+        value: "1".into(),
+    };
+    let int2 = TypedExpr::Int {
+        location: SrcSpan { start: 4, end: 5 },
+        typ: type_::int(),
+        value: "2".into(),
+    };
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 7, end: 8 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    assert_eq!(list.find_node(0), Some(&list));
+    assert_eq!(list.find_node(1), Some(&int1));
+    assert_eq!(list.find_node(2), Some(&list));
+    assert_eq!(list.find_node(3), Some(&list));
+    assert_eq!(list.find_node(4), Some(&int2));
+    assert_eq!(list.find_node(5), Some(&list));
+    assert_eq!(list.find_node(6), Some(&list));
+    assert_eq!(list.find_node(7), Some(&int3));
+    assert_eq!(list.find_node(8), Some(&list));
+    assert_eq!(list.find_node(9), None);
 }
 
 #[test]
 fn find_node_tuple() {
-    let expr = compile_expression(r#"#(1, 2, 3)"#);
-    assert!(expr.find_node(1).is_none());
-    assert!(expr.find_node(2).is_some());
-    assert!(expr.find_node(3).is_none());
-    assert!(expr.find_node(4).is_none());
-    assert!(expr.find_node(5).is_some());
-    assert!(expr.find_node(6).is_none());
-    assert!(expr.find_node(7).is_none());
-    assert!(expr.find_node(8).is_some());
-    assert!(expr.find_node(9).is_none());
+    let tuple = compile_expression(r#"#(1, 2, 3)"#);
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan { start: 2, end: 3 },
+        typ: type_::int(),
+        value: "1".into(),
+    };
+    let int2 = TypedExpr::Int {
+        location: SrcSpan { start: 5, end: 6 },
+        typ: type_::int(),
+        value: "2".into(),
+    };
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 8, end: 9 },
+        typ: type_::int(),
+        value: "3".into(),
+    };
+
+    assert_eq!(tuple.find_node(0), Some(&tuple));
+    assert_eq!(tuple.find_node(1), Some(&tuple));
+    assert_eq!(tuple.find_node(2), Some(&int1));
+    assert_eq!(tuple.find_node(3), Some(&tuple));
+    assert_eq!(tuple.find_node(4), Some(&tuple));
+    assert_eq!(tuple.find_node(5), Some(&int2));
+    assert_eq!(tuple.find_node(6), Some(&tuple));
+    assert_eq!(tuple.find_node(7), Some(&tuple));
+    assert_eq!(tuple.find_node(8), Some(&int3));
+    assert_eq!(tuple.find_node(9), Some(&tuple));
+    assert_eq!(tuple.find_node(10), None);
 }
 
 #[test]
@@ -151,9 +188,7 @@ fn find_node_tuple_index() {
         typ: type_::int(),
     };
 
-    assert_eq!(expr.find_node(0), Some(&expr));
     assert_eq!(expr.find_node(2), Some(&int));
-    assert_eq!(expr.find_node(3), Some(&expr));
     assert_eq!(expr.find_node(4), Some(&expr));
     assert_eq!(expr.find_node(5), Some(&expr));
     assert_eq!(expr.find_node(6), None);

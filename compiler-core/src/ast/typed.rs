@@ -156,16 +156,29 @@ impl TypedExpr {
                 }
             }
 
-            Self::Tuple {
-                elems: expressions, ..
-            }
-            | Self::List {
-                elements: expressions,
-                ..
-            }
-            | Self::Sequence { expressions, .. } => {
+            Self::Sequence { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }
+
+            Self::Tuple {
+                location,
+                elems: expressions,
+                ..
+            }
+            | Self::List {
+                location,
+                elements: expressions,
+                ..
+            } => expressions
+                .iter()
+                .find_map(|e| e.find_node(byte_index))
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
 
             Self::Fn { body, location, .. } => body.find_node(byte_index).or_else(|| {
                 if location.contains(byte_index) {
