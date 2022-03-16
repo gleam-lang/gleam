@@ -1,6 +1,9 @@
 use crate::{
     ast::{SrcSpan, TypedExpr},
-    type_::{self, Environment, ExprTyper, ValueConstructor, ValueConstructorVariant},
+    type_::{
+        self, Environment, ExprTyper, ModuleValueConstructor, ValueConstructor,
+        ValueConstructorVariant,
+    },
     uid::UniqueIdGenerator,
 };
 
@@ -154,4 +157,21 @@ fn find_node_tuple_index() {
     assert_eq!(expr.find_node(4), Some(&expr));
     assert_eq!(expr.find_node(5), Some(&expr));
     assert_eq!(expr.find_node(6), None);
+}
+
+#[test]
+fn find_node_module_select() {
+    let expr = TypedExpr::ModuleSelect {
+        location: SrcSpan { start: 1, end: 3 },
+        typ: type_::int(),
+        label: "label".into(),
+        module_name: vec!["name".into()],
+        module_alias: "alias".into(),
+        constructor: ModuleValueConstructor::Fn,
+    };
+
+    assert_eq!(expr.find_node(0), None);
+    assert_eq!(expr.find_node(1), Some(&expr));
+    assert_eq!(expr.find_node(2), Some(&expr));
+    assert_eq!(expr.find_node(3), None);
 }

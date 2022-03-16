@@ -383,7 +383,12 @@ impl LanguageServer {
 
         // Show the type of the hovered node to the user
         let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
-        let contents = format!("```gleam\n{}\n```", type_);
+        let contents = format!(
+            "```gleam
+{}
+```",
+            type_
+        );
         Ok(Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(contents)),
             range: None,
