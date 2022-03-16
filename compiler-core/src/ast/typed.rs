@@ -145,7 +145,8 @@ impl TypedExpr {
             | TypedExpr::Int { location, .. }
             | TypedExpr::Todo { location, .. }
             | TypedExpr::Float { location, .. }
-            | TypedExpr::String { location, .. } => {
+            | TypedExpr::String { location, .. }
+            | TypedExpr::ModuleSelect { location, .. } => {
                 if location.contains(byte_index) {
                     Some(self)
                 } else {
@@ -215,16 +216,6 @@ impl TypedExpr {
                 record,
             } => None,
 
-            // TODO
-            TypedExpr::ModuleSelect {
-                location,
-                typ,
-                label,
-                module_name,
-                module_alias,
-                constructor,
-            } => None,
-
             TypedExpr::TupleIndex {
                 location, tuple, ..
             } => tuple.find_node(byte_index).or_else(|| {
@@ -235,7 +226,11 @@ impl TypedExpr {
                 }
             }),
 
-            TypedExpr::BitString { location, .. } => todo!(),
+            TypedExpr::BitString {
+                location,
+                typ,
+                segments,
+            } => todo!(),
 
             // TODO
             TypedExpr::RecordUpdate {
