@@ -141,7 +141,8 @@ pub enum TypedExpr {
 impl TypedExpr {
     pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
         match self {
-            TypedExpr::Int { location, .. }
+            TypedExpr::Todo { location, .. }
+            | TypedExpr::Int { location, .. }
             | TypedExpr::Float { location, .. }
             | TypedExpr::String { location, .. }
             | TypedExpr::Var { location, .. } => {
@@ -236,13 +237,6 @@ impl TypedExpr {
                 typ,
                 index,
                 tuple,
-            } => None,
-
-            // TODO
-            TypedExpr::Todo {
-                location,
-                label,
-                typ,
             } => None,
 
             // TODO
