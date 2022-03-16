@@ -373,8 +373,8 @@ impl LanguageServer {
             None => return Ok(None),
         };
 
-        let byte_index = LineNumbers::new(&module.code)
-            .byte_index(params.position.line, params.position.character);
+        let line_numbers = LineNumbers::new(&module.code);
+        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
 
         // Find the AST node at the position of the hover, if there is one
         let expression = match module.find_node(byte_index) {
@@ -392,7 +392,7 @@ impl LanguageServer {
         );
         Ok(Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(contents)),
-            range: None,
+            range: Some(src_span_to_lsp_range(expression.location(), line_numbers)),
         }))
     }
 
