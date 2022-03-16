@@ -166,13 +166,9 @@ impl TypedExpr {
                 return_annotation,
             } => None,
 
-            // TODO
-            TypedExpr::List {
-                location,
-                typ,
-                elements,
-                tail,
-            } => None,
+            TypedExpr::List { elements, .. } => {
+                elements.iter().find_map(|e| e.find_node(byte_index))
+            }
 
             // TODO
             TypedExpr::Call {

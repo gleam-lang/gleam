@@ -73,11 +73,23 @@ wibble"#,
 #[test]
 fn find_node_sequence() {
     let expr = compile_expression(r#"1 2 3"#);
-
     assert!(expr.find_node(0).is_some());
     assert!(expr.find_node(1).is_none());
     assert!(expr.find_node(2).is_some());
     assert!(expr.find_node(3).is_none());
     assert!(expr.find_node(4).is_some());
     assert!(expr.find_node(5).is_none());
+}
+
+#[test]
+fn find_node_list() {
+    let expr = compile_expression(r#"[1, 2, 3]"#);
+    assert!(expr.find_node(1).is_some());
+    assert!(expr.find_node(2).is_none());
+    assert!(expr.find_node(3).is_none());
+    assert!(expr.find_node(4).is_some());
+    assert!(expr.find_node(5).is_none());
+    assert!(expr.find_node(6).is_none());
+    assert!(expr.find_node(7).is_some());
+    assert!(expr.find_node(8).is_none());
 }
