@@ -14,6 +14,7 @@ use gleam_core::{
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
+    type_::{pretty::Printer, HasType},
     Error, Result,
 };
 use itertools::Itertools;
@@ -21,9 +22,10 @@ use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{Formatting, HoverRequest},
     Diagnostic, DiagnosticSeverity, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidSaveTextDocumentParams, Hover, HoverProviderCapability, InitializeParams, OneOf, Position,
-    PublishDiagnosticsParams, Range, SaveOptions, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
+    DidSaveTextDocumentParams, Hover, HoverContents, HoverProviderCapability, InitializeParams,
+    MarkedString, OneOf, Position, PublishDiagnosticsParams, Range, SaveOptions,
+    ServerCapabilities, TextDocumentSyncCapability, TextDocumentSyncKind, TextDocumentSyncOptions,
+    TextDocumentSyncSaveOptions, TextEdit, Url,
 };
 
 use crate::{cli, fs::ProjectIO};
@@ -358,6 +360,8 @@ impl LanguageServer {
     }
 
     fn hover(&self, params: lsp_types::HoverParams) -> Result<Option<Hover>> {
+        // TODO: compile the project before the hover
+
         let params = params.text_document_position_params;
 
         // Look up the type information for the module being hovered in
@@ -368,13 +372,22 @@ impl LanguageServer {
             None => return Ok(None),
         };
 
-        let position = LineNumbers::new(&module.code)
+        let byte_index = LineNumbers::new(&module.code)
             .byte_index(params.position.line, params.position.character);
 
-        eprintln!("found compiled module {}", module.name);
-        eprintln!("position {}", position);
-        eprintln!("found node {:?}", module.find_node(position));
-        Ok(None)
+        // Find the AST node at the position of the hover, if there is one
+        let expression = match module.find_node(byte_index) {
+            Some(expression) => expression,
+            None => return Ok(None),
+        };
+
+        // Show the type of the hovered node to the user
+        let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+        let contents = format!("```gleam\n{}\n```", type_);
+        Ok(Some(Hover {
+            contents: HoverContents::Scalar(MarkedString::String(contents)),
+            range: None,
+        }))
     }
 
     fn get_module_for_uri(&self, uri: &Url) -> Option<&Module> {

@@ -187,13 +187,7 @@ impl TypedExpr {
                 .or_else(|| right.find_node(byte_index)),
 
             // TODO
-            TypedExpr::Assignment {
-                location,
-                typ,
-                value,
-                pattern,
-                kind,
-            } => None,
+            TypedExpr::Assignment { value, .. } => value.find_node(byte_index),
 
             // TODO
             TypedExpr::Try {
