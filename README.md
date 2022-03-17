@@ -34,6 +34,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
 <p>
   <a href="http://www.ninefx.com"><img width=120 src="https://gleam.run/images/sponsors/nine-fx.png" alt="NineFX"></a>
   <a href="https://github.com/J3RN"><img width=120 src="https://avatars.githubusercontent.com/u/2058614?v=4" alt="Jonathan Arnett"></a>
+  <a href="https://github.com/human154"><img width=120 src="https://avatars.githubusercontent.com/u/46430360?v=4" alt="human154"></a>
   <a href="https://github.com/hypno2000"><img width=120 src="https://avatars.githubusercontent.com/u/417241?s=460&v=4" alt="Alexander Babin"></a>
   <a href="https://skunkwerks.at/"><img width=120 src="https://avatars.githubusercontent.com/u/6563319?s=200&v=4" alt="SkunkWerks GmbH"></a>
 </p>
