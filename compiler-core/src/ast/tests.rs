@@ -1,8 +1,10 @@
+use std::sync::Arc;
+
 use crate::{
     ast::{SrcSpan, TypedExpr},
     type_::{
-        self, Environment, ExprTyper, ModuleValueConstructor, ValueConstructor,
-        ValueConstructorVariant,
+        self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
+        RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -17,7 +19,48 @@ fn compile_expression(src: &str) -> TypedExpr {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert("gleam".to_string(), type_::build_prelude(&ids));
-    ExprTyper::new(&mut Environment::new(ids, &[], &modules, &mut vec![]))
+    let mut warnings = vec![];
+    let mut environment = Environment::new(ids, &[], &modules, &mut warnings);
+
+    // Insert a cat record to use in the tests
+    let cat_type = Arc::new(Type::App {
+        public: true,
+        module: vec![],
+        name: "Cat".into(),
+        args: vec![],
+    });
+    let variant = ValueConstructorVariant::Record {
+        name: "Cat".into(),
+        arity: 1,
+        field_map: Some(FieldMap {
+            arity: 1,
+            fields: [("name".into(), 0)].into(),
+        }),
+    };
+    environment.insert_variable(
+        "Cat".into(),
+        variant.clone(),
+        type_::fn_(vec![type_::string()], cat_type.clone()),
+        SrcSpan::default(),
+    );
+
+    environment.insert_accessors(
+        "Cat",
+        AccessorsMap {
+            public: true,
+            type_: cat_type,
+            accessors: [(
+                "name".into(),
+                RecordAccessor {
+                    index: 0,
+                    label: "name".into(),
+                    type_: type_::string(),
+                },
+            )]
+            .into(),
+        },
+    );
+    ExprTyper::new(&mut environment)
         .infer(ast)
         .expect("should successfully infer")
 }
@@ -257,4 +300,22 @@ fn find_node_call() {
     assert_eq!(expr.find_node(16), Some(&expr));
     assert_eq!(expr.find_node(18), Some(&arg2));
     assert_eq!(expr.find_node(19), Some(&expr));
+}
+
+#[test]
+fn find_node_record_access() {
+    let access = compile_expression(r#"Cat("Nubi").name"#);
+
+    let string = TypedExpr::String {
+        location: SrcSpan { start: 4, end: 10 },
+        value: "Nubi".into(),
+        typ: type_::string(),
+    };
+
+    assert_eq!(access.find_node(4), Some(&string));
+    assert_eq!(access.find_node(9), Some(&string));
+    assert_eq!(access.find_node(11), Some(&access));
+    assert_eq!(access.find_node(14), Some(&access));
+    assert_eq!(access.find_node(15), Some(&access));
+    assert_eq!(access.find_node(16), None);
 }
