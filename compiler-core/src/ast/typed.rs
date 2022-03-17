@@ -253,7 +253,17 @@ impl TypedExpr {
                 spread,
                 args,
                 ..
-            } => None,
+            } => args
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| spread.find_node(byte_index))
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
         }
     }
 

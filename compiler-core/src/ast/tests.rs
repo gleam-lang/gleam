@@ -31,16 +31,16 @@ fn compile_expression(src: &str) -> TypedExpr {
     });
     let variant = ValueConstructorVariant::Record {
         name: "Cat".into(),
-        arity: 1,
+        arity: 2,
         field_map: Some(FieldMap {
-            arity: 1,
-            fields: [("name".into(), 0)].into(),
+            arity: 2,
+            fields: [("name".into(), 0), ("age".into(), 1)].into(),
         }),
     };
     environment.insert_variable(
         "Cat".into(),
         variant.clone(),
-        type_::fn_(vec![type_::string()], cat_type.clone()),
+        type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
         SrcSpan::default(),
     );
 
@@ -49,14 +49,24 @@ fn compile_expression(src: &str) -> TypedExpr {
         AccessorsMap {
             public: true,
             type_: cat_type,
-            accessors: [(
-                "name".into(),
-                RecordAccessor {
-                    index: 0,
-                    label: "name".into(),
-                    type_: type_::string(),
-                },
-            )]
+            accessors: [
+                (
+                    "name".into(),
+                    RecordAccessor {
+                        index: 0,
+                        label: "name".into(),
+                        type_: type_::string(),
+                    },
+                ),
+                (
+                    "age".into(),
+                    RecordAccessor {
+                        index: 1,
+                        label: "age".into(),
+                        type_: type_::int(),
+                    },
+                ),
+            ]
             .into(),
         },
     );
@@ -304,7 +314,7 @@ fn find_node_call() {
 
 #[test]
 fn find_node_record_access() {
-    let access = compile_expression(r#"Cat("Nubi").name"#);
+    let access = compile_expression(r#"Cat("Nubi", 3).name"#);
 
     let string = TypedExpr::String {
         location: SrcSpan { start: 4, end: 10 },
@@ -312,10 +322,33 @@ fn find_node_record_access() {
         typ: type_::string(),
     };
 
+    let int = TypedExpr::Int {
+        location: SrcSpan { start: 12, end: 13 },
+        value: "3".into(),
+        typ: type_::int(),
+    };
+
     assert_eq!(access.find_node(4), Some(&string));
     assert_eq!(access.find_node(9), Some(&string));
-    assert_eq!(access.find_node(11), Some(&access));
+    assert_eq!(access.find_node(12), Some(&int));
     assert_eq!(access.find_node(14), Some(&access));
-    assert_eq!(access.find_node(15), Some(&access));
-    assert_eq!(access.find_node(16), None);
+    assert_eq!(access.find_node(18), Some(&access));
+    assert_eq!(access.find_node(19), None);
+}
+
+#[test]
+fn find_node_record_spread() {
+    let update = compile_expression(r#"Cat(..Cat("Nubi", 3), age: 4)"#);
+
+    let int = TypedExpr::Int {
+        location: SrcSpan { start: 27, end: 28 },
+        value: "4".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(update.find_node(0), Some(&update));
+    assert_eq!(update.find_node(3), Some(&update));
+    assert_eq!(update.find_node(27), Some(&int));
+    assert_eq!(update.find_node(28), Some(&update));
+    assert_eq!(update.find_node(29), None);
 }

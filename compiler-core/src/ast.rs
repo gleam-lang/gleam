@@ -576,6 +576,12 @@ pub struct TypedRecordUpdateArg {
     pub index: usize,
 }
 
+impl TypedRecordUpdateArg {
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        self.value.find_node(byte_index)
+    }
+}
+
 pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor, Type>>;
 
 pub type UntypedMultiPattern = MultiPattern<(), ()>;
