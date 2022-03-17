@@ -224,18 +224,16 @@ impl TypedExpr {
                 clauses,
             } => None,
 
-            // TODO
             Self::RecordAccess {
                 location,
-                typ,
-                label,
-                index,
-                record,
-            } => None,
-
-            Self::TupleIndex {
-                location, tuple, ..
-            } => tuple.find_node(byte_index).or_else(|| {
+                record: expression,
+                ..
+            }
+            | Self::TupleIndex {
+                location,
+                tuple: expression,
+                ..
+            } => expression.find_node(byte_index).or_else(|| {
                 if location.contains(byte_index) {
                     Some(self)
                 } else {
