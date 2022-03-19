@@ -317,22 +317,22 @@ impl TypedExpr {
         match self {
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Try { then, .. } => then.type_(),
-            Self::Fn { typ, .. } => typ.clone(),
-            Self::Int { typ, .. } => typ.clone(),
-            Self::Todo { typ, .. } => typ.clone(),
-            Self::Case { typ, .. } => typ.clone(),
-            Self::List { typ, .. } => typ.clone(),
-            Self::Call { typ, .. } => typ.clone(),
-            Self::Float { typ, .. } => typ.clone(),
-            Self::BinOp { typ, .. } => typ.clone(),
-            Self::Tuple { typ, .. } => typ.clone(),
-            Self::String { typ, .. } => typ.clone(),
-            Self::TupleIndex { typ, .. } => typ.clone(),
-            Self::Assignment { typ, .. } => typ.clone(),
-            Self::ModuleSelect { typ, .. } => typ.clone(),
-            Self::RecordAccess { typ, .. } => typ.clone(),
-            Self::BitString { typ, .. } => typ.clone(),
-            Self::RecordUpdate { typ, .. } => typ.clone(),
+            Self::Fn { typ, .. }
+            | Self::Int { typ, .. }
+            | Self::Todo { typ, .. }
+            | Self::Case { typ, .. }
+            | Self::List { typ, .. }
+            | Self::Call { typ, .. }
+            | Self::Float { typ, .. }
+            | Self::BinOp { typ, .. }
+            | Self::Tuple { typ, .. }
+            | Self::String { typ, .. }
+            | Self::TupleIndex { typ, .. }
+            | Self::Assignment { typ, .. }
+            | Self::ModuleSelect { typ, .. }
+            | Self::RecordAccess { typ, .. }
+            | Self::BitString { typ, .. }
+            | Self::RecordUpdate { typ, .. } => typ.clone(),
             Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => expressions
                 .last()
                 .map(TypedExpr::type_)
