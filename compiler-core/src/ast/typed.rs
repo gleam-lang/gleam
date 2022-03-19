@@ -211,7 +211,6 @@ impl TypedExpr {
 
             Self::Assignment { value, .. } => value.find_node(byte_index),
 
-            // TODO: test
             Self::Try {
                 location,
                 value,
@@ -228,13 +227,26 @@ impl TypedExpr {
                     }
                 }),
 
-            // TODO:
             Self::Case {
                 location,
-                typ,
                 subjects,
                 clauses,
-            } => None,
+                ..
+            } => subjects
+                .iter()
+                .find_map(|subject| subject.find_node(byte_index))
+                .or_else(|| {
+                    clauses
+                        .iter()
+                        .find_map(|clause| clause.find_node(byte_index))
+                })
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
 
             Self::RecordAccess {
                 location,
@@ -254,12 +266,18 @@ impl TypedExpr {
             }),
 
             Self::BitString {
-                location,
-                typ,
-                segments,
-            } => todo!(),
+                location, segments, ..
+            } => segments
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
 
-            // TODO:
             Self::RecordUpdate {
                 location,
                 spread,
