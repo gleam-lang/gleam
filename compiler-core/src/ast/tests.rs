@@ -352,3 +352,25 @@ fn find_node_record_spread() {
     assert_eq!(update.find_node(28), Some(&update));
     assert_eq!(update.find_node(29), None);
 }
+
+#[test]
+fn find_node_try() {
+    let try_ = compile_expression(r#"try x = Ok(1) Ok(2)"#);
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan { start: 11, end: 12 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
+
+    let int2 = TypedExpr::Int {
+        location: SrcSpan { start: 17, end: 18 },
+        value: "2".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(try_.find_node(0), Some(&try_));
+    assert_eq!(try_.find_node(11), Some(&int1));
+    assert_eq!(try_.find_node(17), Some(&int2));
+    assert_eq!(try_.find_node(19), None);
+}

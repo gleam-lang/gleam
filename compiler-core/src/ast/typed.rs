@@ -212,11 +212,23 @@ impl TypedExpr {
             Self::Assignment { value, .. } => value.find_node(byte_index),
 
             // TODO: test
-            Self::Try { value, then, .. } => value
+            Self::Try {
+                location,
+                value,
+                then,
+                ..
+            } => value
                 .find_node(byte_index)
-                .or_else(|| then.find_node(byte_index)),
+                .or_else(|| then.find_node(byte_index))
+                .or_else(|| {
+                    if location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                }),
 
-            // TODO
+            // TODO:
             Self::Case {
                 location,
                 typ,
@@ -247,7 +259,7 @@ impl TypedExpr {
                 segments,
             } => todo!(),
 
-            // TODO
+            // TODO:
             Self::RecordUpdate {
                 location,
                 spread,
