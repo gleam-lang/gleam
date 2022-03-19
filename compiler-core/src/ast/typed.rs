@@ -28,6 +28,16 @@ pub enum TypedExpr {
         expressions: Vec<Self>,
     },
 
+    /// A chain of pipe expressions.
+    /// By this point the type checker has expanded it into a series of
+    /// assignments and function calls, but we still have a Pipeline AST node as
+    /// even though it is identical to `Sequence` we want to use different
+    /// locations when showing it in error messages, etc.
+    Pipeline {
+        location: SrcSpan,
+        expressions: Vec<Self>,
+    },
+
     Var {
         location: SrcSpan,
         constructor: ValueConstructor,
@@ -142,68 +152,40 @@ impl TypedExpr {
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
     pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
-        match self {
-            Self::Var { location, .. }
-            | Self::Int { location, .. }
-            | Self::Todo { location, .. }
-            | Self::Float { location, .. }
-            | Self::String { location, .. }
-            | Self::ModuleSelect { location, .. } => {
-                if location.contains(byte_index) {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
+        if !self.location().contains(byte_index) {
+            return None;
+        }
 
-            Self::Sequence { expressions, .. } => {
+        match self {
+            Self::Var { .. }
+            | Self::Int { .. }
+            | Self::Todo { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::ModuleSelect { .. } => Some(self),
+
+            Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }
 
             Self::Tuple {
-                location,
-                elems: expressions,
-                ..
+                elems: expressions, ..
             }
             | Self::List {
-                location,
                 elements: expressions,
                 ..
             } => expressions
                 .iter()
                 .find_map(|e| e.find_node(byte_index))
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
 
-            Self::Fn { body, location, .. } => body.find_node(byte_index).or_else(|| {
-                if location.contains(byte_index) {
-                    Some(self)
-                } else {
-                    None
-                }
-            }),
+            Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
 
-            Self::Call {
-                location,
-                fun,
-                args,
-                ..
-            } => args
+            Self::Call { fun, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| fun.find_node(byte_index))
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
 
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
@@ -211,27 +193,13 @@ impl TypedExpr {
 
             Self::Assignment { value, .. } => value.find_node(byte_index),
 
-            Self::Try {
-                location,
-                value,
-                then,
-                ..
-            } => value
+            Self::Try { value, then, .. } => value
                 .find_node(byte_index)
                 .or_else(|| then.find_node(byte_index))
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
 
             Self::Case {
-                location,
-                subjects,
-                clauses,
-                ..
+                subjects, clauses, ..
             } => subjects
                 .iter()
                 .find_map(|subject| subject.find_node(byte_index))
@@ -240,60 +208,25 @@ impl TypedExpr {
                         .iter()
                         .find_map(|clause| clause.find_node(byte_index))
                 })
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
 
             Self::RecordAccess {
-                location,
-                record: expression,
-                ..
+                record: expression, ..
             }
             | Self::TupleIndex {
-                location,
-                tuple: expression,
-                ..
-            } => expression.find_node(byte_index).or_else(|| {
-                if location.contains(byte_index) {
-                    Some(self)
-                } else {
-                    None
-                }
-            }),
+                tuple: expression, ..
+            } => expression.find_node(byte_index).or(Some(self)),
 
-            Self::BitString {
-                location, segments, ..
-            } => segments
+            Self::BitString { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
 
-            Self::RecordUpdate {
-                location,
-                spread,
-                args,
-                ..
-            } => args
+            Self::RecordUpdate { spread, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| spread.find_node(byte_index))
-                .or_else(|| {
-                    if location.contains(byte_index) {
-                        Some(self)
-                    } else {
-                        None
-                    }
-                }),
+                .or(Some(self)),
         }
     }
 
@@ -309,25 +242,10 @@ impl TypedExpr {
         )
     }
 
-    fn find_try(&self) -> Option<&Self> {
-        match self {
-            Self::Try { .. } => Some(self),
-            Self::Sequence { expressions, .. } => {
-                let last_expression = expressions.last();
-                if let Some(Self::Try { .. }) = last_expression {
-                    last_expression
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Try { then, .. } => then.location(),
             Self::Fn { location, .. }
+            | Self::Try { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
@@ -339,6 +257,7 @@ impl TypedExpr {
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
             | Self::Sequence { location, .. }
+            | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
@@ -349,14 +268,35 @@ impl TypedExpr {
     }
 
     pub fn type_defining_location(&self) -> SrcSpan {
-        // In the presence of try the type is defined by `value`
-        // and `then` so we take everything in between
-        match self.find_try() {
-            Some(Self::Try { location, then, .. }) => SrcSpan {
-                start: location.start,
-                end: then.location().end,
-            },
-            _ => self.location(),
+        match self {
+            Self::Fn { location, .. }
+            | Self::Int { location, .. }
+            | Self::Try { location, .. }
+            | Self::Var { location, .. }
+            | Self::Todo { location, .. }
+            | Self::Case { location, .. }
+            | Self::Call { location, .. }
+            | Self::List { location, .. }
+            | Self::Float { location, .. }
+            | Self::BinOp { location, .. }
+            | Self::Tuple { location, .. }
+            | Self::String { location, .. }
+            | Self::Pipeline { location, .. }
+            | Self::BitString { location, .. }
+            | Self::Assignment { location, .. }
+            | Self::TupleIndex { location, .. }
+            | Self::ModuleSelect { location, .. }
+            | Self::RecordAccess { location, .. }
+            | Self::RecordUpdate { location, .. } => *location,
+
+            Self::Sequence {
+                expressions,
+                location,
+                ..
+            } => expressions
+                .last()
+                .map(TypedExpr::location)
+                .unwrap_or(*location),
         }
     }
 
@@ -393,7 +333,7 @@ impl TypedExpr {
             Self::RecordAccess { typ, .. } => typ.clone(),
             Self::BitString { typ, .. } => typ.clone(),
             Self::RecordUpdate { typ, .. } => typ.clone(),
-            Self::Sequence { expressions, .. } => expressions
+            Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => expressions
                 .last()
                 .map(TypedExpr::type_)
                 .unwrap_or_else(type_::nil),

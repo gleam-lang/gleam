@@ -706,18 +706,15 @@ where
             let value = self.parse_expression()?;
             let then = self.parse_expression_seq()?;
             match (value, then) {
-                (Some(value), Some((then, seq_end))) => Ok(Some((
+                (Some(value), Some((then, end))) => Ok(Some((
                     UntypedExpr::Try {
-                        location: SrcSpan {
-                            start,
-                            end: value.location().end,
-                        },
+                        location: SrcSpan { start, end },
                         value: Box::new(value),
                         pattern,
                         annotation,
                         then: Box::new(then),
                     },
-                    seq_end,
+                    end,
                 ))),
 
                 (None, _) => parse_error(

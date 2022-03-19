@@ -1321,7 +1321,7 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
 ///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match &expression {
-        TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
+        TypedExpr::Pipeline { .. } | TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
             begin_end(expr(expression, env))
         }
         _ => expr(expression, env),
@@ -1387,7 +1387,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Sequence { expressions, .. } => seq(expressions, env),
+        TypedExpr::Pipeline { expressions, .. } | TypedExpr::Sequence { expressions, .. } => {
+            seq(expressions, env)
+        }
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
 

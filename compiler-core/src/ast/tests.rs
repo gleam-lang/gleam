@@ -146,13 +146,13 @@ wibble"#,
 
 #[test]
 fn find_node_sequence() {
-    let expr = compile_expression(r#"1 2 3"#);
-    assert!(expr.find_node(0).is_some());
-    assert!(expr.find_node(1).is_none());
-    assert!(expr.find_node(2).is_some());
-    assert!(expr.find_node(3).is_none());
-    assert!(expr.find_node(4).is_some());
-    assert!(expr.find_node(5).is_none());
+    let sequence = compile_expression(r#"1 2 3"#);
+    assert!(sequence.find_node(0).is_some());
+    assert!(sequence.find_node(1).is_none());
+    assert!(sequence.find_node(2).is_some());
+    assert!(sequence.find_node(3).is_none());
+    assert!(sequence.find_node(4).is_some());
+    assert!(sequence.find_node(5).is_none());
 }
 
 #[test]

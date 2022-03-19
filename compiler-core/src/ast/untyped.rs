@@ -147,10 +147,15 @@ impl UntypedExpr {
     }
 
     pub fn append_in_sequence(self, next: Self) -> Self {
+        // The new location starts with the start of the first
+        // expression and ends with the end of the last one
+        let location = SrcSpan {
+            start: self.location().start,
+            end: next.location().end,
+        };
         match self {
             Self::Sequence {
-                location,
-                mut expressions,
+                mut expressions, ..
             } => {
                 expressions.push(next);
                 Self::Sequence {
@@ -159,7 +164,7 @@ impl UntypedExpr {
                 }
             }
             _ => Self::Sequence {
-                location: next.location(),
+                location,
                 expressions: vec![self, next],
             },
         }
