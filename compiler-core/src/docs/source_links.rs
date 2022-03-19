@@ -17,27 +17,54 @@ impl SourceLinker {
         let path_in_repo = get_path_in_repo(&module.name);
 
         let url_pattern = match &project_config.repository {
-            Repository::GitHub { user, repo } => Some((
-                format!(
-                    "https://github.com/{}/{}/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-L".to_string(),
-            )),
-            Repository::GitLab { user, repo } => Some((
-                format!(
-                    "https://gitlab.com/{}/{}/-/blob/v{}/{}#L",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                "-".to_string(),
-            )),
-            Repository::BitBucket { user, repo } => Some((
-                format!(
-                    "https://bitbucket.com/{}/{}/src/v{}/{}#lines-",
-                    user, repo, project_config.version, path_in_repo
-                ),
-                ":".to_string(),
-            )),
+            Repository::GitHub { user, repo, refer } => match refer {
+                Some(refer) => Some((
+                    format!(
+                        "https://github.com/{}/{}/blob/{}/{}#L",
+                        user, repo, refer, path_in_repo
+                    ),
+                    "-L".to_string(),
+                )),
+                None => Some((
+                    format!(
+                        "https://github.com/{}/{}/blob/v{}/{}#L",
+                        user, repo, project_config.version, path_in_repo
+                    ),
+                    "-L".to_string(),
+                )),
+            },
+            Repository::GitLab { user, repo, refer } => match refer {
+                Some(refer) => Some((
+                    format!(
+                        "https://gitlab.com/{}/{}/-/blob/{}/{}#L",
+                        user, repo, refer, path_in_repo
+                    ),
+                    "-".to_string(),
+                )),
+                None => Some((
+                    format!(
+                        "https://gitlab.com/{}/{}/-/blob/v{}/{}#L",
+                        user, repo, project_config.version, path_in_repo
+                    ),
+                    "-".to_string(),
+                )),
+            },
+            Repository::BitBucket { user, repo, refer } => match refer {
+                Some(refer) => Some((
+                    format!(
+                        "https://bitbucket.com/{}/{}/src/{}/{}#lines-",
+                        user, repo, refer, path_in_repo
+                    ),
+                    ":".to_string(),
+                )),
+                None => Some((
+                    format!(
+                        "https://bitbucket.com/{}/{}/src/v{}/{}#lines-",
+                        user, repo, project_config.version, path_in_repo
+                    ),
+                    ":".to_string(),
+                )),
+            },
             Repository::Custom { .. } | Repository::None => None,
         };
 

@@ -429,25 +429,45 @@ pub struct ErlangConfig {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
-    GitHub { user: String, repo: String },
-    GitLab { user: String, repo: String },
-    BitBucket { user: String, repo: String },
-    Custom { url: String },
+    GitHub {
+        user: String,
+        repo: String,
+        refer: Option<String>,
+    },
+    GitLab {
+        user: String,
+        repo: String,
+        refer: Option<String>,
+    },
+    BitBucket {
+        user: String,
+        repo: String,
+        refer: Option<String>,
+    },
+    Custom {
+        url: String,
+    },
     None,
 }
 
 impl Repository {
     pub fn url(&self) -> Option<String> {
         match self {
-            Repository::GitHub { repo, user } => {
-                Some(format!("https://github.com/{}/{}", user, repo))
-            }
-            Repository::GitLab { repo, user } => {
-                Some(format!("https://gitlab.com/{}/{}", user, repo))
-            }
-            Repository::BitBucket { repo, user } => {
-                Some(format!("https://bitbucket.com/{}/{}", user, repo))
-            }
+            Repository::GitHub {
+                repo,
+                user,
+                refer: _,
+            } => Some(format!("https://github.com/{}/{}", user, repo)),
+            Repository::GitLab {
+                repo,
+                user,
+                refer: _,
+            } => Some(format!("https://gitlab.com/{}/{}", user, repo)),
+            Repository::BitBucket {
+                repo,
+                user,
+                refer: _,
+            } => Some(format!("https://bitbucket.com/{}/{}", user, repo)),
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
         }
