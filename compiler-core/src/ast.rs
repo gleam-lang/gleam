@@ -611,6 +611,10 @@ impl TypedClause {
             end: self.then.location().end,
         }
     }
+
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        self.then.find_node(byte_index)
+    }
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
@@ -894,6 +898,12 @@ pub struct BitStringSegment<Value, Type> {
     pub value: Box<Value>,
     pub options: Vec<BitStringSegmentOption<Value>>,
     pub type_: Type,
+}
+
+impl TypedExprBitStringSegment {
+    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+        self.value.find_node(byte_index)
+    }
 }
 
 pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;

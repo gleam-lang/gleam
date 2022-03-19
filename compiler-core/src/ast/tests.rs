@@ -337,7 +337,7 @@ fn find_node_record_access() {
 }
 
 #[test]
-fn find_node_record_spread() {
+fn find_node_record_update() {
     let update = compile_expression(r#"Cat(..Cat("Nubi", 3), age: 4)"#);
 
     let int = TypedExpr::Int {
@@ -373,4 +373,40 @@ fn find_node_try() {
     assert_eq!(try_.find_node(11), Some(&int1));
     assert_eq!(try_.find_node(17), Some(&int2));
     assert_eq!(try_.find_node(19), None);
+}
+
+#[test]
+fn find_node_case() {
+    let case = compile_expression(
+        r#"
+case 1, 2 {
+  _, _ -> 3
+}
+"#,
+    );
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan { start: 6, end: 7 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
+
+    let int2 = TypedExpr::Int {
+        location: SrcSpan { start: 9, end: 10 },
+        value: "2".into(),
+        typ: type_::int(),
+    };
+
+    let int3 = TypedExpr::Int {
+        location: SrcSpan { start: 23, end: 24 },
+        value: "3".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(case.find_node(1), Some(&case));
+    assert_eq!(case.find_node(6), Some(&int1));
+    assert_eq!(case.find_node(9), Some(&int2));
+    assert_eq!(case.find_node(23), Some(&int3));
+    assert_eq!(case.find_node(25), Some(&case));
+    assert_eq!(case.find_node(26), None);
 }
