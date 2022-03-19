@@ -59,7 +59,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // Return any errors after clean-up
         result?;
 
-        Ok(TypedExpr::Sequence {
+        Ok(TypedExpr::Pipeline {
             expressions: self.expressions,
             location: self.location,
         })

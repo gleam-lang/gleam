@@ -588,11 +588,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let left = self.infer(left)?;
-        self.unify(input_type.clone(), left.type_())
-            .map_err(|e| e.operator_situation(name).into_error(left.location()))?;
+        self.unify(input_type.clone(), left.type_()).map_err(|e| {
+            e.operator_situation(name)
+                .into_error(left.type_defining_location())
+        })?;
         let right = self.infer(right)?;
-        self.unify(input_type, right.type_())
-            .map_err(|e| e.operator_situation(name).into_error(right.location()))?;
+        self.unify(input_type, right.type_()).map_err(|e| {
+            e.operator_situation(name)
+                .into_error(right.type_defining_location())
+        })?;
 
         Ok(TypedExpr::BinOp {
             location,
@@ -669,7 +673,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let v = value_type.clone();
             let e = try_error_type.clone();
             self.unify(result(v, e), value.type_())
-                .map_err(|e| convert_unify_error(e, value.location()))?;
+                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         };
 
         // Ensure the pattern matches the type of the value
@@ -696,7 +700,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
             self.unify(ann_typ, value_type)
-                .map_err(|e| convert_unify_error(e, value.location()))?;
+                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
         Ok(TypedExpr::Try {
