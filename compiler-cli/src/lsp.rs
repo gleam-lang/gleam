@@ -259,39 +259,39 @@ impl LanguageServer {
             .and_then(|w| w.did_change_watched_files)
             .map(|wf| wf.dynamic_registration == Some(true))
             .unwrap_or(false);
-        if supports_watch_files {
-            // Register gleam.toml as a watched file so we get a notification when
-            // it changes and thus know that we need to rebuild the entire project.
-            let watch_config = lsp_types::Registration {
-                id: "watch-gleam-toml".into(),
-                method: "workspace/didChangeWatchedFiles".into(),
-                register_options: Some(
-                    serde_json::value::to_value(
-                        lsp_types::DidChangeWatchedFilesRegistrationOptions {
-                            watchers: vec![lsp_types::FileSystemWatcher {
-                                glob_pattern: "gleam.toml".into(),
-                                kind: Some(lsp_types::WatchKind::Change),
-                            }],
-                        },
-                    )
-                    .unwrap(),
-                ),
-            };
-            let request = lsp_server::Request {
-                id: 1.into(),
-                method: "client/registerCapability".into(),
-                params: serde_json::value::to_value(lsp_types::RegistrationParams {
-                    registrations: vec![watch_config],
+
+        if !supports_watch_files {
+            tracing::warn!("lsp_client_cannot_watch_gleam_toml");
+            return;
+        }
+
+        // Register gleam.toml as a watched file so we get a notification when
+        // it changes and thus know that we need to rebuild the entire project.
+        let watch_config = lsp_types::Registration {
+            id: "watch-gleam-toml".into(),
+            method: "workspace/didChangeWatchedFiles".into(),
+            register_options: Some(
+                serde_json::value::to_value(lsp_types::DidChangeWatchedFilesRegistrationOptions {
+                    watchers: vec![lsp_types::FileSystemWatcher {
+                        glob_pattern: "gleam.toml".into(),
+                        kind: Some(lsp_types::WatchKind::Change),
+                    }],
                 })
                 .unwrap(),
-            };
-            connection
-                .sender
-                .send(lsp_server::Message::Request(request))
-                .unwrap();
-        } else {
-            tracing::warn!("lsp_client_cannot_watch_gleam_toml");
-        }
+            ),
+        };
+        let request = lsp_server::Request {
+            id: 1.into(),
+            method: "client/registerCapability".into(),
+            params: serde_json::value::to_value(lsp_types::RegistrationParams {
+                registrations: vec![watch_config],
+            })
+            .unwrap(),
+        };
+        connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .unwrap();
     }
 
     fn compile(&mut self) -> Result<(), Error> {
