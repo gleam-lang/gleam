@@ -122,8 +122,7 @@ pub struct LanguageServer {
 
 impl LanguageServer {
     pub fn new(initialise_params: InitializeParams) -> Result<Self> {
-        let io = ProjectIO::new();
-        let compiler = LspProjectCompiler::new(io)?;
+        let compiler = LspProjectCompiler::new(ProjectIO::new())?;
         let project_root = PathBuf::from("./").canonicalize().expect("Absolute root");
         Ok(Self {
             initialise_params,
@@ -241,10 +240,7 @@ impl LanguageServer {
                         .unwrap();
                 }
 
-                lsp_server::Message::Response(response) => {
-                    dbg!(response);
-                    // todo!("Unexpected response message")
-                }
+                lsp_server::Message::Response(_) => (),
 
                 lsp_server::Message::Notification(notification) => {
                     self.handle_notification(&connection, notification).unwrap();
@@ -363,9 +359,9 @@ impl LanguageServer {
             }
 
             "workspace/didChangeWatchedFiles" => {
-                // gleam.toml changed
-                // TODO: rebuild project
-                dbg!(notification);
+                tracing::info!("gleam_toml_changed_so_recompiling_full_project");
+                self.compiler = LspProjectCompiler::new(ProjectIO::new())?;
+                let _ = self.compiler.compile()?;
                 Ok(())
             }
 
