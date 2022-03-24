@@ -95,7 +95,7 @@ pub fn main() -> Result<()> {
 }
 
 pub struct LanguageServer {
-    _initialise_params: InitializeParams,
+    initialise_params: InitializeParams,
 
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
@@ -126,7 +126,7 @@ impl LanguageServer {
         let compiler = LspProjectCompiler::new(io)?;
         let project_root = PathBuf::from("./").canonicalize().expect("Absolute root");
         Ok(Self {
-            _initialise_params: initialise_params,
+            initialise_params,
             edited: HashMap::new(),
             modules: HashMap::new(),
             stored_diagnostics: HashMap::new(),
@@ -215,6 +215,8 @@ impl LanguageServer {
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
+        self.start_watching_gleam_toml(&connection);
+
         // Compile the project once so we have all the state and any initial errors
         self.compile()?;
         self.publish_stored_diagnostics(&connection);
@@ -239,8 +241,9 @@ impl LanguageServer {
                         .unwrap();
                 }
 
-                lsp_server::Message::Response(_) => {
-                    todo!("Unexpected response message")
+                lsp_server::Message::Response(response) => {
+                    dbg!(response);
+                    // todo!("Unexpected response message")
                 }
 
                 lsp_server::Message::Notification(notification) => {
@@ -249,6 +252,50 @@ impl LanguageServer {
             }
         }
         Ok(())
+    }
+
+    fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
+        let supports_watch_files = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|w| w.did_change_watched_files)
+            .map(|wf| wf.dynamic_registration == Some(true))
+            .unwrap_or(false);
+        if supports_watch_files {
+            // Register gleam.toml as a watched file so we get a notification when
+            // it changes and thus know that we need to rebuild the entire project.
+            let watch_config = lsp_types::Registration {
+                id: "watch-gleam-toml".into(),
+                method: "workspace/didChangeWatchedFiles".into(),
+                register_options: Some(
+                    serde_json::value::to_value(
+                        lsp_types::DidChangeWatchedFilesRegistrationOptions {
+                            watchers: vec![lsp_types::FileSystemWatcher {
+                                glob_pattern: "gleam.toml".into(),
+                                kind: Some(lsp_types::WatchKind::Change),
+                            }],
+                        },
+                    )
+                    .unwrap(),
+                ),
+            };
+            let request = lsp_server::Request {
+                id: 1.into(),
+                method: "client/registerCapability".into(),
+                params: serde_json::value::to_value(lsp_types::RegistrationParams {
+                    registrations: vec![watch_config],
+                })
+                .unwrap(),
+            };
+            connection
+                .sender
+                .send(lsp_server::Message::Request(request))
+                .unwrap();
+        } else {
+            tracing::warn!("lsp_client_cannot_watch_gleam_toml");
+        }
     }
 
     fn compile(&mut self) -> Result<(), Error> {
@@ -296,30 +343,37 @@ impl LanguageServer {
     fn handle_notification(
         &mut self,
         connection: &lsp_server::Connection,
-        request: lsp_server::Notification,
+        notification: lsp_server::Notification,
     ) -> Result<()> {
-        match request.method.as_str() {
+        match notification.method.as_str() {
             "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(request).unwrap();
-                let result = self.did_save(params);
+                let params = cast_notification::<DidSaveTextDocument>(notification).unwrap();
+                let result = self.text_document_did_save(params);
                 self.publish_result_diagnostics(result, connection)
             }
 
             "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(request).unwrap();
-                self.did_close(params)
+                let params = cast_notification::<DidCloseTextDocument>(notification).unwrap();
+                self.text_document_did_close(params)
             }
 
             "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(request).unwrap();
-                self.did_change(params)
+                let params = cast_notification::<DidChangeTextDocument>(notification).unwrap();
+                self.text_document_did_change(params)
+            }
+
+            "workspace/didChangeWatchedFiles" => {
+                // gleam.toml changed
+                // TODO: rebuild project
+                dbg!(notification);
+                Ok(())
             }
 
             _ => Ok(()),
         }
     }
 
-    fn did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
+    fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
@@ -327,13 +381,13 @@ impl LanguageServer {
         Ok(())
     }
 
-    fn did_close(&mut self, params: DidCloseTextDocumentParams) -> Result<()> {
+    fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
         Ok(())
     }
 
-    fn did_change(&mut self, params: DidChangeTextDocumentParams) -> Result<()> {
+    fn text_document_did_change(&mut self, params: DidChangeTextDocumentParams) -> Result<()> {
         // A file has changed in the editor so store a copy of the new content in memory
         let path = params.text_document.uri.path().to_string();
         if let Some(changes) = params.content_changes.into_iter().next() {
