@@ -705,6 +705,7 @@ fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
     }
 }
 
+#[allow(clippy::large_enum_variant)]
 enum LspDisplayable {
     Diagnostic(PathBuf, lsp::Diagnostic),
     Message(LspMessage),
