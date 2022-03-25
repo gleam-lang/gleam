@@ -457,7 +457,7 @@ impl LanguageServer {
         }
     }
 
-    // TODO: labels
+    // TODO: function & constructor labels
     // TODO: importable modules
     // TODO: module types (including private)
     // TODO: module values (including private)
