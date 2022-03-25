@@ -51,14 +51,15 @@ pub fn main() -> Result<()> {
         )),
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
-        completion_provider: Some(lsp::CompletionOptions {
-            resolve_provider: None,
-            trigger_characters: Some(vec![".".into()]), // TODO: can we include pipe here?
-            all_commit_characters: None,
-            work_done_progress_options: lsp::WorkDoneProgressOptions {
-                work_done_progress: None,
-            },
-        }),
+        // completion_provider: Some(lsp::CompletionOptions {
+        //     resolve_provider: None,
+        //     trigger_characters: Some(vec![".".into()]), // TODO: can we include pipe here?
+        //     all_commit_characters: None,
+        //     work_done_progress_options: lsp::WorkDoneProgressOptions {
+        //         work_done_progress: None,
+        //     },
+        // }),
+        completion_provider: None,
         signature_help_provider: None,
         definition_provider: None,
         type_definition_provider: None,
