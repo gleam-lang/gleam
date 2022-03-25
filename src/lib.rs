@@ -440,7 +440,9 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
-        // StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::LateModification),
+        StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::InvalidModification(
+            String::from_utf8_lossy(&body).to_string(),
+        )),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
@@ -489,8 +491,8 @@ pub enum ApiError {
     #[error("this account is not authorized for this action")]
     Forbidden,
 
-    #[error("can only modify a release up to one hour after publication")]
-    LateModification,
+    #[error("{0}")]
+    InvalidModification(String),
 }
 
 impl ApiError {
