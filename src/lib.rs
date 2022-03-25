@@ -422,7 +422,7 @@ pub fn publish_package_request(
     config
         .api_request(
             Method::POST,
-            format!("publish?replace={}", replace),
+            format!("publish?replace={}", replace).as_str(),
             Some(api_key),
         )
         .header("content-type", "application/x-tar")
