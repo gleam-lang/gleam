@@ -895,7 +895,7 @@ async fn publish_package_success() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_package_response(
-        http_send(crate::publish_package_request(tarball, key, &config))
+        http_send(crate::publish_package_request(tarball, key, &config, false))
             .await
             .unwrap(),
     );

@@ -416,10 +416,15 @@ pub fn publish_package_request(
     release_tarball: Vec<u8>,
     api_key: &str,
     config: &Config,
+    replace: bool,
 ) -> http::Request<Vec<u8>> {
     // TODO: do all the package tarball construction
     config
-        .api_request(Method::POST, "publish", Some(api_key))
+        .api_request(
+            Method::POST,
+            format!("publish?replace={}", replace),
+            Some(api_key),
+        )
         .header("content-type", "application/x-tar")
         .body(release_tarball)
         .expect("publish_package_request request")
@@ -434,6 +439,7 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
+        StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::LateModification),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
@@ -481,6 +487,9 @@ pub enum ApiError {
 
     #[error("this account is not authorized for this action")]
     Forbidden,
+
+    #[error("can only modify a release up to one hour after publication")]
+    LateModification,
 }
 
 impl ApiError {
