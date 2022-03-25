@@ -434,12 +434,13 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
     // TODO: return data from body
     let (parts, body) = response.into_parts();
     match parts.status {
+        StatusCode::OK => Ok(()),
         StatusCode::CREATED => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
-        StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::LateModification),
+        // StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::LateModification),
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
