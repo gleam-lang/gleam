@@ -39,7 +39,7 @@ fn compile_expression(src: &str) -> TypedExpr {
     };
     environment.insert_variable(
         "Cat".into(),
-        variant.clone(),
+        variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
         SrcSpan::default(),
     );

@@ -723,7 +723,7 @@ fn diagnostic_to_lsp(diagnostic: gleam_core::diagnostic::Diagnostic) -> LspDispl
         .and_then(|location| location.label.text.as_deref())
     {
         text.push_str("\n\n");
-        text.push_str(&label);
+        text.push_str(label);
         if !label.ends_with(['.', '?']) {
             text.push('.');
         }
