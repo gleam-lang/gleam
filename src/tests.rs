@@ -884,7 +884,7 @@ async fn publish_package_success() {
     let key = "my-api-key-here";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
-    let mock = mockito::mock("POST", "/publish")
+    let mock = mockito::mock("POST", "/publish?replace=true")
         .expect(1)
         .match_header("authorization", key)
         .match_header("accept", "application/json")
@@ -895,7 +895,7 @@ async fn publish_package_success() {
     config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
 
     let result = crate::publish_package_response(
-        http_send(crate::publish_package_request(tarball, key, &config, false))
+        http_send(crate::publish_package_request(tarball, key, &config, true))
             .await
             .unwrap(),
     );
