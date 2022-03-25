@@ -1,7 +1,6 @@
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::todo)]
-#![allow(dead_code)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -21,11 +20,10 @@ use itertools::Itertools;
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{Formatting, HoverRequest},
+    request::{Completion, Formatting, HoverRequest},
     DidChangeTextDocumentParams, DidCloseTextDocumentParams, DidSaveTextDocumentParams, Hover,
-    HoverContents, HoverProviderCapability, InitializeParams, MarkedString, OneOf, Position,
-    PublishDiagnosticsParams, Range, SaveOptions, ServerCapabilities, TextDocumentSyncCapability,
-    TextDocumentSyncKind, TextDocumentSyncOptions, TextDocumentSyncSaveOptions, TextEdit, Url,
+    HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
+    PublishDiagnosticsParams, Range, TextEdit, Url,
 };
 
 use crate::{cli, fs::ProjectIO};
@@ -37,21 +35,30 @@ pub fn main() -> Result<()> {
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
-    let server_capabilities = ServerCapabilities {
-        text_document_sync: Some(TextDocumentSyncCapability::Options(
-            TextDocumentSyncOptions {
+    let server_capabilities = lsp::ServerCapabilities {
+        text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
+            lsp::TextDocumentSyncOptions {
                 open_close: None,
-                change: Some(TextDocumentSyncKind::FULL),
+                change: Some(lsp::TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
-                save: Some(TextDocumentSyncSaveOptions::SaveOptions(SaveOptions {
-                    include_text: Some(false),
-                })),
+                save: Some(lsp::TextDocumentSyncSaveOptions::SaveOptions(
+                    lsp::SaveOptions {
+                        include_text: Some(false),
+                    },
+                )),
             },
         )),
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
-        completion_provider: None,
+        completion_provider: Some(lsp::CompletionOptions {
+            resolve_provider: None,
+            trigger_characters: Some(vec![".".into()]), // TODO: can we include pipe here?
+            all_commit_characters: None,
+            work_done_progress_options: lsp::WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        }),
         signature_help_provider: None,
         definition_provider: None,
         type_definition_provider: None,
@@ -62,7 +69,7 @@ pub fn main() -> Result<()> {
         workspace_symbol_provider: None,
         code_action_provider: None,
         code_lens_provider: None,
-        document_formatting_provider: Some(OneOf::Left(true)),
+        document_formatting_provider: Some(lsp::OneOf::Left(true)),
         document_range_formatting_provider: None,
         document_on_type_formatting_provider: None,
         rename_provider: None,
@@ -440,13 +447,85 @@ impl LanguageServer {
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
 
+            "textDocument/completion" => {
+                let params = cast_request::<Completion>(request).unwrap();
+                let completions = self.completion(params)?;
+                Ok(serde_json::to_value(completions).unwrap())
+            }
+
             _ => todo!("Unsupported LSP request"),
         }
     }
 
-    fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
-        // TODO: compile the project before the hover
+    // TODO: labels
+    // TODO: importable modules
+    // TODO: module types (including private)
+    // TODO: module values (including private)
+    // TODO: locally defined variables
+    // TODO: imported module values
+    // TODO: imported module types
+    // TODO: record accessors
+    fn completion(&self, params: lsp::CompletionParams) -> Result<Vec<lsp::CompletionItem>> {
+        // Look up the type information for the module being hovered in
+        let module = match self.get_module_for_uri(&params.text_document_position.text_document.uri)
+        {
+            Some(module) => module,
+            // If we don't have a compiled version of the module for this URI
+            // then there's nothing to show, so return None.
+            None => return Ok(vec![]),
+        };
 
+        let mut items = vec![];
+
+        // TODO: replace this with one that includes private values too
+        for (name, _constructor) in module.ast.type_info.values.iter() {
+            items.push(lsp::CompletionItem {
+                label: name.clone(),
+                kind: None,
+                documentation: None,
+                ..Default::default()
+            })
+        }
+
+        // TODO: replace this with one that includes private types too
+        for (name, _constructor) in module.ast.type_info.types.iter() {
+            items.push(lsp::CompletionItem {
+                label: name.clone(),
+                kind: None,
+                documentation: None,
+                ..Default::default()
+            })
+        }
+
+        items.push(lsp::CompletionItem {
+            label: "import gleam/result".into(),
+            kind: None,
+            documentation: None,
+            ..Default::default()
+        });
+        items.push(lsp::CompletionItem {
+            label: "import gleam/map".into(),
+            kind: None,
+            documentation: None,
+            ..Default::default()
+        });
+        items.push(lsp::CompletionItem {
+            label: "import gleam/list".into(),
+            kind: None,
+            documentation: None,
+            ..Default::default()
+        });
+        items.push(lsp::CompletionItem {
+            label: "list.map".into(),
+            kind: None,
+            documentation: None,
+            ..Default::default()
+        });
+
+        Ok(items)
+    }
+
+    fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
         let params = params.text_document_position_params;
 
         // Look up the type information for the module being hovered in
