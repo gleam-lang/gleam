@@ -440,9 +440,13 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
-        StatusCode::UNPROCESSABLE_ENTITY => Err(ApiError::InvalidModification(
-            String::from_utf8_lossy(&body).to_string(),
-        )),
+        StatusCode::UNPROCESSABLE_ENTITY => {
+            let error: serde_json::Value =
+                serde_json::from_str(&String::from_utf8_lossy(&body).to_string())?;
+            Err(ApiError::InvalidModification(
+                error["errors"]["inserted_at"].to_string(),
+            ))
+        }
         status => Err(ApiError::unexpected_response(status, body)),
     }
 }
