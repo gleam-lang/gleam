@@ -16,18 +16,19 @@ use sha2::Digest;
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
-pub fn command() -> Result<()> {
-    PublishCommand::setup()?.run()
+pub fn command(replace: bool) -> Result<()> {
+    PublishCommand::setup(replace)?.run()
 }
 
 pub struct PublishCommand {
     config: PackageConfig,
     package_tarball: Vec<u8>,
     docs_tarball: Vec<u8>,
+    replace: bool,
 }
 
 impl PublishCommand {
-    pub fn setup() -> Result<Self> {
+    pub fn setup(replace: bool) -> Result<Self> {
         // Reset the build directory so we know the state of the project
         fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
@@ -82,6 +83,7 @@ impl PublishCommand {
             config,
             docs_tarball,
             package_tarball,
+            replace,
         })
     }
 }
@@ -100,6 +102,7 @@ impl ApiKeyCommand for PublishCommand {
             std::mem::take(&mut self.package_tarball),
             api_key,
             hex_config,
+            self.replace,
             &HttpClient::new(),
         ))?;
 
