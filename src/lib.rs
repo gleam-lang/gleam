@@ -434,18 +434,17 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
     // TODO: return data from body
     let (parts, body) = response.into_parts();
     match parts.status {
-        StatusCode::OK => Ok(()),
-        StatusCode::CREATED => Ok(()),
+        StatusCode::OK | StatusCode::CREATED => Ok(()),
         StatusCode::NOT_FOUND => Err(ApiError::NotFound),
         StatusCode::TOO_MANY_REQUESTS => Err(ApiError::RateLimited),
         StatusCode::UNAUTHORIZED => Err(ApiError::InvalidApiKey),
         StatusCode::FORBIDDEN => Err(ApiError::Forbidden),
         StatusCode::UNPROCESSABLE_ENTITY => {
-            let error: serde_json::Value =
-                serde_json::from_str(&String::from_utf8_lossy(&body).to_string())?;
-            Err(ApiError::InvalidModification(
-                error["errors"]["inserted_at"].to_string(),
-            ))
+            let body = &String::from_utf8_lossy(&body).to_string();
+            if body.contains("--replace") {
+                return Err(ApiError::NoReplaceFlag);
+            }
+            return Err(ApiError::LateModification);
         }
         status => Err(ApiError::unexpected_response(status, body)),
     }
@@ -495,8 +494,11 @@ pub enum ApiError {
     #[error("this account is not authorized for this action")]
     Forbidden,
 
-    #[error("{0}")]
-    InvalidModification(String),
+    #[error("must include the --replace flag to update an existing release")]
+    NoReplaceFlag,
+
+    #[error("can only modify a release up to one hour after publication")]
+    LateModification,
 }
 
 impl ApiError {

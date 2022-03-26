@@ -884,11 +884,48 @@ async fn publish_package_success() {
     let key = "my-api-key-here";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
-    let mock = mockito::mock("POST", "/publish?replace=true")
+    let mock = mockito::mock("POST", "/publish?replace=false")
         .expect(1)
         .match_header("authorization", key)
         .match_header("accept", "application/json")
         .with_status(201)
+        .create();
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
+
+    let result = crate::publish_package_response(
+        http_send(crate::publish_package_request(tarball, key, &config, false))
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Ok(()) => (),
+        result => panic!("expected Ok(()), got {:?}", result),
+    }
+
+    mock.assert()
+}
+
+#[tokio::test]
+async fn modify_package_late() {
+    let key = "my-api-key-here";
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
+
+    let mock = mockito::mock("POST", "/publish?replace=true")
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(422)
+        .with_body(
+            json!({
+                "errors": {"inserted_at": "can only modify a release up to one hour after publication"},
+                "message": "Validation error(s)",
+                "status": 422,
+            })
+            .to_string(),
+        )
         .create();
 
     let mut config = Config::new();
@@ -901,8 +938,45 @@ async fn publish_package_success() {
     );
 
     match result {
-        Ok(()) => (),
-        result => panic!("expected Ok(()), got {:?}", result),
+        Err(ApiError::LateModification) => (),
+        result => panic!("expected Err(ApiError::LateModification), got {:?}", result),
+    }
+
+    mock.assert()
+}
+
+#[tokio::test]
+async fn no_replace_flag() {
+    let key = "my-api-key-here";
+    let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
+
+    let mock = mockito::mock("POST", "/publish?replace=false")
+        .expect(1)
+        .match_header("authorization", key)
+        .match_header("accept", "application/json")
+        .with_status(422)
+        .with_body(
+            json!({
+                "errors": {"inserted_at": "must include the --replace flag to update an existing release"},
+                "message": "Validation error(s)",
+                "status": 422,
+            })
+            .to_string(),
+        )
+        .create();
+
+    let mut config = Config::new();
+    config.api_base = http::Uri::from_str(&mockito::server_url()).unwrap();
+
+    let result = crate::publish_package_response(
+        http_send(crate::publish_package_request(tarball, key, &config, false))
+            .await
+            .unwrap(),
+    );
+
+    match result {
+        Err(ApiError::NoReplaceFlag) => (),
+        result => panic!("expected Err(ApiError::NoReplaceFlag), got {:?}", result),
     }
 
     mock.assert()
