@@ -3,7 +3,7 @@ use type_::{AccessorsMap, FieldMap, RecordAccessor};
 use super::*;
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitStringSegmentOption,
     },
     build::Origin,
@@ -39,7 +39,10 @@ fn constant_module(constant: TypedConstant) -> Module {
                 public: true,
                 origin: Default::default(),
                 type_: type_::int(),
-                variant: ValueConstructorVariant::ModuleConstant { literal: constant },
+                variant: ValueConstructorVariant::ModuleConstant {
+                    literal: constant,
+                    location: SrcSpan::default(),
+                },
             },
         )]
         .into(),

@@ -850,7 +850,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(ClauseGuard::Constant(literal.clone()))
                     }
                 };
@@ -1515,7 +1515,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    // TODO: remove this clone. Could use an rc instead
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(literal.clone())
                     }
                 };
@@ -1551,7 +1552,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    // TODO: remove this clone. Could be an rc instead
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(literal.clone())
                     }
                 };

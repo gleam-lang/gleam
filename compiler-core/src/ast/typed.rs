@@ -326,9 +326,9 @@ impl TypedExpr {
             | TypedExpr::RecordAccess { .. } => None,
 
             // TODO: definition
-            TypedExpr::RecordUpdate { .. } => todo!(),
+            TypedExpr::RecordUpdate { .. } => None,
             // TODO: definition
-            TypedExpr::ModuleSelect { .. } => todo!(),
+            TypedExpr::ModuleSelect { .. } => None,
 
             // TODO: test
             TypedExpr::Var { constructor, .. } => Some(constructor.definition_location()),

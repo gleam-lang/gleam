@@ -78,21 +78,29 @@ struct ValueConstructor {
 
 struct ValueConstructorVariant {
   union {
-    moduleConstant @0 :Constant;
+    moduleConstant :group {
+      literal @0 :Constant;
+      location @1 :SrcSpan;
+    }
 
     moduleFn :group {
-      name @1 :Text;
-      fieldMap @2 :Option(FieldMap);
-      module @3 :List(Text);
-      arity @4 :UInt16;
+      name @2 :Text;
+      fieldMap @3 :Option(FieldMap);
+      module @4 :List(Text);
+      arity @5 :UInt16;
     }
 
     record :group {
-      name @5 :Text;
-      arity @6 :UInt16;
-      fieldMap @7 :Option(FieldMap);
+      name @6 :Text;
+      arity @7 :UInt16;
+      fieldMap @8 :Option(FieldMap);
     }
   }
+}
+
+struct SrcSpan {
+  start @0 :UInt16;
+  end @1 :UInt16;
 }
 
 # Cap'n Proto only permits pointer types to be used as type parameters
