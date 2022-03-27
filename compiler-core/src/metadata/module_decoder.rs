@@ -337,9 +337,11 @@ impl ModuleDecoder {
         &mut self,
         reader: &value_constructor_variant::module_constant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
-        let location = self.src_span(&reader.get_location()?)?;
-        let literal = self.constant(&reader.get_literal()?)?;
-        Ok(ValueConstructorVariant::ModuleConstant { literal, location })
+        Ok(ValueConstructorVariant::ModuleConstant {
+            location: self.src_span(&reader.get_location()?)?,
+            literal: self.constant(&reader.get_literal()?)?,
+            module: reader.get_module()?.to_string(),
+        })
     }
 
     fn src_span(&mut self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {

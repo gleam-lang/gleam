@@ -1409,7 +1409,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => atom(name.to_snake_case()),
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Constant { literal },
+            constructor: ModuleValueConstructor::Constant { literal, .. },
             ..
         } => const_inline(literal, env),
 

@@ -269,6 +269,7 @@ pub enum ValueConstructorVariant {
     /// A module constant
     ModuleConstant {
         location: SrcSpan,
+        module: String,
         literal: Constant<Arc<Type>, String>,
     },
 
@@ -303,8 +304,11 @@ impl ValueConstructorVariant {
             },
 
             // TODO: remove this clone with an rc clone
-            Self::ModuleConstant { literal, .. } => ModuleValueConstructor::Constant {
+            Self::ModuleConstant {
+                literal, location, ..
+            } => ModuleValueConstructor::Constant {
                 literal: literal.clone(),
+                location: *location,
             },
 
             Self::LocalVariable { .. } | Self::ModuleFn { .. } => ModuleValueConstructor::Fn,
@@ -325,9 +329,12 @@ pub enum ModuleValueConstructor {
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
     },
+
     Fn,
+
     Constant {
         literal: TypedConstant,
+        location: SrcSpan,
     },
 }
 
@@ -449,9 +456,10 @@ impl ValueConstructor {
                 span: *location,
             },
 
-            ValueConstructorVariant::ModuleConstant { location, .. } => DefinitionLocation {
-                // TODO: this should be filled when the constant comes from another module
-                module: None,
+            ValueConstructorVariant::ModuleConstant {
+                location, module, ..
+            } => DefinitionLocation {
+                module: Some(module.as_str()),
                 span: *location,
             },
 
@@ -1288,6 +1296,7 @@ fn infer_statement(
                     variant: ValueConstructorVariant::ModuleConstant {
                         location: location,
                         literal: typed_expr.clone(),
+                        module: module_name.join("/"),
                     },
                     type_: type_.clone(),
                 },

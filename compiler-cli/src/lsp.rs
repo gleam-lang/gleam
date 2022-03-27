@@ -480,11 +480,16 @@ impl LanguageServer {
         let range = src_span_to_lsp_range(location.span, line_numbers);
         let uri = match location.module {
             None => params.text_document.uri,
-            // TODO: construct URI
-            Some(_) => todo!(),
+            Some(name) => self.module_uri(name),
         };
 
         Ok(Some(lsp::Location { uri, range }))
+    }
+
+    fn module_uri(&self, name: &str) -> Url {
+        // TODO: get the module path from the compiled modules information
+        let path = todo!();
+        Url::parse(&format!("file:///{}", path.as_os_str().to_string_lossy())).unwrap()
     }
 
     // TODO: function & constructor labels

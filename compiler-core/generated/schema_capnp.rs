@@ -2216,6 +2216,7 @@ pub mod value_constructor_variant {
       self.builder.set_data_field::<u16>(0, 0);
       self.builder.get_pointer_field(0).clear();
       self.builder.get_pointer_field(1).clear();
+      self.builder.get_pointer_field(2).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2339,6 +2340,13 @@ pub mod value_constructor_variant {
       pub fn has_location(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
+      #[inline]
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
+      }
+      pub fn has_module(&self) -> bool {
+        !self.reader.get_pointer_field(2).is_null()
+      }
     }
 
     pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2418,6 +2426,21 @@ pub mod value_constructor_variant {
       }
       pub fn has_location(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
+      }
+      #[inline]
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_module(&mut self, value: ::capnp::text::Reader<'_>)  {
+        self.builder.get_pointer_field(2).set_text(value);
+      }
+      #[inline]
+      pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
+        self.builder.get_pointer_field(2).init_text(size)
+      }
+      pub fn has_module(&self) -> bool {
+        !self.builder.get_pointer_field(2).is_null()
       }
     }
 
