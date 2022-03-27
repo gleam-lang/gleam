@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Constant, TypedConstant, TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
+        Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
+        TypedConstantBitStringSegmentOption,
     },
     io::Writer,
     schema_capnp::{self as schema, *},
@@ -167,6 +168,11 @@ impl<'a> ModuleEncoder<'a> {
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
 
+    fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {
+        builder.set_start(span.start as u16);
+        builder.set_end(span.end as u16);
+    }
+
     fn build_value_constructor_variant(
         &mut self,
         builder: value_constructor_variant::Builder<'_>,
@@ -177,8 +183,10 @@ impl<'a> ModuleEncoder<'a> {
                 panic!("Unexpected local variable value constructor in module interface",)
             }
 
-            ValueConstructorVariant::ModuleConstant { literal } => {
-                self.build_constant(builder.init_module_constant(), literal)
+            ValueConstructorVariant::ModuleConstant { literal, location } => {
+                let mut builder = builder.init_module_constant();
+                self.build_constant(builder.reborrow().init_literal(), literal);
+                self.build_src_span(builder.reborrow().init_location(), *location);
             }
 
             ValueConstructorVariant::Record {

@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
     },
     build::Origin,
@@ -327,7 +327,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         use value_constructor_variant::Which;
         match reader.which()? {
-            Which::ModuleConstant(reader) => self.module_constant_variant(&reader?),
+            Which::ModuleConstant(reader) => self.module_constant_variant(&reader),
             Which::ModuleFn(reader) => self.module_fn_variant(&reader),
             Which::Record(reader) => self.record(&reader),
         }
@@ -335,10 +335,17 @@ impl ModuleDecoder {
 
     fn module_constant_variant(
         &mut self,
-        reader: &constant::Reader<'_>,
+        reader: &value_constructor_variant::module_constant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
-        Ok(ValueConstructorVariant::ModuleConstant {
-            literal: self.constant(reader)?,
+        let location = self.src_span(&reader.get_location()?)?;
+        let literal = self.constant(&reader.get_literal()?)?;
+        Ok(ValueConstructorVariant::ModuleConstant { literal, location })
+    }
+
+    fn src_span(&mut self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
+        Ok(SrcSpan {
+            start: reader.get_start() as usize,
+            end: reader.get_end() as usize,
         })
     }
 
