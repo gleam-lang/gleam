@@ -467,18 +467,24 @@ impl LanguageServer {
 
     fn goto_definition(&self, params: lsp::GotoDefinitionParams) -> Result<Option<lsp::Location>> {
         let params = params.text_document_position_params;
-        let location = self
-            .node_at_position(&params)
-            .map(|(_, node)| node.definition_location());
-
-        let location = match location {
+        let (line_numbers, node) = match self.node_at_position(&params) {
             Some(location) => location,
             None => return Ok(None),
         };
 
-        tracing::info!("{:?}", location);
+        let location = match node.definition_location() {
+            Some(location) => location,
+            None => return Ok(None),
+        };
 
-        Ok(None)
+        let range = src_span_to_lsp_range(location.span, line_numbers);
+        let uri = match location.module {
+            None => params.text_document.uri,
+            // TODO: construct URI
+            Some(_) => todo!(),
+        };
+
+        Ok(Some(lsp::Location { uri, range }))
     }
 
     // TODO: function & constructor labels
