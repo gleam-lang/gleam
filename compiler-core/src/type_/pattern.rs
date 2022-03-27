@@ -55,7 +55,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // after the pattern.
                 self.environment.insert_variable(
                     name.to_string(),
-                    ValueConstructorVariant::LocalVariable,
+                    ValueConstructorVariant::LocalVariable { location },
                     typ,
                     location,
                 );
@@ -451,7 +451,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             field_map: cons.field_map().cloned(),
                         }
                     }
-                    ValueConstructorVariant::LocalVariable
+                    ValueConstructorVariant::LocalVariable { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => {
                         panic!("Unexpected value constructor type for a constructor pattern.",)

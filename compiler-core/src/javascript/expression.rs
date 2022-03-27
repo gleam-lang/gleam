@@ -291,7 +291,7 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalVariable => self.local_var(name),
+            | ValueConstructorVariant::LocalVariable { .. } => self.local_var(name),
         }
     }
 

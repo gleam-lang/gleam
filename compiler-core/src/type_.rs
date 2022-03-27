@@ -18,11 +18,12 @@ pub use prelude::*;
 
 use crate::{
     ast::{
-        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Layer,
-        Pattern, RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst,
-        TypedConstant, TypedExpr, TypedModule, TypedPattern, TypedPatternBitStringSegment,
-        TypedRecordUpdateArg, TypedStatement, UnqualifiedImport, UntypedModule,
-        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant,
+        DefinitionLocation, Layer, Pattern, RecordConstructor, RecordConstructorArg, SrcSpan,
+        Statement, TypeAst, TypedConstant, TypedExpr, TypedModule, TypedPattern,
+        TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement, UnqualifiedImport,
+        UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        UntypedStatement,
     },
     bit_string,
     build::{Origin, Target},
@@ -263,7 +264,7 @@ pub struct RecordAccessor {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
-    LocalVariable,
+    LocalVariable { location: SrcSpan },
 
     /// A module constant
     ModuleConstant {
@@ -310,7 +311,7 @@ impl ValueConstructorVariant {
 
     /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
-        matches!(self, Self::LocalVariable)
+        matches!(self, Self::LocalVariable { .. })
     }
 }
 
@@ -428,6 +429,7 @@ pub struct TypeConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
     pub public: bool,
+    // TODO: can we remove this? I'm putting the location in the valueconstructorvariant
     pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
@@ -436,6 +438,30 @@ pub struct ValueConstructor {
 impl ValueConstructor {
     pub fn is_local_variable(&self) -> bool {
         self.variant.is_local_variable()
+    }
+
+    pub fn definition_location(&self) -> DefinitionLocation<'_> {
+        match &self.variant {
+            ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
+                module: None,
+                span: *location,
+            },
+
+            ValueConstructorVariant::ModuleConstant { literal } => todo!(),
+
+            ValueConstructorVariant::ModuleFn {
+                name,
+                field_map,
+                module,
+                arity,
+            } => todo!(),
+
+            ValueConstructorVariant::Record {
+                name,
+                arity,
+                field_map,
+            } => todo!(),
+        }
     }
 }
 

@@ -173,7 +173,7 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &ValueConstructorVariant,
     ) {
         match constructor {
-            ValueConstructorVariant::LocalVariable => {
+            ValueConstructorVariant::LocalVariable { .. } => {
                 panic!("Unexpected local variable value constructor in module interface",)
             }
 
