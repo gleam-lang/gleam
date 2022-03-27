@@ -837,6 +837,13 @@ impl SrcSpan {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct DefinitionLocation<'module> {
+    /// If this field is absent then it is defined in the same module
+    pub module: Option<&'module [String]>,
+    pub span: SrcSpan,
+}
+
 pub type UntypedPattern = Pattern<(), ()>;
 pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 

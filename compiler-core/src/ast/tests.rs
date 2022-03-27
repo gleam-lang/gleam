@@ -132,7 +132,9 @@ wibble"#,
         constructor: ValueConstructor {
             public: false,
             origin: SrcSpan { start: 4, end: 10 },
-            variant: ValueConstructorVariant::LocalVariable,
+            variant: ValueConstructorVariant::LocalVariable {
+                location: SrcSpan { start: 4, end: 10 },
+            },
             type_: type_::int(),
         },
         name: "wibble".into(),

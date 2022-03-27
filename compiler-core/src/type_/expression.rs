@@ -844,7 +844,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable => (),
+                    ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
@@ -1511,7 +1511,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable => {
+                    | ValueConstructorVariant::LocalVariable { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
@@ -1547,7 +1547,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable => {
+                    | ValueConstructorVariant::LocalVariable { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
@@ -1841,7 +1841,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
                         body_typer.environment.insert_variable(
                             name.to_string(),
-                            ValueConstructorVariant::LocalVariable,
+                            ValueConstructorVariant::LocalVariable {
+                                location: arg.location,
+                            },
                             t,
                             arg.location,
                         );

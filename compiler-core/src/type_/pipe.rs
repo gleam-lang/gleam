@@ -132,7 +132,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 public: true,
                 origin: self.argument_location,
                 type_: self.argument_type.clone(),
-                variant: ValueConstructorVariant::LocalVariable,
+                variant: ValueConstructorVariant::LocalVariable {
+                    location: self.argument_location,
+                },
             },
         }
     }
@@ -158,7 +160,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // Insert the variable for use in type checking the rest of the pipeline
         self.expr_typer.environment.insert_variable(
             PIPE_VARIABLE.to_string(),
-            ValueConstructorVariant::LocalVariable,
+            ValueConstructorVariant::LocalVariable { location },
             expression.type_(),
             location,
         );

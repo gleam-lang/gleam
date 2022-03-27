@@ -305,7 +305,7 @@ impl TypedExpr {
         matches!(self, Self::Assignment { .. })
     }
 
-    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
             TypedExpr::Fn { .. }
             | TypedExpr::Int { .. }
@@ -329,8 +329,9 @@ impl TypedExpr {
             TypedExpr::RecordUpdate { .. } => todo!(),
             // TODO: definition
             TypedExpr::ModuleSelect { .. } => todo!(),
-            // TODO: definition
-            TypedExpr::Var { .. } => todo!(),
+
+            // TODO: test
+            TypedExpr::Var { constructor, .. } => Some(constructor.definition_location()),
         }
     }
 
@@ -384,9 +385,4 @@ impl HasType for TypedExpr {
     fn type_(&self) -> Arc<Type> {
         self.type_()
     }
-}
-
-pub struct DefinitionLocation {
-    module: Vec<String>,
-    span: SrcSpan,
 }

@@ -937,7 +937,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             _ => atom(record_name.to_snake_case()),
         },
 
-        ValueConstructorVariant::LocalVariable => env.local_var_name(name),
+        ValueConstructorVariant::LocalVariable { .. } => env.local_var_name(name),
 
         ValueConstructorVariant::ModuleConstant { literal } => const_inline(literal, env),
 
