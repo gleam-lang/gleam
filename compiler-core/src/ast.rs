@@ -839,8 +839,7 @@ impl SrcSpan {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct DefinitionLocation<'module> {
-    /// If this field is absent then it is defined in the same module
-    pub module: Option<&'module [String]>,
+    pub module: Option<&'module str>,
     pub span: SrcSpan,
 }
 

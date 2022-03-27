@@ -183,10 +183,15 @@ impl<'a> ModuleEncoder<'a> {
                 panic!("Unexpected local variable value constructor in module interface",)
             }
 
-            ValueConstructorVariant::ModuleConstant { literal, location } => {
+            ValueConstructorVariant::ModuleConstant {
+                literal,
+                location,
+                module,
+            } => {
                 let mut builder = builder.init_module_constant();
-                self.build_constant(builder.reborrow().init_literal(), literal);
                 self.build_src_span(builder.reborrow().init_location(), *location);
+                self.build_constant(builder.reborrow().init_literal(), literal);
+                builder.reborrow().set_module(&module);
             }
 
             ValueConstructorVariant::Record {

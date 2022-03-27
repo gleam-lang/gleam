@@ -42,6 +42,7 @@ fn constant_module(constant: TypedConstant) -> Module {
                 variant: ValueConstructorVariant::ModuleConstant {
                     literal: constant,
                     location: SrcSpan::default(),
+                    module: "one/two".into(),
                 },
             },
         )]

@@ -81,19 +81,20 @@ struct ValueConstructorVariant {
     moduleConstant :group {
       literal @0 :Constant;
       location @1 :SrcSpan;
+      module @2 :Text;
     }
 
     moduleFn :group {
-      name @2 :Text;
-      fieldMap @3 :Option(FieldMap);
-      module @4 :List(Text);
-      arity @5 :UInt16;
+      name @3 :Text;
+      fieldMap @4 :Option(FieldMap);
+      module @5 :List(Text);
+      arity @6 :UInt16;
     }
 
     record :group {
-      name @6 :Text;
-      arity @7 :UInt16;
-      fieldMap @8 :Option(FieldMap);
+      name @7 :Text;
+      arity @8 :UInt16;
+      fieldMap @9 :Option(FieldMap);
     }
   }
 }
