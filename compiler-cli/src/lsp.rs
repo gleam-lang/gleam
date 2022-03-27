@@ -8,7 +8,7 @@ use std::{
 };
 
 use gleam_core::{
-    ast::SrcSpan,
+    ast::{SrcSpan, TypedExpr},
     build::{self, Module, Package, ProjectCompiler},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
@@ -17,6 +17,7 @@ use gleam_core::{
     Error, Result,
 };
 use itertools::Itertools;
+use lsp::request::GotoDefinition;
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
@@ -61,7 +62,7 @@ pub fn main() -> Result<()> {
         // }),
         completion_provider: None,
         signature_help_provider: None,
-        definition_provider: None,
+        definition_provider: Some(lsp::OneOf::Left(true)),
         type_definition_provider: None,
         implementation_provider: None,
         references_provider: None,
@@ -448,6 +449,12 @@ impl LanguageServer {
                 Ok(serde_json::to_value(text_edit).unwrap())
             }
 
+            "textDocument/definition" => {
+                let params = cast_request::<GotoDefinition>(request).unwrap();
+                let location = self.goto_definition(params)?;
+                Ok(serde_json::to_value(location).unwrap())
+            }
+
             "textDocument/completion" => {
                 let params = cast_request::<Completion>(request).unwrap();
                 let completions = self.completion(params)?;
@@ -456,6 +463,22 @@ impl LanguageServer {
 
             _ => todo!("Unsupported LSP request"),
         }
+    }
+
+    fn goto_definition(&self, params: lsp::GotoDefinitionParams) -> Result<Option<lsp::Location>> {
+        let params = params.text_document_position_params;
+        let location = self
+            .node_at_position(&params)
+            .map(|(_, node)| node.definition_location());
+
+        let location = match location {
+            Some(location) => location,
+            None => return Ok(None),
+        };
+
+        tracing::info!("{:?}", location);
+
+        Ok(None)
     }
 
     // TODO: function & constructor labels
@@ -468,8 +491,7 @@ impl LanguageServer {
     // TODO: record accessors
     fn completion(&self, params: lsp::CompletionParams) -> Result<Vec<lsp::CompletionItem>> {
         // Look up the type information for the module being hovered in
-        let module = match self.get_module_for_uri(&params.text_document_position.text_document.uri)
-        {
+        let module = match self.module_for_uri(&params.text_document_position.text_document.uri) {
             Some(module) => module,
             // If we don't have a compiled version of the module for this URI
             // then there's nothing to show, so return None.
@@ -529,20 +551,8 @@ impl LanguageServer {
     fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
         let params = params.text_document_position_params;
 
-        // Look up the type information for the module being hovered in
-        let module = match self.get_module_for_uri(&params.text_document.uri) {
-            Some(module) => module,
-            // If we don't have a compiled version of the module for this URI
-            // then there's nothing to show, so return None.
-            None => return Ok(None),
-        };
-
-        let line_numbers = LineNumbers::new(&module.code);
-        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-
-        // Find the AST node at the position of the hover, if there is one
-        let expression = match module.find_node(byte_index) {
-            Some(expression) => expression,
+        let (line_numbers, expression) = match self.node_at_position(&params) {
+            Some(value) => value,
             None => return Ok(None),
         };
 
@@ -560,7 +570,18 @@ impl LanguageServer {
         }))
     }
 
-    fn get_module_for_uri(&self, uri: &Url) -> Option<&Module> {
+    fn node_at_position(
+        &self,
+        params: &lsp::TextDocumentPositionParams,
+    ) -> Option<(LineNumbers, &TypedExpr)> {
+        let module = self.module_for_uri(&params.text_document.uri)?;
+        let line_numbers = LineNumbers::new(&module.code);
+        let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
+        let expression = module.find_node(byte_index)?;
+        Some((line_numbers, expression))
+    }
+
+    fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
         let module_name = uri_to_module_name(uri, &self.project_root).unwrap();
         self.modules.get(&module_name)
     }

@@ -304,15 +304,36 @@ impl TypedExpr {
     pub fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment { .. })
     }
-}
 
-impl HasLocation for TypedExpr {
-    fn location(&self) -> SrcSpan {
-        self.location()
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
+        match self {
+            TypedExpr::Fn { .. }
+            | TypedExpr::Int { .. }
+            | TypedExpr::Try { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Sequence { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::BitString { .. }
+            | TypedExpr::Assignment { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::RecordAccess { .. } => None,
+
+            // TODO: definition
+            TypedExpr::RecordUpdate { .. } => todo!(),
+            // TODO: definition
+            TypedExpr::ModuleSelect { .. } => todo!(),
+            // TODO: definition
+            TypedExpr::Var { .. } => todo!(),
+        }
     }
-}
 
-impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
             Self::Var { constructor, .. } => constructor.type_.clone(),
@@ -353,8 +374,19 @@ impl TypedExpr {
     }
 }
 
+impl HasLocation for TypedExpr {
+    fn location(&self) -> SrcSpan {
+        self.location()
+    }
+}
+
 impl HasType for TypedExpr {
     fn type_(&self) -> Arc<Type> {
         self.type_()
     }
+}
+
+pub struct DefinitionLocation {
+    module: Vec<String>,
+    span: SrcSpan,
 }
