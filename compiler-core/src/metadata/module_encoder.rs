@@ -210,6 +210,7 @@ impl<'a> ModuleEncoder<'a> {
                 field_map,
                 module,
                 name,
+                location,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
@@ -221,6 +222,7 @@ impl<'a> ModuleEncoder<'a> {
                     }
                 }
                 builder.set_arity(*arity as u16);
+                self.build_src_span(builder.init_location(), *location);
             }
         }
     }

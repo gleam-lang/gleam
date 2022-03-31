@@ -2226,6 +2226,7 @@ pub mod value_constructor_variant {
       self.builder.get_pointer_field(1).clear();
       self.builder.get_pointer_field(2).clear();
       self.builder.set_data_field::<u16>(1, 0u16);
+      self.builder.get_pointer_field(3).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2269,7 +2270,7 @@ pub mod value_constructor_variant {
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
     pub const TYPE_ID: u64 = 0xe14c_79e9_2bd0_a81a;
   }
   pub enum Which<A0,A1,A2> {
@@ -2460,7 +2461,7 @@ pub mod value_constructor_variant {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
       pub const TYPE_ID: u64 = 0x9579_9d69_8196_fbd0;
     }
   }
@@ -2535,6 +2536,13 @@ pub mod value_constructor_variant {
       #[inline]
       pub fn get_arity(self) -> u16 {
         self.reader.get_data_field::<u16>(1)
+      }
+      #[inline]
+      pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
+      }
+      pub fn has_location(&self) -> bool {
+        !self.reader.get_pointer_field(3).is_null()
       }
     }
 
@@ -2639,6 +2647,21 @@ pub mod value_constructor_variant {
       pub fn set_arity(&mut self, value: u16)  {
         self.builder.set_data_field::<u16>(1, value);
       }
+      #[inline]
+      pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(3), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_location(&mut self, value: crate::schema_capnp::src_span::Reader<'_>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(3), value, false)
+      }
+      #[inline]
+      pub fn init_location(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(3), 0)
+      }
+      pub fn has_location(&self) -> bool {
+        !self.builder.get_pointer_field(3).is_null()
+      }
     }
 
     pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -2651,10 +2674,13 @@ pub mod value_constructor_variant {
       pub fn get_field_map(&self) -> crate::schema_capnp::option::Pipeline<crate::schema_capnp::field_map::Owned> {
         ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(1))
       }
+      pub fn get_location(&self) -> crate::schema_capnp::src_span::Pipeline {
+        ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(3))
+      }
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
       pub const TYPE_ID: u64 = 0xaea6_15c5_9871_3779;
     }
   }
@@ -2826,7 +2852,7 @@ pub mod value_constructor_variant {
     }
     mod _private {
       use capnp::private::layout;
-      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 3 };
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
       pub const TYPE_ID: u64 = 0xf00b_1526_e923_3dd5;
     }
   }
