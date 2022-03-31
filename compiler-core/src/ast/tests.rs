@@ -32,6 +32,7 @@ fn compile_expression(src: &str) -> TypedExpr {
     let variant = ValueConstructorVariant::Record {
         name: "Cat".into(),
         arity: 2,
+        location: SrcSpan { start: 12, end: 15 },
         field_map: Some(FieldMap {
             arity: 2,
             fields: [("name".into(), 0), ("age".into(), 1)].into(),

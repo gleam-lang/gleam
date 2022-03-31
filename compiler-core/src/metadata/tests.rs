@@ -347,6 +347,10 @@ fn record_value() {
                     name: "one".to_string(),
                     field_map: None,
                     arity: 5,
+                    location: SrcSpan {
+                        start: 144,
+                        end: 155,
+                    },
                 },
             },
         )]
@@ -378,6 +382,7 @@ fn record_value_with_field_map() {
                         fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
                     }),
                     arity: 5,
+                    location: SrcSpan { start: 5, end: 11 },
                 },
             },
         )]
