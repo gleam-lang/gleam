@@ -344,7 +344,7 @@ impl ModuleDecoder {
         })
     }
 
-    fn src_span(&mut self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
+    fn src_span(&self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
         Ok(SrcSpan {
             start: reader.get_start() as usize,
             end: reader.get_end() as usize,
@@ -360,6 +360,7 @@ impl ModuleDecoder {
             module: module_name(&reader.get_module()?)?,
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
+            location: self.src_span(&reader.get_location()?)?,
         })
     }
 

@@ -248,6 +248,10 @@ fn module_fn_value() {
                     field_map: None,
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan {
+                        start: 535,
+                        end: 1100,
+                    },
                 },
             },
         )]
@@ -278,6 +282,10 @@ fn module_fn_value_regression() {
                     field_map: None,
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
                 },
             },
         )]
@@ -310,6 +318,7 @@ fn module_fn_value_with_field_map() {
                     }),
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan { start: 2, end: 11 },
                 },
             },
         )]

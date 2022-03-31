@@ -279,6 +279,7 @@ pub enum ValueConstructorVariant {
         field_map: Option<FieldMap>,
         module: Vec<String>,
         arity: usize,
+        location: SrcSpan,
     },
 
     /// A constructor for a custom type
@@ -468,7 +469,11 @@ impl ValueConstructor {
                 field_map,
                 module,
                 arity,
-            } => todo!(),
+                location,
+            } => DefinitionLocation {
+                module: None,
+                span: *location,
+            },
 
             ValueConstructorVariant::Record {
                 name,
@@ -733,6 +738,7 @@ fn register_values<'a>(
                     field_map,
                     module: module_name.to_vec(),
                     arity: args.len(),
+                    location: *location,
                 },
                 typ,
                 *location,
@@ -790,6 +796,7 @@ fn register_values<'a>(
                         field_map: field_map.clone(),
                         module: vec![module.clone()],
                         arity: args.len(),
+                        location: *location,
                     },
                 },
             );
@@ -802,6 +809,7 @@ fn register_values<'a>(
                     module: vec![module.clone()],
                     arity: args.len(),
                     field_map,
+                    location: *location,
                 },
                 typ,
                 *location,
@@ -963,6 +971,7 @@ fn generalise_statement(
                         field_map,
                         module: module_name.to_vec(),
                         arity: args.len(),
+                        location,
                     },
                 },
             );
@@ -1052,6 +1061,7 @@ fn infer_statement(
                         field_map,
                         module: module_name.to_vec(),
                         arity: args.len(),
+                        location,
                     },
                     typ.clone(),
                     location,

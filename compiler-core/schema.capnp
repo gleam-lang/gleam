@@ -89,12 +89,13 @@ struct ValueConstructorVariant {
       fieldMap @4 :Option(FieldMap);
       module @5 :List(Text);
       arity @6 :UInt16;
+      location @7 :SrcSpan;
     }
 
     record :group {
-      name @7 :Text;
-      arity @8 :UInt16;
-      fieldMap @9 :Option(FieldMap);
+      name @8 :Text;
+      arity @9 :UInt16;
+      fieldMap @10 :Option(FieldMap);
     }
   }
 }
