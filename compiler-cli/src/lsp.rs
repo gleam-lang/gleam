@@ -468,6 +468,11 @@ impl LanguageServer {
     // TODO: test local variables
     // TODO: test same module constants
     // TODO: test imported module constants
+    // TODO: test unqualified imported module constants
+    // TODO: test same module records
+    // TODO: test imported module records
+    // TODO: test unqualified imported module records
+    // TODO: test same module functions
     fn goto_definition(&self, params: lsp::GotoDefinitionParams) -> Result<Option<lsp::Location>> {
         let params = params.text_document_position_params;
         let (line_numbers, node) = match self.node_at_position(&params) {

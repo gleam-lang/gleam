@@ -1,4 +1,4 @@
-use crate::{build::Origin, uid::UniqueIdGenerator};
+use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -152,6 +152,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
                 name: "True".to_string(),
                 field_map: None,
                 arity: 0,
+                location: SrcSpan::default(),
             },
             bool(),
         ),
@@ -163,6 +164,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
                 name: "False".to_string(),
                 field_map: None,
                 arity: 0,
+                location: SrcSpan::default(),
             },
             bool(),
         ),
@@ -237,6 +239,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
                 name: "Nil".to_string(),
                 arity: 0,
                 field_map: None,
+                location: SrcSpan::default(),
             },
             nil(),
         ),
@@ -283,6 +286,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
                 name: "Ok".to_string(),
                 field_map: None,
                 arity: 1,
+                location: SrcSpan::default(),
             },
             fn_(vec![ok.clone()], result(ok, error)),
         ),
@@ -297,6 +301,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
                 name: "Error".to_string(),
                 field_map: None,
                 arity: 1,
+                location: SrcSpan::default(),
             },
             fn_(vec![error.clone()], result(ok, error)),
         ),

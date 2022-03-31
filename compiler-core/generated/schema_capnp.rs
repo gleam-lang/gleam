@@ -2235,6 +2235,7 @@ pub mod value_constructor_variant {
       self.builder.get_pointer_field(0).clear();
       self.builder.set_data_field::<u16>(1, 0u16);
       self.builder.get_pointer_field(1).clear();
+      self.builder.get_pointer_field(2).clear();
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2749,6 +2750,13 @@ pub mod value_constructor_variant {
       pub fn has_field_map(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
+      #[inline]
+      pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
+      }
+      pub fn has_location(&self) -> bool {
+        !self.reader.get_pointer_field(2).is_null()
+      }
     }
 
     pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -2837,6 +2845,21 @@ pub mod value_constructor_variant {
       pub fn has_field_map(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
+      #[inline]
+      pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_location(&mut self, value: crate::schema_capnp::src_span::Reader<'_>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
+      }
+      #[inline]
+      pub fn init_location(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
+      }
+      pub fn has_location(&self) -> bool {
+        !self.builder.get_pointer_field(2).is_null()
+      }
     }
 
     pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -2848,6 +2871,9 @@ pub mod value_constructor_variant {
     impl Pipeline  {
       pub fn get_field_map(&self) -> crate::schema_capnp::option::Pipeline<crate::schema_capnp::field_map::Owned> {
         ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(1))
+      }
+      pub fn get_location(&self) -> crate::schema_capnp::src_span::Pipeline {
+        ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(2))
       }
     }
     mod _private {

@@ -287,6 +287,7 @@ pub enum ValueConstructorVariant {
         name: String,
         arity: usize,
         field_map: Option<FieldMap>,
+        location: SrcSpan,
     },
 }
 
@@ -297,11 +298,13 @@ impl ValueConstructorVariant {
                 name,
                 arity,
                 field_map,
+                location,
             } => ModuleValueConstructor::Record {
                 name: name.clone(),
                 field_map: field_map.clone(),
                 arity: *arity,
                 type_,
+                location: *location,
             },
 
             // TODO: remove this clone with an rc clone
@@ -329,6 +332,7 @@ pub enum ModuleValueConstructor {
         arity: usize,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
+        location: SrcSpan,
     },
 
     Fn,
@@ -452,11 +456,6 @@ impl ValueConstructor {
 
     pub fn definition_location(&self) -> DefinitionLocation<'_> {
         match &self.variant {
-            ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
-                module: None,
-                span: *location,
-            },
-
             ValueConstructorVariant::ModuleConstant {
                 location, module, ..
             } => DefinitionLocation {
@@ -464,22 +463,12 @@ impl ValueConstructor {
                 span: *location,
             },
 
-            ValueConstructorVariant::ModuleFn {
-                name,
-                field_map,
-                module,
-                arity,
-                location,
-            } => DefinitionLocation {
+            ValueConstructorVariant::Record { location, .. }
+            | ValueConstructorVariant::ModuleFn { location, .. }
+            | ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
                 module: None,
                 span: *location,
             },
-
-            ValueConstructorVariant::Record {
-                name,
-                arity,
-                field_map,
-            } => todo!(),
         }
     }
 }
@@ -892,6 +881,7 @@ fn register_values<'a>(
                                 name: constructor.name.clone(),
                                 arity: constructor.arguments.len(),
                                 field_map: field_map.clone(),
+                                location: constructor.location,
                             },
                         },
                     );
@@ -911,6 +901,7 @@ fn register_values<'a>(
                         name: constructor.name.clone(),
                         arity: constructor.arguments.len(),
                         field_map,
+                        location: constructor.location,
                     },
                     typ,
                     constructor.location,
