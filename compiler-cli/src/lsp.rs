@@ -465,6 +465,9 @@ impl LanguageServer {
         }
     }
 
+    // TODO: test local variables
+    // TODO: test same module constants
+    // TODO: test imported module constants
     fn goto_definition(&self, params: lsp::GotoDefinitionParams) -> Result<Option<lsp::Location>> {
         let params = params.text_document_position_params;
         let (line_numbers, node) = match self.node_at_position(&params) {
@@ -477,19 +480,19 @@ impl LanguageServer {
             None => return Ok(None),
         };
 
-        let range = src_span_to_lsp_range(location.span, line_numbers);
-        let uri = match location.module {
-            None => params.text_document.uri,
-            Some(name) => self.module_uri(name),
+        let (uri, line_numbers) = match location.module {
+            None => (params.text_document.uri, line_numbers),
+            Some(name) => {
+                let module = self.modules.get(name).unwrap();
+                let path = module.input_path.canonicalize().ok().unwrap();
+                let path_uri = format!("file:///{}", path.as_os_str().to_str().unwrap());
+                let url = Url::parse(&path_uri).unwrap();
+                (url, LineNumbers::new(&module.code))
+            }
         };
+        let range = src_span_to_lsp_range(location.span, line_numbers);
 
         Ok(Some(lsp::Location { uri, range }))
-    }
-
-    fn module_uri(&self, name: &str) -> Url {
-        // TODO: get the module path from the compiled modules information
-        let path = todo!();
-        Url::parse(&format!("file:///{}", path.as_os_str().to_string_lossy())).unwrap()
     }
 
     // TODO: function & constructor labels
