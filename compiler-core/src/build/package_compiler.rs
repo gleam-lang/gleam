@@ -30,7 +30,7 @@ pub struct PackageCompiler<'a, IO> {
     pub target: Target,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
-    pub erlang_build_files: HashSet<String>,
+    pub old_build_modules: HashSet<String>,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
@@ -65,7 +65,7 @@ where
             config,
             target,
             sources: vec![],
-            erlang_build_files: HashSet::new(),
+            old_build_modules: HashSet::new(),
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -95,6 +95,11 @@ where
                 .values()
                 .map(|m| m.name.replace('/', "@"))
                 .collect(),
+            existing_modules
+                .values()
+                .map(|m| m.name.join("@"))
+                .filter(|m| !m.starts_with("gleam"))
+                .collect()
         )?;
 
         // Determine order in which modules are to be processed
@@ -250,11 +255,15 @@ where
         Ok(())
     }
 
-    fn clear_outdated_build_files(&mut self, source_files: HashSet<String>) -> Result<()> {
+    fn clear_outdated_build_files(&mut self, current_modules_name: HashSet<String>, existing_modules_name: HashSet<String>) -> Result<()> {
+        let mut current_build_modules = HashSet::new();
+        current_build_modules.extend(current_modules_name);
+        current_build_modules.extend(existing_modules_name);
+
         let build = self.out.join("build");
         let ebin = self.out.join("ebin");
 
-        let diffs: HashSet<String> = (&self.erlang_build_files - &source_files)
+        let diffs: HashSet<String> = (&self.old_build_modules - &current_build_modules)
             .iter()
             .cloned()
             .collect();
@@ -277,7 +286,7 @@ where
         tracing::info!("Reading erlang files");
         for path in self.io.erlang_files(&build) {
             let name = module_name(&build, &path);
-            let _ = self.erlang_build_files.insert(name.clone());
+            let _ = self.old_build_modules.insert(name.clone());
         }
 
         Ok(())
