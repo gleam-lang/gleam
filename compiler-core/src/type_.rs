@@ -315,7 +315,11 @@ impl ValueConstructorVariant {
                 location: *location,
             },
 
-            Self::LocalVariable { .. } | Self::ModuleFn { .. } => ModuleValueConstructor::Fn,
+            Self::LocalVariable { location, .. } | Self::ModuleFn { location, .. } => {
+                ModuleValueConstructor::Fn {
+                    location: *location,
+                }
+            }
         }
     }
 
@@ -344,12 +348,24 @@ pub enum ModuleValueConstructor {
         location: SrcSpan,
     },
 
-    Fn,
+    Fn {
+        location: SrcSpan,
+    },
 
     Constant {
         literal: TypedConstant,
         location: SrcSpan,
     },
+}
+
+impl ModuleValueConstructor {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            ModuleValueConstructor::Fn { location }
+            | ModuleValueConstructor::Record { location, .. }
+            | ModuleValueConstructor::Constant { location, .. } => *location,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

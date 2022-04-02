@@ -950,7 +950,7 @@ impl<'module> Generator<'module> {
         constructor: &'a ModuleValueConstructor,
     ) -> Document<'a> {
         match constructor {
-            ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
+            ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
                 docvec!["$", module, ".", maybe_escape_identifier_doc(label)]
             }
 

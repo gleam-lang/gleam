@@ -66,6 +66,10 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
     files
 }
 
+fn module_name_to_erlang(module: &str) -> Document<'_> {
+    Document::String(module.replace("/", "@"))
+}
+
 fn module_name_join(module: &[String]) -> Document<'_> {
     let mut name = String::new();
     for (i, segment) in module.iter().enumerate() {
@@ -1239,11 +1243,11 @@ fn docs_args_call<'a>(
         TypedExpr::ModuleSelect {
             module_name,
             label,
-            constructor: ModuleValueConstructor::Fn,
+            constructor: ModuleValueConstructor::Fn { .. },
             ..
         } => {
             let args = wrap_args(args);
-            atom(module_name.join("@"))
+            atom(module_name.replace("/", "@"))
                 .append(":")
                 .append(atom(label.to_string()))
                 .append(args)
@@ -1432,7 +1436,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             typ,
             label,
             module_name,
-            constructor: ModuleValueConstructor::Fn,
+            constructor: ModuleValueConstructor::Fn { .. },
             ..
         } => module_select_fn(typ.clone(), module_name, label),
 
@@ -1487,17 +1491,17 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
         .append(wrap_args([index_doc, tuple_doc]))
 }
 
-fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a [String], label: &'a str) -> Document<'a> {
+fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
     match crate::type_::collapse_links(typ).as_ref() {
         crate::type_::Type::Fn { args, .. } => "fun "
             .to_doc()
-            .append(module_name_join(module_name))
+            .append(module_name_to_erlang(module_name))
             .append(":")
             .append(atom(label.to_string()))
             .append("/")
             .append(args.len()),
 
-        _ => module_name_join(module_name)
+        _ => module_name_to_erlang(module_name)
             .append(":")
             .append(atom(label.to_string()))
             .append("()"),

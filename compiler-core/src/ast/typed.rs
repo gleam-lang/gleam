@@ -110,7 +110,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         label: String,
-        module_name: Vec<String>,
+        module_name: String,
         module_alias: String,
         constructor: ModuleValueConstructor,
     },
@@ -327,8 +327,16 @@ impl TypedExpr {
 
             // TODO: definition
             TypedExpr::RecordUpdate { .. } => None,
+
             // TODO: definition
-            TypedExpr::ModuleSelect { .. } => None,
+            TypedExpr::ModuleSelect {
+                module_name,
+                constructor,
+                ..
+            } => Some(DefinitionLocation {
+                module: Some(module_name.as_str()),
+                span: constructor.location(),
+            }),
 
             // TODO: test
             TypedExpr::Var { constructor, .. } => Some(constructor.definition_location()),

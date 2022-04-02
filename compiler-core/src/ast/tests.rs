@@ -254,9 +254,11 @@ fn find_node_module_select() {
         location: SrcSpan { start: 1, end: 3 },
         typ: type_::int(),
         label: "label".into(),
-        module_name: vec!["name".into()],
+        module_name: "name".into(),
         module_alias: "alias".into(),
-        constructor: ModuleValueConstructor::Fn,
+        constructor: ModuleValueConstructor::Fn {
+            location: SrcSpan { start: 1, end: 55 },
+        },
     };
 
     assert_eq!(expr.find_node(0), None);
