@@ -130,7 +130,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             name: PIPE_VARIABLE.to_string(),
             constructor: ValueConstructor {
                 public: true,
-                origin: self.argument_location,
                 type_: self.argument_type.clone(),
                 variant: ValueConstructorVariant::LocalVariable {
                     location: self.argument_location,
@@ -162,7 +161,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             PIPE_VARIABLE.to_string(),
             ValueConstructorVariant::LocalVariable { location },
             expression.type_(),
-            location,
         );
         // Add the assignment to the AST
         let assignment = TypedExpr::Assignment {

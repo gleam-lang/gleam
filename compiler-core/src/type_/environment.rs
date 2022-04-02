@@ -156,13 +156,11 @@ impl<'a> Environment<'a> {
         name: String,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
-        origin: SrcSpan,
     ) {
         let _ = self.local_values.insert(
             name,
             ValueConstructor {
                 public: false,
-                origin,
                 variant,
                 type_: typ,
             },

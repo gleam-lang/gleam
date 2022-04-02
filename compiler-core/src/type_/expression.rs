@@ -1449,7 +1449,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let ValueConstructor {
             public,
             variant,
-            origin,
             type_: typ,
         } = constructor;
 
@@ -1458,7 +1457,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(ValueConstructor {
             public,
             variant,
-            origin,
             type_: typ,
         })
     }
@@ -1847,7 +1845,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 location: arg.location,
                             },
                             t,
-                            arg.location,
                         );
                         body_typer.environment.init_usage(
                             name.to_string(),

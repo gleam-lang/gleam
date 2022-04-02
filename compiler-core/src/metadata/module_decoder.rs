@@ -151,7 +151,6 @@ impl ModuleDecoder {
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
         Ok(ValueConstructor {
             public: true,
-            origin: Default::default(),
             type_,
             variant,
         })

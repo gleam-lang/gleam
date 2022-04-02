@@ -42,7 +42,6 @@ fn compile_expression(src: &str) -> TypedExpr {
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        SrcSpan::default(),
     );
 
     environment.insert_accessors(
@@ -132,7 +131,6 @@ wibble"#,
         location: SrcSpan { start: 15, end: 21 },
         constructor: ValueConstructor {
             public: false,
-            origin: SrcSpan { start: 4, end: 10 },
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 4, end: 10 },
             },

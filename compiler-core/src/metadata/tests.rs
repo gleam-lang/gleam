@@ -37,7 +37,6 @@ fn constant_module(constant: TypedConstant) -> Module {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleConstant {
                     literal: constant,
@@ -241,7 +240,6 @@ fn module_fn_value() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
@@ -275,7 +273,6 @@ fn module_fn_value_regression() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
@@ -308,7 +305,6 @@ fn module_fn_value_with_field_map() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
@@ -341,7 +337,6 @@ fn record_value() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     name: "one".to_string(),
@@ -373,7 +368,6 @@ fn record_value_with_field_map() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     name: "one".to_string(),

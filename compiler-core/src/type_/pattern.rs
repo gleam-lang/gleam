@@ -57,7 +57,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     name.to_string(),
                     ValueConstructorVariant::LocalVariable { location },
                     typ,
-                    location,
                 );
                 Ok(())
             }

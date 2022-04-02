@@ -319,6 +319,15 @@ impl ValueConstructorVariant {
         }
     }
 
+    pub fn definition_location(&self) -> SrcSpan {
+        match self {
+            ValueConstructorVariant::LocalVariable { location }
+            | ValueConstructorVariant::ModuleConstant { location, .. }
+            | ValueConstructorVariant::ModuleFn { location, .. }
+            | ValueConstructorVariant::Record { location, .. } => *location,
+        }
+    }
+
     /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
         matches!(self, Self::LocalVariable { .. })
@@ -443,8 +452,6 @@ pub struct TypeConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
     pub public: bool,
-    // TODO: can we remove this? I'm putting the location in the valueconstructorvariant
-    pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
 }
@@ -577,7 +584,7 @@ pub fn infer_module(
     for value in environment.module_values.values() {
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
-                location: value.origin,
+                location: value.variant.definition_location(),
                 leaked,
             });
         }
@@ -730,7 +737,6 @@ fn register_values<'a>(
                     location: *location,
                 },
                 typ,
-                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -779,7 +785,6 @@ fn register_values<'a>(
                 ValueConstructor {
                     public: *public,
                     type_: typ.clone(),
-                    origin: *location,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: fun.clone(),
                         field_map: field_map.clone(),
@@ -801,7 +806,6 @@ fn register_values<'a>(
                     location: *location,
                 },
                 typ,
-                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -876,7 +880,6 @@ fn register_values<'a>(
                         ValueConstructor {
                             public: *public,
                             type_: typ.clone(),
-                            origin: constructor.location,
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
                                 arity: constructor.arguments.len(),
@@ -904,7 +907,6 @@ fn register_values<'a>(
                         location: constructor.location,
                     },
                     typ,
-                    constructor.location,
                 );
             }
         }
@@ -955,7 +957,6 @@ fn generalise_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location,
                     type_: typ,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
@@ -1055,7 +1056,6 @@ fn infer_statement(
                         location,
                     },
                     typ.clone(),
-                    location,
                 );
                 typ
             } else {
@@ -1293,7 +1293,6 @@ fn infer_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location,
                     variant: ValueConstructorVariant::ModuleConstant {
                         location: location,
                         literal: typed_expr.clone(),
@@ -1787,7 +1786,6 @@ pub fn register_import(
                         imported_name.clone(),
                         value.variant.clone(),
                         value.type_.clone(),
-                        *location,
                     );
                     variant = Some(&value.variant);
                     value_imported = true;
