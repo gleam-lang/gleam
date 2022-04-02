@@ -99,7 +99,7 @@ where
                 .values()
                 .map(|m| m.name.join("@"))
                 .filter(|m| !m.starts_with("gleam"))
-                .collect()
+                .collect(),
         )?;
 
         // Determine order in which modules are to be processed
@@ -255,7 +255,11 @@ where
         Ok(())
     }
 
-    fn clear_outdated_build_files(&mut self, current_modules_name: HashSet<String>, existing_modules_name: HashSet<String>) -> Result<()> {
+    fn clear_outdated_build_files(
+        &mut self,
+        current_modules_name: HashSet<String>,
+        existing_modules_name: HashSet<String>,
+    ) -> Result<()> {
         let mut current_build_modules = HashSet::new();
         current_build_modules.extend(current_modules_name);
         current_build_modules.extend(existing_modules_name);
