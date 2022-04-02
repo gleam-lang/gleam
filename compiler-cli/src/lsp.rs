@@ -503,7 +503,14 @@ impl LanguageServer {
         let (uri, line_numbers) = match location.module {
             None => (params.text_document.uri, &line_numbers),
             Some(name) => {
-                let module = self.compiler.sources.get(name).unwrap();
+                let module = match self.compiler.sources.get(name) {
+                    Some(module) => module,
+                    // TODO: support goto definition for functions defined in
+                    // different packages. Currently it is not possible as the
+                    // required LineNumbers and source file path information is
+                    // not stored in the module metadata.
+                    None => return Ok(None),
+                };
                 let url = Url::parse(&format!("file:///{}", &module.path)).unwrap();
                 (url, &module.line_numbers)
             }
