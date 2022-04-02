@@ -114,7 +114,6 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let value = |variant, type_| ValueConstructor {
         public: true,
-        origin: Default::default(),
         variant,
         type_,
     };
