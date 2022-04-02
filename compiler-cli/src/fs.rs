@@ -89,7 +89,12 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
                 .filter_map(Result::ok)
                 .filter(|e| e.file_type().is_file())
                 .map(|d| d.into_path())
-                .filter(|p| p.file_name().and_then(OsStr::to_str).map(|f| !f.contains("@@")).unwrap_or(false))
+                .filter(|p| {
+                    p.file_name()
+                        .and_then(OsStr::to_str)
+                        .map(|f| !f.contains("@@"))
+                        .unwrap_or(false)
+                })
                 .filter(|p| p.extension().and_then(OsStr::to_str) == Some("erl"))
         })
     }

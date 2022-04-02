@@ -91,7 +91,10 @@ where
         )?;
 
         self.clear_outdated_build_files(
-            parsed_modules.values().map(|m| m.name.replace('/', "@")).collect(),
+            parsed_modules
+                .values()
+                .map(|m| m.name.replace('/', "@"))
+                .collect(),
         )?;
 
         // Determine order in which modules are to be processed
@@ -251,8 +254,11 @@ where
         let build = self.out.join("build");
         let ebin = self.out.join("ebin");
 
-        let diffs: HashSet<String> = (&self.erlang_build_files - &source_files).iter().cloned().collect();
-       
+        let diffs: HashSet<String> = (&self.erlang_build_files - &source_files)
+            .iter()
+            .cloned()
+            .collect();
+
         tracing::info!("Deleting outdated build files");
         for diff in diffs {
             let erlang_file = format!("{}.erl", diff);

@@ -358,9 +358,8 @@ pub mod test {
         }
 
         fn erlang_files(&self, _dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-            unimplemented!() 
+            unimplemented!()
         }
-
     }
 
     impl FileSystemIO for FilesChannel {}
