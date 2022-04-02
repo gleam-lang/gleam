@@ -1177,7 +1177,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             typ: type_.clone(),
             location: select_location,
-            module_name,
+            module_name: module_name.join("/"),
             module_alias: module_alias.to_string(),
             constructor: constructor.variant.to_module_value_constructor(type_),
         })
@@ -1570,7 +1570,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .get(module_name)
                             .expect("Failed to find previously located module import")
                             .name
-                            .clone(),
+                            .join("/"),
                         typ: constructor.type_.clone(),
                         module_alias: module_name.clone(),
                         constructor: constructor
