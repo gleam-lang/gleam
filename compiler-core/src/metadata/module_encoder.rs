@@ -191,7 +191,7 @@ impl<'a> ModuleEncoder<'a> {
                 let mut builder = builder.init_module_constant();
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
-                builder.reborrow().set_module(&module);
+                builder.reborrow().set_module(module);
             }
 
             ValueConstructorVariant::Record {

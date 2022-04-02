@@ -1310,7 +1310,7 @@ fn infer_statement(
                 ValueConstructor {
                     public,
                     variant: ValueConstructorVariant::ModuleConstant {
-                        location: location,
+                        location,
                         literal: typed_expr.clone(),
                         module: module_name.join("/"),
                     },
