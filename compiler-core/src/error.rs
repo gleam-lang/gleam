@@ -10,6 +10,7 @@ use crate::{
 use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
+use std::env;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use termcolor::Buffer;
@@ -441,6 +442,23 @@ your app.src file \"{}\"",
                         "
 Documentation for installing Erlang can be viewed here:
 https://gleam.run/getting-started/",
+                    ),
+                    "rebar3" => text.push_str(
+                        "
+Documentation for installing rebar3 can be viewed here:
+https://gleam.run/getting-started/",
+                    ),
+                    _ => (),
+                }
+                match (program.as_str(), env::consts::OS) {
+                    // TODO: Further suggestions for other OSes?
+                    ("erl" | "erlc" | "escript", "macos") => text.push_str(
+                        "
+You can also install erlang via homebrew using \"brew install erlang\"",
+                    ),
+                    ("rebar3", "macos") => text.push_str(
+                        "
+You can also install rebar3 via homebrew using \"brew install rebar3\"",
                     ),
                     _ => (),
                 };
