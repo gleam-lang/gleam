@@ -92,7 +92,7 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
                 .filter(|p| {
                     p.file_name()
                         .and_then(OsStr::to_str)
-                        .map(|f| !f.contains("@@"))
+                        .map(|f| !f.starts_with("gleam@@"))
                         .unwrap_or(false)
                 })
                 .filter(|p| p.extension().and_then(OsStr::to_str) == Some("erl"))
