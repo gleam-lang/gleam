@@ -67,7 +67,7 @@ pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
 }
 
 fn module_name_to_erlang(module: &str) -> Document<'_> {
-    Document::String(module.replace("/", "@"))
+    Document::String(module.replace('/', "@"))
 }
 
 fn module_name_join(module: &[String]) -> Document<'_> {
@@ -1247,7 +1247,7 @@ fn docs_args_call<'a>(
             ..
         } => {
             let args = wrap_args(args);
-            atom(module_name.replace("/", "@"))
+            atom(module_name.replace('/', "@"))
                 .append(":")
                 .append(atom(label.to_string()))
                 .append(args)
