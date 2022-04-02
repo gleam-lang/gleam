@@ -199,9 +199,11 @@ impl<'a> ModuleEncoder<'a> {
                 field_map,
                 arity,
                 location,
+                module,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
+                builder.set_module(module);
                 builder.set_arity(*arity as u16);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);

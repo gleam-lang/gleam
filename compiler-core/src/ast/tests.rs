@@ -37,6 +37,7 @@ fn compile_expression(src: &str) -> TypedExpr {
             arity: 2,
             fields: [("name".into(), 0), ("age".into(), 1)].into(),
         }),
+        module: "mymod".into(),
     };
     environment.insert_variable(
         "Cat".into(),

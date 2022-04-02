@@ -340,6 +340,7 @@ fn record_value() {
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     name: "one".to_string(),
+                    module: "themodule".to_string(),
                     field_map: None,
                     arity: 5,
                     location: SrcSpan {
@@ -370,6 +371,7 @@ fn record_value_with_field_map() {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
+                    module: "themodule".to_string(),
                     name: "one".to_string(),
                     field_map: Some(FieldMap {
                         arity: 20,
