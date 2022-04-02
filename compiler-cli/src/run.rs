@@ -23,9 +23,6 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
         Which::Test => format!("{}_test", &config.name),
     };
 
-    // Delete the build directory before compilation
-    crate::fs::delete_dir(&gleam_core::paths::build())?;
-
     // Build project so we have bytecode to run
     let _ = crate::build::main(Options {
         perform_codegen: true,
