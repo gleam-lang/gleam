@@ -1,3 +1,7 @@
+// This module is a prototype-y mess. It has lots of TODO comments in it. Let's
+// resolve them all, inject all the IO, wrap a bunch of tests around it, and
+// move it into the `gleam_core` package.
+
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
 #![allow(clippy::todo)]
@@ -9,7 +13,7 @@ use std::{
 
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
-    build::{self, Module, Package, ProjectCompiler},
+    build::{self, Module, ProjectCompiler},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -109,6 +113,15 @@ pub struct LspMessage {
     text: String,
 }
 
+#[derive(Debug)]
+pub struct ModuleSourceInformation {
+    /// The path to the source file from within the project root
+    path: String,
+    /// Useful for converting from Gleam's byte index offsets to the LSP line
+    /// and column number positions.
+    line_numbers: LineNumbers,
+}
+
 pub struct LanguageServer {
     initialise_params: InitializeParams,
 
@@ -134,9 +147,6 @@ pub struct LanguageServer {
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
     compiler: LspProjectCompiler<ProjectIO>,
-
-    /// The result of the previous succesful compilation
-    modules: HashMap<String, Module>,
 }
 
 impl LanguageServer {
@@ -146,7 +156,6 @@ impl LanguageServer {
         Ok(Self {
             initialise_params,
             edited: HashMap::new(),
-            modules: HashMap::new(),
             stored_messages: Vec::new(),
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
@@ -341,10 +350,7 @@ impl LanguageServer {
     }
 
     fn compile(&mut self) -> Result<(), Error> {
-        let result = self.compiler.compile().map(|compiled| {
-            self.modules = compiled.into_modules_hashmap();
-        });
-
+        let result = self.compiler.compile();
         self.store_result_diagnostics(result)?;
         Ok(())
     }
@@ -473,10 +479,14 @@ impl LanguageServer {
     // TODO: test imported module records
     // TODO: test unqualified imported module records
     // TODO: test same module functions
+    // TODO: test module function calls
+    // TODO: test different package module function calls
     //
     //
     //
     // TODO: implement unqualified imported module records
+    // TODO: implement goto definition of modules that do not belong to the top
+    // level package.
     //
     fn goto_definition(&self, params: lsp::GotoDefinitionParams) -> Result<Option<lsp::Location>> {
         let params = params.text_document_position_params;
@@ -491,13 +501,11 @@ impl LanguageServer {
         };
 
         let (uri, line_numbers) = match location.module {
-            None => (params.text_document.uri, line_numbers),
+            None => (params.text_document.uri, &line_numbers),
             Some(name) => {
-                let module = self.modules.get(name).unwrap();
-                let path = module.input_path.canonicalize().ok().unwrap();
-                let path_uri = format!("file:///{}", path.as_os_str().to_str().unwrap());
-                let url = Url::parse(&path_uri).unwrap();
-                (url, LineNumbers::new(&module.code))
+                let module = self.compiler.sources.get(name).unwrap();
+                let url = Url::parse(&format!("file:///{}", &module.path)).unwrap();
+                (url, &module.line_numbers)
             }
         };
         let range = src_span_to_lsp_range(location.span, line_numbers);
@@ -590,7 +598,7 @@ impl LanguageServer {
         );
         Ok(Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(contents)),
-            range: Some(src_span_to_lsp_range(expression.location(), line_numbers)),
+            range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
         }))
     }
 
@@ -607,7 +615,7 @@ impl LanguageServer {
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
         let module_name = uri_to_module_name(uri, &self.project_root).unwrap();
-        self.modules.get(&module_name)
+        self.compiler.modules.get(&module_name)
     }
 
     fn format(&self, params: lsp::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
@@ -784,7 +792,7 @@ fn diagnostic_to_lsp(diagnostic: gleam_core::diagnostic::Diagnostic) -> LspDispl
         Some(location) => {
             let line_numbers = LineNumbers::new(&location.src);
             let diagnostic = lsp::Diagnostic {
-                range: src_span_to_lsp_range(location.label.span, line_numbers),
+                range: src_span_to_lsp_range(location.label.span, &line_numbers),
                 severity: Some(severity),
                 code: None,
                 code_description: None,
@@ -821,6 +829,9 @@ pub struct LspProjectCompiler<IO> {
 
     /// Whether the dependencies have been compiled previously
     dependencies_compiled: bool,
+
+    modules: HashMap<String, Module>,
+    sources: HashMap<String, ModuleSourceInformation>,
 }
 
 impl<IO> LspProjectCompiler<IO>
@@ -843,12 +854,15 @@ where
 
         Ok(Self {
             project_compiler,
+            modules: HashMap::new(),
+            sources: HashMap::new(),
             dependencies_compiled: false,
         })
     }
 
-    pub fn compile(&mut self) -> Result<Package, Error> {
+    pub fn compile(&mut self) -> Result<(), Error> {
         if !self.dependencies_compiled {
+            // TODO: store compiled module info
             self.project_compiler.compile_dependencies()?;
             self.dependencies_compiled = true;
         }
@@ -864,11 +878,24 @@ where
         // Restore the state so that later we can compile the root again
         self.project_compiler.restore(checkpoint);
 
-        result
+        // Return any error
+        let package = result?;
+
+        // Store the compiled module information
+        for module in package.modules {
+            let path = module.input_path.canonicalize().unwrap();
+            let path = path.as_os_str().to_string_lossy().to_string();
+            let line_numbers = LineNumbers::new(&module.code);
+            let source = ModuleSourceInformation { path, line_numbers };
+            let _ = self.sources.insert(module.name.clone(), source);
+            let _ = self.modules.insert(module.name.clone(), module);
+        }
+
+        Ok(())
     }
 }
 
-fn src_span_to_lsp_range(location: SrcSpan, line_numbers: LineNumbers) -> Range {
+fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
     let start = line_numbers.line_and_column_number(location.start);
     let end = line_numbers.line_and_column_number(location.end);
     Range {

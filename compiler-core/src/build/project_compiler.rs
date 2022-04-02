@@ -190,7 +190,7 @@ where
 
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
-            tracing::debug!(package=%package.name,"removing_failed_build");
+            tracing::debug!(package=%package.name, "removing_failed_build");
             let dir = paths::build_package(self.mode(), self.target(), &package.name);
             self.io.delete(&dir)?;
         }
