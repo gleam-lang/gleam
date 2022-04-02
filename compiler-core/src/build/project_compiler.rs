@@ -317,6 +317,7 @@ where
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.read_source_files(mode)?;
+        compiler.read_erlang_files()?;
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(

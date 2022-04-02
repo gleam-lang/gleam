@@ -63,6 +63,11 @@ impl FileSystemWriter for WasmFileSystem {
     fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         Ok(())
     }
+
+    fn delete_file(&self, path: &Path) -> Result<(), Error> {
+        tracing::trace!("delete file {:?}", path);
+        self.imfs.delete_file(path)
+    }
 }
 
 impl FileSystemReader for WasmFileSystem {
@@ -99,5 +104,10 @@ impl FileSystemReader for WasmFileSystem {
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
         tracing::trace!("read_dir {:?}", path);
         self.imfs.read_dir(path)
+    }
+
+    fn erlang_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+        tracing::trace!("erlang_files   {:?}", dir);
+        self.imfs.erlang_files(dir)
     }
 }

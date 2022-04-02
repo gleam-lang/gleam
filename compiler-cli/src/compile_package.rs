@@ -35,6 +35,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     compiler.read_source_files(Mode::Dev)?;
+    compiler.read_erlang_files()?;
     let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // Print warnings

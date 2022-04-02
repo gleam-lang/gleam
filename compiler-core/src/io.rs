@@ -124,6 +124,7 @@ pub trait FileSystemReader {
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
+    fn erlang_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
 }
 
 pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
@@ -150,6 +151,7 @@ pub trait FileSystemWriter {
     fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
+    fn delete_file(&self, path: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -320,6 +322,10 @@ pub mod test {
         fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support symlink")
         }
+
+        fn delete_file(&self, _path: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support deletion")
+        }
     }
 
     impl FileSystemReader for FilesChannel {
@@ -350,6 +356,11 @@ pub mod test {
         fn read_dir(&self, _path: &Path) -> Result<ReadDir> {
             unimplemented!()
         }
+
+        fn erlang_files(&self, _dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+            unimplemented!() 
+        }
+
     }
 
     impl FileSystemIO for FilesChannel {}

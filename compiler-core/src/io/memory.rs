@@ -62,6 +62,10 @@ impl FileSystemWriter for InMemoryFileSystem {
     fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
+
+    fn delete_file(&self, _: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
 }
 
 impl FileSystemReader for InMemoryFileSystem {
@@ -132,6 +136,18 @@ impl FileSystemReader for InMemoryFileSystem {
         );
 
         Ok(read_dir)
+    }
+
+    fn erlang_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+        #[allow(clippy::needless_collect)] // to make borrow work. FIXME.
+        let files: Vec<PathBuf> = (*self.files)
+            .borrow()
+            .iter()
+            .map(|(file_path, _)| file_path.to_path_buf())
+            .filter(|file_path| file_path.starts_with(dir))
+            .filter(|file_path| file_path.extension() == Some(OsStr::new("erl")))
+            .collect();
+        Box::new(files.into_iter())
     }
 }
 

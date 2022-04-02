@@ -30,6 +30,7 @@ pub struct PackageCompiler<'a, IO> {
     pub target: Target,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
+    pub erlang_build_files: HashSet<String>,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
@@ -64,6 +65,7 @@ where
             config,
             target,
             sources: vec![],
+            erlang_build_files: HashSet::new(),
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -86,6 +88,10 @@ where
             &self.config.name,
             std::mem::take(&mut self.sources),
             already_defined_modules,
+        )?;
+
+        self.clear_outdated_build_files(
+            parsed_modules.values().map(|m| m.name.replace('/', "@")).collect(),
         )?;
 
         // Determine order in which modules are to be processed
@@ -238,6 +244,36 @@ where
             let path = self.out.join("build").join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
         }
+        Ok(())
+    }
+
+    fn clear_outdated_build_files(&mut self, source_files: HashSet<String>) -> Result<()> {
+        let build = self.out.join("build");
+        let ebin = self.out.join("ebin");
+
+        let diffs: HashSet<String> = (&self.erlang_build_files - &source_files).iter().cloned().collect();
+       
+        tracing::info!("Deleting outdated build files");
+        for diff in diffs {
+            let erlang_file = format!("{}.erl", diff);
+            let metadata_file = format!("{}.gleam_module", diff);
+            let beam_file = format!("{}.beam", diff);
+            self.io.delete_file(&build.join(erlang_file))?;
+            self.io.delete_file(&build.join(metadata_file))?;
+            self.io.delete_file(&ebin.join(beam_file))?;
+        }
+        Ok(())
+    }
+
+    pub fn read_erlang_files(&mut self) -> Result<()> {
+        let build = self.out.join("build");
+
+        tracing::info!("Reading erlang files");
+        for path in self.io.erlang_files(&build) {
+            let name = module_name(&build, &path);
+            let _ = self.erlang_build_files.insert(name.clone());
+        }
+
         Ok(())
     }
 
