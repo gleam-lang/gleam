@@ -97,6 +97,7 @@ struct ValueConstructorVariant {
       arity @9 :UInt16;
       fieldMap @10 :Option(FieldMap);
       location @11 :SrcSpan;
+      module @12 :Text;
     }
   }
 }

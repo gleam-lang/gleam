@@ -288,6 +288,7 @@ pub enum ValueConstructorVariant {
         arity: usize,
         field_map: Option<FieldMap>,
         location: SrcSpan,
+        module: String,
     },
 }
 
@@ -299,6 +300,7 @@ impl ValueConstructorVariant {
                 arity,
                 field_map,
                 location,
+                ..
             } => ModuleValueConstructor::Record {
                 name: name.clone(),
                 field_map: field_map.clone(),
@@ -479,15 +481,17 @@ impl ValueConstructor {
 
     pub fn definition_location(&self) -> DefinitionLocation<'_> {
         match &self.variant {
-            ValueConstructorVariant::ModuleConstant {
+            ValueConstructorVariant::Record {
+                module, location, ..
+            }
+            | ValueConstructorVariant::ModuleConstant {
                 location, module, ..
             } => DefinitionLocation {
                 module: Some(module.as_str()),
                 span: *location,
             },
 
-            ValueConstructorVariant::Record { location, .. }
-            | ValueConstructorVariant::ModuleFn { location, .. }
+            ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
                 module: None,
                 span: *location,
@@ -901,6 +905,7 @@ fn register_values<'a>(
                                 arity: constructor.arguments.len(),
                                 field_map: field_map.clone(),
                                 location: constructor.location,
+                                module: module_name.join("/"),
                             },
                         },
                     );
@@ -921,6 +926,7 @@ fn register_values<'a>(
                         arity: constructor.arguments.len(),
                         field_map,
                         location: constructor.location,
+                        module: module_name.join("/"),
                     },
                     typ,
                 );

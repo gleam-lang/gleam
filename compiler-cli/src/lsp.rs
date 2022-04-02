@@ -484,7 +484,7 @@ impl LanguageServer {
     //
     //
     //
-    // TODO: implement unqualified imported module records
+    // TODO: implement unqualified imported module functions
     // TODO: implement goto definition of modules that do not belong to the top
     // level package.
     //

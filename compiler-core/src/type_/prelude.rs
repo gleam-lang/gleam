@@ -148,6 +148,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "True".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "True".to_string(),
                 field_map: None,
                 arity: 0,
@@ -160,6 +161,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "False".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "False".to_string(),
                 field_map: None,
                 arity: 0,
@@ -235,6 +237,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Nil".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Nil".to_string(),
                 arity: 0,
                 field_map: None,
@@ -282,6 +285,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Ok".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Ok".to_string(),
                 field_map: None,
                 arity: 1,
@@ -297,6 +301,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Error".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Error".to_string(),
                 field_map: None,
                 arity: 1,

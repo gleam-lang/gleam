@@ -369,6 +369,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::Record {
             name: reader.get_name()?.to_string(),
+            module: reader.get_module()?.to_string(),
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
