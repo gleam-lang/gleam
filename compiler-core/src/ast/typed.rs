@@ -325,10 +325,11 @@ impl TypedExpr {
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordAccess { .. } => None,
 
+            // TODO: test
             // TODO: definition
             TypedExpr::RecordUpdate { .. } => None,
 
-            // TODO: definition
+            // TODO: test
             TypedExpr::ModuleSelect {
                 module_name,
                 constructor,
