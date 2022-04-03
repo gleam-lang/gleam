@@ -1,7 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
-use heck::CamelCase;
-use heck::SnakeCase;
+use heck::{ToSnakeCase, ToUpperCamelCase};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct LexicalError {
@@ -263,7 +262,7 @@ impl LexicalError {
                 vec![
                     "Hint: Upnames start with an uppercase letter and contain".to_string(),
                     "only lowercase letters, numbers, and uppercase letters.".to_string(),
-                    format!("Try: {}", name.to_camel_case()),
+                    format!("Try: {}", name.to_upper_camel_case()),
                 ],
             ),
         }
