@@ -19,7 +19,7 @@ use crate::{
     },
     Result,
 };
-use heck::SnakeCase;
+use heck::ToSnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
