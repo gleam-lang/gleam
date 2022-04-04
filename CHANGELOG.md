@@ -38,6 +38,8 @@
   comments, as well as between comments and any following expression
 - Fixed a bug where `gleam format` would output an unwanted newline at the top
   of documents that only contain simple `//` comments.
+- No longer add `dev-dependencies` to generated `.app` Erlang files unless
+  we're compiling the root project (#1569)
 
 ## v0.21.0 - 2022-04-24
 
