@@ -968,7 +968,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
 
                 TypeError::RecursiveType { location } => {
                     let text = "I don't know how to work out what type this value has. It seems
-to be defined in terms of itself."
+to be defined in terms of itself.\n"
                         .into();
                     Diagnostic {
                         title: "Recursive type".into(),
