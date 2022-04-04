@@ -23,6 +23,8 @@ use std::{
     time::Instant,
 };
 
+use super::package_compiler::DependencyMode;
+
 // On Windows we have to call rebar3 via a little wrapper script.
 //
 #[cfg(not(target_os = "windows"))]
@@ -366,6 +368,11 @@ where
             &lib_path,
             self.target(),
             self.ids.clone(),
+            if is_root {
+                DependencyMode::ProdOnly
+            } else {
+                DependencyMode::IncludeDev
+            },
             self.io.clone(),
             if (is_root) {
                 Some(&mut self.build_journal)

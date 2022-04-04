@@ -21,6 +21,12 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DependencyMode {
+    ProdOnly,
+    IncludeDev,
+}
+
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -38,6 +44,7 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_beam_bytecode: bool,
     pub silence_subprocess_stdout: bool,
     pub build_journal: Option<&'a mut HashSet<PathBuf>>,
+    pub dependency_mode: DependencyMode,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -55,6 +62,7 @@ where
         lib: &'a Path,
         target: Target,
         ids: UniqueIdGenerator,
+        dependency_mode: DependencyMode,
         io: IO,
         build_journal: Option<&'a mut HashSet<PathBuf>>,
     ) -> Self {
@@ -66,6 +74,7 @@ where
             root,
             config,
             target,
+            dependency_mode,
             sources: vec![],
             write_metadata: true,
             perform_codegen: true,
@@ -307,7 +316,11 @@ where
         let io = self.io.clone();
 
         Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
-        ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
+        ErlangApp::new(&self.out.join("ebin"), self.dependency_mode).render(
+            io,
+            &self.config,
+            modules,
+        )?;
 
         if self.write_entrypoint {
             self.render_entrypoint_module(&build_dir, &mut written)?;
