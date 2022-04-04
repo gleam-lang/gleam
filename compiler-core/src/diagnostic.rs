@@ -50,7 +50,7 @@ impl Diagnostic {
         };
 
         if !self.text.is_empty() {
-            writeln!(buffer, "{}", self.text).expect("write text");
+            writeln!(buffer, "{}\n", self.text).expect("write text");
         }
 
         if let Some(hint) = &self.hint {

@@ -968,14 +968,12 @@ Names in a Gleam module must be unique so one will need to be renamed.",
 
                 TypeError::RecursiveType { location } => {
                     let text = "I don't know how to work out what type this value has. It seems
-to be defined in terms of itself.
-
-Hint: Add some type annotations and try again."
+to be defined in terms of itself."
                         .into();
                     Diagnostic {
                         title: "Recursive type".into(),
                         text,
-                        hint: None,
+                        hint: Some("Add some type annotations and try again.".into()),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1060,27 +1058,22 @@ Hint: Add some type annotations and try again."
                 } => {
                     let mut printer = Printer::new();
                     printer.with_names(annotated_names.clone());
-                    let mut text = format!(
+                    let text = format!(
                         "The {op} operator expects arguments of this type:
 
 {expected}
 
 But this argument has this type:
 
-{given}\n",
+{given}",
                         op = op.name(),
                         expected = printer.pretty_print(expected, 4),
                         given = printer.pretty_print(given, 4),
                     );
-                    if let Some(hint) = hint_alternative_operator(op, given) {
-                        text.push('\n');
-                        text.push_str("Hint: ");
-                        text.push_str(&hint);
-                    }
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
-                        hint: None,
+                        hint: hint_alternative_operator(op, given),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -1712,7 +1705,7 @@ function and try again."
                     let (label, mut extra) = match error {
                         bit_string::ErrorType::ConflictingTypeOptions { existing_type } => (
                             "This is an extra type specifier.",
-                            vec![format!("Hint: This segment already has the type {}.", existing_type)],
+                            vec![format!("This segment already has the type {}.", existing_type)],
                         ),
 
                         bit_string::ErrorType::ConflictingSignednessOptions {
@@ -1720,7 +1713,7 @@ function and try again."
                         } => (
                             "This is an extra signedness specifier.",
                             vec![format!(
-                                "Hint: This segment already has a signedness of {}.",
+                                "This segment already has a signedness of {}.",
                                 existing_signed
                             )],
                         ),
@@ -1730,67 +1723,67 @@ function and try again."
                         } => (
                             "This is an extra endianness specifier.",
                             vec![format!(
-                                "Hint: This segment already has an endianness of {}.",
+                                "This segment already has an endianness of {}.",
                                 existing_endianness
                             )],
                         ),
 
                         bit_string::ErrorType::ConflictingSizeOptions => (
                             "This is an extra size specifier.",
-                            vec!["Hint: This segment already has a size.".into()],
+                            vec!["This segment already has a size.".into()],
                         ),
 
                         bit_string::ErrorType::ConflictingUnitOptions => (
                             "This is an extra unit specifier.",
-                            vec!["Hint: A BitString segment can have at most 1 unit.".into()],
+                            vec!["A BitString segment can have at most 1 unit.".into()],
                         ),
 
                         bit_string::ErrorType::FloatWithSize => (
                             "Size cannot be used with float.",
-                            vec!["Hint: floats have an exact size of 64 bits.".into()],
+                            vec!["floats have an exact size of 64 bits.".into()],
                         ),
 
                         bit_string::ErrorType::InvalidEndianness => (
                             "This option is invalid here.",
-                            vec![wrap("Hint: signed and unsigned can only be used with int, float, utf16 and utf32 types.")],
+                            vec![wrap("signed and unsigned can only be used with int, float, utf16 and utf32 types.")],
                         ),
 
                         bit_string::ErrorType::OptionNotAllowedInValue => (
                             "This option is only allowed in BitString patterns.",
-                            vec!["Hint: This option has no effect in BitString values.".into()],
+                            vec!["This option has no effect in BitString values.".into()],
                         ),
 
                         bit_string::ErrorType::SignednessUsedOnNonInt { typ } => (
                             "Signedness is only valid with int types.",
-                            vec![format!("Hint: This segment has a type of {}", typ)],
+                            vec![format!("This segment has a type of {}", typ)],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowSize { typ } => (
                             "Size cannot be specified here",
-                            vec![format!("Hint: {} segments have an autoatic size.", typ)],
+                            vec![format!("{} segments have an autoatic size.", typ)],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowUnit { typ } => (
                             "Unit cannot be specified here",
-                            vec![wrap(&format!("Hint: {} segments are sized based on their value and cannot have a unit.", typ))],
+                            vec![wrap(&format!("{} segments are sized based on their value and cannot have a unit.", typ))],
                         ),
                         bit_string::ErrorType::VariableUtfSegmentInPattern => (
                             "This cannot be a variable",
-                            vec![wrap("Hint: in patterns utf8, utf16, and utf32  must be an exact string.")],
+                            vec![wrap("in patterns utf8, utf16, and utf32  must be an exact string.")],
                         ),
                         bit_string::ErrorType::SegmentMustHaveSize => (
                             "This segment has no size",
-                            vec![wrap("Hint: Bit string segments without a size are only allowed at the end of a bin pattern.")],
+                            vec![wrap("Bit string segments without a size are only allowed at the end of a bin pattern.")],
                         ),
                         bit_string::ErrorType::UnitMustHaveSize => (
                             "This needs an explicit size",
-                            vec!["Hint: If you specify unit() you must also specify size().".into()],
+                            vec!["If you specify unit() you must also specify size().".into()],
                         ),
                     };
                     extra.push("See: https://gleam.run/book/tour/bit-strings.html".into());
-                    let text = extra.join("\n");
+                    let hint = extra.join("\n");
                     Diagnostic {
                         title: "Invalid bit string segment".into(),
-                        text,
-                        hint: None,
+                        text: "".into(),
+                        hint: Some(hint),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
