@@ -946,7 +946,7 @@ async fn modify_package_late() {
 }
 
 #[tokio::test]
-async fn no_replace_flag() {
+async fn not_replacing() {
     let key = "my-api-key-here";
     let tarball = std::include_bytes!("../test/example.tar.gz").to_vec();
 
@@ -975,8 +975,8 @@ async fn no_replace_flag() {
     );
 
     match result {
-        Err(ApiError::NoReplaceFlag) => (),
-        result => panic!("expected Err(ApiError::NoReplaceFlag), got {:?}", result),
+        Err(ApiError::NotReplacing) => (),
+        result => panic!("expected Err(ApiError::NotReplacing), got {:?}", result),
     }
 
     mock.assert()

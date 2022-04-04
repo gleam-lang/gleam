@@ -442,7 +442,7 @@ pub fn publish_package_response(response: http::Response<Vec<u8>>) -> Result<(),
         StatusCode::UNPROCESSABLE_ENTITY => {
             let body = &String::from_utf8_lossy(&body).to_string();
             if body.contains("--replace") {
-                return Err(ApiError::NoReplaceFlag);
+                return Err(ApiError::NotReplacing);
             }
             return Err(ApiError::LateModification);
         }
@@ -494,8 +494,8 @@ pub enum ApiError {
     #[error("this account is not authorized for this action")]
     Forbidden,
 
-    #[error("must include the --replace flag to update an existing release")]
-    NoReplaceFlag,
+    #[error("must explicitly express your intention to replace the release")]
+    NotReplacing,
 
     #[error("can only modify a release up to one hour after publication")]
     LateModification,
