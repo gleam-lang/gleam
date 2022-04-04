@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     ast::SrcSpan,
     build::{
-        package_compiler::{PackageCompiler, Source},
+        package_compiler::{DependencyMode, PackageCompiler, Source},
         Origin, Target,
     },
     codegen,
@@ -51,6 +51,7 @@ macro_rules! assert_erlang_compile {
             &lib,
             Target::Erlang,
             ids,
+            DependencyMode::IncludeDev,
             file_writer,
             Some(&mut build_journal),
         );
@@ -110,6 +111,7 @@ macro_rules! assert_javascript_compile {
             &lib,
             Target::JavaScript,
             ids,
+            DependencyMode::IncludeDev,
             file_writer,
             Some(&mut build_journal),
         );
@@ -170,6 +172,7 @@ macro_rules! assert_no_warnings {
             &lib,
             Target::Erlang,
             ids,
+            DependencyMode::IncludeDev,
             file_writer,
             Some(&mut build_journal),
         );
@@ -2338,6 +2341,7 @@ fn config_compilation_test() {
                 &lib,
                 Target::Erlang,
                 ids,
+                DependencyMode::IncludeDev,
                 file_writer,
                 Some(&mut build_journal),
             );

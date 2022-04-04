@@ -4,7 +4,7 @@ use crate::{
     CompilePackage,
 };
 use gleam_core::{
-    build::{Mode, PackageCompiler},
+    build::{package_compiler::DependencyMode, Mode, PackageCompiler},
     metadata,
     type_::Module,
     uid::UniqueIdGenerator,
@@ -28,6 +28,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &options.libraries_directory,
         options.target,
         ids,
+        DependencyMode::ProdOnly,
         ProjectIO::new(),
         None,
     );
