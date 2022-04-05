@@ -15,6 +15,8 @@
 - Permit type holes in function arguments and return annotations (#1519)
 - Report unused module imports (#1553)
 - Add parse error hint for multi line clauses without curly braces (#1555)
+- Provide better error messages when rebar3 or Erlang are missing from
+  a developer's machine (#1567)
 
 ## v0.20.1 - 2022-02-24
 
