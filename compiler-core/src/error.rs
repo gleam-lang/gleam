@@ -454,7 +454,7 @@ https://gleam.run/getting-started/",
                     // TODO: Further suggestions for other OSes?
                     ("erl" | "erlc" | "escript", "macos") => text.push_str(
                         "
-You can also install erlang via homebrew using \"brew install erlang\"",
+You can also install Erlang via homebrew using \"brew install erlang\"",
                     ),
                     ("rebar3", "macos") => text.push_str(
                         "
