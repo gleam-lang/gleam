@@ -136,6 +136,8 @@ pub trait CommandExecutor {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
+        // Whether to silence stdout
+        quiet: bool,
     ) -> Result<i32, Error>;
 }
 
@@ -285,6 +287,7 @@ pub mod test {
             _args: &[String],
             _env: &[(&str, String)],
             _cwd: Option<&Path>,
+            _quiet: bool,
         ) -> Result<i32, Error> {
             Ok(0)
         }

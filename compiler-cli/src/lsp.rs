@@ -856,8 +856,11 @@ where
             target: None,
             perform_codegen: false,
         };
-        let project_compiler =
+        let mut project_compiler =
             ProjectCompiler::new(config, options, manifest.packages, telemetry, io);
+        // To avoid the Erlang compiler printing to stdout (and thus
+        // violating LSP which is currently using stdout) we silence it.
+        project_compiler.silence_subprocess_stdout = true;
 
         Ok(Self {
             project_compiler,

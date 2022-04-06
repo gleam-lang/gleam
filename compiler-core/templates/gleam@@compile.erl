@@ -1,7 +1,7 @@
 #!/usr/bin/env escript
 
 % TODO: Don't concurrently print warnings and errors
-% TODO: Unit tests perhaps.
+% TODO: Some tests
 
 -record(arguments, {lib = "./", out = "./", modules = []}).
 
@@ -76,6 +76,6 @@ configure_logging() ->
 
 log(Term) ->
     case persistent_term:get(gleam_logging_enabled) of
-        true -> io:format(standard_error, "~p~n", [Term]);
+        true -> erlang:display(Term), ok;
         false -> ok
     end.

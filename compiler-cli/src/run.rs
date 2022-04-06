@@ -67,7 +67,7 @@ fn run_erlang(config: &PackageConfig, module: &str, arguments: Vec<String>) -> R
         args.push(argument);
     }
 
-    ProjectIO::new().exec("erl", &args, &[], None)
+    ProjectIO::new().exec("erl", &args, &[], None, false)
 }
 
 fn run_javascript(
@@ -94,5 +94,5 @@ fn run_javascript(
         args.push(argument);
     }
 
-    ProjectIO::new().exec("node", &args, &[], None)
+    ProjectIO::new().exec("node", &args, &[], None, false)
 }

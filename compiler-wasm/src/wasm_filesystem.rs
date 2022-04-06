@@ -27,6 +27,7 @@ impl CommandExecutor for WasmFileSystem {
         _args: &[String],
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
+        _silence: bool,
     ) -> Result<i32, Error> {
         Ok(0) // Always succeed.
     }

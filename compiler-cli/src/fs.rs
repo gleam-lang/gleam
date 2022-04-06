@@ -13,6 +13,7 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
     path::{Path, PathBuf},
+    process::Stdio,
 };
 
 /// A `FileWriter` implementation that writes to the file system.
@@ -118,10 +119,18 @@ impl CommandExecutor for ProjectIO {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
+        quiet: bool,
     ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
+        let stdout = if quiet {
+            Stdio::null()
+        } else {
+            Stdio::inherit()
+        };
         let result = std::process::Command::new(program)
             .args(args)
+            .stdin(Stdio::null())
+            .stdout(stdout)
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
             .status();
@@ -508,7 +517,7 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
-    match ProjectIO::new().exec("git", &args, &[], None) {
+    match ProjectIO::new().exec("git", &args, &[], None, false) {
         Ok(_) => Ok(()),
         Err(err) => match err {
             Error::ShellProgramNotFound { .. } => Ok(()),

@@ -36,6 +36,7 @@ pub struct PackageCompiler<'a, IO> {
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
+    pub silence_subprocess_stdout: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -69,6 +70,7 @@ where
             write_entrypoint: false,
             copy_native_files: true,
             compile_beam_bytecode: true,
+            silence_subprocess_stdout: false,
         }
     }
 
@@ -147,7 +149,9 @@ where
                 .to_string();
             args.push(path);
         }
-        let status = self.io.exec("escript", &args, &[], None)?;
+        let status = self
+            .io
+            .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
 
         if status == 0 {
             Ok(())
