@@ -80,6 +80,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [José Valim](https://github.com/josevalim)
  - [João Veiga](https://github.com/jveiga)
  - [Kapp Technology](https://github.com/kapp-technology)
+ - [kee-oth](https://github.com/kee-oth)
  - [Lars Wikman](https://github.com/lawik)
  - [Marcin Puc](https://github.com/tranzystorek-io)
  - [Marius Kalvø](https://github.com/mariuskalvo)
