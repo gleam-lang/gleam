@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 415
+expression: "pub fn negate(x) {\n  !x\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([negate/1]).
+
+-spec negate(boolean()) -> boolean().
+negate(X) ->
+    not X.
+
