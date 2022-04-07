@@ -38,7 +38,7 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are
     /// in the correct order.
     ///
-    pub fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: SrcSpan) -> Result<(), Error> {
+    pub fn reorder<A>(&self, args: &mut [CallArg<A>], location: SrcSpan) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
         let mut seen_labels = std::collections::HashSet::new();
         let mut unknown_labels = Vec::new();
