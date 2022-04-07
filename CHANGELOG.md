@@ -8,6 +8,7 @@
 - Log message colours can be disabled by setting the `GLEAM_LOG_NOCOLOUR`
   environment variable.
 - You can now specify multiple packages when using `gleam add`
+- Bools can now be negated with the `!` unary operator.
 - If the compiler version changes we now rebuild the project from scratch on
   next build command (#1547)
 - Updated the "Unknown label" error message to match other error messages
