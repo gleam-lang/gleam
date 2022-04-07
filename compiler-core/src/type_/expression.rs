@@ -275,8 +275,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let value = self.infer(*value)?;
 
-        self.unify(value.type_(), bool())
-            .map_err(|e| convert_unify_error(e, location))?;
+        self.unify(bool(), value.type_())
+            .map_err(|e| convert_unify_error(e, value.location()))?;
 
         Ok(TypedExpr::Negate {
             location,
