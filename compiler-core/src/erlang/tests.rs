@@ -418,3 +418,15 @@ fn negation() {
 }"
     )
 }
+
+#[test]
+fn negation_block() {
+    assert_erl!(
+        "pub fn negate(x) {
+  !{
+    123
+    x
+  }
+}"
+    )
+}

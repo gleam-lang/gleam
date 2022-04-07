@@ -3322,3 +3322,16 @@ fn negation() {
 "
     );
 }
+
+#[test]
+fn negation_block() {
+    assert_format!(
+        "pub fn negate(x) {
+  !{
+    123
+    x
+  }
+}
+"
+    );
+}
