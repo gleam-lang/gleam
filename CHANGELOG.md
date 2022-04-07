@@ -10,14 +10,17 @@
 - You can now specify multiple packages when using `gleam add`.
 - Bools can now be negated with the `!` unary operator.
 - If the compiler version changes we now rebuild the project from scratch on
-  next build command (#1547)
+  next build command to avoid issues arising from reading metadata in an old
+  format. (#1547)
 - Updated the "Unknown label" error message to match other error messages
   (#1548)
-- Permit type holes in function arguments and return annotations (#1519)
-- Report unused module imports (#1553)
-- Add parse error hint for multi line clauses without curly braces (#1555)
-- Provide better error messages when rebar3 or Erlang are missing from
-  a developer's machine (#1567)
+- Type holes are now permitted in function arguments and return annotations.
+  (#1519)
+- Unused module imports now emit a warning. (#1553)
+- The error message for failing to parse a multiline clauses without curly
+  braces has been improved with a hint on how to fix the issue. (#1555)
+- The error messages for when rebar3 or Erlang are missing from the machine has
+  been improved with a tip on how to install them. (#1567)
 
 ## v0.20.1 - 2022-02-24
 
