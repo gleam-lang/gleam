@@ -75,5 +75,5 @@ capnpc = "0.14.4"
 [dev-dependencies]
 # Test assertion errors with diffs
 pretty_assertions = "1.0.0"
-# Snapshot testing to make test maintainence easier
+# Snapshot testing to make test maintenance easier
 insta = "1.8.0"
