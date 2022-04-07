@@ -3317,7 +3317,8 @@ fn first_argument_capture_special_case_fn() {
 fn negation() {
     assert_format!(
         "pub fn negate(x) {
-    !x
-}"
+  !x
+}
+"
     );
 }
