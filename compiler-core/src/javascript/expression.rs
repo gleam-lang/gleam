@@ -162,13 +162,17 @@ impl<'module> Generator<'module> {
                 ..
             } => Ok(self.module_select(module_alias, label, constructor)),
 
-            TypedExpr::Negate { value, .. } => Ok(docvec!["!", self.expression(value)?]),
+            TypedExpr::Negate { value, .. } => self.negate(value),
         }?;
         Ok(if expression.handles_own_return() {
             document
         } else {
             self.wrap_return(document)
         })
+    }
+
+    fn negate<'a>(&mut self, value: &'a TypedExpr) -> Output<'a> {
+        self.not_in_tail_position(|gen| Ok(docvec!("!", gen.wrap_expression(value)?)))
     }
 
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
