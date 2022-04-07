@@ -37,6 +37,7 @@ pub fn main() -> Int {
       suite("record access", record_access_tests()),
       suite("shadowed module", shadowed_module_tests()),
       suite("unicode overflow", unicode_overflow_tests()),
+      suite("negation", negation_tests()),
     ])
 
   case stats.failures {
@@ -1206,4 +1207,22 @@ fn tail_recursive_accumulate_down(x, y) {
     0 -> y
     _ -> tail_recursive_accumulate_down(x - 1, [x, ..y])
   }
+}
+
+fn negation_tests() {
+  [
+    "!True"
+    |> example(fn() { assert_equal(False, !True) }),
+    "!False"
+    |> example(fn() { assert_equal(True, !False) }),
+    "!!False"
+    |> example(fn() { assert_equal(False, !!False) }),
+    "!!True"
+    |> example(fn() { assert_equal(True, !!True) }),
+    // This would crash if the right hand side evaluated
+    "!True && assert False = True"
+    |> example(fn() { assert_equal(False, !True && assert False = True) }),
+    "!False || assert False = True"
+    |> example(fn() { assert_equal(True, !False || assert False = True) }),
+  ]
 }
