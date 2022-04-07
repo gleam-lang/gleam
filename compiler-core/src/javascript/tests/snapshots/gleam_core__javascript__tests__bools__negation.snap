@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 116
+expression: "pub fn negate(x) {\n    !x\n}"
+
+---
+export function negate(x) {
+  return !x;
+}
+
