@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 424
+expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
+
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([negate/1]).
+
+-spec negate(boolean()) -> boolean().
+negate(X) ->
+    not begin
+        123,
+        X
+    end.
+
