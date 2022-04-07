@@ -542,11 +542,14 @@ where
             }
 
             // Boolean negation
-            Some((start, Token::Bang, end)) => {
+            Some((start, Token::Bang, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
                     Some(value) => UntypedExpr::Negate {
-                        location: SrcSpan { start, end },
+                        location: SrcSpan {
+                            start,
+                            end: value.location().end,
+                        },
                         value: Box::from(value),
                     },
                     None => {

@@ -414,3 +414,31 @@ case 1, 2 {
     assert_eq!(case.find_node(25), Some(&case));
     assert_eq!(case.find_node(26), None);
 }
+
+#[test]
+fn find_node_bool() {
+    let negate = compile_expression(r#"!True"#);
+
+    let bool = TypedExpr::Var {
+        location: SrcSpan { start: 1, end: 5 },
+        constructor: ValueConstructor {
+            public: true,
+            variant: ValueConstructorVariant::Record {
+                name: "True".into(),
+                arity: 0,
+                field_map: None,
+                location: SrcSpan { start: 0, end: 0 },
+                module: "".into(),
+            },
+            type_: type_::bool(),
+        },
+        name: "True".into(),
+    };
+
+    assert_eq!(negate.find_node(0), Some(&negate));
+    assert_eq!(negate.find_node(1), Some(&bool));
+    assert_eq!(negate.find_node(2), Some(&bool));
+    assert_eq!(negate.find_node(3), Some(&bool));
+    assert_eq!(negate.find_node(4), Some(&bool));
+    assert_eq!(negate.find_node(5), None);
+}
