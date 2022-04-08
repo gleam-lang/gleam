@@ -62,6 +62,10 @@ impl FileSystemWriter for InMemoryFileSystem {
     fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
+
+    fn delete_file(&self, _: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
 }
 
 impl FileSystemReader for InMemoryFileSystem {
