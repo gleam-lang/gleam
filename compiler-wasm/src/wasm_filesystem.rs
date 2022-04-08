@@ -64,6 +64,11 @@ impl FileSystemWriter for WasmFileSystem {
     fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
         Ok(())
     }
+
+    fn delete_file(&self, path: &Path) -> Result<(), Error> {
+        tracing::trace!("delete file {:?}", path);
+        self.imfs.delete_file(path)
+    }
 }
 
 impl FileSystemReader for WasmFileSystem {
