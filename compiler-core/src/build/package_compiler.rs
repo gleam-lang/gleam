@@ -154,6 +154,14 @@ where
                 .to_string();
             args.push(path.clone());
             let _ = build_journal.insert(path);
+            let beam_path = self
+                .out
+                .join("ebin")
+                .join(module)
+                .with_extension("beam")
+                .to_string_lossy()
+                .to_string();
+            let _ = build_journal.insert(beam_path);
         }
         let status = self
             .io
