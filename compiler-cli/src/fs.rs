@@ -110,6 +110,10 @@ impl FileSystemWriter for ProjectIO {
     fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error> {
         symlink_dir(from, to)
     }
+
+    fn delete_file(&self, path: &Path) -> Result<()> {
+        delete_file(path)
+    }
 }
 
 impl CommandExecutor for ProjectIO {
@@ -169,20 +173,20 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-// pub fn delete(file: &PathBuf) -> Result<(), Error> {
-//     tracing::debug!("Deleting file {:?}", file);
-//     if file.exists() {
-//         std::fs::remove_file(&file).map_err(|e| Error::FileIO {
-//             action: FileIOAction::Delete,
-//             kind: FileKind::File,
-//             path: file.clone(),
-//             err: Some(e.to_string()),
-//         })?;
-//     } else {
-//         tracing::debug!("Did not exist for deletion: {:?}", file);
-//     }
-//     Ok(())
-// }
+pub fn delete_file(file: &Path) -> Result<(), Error> {
+    tracing::debug!("Deleting file {:?}", file);
+    if file.exists() {
+        std::fs::remove_file(&file).map_err(|e| Error::FileIo {
+            action: FileIoAction::Delete,
+            kind: FileKind::File,
+            path: file.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
+    } else {
+        tracing::debug!("Did not exist for deletion: {:?}", file);
+    }
+    Ok(())
+}
 
 pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Error> {
     for file in outputs {

@@ -152,6 +152,7 @@ pub trait FileSystemWriter {
     fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn symlink_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
+    fn delete_file(&self, path: &Path) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -322,6 +323,10 @@ pub mod test {
 
         fn symlink_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support symlink")
+        }
+
+        fn delete_file(&self, _path: &Path) -> Result<(), Error> {
+            panic!("FilesChannel does not support deletion")
         }
     }
 
