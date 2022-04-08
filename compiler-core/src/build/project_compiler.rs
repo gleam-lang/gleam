@@ -21,6 +21,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+use itertools::Itertools;
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -52,6 +53,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     ids: UniqueIdGenerator,
     io: IO,
+    builds_journal: HashSet<String>,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub silence_subprocess_stdout: bool,
@@ -87,6 +89,7 @@ where
             options,
             config,
             io,
+            builds_journal: HashSet::new(),
         }
     }
 
@@ -130,6 +133,8 @@ where
         }
         let result = self.compile_root_package();
 
+        self.check_build_journal();
+
         // Print warnings
         for warning in &self.warnings {
             self.telemetry.warning(warning);
@@ -172,6 +177,32 @@ where
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path: version_path,
+                err: Some(e.to_string()),
+            })
+    }
+
+    /// Checks that build journal file found in the build directory matches the
+    /// current build of gleam. If not, we will clear the outdated files
+    pub fn check_build_journal(&self) -> Result<(), Error> {
+        let build_path = paths::build_packages(self.mode(), self.target());
+        let journal_path = paths::build_journal(self.mode(), self.target());
+        if self.io.is_file(&journal_path) {
+            let io_journals = self.io.read(&journal_path)?;
+            let old_journals: HashSet<String> = io_journals.lines().map(String::from).collect();
+            
+            tracing::info!("Deleting outdated build files");
+            for diff in old_journals.difference(&self.builds_journal) {
+                self.io.delete_file(Path::new(&diff));
+            }
+        }
+
+        let mut writer = self.io.writer(&journal_path)?;
+        writer
+            .write_str(&self.builds_journal.iter().join("\n"))
+            .map_err(|e| Error::FileIo {
+                action: FileIoAction::WriteTo,
+                kind: FileKind::File,
+                path: journal_path,
                 err: Some(e.to_string()),
             })
     }
@@ -342,6 +373,7 @@ where
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
+            &mut self.builds_journal,
         )?;
 
         Ok(compiled)
