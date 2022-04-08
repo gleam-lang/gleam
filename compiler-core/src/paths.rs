@@ -112,6 +112,12 @@ pub fn build_gleam_version(mode: Mode, target: Target) -> PathBuf {
     build_packages(mode, target).join("gleam_version")
 }
 
+/// A path to a special file that contains the build journal of gleam that last built
+/// the artifacts.
+pub fn build_journal(mode: Mode, target: Target) -> PathBuf {
+    build_packages(mode, target).join("gleam_build_journal")
+}
+
 #[test]
 fn paths() {
     assert!(default_gleam_cache().ends_with("gleam"));
