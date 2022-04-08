@@ -79,6 +79,7 @@ where
         warnings: &mut Vec<Warning>,
         existing_modules: &mut im::HashMap<String, type_::Module>,
         already_defined_modules: &mut im::HashMap<String, PathBuf>,
+        builds_journal: &mut HashSet<String>,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -111,14 +112,14 @@ where
         )?;
 
         tracing::info!("Performing code generation");
-        self.perform_codegen(&modules)?;
+        self.perform_codegen(&modules, builds_journal)?;
 
-        self.encode_and_write_metadata(&modules)?;
+        self.encode_and_write_metadata(&modules, builds_journal)?;
 
         Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>, build_journal: &mut HashSet<String>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
         let escript_path = self.out.join("build").join("gleam@@compile.erl");
@@ -147,13 +148,15 @@ where
                 .with_extension("erl")
                 .to_string_lossy()
                 .to_string();
-            args.push(path);
+            args.push(path.clone());
+            let _ = build_journal.insert(path);
         }
         let status = self
             .io
             .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
 
         if status == 0 {
+            let _ = build_journal.insert(escript_path.to_string_lossy().to_string());
             Ok(())
         } else {
             Err(Error::ShellCommand {
@@ -167,6 +170,7 @@ where
         &mut self,
         build_dir: &Path,
         modules: &mut HashSet<PathBuf>,
+        builds_journal: &mut HashSet<String>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
 
@@ -181,9 +185,9 @@ where
         let src = self.root.join("src");
         let test = self.root.join("test");
         let mut copied = HashSet::new();
-        self.copy_native_files(&src, build_dir, &mut copied, modules)?;
+        self.copy_native_files(&src, build_dir, &mut copied, modules, builds_journal)?;
         if self.io.is_directory(&test) {
-            self.copy_native_files(&test, build_dir, &mut copied, modules)?;
+            self.copy_native_files(&test, build_dir, &mut copied, modules, builds_journal)?;
         }
 
         Ok(())
@@ -195,6 +199,7 @@ where
         out: &Path,
         copied: &mut HashSet<PathBuf>,
         to_compile_modules: &mut HashSet<PathBuf>,
+        builds_journal: &mut HashSet<String>,
     ) -> Result<()> {
         self.io.mkdir(&out)?;
 
@@ -220,6 +225,7 @@ where
             };
 
             self.io.copy(&path, &out.join(&relative_path))?;
+            let _ = builds_journal.insert(out.join(&relative_path).to_string_lossy().to_string());
 
             // TODO: test
             if !copied.insert(relative_path.clone()) {
@@ -231,7 +237,7 @@ where
         Ok(())
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
+    fn encode_and_write_metadata(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<()> {
         if !self.write_metadata {
             tracing::info!("Package metadata writing disabled");
             return Ok(());
@@ -241,6 +247,7 @@ where
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
             let path = self.out.join("build").join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
+            let _ = builds_journal.insert(path.to_string_lossy().to_string());
         }
         Ok(())
     }
@@ -278,19 +285,19 @@ where
         Ok(())
     }
 
-    fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
+    fn perform_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<()> {
         if !self.perform_codegen {
             tracing::info!("skipping_codegen");
             return Ok(());
         }
 
         match self.target {
-            Target::JavaScript => self.perform_javascript_codegen(modules),
-            Target::Erlang => self.perform_erlang_codegen(modules),
+            Target::JavaScript => self.perform_javascript_codegen(modules, builds_journal),
+            Target::Erlang => self.perform_erlang_codegen(modules, builds_journal),
         }
     }
 
-    fn perform_erlang_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+    fn perform_erlang_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
@@ -300,34 +307,34 @@ where
         ErlangApp::new(&self.out.join("ebin")).render(io, &self.config, modules)?;
 
         if self.write_entrypoint {
-            self.render_entrypoint_module(&build_dir, &mut written)?;
+            self.render_entrypoint_module(&build_dir, &mut written, builds_journal)?;
         } else {
             tracing::info!("skipping_entrypoint_generation");
         }
 
         if self.copy_native_files {
-            self.copy_project_native_files(&build_dir, &mut written)?;
+            self.copy_project_native_files(&build_dir, &mut written, builds_journal)?;
         } else {
             tracing::info!("skipping_native_file_copying");
         }
 
         if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
-            self.compile_erlang_to_beam(&written)?;
+            self.compile_erlang_to_beam(&written, builds_journal)?;
         } else {
             tracing::info!("skipping_erlang_bytecode_compilation");
         }
         Ok(())
     }
 
-    fn perform_javascript_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+    fn perform_javascript_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<(), Error> {
         let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
 
         JavaScript::new(&artifact_dir).render(&self.io, modules)?;
 
         if self.copy_native_files {
-            self.copy_project_native_files(&artifact_dir, &mut written)?;
+            self.copy_project_native_files(&artifact_dir, &mut written, builds_journal)?;
         }
         Ok(())
     }
@@ -336,6 +343,7 @@ where
         &self,
         out: &Path,
         modules_to_compile: &mut HashSet<PathBuf>,
+        builds_journal: &mut HashSet<String>,
     ) -> Result<(), Error> {
         let name = "gleam@@main.erl";
         let module = ErlangEntrypointModule {
@@ -345,6 +353,7 @@ where
         .expect("Erlang entrypoint rendering");
         self.io.writer(&out.join(name))?.write(module.as_bytes())?;
         let _ = modules_to_compile.insert(name.into());
+        let _ = builds_journal.insert(out.join(name).to_string_lossy().to_string());
         Ok(())
     }
 }
