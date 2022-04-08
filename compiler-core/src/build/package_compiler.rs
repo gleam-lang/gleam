@@ -119,7 +119,11 @@ where
         Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>, build_journal: &mut HashSet<String>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(
+        &mut self,
+        modules: &HashSet<PathBuf>,
+        build_journal: &mut HashSet<String>,
+    ) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
         let escript_path = self.out.join("build").join("gleam@@compile.erl");
@@ -237,7 +241,11 @@ where
         Ok(())
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<()> {
+    fn encode_and_write_metadata(
+        &mut self,
+        modules: &[Module],
+        builds_journal: &mut HashSet<String>,
+    ) -> Result<()> {
         if !self.write_metadata {
             tracing::info!("Package metadata writing disabled");
             return Ok(());
@@ -285,7 +293,11 @@ where
         Ok(())
     }
 
-    fn perform_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<()> {
+    fn perform_codegen(
+        &mut self,
+        modules: &[Module],
+        builds_journal: &mut HashSet<String>,
+    ) -> Result<()> {
         if !self.perform_codegen {
             tracing::info!("skipping_codegen");
             return Ok(());
@@ -297,7 +309,11 @@ where
         }
     }
 
-    fn perform_erlang_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<(), Error> {
+    fn perform_erlang_codegen(
+        &mut self,
+        modules: &[Module],
+        builds_journal: &mut HashSet<String>,
+    ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
@@ -327,7 +343,11 @@ where
         Ok(())
     }
 
-    fn perform_javascript_codegen(&mut self, modules: &[Module], builds_journal: &mut HashSet<String>) -> Result<(), Error> {
+    fn perform_javascript_codegen(
+        &mut self,
+        modules: &[Module],
+        builds_journal: &mut HashSet<String>,
+    ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
 
