@@ -31,6 +31,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         ids,
         ProjectIO::new(),
     );
+    compiler.write_build_journal = false;
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;

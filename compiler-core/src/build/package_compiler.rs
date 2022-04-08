@@ -37,6 +37,7 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub silence_subprocess_stdout: bool,
+    pub write_build_journal: bool,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -71,6 +72,7 @@ where
             copy_native_files: true,
             compile_beam_bytecode: true,
             silence_subprocess_stdout: false,
+            write_build_journal: false,
         }
     }
 
@@ -153,7 +155,7 @@ where
                 .to_string_lossy()
                 .to_string();
             args.push(path.clone());
-            let _ = build_journal.insert(path);
+            self.add_build_journal(build_journal, path);
             let beam_path = self
                 .out
                 .join("ebin")
@@ -161,14 +163,14 @@ where
                 .with_extension("beam")
                 .to_string_lossy()
                 .to_string();
-            let _ = build_journal.insert(beam_path);
+            self.add_build_journal(build_journal, beam_path);
         }
         let status = self
             .io
             .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
 
         if status == 0 {
-            let _ = build_journal.insert(escript_path.to_string_lossy().to_string());
+            self.add_build_journal(build_journal, escript_path.to_string_lossy().to_string());
             Ok(())
         } else {
             Err(Error::ShellCommand {
@@ -237,7 +239,10 @@ where
             };
 
             self.io.copy(&path, &out.join(&relative_path))?;
-            let _ = builds_journal.insert(out.join(&relative_path).to_string_lossy().to_string());
+            self.add_build_journal(
+                builds_journal,
+                out.join(&relative_path).to_string_lossy().to_string(),
+            );
 
             // TODO: test
             if !copied.insert(relative_path.clone()) {
@@ -263,7 +268,7 @@ where
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
             let path = self.out.join("build").join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
-            let _ = builds_journal.insert(path.to_string_lossy().to_string());
+            self.add_build_journal(builds_journal, path.to_string_lossy().to_string());
         }
         Ok(())
     }
@@ -298,6 +303,13 @@ where
             code,
             origin,
         });
+        Ok(())
+    }
+
+    fn add_build_journal(&self, builds_journal: &mut HashSet<String>, path: String) -> Result<()> {
+        if self.write_build_journal {
+            let _ = builds_journal.insert(path);
+        }
         Ok(())
     }
 
@@ -381,7 +393,7 @@ where
         .expect("Erlang entrypoint rendering");
         self.io.writer(&out.join(name))?.write(module.as_bytes())?;
         let _ = modules_to_compile.insert(name.into());
-        let _ = builds_journal.insert(out.join(name).to_string_lossy().to_string());
+        self.add_build_journal(builds_journal, out.join(name).to_string_lossy().to_string());
         Ok(())
     }
 }
