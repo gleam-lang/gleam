@@ -14,6 +14,7 @@ use crate::{
     version::COMPILER_VERSION,
     warning, Error, Result, Warning,
 };
+use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -21,7 +22,6 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use itertools::Itertools;
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -189,7 +189,7 @@ where
         if self.io.is_file(&journal_path) {
             let io_journals = self.io.read(&journal_path)?;
             let old_journals: HashSet<String> = io_journals.lines().map(String::from).collect();
-            
+
             tracing::info!("Deleting outdated build files");
             for diff in old_journals.difference(&self.builds_journal) {
                 self.io.delete_file(Path::new(&diff));

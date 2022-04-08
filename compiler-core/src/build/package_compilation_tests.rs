@@ -11,7 +11,7 @@ use crate::{
     io::test::FilesChannel,
     javascript, type_,
 };
-use std::{path::PathBuf, sync::Arc, collections::HashSet};
+use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
 use hexpm::version::{Range, Version};
 use pretty_assertions::assert_eq;
@@ -48,7 +48,12 @@ macro_rules! assert_erlang_compile {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut im::HashMap::new(), &mut HashSet::new())
+            .compile(
+                &mut vec![],
+                &mut modules,
+                &mut im::HashMap::new(),
+                &mut HashSet::new(),
+            )
             .map(|_| {
                 let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
@@ -102,7 +107,12 @@ macro_rules! assert_javascript_compile {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut im::HashMap::new(), &mut HashSet::new())
+            .compile(
+                &mut vec![],
+                &mut modules,
+                &mut im::HashMap::new(),
+                &mut HashSet::new(),
+            )
             .map(|_| {
                 let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
@@ -150,7 +160,12 @@ macro_rules! assert_no_warnings {
         compiler.copy_native_files = false;
         compiler.sources = $sources;
         let outputs = compiler
-            .compile(&mut warnings, &mut modules, &mut im::HashMap::new(), &mut HashSet::new())
+            .compile(
+                &mut warnings,
+                &mut modules,
+                &mut im::HashMap::new(),
+                &mut HashSet::new(),
+            )
             .unwrap();
         assert_eq!(vec![] as Vec<crate::Warning>, warnings);
     };
@@ -2309,7 +2324,12 @@ fn config_compilation_test() {
             compiler.copy_native_files = false;
             compiler.sources = $sources;
             let compiled = compiler
-                .compile(&mut vec![], &mut modules, &mut im::HashMap::new(), &mut HashSet::new())
+                .compile(
+                    &mut vec![],
+                    &mut modules,
+                    &mut im::HashMap::new(),
+                    &mut HashSet::new(),
+                )
                 .expect("Should compile OK");
             let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
             outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());

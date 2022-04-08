@@ -1,3 +1,8 @@
+use crate::{
+    config,
+    fs::{self, ProjectIO},
+    CompilePackage,
+};
 use gleam_core::{
     build::{Mode, PackageCompiler},
     metadata,
@@ -5,15 +10,7 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{
-    collections::HashSet,
-    path::Path,
-};
-use crate::{
-    config,
-    fs::{self, ProjectIO},
-    CompilePackage,
-};
+use std::{collections::HashSet, path::Path};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
@@ -38,7 +35,12 @@ pub fn command(options: CompilePackage) -> Result<()> {
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     compiler.read_source_files(Mode::Dev)?;
-    let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules, &mut builds_journal)?;
+    let _ = compiler.compile(
+        &mut warnings,
+        &mut type_manifests,
+        &mut defined_modules,
+        &mut builds_journal,
+    )?;
 
     // Print warnings
     for warning in warnings {
