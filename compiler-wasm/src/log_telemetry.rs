@@ -23,4 +23,12 @@ impl Telemetry for LogTelemetry {
 
         tracing::warn!("Warning: {:?}", string);
     }
+
+    fn downloading_package(&self, name: &str) {
+        tracing::info!("Downloading package: {}", name);
+    }
+
+    fn resolving_package_versions(&self) {
+        tracing::info!("Resolving package versions");
+    }
 }

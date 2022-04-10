@@ -309,7 +309,9 @@ fn main() {
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 
-        Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
+        Command::Deps(Dependencies::Download) => {
+            dependencies::download(cli::Reporter::new(), None).map(|_| ())
+        }
 
         Command::New(options) => new::create(options, VERSION),
 

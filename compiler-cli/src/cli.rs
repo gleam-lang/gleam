@@ -33,6 +33,14 @@ impl Telemetry for Reporter {
     fn warning(&self, warning: &Warning) {
         print_warning(warning)
     }
+
+    fn downloading_package(&self, name: &str) {
+        print_downloading(name)
+    }
+
+    fn resolving_package_versions(&self) {
+        print_resolving_versions()
+    }
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {
@@ -78,15 +86,15 @@ pub fn print_publishing_documentation() {
     print_colourful_prefix(" Publishing", "documentation");
 }
 
-pub fn print_downloading(text: &str) {
+fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
 }
 
-pub fn print_resolving_versions() {
+fn print_resolving_versions() {
     print_colourful_prefix("  Resolving", "versions")
 }
 
-pub fn print_compiling(text: &str) {
+fn print_compiling(text: &str) {
     print_colourful_prefix("  Compiling", text)
 }
 

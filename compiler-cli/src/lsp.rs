@@ -848,7 +848,7 @@ where
     pub fn new(io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = Box::new(cli::Reporter::new());
-        let manifest = crate::dependencies::download(None)?;
+        let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
         let config = crate::config::root_config()?;
 
         let options = build::Options {
