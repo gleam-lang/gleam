@@ -34,6 +34,9 @@ use lsp_types::{
 
 use crate::fs::ProjectIO;
 
+const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
+const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
+
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
@@ -270,6 +273,7 @@ impl LanguageServer {
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
+        self.create_compilation_progress_token(&connection);
         self.start_watching_gleam_toml(&connection);
 
         // Compile the project once so we have all the state and any initial errors
@@ -304,6 +308,21 @@ impl LanguageServer {
             }
         }
         Ok(())
+    }
+
+    fn create_compilation_progress_token(&mut self, connection: &lsp_server::Connection) {
+        let params = lsp::WorkDoneProgressCreateParams {
+            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.into()),
+        };
+        let request = lsp_server::Request {
+            id: CREATE_COMPILING_PROGRESS_TOKEN.to_string().into(),
+            method: "window/workDoneProgress/create".into(),
+            params: serde_json::to_value(&params).expect("WorkDoneProgressCreateParams json"),
+        };
+        connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .expect("WorkDoneProgressCreate");
     }
 
     fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
