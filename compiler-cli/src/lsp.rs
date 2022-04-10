@@ -13,7 +13,7 @@ use std::{
 
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
-    build::{self, Module, ProjectCompiler},
+    build::{self, Module, ProjectCompiler, Telemetry},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -31,7 +31,7 @@ use lsp_types::{
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
 
-use crate::{cli, fs::ProjectIO};
+use crate::fs::ProjectIO;
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
@@ -826,6 +826,31 @@ fn path_to_uri(path: PathBuf) -> Url {
     Url::parse(&file).unwrap()
 }
 
+#[derive(Debug, Clone, Copy)]
+struct NullTelemetry;
+
+impl Telemetry for NullTelemetry {
+    fn resolving_package_versions(&self) {
+        ()
+    }
+
+    fn downloading_package(&self, _name: &str) {
+        ()
+    }
+
+    fn compiling_package(&self, _name: &str) {
+        ()
+    }
+
+    fn checking_package(&self, _name: &str) {
+        ()
+    }
+
+    fn warning(&self, _warning: &gleam_core::Warning) {
+        ()
+    }
+}
+
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
 /// compiled dependency packages.
@@ -847,8 +872,8 @@ where
 {
     pub fn new(io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
-        let telemetry = Box::new(cli::Reporter::new());
-        let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
+        let telemetry = NullTelemetry;
+        let manifest = crate::dependencies::download(telemetry, None)?;
         let config = crate::config::root_config()?;
 
         let options = build::Options {
@@ -857,7 +882,7 @@ where
             perform_codegen: false,
         };
         let mut project_compiler =
-            ProjectCompiler::new(config, options, manifest.packages, telemetry, io);
+            ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.silence_subprocess_stdout = true;
