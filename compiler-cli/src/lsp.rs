@@ -277,7 +277,7 @@ impl LanguageServer {
         self.start_watching_gleam_toml(&connection);
 
         // Compile the project once so we have all the state and any initial errors
-        self.compile()?;
+        self.compile(&connection)?;
         self.publish_stored_diagnostics(&connection);
 
         // Enter the message loop, handling each message that comes in from the client
@@ -325,6 +325,45 @@ impl LanguageServer {
             .expect("WorkDoneProgressCreate");
     }
 
+    fn notify_client_of_compilation_start(&self, connection: &lsp_server::Connection) {
+        self.send_work_done_notification(
+            connection,
+            lsp::WorkDoneProgress::Begin(lsp::WorkDoneProgressBegin {
+                title: "Compiling Gleam".into(),
+                cancellable: Some(false),
+                message: None,
+                percentage: None,
+            }),
+        );
+    }
+
+    fn notify_client_of_compilation_end(&self, connection: &lsp_server::Connection) {
+        self.send_work_done_notification(
+            connection,
+            lsp::WorkDoneProgress::End(lsp::WorkDoneProgressEnd { message: None }),
+        );
+    }
+
+    fn send_work_done_notification(
+        &self,
+        connection: &lsp_server::Connection,
+        work_done: lsp::WorkDoneProgress,
+    ) {
+        tracing::info!("sending {:?}", work_done);
+        let params = lsp::ProgressParams {
+            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.to_string()),
+            value: lsp::ProgressParamsValue::WorkDone(work_done),
+        };
+        let notification = lsp_server::Notification {
+            method: "$/progress".into(),
+            params: serde_json::to_value(&params).expect("ProgressParams json"),
+        };
+        connection
+            .sender
+            .send(lsp_server::Message::Notification(notification))
+            .expect("send_work_done_notification send")
+    }
+
     fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
         let supports_watch_files = self
             .initialise_params
@@ -369,8 +408,10 @@ impl LanguageServer {
             .unwrap();
     }
 
-    fn compile(&mut self) -> Result<(), Error> {
+    fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+        self.notify_client_of_compilation_start(connection);
         let result = self.compiler.compile();
+        self.notify_client_of_compilation_end(connection);
         self.store_result_diagnostics(result)?;
         Ok(())
     }
@@ -413,7 +454,7 @@ impl LanguageServer {
         match notification.method.as_str() {
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification).unwrap();
-                let result = self.text_document_did_save(params);
+                let result = self.text_document_did_save(params, connection);
                 self.publish_result_diagnostics(result, connection)
             }
 
@@ -438,11 +479,15 @@ impl LanguageServer {
         }
     }
 
-    fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
+    fn text_document_did_save(
+        &mut self,
+        params: DidSaveTextDocumentParams,
+        connection: &lsp_server::Connection,
+    ) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
-        self.compile()?;
+        self.compile(connection)?;
         Ok(())
     }
 
