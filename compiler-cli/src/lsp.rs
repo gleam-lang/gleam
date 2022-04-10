@@ -9,6 +9,7 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 use gleam_core::{
@@ -847,6 +848,10 @@ impl Telemetry for NullTelemetry {
     }
 
     fn warning(&self, _warning: &gleam_core::Warning) {
+        ()
+    }
+
+    fn packages_downloaded(&self, _start: Instant, _count: usize) {
         ()
     }
 }

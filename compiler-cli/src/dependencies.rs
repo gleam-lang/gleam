@@ -176,7 +176,7 @@ async fn download_missing_packages<Telem: Telemetry>(
         downloader
             .download_hex_packages(missing, &project_name)
             .await?;
-        cli::print_packages_downloaded(start, count);
+        telemetry.packages_downloaded(start, count);
     }
     Ok(())
 }

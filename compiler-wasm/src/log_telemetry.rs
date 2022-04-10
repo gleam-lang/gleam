@@ -31,4 +31,8 @@ impl Telemetry for LogTelemetry {
     fn resolving_package_versions(&self) {
         tracing::info!("Resolving package versions");
     }
+
+    fn packages_downloaded(&self, _start: std::time::Instant, count: usize) {
+        tracing::info!("Downloaded {} packages", count);
+    }
 }

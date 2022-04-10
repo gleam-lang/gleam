@@ -38,6 +38,10 @@ impl Telemetry for Reporter {
         print_downloading(name)
     }
 
+    fn packages_downloaded(&self, start: Instant, count: usize) {
+        print_packages_downloaded(start, count)
+    }
+
     fn resolving_package_versions(&self) {
         print_resolving_versions()
     }
@@ -122,7 +126,7 @@ pub fn print_generating_documentation() {
     print_colourful_prefix(" Generating", "documentation")
 }
 
-pub fn print_packages_downloaded(start: Instant, count: usize) {
+fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
         1 => format!("1 package in {}", elapsed),
