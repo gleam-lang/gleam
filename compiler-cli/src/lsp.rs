@@ -831,29 +831,17 @@ fn path_to_uri(path: PathBuf) -> Url {
 struct NullTelemetry;
 
 impl Telemetry for NullTelemetry {
-    fn resolving_package_versions(&self) {
-        
-    }
+    fn resolving_package_versions(&self) {}
 
-    fn downloading_package(&self, _name: &str) {
-        
-    }
+    fn downloading_package(&self, _name: &str) {}
 
-    fn compiling_package(&self, _name: &str) {
-        
-    }
+    fn compiling_package(&self, _name: &str) {}
 
-    fn checking_package(&self, _name: &str) {
-        
-    }
+    fn checking_package(&self, _name: &str) {}
 
-    fn warning(&self, _warning: &gleam_core::Warning) {
-        
-    }
+    fn warning(&self, _warning: &gleam_core::Warning) {}
 
-    fn packages_downloaded(&self, _start: Instant, _count: usize) {
-        
-    }
+    fn packages_downloaded(&self, _start: Instant, _count: usize) {}
 }
 
 /// A wrapper around the project compiler which makes it possible to repeatedly
