@@ -1016,6 +1016,8 @@ fn bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
     "<<<<1>>:bit_string, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
+    "<<1>> == <<1:int>>"
+    |> example(fn() { assert_equal(True, <<1>> == <<1:int>>) }),
   ]
 }
 
