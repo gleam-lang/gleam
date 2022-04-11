@@ -45,6 +45,17 @@ fn go() {
 }
 
 #[test]
+fn float() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float>>
+}
+"#,
+    );
+}
+
+#[test]
 fn variable() {
     assert_js!(
         r#"
