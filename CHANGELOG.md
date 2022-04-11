@@ -22,6 +22,7 @@
   braces has been improved with a hint on how to fix the issue. (#1555)
 - The error messages for when rebar3 or Erlang are missing from the machine has
   been improved with a tip on how to install them. (#1567)
+- Add support for `int` bitstring type when compiling to JavaScript.
 
 ## v0.20.1 - 2022-02-24
 
@@ -176,7 +177,6 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
-
 
 [Release Blog Post](https://gleam.run/news/gleam-v0.17-released/)
 
