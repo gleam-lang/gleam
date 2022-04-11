@@ -34,6 +34,17 @@ fn go() {
 }
 
 #[test]
+fn integer() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:int>>
+}
+"#,
+    );
+}
+
+#[test]
 fn variable() {
     assert_js!(
         r#"
