@@ -8,7 +8,7 @@ use gleam_core::{
 use crate::{cli, fs};
 
 pub fn main(options: Options) -> Result<Package> {
-    let manifest = crate::dependencies::download(None)?;
+    let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
 
     let perform_codegen = options.perform_codegen;
     let root_config = crate::config::root_config()?;

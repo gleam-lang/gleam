@@ -9,11 +9,12 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    time::Instant,
 };
 
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
-    build::{self, Module, ProjectCompiler},
+    build::{self, Module, ProjectCompiler, Telemetry},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -31,7 +32,10 @@ use lsp_types::{
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
 
-use crate::{cli, fs::ProjectIO};
+use crate::fs::ProjectIO;
+
+const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
+const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
@@ -269,10 +273,11 @@ impl LanguageServer {
     }
 
     pub fn run(&mut self, connection: lsp_server::Connection) -> Result<()> {
+        self.create_compilation_progress_token(&connection);
         self.start_watching_gleam_toml(&connection);
 
         // Compile the project once so we have all the state and any initial errors
-        self.compile()?;
+        self.compile(&connection)?;
         self.publish_stored_diagnostics(&connection);
 
         // Enter the message loop, handling each message that comes in from the client
@@ -303,6 +308,60 @@ impl LanguageServer {
             }
         }
         Ok(())
+    }
+
+    fn create_compilation_progress_token(&mut self, connection: &lsp_server::Connection) {
+        let params = lsp::WorkDoneProgressCreateParams {
+            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.into()),
+        };
+        let request = lsp_server::Request {
+            id: CREATE_COMPILING_PROGRESS_TOKEN.to_string().into(),
+            method: "window/workDoneProgress/create".into(),
+            params: serde_json::to_value(&params).expect("WorkDoneProgressCreateParams json"),
+        };
+        connection
+            .sender
+            .send(lsp_server::Message::Request(request))
+            .expect("WorkDoneProgressCreate");
+    }
+
+    fn notify_client_of_compilation_start(&self, connection: &lsp_server::Connection) {
+        self.send_work_done_notification(
+            connection,
+            lsp::WorkDoneProgress::Begin(lsp::WorkDoneProgressBegin {
+                title: "Compiling Gleam".into(),
+                cancellable: Some(false),
+                message: None,
+                percentage: None,
+            }),
+        );
+    }
+
+    fn notify_client_of_compilation_end(&self, connection: &lsp_server::Connection) {
+        self.send_work_done_notification(
+            connection,
+            lsp::WorkDoneProgress::End(lsp::WorkDoneProgressEnd { message: None }),
+        );
+    }
+
+    fn send_work_done_notification(
+        &self,
+        connection: &lsp_server::Connection,
+        work_done: lsp::WorkDoneProgress,
+    ) {
+        tracing::info!("sending {:?}", work_done);
+        let params = lsp::ProgressParams {
+            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.to_string()),
+            value: lsp::ProgressParamsValue::WorkDone(work_done),
+        };
+        let notification = lsp_server::Notification {
+            method: "$/progress".into(),
+            params: serde_json::to_value(&params).expect("ProgressParams json"),
+        };
+        connection
+            .sender
+            .send(lsp_server::Message::Notification(notification))
+            .expect("send_work_done_notification send")
     }
 
     fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
@@ -349,8 +408,10 @@ impl LanguageServer {
             .unwrap();
     }
 
-    fn compile(&mut self) -> Result<(), Error> {
+    fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+        self.notify_client_of_compilation_start(connection);
         let result = self.compiler.compile();
+        self.notify_client_of_compilation_end(connection);
         self.store_result_diagnostics(result)?;
         Ok(())
     }
@@ -393,7 +454,7 @@ impl LanguageServer {
         match notification.method.as_str() {
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification).unwrap();
-                let result = self.text_document_did_save(params);
+                let result = self.text_document_did_save(params, connection);
                 self.publish_result_diagnostics(result, connection)
             }
 
@@ -418,11 +479,15 @@ impl LanguageServer {
         }
     }
 
-    fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Result<()> {
+    fn text_document_did_save(
+        &mut self,
+        params: DidSaveTextDocumentParams,
+        connection: &lsp_server::Connection,
+    ) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
         let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
-        self.compile()?;
+        self.compile(connection)?;
         Ok(())
     }
 
@@ -826,6 +891,23 @@ fn path_to_uri(path: PathBuf) -> Url {
     Url::parse(&file).unwrap()
 }
 
+#[derive(Debug, Clone, Copy)]
+struct NullTelemetry;
+
+impl Telemetry for NullTelemetry {
+    fn resolving_package_versions(&self) {}
+
+    fn downloading_package(&self, _name: &str) {}
+
+    fn compiling_package(&self, _name: &str) {}
+
+    fn checking_package(&self, _name: &str) {}
+
+    fn warning(&self, _warning: &gleam_core::Warning) {}
+
+    fn packages_downloaded(&self, _start: Instant, _count: usize) {}
+}
+
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
 /// compiled dependency packages.
@@ -847,8 +929,8 @@ where
 {
     pub fn new(io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
-        let telemetry = Box::new(cli::Reporter::new());
-        let manifest = crate::dependencies::download(None)?;
+        let telemetry = NullTelemetry;
+        let manifest = crate::dependencies::download(telemetry, None)?;
         let config = crate::config::root_config()?;
 
         let options = build::Options {
@@ -857,7 +939,7 @@ where
             perform_codegen: false,
         };
         let mut project_compiler =
-            ProjectCompiler::new(config, options, manifest.packages, telemetry, io);
+            ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.silence_subprocess_stdout = true;
