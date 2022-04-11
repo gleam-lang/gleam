@@ -93,6 +93,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "codepointBits");
         };
 
+        if self.tracker.float_bit_string_segment_used {
+            self.register_prelude_usage(&mut imports, "float64Bits");
+        };
+
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
@@ -621,4 +625,5 @@ pub(crate) struct UsageTracker {
     pub bit_string_literal_used: bool,
     pub string_bit_string_segment_used: bool,
     pub codepoint_bit_string_segment_used: bool,
+    pub float_bit_string_segment_used: bool,
 }
