@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.0 - 2022-04-12
+
+- The `publish_package_request` now takes an additional argument signifying
+  whether an existing package can be replaced for now.
+
 ## v1.4.1 - 2021-12-03
 
 - Fixed a bug where locked versions would discard incompatible requirements
@@ -12,7 +17,7 @@
 - `Version` and `Requirement` structs have been added for representing
   information about requests versions of packages.
 - Protobuf code updated to use `cfg_attr` rather than deprecated attributes.
-- The `get_repository_versions` method returns `Version`s rather than strings.
+- The `get_repository_versions` method returngit@github.com:gleam-lang/hexpm-rust.gits `Version`s rather than strings.
 - The `get_package` uses the `version::Range` type to represent `requirement`s.
 - A pubgrub based dependency resolver has been added.
 - Fixed a bug where a forbidden error was returned for a not-found package by
