@@ -21,6 +21,7 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
+use named_lock::NamedLock;
 
 #[derive(Debug)]
 pub struct Options {
@@ -45,6 +46,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     ids: UniqueIdGenerator,
     io: IO,
+    lock: NamedLock,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub silence_subprocess_stdout: bool,
@@ -68,6 +70,10 @@ where
             .into_iter()
             .map(|p| (p.name.to_string(), p))
             .collect();
+
+        // TODO can this return a result?
+        let lock = NamedLock::create("gleam-compile")?;
+
         Self {
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),
@@ -79,6 +85,7 @@ where
             options,
             config,
             io,
+            lock
         }
     }
 
@@ -112,6 +119,11 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(&mut self) -> Result<Package> {
+        let lock_guard = self.lock.try_lock();
+        if(lock_guard.is_err()) {
+            return lock_guard // TODO fix return type
+        }
+
         self.check_gleam_version()?;
         self.compile_dependencies()?;
 
