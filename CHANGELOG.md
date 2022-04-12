@@ -24,7 +24,7 @@
   been improved with a tip on how to install them. (#1567)
 - Corrected the hint given with certain int and float binary operator type
   errors.
-- Add support for `int` bitstring type when compiling to JavaScript.
+- Add support for `int` and `float` bitstring type when compiling to JavaScript.
 
 ## v0.20.1 - 2022-02-24
 
