@@ -22,6 +22,8 @@
   braces has been improved with a hint on how to fix the issue. (#1555)
 - The error messages for when rebar3 or Erlang are missing from the machine has
   been improved with a tip on how to install them. (#1567)
+- Corrected the hint given with certain int and float binary operator type
+  errors.
 
 ## v0.20.1 - 2022-02-24
 
