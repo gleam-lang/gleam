@@ -114,7 +114,7 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(&mut self) -> Result<Package> {
-        if !(cfg!(all(target_arch = "wasm32", target_os = "unknown"))) {
+        if cfg!(not(all(target_arch = "wasm32", target_os = "unknown"))) {
             let mut lock_file =
                 LockFile::open("gleam-compile").expect("Could not lock build directory");
             let _ = lock_file
