@@ -14,7 +14,7 @@ use crate::{
     version::COMPILER_VERSION,
     warning, Error, Result, Warning,
 };
-use named_lock::NamedLock;
+use fslock::LockFile;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -114,8 +114,8 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(&mut self) -> Result<Package> {
-        let lock = NamedLock::create("gleam-compile").expect("Could not lock build directory");
-        let _lock_guard = lock.try_lock().expect("Could not lock build directory");
+        let mut lock_file = LockFile::open("gleam-compile").expect("Could not lock build directory");
+        let _ = lock_file.try_lock().expect("Could not lock build directory");
 
         self.check_gleam_version()?;
         self.compile_dependencies()?;
