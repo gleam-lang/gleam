@@ -114,8 +114,11 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(&mut self) -> Result<Package> {
-        let mut lock_file = LockFile::open("gleam-compile").expect("Could not lock build directory");
-        let _ = lock_file.try_lock().expect("Could not lock build directory");
+        let mut lock_file =
+            LockFile::open("gleam-compile").expect("Could not lock build directory");
+        let _ = lock_file
+            .try_lock()
+            .expect("Could not lock build directory");
 
         self.check_gleam_version()?;
         self.compile_dependencies()?;
