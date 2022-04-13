@@ -14,8 +14,7 @@ use crate::{
     version::COMPILER_VERSION,
     warning, Error, Result, Warning,
 };
-#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
-use fslock::LockFile;
+use named_lock::NamedLock;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -115,13 +114,8 @@ where
 
     /// Returns the compiled information from the root package
     pub fn compile(&mut self) -> Result<Package> {
-        if cfg!(not(all(target_arch = "wasm32", target_os = "unknown"))) {
-            let mut lock_file =
-                LockFile::open("gleam-compile").expect("Could not lock build directory");
-            let _ = lock_file
-                .try_lock()
-                .expect("Could not lock build directory");
-        }
+        let lock = NamedLock::create("gleam-compile").expect("Could not lock build directory");
+        let _lock_guard = lock.try_lock().expect("Could not lock build directory");
 
         self.check_gleam_version()?;
         self.compile_dependencies()?;
