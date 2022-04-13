@@ -14,6 +14,7 @@ use crate::{
     version::COMPILER_VERSION,
     warning, Error, Result, Warning,
 };
+use named_lock::NamedLock;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -21,7 +22,6 @@ use std::{
     path::{Path, PathBuf},
     time::Instant,
 };
-use named_lock::NamedLock;
 
 #[derive(Debug)]
 pub struct Options {
@@ -80,7 +80,7 @@ where
             packages,
             options,
             config,
-            io
+            io,
         }
     }
 
