@@ -14,6 +14,7 @@ use crate::{
     version::COMPILER_VERSION,
     warning, Error, Result, Warning,
 };
+#[cfg(not(all(target_arch = "wasm32", target_os = "unknown")))]
 use fslock::LockFile;
 use std::{
     collections::{HashMap, HashSet},
