@@ -4,7 +4,6 @@
 
 // TODO: remove this
 #![allow(clippy::unwrap_used)]
-#![allow(clippy::todo)]
 
 use std::{
     collections::{HashMap, HashSet},
@@ -530,7 +529,7 @@ impl LanguageServer {
                 Ok(serde_json::to_value(completions).unwrap())
             }
 
-            _ => todo!("Unsupported LSP request"),
+            _ => panic!("Unsupported LSP request"),
         }
     }
 
