@@ -189,6 +189,10 @@ export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
+export function float64Bits(float) {
+  return new Uint8Array(Float64Array.from([float]).buffer).reverse();
+}
+
 export class Result extends CustomType {
   static isResult(data) {
     let variant = data?.__gleam_prelude_variant__;

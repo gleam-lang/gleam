@@ -35,4 +35,8 @@ impl Telemetry for LogTelemetry {
     fn packages_downloaded(&self, _start: std::time::Instant, count: usize) {
         tracing::info!("Downloaded {} packages", count);
     }
+
+    fn waiting_for_build_directory_lock(&self) {
+        tracing::info!("Waiting for build directory lock");
+    }
 }

@@ -45,6 +45,17 @@ fn go() {
 }
 
 #[test]
+fn float() {
+  assert_js!(
+      r#"
+fn go() {
+<<1.1:float>>
+}
+"#,
+  );
+}
+
+#[test]
 fn sized() {
     assert_js!(
         r#"
@@ -52,7 +63,7 @@ fn go() {
   <<256:4>>
 }
 "#,
-    );
+  );
 }
 
 // split out into shift left and right that I think I had already found, put above integer. Pattern can also be in parralel
@@ -77,7 +88,6 @@ fn go(x, y) {
 "#,
     );
 }
-
 
 #[test]
 fn variable() {

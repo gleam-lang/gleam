@@ -194,6 +194,12 @@ impl<'module> Generator<'module> {
                     Ok(docvec!["sizedInteger(", value, ", ",size,")"])
                 }
 
+                // Floats
+                [Opt::Float { .. }] => {
+                    self.tracker.float_bit_string_segment_used = true;
+                    Ok(docvec!["float64Bits(", value, ")"])
+                }
+
                 // UTF8 strings
                 [Opt::Utf8 { .. }] => {
                     self.tracker.string_bit_string_segment_used = true;

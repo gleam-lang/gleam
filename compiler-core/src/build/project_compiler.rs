@@ -68,6 +68,7 @@ where
             .into_iter()
             .map(|p| (p.name.to_string(), p))
             .collect();
+
         Self {
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),

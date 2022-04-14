@@ -2,19 +2,15 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-// TODO: remove this
-#![allow(clippy::unwrap_used)]
-#![allow(clippy::todo)]
-
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
-    time::Instant,
 };
 
+use crate::{build_lock::BuildLock, fs::ProjectIO, telemetry::NullTelemetry};
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
-    build::{self, Module, ProjectCompiler, Telemetry},
+    build::{self, Module, ProjectCompiler},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -31,8 +27,6 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
-
-use crate::fs::ProjectIO;
 
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
@@ -99,8 +93,12 @@ pub fn main() -> Result<()> {
     let server_capabilities_json =
         serde_json::to_value(&server_capabilities).expect("server_capabilities_serde");
 
-    let initialization_params: InitializeParams =
-        serde_json::from_value(connection.initialize(server_capabilities_json).unwrap()).unwrap();
+    let initialization_params: InitializeParams = serde_json::from_value(
+        connection
+            .initialize(server_capabilities_json)
+            .expect("LSP initialize"),
+    )
+    .expect("LSP InitializeParams from json");
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     LanguageServer::new(initialization_params)?.run(connection)?;
@@ -171,8 +169,8 @@ impl LanguageServer {
     /// Publish all stored diagnostics to the client.
     /// Any previously publish diagnostics are cleared before the new set are
     /// published to the client.
-    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) {
-        self.clear_all_diagnostics(connection).unwrap();
+    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<()> {
+        self.clear_all_diagnostics(connection)?;
 
         for (path, diagnostics) in self.stored_diagnostics.drain() {
             let uri = path_to_uri(path);
@@ -189,12 +187,13 @@ impl LanguageServer {
             };
             let notification = lsp_server::Notification {
                 method: "textDocument/publishDiagnostics".into(),
-                params: serde_json::to_value(diagnostic_params).unwrap(),
+                params: serde_json::to_value(diagnostic_params)
+                    .expect("textDocument/publishDiagnostics to json"),
             };
             connection
                 .sender
                 .send(lsp_server::Message::Notification(notification))
-                .unwrap();
+                .expect("send textDocument/publishDiagnostics");
         }
 
         for message in self.stored_messages.drain(..) {
@@ -208,14 +207,15 @@ impl LanguageServer {
 
             let notification = lsp_server::Notification {
                 method: "window/showMessage".into(),
-                params: serde_json::to_value(params).unwrap(),
+                params: serde_json::to_value(params).expect("window/showMessage to json"),
             };
 
             connection
                 .sender
                 .send(lsp_server::Message::Notification(notification))
-                .unwrap();
+                .expect("send window/showMessage");
         }
+        Ok(())
     }
 
     fn push_diagnostic(&mut self, path: PathBuf, diagnostic: lsp::Diagnostic) {
@@ -262,12 +262,12 @@ impl LanguageServer {
                     diagnostics: vec![],
                     version: None,
                 })
-                .unwrap(),
+                .expect("textDocument/publishDiagnostics to json"),
             };
             connection
                 .sender
                 .send(lsp_server::Message::Notification(notification))
-                .unwrap();
+                .expect("send textDocument/publishDiagnostics");
         }
         Ok(())
     }
@@ -278,7 +278,7 @@ impl LanguageServer {
 
         // Compile the project once so we have all the state and any initial errors
         self.compile(&connection)?;
-        self.publish_stored_diagnostics(&connection);
+        self.publish_stored_diagnostics(&connection)?;
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
@@ -292,18 +292,18 @@ impl LanguageServer {
                     let (response, diagnostic) = result_to_response(result, id);
                     if let Some(diagnostic) = diagnostic {
                         self.process_gleam_diagnostic(diagnostic);
-                        self.publish_stored_diagnostics(&connection);
+                        self.publish_stored_diagnostics(&connection)?;
                     }
                     connection
                         .sender
                         .send(lsp_server::Message::Response(response))
-                        .unwrap();
+                        .expect("channel send LSP response")
                 }
 
                 lsp_server::Message::Response(_) => (),
 
                 lsp_server::Message::Notification(notification) => {
-                    self.handle_notification(&connection, notification).unwrap();
+                    self.handle_notification(&connection, notification)?;
                 }
             }
         }
@@ -391,7 +391,7 @@ impl LanguageServer {
                         kind: Some(lsp::WatchKind::Change),
                     }],
                 })
-                .unwrap(),
+                .expect("workspace/didChangeWatchedFiles to json"),
             ),
         };
         let request = lsp_server::Request {
@@ -400,12 +400,12 @@ impl LanguageServer {
             params: serde_json::value::to_value(lsp::RegistrationParams {
                 registrations: vec![watch_config],
             })
-            .unwrap(),
+            .expect("client/registerCapability to json"),
         };
         connection
             .sender
             .send(lsp_server::Message::Request(request))
-            .unwrap();
+            .expect("send client/registerCapability");
     }
 
     fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
@@ -430,7 +430,7 @@ impl LanguageServer {
         connection: &lsp_server::Connection,
     ) -> Result<()> {
         self.store_result_diagnostics(result)?;
-        self.publish_stored_diagnostics(connection);
+        self.publish_stored_diagnostics(connection)?;
         Ok(())
     }
 
@@ -453,18 +453,21 @@ impl LanguageServer {
     ) -> Result<()> {
         match notification.method.as_str() {
             "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification).unwrap();
+                let params = cast_notification::<DidSaveTextDocument>(notification)
+                    .expect("cast DidSaveTextDocument");
                 let result = self.text_document_did_save(params, connection);
                 self.publish_result_diagnostics(result, connection)
             }
 
             "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification).unwrap();
+                let params = cast_notification::<DidCloseTextDocument>(notification)
+                    .expect("cast DidCloseTextDocument");
                 self.text_document_did_close(params)
             }
 
             "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification).unwrap();
+                let params = cast_notification::<DidChangeTextDocument>(notification)
+                    .expect("cast DidChangeTextDocument");
                 self.text_document_did_change(params)
             }
 
@@ -509,30 +512,30 @@ impl LanguageServer {
     fn handle_request(&self, request: lsp_server::Request) -> Result<serde_json::Value> {
         match request.method.as_str() {
             "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request).unwrap();
+                let params = cast_request::<Formatting>(request).expect("cast Formatting");
                 let text_edit = self.format(params)?;
-                Ok(serde_json::to_value(text_edit).unwrap())
+                Ok(serde_json::to_value(text_edit).expect("TextEdits to json"))
             }
 
             "textDocument/hover" => {
-                let params = cast_request::<HoverRequest>(request).unwrap();
+                let params = cast_request::<HoverRequest>(request).expect("cast HoverRequest");
                 let text_edit = self.hover(params)?;
-                Ok(serde_json::to_value(text_edit).unwrap())
+                Ok(serde_json::to_value(text_edit).expect("Hover to json"))
             }
 
             "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request).unwrap();
+                let params = cast_request::<GotoDefinition>(request).expect("cast GotoDefinition");
                 let location = self.goto_definition(params)?;
-                Ok(serde_json::to_value(location).unwrap())
+                Ok(serde_json::to_value(location).expect("Location to json"))
             }
 
             "textDocument/completion" => {
-                let params = cast_request::<Completion>(request).unwrap();
+                let params = cast_request::<Completion>(request).expect("cast Completion");
                 let completions = self.completion(params)?;
-                Ok(serde_json::to_value(completions).unwrap())
+                Ok(serde_json::to_value(completions).expect("Completions to json"))
             }
 
-            _ => todo!("Unsupported LSP request"),
+            _ => panic!("Unsupported LSP request"),
         }
     }
 
@@ -576,7 +579,8 @@ impl LanguageServer {
                     // not stored in the module metadata.
                     None => return Ok(None),
                 };
-                let url = Url::parse(&format!("file:///{}", &module.path)).unwrap();
+                let url = Url::parse(&format!("file:///{}", &module.path))
+                    .expect("goto definition URL parse");
                 (url, &module.line_numbers)
             }
         };
@@ -686,7 +690,7 @@ impl LanguageServer {
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        let module_name = uri_to_module_name(uri, &self.project_root).unwrap();
+        let module_name = uri_to_module_name(uri, &self.project_root).expect("uri to module name");
         self.compiler.modules.get(&module_name)
     }
 
@@ -874,7 +878,7 @@ fn diagnostic_to_lsp(diagnostic: gleam_core::diagnostic::Diagnostic) -> LspDispl
                 tags: None,
                 data: None,
             };
-            let path = location.path.canonicalize().unwrap();
+            let path = location.path.canonicalize().expect("canonicalize");
 
             LspDisplayable::Diagnostic(path, diagnostic)
         }
@@ -888,24 +892,7 @@ fn diagnostic_to_lsp(diagnostic: gleam_core::diagnostic::Diagnostic) -> LspDispl
 fn path_to_uri(path: PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
-    Url::parse(&file).unwrap()
-}
-
-#[derive(Debug, Clone, Copy)]
-struct NullTelemetry;
-
-impl Telemetry for NullTelemetry {
-    fn resolving_package_versions(&self) {}
-
-    fn downloading_package(&self, _name: &str) {}
-
-    fn compiling_package(&self, _name: &str) {}
-
-    fn checking_package(&self, _name: &str) {}
-
-    fn warning(&self, _warning: &gleam_core::Warning) {}
-
-    fn packages_downloaded(&self, _start: Instant, _count: usize) {}
+    Url::parse(&file).expect("path_to_uri URL parse")
 }
 
 /// A wrapper around the project compiler which makes it possible to repeatedly
@@ -919,8 +906,13 @@ pub struct LspProjectCompiler<IO> {
     /// Whether the dependencies have been compiled previously
     dependencies_compiled: bool,
 
+    // Information on compiled modules
     modules: HashMap<String, Module>,
     sources: HashMap<String, ModuleSourceInformation>,
+
+    /// A lock to ensure the LSP and the CLI don't try and use build directory
+    /// at the same time.
+    build_lock: BuildLock,
 }
 
 impl<IO> LspProjectCompiler<IO>
@@ -948,11 +940,15 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
+            build_lock: BuildLock::new(),
             dependencies_compiled: false,
         })
     }
 
     pub fn compile(&mut self) -> Result<(), Error> {
+        // Lock the build directory to ensure to ensure we are the only one compiling
+        let _lock = self.build_lock.lock(&NullTelemetry);
+
         if !self.dependencies_compiled {
             // TODO: store compiled module info
             self.project_compiler.compile_dependencies()?;
@@ -975,7 +971,7 @@ where
 
         // Store the compiled module information
         for module in package.modules {
-            let path = module.input_path.canonicalize().unwrap();
+            let path = module.input_path.canonicalize().expect("Canonicalize");
             let path = path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
