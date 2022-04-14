@@ -74,6 +74,8 @@ symlink = "0.1"
 # Language server protocol server plumbing
 lsp-server = "0.5"
 lsp-types = "0.92"
+# Directory locking
+named-lock = "0.1.1"
 
 [dev-dependencies]
 # Test assertion errors with diffs

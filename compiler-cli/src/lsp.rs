@@ -12,6 +12,7 @@ use std::{
     time::Instant,
 };
 
+use crate::{build_lock::BuildLock, fs::ProjectIO};
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
     build::{self, Module, ProjectCompiler, Telemetry},
@@ -31,8 +32,6 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
-
-use crate::fs::ProjectIO;
 
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
@@ -919,8 +918,13 @@ pub struct LspProjectCompiler<IO> {
     /// Whether the dependencies have been compiled previously
     dependencies_compiled: bool,
 
+    // Information on compiled modules
     modules: HashMap<String, Module>,
     sources: HashMap<String, ModuleSourceInformation>,
+
+    /// A lock to ensure the LSP and the CLI don't try and use build directory
+    /// at the same time.
+    build_lock: BuildLock,
 }
 
 impl<IO> LspProjectCompiler<IO>
@@ -948,11 +952,15 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
+            build_lock: BuildLock::new(),
             dependencies_compiled: false,
         })
     }
 
     pub fn compile(&mut self) -> Result<(), Error> {
+        // Lock the build directory to ensure to ensure we are the only one compiling
+        let _lock = self.build_lock.lock();
+
         if !self.dependencies_compiled {
             // TODO: store compiled module info
             self.project_compiler.compile_dependencies()?;

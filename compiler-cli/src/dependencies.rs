@@ -19,6 +19,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 
 use crate::{
+    build_lock::BuildLock,
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
@@ -102,6 +103,10 @@ pub fn download<Telem: Telemetry>(
 ) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
+
+    let lock = BuildLock::new();
+    let _guard = lock.lock();
+
     let mode = Mode::Dev;
 
     let http = HttpClient::boxed();
