@@ -52,6 +52,7 @@ extern crate pretty_assertions;
 
 mod add;
 mod build;
+mod build_lock;
 mod cli;
 mod compile_package;
 mod config;
