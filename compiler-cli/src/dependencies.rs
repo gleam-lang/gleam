@@ -105,7 +105,7 @@ pub fn download<Telem: Telemetry>(
     let _enter = span.enter();
 
     let lock = BuildLock::new();
-    let _guard = lock.lock();
+    let _guard = lock.lock(&telemetry);
 
     let mode = Mode::Dev;
 

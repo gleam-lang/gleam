@@ -45,6 +45,10 @@ impl Telemetry for Reporter {
     fn resolving_package_versions(&self) {
         print_resolving_versions()
     }
+
+    fn waiting_for_build_directory_lock(&self) {
+        print_waiting_for_build_directory_lock()
+    }
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {
@@ -92,6 +96,10 @@ pub fn print_publishing_documentation() {
 
 fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
+}
+
+fn print_waiting_for_build_directory_lock() {
+    print_colourful_prefix("    Waiting", "for build directory lock")
 }
 
 fn print_resolving_versions() {

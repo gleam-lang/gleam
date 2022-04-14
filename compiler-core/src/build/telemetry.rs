@@ -6,6 +6,7 @@ use std::{
 use crate::Warning;
 
 pub trait Telemetry: Debug {
+    fn waiting_for_build_directory_lock(&self);
     fn resolving_package_versions(&self);
     fn downloading_package(&self, name: &str);
     fn packages_downloaded(&self, start: Instant, count: usize);

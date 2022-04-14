@@ -69,6 +69,7 @@ mod project;
 mod publish;
 mod run;
 mod shell;
+mod telemetry;
 
 use config::root_config;
 pub use gleam_core::{

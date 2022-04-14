@@ -9,13 +9,12 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
-    time::Instant,
 };
 
-use crate::{build_lock::BuildLock, fs::ProjectIO};
+use crate::{build_lock::BuildLock, fs::ProjectIO, telemetry::NullTelemetry};
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
-    build::{self, Module, ProjectCompiler, Telemetry},
+    build::{self, Module, ProjectCompiler},
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
@@ -890,23 +889,6 @@ fn path_to_uri(path: PathBuf) -> Url {
     Url::parse(&file).unwrap()
 }
 
-#[derive(Debug, Clone, Copy)]
-struct NullTelemetry;
-
-impl Telemetry for NullTelemetry {
-    fn resolving_package_versions(&self) {}
-
-    fn downloading_package(&self, _name: &str) {}
-
-    fn compiling_package(&self, _name: &str) {}
-
-    fn checking_package(&self, _name: &str) {}
-
-    fn warning(&self, _warning: &gleam_core::Warning) {}
-
-    fn packages_downloaded(&self, _start: Instant, _count: usize) {}
-}
-
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
 /// compiled dependency packages.
@@ -959,7 +941,7 @@ where
 
     pub fn compile(&mut self) -> Result<(), Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock = self.build_lock.lock();
+        let _lock = self.build_lock.lock(&NullTelemetry);
 
         if !self.dependencies_compiled {
             // TODO: store compiled module info

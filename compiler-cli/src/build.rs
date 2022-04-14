@@ -19,7 +19,7 @@ pub fn main(options: Options) -> Result<Package> {
 
     tracing::info!("Compiling packages");
     let compiled = {
-        let _guard = lock.lock();
+        let _guard = lock.lock(telemetry.as_ref());
         ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?
     };
 

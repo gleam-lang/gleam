@@ -1,3 +1,5 @@
+use gleam_core::build::Telemetry;
+
 #[derive(Debug)]
 pub(crate) struct BuildLock(named_lock::NamedLock);
 
@@ -15,8 +17,15 @@ impl BuildLock {
     }
 
     /// Lock the build directory
-    pub fn lock(&self) -> Guard<'_> {
-        let guard = self.0.lock().expect("Build locking");
+    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard<'_> {
+        tracing::info!("locking_build_directory");
+        let guard = match self.0.try_lock() {
+            Ok(guard) => guard,
+            Err(_) => {
+                telemetry.waiting_for_build_directory_lock();
+                self.0.lock().expect("Build locking")
+            }
+        };
         Guard(guard)
     }
 }
@@ -27,6 +36,6 @@ pub(crate) struct Guard<'a>(named_lock::NamedLockGuard<'a>);
 #[test]
 fn locking() {
     let lock = BuildLock::new();
-    let _guard1 = lock.lock();
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
     println!("Locked!")
 }
