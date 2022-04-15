@@ -131,3 +131,14 @@ fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn empty_match() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<>> = x
+}
+"#,
+    );
+}
