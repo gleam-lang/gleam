@@ -142,3 +142,14 @@ fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn match_bytes() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<1, y>> = x
+}
+"#,
+    );
+}

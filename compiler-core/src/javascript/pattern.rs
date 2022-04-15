@@ -344,8 +344,24 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             Pattern::BitString { segments, .. } => {
+                use BitStringSegmentOption as Opt;
+
                 self.push_bitstring_length_check(subject.clone(), segments.len(), false);
-                let _ = segments.len();
+                self.push_string("buffer");
+                for (index, segment) in segments.iter().enumerate() {
+                    let _ = match segment.options.as_slice() {
+                        [] | [Opt::Int { .. }] => Ok(()),
+                        _ => Err(Error::Unsupported {
+                            feature: "This bit string segment option in patterns".to_string(),
+                            location: segment.location,
+                        }),
+                    }?;
+                    self.push_int(index);
+                    self.traverse_pattern(subject, &segment.value)?;
+                    self.pop();
+                }
+                self.pop();
+
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
@@ -572,14 +588,14 @@ impl<'a> Check<'a> {
                 has_tail_spread,
             } => {
                 let length_check = Document::String(if has_tail_spread {
-                    format!(".length >= {}", expected_bytes)
+                    format!(".atLeastLength({})", expected_bytes)
                 } else {
-                    format!(".length == {}", expected_bytes)
+                    format!(".hasLength({})", expected_bytes)
                 });
                 if match_desired {
                     docvec![subject, path, length_check,]
                 } else {
-                    docvec!["!(", subject, path, length_check, ")"]
+                    docvec!["!", subject, path, length_check,]
                 }
             }
         }

@@ -39,6 +39,7 @@ pub fn main() -> Int {
       suite("shadowed module", shadowed_module_tests()),
       suite("unicode overflow", unicode_overflow_tests()),
       suite("negation", negation_tests()),
+      suite("bit string match", bit_string_match_tests()),
     ])
 
   case stats.failures {
@@ -1260,5 +1261,15 @@ fn negation_tests() {
     |> example(fn() { assert_equal(False, !True && assert False = True) }),
     "!False || assert False = True"
     |> example(fn() { assert_equal(True, !False || assert False = True) }),
+  ]
+}
+
+fn bit_string_match_tests() {
+  [
+    "let <<1, x>> = <<1, 2>>"
+    |> example(fn() { assert_equal(2, {
+      let <<1, x>> = <<1, 2>>
+      x
+    }) }),
   ]
 }
