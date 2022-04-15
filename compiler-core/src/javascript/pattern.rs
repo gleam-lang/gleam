@@ -23,6 +23,19 @@ pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
     assignments: Vec<Assignment<'a>>,
 }
 
+struct Offset {
+    count: usize
+}
+
+impl Offset {
+    pub fn new() -> Self {
+        Self{count: 0}
+    }
+    pub fn increment(mut self, step: usize) {
+        self.count = self.count + step 
+    }
+}
+
 impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, 'a> {
     pub fn new(
         expression_generator: &'expression_gen mut expression::Generator<'module_ctx>,
@@ -346,11 +359,27 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Pattern::BitString { segments, .. } => {
                 use BitStringSegmentOption as Opt;
 
-                self.push_bitstring_length_check(subject.clone(), segments.len(), false);
+                let mut offset = &Offset::new();
                 self.push_string("buffer");
                 for (index, segment) in segments.iter().enumerate() {
                     let _ = match segment.options.as_slice() {
-                        [] | [Opt::Int { .. }] => Ok(()),
+                        [] | [Opt::Int { .. }] => {
+                            offset.increment(1);
+                            Ok(())
+                        },
+                        [Opt::Size{value: size, ..}] => {
+                            match &**size {
+                                Pattern::Int{value, ..} =>  {
+                                    offset.increment(value.parse().unwrap());
+                                    println!("{:?}", value);
+                                    unimplemented!("foo")
+                                }
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit string size option in patterns".to_string(),
+                                    location: segment.location,
+                                }),
+                            }
+                        }
                         _ => Err(Error::Unsupported {
                             feature: "This bit string segment option in patterns".to_string(),
                             location: segment.location,
@@ -361,7 +390,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     self.pop();
                 }
                 self.pop();
-
+                
+                self.push_bitstring_length_check(subject.clone(), offset.count, false);
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {

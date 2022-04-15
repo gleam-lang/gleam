@@ -153,3 +153,18 @@ fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn match_sized() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<a:16, b:8>> = x
+}
+"#,
+    );
+}
+
+// variable sized
+// binary rest
+// utf8 matched
