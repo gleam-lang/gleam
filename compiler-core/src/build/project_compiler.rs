@@ -133,7 +133,7 @@ where
         }
         let result = self.compile_root_package();
 
-        self.check_build_journal();
+        self.check_build_journal()?;
 
         // Print warnings
         for warning in &self.warnings {
