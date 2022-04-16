@@ -716,7 +716,7 @@ impl LanguageServer {
 }
 
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let path = PathBuf::from(uri.path().replace("\\", "/"));
+    let path = PathBuf::from(uri.path().replace('\\', "/"));
     let components = path
         .strip_prefix(&root)
         .ok()?
