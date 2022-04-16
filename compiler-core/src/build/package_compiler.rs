@@ -170,7 +170,6 @@ where
             .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
 
         if status == 0 {
-            self.add_build_journal(build_journal, escript_path.to_string_lossy().to_string());
             Ok(())
         } else {
             Err(Error::ShellCommand {
