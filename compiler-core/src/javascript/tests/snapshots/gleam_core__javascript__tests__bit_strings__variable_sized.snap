@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go(x, y) {\n  <<x:size(y)>>\n}\n"
+---
+import { toBitString, sizedInteger } from "../gleam.mjs";
+
+function go(x, y) {
+  return toBitString([sizedInteger(x, y)]);
+}
+

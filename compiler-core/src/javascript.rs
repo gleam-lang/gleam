@@ -85,6 +85,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toBitString");
         };
 
+        if self.tracker.sized_integer_segment_used {
+            self.register_prelude_usage(&mut imports, "sizedInteger");
+        };
+
         if self.tracker.string_bit_string_segment_used {
             self.register_prelude_usage(&mut imports, "stringBits");
         };
@@ -623,6 +627,7 @@ pub(crate) struct UsageTracker {
     pub float_division_used: bool,
     pub object_equality_used: bool,
     pub bit_string_literal_used: bool,
+    pub sized_integer_segment_used: bool,
     pub string_bit_string_segment_used: bool,
     pub codepoint_bit_string_segment_used: bool,
     pub float_bit_string_segment_used: bool,

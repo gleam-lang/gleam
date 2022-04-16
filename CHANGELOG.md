@@ -25,6 +25,8 @@
 - Corrected the hint given with certain int and float binary operator type
   errors.
 - Add support for `int` and `float` bitstring type when compiling to JavaScript.
+- Add support for specifying size of integers in a bitstring. Supports only exact binaries,
+  i.e. length is a multiple of 8.
 
 ## v0.20.1 - 2022-02-24
 

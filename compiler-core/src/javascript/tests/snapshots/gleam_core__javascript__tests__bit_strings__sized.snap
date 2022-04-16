@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go() {\n  <<256:4>>\n}\n"
+---
+import { toBitString, sizedInteger } from "../gleam.mjs";
+
+function go() {
+  return toBitString([sizedInteger(256, 4)]);
+}
+
