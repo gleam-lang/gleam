@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- The Gleam language server is here! This will provide IDE like features for
+  code editors that support LSP, including but not limited to VSCode, Neovim,
+  Emacs, Eclipse, Visual Studio, and Atom. This first version includes these
+  features:
+  - Project compilation.
+  - Inline errors and warnings.
+  - Type information on hover.
+  - Go-to definition.
+  - Code formatting.
 - Fixed a bug in generated JavaScript code where functions named `then` would
   cause errors when dynamically imported.
 - Initialize `git` repo when creating a new project.
