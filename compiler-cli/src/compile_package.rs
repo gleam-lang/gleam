@@ -10,14 +10,13 @@ use gleam_core::{
     uid::UniqueIdGenerator,
     Result,
 };
-use std::{collections::HashSet, path::Path};
+use std::path::Path;
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
     let mut warnings = Vec::new();
-    let mut build_journal = HashSet::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
 
     tracing::info!("Compiling package");
@@ -30,7 +29,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
         options.target,
         ids,
         ProjectIO::new(),
-        &mut build_journal,
+        None,
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;

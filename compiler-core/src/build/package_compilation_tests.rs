@@ -49,7 +49,7 @@ macro_rules! assert_erlang_compile {
             Target::Erlang,
             ids,
             file_writer,
-            &mut build_journal,
+            Some(&mut build_journal),
         );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
@@ -105,7 +105,7 @@ macro_rules! assert_javascript_compile {
             Target::JavaScript,
             ids,
             file_writer,
-            &mut build_journal,
+            Some(&mut build_journal),
         );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
@@ -162,7 +162,7 @@ macro_rules! assert_no_warnings {
             Target::Erlang,
             ids,
             file_writer,
-            &mut build_journal,
+            Some(&mut build_journal),
         );
         compiler.write_entrypoint = false;
         compiler.write_metadata = false;
@@ -2330,7 +2330,7 @@ fn config_compilation_test() {
                 Target::Erlang,
                 ids,
                 file_writer,
-                &mut build_journal,
+                Some(&mut build_journal),
             );
             compiler.write_entrypoint = false;
             compiler.write_metadata = false;

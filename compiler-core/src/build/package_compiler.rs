@@ -37,7 +37,7 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub silence_subprocess_stdout: bool,
-    pub build_journal: &'a mut HashSet<PathBuf>,
+    pub build_journal: Option<&'a mut HashSet<PathBuf>>,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -56,7 +56,7 @@ where
         target: Target,
         ids: UniqueIdGenerator,
         io: IO,
-        build_journal: &'a mut HashSet<PathBuf>,
+        build_journal: Option<&'a mut HashSet<PathBuf>>,
     ) -> Self {
         Self {
             io,
@@ -282,7 +282,9 @@ where
     }
 
     fn add_build_journal(&mut self, path: PathBuf) -> Result<()> {
-        let _ = self.build_journal.insert(path);
+        if let Some(b) = self.build_journal.as_mut() {
+            let _ = b.insert(path);
+        }
         Ok(())
     }
 

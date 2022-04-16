@@ -367,7 +367,11 @@ where
             self.target(),
             self.ids.clone(),
             self.io.clone(),
-            &mut self.build_journal,
+            if (is_root) {
+                Some(&mut self.build_journal)
+            } else {
+                None
+            },
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
