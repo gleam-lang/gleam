@@ -8,6 +8,7 @@ impl BuildLock {
     pub fn new() -> Self {
         let dir = std::env::current_dir()
             .expect("Determining current directory")
+            .join("build")
             .join("gleam-compile");
         // We replace any `\` with `/` because on Windows the mutex's name must
         // not contain them.
