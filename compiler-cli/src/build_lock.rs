@@ -1,37 +1,36 @@
-use gleam_core::{build::Telemetry, Result};
+use std::path::PathBuf;
+
+use gleam_core::{build::Telemetry, paths, Result};
 
 #[derive(Debug)]
-pub(crate) struct BuildLock(named_lock::NamedLock);
+pub(crate) struct BuildLock {
+    path: PathBuf,
+}
 
 // TODO: return errors rather than crashing.
 impl BuildLock {
     pub fn new() -> Result<Self> {
-        let build = std::env::current_dir().expect("Determining current directory");
+        let build = paths::build();
         crate::fs::mkdir(&build)?;
-        let dir = build.join("build").join("gleam-compile");
-        // We replace any `\` with `/` because on Windows the mutex's name must
-        // not contain them.
-        let name = dir.to_string_lossy().replace('\\', "/");
-        let lock = named_lock::NamedLock::create(&name).expect("Lock creation");
-        Ok(Self(lock))
+        Ok(Self {
+            path: build.join("gleam-compile.lock"),
+        })
     }
 
     /// Lock the build directory
-    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard<'_> {
+    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
         tracing::info!("locking_build_directory");
-        let guard = match self.0.try_lock() {
-            Ok(guard) => guard,
-            Err(_) => {
-                telemetry.waiting_for_build_directory_lock();
-                self.0.lock().expect("Build locking")
-            }
-        };
-        Guard(guard)
+        let mut file = fslock::LockFile::open(&self.path).expect("LockFile creation");
+        if !file.try_lock_with_pid().expect("Trying build locking") {
+            telemetry.waiting_for_build_directory_lock();
+            file.lock_with_pid().expect("Build locking")
+        }
+        Guard(file)
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct Guard<'a>(named_lock::NamedLockGuard<'a>);
+pub(crate) struct Guard(fslock::LockFile);
 
 #[test]
 fn locking() {
