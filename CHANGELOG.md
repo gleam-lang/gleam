@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.21.0-rc1 - 2022-04-16
 
 - The Gleam language server is here! This will provide IDE like features for
   code editors that support LSP, including but not limited to VSCode, Neovim,
