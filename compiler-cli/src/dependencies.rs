@@ -104,7 +104,7 @@ pub fn download<Telem: Telemetry>(
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
 
-    let lock = BuildLock::new();
+    let lock = BuildLock::new()?;
     let _guard = lock.lock(&telemetry);
 
     let mode = Mode::Dev;

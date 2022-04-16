@@ -1,20 +1,19 @@
-use gleam_core::build::Telemetry;
+use gleam_core::{build::Telemetry, Result};
 
 #[derive(Debug)]
 pub(crate) struct BuildLock(named_lock::NamedLock);
 
 // TODO: return errors rather than crashing.
 impl BuildLock {
-    pub fn new() -> Self {
-        let dir = std::env::current_dir()
-            .expect("Determining current directory")
-            .join("build")
-            .join("gleam-compile");
+    pub fn new() -> Result<Self> {
+        let build = std::env::current_dir().expect("Determining current directory");
+        crate::fs::mkdir(&build)?;
+        let dir = build.join("build").join("gleam-compile");
         // We replace any `\` with `/` because on Windows the mutex's name must
         // not contain them.
         let name = dir.to_string_lossy().replace('\\', "/");
         let lock = named_lock::NamedLock::create(&name).expect("Lock creation");
-        Self(lock)
+        Ok(Self(lock))
     }
 
     /// Lock the build directory
@@ -36,7 +35,7 @@ pub(crate) struct Guard<'a>(named_lock::NamedLockGuard<'a>);
 
 #[test]
 fn locking() {
-    let lock = BuildLock::new();
+    let lock = BuildLock::new().expect("make lock");
     let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
     println!("Locked!")
 }

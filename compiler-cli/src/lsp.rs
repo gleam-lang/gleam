@@ -940,7 +940,7 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock: BuildLock::new(),
+            build_lock: BuildLock::new()?,
             dependencies_compiled: false,
         })
     }

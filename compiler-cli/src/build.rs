@@ -8,7 +8,7 @@ use gleam_core::{
 use crate::{build_lock::BuildLock, cli, fs};
 
 pub fn main(options: Options) -> Result<Package> {
-    let lock = BuildLock::new();
+    let lock = BuildLock::new()?;
     let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
 
     let perform_codegen = options.perform_codegen;
