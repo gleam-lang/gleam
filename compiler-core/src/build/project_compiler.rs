@@ -46,7 +46,7 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     ids: UniqueIdGenerator,
     io: IO,
-    builds_journal: HashSet<String>,
+    build_journal: HashSet<PathBuf>,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub silence_subprocess_stdout: bool,
@@ -81,7 +81,7 @@ where
             options,
             config,
             io,
-            builds_journal: HashSet::new(),
+            build_journal: HashSet::new(),
         }
     }
 
@@ -180,17 +180,23 @@ where
         let journal_path = paths::build_journal(self.mode(), self.target());
         if self.io.is_file(&journal_path) {
             let io_journals = self.io.read(&journal_path)?;
-            let old_journals: HashSet<String> = io_journals.lines().map(String::from).collect();
+            let old_journals: HashSet<PathBuf> = io_journals.lines().map(PathBuf::from).collect();
 
             tracing::info!("Deleting outdated build files");
-            for diff in old_journals.difference(&self.builds_journal) {
+            for diff in old_journals.difference(&self.build_journal) {
                 self.io.delete_file(Path::new(&diff));
             }
         }
 
         let mut writer = self.io.writer(&journal_path)?;
         writer
-            .write_str(&self.builds_journal.iter().join("\n"))
+            .write_str(
+                &self
+                    .build_journal
+                    .iter()
+                    .map(|b| b.to_string_lossy().to_string())
+                    .join("\n"),
+            )
             .map_err(|e| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
@@ -353,8 +359,8 @@ where
             self.target(),
             self.ids.clone(),
             self.io.clone(),
+            &mut self.build_journal,
         );
-        compiler.write_build_journal = is_root;
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
@@ -366,7 +372,6 @@ where
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
-            &mut self.builds_journal,
         )?;
 
         Ok(compiled)

@@ -17,7 +17,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
     let mut warnings = Vec::new();
-    let mut builds_journal = HashSet::new();
+    let mut build_journal = HashSet::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
 
     tracing::info!("Compiling package");
@@ -30,18 +30,13 @@ pub fn command(options: CompilePackage) -> Result<()> {
         options.target,
         ids,
         ProjectIO::new(),
+        &mut build_journal,
     );
-    compiler.write_build_journal = false;
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     compiler.read_source_files(Mode::Dev)?;
-    let _ = compiler.compile(
-        &mut warnings,
-        &mut type_manifests,
-        &mut defined_modules,
-        &mut builds_journal,
-    )?;
+    let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // Print warnings
     for warning in warnings {
