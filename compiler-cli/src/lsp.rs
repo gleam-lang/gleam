@@ -727,6 +727,27 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
         .collect::<String>()
         .strip_suffix(".gleam")?
         .to_string();
+    eprintln!(
+        "
+path: {:?}
+path replaced: {:?}
+pathbuf: {:?}
+components: {:?}
+name: {:?}
+",
+        uri.path(),
+        uri.path().replace('\\', "/"),
+        PathBuf::from(uri.path().replace('\\', "/")),
+        PathBuf::from(uri.path().replace('\\', "/"))
+            .strip_prefix(&root)
+            .ok()
+            .unwrap()
+            .components()
+            .skip(1)
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>(),
+        module_name
+    );
     Some(module_name)
 }
 
