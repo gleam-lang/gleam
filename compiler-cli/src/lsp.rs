@@ -27,6 +27,8 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
+#[cfg(target_os = "windows")]
+use urlencoding::decode;
 
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
@@ -154,7 +156,7 @@ pub struct LanguageServer {
 impl LanguageServer {
     pub fn new(initialise_params: InitializeParams) -> Result<Self> {
         let compiler = LspProjectCompiler::new(ProjectIO::new())?;
-        let project_root = PathBuf::from("./").canonicalize().expect("Absolute root");
+        let project_root = std::env::current_dir().expect("Project root");
         Ok(Self {
             initialise_params,
             edited: HashMap::new(),
@@ -715,6 +717,45 @@ impl LanguageServer {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    let mut uri_path = decode(&*uri.path().replace('/', "\\"))
+        .expect("Invalid formatting")
+        .to_string();
+    if uri_path.starts_with("\\") {
+        uri_path = uri_path
+            .strip_prefix("\\")
+            .expect("Failed to remove \"\\\" prefix")
+            .to_string();
+    }
+    let path = PathBuf::from(uri_path);
+    let components = path
+        .strip_prefix(&root)
+        .ok()?
+        .components()
+        .skip(1)
+        .map(|c| c.as_os_str().to_string_lossy());
+    let module_name = Itertools::intersperse(components, "/".into())
+        .collect::<String>()
+        .strip_suffix(".gleam")?
+        .to_string();
+    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
+    Some(module_name)
+}
+
+#[test]
+#[cfg(target_os = "windows")]
+fn uri_to_module_name_test() {
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+}
+
+#[cfg(not(target_os = "windows"))]
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
     let path = PathBuf::from(uri.path());
     let components = path
@@ -731,6 +772,7 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
 }
 
 #[test]
+#[cfg(not(target_os = "windows"))]
 fn uri_to_module_name_test() {
     let root = PathBuf::from("/projects/app");
     let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
