@@ -588,14 +588,14 @@ impl<'a> Check<'a> {
                 has_tail_spread,
             } => {
                 let length_check = Document::String(if has_tail_spread {
-                    format!(".atLeastLength({})", expected_bytes)
+                    format!(".length >= {}", expected_bytes)
                 } else {
-                    format!(".hasLength({})", expected_bytes)
+                    format!(".length == {}", expected_bytes)
                 });
                 if match_desired {
                     docvec![subject, path, length_check,]
                 } else {
-                    docvec!["!", subject, path, length_check,]
+                    docvec!["!(", subject, path, length_check, ")",]
                 }
             }
         }

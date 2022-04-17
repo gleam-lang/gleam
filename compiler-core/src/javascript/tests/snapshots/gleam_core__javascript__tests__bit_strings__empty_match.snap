@@ -5,7 +5,7 @@ expression: "\nfn go(x) {\n  let <<>> = x\n}\n"
 import { throwError } from "../gleam.mjs";
 
 function go(x) {
-  if (!x.hasLength(0)) {
+  if (!(x.length == 0)) {
     throwError(
       "assignment_no_match",
       "my/mod",
