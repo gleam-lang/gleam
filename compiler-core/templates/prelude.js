@@ -135,6 +135,10 @@ export class BitString {
     return this.buffer[index];
   }
 
+  floatAt(index) {
+    return byteArrayToFloat(this.buffer.slice(index, index + 8))
+  }
+
   intFromSlice(start, end) {
     return byteArrayToInt(this.buffer.slice(start, end))
   }
@@ -199,6 +203,10 @@ export function byteArrayToInt(byteArray) {
 
   return value;
 };
+
+export function byteArrayToFloat(byteArray) {
+  return new Float64Array(byteArray.reverse().buffer)[0]
+}
 
 export function stringBits(string) {
   return new TextEncoder().encode(string);

@@ -187,6 +187,17 @@ fn go(x) {
     );
 }
 
+#[test]
+fn match_float() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<a:float, b:int>> = x
+}
+"#,
+    );
+}
+
 // variable sized
 // binary rest
 // utf8 matched

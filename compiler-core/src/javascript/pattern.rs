@@ -375,6 +375,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             offset.increment(1);
                             Ok(())
                         },
+
                         [Opt::Size{value: size, ..}] => {
                             match &**size {
                                 Pattern::Int{value, ..} =>  {
@@ -393,6 +394,15 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }),
                             }
                         }
+
+                        [Opt::Float { .. }] => {
+                            self.push_method(format!("floatAt({})", offset.bytes));
+                            self.traverse_pattern(subject, &segment.value)?;
+                            self.pop();
+                            offset.increment(8);
+                            Ok(())
+                        }
+                        
                         _ => Err(Error::Unsupported {
                             feature: "This bit string segment option in patterns".to_string(),
                             location: segment.location,

@@ -1022,7 +1022,6 @@ fn bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<1>> == <<1:int>>) }),
     "<<1>> == <<1.0:float>>"
     |> example(fn() { assert_equal(True, <<63,240,0,0,0,0,0,0>> == <<1.0:float>>) }),
-
   ]
 }
 
@@ -1285,6 +1284,19 @@ fn bit_string_match_tests() {
         #(a, b)
       }) 
     }),
-
+    "let <<a:float, b:int>> = <<63,240,0,0,0,0,0,0,1>>"
+    |> example(fn() { assert_equal(#(1.0, 1), 
+      {
+        let <<a:float, b:int>> = <<63,240,0,0,0,0,0,0,1>>
+        #(a, b)
+      }) 
+    }),
+    "let <<a:float>> = <<1.23:float>>"
+    |> example(fn() { assert_equal(1.23, 
+      {
+        let <<a:float>> = <<1.23:float>>
+        a
+      }) 
+    }),
   ]
 }

@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go(x) {\n  let <<258:16>> = x\n}\n"
+---
+import { throwError } from "../gleam.mjs";
+
+function go(x) {
+  if (x.intFromSlice(0, 2) !== 258 || !(x.length == 2)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    );
+  }
+  return x;
+}
+
