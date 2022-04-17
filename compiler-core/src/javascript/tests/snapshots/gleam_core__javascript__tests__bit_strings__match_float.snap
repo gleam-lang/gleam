@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go(x) {\n  let <<a:float, b:int>> = x\n}\n"
+---
+import { throwError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 9)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    );
+  }
+  let a = x.floatAt(0);
+  let b = x.byteAt(8);
+  return x;
+}
+
