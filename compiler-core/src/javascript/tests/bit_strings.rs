@@ -198,7 +198,6 @@ fn go(x) {
     );
 }
 
-
 #[test]
 fn match_rest() {
     assert_js!(
@@ -209,7 +208,6 @@ fn go(x) {
 "#,
     );
 }
-
 
 // binary rest
 // utf8 matched
