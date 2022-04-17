@@ -753,6 +753,14 @@ fn uri_to_module_name_test() {
     let root = PathBuf::from("/projects/app");
     let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
     assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
 fn cast_request<R>(request: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
