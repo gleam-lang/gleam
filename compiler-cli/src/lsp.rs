@@ -27,6 +27,7 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
+#[cfg(target_os = "windows")]
 use urlencoding::decode;
 
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
