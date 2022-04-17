@@ -137,7 +137,7 @@ fn empty_match() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<>> = x
+  assert <<>> = x
 }
 "#,
     );
@@ -148,7 +148,7 @@ fn match_bytes() {
     assert_js!(
         r#"
 fn go(x) {
-  let <<1, y>> = x
+  assert <<1, y>> = x
 }
 "#,
     );
