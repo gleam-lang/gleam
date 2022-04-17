@@ -24,15 +24,15 @@ pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
 }
 
 struct Offset {
-    count: usize
+    bytes: usize
 }
 
 impl Offset {
     pub fn new() -> Self {
-        Self{count: 0}
+        Self{bytes: 0}
     }
-    pub fn increment(mut self, step: usize) {
-        self.count = self.count + step 
+    pub fn increment(&mut self, step: usize) {
+        self.bytes = self.bytes + step 
     }
 }
 
@@ -359,20 +359,30 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Pattern::BitString { segments, .. } => {
                 use BitStringSegmentOption as Opt;
 
-                let mut offset = &Offset::new();
+                let mut offset = Offset::new();
                 self.push_string("buffer");
-                for (index, segment) in segments.iter().enumerate() {
+                for segment in segments {
                     let _ = match segment.options.as_slice() {
                         [] | [Opt::Int { .. }] => {
+                            self.push_int(offset.bytes);
+                            self.traverse_pattern(subject, &segment.value)?;
+                            self.pop();
                             offset.increment(1);
                             Ok(())
                         },
                         [Opt::Size{value: size, ..}] => {
                             match &**size {
                                 Pattern::Int{value, ..} =>  {
+                                    let start = offset.bytes;
                                     offset.increment(value.parse().unwrap());
-                                    println!("{:?}", value);
-                                    unimplemented!("foo")
+                                    let end = offset.bytes;
+                                    // let stringly:'a String = format!("slice({}, {})", start, end);
+                                    // let range: &'a str = stringly.as_str();
+                                    // self.push_string(range);
+                                    self.push_string(format!("slice({}, {})", start, end).as_str());
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
                                 }
                                 _ => Err(Error::Unsupported {
                                     feature: "This bit string size option in patterns".to_string(),
@@ -385,13 +395,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             location: segment.location,
                         }),
                     }?;
-                    self.push_int(index);
-                    self.traverse_pattern(subject, &segment.value)?;
-                    self.pop();
+
                 }
                 self.pop();
                 
-                self.push_bitstring_length_check(subject.clone(), offset.count, false);
+                self.push_bitstring_length_check(subject.clone(), offset.bytes, false);
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {

@@ -5,7 +5,11 @@ expression: "\nfn go(x) {\n  let <<1, y>> = x\n}\n"
 import { throwError } from "../gleam.mjs";
 
 function go(x) {
+<<<<<<< HEAD
   if (!(x.length == 2) || x.buffer[0] !== 1) {
+=======
+  if (x.buffer[0] !== 1 || !x.hasLength(2)) {
+>>>>>>> more experiments
     throwError(
       "assignment_no_match",
       "my/mod",
