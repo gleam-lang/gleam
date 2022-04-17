@@ -716,22 +716,44 @@ impl LanguageServer {
     }
 }
 
+#[cfg(target_os = "windows")]
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let mut uri_path: String;
-    if cfg!(target_os = "windows") {
-        uri_path = decode(&*uri.path().replace('/', "\\"))
-            .expect("Invalid formatting")
-            .to_string();
-        if uri_path.starts_with('/') {
-            uri_path = uri_path
-                .strip_prefix('/')
-                .expect("Failed to remove \"/\" prefix")
-                .to_string();
-        }
-    } else {
-        uri_path = uri.path().to_string();
+    let mut uri_path = decode(&*uri.path().replace('/', "\\"))
+        .expect("Invalid formatting")
+        .to_string();
+    if uri_path.starts_with("\\") {
+        uri_path = uri_path.strip_prefix("\\").expect("Failed to remove \"\\\" prefix").to_string();
     }
     let path = PathBuf::from(uri_path);
+    let components = path
+        .strip_prefix(&root)
+        .ok()?
+        .components()
+        .skip(1)
+        .map(|c| c.as_os_str().to_string_lossy());
+    let module_name = Itertools::intersperse(components, "/".into())
+        .collect::<String>()
+        .strip_suffix(".gleam")?
+        .to_string();
+    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
+    Some(module_name)
+}
+
+#[test]
+#[cfg(target_os = "windows")]
+fn uri_to_module_name_test() {
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    let path = PathBuf::from(uri.path());
     let components = path
         .strip_prefix(&root)
         .ok()?
@@ -746,6 +768,7 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
 }
 
 #[test]
+#[cfg(not(target_os = "windows"))]
 fn uri_to_module_name_test() {
     let root = PathBuf::from("/projects/app");
     let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
@@ -767,14 +790,6 @@ fn uri_to_module_name_test() {
 
     let root = PathBuf::from("/projects/app");
     let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
     assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
