@@ -366,7 +366,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 use BitStringSegmentOption as Opt;
 
                 let mut offset = Offset::new();
-                // self.push_string("buffer");
                 for segment in segments {
                     let _ = match segment.options.as_slice() {
                         [] | [Opt::Int { .. }] => {
@@ -382,7 +381,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                     let start = offset.bytes;
                                     offset.increment(value.parse::<usize>().unwrap()/8);
                                     let end = offset.bytes;
-                                    
+
                                     self.push_method(format!("intFromSlice({}, {})", start, end));
                                     self.traverse_pattern(subject, &segment.value)?;
                                     self.pop();
@@ -401,7 +400,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     }?;
 
                 }
-                // self.pop();
                 
                 self.push_bitstring_length_check(subject.clone(), offset.bytes, false);
                 Ok(())

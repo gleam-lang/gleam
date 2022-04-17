@@ -176,6 +176,17 @@ fn go(x) {
     );
 }
 
+#[test]
+fn match_sized_value() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<258:16>> = x
+}
+"#,
+    );
+}
+
 // variable sized
 // binary rest
 // utf8 matched
