@@ -15,8 +15,8 @@ function go(x) {
       { value: x }
     );
   }
-  let a = x.buffer.slice(0, 2);
-  let b = x.buffer.slice(2, 3);
+  let a = x.intFromSlice(0, 2);
+  let b = x.intFromSlice(2, 3);
   return x;
 }
 

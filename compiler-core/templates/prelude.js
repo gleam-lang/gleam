@@ -130,6 +130,14 @@ export class BitString {
   get length() {
     return this.buffer.length;
   }
+
+  byteAt(index) {
+    return this.buffer[index];
+  }
+
+  intFromSlice(start, end) {
+    return byteArrayToInt(this.buffer.slice(start, end))
+  }
 }
 
 export class UtfCodepoint {
@@ -181,6 +189,16 @@ export function sizedInteger(value, size) {
   }
   return byteArray.reverse();
 }
+
+export function byteArrayToInt(byteArray) {
+  byteArray = byteArray.reverse()
+  var value = 0;
+  for ( var i = byteArray.length - 1; i >= 0; i--) {
+      value = (value * 256) + byteArray[i];
+  }
+
+  return value;
+};
 
 export function stringBits(string) {
   return new TextEncoder().encode(string);

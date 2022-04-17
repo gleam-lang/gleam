@@ -1271,10 +1271,20 @@ fn bit_string_match_tests() {
       let <<1, x>> = <<1, 2>>
       x
     }) }),
-        "let <<1, x>> = <<1, 2>>"
-    |> example(fn() { assert_equal(258, {
-      let <<a:16, b:8>> = <<1, 2, 3>>
-      a
-    }) }),
+    "let <<a:8>> = <<1>>"
+    |> example(fn() { assert_equal(1, 
+      {
+        let <<a:8>> = <<1>>
+        a
+      }) 
+    }),
+    "let <<a:16, b:8>> = <<1, 2, 3>>"
+    |> example(fn() { assert_equal(#(258, 3), 
+      {
+        let <<a:16, b:8>> = <<1, 2, 3>>
+        #(a, b)
+      }) 
+    }),
+
   ]
 }
