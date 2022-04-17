@@ -31,12 +31,15 @@ struct Offset {
 
 impl Offset {
     pub fn new() -> Self {
-        Self{bytes: 0, open_ended: false}
+        Self {
+            bytes: 0,
+            open_ended: false,
+        }
     }
     // This should never be called on an open ended offset
     // However previous checks ensure bit_string segements without a size are only allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
-        self.bytes = self.bytes + step 
+        self.bytes = self.bytes + step
     }
     pub fn set_open_ended(&mut self) {
         self.open_ended = true
@@ -380,26 +383,24 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             self.pop();
                             offset.increment(1);
                             Ok(())
-                        },
-
-                        [Opt::Size{value: size, ..}] => {
-                            match &**size {
-                                Pattern::Int{value, ..} =>  {
-                                    let start = offset.bytes;
-                                    offset.increment(value.parse::<usize>().unwrap()/8);
-                                    let end = offset.bytes;
-
-                                    self.push_method(format!("intFromSlice({}, {})", start, end));
-                                    self.traverse_pattern(subject, &segment.value)?;
-                                    self.pop();
-                                    Ok(())
-                                }
-                                _ => Err(Error::Unsupported {
-                                    feature: "This bit string size option in patterns".to_string(),
-                                    location: segment.location,
-                                }),
-                            }
                         }
+
+                        [Opt::Size { value: size, .. }] => match &**size {
+                            Pattern::Int { value, .. } => {
+                                let start = offset.bytes;
+                                offset.increment(value.parse::<usize>().unwrap() / 8);
+                                let end = offset.bytes;
+
+                                self.push_method(format!("intFromSlice({}, {})", start, end));
+                                self.traverse_pattern(subject, &segment.value)?;
+                                self.pop();
+                                Ok(())
+                            }
+                            _ => Err(Error::Unsupported {
+                                feature: "This bit string size option in patterns".to_string(),
+                                location: segment.location,
+                            }),
+                        },
 
                         [Opt::Float { .. }] => {
                             self.push_method(format!("floatAt({})", offset.bytes));
@@ -422,9 +423,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             location: segment.location,
                         }),
                     }?;
-
                 }
-                
+
                 self.push_bitstring_length_check(subject.clone(), offset.bytes, offset.open_ended);
                 Ok(())
             }
