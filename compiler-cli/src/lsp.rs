@@ -720,18 +720,11 @@ impl LanguageServer {
 }
 
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let path = PathBuf::from(uri.path());
     let mut uri_path = decode(&*uri.path().replace("/", "\\")).expect("Invalid formatting").to_string();
-    if cfg!(target_os = "windows") {
-        uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix")
-        uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix");
+    if uri_path[0] == "/" {
         uri_path = uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix").to_string();
     }
     let path = PathBuf::from(uri_path);
-    tracing::info!("(uri_to_module_name) URI: {}", uri.path());
-    tracing::info!("(uri_to_module_name) PathBuf: {}", path.to_str()?);
-    tracing::info!("(uri_to_module_name) root: {}", root.to_str()?);
-    tracing::info!("(uri_to_module_name) root_with_edits: {}", root.to_path_buf().to_str()?);
     let components = path
         .strip_prefix(&root)
         .ok()?
@@ -742,7 +735,6 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
         .collect::<String>()
         .strip_suffix(".gleam")?
         .to_string();
-    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
     Some(module_name)
 }
 
