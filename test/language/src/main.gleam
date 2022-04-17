@@ -1298,5 +1298,19 @@ fn bit_string_match_tests() {
         a
       }) 
     }),
+    "let <<_, rest:binary>> = <<1>>"
+    |> example(fn() { assert_equal(<<>>,
+      {
+        let <<_, rest:binary>> = <<1>>
+        rest
+      })
+    }),
+        "let <<_, rest:binary>> = <<1,2,3>>"
+    |> example(fn() { assert_equal(<<2,3>>,
+      {
+        let <<_, rest:binary>> = <<1,2,3>>
+        rest
+      })
+    }),
   ]
 }

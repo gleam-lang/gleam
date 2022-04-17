@@ -142,6 +142,11 @@ export class BitString {
   intFromSlice(start, end) {
     return byteArrayToInt(this.buffer.slice(start, end))
   }
+
+  restFrom(index) {
+    return new BitString(this.buffer.slice(index))
+  }
+
 }
 
 export class UtfCodepoint {
