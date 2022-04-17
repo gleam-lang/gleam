@@ -110,7 +110,10 @@ enum Command {
     Check,
 
     /// Publish the project to the Hex package manager
-    Publish,
+    Publish {
+        #[clap(long)]
+        replace: bool,
+    },
 
     /// Render HTML documentation
     #[clap(subcommand)]
@@ -325,7 +328,7 @@ fn main() {
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
-        Command::Publish => publish::command(),
+        Command::Publish { replace } => publish::command(replace),
 
         Command::PrintConfig => print_config(),
 
