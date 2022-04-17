@@ -691,10 +691,7 @@ impl LanguageServer {
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        tracing::info!("File URI: {}", uri.to_string());
-        tracing::info!("Project Root: {}", self.project_root.to_str()?);
         let module_name = uri_to_module_name(uri, &self.project_root).expect("uri to module name");
-        tracing::info!("Module: {}", module_name);
         self.compiler.modules.get(&module_name)
     }
 
