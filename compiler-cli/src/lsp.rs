@@ -721,6 +721,7 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
     let mut uri_path = decode(&*uri.path().replace("/", "\\")).expect("Invalid formatting").to_string();
     if cfg!(target_os = "windows") {
         uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix")
+        uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix");
     }
     let path = PathBuf::from(uri_path);
     let components = path
