@@ -154,7 +154,7 @@ pub struct LanguageServer {
 impl LanguageServer {
     pub fn new(initialise_params: InitializeParams) -> Result<Self> {
         let compiler = LspProjectCompiler::new(ProjectIO::new())?;
-        let project_root = PathBuf::from("./").canonicalize().expect("Absolute root");
+        let project_root = std::env::current_dir().expect("Project root");
         Ok(Self {
             initialise_params,
             edited: HashMap::new(),
