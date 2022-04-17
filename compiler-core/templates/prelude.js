@@ -130,14 +130,6 @@ export class BitString {
   get length() {
     return this.buffer.length;
   }
-
-  atLeastLength(desired) {
-    return desired <= this.length;
-  }
-
-  hasLength(desired) {
-    return this.length === desired;
-  }
 }
 
 export class UtfCodepoint {
