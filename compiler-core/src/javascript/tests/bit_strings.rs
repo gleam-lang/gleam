@@ -198,6 +198,18 @@ fn go(x) {
     );
 }
 
-// variable sized
+
+#[test]
+fn match_rest() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<_, b:binary>> = <<1,2,3>>
+}
+"#,
+    );
+}
+
+
 // binary rest
 // utf8 matched

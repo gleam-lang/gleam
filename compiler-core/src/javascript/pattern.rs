@@ -25,15 +25,21 @@ pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
 }
 
 struct Offset {
-    bytes: usize
+    bytes: usize,
+    open_ended: bool,
 }
 
 impl Offset {
     pub fn new() -> Self {
-        Self{bytes: 0}
+        Self{bytes: 0, open_ended: false}
     }
+    // This should never be called on an open ended offset
+    // However previous checks ensure bit_string segements without a size are only allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
         self.bytes = self.bytes + step 
+    }
+    pub fn set_open_ended(&mut self) {
+        self.open_ended = true
     }
 }
 
@@ -402,7 +408,15 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             offset.increment(8);
                             Ok(())
                         }
-                        
+
+                        [Opt::Binary { .. }] => {
+                            self.push_method(format!("restFrom({})", offset.bytes));
+                            self.traverse_pattern(subject, &segment.value)?;
+                            self.pop();
+                            offset.set_open_ended();
+                            Ok(())
+                        }
+
                         _ => Err(Error::Unsupported {
                             feature: "This bit string segment option in patterns".to_string(),
                             location: segment.location,
@@ -411,7 +425,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                 }
                 
-                self.push_bitstring_length_check(subject.clone(), offset.bytes, false);
+                self.push_bitstring_length_check(subject.clone(), offset.bytes, offset.open_ended);
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {

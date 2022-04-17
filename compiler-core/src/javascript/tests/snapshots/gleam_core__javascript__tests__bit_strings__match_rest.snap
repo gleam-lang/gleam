@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
+---
+import { throwError, toBitString } from "../gleam.mjs";
+
+function go(x) {
+  let $ = toBitString([1, 2, 3]);
+  if (!($.length >= 1)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: $ }
+    );
+  }
+  let b = $.restFrom(1);
+  return $;
+}
+
