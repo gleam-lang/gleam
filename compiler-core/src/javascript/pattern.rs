@@ -366,11 +366,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 use BitStringSegmentOption as Opt;
 
                 let mut offset = Offset::new();
-                self.push_string("buffer");
+                // self.push_string("buffer");
                 for segment in segments {
                     let _ = match segment.options.as_slice() {
                         [] | [Opt::Int { .. }] => {
-                            self.push_int(offset.bytes);
+                            self.push_method(format!("byteAt({})", offset.bytes));
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
                             offset.increment(1);
@@ -382,10 +382,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                     let start = offset.bytes;
                                     offset.increment(value.parse::<usize>().unwrap()/8);
                                     let end = offset.bytes;
-                                    // let stringly:'a String = format!("slice({}, {})", start, end);
-                                    // let range: &'a str = stringly.as_str();
-                                    // self.push_string(range);
-                                    self.push_method(format!("slice({}, {})", start, end));
+                                    
+                                    self.push_method(format!("intFromSlice({}, {})", start, end));
                                     self.traverse_pattern(subject, &segment.value)?;
                                     self.pop();
                                     Ok(())
@@ -403,7 +401,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     }?;
 
                 }
-                self.pop();
+                // self.pop();
                 
                 self.push_bitstring_length_check(subject.clone(), offset.bytes, false);
                 Ok(())

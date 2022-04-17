@@ -165,6 +165,17 @@ fn go(x) {
     );
 }
 
+#[test]
+fn discard_sized() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let <<_:16, _:8>> = x
+}
+"#,
+    );
+}
+
 // variable sized
 // binary rest
 // utf8 matched
