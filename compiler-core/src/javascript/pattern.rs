@@ -7,6 +7,7 @@ pub static ASSIGNMENT_VAR: &str = "$";
 enum Index<'a> {
     Int(usize),
     String(&'a str),
+    Method(String),
 }
 
 #[derive(Debug)]
@@ -64,6 +65,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::Int(i));
     }
 
+    fn push_method(&mut self, s: String) {
+        self.path.push(Index::Method(s));
+    }
+
     fn push_string_times(&mut self, s: &'a str, times: usize) {
         for _ in 0..times {
             self.push_string(s);
@@ -85,6 +90,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::Int(i) => Document::String(format!("[{}]", i)),
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
+            Index::Method(s) => docvec!(".", Document::String(s.to_string())),
         }))
     }
 
@@ -374,12 +380,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             match &**size {
                                 Pattern::Int{value, ..} =>  {
                                     let start = offset.bytes;
-                                    offset.increment(value.parse().unwrap());
+                                    offset.increment(value.parse::<usize>().unwrap()/8);
                                     let end = offset.bytes;
                                     // let stringly:'a String = format!("slice({}, {})", start, end);
                                     // let range: &'a str = stringly.as_str();
                                     // self.push_string(range);
-                                    self.push_string(format!("slice({}, {})", start, end).as_str());
+                                    self.push_method(format!("slice({}, {})", start, end));
                                     self.traverse_pattern(subject, &segment.value)?;
                                     self.pop();
                                     Ok(())
