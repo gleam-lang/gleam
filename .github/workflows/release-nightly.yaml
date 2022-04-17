@@ -17,6 +17,8 @@ jobs:
         with:
           token: ${{ github.token }}
           tag: nightly
+          fail-if-no-assets: false
+          fail-if-no-release: false
           assets: |
             *.zip
             *.tar.gz
