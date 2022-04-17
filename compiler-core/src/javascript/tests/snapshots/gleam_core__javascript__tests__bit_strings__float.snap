@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go() {\n  <<1.1:float>>\n}\n"
+---
+import { toBitString, float64Bits } from "../gleam.mjs";
+
+function go() {
+  return toBitString([float64Bits(1.1)]);
+}
+

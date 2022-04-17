@@ -4,7 +4,7 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
     },
     build::Origin,
@@ -151,7 +151,6 @@ impl ModuleDecoder {
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
         Ok(ValueConstructor {
             public: true,
-            origin: Default::default(),
             type_,
             variant,
         })
@@ -327,7 +326,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         use value_constructor_variant::Which;
         match reader.which()? {
-            Which::ModuleConstant(reader) => self.module_constant_variant(&reader?),
+            Which::ModuleConstant(reader) => self.module_constant_variant(&reader),
             Which::ModuleFn(reader) => self.module_fn_variant(&reader),
             Which::Record(reader) => self.record(&reader),
         }
@@ -335,10 +334,19 @@ impl ModuleDecoder {
 
     fn module_constant_variant(
         &mut self,
-        reader: &constant::Reader<'_>,
+        reader: &value_constructor_variant::module_constant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleConstant {
-            literal: self.constant(reader)?,
+            location: self.src_span(&reader.get_location()?)?,
+            literal: self.constant(&reader.get_literal()?)?,
+            module: reader.get_module()?.to_string(),
+        })
+    }
+
+    fn src_span(&self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
+        Ok(SrcSpan {
+            start: reader.get_start() as usize,
+            end: reader.get_end() as usize,
         })
     }
 
@@ -351,6 +359,7 @@ impl ModuleDecoder {
             module: module_name(&reader.get_module()?)?,
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
+            location: self.src_span(&reader.get_location()?)?,
         })
     }
 
@@ -360,8 +369,10 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::Record {
             name: reader.get_name()?.to_string(),
+            module: reader.get_module()?.to_string(),
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
+            location: self.src_span(&reader.get_location()?)?,
         })
     }
 

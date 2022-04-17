@@ -6,7 +6,7 @@ use std::{
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
-    build::Mode,
+    build::{Mode, Telemetry},
     config::PackageConfig,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -19,6 +19,7 @@ use hexpm::version::Version;
 use itertools::Itertools;
 
 use crate::{
+    build_lock::BuildLock,
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
@@ -28,7 +29,12 @@ pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     let config = crate::config::root_config()?;
-    let (_, manifest) = get_manifest(runtime.handle().clone(), Mode::Dev, &config)?;
+    let (_, manifest) = get_manifest(
+        runtime.handle().clone(),
+        Mode::Dev,
+        &config,
+        &cli::Reporter::new(),
+    )?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
@@ -91,9 +97,16 @@ zzz 0.4.0
     )
 }
 
-pub fn download(new_package: Option<(Vec<String>, bool)>) -> Result<Manifest> {
+pub fn download<Telem: Telemetry>(
+    telemetry: Telem,
+    new_package: Option<(Vec<String>, bool)>,
+) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
+
+    let lock = BuildLock::new()?;
+    let _guard = lock.lock(&telemetry);
+
     let mode = Mode::Dev;
 
     let http = HttpClient::boxed();
@@ -120,7 +133,8 @@ pub fn download(new_package: Option<(Vec<String>, bool)>) -> Result<Manifest> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let (manifest_updated, manifest) = get_manifest(runtime.handle().clone(), mode, &config)?;
+    let (manifest_updated, manifest) =
+        get_manifest(runtime.handle().clone(), mode, &config, &telemetry)?;
     let local = LocalPackages::read_from_disc()?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
@@ -132,6 +146,7 @@ pub fn download(new_package: Option<(Vec<String>, bool)>) -> Result<Manifest> {
         &manifest,
         &local,
         project_name,
+        &telemetry,
     ))?;
 
     // Record new state of the packages directory
@@ -144,11 +159,12 @@ pub fn download(new_package: Option<(Vec<String>, bool)>) -> Result<Manifest> {
     Ok(manifest)
 }
 
-async fn download_missing_packages(
+async fn download_missing_packages<Telem: Telemetry>(
     downloader: hex::Downloader,
     manifest: &Manifest,
     local: &LocalPackages,
     project_name: String,
+    telemetry: &Telem,
 ) -> Result<(), Error> {
     let mut count = 0;
     let mut missing = local
@@ -161,11 +177,11 @@ async fn download_missing_packages(
         .peekable();
     if missing.peek().is_some() {
         let start = Instant::now();
-        cli::print_downloading("packages");
+        telemetry.downloading_package("packages");
         downloader
             .download_hex_packages(missing, &project_name)
             .await?;
-        cli::print_packages_downloaded(start, count);
+        telemetry.packages_downloaded(start, count);
     }
     Ok(())
 }
@@ -384,15 +400,16 @@ fn extra_local_packages() {
     )
 }
 
-fn get_manifest(
+fn get_manifest<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
+    telemetry: &Telem,
 ) -> Result<(bool, Manifest)> {
     // If there's no manifest then resolve the versions anew
     if !paths::manifest().exists() {
         tracing::info!("manifest_not_present");
-        let manifest = resolve_versions(runtime, mode, config, None)?;
+        let manifest = resolve_versions(runtime, mode, config, None, telemetry)?;
         return Ok((true, manifest));
     }
 
@@ -405,18 +422,19 @@ fn get_manifest(
         Ok((false, manifest))
     } else {
         tracing::info!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, config, Some(&manifest))?;
+        let manifest = resolve_versions(runtime, mode, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
 }
 
-fn resolve_versions(
+fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
     manifest: Option<&Manifest>,
+    telemetry: &Telem,
 ) -> Result<Manifest, Error> {
-    cli::print_resolving_versions();
+    telemetry.resolving_package_versions();
     let resolved = hex::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
         mode,

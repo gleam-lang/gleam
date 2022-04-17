@@ -641,6 +641,8 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
+            UntypedExpr::Negate { value, .. } => self.negate(value),
+
             UntypedExpr::Fn {
                 is_capture: true,
                 body,
@@ -1338,6 +1340,10 @@ impl<'comments> Formatter<'comments> {
             None => self.const_expr(&arg.value),
             Some(s) => s.to_doc().append(": ").append(self.const_expr(&arg.value)),
         }
+    }
+
+    fn negate<'a>(&mut self, value: &'a UntypedExpr) -> Document<'a> {
+        docvec!["!", self.wrap_expr(value)]
     }
 }
 

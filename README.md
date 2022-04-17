@@ -15,8 +15,8 @@
 
 Gleam is a friendly language for building type-safe, scalable systems!
 
-It compiles to [Erlang](http://www.erlang.org/) and has straightforward interop with other
-BEAM languages such as Erlang, Elixir and LFE.
+It compiles to [Erlang](http://www.erlang.org/) (or JavaScript) and has straightforward interop
+with other BEAM languages such as Erlang, Elixir, and LFE.
 
 For more information see the Gleam website: [https://gleam.run](https://gleam.run).
 
@@ -80,6 +80,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [José Valim](https://github.com/josevalim)
  - [João Veiga](https://github.com/jveiga)
  - [Kapp Technology](https://github.com/kapp-technology)
+ - [kee-oth](https://github.com/kee-oth)
  - [Lars Wikman](https://github.com/lawik)
  - [Marcin Puc](https://github.com/tranzystorek-io)
  - [Marius Kalvø](https://github.com/mariuskalvo)

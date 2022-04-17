@@ -130,9 +130,10 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             name: PIPE_VARIABLE.to_string(),
             constructor: ValueConstructor {
                 public: true,
-                origin: self.argument_location,
                 type_: self.argument_type.clone(),
-                variant: ValueConstructorVariant::LocalVariable,
+                variant: ValueConstructorVariant::LocalVariable {
+                    location: self.argument_location,
+                },
             },
         }
     }
@@ -158,9 +159,8 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // Insert the variable for use in type checking the rest of the pipeline
         self.expr_typer.environment.insert_variable(
             PIPE_VARIABLE.to_string(),
-            ValueConstructorVariant::LocalVariable,
+            ValueConstructorVariant::LocalVariable { location },
             expression.type_(),
-            location,
         );
         // Add the assignment to the AST
         let assignment = TypedExpr::Assignment {
@@ -245,7 +245,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 fn_(vec![self.argument_type.clone()], return_type.clone()),
             )
             .map_err(|e| {
-                let is_pipe_mismatch = self.is_pipe_type_mismatch(&e);
+                let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
                 let error = convert_unify_error(e, function.location());
                 if is_pipe_mismatch {
                     error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
@@ -262,7 +262,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         })
     }
 
-    fn is_pipe_type_mismatch(&mut self, error: &UnifyError) -> bool {
+    fn check_if_pipe_type_mismatch(&mut self, error: &UnifyError) -> bool {
         let types = match error {
             UnifyError::CouldNotUnify {
                 expected, given, ..

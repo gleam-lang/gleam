@@ -18,11 +18,12 @@ pub use prelude::*;
 
 use crate::{
     ast::{
-        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant, Layer,
-        Pattern, RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst,
-        TypedConstant, TypedExpr, TypedModule, TypedPattern, TypedPatternBitStringSegment,
-        TypedRecordUpdateArg, TypedStatement, UnqualifiedImport, UntypedModule,
-        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+        self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant,
+        DefinitionLocation, Layer, Pattern, RecordConstructor, RecordConstructorArg, SrcSpan,
+        Statement, TypeAst, TypedConstant, TypedExpr, TypedModule, TypedPattern,
+        TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement, UnqualifiedImport,
+        UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        UntypedStatement,
     },
     bit_string,
     build::{Origin, Target},
@@ -263,10 +264,12 @@ pub struct RecordAccessor {
 #[derive(Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
-    LocalVariable,
+    LocalVariable { location: SrcSpan },
 
     /// A module constant
     ModuleConstant {
+        location: SrcSpan,
+        module: String,
         literal: Constant<Arc<Type>, String>,
     },
 
@@ -276,6 +279,7 @@ pub enum ValueConstructorVariant {
         field_map: Option<FieldMap>,
         module: Vec<String>,
         arity: usize,
+        location: SrcSpan,
     },
 
     /// A constructor for a custom type
@@ -283,6 +287,8 @@ pub enum ValueConstructorVariant {
         name: String,
         arity: usize,
         field_map: Option<FieldMap>,
+        location: SrcSpan,
+        module: String,
     },
 }
 
@@ -293,24 +299,44 @@ impl ValueConstructorVariant {
                 name,
                 arity,
                 field_map,
+                location,
+                ..
             } => ModuleValueConstructor::Record {
                 name: name.clone(),
                 field_map: field_map.clone(),
                 arity: *arity,
                 type_,
+                location: *location,
             },
 
-            Self::ModuleConstant { literal } => ModuleValueConstructor::Constant {
+            // TODO: remove this clone with an rc clone
+            Self::ModuleConstant {
+                literal, location, ..
+            } => ModuleValueConstructor::Constant {
                 literal: literal.clone(),
+                location: *location,
             },
 
-            Self::LocalVariable { .. } | Self::ModuleFn { .. } => ModuleValueConstructor::Fn,
+            Self::LocalVariable { location, .. } | Self::ModuleFn { location, .. } => {
+                ModuleValueConstructor::Fn {
+                    location: *location,
+                }
+            }
+        }
+    }
+
+    pub fn definition_location(&self) -> SrcSpan {
+        match self {
+            ValueConstructorVariant::LocalVariable { location }
+            | ValueConstructorVariant::ModuleConstant { location, .. }
+            | ValueConstructorVariant::ModuleFn { location, .. }
+            | ValueConstructorVariant::Record { location, .. } => *location,
         }
     }
 
     /// Returns `true` if the variant is [`LocalVariable`].
     pub fn is_local_variable(&self) -> bool {
-        matches!(self, Self::LocalVariable)
+        matches!(self, Self::LocalVariable { .. })
     }
 }
 
@@ -321,11 +347,27 @@ pub enum ModuleValueConstructor {
         arity: usize,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
+        location: SrcSpan,
     },
-    Fn,
+
+    Fn {
+        location: SrcSpan,
+    },
+
     Constant {
         literal: TypedConstant,
+        location: SrcSpan,
     },
+}
+
+impl ModuleValueConstructor {
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            ModuleValueConstructor::Fn { location }
+            | ModuleValueConstructor::Record { location, .. }
+            | ModuleValueConstructor::Constant { location, .. } => *location,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -428,7 +470,6 @@ pub struct TypeConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
     pub public: bool,
-    pub origin: SrcSpan,
     pub variant: ValueConstructorVariant,
     pub type_: Arc<Type>,
 }
@@ -436,6 +477,26 @@ pub struct ValueConstructor {
 impl ValueConstructor {
     pub fn is_local_variable(&self) -> bool {
         self.variant.is_local_variable()
+    }
+
+    pub fn definition_location(&self) -> DefinitionLocation<'_> {
+        match &self.variant {
+            ValueConstructorVariant::Record {
+                module, location, ..
+            }
+            | ValueConstructorVariant::ModuleConstant {
+                location, module, ..
+            } => DefinitionLocation {
+                module: Some(module.as_str()),
+                span: *location,
+            },
+
+            ValueConstructorVariant::ModuleFn { location, .. }
+            | ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
+                module: None,
+                span: *location,
+            },
+        }
     }
 }
 
@@ -543,7 +604,7 @@ pub fn infer_module(
     for value in environment.module_values.values() {
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
-                location: value.origin,
+                location: value.variant.definition_location(),
                 leaked,
             });
         }
@@ -693,9 +754,9 @@ fn register_values<'a>(
                     field_map,
                     module: module_name.to_vec(),
                     arity: args.len(),
+                    location: *location,
                 },
                 typ,
-                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -744,12 +805,12 @@ fn register_values<'a>(
                 ValueConstructor {
                     public: *public,
                     type_: typ.clone(),
-                    origin: *location,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: fun.clone(),
                         field_map: field_map.clone(),
                         module: vec![module.clone()],
                         arity: args.len(),
+                        location: *location,
                     },
                 },
             );
@@ -762,9 +823,9 @@ fn register_values<'a>(
                     module: vec![module.clone()],
                     arity: args.len(),
                     field_map,
+                    location: *location,
                 },
                 typ,
-                *location,
             );
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
@@ -839,11 +900,12 @@ fn register_values<'a>(
                         ValueConstructor {
                             public: *public,
                             type_: typ.clone(),
-                            origin: constructor.location,
                             variant: ValueConstructorVariant::Record {
                                 name: constructor.name.clone(),
                                 arity: constructor.arguments.len(),
                                 field_map: field_map.clone(),
+                                location: constructor.location,
+                                module: module_name.join("/"),
                             },
                         },
                     );
@@ -863,9 +925,10 @@ fn register_values<'a>(
                         name: constructor.name.clone(),
                         arity: constructor.arguments.len(),
                         field_map,
+                        location: constructor.location,
+                        module: module_name.join("/"),
                     },
                     typ,
-                    constructor.location,
                 );
             }
         }
@@ -916,13 +979,13 @@ fn generalise_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location,
                     type_: typ,
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
                         module: module_name.to_vec(),
                         arity: args.len(),
+                        location,
                     },
                 },
             );
@@ -1012,9 +1075,9 @@ fn infer_statement(
                         field_map,
                         module: module_name.to_vec(),
                         arity: args.len(),
+                        location,
                     },
                     typ.clone(),
-                    location,
                 );
                 typ
             } else {
@@ -1252,9 +1315,10 @@ fn infer_statement(
                 &name,
                 ValueConstructor {
                     public,
-                    origin: location,
                     variant: ValueConstructorVariant::ModuleConstant {
+                        location,
                         literal: typed_expr.clone(),
+                        module: module_name.join("/"),
                     },
                     type_: type_.clone(),
                 },
@@ -1744,7 +1808,6 @@ pub fn register_import(
                         imported_name.clone(),
                         value.variant.clone(),
                         value.type_.clone(),
-                        *location,
                     );
                     variant = Some(&value.variant);
                     value_imported = true;

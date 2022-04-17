@@ -32,16 +32,17 @@ fn compile_expression(src: &str) -> TypedExpr {
     let variant = ValueConstructorVariant::Record {
         name: "Cat".into(),
         arity: 2,
+        location: SrcSpan { start: 12, end: 15 },
         field_map: Some(FieldMap {
             arity: 2,
             fields: [("name".into(), 0), ("age".into(), 1)].into(),
         }),
+        module: "mymod".into(),
     };
     environment.insert_variable(
         "Cat".into(),
-        variant.clone(),
+        variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        SrcSpan::default(),
     );
 
     environment.insert_accessors(
@@ -131,8 +132,9 @@ wibble"#,
         location: SrcSpan { start: 15, end: 21 },
         constructor: ValueConstructor {
             public: false,
-            origin: SrcSpan { start: 4, end: 10 },
-            variant: ValueConstructorVariant::LocalVariable,
+            variant: ValueConstructorVariant::LocalVariable {
+                location: SrcSpan { start: 4, end: 10 },
+            },
             type_: type_::int(),
         },
         name: "wibble".into(),
@@ -253,9 +255,11 @@ fn find_node_module_select() {
         location: SrcSpan { start: 1, end: 3 },
         typ: type_::int(),
         label: "label".into(),
-        module_name: vec!["name".into()],
+        module_name: "name".into(),
         module_alias: "alias".into(),
-        constructor: ModuleValueConstructor::Fn,
+        constructor: ModuleValueConstructor::Fn {
+            location: SrcSpan { start: 1, end: 55 },
+        },
     };
 
     assert_eq!(expr.find_node(0), None);
@@ -409,4 +413,32 @@ case 1, 2 {
     assert_eq!(case.find_node(23), Some(&int3));
     assert_eq!(case.find_node(25), Some(&case));
     assert_eq!(case.find_node(26), None);
+}
+
+#[test]
+fn find_node_bool() {
+    let negate = compile_expression(r#"!True"#);
+
+    let bool = TypedExpr::Var {
+        location: SrcSpan { start: 1, end: 5 },
+        constructor: ValueConstructor {
+            public: true,
+            variant: ValueConstructorVariant::Record {
+                name: "True".into(),
+                arity: 0,
+                field_map: None,
+                location: SrcSpan { start: 0, end: 0 },
+                module: "".into(),
+            },
+            type_: type_::bool(),
+        },
+        name: "True".into(),
+    };
+
+    assert_eq!(negate.find_node(0), Some(&negate));
+    assert_eq!(negate.find_node(1), Some(&bool));
+    assert_eq!(negate.find_node(2), Some(&bool));
+    assert_eq!(negate.find_node(3), Some(&bool));
+    assert_eq!(negate.find_node(4), Some(&bool));
+    assert_eq!(negate.find_node(5), None);
 }

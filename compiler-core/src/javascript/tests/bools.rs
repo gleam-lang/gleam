@@ -110,3 +110,24 @@ fn go(a) {
 "#,
     );
 }
+
+#[test]
+fn negation() {
+    assert_js!(
+        "pub fn negate(x) {
+    !x
+}"
+    );
+}
+
+#[test]
+fn negation_block() {
+    assert_js!(
+        "pub fn negate(x) {
+  !{
+    123
+    x
+  }
+}"
+    );
+}

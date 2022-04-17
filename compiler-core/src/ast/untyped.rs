@@ -115,6 +115,11 @@ pub enum UntypedExpr {
         spread: RecordUpdateSpread,
         arguments: Vec<UntypedRecordUpdateArg>,
     },
+
+    Negate {
+        location: SrcSpan,
+        value: Box<Self>,
+    },
 }
 
 impl UntypedExpr {
@@ -137,7 +142,8 @@ impl UntypedExpr {
             | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
-            | Self::RecordUpdate { location, .. } => *location,
+            | Self::RecordUpdate { location, .. }
+            | Self::Negate { location, .. } => *location,
             Self::Sequence {
                 location,
                 expressions,

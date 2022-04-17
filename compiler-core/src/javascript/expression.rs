@@ -161,12 +161,18 @@ impl<'module> Generator<'module> {
                 constructor,
                 ..
             } => Ok(self.module_select(module_alias, label, constructor)),
+
+            TypedExpr::Negate { value, .. } => self.negate(value),
         }?;
         Ok(if expression.handles_own_return() {
             document
         } else {
             self.wrap_return(document)
         })
+    }
+
+    fn negate<'a>(&mut self, value: &'a TypedExpr) -> Output<'a> {
+        self.not_in_tail_position(|gen| Ok(docvec!("!", gen.wrap_expression(value)?)))
     }
 
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
@@ -179,7 +185,20 @@ impl<'module> Generator<'module> {
             let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
             match segment.options.as_slice() {
                 // Ints
-                [] => Ok(value),
+                [] | [Opt::Int { .. }] => Ok(value),
+
+                // Sized ints
+                [Opt::Size { value: size, .. }] => {
+                    self.tracker.sized_integer_segment_used = true;
+                    let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
+                    Ok(docvec!["sizedInteger(", value, ", ", size, ")"])
+                }
+
+                // Floats
+                [Opt::Float { .. }] => {
+                    self.tracker.float_bit_string_segment_used = true;
+                    Ok(docvec!["float64Bits(", value, ")"])
+                }
 
                 // UTF8 strings
                 [Opt::Utf8 { .. }] => {
@@ -291,7 +310,7 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalVariable => self.local_var(name),
+            | ValueConstructorVariant::LocalVariable { .. } => self.local_var(name),
         }
     }
 
@@ -950,7 +969,7 @@ impl<'module> Generator<'module> {
         constructor: &'a ModuleValueConstructor,
     ) -> Document<'a> {
         match constructor {
-            ModuleValueConstructor::Fn | ModuleValueConstructor::Constant { .. } => {
+            ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
                 docvec!["$", module, ".", maybe_escape_identifier_doc(label)]
             }
 

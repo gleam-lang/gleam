@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\nfn go() {\n  <<256:int>>\n}\n"
+---
+import { toBitString } from "../gleam.mjs";
+
+function go() {
+  return toBitString([256]);
+}
+

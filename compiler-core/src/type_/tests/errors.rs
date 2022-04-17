@@ -1580,3 +1580,8 @@ fn main(x) {
 "#
     );
 }
+
+#[test]
+fn negate_string() {
+    assert_error!(r#"!"Hello Gleam""#);
+}

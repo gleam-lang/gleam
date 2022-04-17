@@ -10,6 +10,7 @@ use crate::{
 use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
+use std::env;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 use termcolor::Buffer;
@@ -441,6 +442,23 @@ your app.src file \"{}\"",
                         "
 Documentation for installing Erlang can be viewed here:
 https://gleam.run/getting-started/",
+                    ),
+                    "rebar3" => text.push_str(
+                        "
+Documentation for installing rebar3 can be viewed here:
+https://gleam.run/getting-started/",
+                    ),
+                    _ => (),
+                }
+                match (program.as_str(), env::consts::OS) {
+                    // TODO: Further suggestions for other OSes?
+                    ("erl" | "erlc" | "escript", "macos") => text.push_str(
+                        "
+You can also install Erlang via homebrew using \"brew install erlang\"",
+                    ),
+                    ("rebar3", "macos") => text.push_str(
+                        "
+You can also install rebar3 via homebrew using \"brew install rebar3\"",
                     ),
                     _ => (),
                 };
@@ -2261,8 +2279,8 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
     match op {
         BinOp::AddInt if given.is_float() => Some(hint_numeric_message("+.", "Float")),
         BinOp::DivInt if given.is_float() => Some(hint_numeric_message("/.", "Float")),
-        BinOp::GtEqInt if given.is_float() => Some(hint_numeric_message(">=", "Float")),
-        BinOp::GtInt if given.is_float() => Some(hint_numeric_message(">", "Float")),
+        BinOp::GtEqInt if given.is_float() => Some(hint_numeric_message(">=.", "Float")),
+        BinOp::GtInt if given.is_float() => Some(hint_numeric_message(">.", "Float")),
         BinOp::LtEqInt if given.is_float() => Some(hint_numeric_message("<=.", "Float")),
         BinOp::LtInt if given.is_float() => Some(hint_numeric_message("<.", "Float")),
         BinOp::MultInt if given.is_float() => Some(hint_numeric_message("*.", "Float")),
@@ -2270,8 +2288,8 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 
         BinOp::AddFloat if given.is_int() => Some(hint_numeric_message("+", "Int")),
         BinOp::DivFloat if given.is_int() => Some(hint_numeric_message("/", "Int")),
-        BinOp::GtEqFloat if given.is_int() => Some(hint_numeric_message(">=.", "Int")),
-        BinOp::GtFloat if given.is_int() => Some(hint_numeric_message(">.", "Int")),
+        BinOp::GtEqFloat if given.is_int() => Some(hint_numeric_message(">=", "Int")),
+        BinOp::GtFloat if given.is_int() => Some(hint_numeric_message(">", "Int")),
         BinOp::LtEqFloat if given.is_int() => Some(hint_numeric_message("<=", "Int")),
         BinOp::LtFloat if given.is_int() => Some(hint_numeric_message("<", "Int")),
         BinOp::MultFloat if given.is_int() => Some(hint_numeric_message("*", "Int")),

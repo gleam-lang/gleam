@@ -3,7 +3,7 @@ use type_::{AccessorsMap, FieldMap, RecordAccessor};
 use super::*;
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, TypedConstant,
+        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
         TypedConstantBitStringSegmentOption,
     },
     build::Origin,
@@ -37,9 +37,12 @@ fn constant_module(constant: TypedConstant) -> Module {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
-                variant: ValueConstructorVariant::ModuleConstant { literal: constant },
+                variant: ValueConstructorVariant::ModuleConstant {
+                    literal: constant,
+                    location: SrcSpan::default(),
+                    module: "one/two".into(),
+                },
             },
         )]
         .into(),
@@ -237,13 +240,16 @@ fn module_fn_value() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
                     field_map: None,
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan {
+                        start: 535,
+                        end: 1100,
+                    },
                 },
             },
         )]
@@ -267,13 +273,16 @@ fn module_fn_value_regression() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
                     field_map: None,
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
                 },
             },
         )]
@@ -296,7 +305,6 @@ fn module_fn_value_with_field_map() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
                     name: "one".to_string(),
@@ -306,6 +314,7 @@ fn module_fn_value_with_field_map() {
                     }),
                     module: vec!["a".to_string()],
                     arity: 5,
+                    location: SrcSpan { start: 2, end: 11 },
                 },
             },
         )]
@@ -328,12 +337,16 @@ fn record_value() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
                     name: "one".to_string(),
+                    module: "themodule".to_string(),
                     field_map: None,
                     arity: 5,
+                    location: SrcSpan {
+                        start: 144,
+                        end: 155,
+                    },
                 },
             },
         )]
@@ -356,15 +369,16 @@ fn record_value_with_field_map() {
             "one".to_string(),
             ValueConstructor {
                 public: true,
-                origin: Default::default(),
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
+                    module: "themodule".to_string(),
                     name: "one".to_string(),
                     field_map: Some(FieldMap {
                         arity: 20,
                         fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
                     }),
                     arity: 5,
+                    location: SrcSpan { start: 5, end: 11 },
                 },
             },
         )]

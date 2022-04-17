@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "0.20.2"
+version = "0.21.0-rc1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -16,7 +16,7 @@ tracing = "0.1.29"
 # Extra iter methods
 itertools = "0.10.1"
 # String case conversion
-heck = "0.3.3"
+heck = "0.4.0"
 # Parsing
 regex = "1.5.4"
 # Graph data structures
@@ -30,7 +30,7 @@ serde = { version = "1.0.130", features = ["derive"] }
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
 # Enum trait impl macros
-strum = { version = "0.23.0", features = ["derive"] }
+strum = { version = "0.24.0", features = ["derive"] }
 # Template rendering
 askama = "0.10.5"
 # Markdown parsing
@@ -58,7 +58,7 @@ tar = "0.4.37"
 # gzip compression
 flate2 = "1.0.22"
 # Helper for wrapping text onto lines based upon width
-textwrap = { version = "0.14.2", features = ["terminal_size"] }
+textwrap = { version = "0.15.0", features = ["terminal_size"] }
 # base encoding
 base16 = "0.2.1"
 # toml config file parsing
@@ -75,5 +75,5 @@ capnpc = "0.14.4"
 [dev-dependencies]
 # Test assertion errors with diffs
 pretty_assertions = "1.0.0"
-# Snapshot testing to make test maintainence easier
+# Snapshot testing to make test maintenance easier
 insta = "1.8.0"

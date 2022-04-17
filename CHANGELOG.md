@@ -1,20 +1,42 @@
 # Changelog
 
-## Unreleased
+## v0.21.0-rc1 - 2022-04-16
 
-- Fixed a bug where functions named `then` would cause errors on dynamic import.
+- The Gleam language server is here! This will provide IDE like features for
+  code editors that support LSP, including but not limited to VSCode, Neovim,
+  Emacs, Eclipse, Visual Studio, and Atom. This first version includes these
+  features:
+  - Project compilation.
+  - Inline errors and warnings.
+  - Type information on hover.
+  - Go-to definition.
+  - Code formatting.
+- Fixed a bug in generated JavaScript code where functions named `then` would
+  cause errors when dynamically imported.
 - Initialize `git` repo when creating a new project.
 - Log messages controlled with `GLEAM_LOG` now print to standard error.
 - Log message colours can be disabled by setting the `GLEAM_LOG_NOCOLOUR`
   environment variable.
-- You can now specify multiple packages when using `gleam add`
+- You can now specify multiple packages when using `gleam add`.
+- Bools can now be negated with the `!` unary operator.
 - If the compiler version changes we now rebuild the project from scratch on
-  next build command (#1547)
+  next build command to avoid issues arising from reading metadata in an old
+  format. (#1547)
 - Updated the "Unknown label" error message to match other error messages
   (#1548)
-- Permit type holes in function arguments and return annotations (#1519)
-- Report unused module imports (#1553)
-- Add parse error hint for multi line clauses without curly braces (#1555)
+- Type holes are now permitted in function arguments and return annotations.
+  (#1519)
+- Unused module imports now emit a warning. (#1553)
+- The error message for failing to parse a multiline clauses without curly
+  braces has been improved with a hint on how to fix the issue. (#1555)
+- The error messages for when rebar3 or Erlang are missing from the machine has
+  been improved with a tip on how to install them. (#1567)
+- Corrected the hint given with certain int and float binary operator type
+  errors.
+- Add support for `int` and `float` bitstring type when compiling to JavaScript.
+- Add support for specifying size of integers in a bitstring. Supports only exact binaries,
+  i.e. length is a multiple of 8.
+- Fixed compilation of rebar3 based dependencies on Windows.
 
 ## v0.20.1 - 2022-02-24
 
@@ -169,7 +191,6 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
-
 
 [Release Blog Post](https://gleam.run/news/gleam-v0.17-released/)
 

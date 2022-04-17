@@ -1,6 +1,7 @@
 use crate::{
     ast::{
-        Constant, TypedConstant, TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
+        Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
+        TypedConstantBitStringSegmentOption,
     },
     io::Writer,
     schema_capnp::{self as schema, *},
@@ -167,29 +168,45 @@ impl<'a> ModuleEncoder<'a> {
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
 
+    fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {
+        builder.set_start(span.start as u16);
+        builder.set_end(span.end as u16);
+    }
+
     fn build_value_constructor_variant(
         &mut self,
         builder: value_constructor_variant::Builder<'_>,
         constructor: &ValueConstructorVariant,
     ) {
         match constructor {
-            ValueConstructorVariant::LocalVariable => {
+            ValueConstructorVariant::LocalVariable { .. } => {
                 panic!("Unexpected local variable value constructor in module interface",)
             }
 
-            ValueConstructorVariant::ModuleConstant { literal } => {
-                self.build_constant(builder.init_module_constant(), literal)
+            ValueConstructorVariant::ModuleConstant {
+                literal,
+                location,
+                module,
+            } => {
+                let mut builder = builder.init_module_constant();
+                self.build_src_span(builder.reborrow().init_location(), *location);
+                self.build_constant(builder.reborrow().init_literal(), literal);
+                builder.reborrow().set_module(module);
             }
 
             ValueConstructorVariant::Record {
                 name,
                 field_map,
                 arity,
+                location,
+                module,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
+                builder.set_module(module);
                 builder.set_arity(*arity as u16);
-                self.build_optional_field_map(builder.init_field_map(), field_map);
+                self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
+                self.build_src_span(builder.init_location(), *location);
             }
 
             ValueConstructorVariant::ModuleFn {
@@ -197,6 +214,7 @@ impl<'a> ModuleEncoder<'a> {
                 field_map,
                 module,
                 name,
+                location,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
@@ -208,6 +226,7 @@ impl<'a> ModuleEncoder<'a> {
                     }
                 }
                 builder.set_arity(*arity as u16);
+                self.build_src_span(builder.init_location(), *location);
             }
         }
     }

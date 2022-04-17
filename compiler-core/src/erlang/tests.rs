@@ -409,3 +409,24 @@ pub fn bool_expr(x, y) {
 }"
     );
 }
+
+#[test]
+fn negation() {
+    assert_erl!(
+        "pub fn negate(x) {
+  !x
+}"
+    )
+}
+
+#[test]
+fn negation_block() {
+    assert_erl!(
+        "pub fn negate(x) {
+  !{
+    123
+    x
+  }
+}"
+    )
+}

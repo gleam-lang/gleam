@@ -5,10 +5,11 @@ use gleam_core::{
     Result,
 };
 
-use crate::{cli, fs};
+use crate::{build_lock::BuildLock, cli, fs};
 
 pub fn main(options: Options) -> Result<Package> {
-    let manifest = crate::dependencies::download(None)?;
+    let lock = BuildLock::new()?;
+    let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
 
     let perform_codegen = options.perform_codegen;
     let root_config = crate::config::root_config()?;
@@ -17,8 +18,10 @@ pub fn main(options: Options) -> Result<Package> {
     let start = Instant::now();
 
     tracing::info!("Compiling packages");
-    let compiled =
-        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?;
+    let compiled = {
+        let _guard = lock.lock(telemetry.as_ref());
+        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?
+    };
 
     if perform_codegen {
         cli::print_compiled(start.elapsed());

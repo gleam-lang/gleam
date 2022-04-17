@@ -180,6 +180,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 spread,
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
+
+            UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
         }
     }
 
@@ -263,6 +265,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::Sequence {
             location,
             expressions,
+        })
+    }
+
+    fn infer_negate(
+        &mut self,
+        location: SrcSpan,
+        value: Box<UntypedExpr>,
+    ) -> Result<TypedExpr, Error> {
+        let value = self.infer(*value)?;
+
+        self.unify(bool(), value.type_())
+            .map_err(|e| convert_unify_error(e, value.location()))?;
+
+        Ok(TypedExpr::Negate {
+            location,
+            value: Box::new(value),
         })
     }
 
@@ -844,13 +862,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable => (),
+                    ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(ClauseGuard::Constant(literal.clone()))
                     }
                 };
@@ -1177,7 +1195,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             typ: type_.clone(),
             location: select_location,
-            module_name,
+            module_name: module_name.join("/"),
             module_alias: module_alias.to_string(),
             constructor: constructor.variant.to_module_value_constructor(type_),
         })
@@ -1287,7 +1305,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             constructor => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
-                })
+                });
             }
         };
 
@@ -1326,7 +1344,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             let spread_field = self.infer_known_record_access(
                                 spread.clone(),
                                 label.to_string(),
-                               *location,
+                                *location,
                             )?;
 
                             // Check that the update argument unifies with the corresponding
@@ -1341,7 +1359,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                     "Failed to lookup record field after successfully inferring that field",
                                 ),
                                 Some(p) => Ok(TypedRecordUpdateArg {
-                                    location:*location,
+                                    location: *location,
                                     label: label.to_string(),
                                     value,
                                     index: *p,
@@ -1449,7 +1467,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let ValueConstructor {
             public,
             variant,
-            origin,
             type_: typ,
         } = constructor;
 
@@ -1458,7 +1475,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(ValueConstructor {
             public,
             variant,
-            origin,
             type_: typ,
         })
     }
@@ -1511,11 +1527,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable => {
+                    | ValueConstructorVariant::LocalVariable { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    // TODO: remove this clone. Could use an rc instead
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(literal.clone())
                     }
                 };
@@ -1547,11 +1564,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     } => (name.clone(), field_map.clone()),
 
                     ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable => {
+                    | ValueConstructorVariant::LocalVariable { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name })
                     }
 
-                    ValueConstructorVariant::ModuleConstant { literal } => {
+                    // TODO: remove this clone. Could be an rc instead
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
                         return Ok(literal.clone())
                     }
                 };
@@ -1570,7 +1588,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .get(module_name)
                             .expect("Failed to find previously located module import")
                             .name
-                            .clone(),
+                            .join("/"),
                         typ: constructor.type_.clone(),
                         module_alias: module_name.clone(),
                         constructor: constructor
@@ -1841,9 +1859,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
                         body_typer.environment.insert_variable(
                             name.to_string(),
-                            ValueConstructorVariant::LocalVariable,
+                            ValueConstructorVariant::LocalVariable {
+                                location: arg.location,
+                            },
                             t,
-                            arg.location,
                         );
                         body_typer.environment.init_usage(
                             name.to_string(),

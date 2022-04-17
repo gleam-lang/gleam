@@ -34,6 +34,61 @@ fn go() {
 }
 
 #[test]
+fn integer() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:int>>
+}
+"#,
+    );
+}
+
+#[test]
+fn float() {
+    assert_js!(
+        r#"
+fn go() {
+  <<1.1:float>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:4>>
+}
+"#,
+    );
+}
+
+#[test]
+fn explicit_sized() {
+    assert_js!(
+        r#"
+fn go() {
+  <<256:size(4)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn variable_sized() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  <<x:size(y)>>
+}
+"#,
+    );
+}
+
+#[test]
 fn variable() {
     assert_js!(
         r#"

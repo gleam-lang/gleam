@@ -1,5 +1,5 @@
 use super::*;
-use crate::type_::{HasType, Type};
+use crate::type_::{bool, HasType, Type};
 
 use lazy_static::lazy_static;
 
@@ -110,7 +110,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         label: String,
-        module_name: Vec<String>,
+        module_name: String,
         module_alias: String,
         constructor: ModuleValueConstructor,
     },
@@ -146,6 +146,11 @@ pub enum TypedExpr {
         spread: Box<Self>,
         args: Vec<TypedRecordUpdateArg>,
     },
+
+    Negate {
+        location: SrcSpan,
+        value: Box<Self>,
+    },
 }
 
 impl TypedExpr {
@@ -178,6 +183,8 @@ impl TypedExpr {
                 .iter()
                 .find_map(|e| e.find_node(byte_index))
                 .or(Some(self)),
+
+            Self::Negate { value, .. } => value.find_node(byte_index).or(Some(self)),
 
             Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
 
@@ -256,6 +263,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Negate { location, .. }
             | Self::Sequence { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
@@ -281,6 +289,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Negate { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -304,17 +313,50 @@ impl TypedExpr {
     pub fn is_assignment(&self) -> bool {
         matches!(self, Self::Assignment { .. })
     }
-}
 
-impl HasLocation for TypedExpr {
-    fn location(&self) -> SrcSpan {
-        self.location()
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        match self {
+            TypedExpr::Fn { .. }
+            | TypedExpr::Int { .. }
+            | TypedExpr::Try { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::Negate { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Sequence { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::BitString { .. }
+            | TypedExpr::Assignment { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::RecordAccess { .. } => None,
+
+            // TODO: test
+            // TODO: definition
+            TypedExpr::RecordUpdate { .. } => None,
+
+            // TODO: test
+            TypedExpr::ModuleSelect {
+                module_name,
+                constructor,
+                ..
+            } => Some(DefinitionLocation {
+                module: Some(module_name.as_str()),
+                span: constructor.location(),
+            }),
+
+            // TODO: test
+            TypedExpr::Var { constructor, .. } => Some(constructor.definition_location()),
+        }
     }
-}
 
-impl TypedExpr {
     fn type_(&self) -> Arc<Type> {
         match self {
+            Self::Negate { .. } => bool(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
@@ -327,11 +369,11 @@ impl TypedExpr {
             | Self::BinOp { typ, .. }
             | Self::Tuple { typ, .. }
             | Self::String { typ, .. }
+            | Self::BitString { typ, .. }
             | Self::TupleIndex { typ, .. }
             | Self::Assignment { typ, .. }
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
-            | Self::BitString { typ, .. }
             | Self::RecordUpdate { typ, .. } => typ.clone(),
             Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => expressions
                 .last()
@@ -350,6 +392,12 @@ impl TypedExpr {
                 | Self::String { .. }
                 | Self::BitString { .. }
         )
+    }
+}
+
+impl HasLocation for TypedExpr {
+    fn location(&self) -> SrcSpan {
+        self.location()
     }
 }
 

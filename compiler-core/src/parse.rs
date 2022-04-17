@@ -381,6 +381,7 @@ where
                     value,
                 }
             }
+
             // var lower_name and UpName
             Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
@@ -389,6 +390,7 @@ where
                     name,
                 }
             }
+
             Some((start, Token::Todo, mut end)) => {
                 let _ = self.next_tok();
                 let mut label = None;
@@ -403,6 +405,7 @@ where
                     label,
                 }
             }
+
             Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
@@ -537,6 +540,27 @@ where
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
             }
+
+            // Boolean negation
+            Some((start, Token::Bang, _end)) => {
+                let _ = self.next_tok();
+                match self.parse_expression_unit()? {
+                    Some(value) => UntypedExpr::Negate {
+                        location: SrcSpan {
+                            start,
+                            end: value.location().end,
+                        },
+                        value: Box::from(value),
+                    },
+                    None => {
+                        return parse_error(
+                            ParseErrorType::ExpectedExpr,
+                            SrcSpan { start, end: start },
+                        )
+                    }
+                }
+            }
+
             t0 => {
                 self.tok0 = t0;
                 return Ok(None);

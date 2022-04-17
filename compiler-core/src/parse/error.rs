@@ -1,7 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
-use heck::CamelCase;
-use heck::SnakeCase;
+use heck::{ToSnakeCase, ToUpperCamelCase};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct LexicalError {
@@ -175,6 +174,11 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
                 ("I was not expecting this.", messages)
             }
+            ParseErrorType::ExpectedBoolean => (
+                "Did you mean to negate a boolean?",
+                // TODO (HarryET): Get a hint for missing boolean
+                vec![],
+            ),
         }
     }
 }
@@ -216,6 +220,7 @@ pub enum ParseErrorType {
         expected: Vec<String>,
         hint: Option<String>,
     },
+    ExpectedBoolean,
 }
 
 impl LexicalError {
@@ -263,7 +268,7 @@ impl LexicalError {
                 vec![
                     "Hint: Upnames start with an uppercase letter and contain".to_string(),
                     "only lowercase letters, numbers, and uppercase letters.".to_string(),
-                    format!("Try: {}", name.to_camel_case()),
+                    format!("Try: {}", name.to_upper_camel_case()),
                 ],
             ),
         }

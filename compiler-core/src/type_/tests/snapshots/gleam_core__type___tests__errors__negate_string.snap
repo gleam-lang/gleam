@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1581
+expression: "!\"Hello Gleam\""
+
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:2
+  │
+1 │ !"Hello Gleam"
+  │  ^^^^^^^^^^^^^
+
+Expected type:
+
+    Bool
+
+Found type:
+
+    String
+

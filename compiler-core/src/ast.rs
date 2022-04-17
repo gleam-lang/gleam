@@ -837,6 +837,12 @@ impl SrcSpan {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct DefinitionLocation<'module> {
+    pub module: Option<&'module str>,
+    pub span: SrcSpan,
+}
+
 pub type UntypedPattern = Pattern<(), ()>;
 pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 

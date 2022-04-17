@@ -1,4 +1,4 @@
-use crate::{build::Origin, uid::UniqueIdGenerator};
+use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 
 use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -114,7 +114,6 @@ pub fn link(type_: Arc<Type>) -> Arc<Type> {
 pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let value = |variant, type_| ValueConstructor {
         public: true,
-        origin: Default::default(),
         variant,
         type_,
     };
@@ -149,9 +148,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "True".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "True".to_string(),
                 field_map: None,
                 arity: 0,
+                location: SrcSpan::default(),
             },
             bool(),
         ),
@@ -160,9 +161,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "False".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "False".to_string(),
                 field_map: None,
                 arity: 0,
+                location: SrcSpan::default(),
             },
             bool(),
         ),
@@ -234,9 +237,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Nil".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Nil".to_string(),
                 arity: 0,
                 field_map: None,
+                location: SrcSpan::default(),
             },
             nil(),
         ),
@@ -280,9 +285,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Ok".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Ok".to_string(),
                 field_map: None,
                 arity: 1,
+                location: SrcSpan::default(),
             },
             fn_(vec![ok.clone()], result(ok, error)),
         ),
@@ -294,9 +301,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         "Error".to_string(),
         value(
             ValueConstructorVariant::Record {
+                module: "".into(),
                 name: "Error".to_string(),
                 field_map: None,
                 arity: 1,
+                location: SrcSpan::default(),
             },
             fn_(vec![error.clone()], result(ok, error)),
         ),

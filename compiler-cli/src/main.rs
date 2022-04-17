@@ -52,6 +52,7 @@ extern crate pretty_assertions;
 
 mod add;
 mod build;
+mod build_lock;
 mod cli;
 mod compile_package;
 mod config;
@@ -68,6 +69,7 @@ mod project;
 mod publish;
 mod run;
 mod shell;
+mod telemetry;
 
 use config::root_config;
 pub use gleam_core::{
@@ -312,7 +314,9 @@ fn main() {
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 
-        Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
+        Command::Deps(Dependencies::Download) => {
+            dependencies::download(cli::Reporter::new(), None).map(|_| ())
+        }
 
         Command::New(options) => new::create(options, VERSION),
 
