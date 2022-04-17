@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Added the ability to replace a release up to one hour after it is published using `gleam publish --replace`
+
 ## v0.21.0-rc1 - 2022-04-16
 
 - The Gleam language server is here! This will provide IDE like features for
