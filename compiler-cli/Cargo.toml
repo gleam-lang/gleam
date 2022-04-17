@@ -76,6 +76,8 @@ lsp-server = "0.5"
 lsp-types = "0.92"
 # File locking
 fslock = "0.2.1"
+# File URl decoding
+urlencoding = "2.1.0"
 
 [dev-dependencies]
 # Test assertion errors with diffs
