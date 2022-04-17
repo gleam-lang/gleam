@@ -716,7 +716,7 @@ impl LanguageServer {
 }
 
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let path = uri.to_file_path().expect("uri to pathbuf");
+    let path = PathBuf::from(uri.path());
     let components = path
         .strip_prefix(&root)
         .ok()?
