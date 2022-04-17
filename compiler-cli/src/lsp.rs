@@ -691,7 +691,10 @@ impl LanguageServer {
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
+        tracing::info!("File URI: {}", uri.to_string());
+        tracing::info!("Project Root: {}", self.project_root.to_str()?);
         let module_name = uri_to_module_name(uri, &self.project_root).expect("uri to module name");
+        tracing::info!("Module: {}", module_name);
         self.compiler.modules.get(&module_name)
     }
 
@@ -725,6 +728,10 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
         uri_path = uri_path.strip_prefix("/").expect("Failed to remove \"/\" prefix").to_string();
     }
     let path = PathBuf::from(uri_path);
+    tracing::info!("(uri_to_module_name) URI: {}", uri.path());
+    tracing::info!("(uri_to_module_name) PathBuf: {}", path.to_str()?);
+    tracing::info!("(uri_to_module_name) root: {}", root.to_str()?);
+    tracing::info!("(uri_to_module_name) root_with_edits: {}", root.to_path_buf().to_str()?);
     let components = path
         .strip_prefix(&root)
         .ok()?
@@ -735,6 +742,7 @@ fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
         .collect::<String>()
         .strip_suffix(".gleam")?
         .to_string();
+    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
     Some(module_name)
 }
 
