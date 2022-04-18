@@ -1600,12 +1600,22 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
     let args = first_constructor_arg
         .iter()
         .filter(|data_type| {
+            let mut clear_data_type = data_type.clone().clone();
+            clear_data_type.location = SrcSpan { start: 0, end: 0 };
+            let clear_data_type_ast = clear_data_type.ast.clone();
+            clear_data_type.ast = clear_data_type_ast.clear_location();
             constructor_args.iter().all(|arg| {
                 !arg.iter()
-                    .map(|item| (item.label.as_ref(), item.type_.clone()))
+                    .map(|item| {
+                        let mut new_item = item.clone();
+                        new_item.location = SrcSpan { start: 0, end: 0 };
+                        let new_item_ast = new_item.ast.clone();
+                        new_item.ast = new_item_ast.clear_location();
+                        new_item
+                    })
                     .filter(|item| {
                         // TODO type comparison
-                        item.0 == data_type.label.as_ref()
+                        item == &clear_data_type
                     })
                     .collect_vec()
                     .is_empty()
