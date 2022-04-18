@@ -770,6 +770,19 @@ pub fn get_height(person: Person) { person.height }"
 }
 
 #[test]
+fn field_type_different_between_variants() {
+    assert_module_error!(
+        "
+pub type Shape {
+    Square(x: Int, y: Int)
+    Rectangle(x: String, y: String)
+}
+pub fn get_x(shape: Shape) { shape.x }
+pub fn get_y(shape: Shape) { shape.y }"
+    );
+}
+
+#[test]
 fn module_could_not_unify() {
     assert_module_error!("fn go() { 1 + 2.0 }");
 }
