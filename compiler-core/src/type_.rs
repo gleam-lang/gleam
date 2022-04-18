@@ -1602,8 +1602,8 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
         .filter(|data_type| {
             constructor_args.iter().all(|arg| {
                 arg.iter()
-                    .map(|item| (item.label.clone(), item.type_.clone()))
-                    .contains(&(data_type.label.clone(), data_type.type_.clone()))
+                    .map(|item| (item.label.as_ref(), item.type_.clone()))
+                    .contains(&(data_type.label.as_ref(), data_type.type_.clone()))
             })
         })
         .collect::<Vec<_>>();
