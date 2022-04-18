@@ -746,6 +746,30 @@ fn inconsistent_try_5() {
 }
 
 #[test]
+fn field_not_in_all_variants() {
+    assert_module_error!(
+        "
+pub type Person {
+    Teacher(name: String, age: Int, title: String)
+    Student(name: String, age: Int)
+}
+pub fn get_title(person: Person) { person.title }"
+    );
+}
+
+#[test]
+fn field_not_in_any_variant() {
+    assert_module_error!(
+        "
+pub type Person {
+    Teacher(name: String, age: Int, title: String)
+    Student(name: String, age: Int)
+}
+pub fn get_height(person: Person) { person.height }"
+    );
+}
+
+#[test]
 fn module_could_not_unify() {
     assert_module_error!("fn go() { 1 + 2.0 }");
 }
