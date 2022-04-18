@@ -1485,7 +1485,7 @@ fn match_fun_type(
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
-                return match_fun_type(typ.clone(), arity, environment)
+                return match_fun_type(typ.clone(), arity, environment);
             }
 
             TypeVar::Unbound { .. } => {
@@ -1579,18 +1579,42 @@ fn make_type_vars(
         .try_collect()
 }
 
-fn custom_type_accessors<A>(
+fn custom_type_accessors<A: std::cmp::PartialEq>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
-    // Get the constructor for this custom type.
-    let args = match constructors {
-        [constructor] if !constructor.arguments.is_empty() => &constructor.arguments,
-        // If there is not exactly 1 constructor we return as we cannot
-        // build any constructors.
-        _ => return Ok(None),
-    };
+    if constructors.is_empty() {
+        return Ok(None);
+    }
+
+    let mut args: Vec<&RecordConstructorArg<A>> = vec![];
+
+    let constructor_args = constructors
+        .iter()
+        .map(|constructor| constructor.arguments.as_slice())
+        .collect_vec();
+
+    let first_constructor = *constructor_args.first().expect("First constructor");
+
+    for arg in first_constructor {
+        let mut should_insert = true;
+        for constructor_arg_group in &constructor_args {
+            if !constructor_arg_group
+                .iter()
+                .filter(|a| a.type_ == arg.type_ && a.label == arg.label)
+                .collect_vec()
+                .is_empty()
+            {
+                should_insert = false;
+                break;
+            }
+        }
+
+        if should_insert {
+            args.push(arg)
+        }
+    }
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
