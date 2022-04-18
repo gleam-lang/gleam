@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "\npub type Person {\n    Teacher(name: String, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([get_name/1]).
+-export_type([person/0]).
+
+-type person() :: {teacher, binary(), binary()} | {student, binary(), integer()}.
+
+-spec get_name(person()) -> binary().
+get_name(Person) ->
+    erlang:element(2, Person).
+
