@@ -1105,7 +1105,8 @@ pub type Person {
 }
 pub fn get_name(person: Person) { person.name }",
         vec![
-            ("Person", "fn(String, Int) -> Person"),
+            ("Student", "fn(String, Int) -> Person"),
+            ("Teacher", "fn(String, String) -> Person"),
             ("get_name", "fn(Person) -> String"),
         ]
     );
