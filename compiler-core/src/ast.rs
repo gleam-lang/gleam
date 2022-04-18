@@ -283,6 +283,12 @@ impl TypeAst {
         }
     }
 
+    pub fn compare_without_location(&self, other: TypeAst) -> bool {
+        // TODO write this
+        false
+    }
+
+    // TODO delete this
     pub fn clear_location(&self) -> TypeAst {
         match self {
             TypeAst::Constructor {

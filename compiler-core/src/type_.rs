@@ -1603,6 +1603,7 @@ fn custom_type_accessors<A: Clone + PartialEq>(
     let args = first_constructor_arg
         .iter()
         .filter(|data_type| {
+            // TODO delete this section
             let mut clear_data_type = data_type.clone().clone();
             clear_data_type.location = SrcSpan { start: 0, end: 0 };
             let clear_data_type_ast = clear_data_type.ast.clone();
@@ -1618,7 +1619,7 @@ fn custom_type_accessors<A: Clone + PartialEq>(
                         new_item
                     })
                     .filter(|item| {
-                        // TODO type comparison
+                        // TODO type comparison using `.compare_without_location(data_type)`
                         item == &clear_data_type && x == y
                     })
                     .collect_vec()
