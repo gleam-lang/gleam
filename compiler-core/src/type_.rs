@@ -1598,13 +1598,13 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
         .expect("No constructs with args");
     let args = first_constructor_arg
         .iter()
-        .filter(|data_type|
-            constructor_args
-                .iter()
-                .all(|set| set
-                    .iter()
-                    .map(|item| { (item.label.clone(), item.type_.clone()) })
-                    .contains(&(data_type.label.clone(), data_type.type_.clone()))))
+        .filter(|data_type| {
+            constructor_args.iter().all(|set| {
+                set.iter()
+                    .map(|item| (item.label.clone(), item.type_.clone()))
+                    .contains(&(data_type.label.clone(), data_type.type_.clone()))
+            })
+        })
         .collect::<Vec<_>>();
 
     let mut fields = HashMap::with_capacity(args.len());
