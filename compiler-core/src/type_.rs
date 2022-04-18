@@ -1608,7 +1608,8 @@ fn custom_type_accessors<A: Clone + PartialEq>(
             let clear_data_type_ast = clear_data_type.ast.clone();
             clear_data_type.ast = clear_data_type_ast.clear_location();
             let res = constructor_args.iter().all(|arg| {
-                let res_inner = !arg.iter()
+                let res_inner = !arg
+                    .iter()
                     .map(|item| {
                         let mut new_item = item.clone();
                         new_item.location = SrcSpan { start: 0, end: 0 };
