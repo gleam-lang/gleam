@@ -282,6 +282,41 @@ impl TypeAst {
             | TypeAst::Constructor { location, .. } => *location,
         }
     }
+
+    pub fn clear_location(&self) -> TypeAst {
+        match self {
+            TypeAst::Constructor {
+                module,
+                name,
+                arguments,
+                ..
+            } => TypeAst::Constructor {
+                module: module.clone(),
+                name: name.clone(),
+                arguments: arguments.clone(),
+                location: SrcSpan { start: 0, end: 0 },
+            },
+            TypeAst::Fn {
+                arguments, return_, ..
+            } => TypeAst::Fn {
+                arguments: arguments.clone(),
+                return_: return_.clone(),
+                location: SrcSpan { start: 0, end: 0 },
+            },
+            TypeAst::Var { name, .. } => TypeAst::Var {
+                name: name.clone(),
+                location: SrcSpan { start: 0, end: 0 },
+            },
+            TypeAst::Tuple { elems, .. } => TypeAst::Tuple {
+                elems: elems.clone(),
+                location: SrcSpan { start: 0, end: 0 },
+            },
+            TypeAst::Hole { name, .. } => TypeAst::Hole {
+                name: name.clone(),
+                location: SrcSpan { start: 0, end: 0 },
+            },
+        }
+    }
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String, String>;
