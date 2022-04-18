@@ -1579,8 +1579,7 @@ fn make_type_vars(
         .try_collect()
 }
 
-#[allow(unused_qualifications)]
-fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
+fn custom_type_accessors<A: Clone + PartialEq>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
