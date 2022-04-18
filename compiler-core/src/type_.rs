@@ -1600,8 +1600,8 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
     let args = first_constructor_arg
         .iter()
         .filter(|data_type| {
-            constructor_args.iter().all(|set| {
-                set.iter()
+            constructor_args.iter().all(|arg| {
+                arg.iter()
                     .map(|item| (item.label.clone(), item.type_.clone()))
                     .contains(&(data_type.label.clone(), data_type.type_.clone()))
             })
