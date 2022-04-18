@@ -1593,11 +1593,13 @@ fn custom_type_accessors<A: std::cmp::PartialEq>(
         .map(|constructor| constructor.arguments.as_slice())
         .collect_vec();
 
-    let (first_constructor_arg, constructor_args) = constructor_args_data.split_first().expect("No constructs with args");
+    let (first_constructor_arg, constructor_args) = constructor_args_data
+        .split_first()
+        .expect("No constructs with args");
     let args = first_constructor_arg
         .iter()
         .filter(|data_type| constructor_args.iter().all(|set| set.contains(data_type)))
-            .collect::<Vec<_>>();
+        .collect::<Vec<_>>();
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
