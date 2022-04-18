@@ -1113,45 +1113,6 @@ pub fn get_name(person: Person) { person.name }",
 }
 
 #[test]
-fn accessor_multiple_variants_multiple_positions() {
-    // We can access fields on custom types with multiple variants
-    // Where they are in different positions e.g. 2nd and 3rd
-    assert_module_infer!(
-        "
-pub type Person {
-    Teacher(name: String, title: String, age: Int)
-    Student(name: String, age: Int)
-}
-pub fn get_name(person: Person) { person.name }
-pub fn get_age(person: Person) { person.age }",
-        vec![
-            ("Student", "fn(String, Int) -> Person"),
-            ("Teacher", "fn(String, String, Int) -> Person"),
-            ("get_age", "fn(Person) -> Int"),
-            ("get_name", "fn(Person) -> String"),
-        ]
-    );
-
-    // We can access fields on custom types with multiple variants
-    // Where they are in different positions e.g. 1st and 3rd
-    assert_module_infer!(
-        "
-pub type Person {
-    Teacher(title: String, age: Int, name: String)
-    Student(name: String, age: Int)
-}
-pub fn get_name(person: Person) { person.name }
-pub fn get_age(person: Person) { person.age }",
-        vec![
-            ("Student", "fn(String, Int) -> Person"),
-            ("Teacher", "fn(String, Int, String) -> Person"),
-            ("get_age", "fn(Person) -> Int"),
-            ("get_name", "fn(Person) -> String"),
-        ]
-    );
-}
-
-#[test]
 fn accessor_multiple_variants_positions_other_than_first() {
     // We can access fields on custom types with multiple variants
     // In positions other than the 1st field

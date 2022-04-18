@@ -25,7 +25,6 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
-        use std::path::PathBuf;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -779,6 +778,31 @@ pub type Shape {
 }
 pub fn get_x(shape: Shape) { shape.x }
 pub fn get_y(shape: Shape) { shape.y }"
+    );
+}
+
+#[test]
+fn accessor_multiple_variants_multiple_positions() {
+    // We cannot access fields on custom types with multiple variants where they are in different positions e.g. 2nd and 3rd
+    assert_module_error!(
+        "
+pub type Person {
+    Teacher(name: String, title: String, age: Int)
+    Student(name: String, age: Int)
+}
+pub fn get_name(person: Person) { person.name }
+pub fn get_age(person: Person) { person.age }"
+    );
+
+    // We cannot access fields on custom types with multiple variants where they are in different positions e.g. 1st and 3rd
+    assert_module_error!(
+        "
+pub type Person {
+    Teacher(title: String, age: Int, name: String)
+    Student(name: String, age: Int)
+}
+pub fn get_name(person: Person) { person.name }
+pub fn get_age(person: Person) { person.age }"
     );
 }
 
