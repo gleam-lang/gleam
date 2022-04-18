@@ -1588,33 +1588,16 @@ fn custom_type_accessors<A: std::cmp::PartialEq>(
         return Ok(None);
     }
 
-    let mut args: Vec<&RecordConstructorArg<A>> = vec![];
-
-    let constructor_args = constructors
+    let constructor_args_data = constructors
         .iter()
         .map(|constructor| constructor.arguments.as_slice())
         .collect_vec();
 
-    let first_constructor = *constructor_args.first().expect("First constructor");
-
-    for arg in first_constructor {
-        let mut should_insert = true;
-        for constructor_arg_group in &constructor_args {
-            if !constructor_arg_group
-                .iter()
-                .filter(|a| a.type_ == arg.type_ && a.label == arg.label)
-                .collect_vec()
-                .is_empty()
-            {
-                should_insert = false;
-                break;
-            }
-        }
-
-        if should_insert {
-            args.push(arg)
-        }
-    }
+    let (first_constructor_arg, constructor_args) = constructor_args_data.split_first().expect("No constructs with args");
+    let args = first_constructor_arg
+        .iter()
+        .filter(|data_type| constructor_args.iter().all(|set| set.contains(data_type)))
+            .collect::<Vec<_>>();
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
