@@ -1597,6 +1597,10 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
     let (first_constructor_arg, constructor_args) = constructor_args_data
         .split_first()
         .expect("No constructs with args");
+
+    let mut x = 0;
+    let mut y = 0;
+
     let args = first_constructor_arg
         .iter()
         .filter(|data_type| {
@@ -1604,8 +1608,8 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
             clear_data_type.location = SrcSpan { start: 0, end: 0 };
             let clear_data_type_ast = clear_data_type.ast.clone();
             clear_data_type.ast = clear_data_type_ast.clear_location();
-            constructor_args.iter().all(|arg| {
-                !arg.iter()
+            let res = constructor_args.iter().all(|arg| {
+                let res_inner = !arg.iter()
                     .map(|item| {
                         let mut new_item = item.clone();
                         new_item.location = SrcSpan { start: 0, end: 0 };
@@ -1615,11 +1619,15 @@ fn custom_type_accessors<A: Clone + std::cmp::PartialEq>(
                     })
                     .filter(|item| {
                         // TODO type comparison
-                        item == &clear_data_type
+                        item == &clear_data_type && x == y
                     })
                     .collect_vec()
-                    .is_empty()
-            })
+                    .is_empty();
+                y = y + 1;
+                res_inner
+            });
+            x = x + 1;
+            res
         })
         .collect::<Vec<_>>();
 
