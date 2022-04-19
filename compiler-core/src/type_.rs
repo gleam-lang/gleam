@@ -1597,50 +1597,32 @@ fn custom_type_accessors<A: Clone + PartialEq>(
         .split_first()
         .expect("No constructs with args");
 
-    let mut x = 0;
-    let mut y = 0;
-
     let args = first_constructor_arg
         .iter()
+        .enumerate()
         .filter(|data_type| {
-            // TODO delete this section
-            let mut clear_data_type = data_type.clone().clone();
-            clear_data_type.location = SrcSpan { start: 0, end: 0 };
-            let clear_data_type_ast = clear_data_type.ast.clone();
-            clear_data_type.ast = clear_data_type_ast.clear_location();
-            let res = constructor_args.iter().all(|arg| {
-                let res_inner = !arg
-                    .iter()
-                    .map(|item| {
-                        let mut new_item = item.clone();
-                        new_item.location = SrcSpan { start: 0, end: 0 };
-                        let new_item_ast = new_item.ast.clone();
-                        new_item.ast = new_item_ast.clear_location();
-                        new_item
-                    })
+            constructor_args.iter().all(|arg| {
+                !arg.iter()
+                    .enumerate()
                     .filter(|item| {
                         // TODO type comparison using `.compare_without_location(data_type)`
-                        item == &clear_data_type && x == y
+                        item.0 == data_type.0 && item.1.compare_without_location(data_type.1)
                     })
                     .collect_vec()
-                    .is_empty();
-                y = y + 1;
-                res_inner
-            });
-            x = x + 1;
-            res
+                    .is_empty()
+            })
         })
         .collect::<Vec<_>>();
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (index, RecordConstructorArg { label, ast, .. }) in args.iter().enumerate() {
+    for (_, (index, RecordConstructorArg { label, ast, .. })) in args.iter().enumerate() {
         if let Some(label) = label {
             let typ = hydrator.type_from_ast(ast, environment)?;
             let _ = fields.insert(
                 label.to_string(),
                 RecordAccessor {
-                    index: index as u64,
+                    index: (*index) as u64,
                     label: label.to_string(),
                     type_: typ,
                 },
