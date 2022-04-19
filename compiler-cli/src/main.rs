@@ -113,6 +113,8 @@ enum Command {
     Publish {
         #[clap(long)]
         replace: bool,
+        #[clap(long)]
+        yes: bool,
     },
 
     /// Render HTML documentation
@@ -328,7 +330,7 @@ fn main() {
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
-        Command::Publish { replace } => publish::command(replace),
+        Command::Publish { replace, yes } => publish::command(replace, yes),
 
         Command::PrintConfig => print_config(),
 
