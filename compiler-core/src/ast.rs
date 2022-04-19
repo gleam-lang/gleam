@@ -235,9 +235,16 @@ pub struct RecordConstructorArg<T> {
     pub doc: Option<String>,
 }
 
-impl<T> RecordConstructorArg<T> {
+impl<T: PartialEq> RecordConstructorArg<T> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.doc = Some(new_doc);
+    }
+
+    pub fn compare_without_location(&self, other: &RecordConstructorArg<T>) -> bool {
+        self.type_ == other.type_
+            && self.label == other.label
+            && self.doc == other.doc
+            && self.ast.compare_without_location(&other.ast)
     }
 }
 
@@ -283,43 +290,43 @@ impl TypeAst {
         }
     }
 
-    pub fn compare_without_location(&self, other: TypeAst) -> bool {
-        // TODO write this
-        false
-    }
-
-    // TODO delete this
-    pub fn clear_location(&self) -> TypeAst {
+    pub fn compare_without_location(&self, other: &TypeAst) -> bool {
         match self {
             TypeAst::Constructor {
                 module,
                 name,
                 arguments,
                 ..
-            } => TypeAst::Constructor {
-                module: module.clone(),
-                name: name.clone(),
-                arguments: arguments.clone(),
-                location: SrcSpan { start: 0, end: 0 },
+            } => match other {
+                TypeAst::Constructor {
+                    module: o_module,
+                    name: o_name,
+                    arguments: o_arguments,
+                    ..
+                } => module == o_module && name == o_name && arguments == o_arguments,
+                _ => false,
             },
             TypeAst::Fn {
                 arguments, return_, ..
-            } => TypeAst::Fn {
-                arguments: arguments.clone(),
-                return_: return_.clone(),
-                location: SrcSpan { start: 0, end: 0 },
+            } => match other {
+                TypeAst::Fn {
+                    arguments: o_arguments,
+                    return_: o_return_,
+                    ..
+                } => arguments == o_arguments && return_ == o_return_,
+                _ => false,
             },
-            TypeAst::Var { name, .. } => TypeAst::Var {
-                name: name.clone(),
-                location: SrcSpan { start: 0, end: 0 },
+            TypeAst::Var { name, .. } => match other {
+                TypeAst::Var { name: o_name, .. } => name == o_name,
+                _ => false,
             },
-            TypeAst::Tuple { elems, .. } => TypeAst::Tuple {
-                elems: elems.clone(),
-                location: SrcSpan { start: 0, end: 0 },
+            TypeAst::Tuple { elems, .. } => match other {
+                TypeAst::Tuple { elems: o_elems, .. } => elems == o_elems,
+                _ => false,
             },
-            TypeAst::Hole { name, .. } => TypeAst::Hole {
-                name: name.clone(),
-                location: SrcSpan { start: 0, end: 0 },
+            TypeAst::Hole { name, .. } => match other {
+                TypeAst::Hole { name: o_name, .. } => name == o_name,
+                _ => false,
             },
         }
     }
