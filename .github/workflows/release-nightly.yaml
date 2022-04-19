@@ -71,7 +71,7 @@ jobs:
       - name: Update versions
         shell: bash
         run: |
-          version=nightly-$(date +"%y%m%d")
+          version=0.0.0-nightly-$(date +"%y%m%d")
           
           sed "s/^version = \".*\"\$/version = \"$version\"/" compiler-core/Cargo.toml > /tmp/gleam-cargo.toml
           mv /tmp/gleam-cargo.toml compiler-core/Cargo.toml
@@ -105,7 +105,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          VERSION=nightly-$(date +"%y%m%d")
+          version=0.0.0-nightly-$(date +"%y%m%d")
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
