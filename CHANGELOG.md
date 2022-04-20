@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.21.0-rc2 - 2022-04-20
 
 - Added the ability to replace a release up to one hour after it is published
   using `gleam publish --replace`.
