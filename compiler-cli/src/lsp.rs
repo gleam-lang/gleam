@@ -11,9 +11,11 @@ use crate::{build_lock::BuildLock, fs::ProjectIO, telemetry::NullTelemetry};
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
     build::{self, Module, ProjectCompiler},
+    config::PackageConfig,
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
+    paths,
     type_::{pretty::Printer, HasType},
     Error, Result,
 };
@@ -36,11 +38,43 @@ const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
+    // Read the project config. If we are running in the context of a Gleam
+    // project then there will be one. If not there will not be one and we'll
+    // fall back to a non-compiling mode that can only do formatting.
+    let config = if paths::root_config().exists() {
+        tracing::info!("gleam_project_detected");
+        Some(crate::config::root_config()?)
+    } else {
+        tracing::info!("gleam_project_not_found");
+        None
+    };
+
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
+    let server_capabilities = server_capabilities();
 
-    let server_capabilities = lsp::ServerCapabilities {
+    let server_capabilities_json =
+        serde_json::to_value(&server_capabilities).expect("server_capabilities_serde");
+
+    let initialization_params: InitializeParams = serde_json::from_value(
+        connection
+            .initialize(server_capabilities_json)
+            .expect("LSP initialize"),
+    )
+    .expect("LSP InitializeParams from json");
+
+    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
+    LanguageServer::new(initialization_params, config)?.run(connection)?;
+    io_threads.join().expect("joining_lsp_threads");
+
+    // Shut down gracefully.
+    tracing::info!("language_server_stopped");
+    Ok(())
+}
+
+fn server_capabilities() -> lsp::ServerCapabilities {
+    lsp::ServerCapabilities {
         text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
             lsp::TextDocumentSyncOptions {
                 open_close: None,
@@ -90,25 +124,7 @@ pub fn main() -> Result<()> {
         moniker_provider: None,
         linked_editing_range_provider: None,
         experimental: None,
-    };
-
-    let server_capabilities_json =
-        serde_json::to_value(&server_capabilities).expect("server_capabilities_serde");
-
-    let initialization_params: InitializeParams = serde_json::from_value(
-        connection
-            .initialize(server_capabilities_json)
-            .expect("LSP initialize"),
-    )
-    .expect("LSP InitializeParams from json");
-
-    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServer::new(initialization_params)?.run(connection)?;
-    io_threads.join().expect("joining_lsp_threads");
-
-    // Shut down gracefully.
-    tracing::info!("language_server_stopped");
-    Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -150,22 +166,26 @@ pub struct LanguageServer {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: LspProjectCompiler<ProjectIO>,
+    compiler: Option<LspProjectCompiler<ProjectIO>>,
+
+    config: Option<PackageConfig>,
 }
 
 impl LanguageServer {
-    pub fn new(initialise_params: InitializeParams) -> Result<Self> {
-        let compiler = LspProjectCompiler::new(ProjectIO::new())?;
+    pub fn new(initialise_params: InitializeParams, config: Option<PackageConfig>) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
-        Ok(Self {
+        let mut language_server = Self {
             initialise_params,
             edited: HashMap::new(),
             stored_messages: Vec::new(),
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
             project_root,
-            compiler,
-        })
+            compiler: None,
+            config,
+        };
+        language_server.create_new_compiler()?;
+        Ok(language_server)
     }
 
     /// Publish all stored diagnostics to the client.
@@ -410,19 +430,24 @@ impl LanguageServer {
             .expect("send client/registerCapability");
     }
 
+    /// Compile the project if we are in one. Otherwise do nothing.
     fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
         self.notify_client_of_compilation_start(connection);
-        let result = self.compiler.compile();
+        if let Some(compiler) = self.compiler.as_mut() {
+            let result = compiler.compile();
+            self.store_result_diagnostics(result)?;
+        }
         self.notify_client_of_compilation_end(connection);
-        self.store_result_diagnostics(result)?;
         Ok(())
     }
 
     fn take_and_store_warning_diagnostics(&mut self) {
-        let warnings = self.compiler.project_compiler.take_warnings();
-        for warn in warnings {
-            let diagnostic = warn.to_diagnostic();
-            self.process_gleam_diagnostic(diagnostic);
+        if let Some(compiler) = self.compiler.as_mut() {
+            let warnings = compiler.project_compiler.take_warnings();
+            for warn in warnings {
+                let diagnostic = warn.to_diagnostic();
+                self.process_gleam_diagnostic(diagnostic);
+            }
         }
     }
 
@@ -475,13 +500,21 @@ impl LanguageServer {
 
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
-                self.compiler = LspProjectCompiler::new(ProjectIO::new())?;
-                let _ = self.compiler.compile()?;
+                self.create_new_compiler()?;
+                let _ = self.compile(connection)?;
                 Ok(())
             }
 
             _ => Ok(()),
         }
+    }
+
+    fn create_new_compiler(&mut self) -> Result<(), Error> {
+        if let Some(config) = self.config.as_ref() {
+            let compiler = LspProjectCompiler::new(config.clone(), ProjectIO::new())?;
+            self.compiler = Some(compiler);
+        }
+        Ok(())
     }
 
     fn text_document_did_save(
@@ -573,7 +606,11 @@ impl LanguageServer {
         let (uri, line_numbers) = match location.module {
             None => (params.text_document.uri, &line_numbers),
             Some(name) => {
-                let module = match self.compiler.sources.get(name) {
+                let module = match self
+                    .compiler
+                    .as_ref()
+                    .and_then(|compiler| compiler.sources.get(name))
+                {
                     Some(module) => module,
                     // TODO: support goto definition for functions defined in
                     // different packages. Currently it is not possible as the
@@ -692,8 +729,11 @@ impl LanguageServer {
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        let module_name = uri_to_module_name(uri, &self.project_root).expect("uri to module name");
-        self.compiler.modules.get(&module_name)
+        self.compiler.as_ref().and_then(|compiler| {
+            let module_name =
+                uri_to_module_name(uri, &self.project_root).expect("uri to module name");
+            compiler.modules.get(&module_name)
+        })
     }
 
     fn format(&self, params: lsp::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
@@ -961,11 +1001,10 @@ impl<IO> LspProjectCompiler<IO>
 where
     IO: CommandExecutor + FileSystemIO + Clone,
 {
-    pub fn new(io: IO) -> Result<Self> {
+    pub fn new(config: PackageConfig, io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None)?;
-        let config = crate::config::root_config()?;
 
         let options = build::Options {
             mode: build::Mode::Dev,
