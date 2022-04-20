@@ -122,6 +122,20 @@ pub fn get_age(person: Person) { person.age }"
 }
 
 #[test]
+fn record_accessor_multiple_with_first_position_different_types() {
+    // We can access fields on custom types with multiple variants
+    // In positions other than the 1st field
+    assert_erl!(
+        "
+pub type Person {
+    Teacher(name: Nil, age: Int)
+    Student(name: String, age: Int)
+}
+pub fn get_age(person: Person) { person.age }"
+    );
+}
+
+#[test]
 fn record_spread() {
     // Test binding to a record field with the spread operator
     assert_erl!(

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 128
+expression: "\npub type Person {\n    Teacher(name: Nil, age: Int)\n    Student(name: String, age: Int)\n}\npub fn get_age(person: Person) { person.age }"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([get_age/1]).
+-export_type([person/0]).
+
+-type person() :: {teacher, nil, integer()} | {student, binary(), integer()}.
+
+-spec get_age(person()) -> integer().
+get_age(Person) ->
+    erlang:element(3, Person).
+
