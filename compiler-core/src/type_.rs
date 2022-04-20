@@ -1616,7 +1616,7 @@ fn custom_type_accessors<A: Clone + PartialEq>(
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (_, (index, RecordConstructorArg { label, ast, .. })) in args.iter().enumerate() {
+    for (index, RecordConstructorArg { label, ast, .. }) in args.iter() {
         if let Some(label) = label {
             let typ = hydrator.type_from_ast(ast, environment)?;
             let _ = fields.insert(
