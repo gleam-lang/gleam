@@ -296,36 +296,47 @@ impl TypeAst {
                 module,
                 name,
                 arguments,
-                ..
+                location: _,
             } => match other {
                 TypeAst::Constructor {
                     module: o_module,
                     name: o_name,
                     arguments: o_arguments,
-                    ..
+                    location: _,
                 } => module == o_module && name == o_name && arguments == o_arguments,
                 _ => false,
             },
             TypeAst::Fn {
-                arguments, return_, ..
+                arguments,
+                return_,
+                location: _,
             } => match other {
                 TypeAst::Fn {
                     arguments: o_arguments,
                     return_: o_return_,
-                    ..
+                    location: _,
                 } => arguments == o_arguments && return_ == o_return_,
                 _ => false,
             },
-            TypeAst::Var { name, .. } => match other {
-                TypeAst::Var { name: o_name, .. } => name == o_name,
+            TypeAst::Var { name, location: _ } => match other {
+                TypeAst::Var {
+                    name: o_name,
+                    location: _,
+                } => name == o_name,
                 _ => false,
             },
-            TypeAst::Tuple { elems, .. } => match other {
-                TypeAst::Tuple { elems: o_elems, .. } => elems == o_elems,
+            TypeAst::Tuple { elems, location: _ } => match other {
+                TypeAst::Tuple {
+                    elems: o_elems,
+                    location: _,
+                } => elems == o_elems,
                 _ => false,
             },
-            TypeAst::Hole { name, .. } => match other {
-                TypeAst::Hole { name: o_name, .. } => name == o_name,
+            TypeAst::Hole { name, location: _ } => match other {
+                TypeAst::Hole {
+                    name: o_name,
+                    location: _,
+                } => name == o_name,
                 _ => false,
             },
         }
