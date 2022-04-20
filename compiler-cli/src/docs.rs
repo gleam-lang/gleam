@@ -21,10 +21,7 @@ struct RemoveCommand {
 
 impl RemoveCommand {
     pub fn new(package: String, version: String) -> Self {
-        Self {
-            package: package,
-            version: version,
-        }
+        Self { package, version }
     }
 }
 
@@ -38,9 +35,8 @@ impl ApiKeyCommand for RemoveCommand {
         let http = HttpClient::new();
 
         // Remove docs from API
-        let request =
-            hexpm::remove_docs_request(&self.package, &self.version, &api_key, &hex_config)
-                .map_err(Error::hex)?;
+        let request = hexpm::remove_docs_request(&self.package, &self.version, api_key, hex_config)
+            .map_err(Error::hex)?;
         let response = handle.block_on(http.send(request))?;
         hexpm::remove_docs_response(response).map_err(Error::hex)?;
 
