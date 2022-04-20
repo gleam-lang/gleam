@@ -113,7 +113,7 @@ enum Command {
     Publish {
         #[clap(long)]
         replace: bool,
-        #[clap(long)]
+        #[clap(short, long)]
         yes: bool,
     },
 
@@ -304,7 +304,7 @@ fn main() {
 
         Command::Docs(Docs::Build) => docs::build(),
 
-        Command::Docs(Docs::Publish) => docs::PublishCommand::publish(),
+        Command::Docs(Docs::Publish) => docs::publish(),
 
         Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
 
