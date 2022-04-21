@@ -105,7 +105,7 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          version=nightly-$(date +"%y%m%d")
+          VERSION=nightly-$(date +"%y%m%d")
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
