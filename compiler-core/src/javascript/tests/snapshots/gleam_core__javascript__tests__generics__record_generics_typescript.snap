@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn main() {\n  Cat(type_: 6)\n}\n"
+---
+import * as $Gleam from "../gleam.d.ts";
+
+export class Cat<I> extends $Gleam.CustomType {
+  constructor(type_: I);
+  
+  type_: I;
+}
+
+export class Dog<I> extends $Gleam.CustomType {
+  constructor(type_: I);
+  
+  type_: I;
+}
+
+export type Animal$<I> = Cat<I> | Dog<I>;
+
+export function main(): Animal$<number>;
+

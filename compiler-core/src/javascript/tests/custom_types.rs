@@ -1,7 +1,7 @@
 // TODO: snapshots for tests that use another module
 
-use crate::assert_js;
 use crate::javascript::tests::CURRENT_PACKAGE;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn zero_arity_literal() {
@@ -51,6 +51,21 @@ pub fn main() {
 }
 
 #[test]
+fn zero_arity_imported_typscript() {
+    assert_ts_def!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { Two }"#
+        ),
+        r#"import other
+pub fn main() {
+  other.Two
+}"#,
+    );
+}
+
+#[test]
 fn zero_arity_imported_unqualified() {
     assert_js!(
         (
@@ -66,8 +81,38 @@ pub fn main() {
 }
 
 #[test]
+fn zero_arity_imported_unqualified_typescript() {
+    assert_ts_def!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { Two }"#
+        ),
+        r#"import other.{Two}
+pub fn main() {
+  Two
+}"#,
+    );
+}
+
+#[test]
 fn zero_arity_imported_unqualified_aliased() {
     assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { Two }"#
+        ),
+        r#"import other.{Two as Three}
+pub fn main() {
+  Three
+}"#
+    );
+}
+
+#[test]
+fn zero_arity_imported_unqualified_aliased_typescript() {
+    assert_ts_def!(
         (
             CURRENT_PACKAGE,
             vec!["other".to_string()],
@@ -134,6 +179,20 @@ type Mine {
 
 const labels = Mine(b: 2, a: 1)
 const no_labels = Mine(3, 4)
+"#,
+    );
+}
+
+#[test]
+fn const_with_fields_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Mine {
+  Mine(a: Int, b: Int)
+}
+
+pub const labels = Mine(b: 2, a: 1)
+pub const no_labels = Mine(3, 4)
 "#,
     );
 }
@@ -317,6 +376,21 @@ pub fn main() {
 #[test]
 fn unqualified_imported_no_label() {
     assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["other".to_string()],
+            r#"pub type One { Two(Int) }"#
+        ),
+        r#"import other.{Two}
+pub fn main() {
+  Two(1)
+}"#,
+    );
+}
+
+#[test]
+fn unqualified_imported_no_label_typescript() {
+    assert_ts_def!(
         (
             CURRENT_PACKAGE,
             vec!["other".to_string()],
@@ -561,5 +635,28 @@ pub fn main() {
   other.One
 }
 "#,
+    );
+}
+
+#[test]
+fn unapplied_record_constructors_typescript() {
+    assert_ts_def!(
+        r#"pub type Cat { Cat(name: String) }
+
+pub fn return_unapplied_cat() {
+  Cat
+}
+"#
+    );
+}
+
+#[test]
+fn opaque_types_typescript() {
+    assert_ts_def!(
+        r#"pub opaque type Animal {
+  Cat(goes_outside: Bool)
+  Dog(plays_fetch: Bool)
+}
+"#
     );
 }

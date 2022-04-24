@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/type_alias.rs
+expression: "\npub type Headers = List(#(String, String))\n"
+---
+import * as $Gleam from "../gleam.d.ts";
+
+export type Headers = $Gleam.List<[string, string]>;
+

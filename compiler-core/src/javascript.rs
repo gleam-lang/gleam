@@ -3,6 +3,7 @@ mod import;
 mod pattern;
 #[cfg(test)]
 mod tests;
+mod typescript;
 
 use std::path::Path;
 
@@ -447,6 +448,22 @@ pub fn module(
     writer: &mut impl Utf8Writer,
 ) -> Result<(), crate::Error> {
     Generator::new(line_numbers, module)
+        .compile()
+        .map_err(|error| crate::Error::JavaScript {
+            path: path.to_path_buf(),
+            src: src.to_string(),
+            error,
+        })?
+        .pretty_print(80, writer)
+}
+
+pub fn ts_declaration(
+    module: &TypedModule,
+    path: &Path,
+    src: &str,
+    writer: &mut impl Utf8Writer,
+) -> Result<(), crate::Error> {
+    typescript::TypeScriptGenerator::new(module)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),

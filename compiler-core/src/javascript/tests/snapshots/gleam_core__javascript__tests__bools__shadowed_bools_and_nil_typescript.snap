@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/bools.rs
+expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
+---
+import * as $Gleam from "../gleam.d.ts";
+
+export class True extends $Gleam.CustomType {}
+
+export class False extends $Gleam.CustomType {}
+
+export class Nil extends $Gleam.CustomType {}
+
+export type True$ = True | False | Nil;
+
+export function go(x: True$, y: True$): True$;
+

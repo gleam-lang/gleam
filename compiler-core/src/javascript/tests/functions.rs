@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 use super::CURRENT_PACKAGE;
 
@@ -68,6 +68,23 @@ pub fn math(x, y) {
     x - y
     2 * x
   }
+}"#,
+    );
+}
+
+#[test]
+fn function_formatting_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_should_be_added) {
+  the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
+}"#,
+    );
+
+    assert_ts_def!(
+        r#"
+pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
+x + y
 }"#,
     );
 }
@@ -284,6 +301,17 @@ fn assert_last() {
     assert_js!(
         r#"pub fn main() {
   assert x = 1
+}
+"#,
+    );
+}
+
+#[test]
+fn fn_return_fn_typescript() {
+    assert_ts_def!(
+        r#"pub fn main(f: fn(Int) -> Int) {
+  let func = fn(x, y) { f(x) + f(y) }
+  func
 }
 "#,
     );

@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn empty() {
@@ -122,10 +122,32 @@ fn go(x) {
 }
 
 #[test]
+fn utf8_codepoint_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn go(x) {
+  <<x:utf8_codepoint, "Gleam":utf8>>
+}
+"#,
+    );
+}
+
+#[test]
 fn bit_string() {
     assert_js!(
         r#"
 fn go(x) {
+  <<x:bit_string, "Gleam":utf8>>
+}
+"#,
+    );
+}
+
+#[test]
+fn bit_string_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn go(x) {
   <<x:bit_string, "Gleam":utf8>>
 }
 "#,

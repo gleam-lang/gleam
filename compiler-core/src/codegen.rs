@@ -151,6 +151,7 @@ impl<'a> JavaScript<'a> {
     pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
+            self.ts_declaration(writer, module, &js_name)?;
             self.js_module(writer, module, &js_name)?
         }
         self.write_prelude(writer)?;
@@ -167,6 +168,21 @@ impl<'a> JavaScript<'a> {
             .str_write(javascript::PRELUDE_TS_DEF)?;
         tracing::debug!("Generated TS prelude");
         Ok(())
+    }
+
+    fn ts_declaration(
+        &self,
+        writer: &impl FileSystemWriter,
+        module: &Module,
+        js_name: &str,
+    ) -> Result<()> {
+        let name = format!("{}.d.ts", js_name);
+        let path = self.output_directory.join(&name);
+        let mut file = writer.writer(&path)?;
+        let res =
+            javascript::ts_declaration(&module.ast, &module.input_path, &module.code, &mut file);
+        tracing::debug!(name = ?js_name, "Generated TS declaration");
+        res
     }
 
     fn js_module(

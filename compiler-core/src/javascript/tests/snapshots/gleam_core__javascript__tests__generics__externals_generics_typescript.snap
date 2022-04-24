@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub external type Queue(a)\n\npub external fn new() -> Queue(a) = \"queue\" \"new\"\n\npub external fn length(Queue(a)) -> Int = \"queue\" \"len\"\n\npub external fn push(Queue(a), a) -> Queue(a) = \"queue\" \"in\"\n"
+---
+export type Queue$<A> = any;
+
+export function new$(): Queue$<any>;
+
+export function length(x0: Queue$<any>): number;
+
+export function push<N>(x0: Queue$<N>, x1: N): Queue$<N>;
+

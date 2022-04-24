@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn list_literals() {
@@ -43,6 +43,16 @@ fn list_constants() {
         r#"
 const a = []
 const b = [1, 2, 3]
+"#,
+    );
+}
+
+#[test]
+fn list_constants_typescript() {
+    assert_ts_def!(
+        r#"
+pub const a = []
+pub const b = [1, 2, 3]
 "#,
     );
 }

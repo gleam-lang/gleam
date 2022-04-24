@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
+---
+import * as $Gleam from "../gleam.d.ts";
+
+export const labels: Mine$;
+
+export const no_labels: Mine$;
+
+export class Mine extends $Gleam.CustomType {
+  constructor(a: number, b: number);
+  
+  a: number;
+  b: number;
+}
+
+export type Mine$ = Mine;
+

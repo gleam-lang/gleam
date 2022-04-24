@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn type_() {
@@ -16,6 +16,11 @@ fn pub_module_fn() {
 }
 
 #[test]
+fn pub_module_fn_typescript() {
+    assert_ts_def!(r#"pub external fn show(anything) -> Nil = "utils" "inspect""#,);
+}
+
+#[test]
 fn global_fn() {
     assert_js!(r#"external fn down(Float) -> Float = "" "Math.floor""#,);
 }
@@ -23,6 +28,11 @@ fn global_fn() {
 #[test]
 fn pub_global_fn() {
     assert_js!(r#"pub external fn down(Float) -> Float = "" "Math.floor""#,);
+}
+
+#[test]
+fn pub_global_fn_typescript() {
+    assert_ts_def!(r#"pub external fn down(Float) -> Float = "" "Math.floor""#,);
 }
 
 #[test]
@@ -52,6 +62,15 @@ pub external fn two() -> Nil = "./the/module.mjs" "dup"
 fn name_to_escape() {
     assert_js!(
         r#"pub external fn class() -> Nil = "./the/module.mjs" "one"
+"#,
+    );
+}
+
+#[test]
+fn external_type_typescript() {
+    assert_ts_def!(
+        r#"pub external type Queue(a)
+pub external fn new() -> Queue(a) = "queue" "new"
 "#,
     );
 }

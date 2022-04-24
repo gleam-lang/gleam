@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "pub fn main(f: fn(Int) -> Int) {\n  let func = fn(x, y) { f(x) + f(y) }\n  func\n}\n"
+---
+export function main(f: (x0: number) => number): (x0: number, x1: number) => number;
+

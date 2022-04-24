@@ -1,10 +1,21 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn without_message() {
     assert_js!(
         r#"
 fn go() {
+    todo
+}
+"#,
+    );
+}
+
+#[test]
+fn without_message_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn go() {
     todo
 }
 "#,
