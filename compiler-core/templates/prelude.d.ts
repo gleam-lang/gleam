@@ -1,3 +1,8 @@
+export class CustomType {
+  inspect(): string;
+  withFields<K extends keyof this>(fields: { [P in K]: this[P] }): this;
+}
+
 export interface ListStatic {
   fromArray<T>(array: Array<T>): List<T>;
   isList(value: unknown): boolean;
