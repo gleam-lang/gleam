@@ -15,6 +15,8 @@
   evaluates to could generate invalid JavaScript.
 - Fixed a bug where running a project on the Erlang target when the default
   project target is set to JavaScript.
+- The compiler can now generate TypeScript declaration files when targeting
+  JavaScript (#1563)
 
 ## v0.21.0 - 2022-04-24
 
