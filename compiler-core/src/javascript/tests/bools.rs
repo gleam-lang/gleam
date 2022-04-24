@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn expressions() {
@@ -20,6 +20,17 @@ fn constants() {
 const a = True
 const b = False
 const c = Nil
+"#,
+    );
+}
+
+#[test]
+fn constants_typescript() {
+    assert_ts_def!(
+        r#"
+pub const a = True
+pub const b = False
+pub const c = Nil
 "#,
     );
 }
@@ -57,6 +68,20 @@ fn shadowed_bools_and_nil() {
         r#"
 pub type True { True False Nil }
 fn go(x, y) {
+  assert True = x
+  assert False = x
+  assert Nil = y
+}
+"#,
+    );
+}
+
+#[test]
+fn shadowed_bools_and_nil_typescript() {
+    assert_ts_def!(
+        r#"
+pub type True { True False Nil }
+pub fn go(x, y) {
   assert True = x
   assert False = x
   assert Nil = y

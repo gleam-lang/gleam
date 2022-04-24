@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn tuple() {
@@ -18,6 +18,17 @@ fn go() {
     #("1111111111111111111111111111111", "2", "3"),
     "3",
   )
+}
+"#,
+    );
+}
+
+#[test]
+fn tuple_typescript() {
+    assert_ts_def!(
+        r#"
+pub fn go() {
+  #("1", "2", "3")
 }
 "#,
     );
@@ -79,6 +90,19 @@ const e = #("bob", "dug")
 const e = #(
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
   "loooooooooooooong", "loooooooooooong", "loooooooooooooong",
+)
+"#
+    );
+}
+
+#[test]
+fn tuple_formating_typescript() {
+    assert_ts_def!(
+        r#"
+pub const e = #(
+  "a", "a", "a", "a", "a", "a", "a",
+  "a", "a", "a", "a", "a", "a", "a",
+  "a", "a", "a", "a", "a", "a", "a",
 )
 "#
     );

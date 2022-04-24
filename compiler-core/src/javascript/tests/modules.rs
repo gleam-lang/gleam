@@ -1,5 +1,5 @@
-use crate::assert_js;
 use crate::javascript::tests::CURRENT_PACKAGE;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn empty_module() {
@@ -184,6 +184,21 @@ pub fn go() { 1 }
 #[test]
 fn imported_custom_types_dont_get_rendered() {
     assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["one".to_string(), "two".to_string(), "three".to_string()],
+            r#"pub type Custom { One Two }"#
+        ),
+        r#"import one/two/three.{Custom, One, Two}
+
+pub fn go() -> List(Custom) { [One, Two] }
+"#,
+    );
+}
+
+#[test]
+fn imported_custom_types_do_get_rendered_in_typescript() {
+    assert_ts_def!(
         (
             CURRENT_PACKAGE,
             vec!["one".to_string(), "two".to_string(), "three".to_string()],

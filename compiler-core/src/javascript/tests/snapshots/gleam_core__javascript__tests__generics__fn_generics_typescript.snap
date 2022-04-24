@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub fn indentity(a) -> a {\n  a\n}\n"
+---
+export function indentity<J>(a: J): J;
+

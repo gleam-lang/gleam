@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "import other.{Two}\npub fn main() {\n  Two\n}"
+---
+import * as $Other from "../other.d.ts";
+
+export function main(): $Other.One$;
+

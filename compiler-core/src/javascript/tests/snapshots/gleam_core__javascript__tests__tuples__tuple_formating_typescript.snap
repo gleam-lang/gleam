@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/tuples.rs
+expression: "\npub const e = #(\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n)\n"
+---
+export const e: [
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string,
+  string
+];
+

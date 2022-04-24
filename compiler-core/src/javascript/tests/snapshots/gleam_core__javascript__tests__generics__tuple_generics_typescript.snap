@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub fn make_tuple(x: t) -> #(Int, t, Int) {\n  #(0, x, 1)\n}\n"
+---
+export function make_tuple<I>(x: I): [number, I, number];
+

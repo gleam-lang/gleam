@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+expression: "\npub fn go(x) {\n  <<x:bit_string, \"Gleam\":utf8>>\n}\n"
+---
+import * as $Gleam from "../gleam.d.ts";
+
+export function go(x: $Gleam.BitString): $Gleam.BitString;
+

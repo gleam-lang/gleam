@@ -2637,13 +2637,27 @@ export class A extends CustomType {}\n"
                     .to_string(),
             },
             OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/dist/one/two.d.ts"),
+                text: r#"import * as $Gleam from "../gleam.d.ts";
+
+export class A extends $Gleam.CustomType {}
+
+export type A$ = A;
+"#
+                .to_string(),
+            },
+            OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/dist/two.mjs"),
                 text: r#"import * as $two from "./one/two.mjs";
 
 const x = new $two.A();
 "#
                 .to_string(),
-            }
+            },
+            OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/dist/two.d.ts"),
+                text: "import * as $OneTwo from \"./one/two.d.ts\";\n".to_string(),
+            },
         ]),
     );
 }
