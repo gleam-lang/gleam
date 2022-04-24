@@ -396,7 +396,6 @@ pub enum TypeVar {
     /// identify if two unbound variable Rust values are the same Gleam type variable
     /// instance or not.
     ///
-    ///
     Unbound { id: u64 },
     /// Link is type variable where it was an unbound variable but we worked out
     /// that it is some other type and now we point to that one.
