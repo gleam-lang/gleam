@@ -334,7 +334,7 @@ where
         let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
 
-        JavaScript::new(&artifact_dir).render(&self.io, modules)?;
+        JavaScript::new(&artifact_dir, &self.config.javascript).render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&artifact_dir, &mut written)?;
