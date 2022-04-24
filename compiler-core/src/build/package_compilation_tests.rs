@@ -2626,6 +2626,10 @@ const x = two.A"#
                 text: javascript::PRELUDE.to_string(),
             },
             OutputFile {
+                path: PathBuf::from("_build/default/lib/the_package/dist/gleam.d.ts"),
+                text: javascript::PRELUDE_TS_DEF.to_string(),
+            },
+            OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/dist/one/two.mjs"),
                 text: "import { CustomType } from \"../gleam.mjs\";
 
