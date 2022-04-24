@@ -80,6 +80,8 @@ pub struct PackageConfig {
     pub links: Vec<Link>,
     #[serde(default)]
     pub erlang: ErlangConfig,
+    #[serde(default)]
+    pub javascript: JavascriptConfig,
     #[serde(default = "erlang_target")]
     pub target: Target,
 }
@@ -409,6 +411,7 @@ impl Default for PackageConfig {
             documentation: Default::default(),
             dependencies: Default::default(),
             erlang: Default::default(),
+            javascript: Default::default(),
             repository: Default::default(),
             dev_dependencies: Default::default(),
             licences: Default::default(),
@@ -424,6 +427,12 @@ pub struct ErlangConfig {
     pub application_start_module: Option<String>,
     #[serde(default)]
     pub extra_applications: Vec<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Default, Clone, Copy)]
+pub struct JavascriptConfig {
+    #[serde(default)]
+    pub typescript_declarations: bool,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Clone)]
