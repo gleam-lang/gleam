@@ -14,6 +14,7 @@ use self::import::{Imports, Member};
 const INDENT: isize = 2;
 
 pub const PRELUDE: &str = include_str!("../templates/prelude.js");
+pub const PRELUDE_TS_DEF: &str = include_str!("../templates/prelude.d.ts");
 
 pub type Output<'a> = Result<Document<'a>, Error>;
 
