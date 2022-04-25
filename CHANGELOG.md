@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Added the ability to replace a release up to one hour after it is published using `gleam publish --replace`
+- All commands that authenticate using the `ApiKeyCommand` trait (currently `gleam publish`, `gleam docs pulish`, `gleam docs remove`, `gleam hex retire`, and `gleam hex unretire`) and now have access to environment variables for username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
+- The `gleam publish` command gains the `-y/--yes` flag to disable the "are you sure" prompt
+
 ## v0.21.0 - 2022-04-24
 
 - New projects are created with `gleam_stdlib` v0.21.
