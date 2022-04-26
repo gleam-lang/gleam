@@ -52,6 +52,7 @@ extern crate pretty_assertions;
 
 mod add;
 mod build;
+mod build_lock;
 mod cli;
 mod compile_package;
 mod config;
@@ -68,6 +69,7 @@ mod project;
 mod publish;
 mod run;
 mod shell;
+mod telemetry;
 
 use config::root_config;
 pub use gleam_core::{
@@ -108,7 +110,10 @@ enum Command {
     Check,
 
     /// Publish the project to the Hex package manager
-    Publish,
+    Publish {
+        #[clap(long)]
+        replace: bool,
+    },
 
     /// Render HTML documentation
     #[clap(subcommand)]
@@ -309,7 +314,9 @@ fn main() {
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 
-        Command::Deps(Dependencies::Download) => dependencies::download(None).map(|_| ()),
+        Command::Deps(Dependencies::Download) => {
+            dependencies::download(cli::Reporter::new(), None).map(|_| ())
+        }
 
         Command::New(options) => new::create(options, VERSION),
 
@@ -321,7 +328,7 @@ fn main() {
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
-        Command::Publish => publish::command(),
+        Command::Publish { replace } => publish::command(replace),
 
         Command::PrintConfig => print_config(),
 

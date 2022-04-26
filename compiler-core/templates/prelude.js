@@ -164,12 +164,34 @@ export function toBitString(segments) {
   return new BitString(new Uint8Array(view.buffer));
 }
 
+// Derrived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
+export function sizedInteger(value, size) {
+  if (size < 0) {
+    return new Uint8Array();
+  }
+  if (size % 8 != 0) {
+    throw "Needs to be a byte size" + size;
+  }
+  var byteArray = new Uint8Array(size / 8);
+
+  for (var index = 0; index < byteArray.length; index++) {
+    var byte = value & 0xff;
+    byteArray[index] = byte;
+    value = (value - byte) / 256;
+  }
+  return byteArray.reverse();
+}
+
 export function stringBits(string) {
   return new TextEncoder().encode(string);
 }
 
 export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
+}
+
+export function float64Bits(float) {
+  return new Uint8Array(Float64Array.from([float]).buffer).reverse();
 }
 
 export class Result extends CustomType {

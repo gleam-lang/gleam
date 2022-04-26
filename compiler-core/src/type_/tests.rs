@@ -1095,6 +1095,45 @@ fn fn_annotation_reused() {
 }
 
 #[test]
+fn accessor_multiple_variants() {
+    // We can access fields on custom types with multiple variants
+    assert_module_infer!(
+        "
+pub type Person {
+    Teacher(name: String, title: String)
+    Student(name: String, age: Int)
+}
+pub fn get_name(person: Person) { person.name }",
+        vec![
+            ("Student", "fn(String, Int) -> Person"),
+            ("Teacher", "fn(String, String) -> Person"),
+            ("get_name", "fn(Person) -> String"),
+        ]
+    );
+}
+
+#[test]
+fn accessor_multiple_variants_positions_other_than_first() {
+    // We can access fields on custom types with multiple variants
+    // In positions other than the 1st field
+    assert_module_infer!(
+        "
+pub type Person {
+    Teacher(name: String, age: Int, title: String)
+    Student(name: String, age: Int)
+}
+pub fn get_name(person: Person) { person.name }
+pub fn get_age(person: Person) { person.age }",
+        vec![
+            ("Student", "fn(String, Int) -> Person"),
+            ("Teacher", "fn(String, Int, String) -> Person"),
+            ("get_age", "fn(Person) -> Int"),
+            ("get_name", "fn(Person) -> String"),
+        ]
+    );
+}
+
+#[test]
 fn box_record() {
     assert_module_infer!(
         "

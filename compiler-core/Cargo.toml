@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "0.20.2"
+version = "0.21.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -38,7 +38,7 @@ pulldown-cmark = "0.8.0"
 # Non-empty vectors
 vec1 = "1.8.0"
 # Hex package manager client
-hexpm = "1.4.0"
+hexpm = "2.0.0"
 # XDG directory locations
 dirs = "4.0.0"
 # HTTP types

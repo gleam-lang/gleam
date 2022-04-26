@@ -22,6 +22,7 @@ pub fn main() -> Int {
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
       suite("bit strings", bit_string_tests()),
+      suite("sized bit strings", sized_bit_string_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -38,6 +39,7 @@ pub fn main() -> Int {
       suite("shadowed module", shadowed_module_tests()),
       suite("unicode overflow", unicode_overflow_tests()),
       suite("negation", negation_tests()),
+      suite("bit string match", bit_string_match_tests()),
     ])
 
   case stats.failures {
@@ -1016,6 +1018,41 @@ fn bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
     "<<<<1>>:bit_string, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
+    "<<1>> == <<1:int>>"
+    |> example(fn() { assert_equal(True, <<1>> == <<1:int>>) }),
+    "<<1>> == <<1.0:float>>"
+    |> example(fn() { assert_equal(True, <<63,240,0,0,0,0,0,0>> == <<1.0:float>>) }),
+
+  ]
+}
+
+fn sized_bit_string_tests() -> List(Test) {
+  [
+    "<<1>> == <<257:size(8)>>"
+    |> example(fn() {
+      assert_equal(True, <<1>> ==<<257:size(8)>>)
+    }),
+    "<<1, 1>> == <<257:size(16)>>"
+    |> example(fn() {
+      assert_equal(True, <<1, 1>> ==<<257:size(16)>>)
+    }),
+    "<<1, 1>> == <<257:size(24)>>"
+    |> example(fn() {
+      assert_equal(True, <<0, 1, 1>> ==<<257:size(24)>>)
+    }),
+    "<<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>"
+    |> example(fn() {
+      assert_equal(True, <<1, 0, 0, 0, 1>> ==<<4294967297:size(40)>>)
+    }),
+    "<<>> == <<256:size(-1)>>"
+    |> example(fn() {
+      assert_equal(True, <<>> ==<<256:size(-1)>>)
+    }),
+    // JS Number.MAX_SAFE_INTEGER
+    "<<0, 31, 255, 255, 255, 255, 255, 255>> == <<9007199254740991:size(64)>>"
+    |> example(fn() {
+      assert_equal(True, <<0, 31, 255, 255, 255, 255, 255, 255>> ==<<9007199254740991:size(64)>>)
+    }),
   ]
 }
 
@@ -1224,5 +1261,15 @@ fn negation_tests() {
     |> example(fn() { assert_equal(False, !True && assert False = True) }),
     "!False || assert False = True"
     |> example(fn() { assert_equal(True, !False || assert False = True) }),
+  ]
+}
+
+fn bit_string_match_tests() {
+  [
+    "let <<1, x>> = <<1, 2>>"
+    |> example(fn() { assert_equal(2, {
+      let <<1, x>> = <<1, 2>>
+      x
+    }) }),
   ]
 }

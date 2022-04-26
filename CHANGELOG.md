@@ -1,7 +1,28 @@
 # Changelog
 
-## Unreleased
+## v0.21.0 - 2022-04-24
 
+- New projects are created with `gleam_stdlib` v0.21.
+
+## v0.21.0-rc2 - 2022-04-20
+
+- Added the ability to replace a release up to one hour after it is published
+  using `gleam publish --replace`.
+- The language server will now enter a degraded mode that only performs
+  formatting if running in a directory that is not a Gleam project with a
+  `gleam.toml`.
+
+## v0.21.0-rc1 - 2022-04-16
+
+- The Gleam language server is here! This will provide IDE like features for
+  code editors that support LSP, including but not limited to VSCode, Neovim,
+  Emacs, Eclipse, Visual Studio, and Atom. This first version includes these
+  features:
+  - Project compilation.
+  - Inline errors and warnings.
+  - Type information on hover.
+  - Go-to definition.
+  - Code formatting.
 - Fixed a bug in generated JavaScript code where functions named `then` would
   cause errors when dynamically imported.
 - Initialize `git` repo when creating a new project.
@@ -22,6 +43,12 @@
   braces has been improved with a hint on how to fix the issue. (#1555)
 - The error messages for when rebar3 or Erlang are missing from the machine has
   been improved with a tip on how to install them. (#1567)
+- Corrected the hint given with certain int and float binary operator type
+  errors.
+- Add support for `int` and `float` bitstring type when compiling to JavaScript.
+- Add support for specifying size of integers in a bitstring. Supports only exact binaries,
+  i.e. length is a multiple of 8.
+- Fixed compilation of rebar3 based dependencies on Windows.
 
 ## v0.20.1 - 2022-02-24
 
@@ -176,7 +203,6 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - New projects use v0.18 of the stdlib.
 
 ## v0.17.0 - 2021-09-20
-
 
 [Release Blog Post](https://gleam.run/news/gleam-v0.17-released/)
 

@@ -343,12 +343,31 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::VarUsage { location, .. } | Pattern::BitString { location, .. } => {
-                Err(Error::Unsupported {
-                    feature: "Bit string matching".to_string(),
-                    location: *location,
-                })
+            Pattern::BitString { segments, .. } => {
+                use BitStringSegmentOption as Opt;
+
+                self.push_bitstring_length_check(subject.clone(), segments.len(), false);
+                self.push_string("buffer");
+                for (index, segment) in segments.iter().enumerate() {
+                    let _ = match segment.options.as_slice() {
+                        [] | [Opt::Int { .. }] => Ok(()),
+                        _ => Err(Error::Unsupported {
+                            feature: "This bit string segment option in patterns".to_string(),
+                            location: segment.location,
+                        }),
+                    }?;
+                    self.push_int(index);
+                    self.traverse_pattern(subject, &segment.value)?;
+                    self.pop();
+                }
+                self.pop();
+
+                Ok(())
             }
+            Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
+                feature: "Bit string matching".to_string(),
+                location: *location,
+            }),
         }
     }
 
@@ -408,6 +427,20 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             path: self.path_document(),
         })
     }
+
+    fn push_bitstring_length_check(
+        &mut self,
+        subject: Document<'a>,
+        expected_bytes: usize,
+        has_tail_spread: bool,
+    ) {
+        self.checks.push(Check::BitStringLength {
+            expected_bytes,
+            has_tail_spread,
+            subject,
+            path: self.path_document(),
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -461,6 +494,12 @@ pub enum Check<'a> {
         subject: Document<'a>,
         path: Document<'a>,
         expected_length: usize,
+        has_tail_spread: bool,
+    },
+    BitStringLength {
+        subject: Document<'a>,
+        path: Document<'a>,
+        expected_bytes: usize,
         has_tail_spread: bool,
     },
     Booly {
@@ -540,6 +579,23 @@ impl<'a> Check<'a> {
                     docvec![subject, path, length_check,]
                 } else {
                     docvec!["!", subject, path, length_check,]
+                }
+            }
+            Check::BitStringLength {
+                subject,
+                path,
+                expected_bytes,
+                has_tail_spread,
+            } => {
+                let length_check = Document::String(if has_tail_spread {
+                    format!(".length >= {}", expected_bytes)
+                } else {
+                    format!(".length == {}", expected_bytes)
+                });
+                if match_desired {
+                    docvec![subject, path, length_check,]
+                } else {
+                    docvec!["!(", subject, path, length_check, ")",]
                 }
             }
         }

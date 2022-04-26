@@ -33,9 +33,13 @@ export interface Utf8Codepoint {
 
 export function toBitString(segments: Array<number | Uint8Array>): BitString;
 
+export function sizedInteger(number: number, size: number): BitString;
+
 export function stringBits(string: string): Uint8Array;
 
 export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
+
+export function float64Bits(float: number): Uint8Array;
 
 export interface Result<T, E> {
   get __gleam_prelude_variant__(): "Ok" | "Error";

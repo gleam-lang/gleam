@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Person {\n    Teacher(title: String, age: Int, name: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }\npub fn get_age(person: Person) { person.age }"
+---
+error: Unknown record field
+  ┌─ /src/one/two.gleam:6:35
+  │
+6 │ pub fn get_name(person: Person) { person.name }
+  │                                   ^^^^^^^^^^^ Did you mean `age`?
+
+The value being accessed has this type:
+
+    Person
+
+It has these fields:
+
+    .age
+

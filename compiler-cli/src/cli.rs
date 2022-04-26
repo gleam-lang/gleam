@@ -33,6 +33,22 @@ impl Telemetry for Reporter {
     fn warning(&self, warning: &Warning) {
         print_warning(warning)
     }
+
+    fn downloading_package(&self, name: &str) {
+        print_downloading(name)
+    }
+
+    fn packages_downloaded(&self, start: Instant, count: usize) {
+        print_packages_downloaded(start, count)
+    }
+
+    fn resolving_package_versions(&self) {
+        print_resolving_versions()
+    }
+
+    fn waiting_for_build_directory_lock(&self) {
+        print_waiting_for_build_directory_lock()
+    }
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {
@@ -78,15 +94,19 @@ pub fn print_publishing_documentation() {
     print_colourful_prefix(" Publishing", "documentation");
 }
 
-pub fn print_downloading(text: &str) {
+fn print_downloading(text: &str) {
     print_colourful_prefix("Downloading", text)
 }
 
-pub fn print_resolving_versions() {
+fn print_waiting_for_build_directory_lock() {
+    print_colourful_prefix("    Waiting", "for build directory lock")
+}
+
+fn print_resolving_versions() {
     print_colourful_prefix("  Resolving", "versions")
 }
 
-pub fn print_compiling(text: &str) {
+fn print_compiling(text: &str) {
     print_colourful_prefix("  Compiling", text)
 }
 
@@ -114,7 +134,7 @@ pub fn print_generating_documentation() {
     print_colourful_prefix(" Generating", "documentation")
 }
 
-pub fn print_packages_downloaded(start: Instant, count: usize) {
+fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
         1 => format!("1 package in {}", elapsed),

@@ -2279,8 +2279,8 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
     match op {
         BinOp::AddInt if given.is_float() => Some(hint_numeric_message("+.", "Float")),
         BinOp::DivInt if given.is_float() => Some(hint_numeric_message("/.", "Float")),
-        BinOp::GtEqInt if given.is_float() => Some(hint_numeric_message(">=", "Float")),
-        BinOp::GtInt if given.is_float() => Some(hint_numeric_message(">", "Float")),
+        BinOp::GtEqInt if given.is_float() => Some(hint_numeric_message(">=.", "Float")),
+        BinOp::GtInt if given.is_float() => Some(hint_numeric_message(">.", "Float")),
         BinOp::LtEqInt if given.is_float() => Some(hint_numeric_message("<=.", "Float")),
         BinOp::LtInt if given.is_float() => Some(hint_numeric_message("<.", "Float")),
         BinOp::MultInt if given.is_float() => Some(hint_numeric_message("*.", "Float")),
@@ -2288,8 +2288,8 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 
         BinOp::AddFloat if given.is_int() => Some(hint_numeric_message("+", "Int")),
         BinOp::DivFloat if given.is_int() => Some(hint_numeric_message("/", "Int")),
-        BinOp::GtEqFloat if given.is_int() => Some(hint_numeric_message(">=.", "Int")),
-        BinOp::GtFloat if given.is_int() => Some(hint_numeric_message(">.", "Int")),
+        BinOp::GtEqFloat if given.is_int() => Some(hint_numeric_message(">=", "Int")),
+        BinOp::GtFloat if given.is_int() => Some(hint_numeric_message(">", "Int")),
         BinOp::LtEqFloat if given.is_int() => Some(hint_numeric_message("<=", "Int")),
         BinOp::LtFloat if given.is_int() => Some(hint_numeric_message("<", "Int")),
         BinOp::MultFloat if given.is_int() => Some(hint_numeric_message("*", "Int")),

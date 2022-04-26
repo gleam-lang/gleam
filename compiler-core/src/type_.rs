@@ -1485,7 +1485,7 @@ fn match_fun_type(
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
-                return match_fun_type(typ.clone(), arity, environment)
+                return match_fun_type(typ.clone(), arity, environment);
             }
 
             TypeVar::Unbound { .. } => {
@@ -1579,28 +1579,50 @@ fn make_type_vars(
         .try_collect()
 }
 
-fn custom_type_accessors<A>(
+fn custom_type_accessors<A: Clone + PartialEq>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
-    // Get the constructor for this custom type.
-    let args = match constructors {
-        [constructor] if !constructor.arguments.is_empty() => &constructor.arguments,
-        // If there is not exactly 1 constructor we return as we cannot
-        // build any constructors.
-        _ => return Ok(None),
-    };
+    if constructors.is_empty() {
+        return Ok(None);
+    }
+
+    let constructor_args_data = constructors
+        .iter()
+        .map(|constructor| constructor.arguments.as_slice())
+        .collect_vec();
+
+    let (first_constructor_arg, constructor_args) = constructor_args_data
+        .split_first()
+        .expect("No constructs with args");
+
+    let args = first_constructor_arg
+        .iter()
+        .enumerate()
+        .filter(|data_type| {
+            constructor_args.iter().all(|arg| {
+                !arg.iter()
+                    .enumerate()
+                    .filter(|item| {
+                        // TODO type comparison using `.compare_without_location(data_type)`
+                        item.0 == data_type.0 && item.1.compare_without_location(data_type.1)
+                    })
+                    .collect_vec()
+                    .is_empty()
+            })
+        })
+        .collect::<Vec<_>>();
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (index, RecordConstructorArg { label, ast, .. }) in args.iter().enumerate() {
+    for (index, RecordConstructorArg { label, ast, .. }) in args.iter() {
         if let Some(label) = label {
             let typ = hydrator.type_from_ast(ast, environment)?;
             let _ = fields.insert(
                 label.to_string(),
                 RecordAccessor {
-                    index: index as u64,
+                    index: (*index) as u64,
                     label: label.to_string(),
                     type_: typ,
                 },
