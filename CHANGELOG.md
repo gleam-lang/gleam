@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Clear outdated files from the build directory after compilation
+
 ## v0.21.0 - 2022-04-24
 
 - New projects are created with `gleam_stdlib` v0.21.
