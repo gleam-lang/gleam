@@ -34,7 +34,7 @@ strum = { version = "0.24.0", features = ["derive"] }
 # Template rendering
 askama = "0.10.5"
 # Markdown parsing
-pulldown-cmark = "0.8.0"
+pulldown-cmark = { version = "0.8.0", default-features = false }
 # Non-empty vectors
 vec1 = "1.8.0"
 # Hex package manager client
