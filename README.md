@@ -91,6 +91,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [NineFX](http://www.ninefx.com)
  - [Parker Selbert](https://github.com/sorentwo)
  - [Pete Jodo](https://github.com/petejodo)
+ - [qingliangcn](https://github.com/qingliangcn)
  - [Raúl Chouza ](https://github.com/chouzar)
  - [Reio Piller](https://github.com/hypno2000)
  - [Sascha Wolf](https://github.com/sascha-wolf)
