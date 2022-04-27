@@ -303,7 +303,7 @@ impl TypeAst {
                     name: o_name,
                     arguments: o_arguments,
                     location: _,
-                } => module == o_module && name == o_name && arguments == o_arguments,
+                } => module == o_module && name == o_name && arguments.len() == o_arguments.len() && arguments.iter().zip(o_arguments).all(|a| { a.0.compare_without_location(a.1) }),
                 _ => false,
             },
             TypeAst::Fn {
@@ -315,7 +315,7 @@ impl TypeAst {
                     arguments: o_arguments,
                     return_: o_return_,
                     location: _,
-                } => arguments == o_arguments && return_ == o_return_,
+                } => arguments.len() == o_arguments.len() && arguments.iter().zip(o_arguments).all(|a| { a.0.compare_without_location(a.1) }) && return_.compare_without_location(o_return_),
                 _ => false,
             },
             TypeAst::Var { name, location: _ } => match other {
@@ -329,7 +329,7 @@ impl TypeAst {
                 TypeAst::Tuple {
                     elems: o_elems,
                     location: _,
-                } => elems == o_elems,
+                } => elems.len() == o_elems.len() && elems.iter().zip(o_elems).all(|a| { a.0.compare_without_location(a.1) }),
                 _ => false,
             },
             TypeAst::Hole { name, location: _ } => match other {
