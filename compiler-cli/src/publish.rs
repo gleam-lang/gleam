@@ -16,8 +16,8 @@ use sha2::Digest;
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
-pub fn command(replace: bool) -> Result<()> {
-    PublishCommand::setup(replace)?.run()
+pub fn command(replace: bool, yes: bool) -> Result<()> {
+    PublishCommand::setup(replace, yes)?.run()
 }
 
 pub struct PublishCommand {
@@ -28,7 +28,7 @@ pub struct PublishCommand {
 }
 
 impl PublishCommand {
-    pub fn setup(replace: bool) -> Result<Self> {
+    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
         // Reset the build directory so we know the state of the project
         fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
@@ -74,7 +74,7 @@ impl PublishCommand {
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
 
-        if cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
+        if !i_am_sure && cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
             println!("Not publishing.");
             std::process::exit(0);
         }
