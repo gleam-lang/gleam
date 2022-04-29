@@ -106,6 +106,7 @@ jobs:
         shell: bash
         run: |
           VERSION=nightly
+          DAY=$(date +"%y%m%d")
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
@@ -122,6 +123,7 @@ jobs:
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
           openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+          echo "DAY=$DAY" >> $GITHUB_ENV
 
       - name: Ensure binary successfully boots
         shell: bash
@@ -145,6 +147,7 @@ jobs:
           fail_on_unmatched_files: true
           name: "Nightly"
           tag_name: "nightly"
+          body: nightly release for ${{ env.DAY }}
           files: |
             ${{ env.ASSET }}
             ${{ env.ASSET }}.sha256
@@ -192,6 +195,7 @@ jobs:
         shell: bash
         run: |
           VERSION=nightly
+          DAY=$(date +"%y%m%d")
 
           ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
           cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
@@ -199,6 +203,7 @@ jobs:
           openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
           openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
           echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+          echo "DAY=$DAY" >> $GITHUB_ENV
 
       - name: Ensure binary successfully boots
         shell: bash
@@ -215,6 +220,7 @@ jobs:
           fail_on_unmatched_files: true
           name: "Nightly"
           tag_name: "nightly"
+          body: nightly release for ${{ env.DAY }}
           files: |
             ${{ env.ASSET }}
             ${{ env.ASSET }}.sha256
