@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 128
+expression: "\npub type Person {\n    Teacher(name: String, age: List(Int), title: String)\n    Student(name: String, age: List(Int))\n}\npub fn get_name(person: Person) { person.name }\npub fn get_age(person: Person) { person.age }"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([get_name/1, get_age/1]).
+-export_type([person/0]).
+
+-type person() :: {teacher, binary(), list(integer()), binary()} |
+    {student, binary(), list(integer())}.
+
+-spec get_name(person()) -> binary().
+get_name(Person) ->
+    erlang:element(2, Person).
+
+-spec get_age(person()) -> list(integer()).
+get_age(Person) ->
+    erlang:element(3, Person).
+
