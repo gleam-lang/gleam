@@ -1579,57 +1579,75 @@ fn make_type_vars(
         .try_collect()
 }
 
-fn custom_type_accessors<A: Clone + PartialEq>(
+fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
-    if constructors.is_empty() {
-        return Ok(None);
-    }
-
-    let constructor_args_data = constructors
-        .iter()
-        .map(|constructor| constructor.arguments.as_slice())
-        .collect_vec();
-
-    let (first_constructor_arg, constructor_args) = constructor_args_data
-        .split_first()
-        .expect("No constructs with args");
-
-    let args = first_constructor_arg
-        .iter()
-        .enumerate()
-        .filter(|data_type| {
-            constructor_args.iter().all(|arg| {
-                !arg.iter()
-                    .enumerate()
-                    .filter(|item| {
-                        // TODO type comparison using `.compare_without_location(data_type)`
-                        item.0 == data_type.0 && item.1.compare_without_location(data_type.1)
-                    })
-                    .collect_vec()
-                    .is_empty()
-            })
-        })
-        .collect::<Vec<_>>();
+    let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (index, RecordConstructorArg { label, ast, .. }) in args.iter() {
-        if let Some(label) = label {
-            let typ = hydrator.type_from_ast(ast, environment)?;
-            let _ = fields.insert(
-                label.to_string(),
-                RecordAccessor {
-                    index: (*index) as u64,
-                    label: label.to_string(),
-                    type_: typ,
-                },
-            );
-        }
+    for (index, label, ast) in args {
+        let typ = hydrator.type_from_ast(ast, environment)?;
+        let _ = fields.insert(
+            label.to_string(),
+            RecordAccessor {
+                index: index as u64,
+                label: label.to_string(),
+                type_: typ,
+            },
+        );
     }
     Ok(Some(fields))
+}
+
+/// Returns the fields that have the same label and type across all variants of
+/// the given type.
+fn get_compatible_record_fields<A>(
+    constructors: &[RecordConstructor<A>],
+) -> Vec<(usize, &str, &TypeAst)> {
+    let mut compatible = vec![];
+
+    let first = match constructors.get(0) {
+        Some(first) => first,
+        None => return compatible,
+    };
+
+    'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
+        // Fields without labels do not have accessors
+        let label = match first_argument.label.as_ref() {
+            Some(label) => label.as_str(),
+            None => continue 'next_argument,
+        };
+
+        // Check each variant to see if they have an field in the same position
+        // with the same label and the same type
+        for constructor in constructors.iter().skip(1) {
+            // The field must exist in all variants
+            let argument = match constructor.arguments.get(index) {
+                Some(argument) => argument,
+                None => continue 'next_argument,
+            };
+
+            // The labels must be the same
+            if argument.label != first_argument.label {
+                continue 'next_argument;
+            }
+
+            // The types must be the same
+            if !argument.ast.is_logically_equal(&first_argument.ast) {
+                continue 'next_argument;
+            }
+        }
+
+        // The previous loop did not find any incompatible fields in the other
+        // variants so this field is compatible across variants and we should
+        // generate an accessor for it.
+        compatible.push((index, label, &first_argument.ast))
+    }
+
+    compatible
 }
 
 /// Iterate over a module, registering any new types created by the module into the typer

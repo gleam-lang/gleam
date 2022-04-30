@@ -1113,21 +1113,21 @@ pub fn get_name(person: Person) { person.name }",
 }
 
 #[test]
-fn record_accessor_multiple_variants_optional_types() {
+fn record_accessor_multiple_variants_parameterised_types() {
     // We can access fields on custom types with multiple variants
     // In positions other than the 1st field
     assert_module_infer!(
         "
 pub type Person {
-    Teacher(name: String, age: Option(Int), title: String)
-    Student(name: String, age: Option(Int))
+    Teacher(name: String, age: List(Int), title: String)
+    Student(name: String, age: List(Int))
 }
 pub fn get_name(person: Person) { person.name }
 pub fn get_age(person: Person) { person.age }",
         vec![
-            ("Student", "fn(String, Option(Int)) -> Person"),
-            ("Teacher", "fn(String, Option(Int), String) -> Person"),
-            ("get_age", "fn(Person) -> Int"),
+            ("Student", "fn(String, List(Int)) -> Person"),
+            ("Teacher", "fn(String, List(Int), String) -> Person"),
+            ("get_age", "fn(Person) -> List(Int)"),
             ("get_name", "fn(Person) -> String"),
         ]
     );

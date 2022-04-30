@@ -239,13 +239,6 @@ impl<T: PartialEq> RecordConstructorArg<T> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.doc = Some(new_doc);
     }
-
-    pub fn compare_without_location(&self, other: &RecordConstructorArg<T>) -> bool {
-        self.type_ == other.type_
-            && self.label == other.label
-            && self.doc == other.doc
-            && self.ast.compare_without_location(&other.ast)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -290,7 +283,7 @@ impl TypeAst {
         }
     }
 
-    pub fn compare_without_location(&self, other: &TypeAst) -> bool {
+    pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
         match self {
             TypeAst::Constructor {
                 module,
@@ -310,7 +303,7 @@ impl TypeAst {
                         && arguments
                             .iter()
                             .zip(o_arguments)
-                            .all(|a| a.0.compare_without_location(a.1))
+                            .all(|a| a.0.is_logically_equal(a.1))
                 }
                 _ => false,
             },
@@ -328,8 +321,8 @@ impl TypeAst {
                         && arguments
                             .iter()
                             .zip(o_arguments)
-                            .all(|a| a.0.compare_without_location(a.1))
-                        && return_.compare_without_location(o_return_)
+                            .all(|a| a.0.is_logically_equal(a.1))
+                        && return_.is_logically_equal(o_return_)
                 }
                 _ => false,
             },
@@ -349,7 +342,7 @@ impl TypeAst {
                         && elems
                             .iter()
                             .zip(o_elems)
-                            .all(|a| a.0.compare_without_location(a.1))
+                            .all(|a| a.0.is_logically_equal(a.1))
                 }
                 _ => false,
             },
