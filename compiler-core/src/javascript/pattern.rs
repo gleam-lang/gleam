@@ -42,7 +42,7 @@ impl Offset {
     // This should never be called on an open ended offset
     // However previous checks ensure bit_string segements without a size are only allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
-        self.bytes = self.bytes + step
+        self.bytes += step
     }
     pub fn set_open_ended(&mut self) {
         self.open_ended = true
@@ -406,7 +406,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         [Opt::Size { value: size, .. }] => match &**size {
                             Pattern::Int { value, .. } => {
                                 let start = offset.bytes;
-                                offset.increment(value.parse::<usize>().unwrap() / 8);
+                                let increment = value
+                                    .parse::<usize>()
+                                    .expect("part of an Int node should always parse as integer");
+                                offset.increment(increment / 8);
                                 let end = offset.bytes;
 
                                 self.push_int_from_slice(start, end);
