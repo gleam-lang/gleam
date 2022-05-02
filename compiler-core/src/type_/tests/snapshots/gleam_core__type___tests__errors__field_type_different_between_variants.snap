@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Shape {\n    Square(x: Int, y: Int)\n    Rectangle(x: String, y: String)\n}\npub fn get_x(shape: Shape) { shape.x }\npub fn get_y(shape: Shape) { shape.y }"
+---
+error: Unknown record field
+  ┌─ /src/one/two.gleam:6:30
+  │
+6 │ pub fn get_x(shape: Shape) { shape.x }
+  │                              ^^^^^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Shape
+
+It does not have any fields.
+

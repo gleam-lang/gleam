@@ -7,6 +7,12 @@ use crate::{cli, http::HttpClient};
 
 /// A helper trait that handles the provisioning and destruction of a Hex API key.
 pub trait ApiKeyCommand {
+    const USER_PROMPT: &'static str = "https://hex.pm username";
+    const USER_KEY: &'static str = "HEXPM_USER";
+
+    const PASS_PROMPT: &'static str = "https://hex.pm password";
+    const PASS_KEY: &'static str = "HEXPM_PASS";
+
     fn with_api_key(
         &mut self,
         runtime: &tokio::runtime::Handle,
@@ -21,8 +27,10 @@ pub trait ApiKeyCommand {
         let http = HttpClient::new();
 
         // Get login creds from user
-        let username = cli::ask("https://hex.pm username")?;
-        let password = cli::ask_password("https://hex.pm password")?;
+
+        let username = std::env::var(Self::USER_KEY).or_else(|_| cli::ask(Self::USER_PROMPT))?;
+        let password =
+            std::env::var(Self::PASS_KEY).or_else(|_| cli::ask_password(Self::PASS_PROMPT))?;
 
         // Get API key
         let api_key = runtime.block_on(gleam_core::hex::create_api_key(

@@ -235,7 +235,7 @@ pub struct RecordConstructorArg<T> {
     pub doc: Option<String>,
 }
 
-impl<T> RecordConstructorArg<T> {
+impl<T: PartialEq> RecordConstructorArg<T> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.doc = Some(new_doc);
     }
@@ -280,6 +280,79 @@ impl TypeAst {
             | TypeAst::Hole { location, .. }
             | TypeAst::Tuple { location, .. }
             | TypeAst::Constructor { location, .. } => *location,
+        }
+    }
+
+    pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
+        match self {
+            TypeAst::Constructor {
+                module,
+                name,
+                arguments,
+                location: _,
+            } => match other {
+                TypeAst::Constructor {
+                    module: o_module,
+                    name: o_name,
+                    arguments: o_arguments,
+                    location: _,
+                } => {
+                    module == o_module
+                        && name == o_name
+                        && arguments.len() == o_arguments.len()
+                        && arguments
+                            .iter()
+                            .zip(o_arguments)
+                            .all(|a| a.0.is_logically_equal(a.1))
+                }
+                _ => false,
+            },
+            TypeAst::Fn {
+                arguments,
+                return_,
+                location: _,
+            } => match other {
+                TypeAst::Fn {
+                    arguments: o_arguments,
+                    return_: o_return_,
+                    location: _,
+                } => {
+                    arguments.len() == o_arguments.len()
+                        && arguments
+                            .iter()
+                            .zip(o_arguments)
+                            .all(|a| a.0.is_logically_equal(a.1))
+                        && return_.is_logically_equal(o_return_)
+                }
+                _ => false,
+            },
+            TypeAst::Var { name, location: _ } => match other {
+                TypeAst::Var {
+                    name: o_name,
+                    location: _,
+                } => name == o_name,
+                _ => false,
+            },
+            TypeAst::Tuple { elems, location: _ } => match other {
+                TypeAst::Tuple {
+                    elems: o_elems,
+                    location: _,
+                } => {
+                    elems.len() == o_elems.len()
+                        && elems
+                            .iter()
+                            .zip(o_elems)
+                            .all(|a| a.0.is_logically_equal(a.1))
+                }
+                _ => false,
+            },
+            TypeAst::Hole { name, location: _ } => match other {
+                TypeAst::Hole {
+                    name: o_name,
+                    location: _,
+                } => name == o_name,
+                _ => false,
+            },
         }
     }
 }

@@ -1485,7 +1485,7 @@ fn match_fun_type(
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
-                return match_fun_type(typ.clone(), arity, environment)
+                return match_fun_type(typ.clone(), arity, environment);
             }
 
             TypeVar::Unbound { .. } => {
@@ -1584,30 +1584,70 @@ fn custom_type_accessors<A>(
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
 ) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
-    // Get the constructor for this custom type.
-    let args = match constructors {
-        [constructor] if !constructor.arguments.is_empty() => &constructor.arguments,
-        // If there is not exactly 1 constructor we return as we cannot
-        // build any constructors.
-        _ => return Ok(None),
-    };
+    let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
-    for (index, RecordConstructorArg { label, ast, .. }) in args.iter().enumerate() {
-        if let Some(label) = label {
-            let typ = hydrator.type_from_ast(ast, environment)?;
-            let _ = fields.insert(
-                label.to_string(),
-                RecordAccessor {
-                    index: index as u64,
-                    label: label.to_string(),
-                    type_: typ,
-                },
-            );
-        }
+    for (index, label, ast) in args {
+        let typ = hydrator.type_from_ast(ast, environment)?;
+        let _ = fields.insert(
+            label.to_string(),
+            RecordAccessor {
+                index: index as u64,
+                label: label.to_string(),
+                type_: typ,
+            },
+        );
     }
     Ok(Some(fields))
+}
+
+/// Returns the fields that have the same label and type across all variants of
+/// the given type.
+fn get_compatible_record_fields<A>(
+    constructors: &[RecordConstructor<A>],
+) -> Vec<(usize, &str, &TypeAst)> {
+    let mut compatible = vec![];
+
+    let first = match constructors.get(0) {
+        Some(first) => first,
+        None => return compatible,
+    };
+
+    'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
+        // Fields without labels do not have accessors
+        let label = match first_argument.label.as_ref() {
+            Some(label) => label.as_str(),
+            None => continue 'next_argument,
+        };
+
+        // Check each variant to see if they have an field in the same position
+        // with the same label and the same type
+        for constructor in constructors.iter().skip(1) {
+            // The field must exist in all variants
+            let argument = match constructor.arguments.get(index) {
+                Some(argument) => argument,
+                None => continue 'next_argument,
+            };
+
+            // The labels must be the same
+            if argument.label != first_argument.label {
+                continue 'next_argument;
+            }
+
+            // The types must be the same
+            if !argument.ast.is_logically_equal(&first_argument.ast) {
+                continue 'next_argument;
+            }
+        }
+
+        // The previous loop did not find any incompatible fields in the other
+        // variants so this field is compatible across variants and we should
+        // generate an accessor for it.
+        compatible.push((index, label, &first_argument.ast))
+    }
+
+    compatible
 }
 
 /// Iterate over a module, registering any new types created by the module into the typer

@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Person { Person(name: String, age: Int) }\npub fn get_age(person: Person) { person.age }\npub fn get_name(person: Person) { person.name }\n"
+---
+import { CustomType } from "../gleam.mjs";
+
+export class Person extends CustomType {
+  constructor(name, age) {
+    super();
+    this.name = name;
+    this.age = age;
+  }
+}
+
+export function get_age(person) {
+  return person.age;
+}
+
+export function get_name(person) {
+  return person.name;
+}
+
