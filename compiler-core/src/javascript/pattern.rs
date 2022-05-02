@@ -7,7 +7,9 @@ pub static ASSIGNMENT_VAR: &str = "$";
 enum Index<'a> {
     Int(usize),
     String(&'a str),
-    Method(String),
+    ByteAt(usize),
+    IntFromSlice(usize, usize),
+    FloatAt(usize),
     RestFrom(usize),
 }
 
@@ -75,8 +77,16 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::Int(i));
     }
 
-    fn push_method(&mut self, s: String) {
-        self.path.push(Index::Method(s));
+    fn push_byte_at(&mut self, i: usize) {
+        self.path.push(Index::ByteAt(i));
+    }
+
+    fn push_int_from_slice(&mut self, start: usize, end: usize) {
+        self.path.push(Index::IntFromSlice(start, end));
+    }
+
+    fn push_float_at(&mut self, i: usize) {
+        self.path.push(Index::FloatAt(i));
     }
 
     fn push_rest_from(&mut self, i: usize) {
@@ -104,7 +114,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::Int(i) => Document::String(format!("[{}]", i)),
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
-            Index::Method(s) => docvec!(".", Document::String(s.to_string())),
+            Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
+            Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
+            Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
             Index::RestFrom(i) => docvec!(".restFrom(", i, ")"),
         }))
     }
@@ -384,7 +396,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 for segment in segments {
                     let _ = match segment.options.as_slice() {
                         [] | [Opt::Int { .. }] => {
-                            self.push_method(format!("byteAt({})", offset.bytes));
+                            self.push_byte_at(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
                             offset.increment(1);
@@ -397,7 +409,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 offset.increment(value.parse::<usize>().unwrap() / 8);
                                 let end = offset.bytes;
 
-                                self.push_method(format!("intFromSlice({}, {})", start, end));
+                                self.push_int_from_slice(start, end);
                                 self.traverse_pattern(subject, &segment.value)?;
                                 self.pop();
                                 Ok(())
@@ -409,7 +421,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         },
 
                         [Opt::Float { .. }] => {
-                            self.push_method(format!("floatAt({})", offset.bytes));
+                            self.push_float_at(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
                             offset.increment(8);
