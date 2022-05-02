@@ -8,6 +8,7 @@ enum Index<'a> {
     Int(usize),
     String(&'a str),
     Method(String),
+    RestFrom(usize),
 }
 
 #[derive(Debug)]
@@ -78,6 +79,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::Method(s));
     }
 
+    fn push_rest_from(&mut self, i: usize) {
+        self.path.push(Index::RestFrom(i));
+    }
+
     fn push_string_times(&mut self, s: &'a str, times: usize) {
         for _ in 0..times {
             self.push_string(s);
@@ -100,6 +105,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
             Index::Method(s) => docvec!(".", Document::String(s.to_string())),
+            Index::RestFrom(i) => docvec!(".restFrom(", i, ")"),
         }))
     }
 
@@ -411,7 +417,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         }
 
                         [Opt::Binary { .. }] => {
-                            self.push_method(format!("restFrom({})", offset.bytes));
+                            self.push_rest_from(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;
                             self.pop();
                             offset.set_open_ended();
