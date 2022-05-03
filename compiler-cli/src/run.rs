@@ -37,18 +37,18 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
 
     // Run the command
     let status = match target.unwrap_or(config.target) {
-        Target::Erlang => run_erlang(&config, &module, arguments),
+        Target::Erlang => run_erlang(&module, arguments),
         Target::JavaScript => run_javascript(&config, &module, arguments),
     }?;
 
     std::process::exit(status);
 }
 
-fn run_erlang(config: &PackageConfig, module: &str, arguments: Vec<String>) -> Result<i32, Error> {
+fn run_erlang(module: &str, arguments: Vec<String>) -> Result<i32, Error> {
     let mut args = vec![];
 
     // Specify locations of .beam files
-    let packages = paths::build_packages(Mode::Dev, config.target);
+    let packages = paths::build_packages(Mode::Dev, Target::Erlang);
 
     for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
         args.push("-pa".into());
