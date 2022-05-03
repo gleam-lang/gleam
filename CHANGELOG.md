@@ -13,6 +13,8 @@
 - Clear outdated files from the build directory after compilation.
 - Fixed a bug where immediately calling the value that a case expression
   evaluates to could generate invalid JavaScript.
+- Fixed a bug where running a project on the Erlang target when the default
+  project target is set to JavaScript.
 
 ## v0.21.0 - 2022-04-24
 
