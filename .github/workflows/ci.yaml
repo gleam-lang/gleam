@@ -226,11 +226,17 @@ jobs:
           gleam docs build
         working-directory: ./test/project_erlang
 
-      # TODO: Add the stdlib to this project once it uses .mjs imports
-      - name: test/project_javascript
+      - name: test/project_javascript on javascript target
         run: |
           gleam run
           gleam test
+          gleam docs build
+        working-directory: ./test/project_javascript
+
+      - name: test/project_javascript on erlang target
+        run: |
+          gleam run --target erlang
+          gleam test --target erlang
           gleam docs build
         working-directory: ./test/project_javascript
 

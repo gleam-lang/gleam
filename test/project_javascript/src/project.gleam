@@ -1,6 +1,13 @@
 pub fn main() {
-  println("Hello, from Gleam compiled to JavaScript!")
+  println("Hello, from project_javascript!")
 }
 
-external fn println(String) -> Nil =
-  "" "globalThis.console.log"
+if javascript {
+  external fn println(String) -> Nil =
+    "" "globalThis.console.log"
+}
+
+if erlang {
+  external fn println(String) -> Nil =
+    "erlang" "display"
+}
