@@ -366,6 +366,19 @@ assertEqual(inspect(List.fromArray([new Ok(1), new Ok(2)])), "[Ok(1), Ok(2)]");
 assertEqual(inspect(new BitString(new Uint8Array([]))), "<<>>");
 assertEqual(inspect(new BitString(new Uint8Array([1, 2, 3]))), "<<1, 2, 3>>");
 
+assertEqual(new BitString(new Uint8Array([1, 2, 3])).byteAt(0), 1);
+assertEqual(new BitString(new Uint8Array([1, 2, 3])).byteAt(2), 3);
+assertEqual(
+  new BitString(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatAt(0),
+  1.0
+);
+assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 1), 1);
+assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 2), 258);
+assertEqual(
+  new BitString(new Uint8Array([1, 2, 3])).restFrom(1),
+  new BitString(new Uint8Array([2, 3]))
+);
+
 assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
 
 assertEqual(
