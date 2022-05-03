@@ -24,6 +24,10 @@ export interface BitString {
   get __gleam_prelude_variant__(): "BitString";
   get length(): number;
   inspect(): string;
+  byteAt(index: number): number;
+  floatAt(index: number): number;
+  intFromSlice(start: number, end: number): number;
+  restFrom(index: number): BitString;
 }
 
 export interface Utf8Codepoint {
