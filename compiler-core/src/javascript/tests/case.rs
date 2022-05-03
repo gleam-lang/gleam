@@ -143,3 +143,18 @@ fn go(x) {
 "#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1506
+#[test]
+fn called_case() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  case x {
+    0 -> y
+    _ -> y
+  }()
+}
+"#,
+    )
+}

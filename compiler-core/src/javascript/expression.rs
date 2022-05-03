@@ -738,7 +738,7 @@ impl<'module> Generator<'module> {
             _ => {
                 let fun = self.not_in_tail_position(|gen| {
                     let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
-                    let fun = gen.expression(fun)?;
+                    let fun = gen.wrap_expression(fun)?;
                     if is_fn_literal {
                         Ok(docvec!("(", fun, ")"))
                     } else {
