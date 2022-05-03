@@ -54,6 +54,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Clay](https://github.com/connorlay)
  - [Cole Lawrence](https://github.com/colelawrence)
  - [Colin](https://github.com/insanitybit)
+ - [Copple](https://github.com/kiwicopple)
  - [Dan Dresselhaus](https://github.com/ddresselhaus)
  - [Dan Mueller](https://github.com/unthought)
  - [Dave Lucia](https://github.com/davydog187)
