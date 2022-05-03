@@ -10,7 +10,7 @@ enum Index<'a> {
     ByteAt(usize),
     IntFromSlice(usize, usize),
     FloatAt(usize),
-    RestFrom(usize),
+    SliceAfter(usize),
 }
 
 #[derive(Debug)]
@@ -90,7 +90,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn push_rest_from(&mut self, i: usize) {
-        self.path.push(Index::RestFrom(i));
+        self.path.push(Index::SliceAfter(i));
     }
 
     fn push_string_times(&mut self, s: &'a str, times: usize) {
@@ -117,7 +117,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
             Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
             Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
-            Index::RestFrom(i) => docvec!(".restFrom(", i, ")"),
+            Index::SliceAfter(i) => docvec!(".sliceAfter(", i, ")"),
         }))
     }
 

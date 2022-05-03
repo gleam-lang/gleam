@@ -136,17 +136,16 @@ export class BitString {
   }
 
   floatAt(index) {
-    return byteArrayToFloat(this.buffer.slice(index, index + 8))
+    return byteArrayToFloat(this.buffer.slice(index, index + 8));
   }
 
   intFromSlice(start, end) {
-    return byteArrayToInt(this.buffer.slice(start, end))
+    return byteArrayToInt(this.buffer.slice(start, end));
   }
 
-  restFrom(index) {
-    return new BitString(this.buffer.slice(index))
+  sliceAfter(index) {
+    return new BitString(this.buffer.slice(index));
   }
-
 }
 
 export class UtfCodepoint {
@@ -200,17 +199,17 @@ export function sizedInteger(value, size) {
 }
 
 export function byteArrayToInt(byteArray) {
-  byteArray = byteArray.reverse()
+  byteArray = byteArray.reverse();
   var value = 0;
-  for ( var i = byteArray.length - 1; i >= 0; i--) {
-      value = (value * 256) + byteArray[i];
+  for (var i = byteArray.length - 1; i >= 0; i--) {
+    value = value * 256 + byteArray[i];
   }
 
   return value;
-};
+}
 
 export function byteArrayToFloat(byteArray) {
-  return new Float64Array(byteArray.reverse().buffer)[0]
+  return new Float64Array(byteArray.reverse().buffer)[0];
 }
 
 export function stringBits(string) {

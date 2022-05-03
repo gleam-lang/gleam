@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
+assertion_line: 203
 expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
 ---
 import { throwError, toBitString } from "../gleam.mjs";
@@ -16,7 +17,7 @@ function go(x) {
       { value: $ }
     );
   }
-  let b = $.restFrom(1);
+  let b = $.sliceAfter(1);
   return $;
 }
 

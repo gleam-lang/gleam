@@ -375,7 +375,7 @@ assertEqual(
 assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 1), 1);
 assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 2), 258);
 assertEqual(
-  new BitString(new Uint8Array([1, 2, 3])).restFrom(1),
+  new BitString(new Uint8Array([1, 2, 3])).sliceAfter(1),
   new BitString(new Uint8Array([2, 3]))
 );
 
