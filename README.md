@@ -28,7 +28,7 @@ please consider sponsoring its development [on GitHub](https://github.com/sponso
 Thank you to our top sponsors! Gleam would not be possible without you.
 
 <p>
-  <a href="https://fly.io/"><img width=200 src="https://gleam.run/images/sponsors/flyio.png" alt="Fly.io"></a>
+  <a href="https://fly.io/"><img width=200 src="https://gleam.run/images/sponsors/fly.svg" alt="Fly.io"></a>
 </p>
 
 <p>
