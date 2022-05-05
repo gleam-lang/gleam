@@ -47,6 +47,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Ali Farhadi](https://github.com/farhadi)
  - [Ben Marx](https://github.com/bgmarx)
  - [Ben Myles](https://github.com/benmyles)
+ - [Bernat Jufré Martínez](https://github.com/bjufre)
  - [Charles Chamberlain](https://github.com/charlesetc)
  - [Chew Choon Keat](https://github.com/choonkeat)
  - [Christian Meunier](https://github.com/tlvenn)
