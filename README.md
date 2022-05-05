@@ -77,6 +77,7 @@ Thank you to our top sponsors! Gleam would not be possible without you.
  - [Jechol Lee](https://github.com/jechol)
  - [jiangplus](https://github.com/jiangplus)
  - [Joe Corkerton](https://github.com/joecorkerton)
+ - [John Gallagher](https://github.com/johngallagher)
  - [John Palgut](https://github.com/Jwsonic)
  - [Jonathan Arnett](https://github.com/J3RN)
  - [José Valim](https://github.com/josevalim)
