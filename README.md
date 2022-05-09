@@ -64,6 +64,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Damir Vandic](https://github.com/dvic)
  - [Dan Dresselhaus](https://github.com/ddresselhaus)
  - [Dan Mueller](https://github.com/unthought)
+ - [Dashuang Li](https://github.com/defp)
  - [Dave Lucia](https://github.com/davydog187)
  - [David Armstrong Lewis](https://github.com/davidarmstronglewis)
  - [David Bernheisel](https://github.com/dbernheisel)
