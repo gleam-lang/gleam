@@ -1268,7 +1268,22 @@ where
                 return_annotation,
             }))
         } else {
-            self.next_tok_unexpected(vec!["The body of a function".to_string()])
+            match self.next_tok() {
+                None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
+
+                Some((start, Token::RightBrace, end)) => parse_error(
+                    ParseErrorType::ExpectedFuncBody,
+                    SrcSpan { start, end },
+                ),
+
+                Some((start, _, end)) => parse_error(
+                    ParseErrorType::UnexpectedToken {
+                        expected: vec!["The body of a function".to_string()],
+                        hint: None,
+                    },
+                    SrcSpan { start, end },
+                ),
+            }
         }
     }
 

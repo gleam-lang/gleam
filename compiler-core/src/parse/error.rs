@@ -49,6 +49,13 @@ impl ParseError {
                 "This is an extra delimiter.",
                 vec!["Hint: Try removing it?".to_string()],
             ),
+            ParseErrorType::ExpectedFuncBody => (
+                "I was not expecting this.",
+                vec![
+                    "Function bodies cannot be empty in Gleam.".to_string(),
+                    "Maybe you would like to add a \"todo\" instead?".to_string()
+                ],
+            ),
             ParseErrorType::ExprLparStart => (
                 "This paren cannot be understood here.",
                 vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()],
@@ -191,6 +198,7 @@ pub enum ParseErrorType {
     ExpectedType,            // after ':' or '->' where a type annotation is expected
     ExpectedUpName,          // any token used when a UpName was expected
     ExpectedValue,           // no value after "="
+    ExpectedFuncBody,        // after "{" where a function body is expected and "}" is found
     ExprLparStart,           // it seems "(" was used to start an expression
     ExprThenlessTry,         // a try in the tail position of an expression sequence
     ExtraSeparator,          // #(1,,) <- the 2nd comma is an extra separator
