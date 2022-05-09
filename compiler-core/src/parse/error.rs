@@ -50,7 +50,7 @@ impl ParseError {
                 vec!["Hint: Try removing it?".to_string()],
             ),
             ParseErrorType::ExprLparStart => (
-                "This paren cannot be understood here.",
+                "This parenthesis cannot be understood here.",
                 vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()],
             ),
             ParseErrorType::ExprThenlessTry => (
