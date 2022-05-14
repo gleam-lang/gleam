@@ -158,7 +158,7 @@ impl<'a> JavaScript<'a> {
     }
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
-        tracing::debug!("Generated js prelude");
+        tracing::debug!("Generating js prelude");
         writer
             .writer(&self.output_directory.join("gleam.mjs"))?
             .str_write(javascript::PRELUDE)?;

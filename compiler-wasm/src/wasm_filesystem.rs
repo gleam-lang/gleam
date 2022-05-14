@@ -24,6 +24,7 @@ impl CommandExecutor for WasmFileSystem {
     fn exec(
         &self,
         _program: &str,
+        _stdin: Option<&[u8]>,
         _args: &[String],
         _env: &[(&str, String)],
         _cwd: Option<&Path>,

@@ -150,9 +150,14 @@ where
             let beam_path = self.out.join("ebin").join(module).with_extension("beam");
             self.add_build_journal(beam_path);
         }
-        let status = self
-            .io
-            .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
+        let status = self.io.exec(
+            "escript",
+            None,
+            &args,
+            &[],
+            None,
+            self.silence_subprocess_stdout,
+        )?;
 
         if status == 0 {
             Ok(())

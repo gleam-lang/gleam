@@ -307,6 +307,7 @@ where
         ];
         let status = self.io.exec(
             REBAR_EXECUTABLE,
+            None,
             &args,
             &env,
             Some(&project_dir),

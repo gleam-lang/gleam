@@ -133,6 +133,7 @@ pub trait CommandExecutor {
     fn exec(
         &self,
         program: &str,
+        stdin: Option<&[u8]>,
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
@@ -285,6 +286,7 @@ pub mod test {
         fn exec(
             &self,
             _program: &str,
+            _stdin: Option<&[u8]>,
             _args: &[String],
             _env: &[(&str, String)],
             _cwd: Option<&Path>,

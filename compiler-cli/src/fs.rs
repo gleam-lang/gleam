@@ -11,7 +11,7 @@ use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, BufRead, BufReader, BufWriter, Write},
     path::{Path, PathBuf},
     process::Stdio,
 };
@@ -120,24 +120,41 @@ impl CommandExecutor for ProjectIO {
     fn exec(
         &self,
         program: &str,
+        stdin_buf: Option<&[u8]>,
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
         quiet: bool,
     ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
+        let stdin = if let Some(_) = stdin_buf {
+            Stdio::piped()
+        } else {
+            Stdio::null()
+        };
         let stdout = if quiet {
             Stdio::null()
         } else {
             Stdio::inherit()
         };
-        let result = std::process::Command::new(program)
+        let mut proc = std::process::Command::new(program)
             .args(args)
-            .stdin(Stdio::null())
+            .stdin(stdin)
             .stdout(stdout)
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
-            .status();
+            .spawn()
+            .unwrap();
+
+        if let Some(buf) = stdin_buf {
+            let mut child_stdin = proc.stdin.as_ref().unwrap();
+            let mut writer = BufWriter::new(&mut child_stdin);
+            writer
+                .write_all(buf)
+                .expect("Failed to gain control of deno");
+        }
+
+        let result = proc.wait();
 
         match result {
             Ok(status) => Ok(status.code().unwrap_or_default()),
@@ -521,7 +538,7 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
-    match ProjectIO::new().exec("git", &args, &[], None, false) {
+    match ProjectIO::new().exec("git", None, &args, &[], None, false) {
         Ok(_) => Ok(()),
         Err(err) => match err {
             Error::ShellProgramNotFound { .. } => Ok(()),

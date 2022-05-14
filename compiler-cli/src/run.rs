@@ -38,7 +38,7 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
     // Run the command
     let status = match target.unwrap_or(config.target) {
         Target::Erlang => run_erlang(&module, arguments),
-        Target::JavaScript => run_javascript(&config, &module, arguments),
+        Target::JavaScript => run_deno(&config, &module, arguments),
     }?;
 
     std::process::exit(status);
@@ -67,13 +67,13 @@ fn run_erlang(module: &str, arguments: Vec<String>) -> Result<i32, Error> {
         args.push(argument);
     }
 
-    ProjectIO::new().exec("erl", &args, &[], None, false)
+    ProjectIO::new().exec("erl", None, &args, &[], None, false)
 }
 
 fn run_javascript(
     config: &PackageConfig,
     module: &str,
-    arguments: Vec<String>,
+    mut arguments: Vec<String>,
 ) -> Result<i32, Error> {
     let mut args = vec![];
 
@@ -90,9 +90,33 @@ fn run_javascript(
 
     // Tell Node that any following argument are for the program
     args.push("--".into());
-    for argument in arguments.into_iter() {
-        args.push(argument);
-    }
+    args.append(&mut arguments);
 
-    ProjectIO::new().exec("node", &args, &[], None, false)
+    ProjectIO::new().exec("node", None, &args, &[], None, false)
+}
+
+fn run_deno(
+    config: &PackageConfig,
+    module: &str,
+    mut arguments: Vec<String>,
+) -> Result<i32, Error> {
+    let mut args = vec![
+        "run".to_owned(),
+        "-A".to_owned(), // Allow all permissions
+    ];
+
+    let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
+        .join("dist")
+        .join(module);
+
+    // Run the main function.
+    args.push("-".into());
+    let script = format!(
+        "import('./{}.mjs').then(module => module.main())",
+        module.to_string_lossy()
+    );
+
+    args.append(&mut arguments);
+
+    ProjectIO::new().exec("deno", Some(script.as_bytes()), &args, &[], None, false)
 }
