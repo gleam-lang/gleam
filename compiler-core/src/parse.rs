@@ -1246,7 +1246,11 @@ where
             name = n;
         }
         let _ = self.expect_one(&Token::LeftParen)?;
-        let args = Parser::series_of(self, &|parser| Parser::parse_fn_param(parser, is_anon), Some(&Token::Comma))?;
+        let args = Parser::series_of(
+            self,
+            &|parser| Parser::parse_fn_param(parser, is_anon),
+            Some(&Token::Comma),
+        )?;
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
@@ -1378,7 +1382,15 @@ where
                 Some((start, Token::Name { name: label }, tok0_end)),
                 Some((_, Token::DiscardName { name }, end)),
             ) => {
-                if is_anon { return parse_error(ParseErrorType::UnexpectedLabel, SrcSpan { start, end: tok0_end }) }
+                if is_anon {
+                    return parse_error(
+                        ParseErrorType::UnexpectedLabel,
+                        SrcSpan {
+                            start,
+                            end: tok0_end,
+                        },
+                    );
+                }
 
                 let _ = self.next_tok();
                 let _ = self.next_tok();
@@ -1395,7 +1407,15 @@ where
                 Some((start, Token::Name { name: label }, tok0_end)),
                 Some((_, Token::Name { name }, end)),
             ) => {
-                if is_anon { return parse_error(ParseErrorType::UnexpectedLabel, SrcSpan { start, end: tok0_end }) }
+                if is_anon {
+                    return parse_error(
+                        ParseErrorType::UnexpectedLabel,
+                        SrcSpan {
+                            start,
+                            end: tok0_end,
+                        },
+                    );
+                }
 
                 let _ = self.next_tok();
                 let _ = self.next_tok();
