@@ -162,6 +162,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://gleam.run/book/tour/bools.html".to_string(),
                 ],
             ),
+            ParseErrorType::UnexpectedLabel => (
+                "Argument labels are not allowed for anonymous functions.",
+                vec!["Please remove the argument label.".to_string()],
+            ),
             ParseErrorType::UnexpectedToken { expected, hint } => {
                 let mut messages = expected.clone();
                 if let Some(s) = messages.first_mut() {
@@ -205,7 +209,7 @@ pub enum ParseErrorType {
     },
     NestedBitStringPattern,    // <<<<1>>, 2>>, <<1>> is not allowed in there
     NoConstructors,            // A type "A {}" must have at least one constructor
-    NoCaseClause,              // a case with no claueses
+    NoCaseClause,              // a case with no clauses
     NoExpression, // between "{" and "}" in expression position, there must be an expression
     NoValueAfterEqual, // = <something other than a value>
     NotConstType, // :fn(), name, _  are not valid const types
@@ -214,6 +218,7 @@ pub enum ParseErrorType {
     TooManyArgHoles, // a function call can have at most 1 arg hole
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
+    UnexpectedLabel, // argument labels were provided, but are not supported in this context
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
