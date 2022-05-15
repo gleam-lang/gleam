@@ -100,7 +100,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release
+          args: --release --target ${{ matrix.target }}
 
       - name: Build archive
         shell: bash
@@ -110,12 +110,12 @@ jobs:
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
-            cp "target/release/gleam.exe" "gleam.exe"
+            cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
             rm gleam.exe
           else
             ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
-            cp "target/release/gleam" "gleam"
+            cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
             rm gleam
           fi
