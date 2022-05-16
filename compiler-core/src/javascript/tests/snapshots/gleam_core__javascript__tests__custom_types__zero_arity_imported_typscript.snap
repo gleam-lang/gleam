@@ -1,8 +1,9 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 55
 expression: "import other\npub fn main() {\n  other.Two\n}"
 ---
-import * as $Other from "../other.d.ts";
+import * as other from "../other.d.ts";
 
-export function main(): $Other.One$;
+export function main(): other.One$;
 

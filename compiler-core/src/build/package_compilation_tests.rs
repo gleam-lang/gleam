@@ -2666,7 +2666,7 @@ const x = new $two.A();
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/dist/two.d.ts"),
-                text: "import * as $OneTwo from \"./one/two.d.ts\";\n".to_string(),
+                text: "import * as two from \"./one/two.d.ts\";\n".to_string(),
             },
         ]),
     );
