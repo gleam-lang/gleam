@@ -28,194 +28,6 @@ use crate::{
 
 use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 
-/// The `TypePrinter` contains the logic of how to convert Gleam's type system
-/// into the equivalent TypeScript type strings.
-///
-#[derive(Debug)]
-struct TypePrinter<'a> {
-    tracker: UsageTracker,
-    current_module: &'a [String],
-}
-
-impl<'a> TypePrinter<'a> {
-    fn new(current_module: &'a [String]) -> Self {
-        Self {
-            current_module,
-            tracker: UsageTracker::default(),
-        }
-    }
-
-    /// Converts a Gleam type into a TypeScript type string
-    ///
-    pub fn print(&mut self, type_: &Type) -> Document<'static> {
-        self.do_print(type_, None)
-    }
-
-    /// Helper function for genering a TypeScript type string after collecting
-    /// all of the generics used in a statement
-    ///
-    pub fn print_with_generic_usages(
-        &mut self,
-        type_: &Type,
-        generic_usages: &HashMap<u64, u64>,
-    ) -> Document<'static> {
-        self.do_print(type_, Some(generic_usages))
-    }
-
-    fn do_print(
-        &mut self,
-        type_: &Type,
-        generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
-        match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages),
-
-            Type::App {
-                name, module, args, ..
-            } if module.is_empty() => self.print_prelude_type(name, args, generic_usages),
-
-            Type::App {
-                name, args, module, ..
-            } => self.print_type_app(name, args, module, generic_usages),
-
-            Type::Fn { args, retrn } => self.print_fn(args, retrn, generic_usages),
-
-            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.do_print(e, generic_usages))),
-        }
-    }
-
-    fn print_var(
-        &mut self,
-        type_: &TypeVar,
-        generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
-        match type_ {
-            TypeVar::Generic { id } => match &generic_usages {
-                Some(usages) => match usages.get(id) {
-                    Some(&0) => super::nil(),
-                    Some(&1) => "any".to_doc(),
-                    _ => id_to_type_var(*id),
-                },
-                None => id_to_type_var(*id),
-            },
-            // Shouldn't get here unless something went wrong
-            TypeVar::Unbound { .. } => "any".to_doc(),
-            TypeVar::Link { type_: typ } => self.do_print(typ, generic_usages),
-        }
-    }
-
-    /// Prints a type coming from the Gleam prelude module. These are often the
-    /// low level types the rest of the type system are built up from. If there
-    /// is no built-in TypeScript equivalent, the type is prefixed with "_."
-    /// and the Gleam prelude namespace will be imported during the code emission.
-    ///
-    fn print_prelude_type(
-        &mut self,
-        name: &str,
-        args: &[Arc<Type>],
-        generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
-        match name {
-            "Nil" => "null".to_doc(),
-            "Int" | "Float" => "number".to_doc(),
-            "UtfCodepoint" => {
-                self.tracker.prelude_used = true;
-                "_.UtfCodepoint".to_doc()
-            }
-            "String" => "string".to_doc(),
-            "Bool" => "boolean".to_doc(),
-            "BitString" => {
-                self.tracker.prelude_used = true;
-                "_.BitString".to_doc()
-            }
-            "List" => {
-                self.tracker.prelude_used = true;
-                docvec![
-                    "_.List",
-                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
-                ]
-            }
-            "Result" => {
-                self.tracker.prelude_used = true;
-                docvec![
-                    "_.Result",
-                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
-                ]
-            }
-            // Getting here sholud mean we either forgot a built-in type or there is a
-            // compiler error
-            name => panic!("{} is not a built-in type.", name),
-        }
-    }
-
-    /// Prints a "named" programmer-defined Gleam type into the TypeScript
-    /// equivalent.
-    ///
-    fn print_type_app(
-        &mut self,
-        name: &str,
-        args: &[Arc<Type>],
-        module: &[String],
-        generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
-        let name = format!("{}$", ts_safe_type_name(name.to_upper_camel_case()));
-        let name = match module == self.current_module {
-            true => Document::String(name),
-            false => {
-                // If type comes from a seperate module, use that module's nam
-                // as a TypeScript namespace prefix
-                docvec![
-                    Document::String(format!("${}", module_name(module))),
-                    ".",
-                    Document::String(name),
-                ]
-            }
-        };
-        if args.is_empty() {
-            return name;
-        }
-
-        // If the App type takes arguments, pass them in as TypeScript generics
-        docvec![
-            name,
-            wrap_generic_args(args.iter().map(|a| self.do_print(a, generic_usages)))
-        ]
-    }
-
-    /// Prints the TypeScript type for an anonymous function (aka lambda)
-    ///
-    fn print_fn(
-        &mut self,
-        args: &[Arc<Type>],
-        retrn: &Type,
-        generic_usages: Option<&HashMap<u64, u64>>,
-    ) -> Document<'static> {
-        docvec![
-            wrap_args(args.iter().enumerate().map(|(idx, a)| docvec![
-                "x",
-                idx,
-                ": ",
-                self.do_print(a, generic_usages)
-            ])),
-            " => ",
-            self.do_print(retrn, generic_usages)
-        ]
-    }
-
-    /// Allows an outside module to mark the Gleam prelude as "used"
-    ///
-    pub fn set_prelude_used(&mut self) {
-        self.tracker.prelude_used = true
-    }
-
-    /// Returns if the Gleam prelude has been used at all during the process
-    /// of printing the TypeScript types
-    ///
-    pub fn prelude_used(&self) -> bool {
-        self.tracker.prelude_used
-    }
-}
-
 // When rendering a type variable to an TypeScript type spec we need all type
 // variables with the same id to end up with the same name in the generated
 // TypeScript. This function converts a usize into base 26 A-Z for this purpose.
@@ -367,20 +179,16 @@ fn ts_safe_type_name(mut name: String) -> String {
 #[derive(Debug)]
 pub struct TypeScriptGenerator<'a> {
     module: &'a TypedModule,
-    type_printer: TypePrinter<'a>,
-}
-
-/// Joins the parts of the import into a single `UpperCamelCase` string
-///
-fn module_name(parts: &[String]) -> String {
-    parts.iter().map(|x| x.to_upper_camel_case()).join("")
+    aliased_module_names: HashMap<&'a [String], &'a str>,
+    tracker: UsageTracker,
 }
 
 impl<'a> TypeScriptGenerator<'a> {
     pub fn new(module: &'a TypedModule) -> Self {
         Self {
             module,
-            type_printer: TypePrinter::new(&module.name),
+            aliased_module_names: HashMap::new(),
+            tracker: UsageTracker::default(),
         }
     }
 
@@ -398,7 +206,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         // Put it all together
 
-        if self.type_printer.prelude_used() {
+        if self.prelude_used() {
             let path = self.import_path(&self.module.type_info.package, &["gleam".into()]);
             imports.register_module(path, ["_".into()], []);
         }
@@ -428,8 +236,14 @@ impl<'a> TypeScriptGenerator<'a> {
                 | Statement::ModuleConstant { .. } => (),
 
                 Statement::Import {
-                    module, package, ..
+                    module,
+                    package,
+                    as_name,
+                    ..
                 } => {
+                    if let Some(alias) = as_name {
+                        let _ = self.aliased_module_names.insert(module, &alias);
+                    }
                     self.register_import(&mut imports, package, module);
                 }
             }
@@ -450,7 +264,7 @@ impl<'a> TypeScriptGenerator<'a> {
         module: &'a [String],
     ) {
         let path = self.import_path(package, module);
-        imports.register_module(path, [format!("${}", module_name(module))], []);
+        imports.register_module(path, [self.module_name(module)], []);
     }
 
     /// Calculates the path of where to import an external module from
@@ -558,7 +372,7 @@ impl<'a> TypeScriptGenerator<'a> {
             "export type ",
             Document::String(ts_safe_type_name(alias.to_string())),
             " = ",
-            self.type_printer.print(type_),
+            self.print_type(type_),
             ";"
         ])
     }
@@ -605,7 +419,7 @@ impl<'a> TypeScriptGenerator<'a> {
         constructor: &'a TypedRecordConstructor,
         opaque: bool,
     ) -> Document<'a> {
-        self.type_printer.set_prelude_used();
+        self.set_prelude_used();
         let head = docvec![
             // opaque type constructors are not exposed to JS
             if opaque {
@@ -635,7 +449,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     .as_ref()
                     .map(|s| super::maybe_escape_identifier_doc(s))
                     .unwrap_or_else(|| Document::String(format!("{}", i)));
-                docvec![name, ": ", self.type_printer.print(&arg.type_)]
+                docvec![name, ": ", self.print_type(&arg.type_)]
             })),
             ";",
             line(),
@@ -648,7 +462,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         .as_ref()
                         .map(|s| super::maybe_escape_identifier_doc(s))
                         .unwrap_or_else(|| Document::String(format!("x{}", i)));
-                    docvec![name, ": ", self.type_printer.print(&arg.type_), ";"]
+                    docvec![name, ": ", self.print_type(&arg.type_), ";"]
                 }),
                 line(),
             )),
@@ -663,7 +477,7 @@ impl<'a> TypeScriptGenerator<'a> {
             "export const ",
             super::maybe_escape_identifier_doc(name),
             ": ",
-            self.type_printer.print(&value.type_()),
+            self.print_type(&value.type_()),
             ";",
         ])
     }
@@ -701,21 +515,18 @@ impl<'a> TypeScriptGenerator<'a> {
                                 "x",
                                 i,
                                 ": ",
-                                self.type_printer
-                                    .print_with_generic_usages(&a.type_, &generic_usages)
+                                self.print_type_with_generic_usages(&a.type_, &generic_usages)
                             ]
                         }
                         Some(name) => docvec![
                             super::maybe_escape_identifier_doc(name),
                             ": ",
-                            self.type_printer
-                                .print_with_generic_usages(&a.type_, &generic_usages)
+                            self.print_type_with_generic_usages(&a.type_, &generic_usages)
                         ],
                     }),
             ),
             ": ",
-            self.type_printer
-                .print_with_generic_usages(return_type, &generic_usages),
+            self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",
         ])
     }
@@ -750,21 +561,204 @@ impl<'a> TypeScriptGenerator<'a> {
                         "x",
                         i,
                         ": ",
-                        self.type_printer
-                            .print_with_generic_usages(&a.type_, &generic_usages)
+                        self.print_type_with_generic_usages(&a.type_, &generic_usages)
                     ]
                 }
                 Some(name) => docvec![
                     super::maybe_escape_identifier_doc(name),
                     ": ",
-                    self.type_printer.print_with_generic_usages(&a.type_, &generic_usages)
+                    self.print_type_with_generic_usages(&a.type_, &generic_usages)
                 ],
             })),
             ": ",
-            self.type_printer
-                .print_with_generic_usages(return_type, &generic_usages),
+            self.print_type_with_generic_usages(return_type, &generic_usages),
             ";",
         ])
+    }
+
+    /// Converts a Gleam type into a TypeScript type string
+    ///
+    pub fn print_type(&mut self, type_: &Type) -> Document<'static> {
+        self.do_print(type_, None)
+    }
+
+    /// Helper function for genering a TypeScript type string after collecting
+    /// all of the generics used in a statement
+    ///
+    pub fn print_type_with_generic_usages(
+        &mut self,
+        type_: &Type,
+        generic_usages: &HashMap<u64, u64>,
+    ) -> Document<'static> {
+        self.do_print(type_, Some(generic_usages))
+    }
+
+    /// Get the locally used name for a module. Either the last segment, or the
+    /// alias if one was given when imported.
+    ///
+    fn module_name(&self, parts: &[String]) -> String {
+        // The prelude is always `_`
+        if parts.is_empty() {
+            return "_".into();
+        }
+
+        match self.aliased_module_names.get(parts) {
+            Some(name) => name.to_string(),
+            None => parts.last().expect("Non empty module path").clone(),
+        }
+    }
+
+    fn do_print(
+        &mut self,
+        type_: &Type,
+        generic_usages: Option<&HashMap<u64, u64>>,
+    ) -> Document<'static> {
+        match type_ {
+            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages),
+
+            Type::App {
+                name, module, args, ..
+            } if module.is_empty() => self.print_prelude_type(name, args, generic_usages),
+
+            Type::App {
+                name, args, module, ..
+            } => self.print_type_app(name, args, module, generic_usages),
+
+            Type::Fn { args, retrn } => self.print_fn(args, retrn, generic_usages),
+
+            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.do_print(e, generic_usages))),
+        }
+    }
+
+    fn print_var(
+        &mut self,
+        type_: &TypeVar,
+        generic_usages: Option<&HashMap<u64, u64>>,
+    ) -> Document<'static> {
+        match type_ {
+            TypeVar::Generic { id } => match &generic_usages {
+                Some(usages) => match usages.get(id) {
+                    Some(&0) => super::nil(),
+                    Some(&1) => "any".to_doc(),
+                    _ => id_to_type_var(*id),
+                },
+                None => id_to_type_var(*id),
+            },
+            // Shouldn't get here unless something went wrong
+            TypeVar::Unbound { .. } => "any".to_doc(),
+            TypeVar::Link { type_: typ } => self.do_print(typ, generic_usages),
+        }
+    }
+
+    /// Prints a type coming from the Gleam prelude module. These are often the
+    /// low level types the rest of the type system are built up from. If there
+    /// is no built-in TypeScript equivalent, the type is prefixed with "_."
+    /// and the Gleam prelude namespace will be imported during the code emission.
+    ///
+    fn print_prelude_type(
+        &mut self,
+        name: &str,
+        args: &[Arc<Type>],
+        generic_usages: Option<&HashMap<u64, u64>>,
+    ) -> Document<'static> {
+        match name {
+            "Nil" => "null".to_doc(),
+            "Int" | "Float" => "number".to_doc(),
+            "UtfCodepoint" => {
+                self.tracker.prelude_used = true;
+                "_.UtfCodepoint".to_doc()
+            }
+            "String" => "string".to_doc(),
+            "Bool" => "boolean".to_doc(),
+            "BitString" => {
+                self.tracker.prelude_used = true;
+                "_.BitString".to_doc()
+            }
+            "List" => {
+                self.tracker.prelude_used = true;
+                docvec![
+                    "_.List",
+                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
+                ]
+            }
+            "Result" => {
+                self.tracker.prelude_used = true;
+                docvec![
+                    "_.Result",
+                    wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
+                ]
+            }
+            // Getting here sholud mean we either forgot a built-in type or there is a
+            // compiler error
+            name => panic!("{} is not a built-in type.", name),
+        }
+    }
+
+    /// Prints a "named" programmer-defined Gleam type into the TypeScript
+    /// equivalent.
+    ///
+    fn print_type_app(
+        &mut self,
+        name: &str,
+        args: &[Arc<Type>],
+        module: &[String],
+        generic_usages: Option<&HashMap<u64, u64>>,
+    ) -> Document<'static> {
+        let name = format!("{}$", ts_safe_type_name(name.to_upper_camel_case()));
+        let name = match module == self.module.name {
+            true => Document::String(name),
+            false => {
+                // If type comes from a seperate module, use that module's nam
+                // as a TypeScript namespace prefix
+                docvec![
+                    Document::String(self.module_name(module)),
+                    ".",
+                    Document::String(name),
+                ]
+            }
+        };
+        if args.is_empty() {
+            return name;
+        }
+
+        // If the App type takes arguments, pass them in as TypeScript generics
+        docvec![
+            name,
+            wrap_generic_args(args.iter().map(|a| self.do_print(a, generic_usages)))
+        ]
+    }
+
+    /// Prints the TypeScript type for an anonymous function (aka lambda)
+    ///
+    fn print_fn(
+        &mut self,
+        args: &[Arc<Type>],
+        retrn: &Type,
+        generic_usages: Option<&HashMap<u64, u64>>,
+    ) -> Document<'static> {
+        docvec![
+            wrap_args(args.iter().enumerate().map(|(idx, a)| docvec![
+                "x",
+                idx,
+                ": ",
+                self.do_print(a, generic_usages)
+            ])),
+            " => ",
+            self.do_print(retrn, generic_usages)
+        ]
+    }
+
+    /// Allows an outside module to mark the Gleam prelude as "used"
+    ///
+    pub fn set_prelude_used(&mut self) {
+        self.tracker.prelude_used = true
+    }
+
+    /// Returns if the Gleam prelude has been used at all during the process
+    /// of printing the TypeScript types
+    ///
+    pub fn prelude_used(&self) -> bool {
+        self.tracker.prelude_used
     }
 }
 
