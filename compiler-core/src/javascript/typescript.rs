@@ -242,7 +242,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     ..
                 } => {
                     if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, &alias);
+                        let _ = self.aliased_module_names.insert(module, alias);
                     }
                     self.register_import(&mut imports, package, module);
                 }
@@ -603,7 +603,7 @@ impl<'a> TypeScriptGenerator<'a> {
         }
 
         match self.aliased_module_names.get(parts) {
-            Some(name) => name.to_string(),
+            Some(name) => (*name).to_string(),
             None => parts.last().expect("Non empty module path").clone(),
         }
     }
