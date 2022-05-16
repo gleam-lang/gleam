@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
+assertion_line: 52
 expression: "\npub const a = []\npub const b = [1, 2, 3]\n"
 ---
-import * as $Gleam from "../gleam.d.ts";
+import * as _ from "../gleam.d.ts";
 
-export const a: $Gleam.List<any>;
+export const a: _.List<any>;
 
-export const b: $Gleam.List<number>;
+export const b: _.List<number>;
 

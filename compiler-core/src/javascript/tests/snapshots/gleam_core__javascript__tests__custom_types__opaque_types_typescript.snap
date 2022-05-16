@@ -1,16 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 655
 expression: "pub opaque type Animal {\n  Cat(goes_outside: Bool)\n  Dog(plays_fetch: Bool)\n}\n"
 ---
-import * as $Gleam from "../gleam.d.ts";
+import * as _ from "../gleam.d.ts";
 
-class Cat extends $Gleam.CustomType {
+class Cat extends _.CustomType {
   constructor(goes_outside: boolean);
   
   goes_outside: boolean;
 }
 
-class Dog extends $Gleam.CustomType {
+class Dog extends _.CustomType {
   constructor(plays_fetch: boolean);
   
   plays_fetch: boolean;

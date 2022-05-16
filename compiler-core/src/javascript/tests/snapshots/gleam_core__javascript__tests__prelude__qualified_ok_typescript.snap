@@ -1,8 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/prelude.rs
+assertion_line: 14
 expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
 ---
 import * as $Gleam from "../gleam.d.ts";
+import * as _ from "../gleam.d.ts";
 
-export function go(): $Gleam.Result<number, any>;
+export function go(): _.Result<number, any>;
 

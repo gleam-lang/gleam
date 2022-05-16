@@ -106,7 +106,7 @@ impl<'a> TypePrinter<'a> {
 
     /// Prints a type coming from the Gleam prelude module. These are often the
     /// low level types the rest of the type system are built up from. If there
-    /// is no built-in TypeScript equivalent, the type is prefixed with "$Gleam."
+    /// is no built-in TypeScript equivalent, the type is prefixed with "_."
     /// and the Gleam prelude namespace will be imported during the code emission.
     ///
     fn print_prelude_type(
@@ -120,25 +120,25 @@ impl<'a> TypePrinter<'a> {
             "Int" | "Float" => "number".to_doc(),
             "UtfCodepoint" => {
                 self.tracker.prelude_used = true;
-                "$Gleam.UtfCodepoint".to_doc()
+                "_.UtfCodepoint".to_doc()
             }
             "String" => "string".to_doc(),
             "Bool" => "boolean".to_doc(),
             "BitString" => {
                 self.tracker.prelude_used = true;
-                "$Gleam.BitString".to_doc()
+                "_.BitString".to_doc()
             }
             "List" => {
                 self.tracker.prelude_used = true;
                 docvec![
-                    "$Gleam.List",
+                    "_.List",
                     wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
                 ]
             }
             "Result" => {
                 self.tracker.prelude_used = true;
                 docvec![
-                    "$Gleam.Result",
+                    "_.Result",
                     wrap_generic_args(args.iter().map(|x| self.do_print(x, generic_usages)))
                 ]
             }
@@ -399,8 +399,8 @@ impl<'a> TypeScriptGenerator<'a> {
         // Put it all together
 
         if self.type_printer.prelude_used() {
-            let path = self.import_path(&self.module.type_info.package, &["gleam".to_string()]);
-            imports.register_module(path, ["$Gleam".to_string()], []);
+            let path = self.import_path(&self.module.type_info.package, &["gleam".into()]);
+            imports.register_module(path, ["_".into()], []);
         }
 
         if imports.is_empty() && statements.is_empty() {
@@ -618,7 +618,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 super::maybe_escape_identifier_doc(&constructor.name),
                 constructor.arguments.iter().map(|a| &a.type_)
             ),
-            " extends $Gleam.CustomType {"
+            " extends _.CustomType {"
         ];
 
         if constructor.arguments.is_empty() {
