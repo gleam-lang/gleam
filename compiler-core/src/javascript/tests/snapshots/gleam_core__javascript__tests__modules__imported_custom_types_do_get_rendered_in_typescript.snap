@@ -1,9 +1,10 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
+assertion_line: 201
 expression: "import one/two/three.{Custom, One, Two}\n\npub fn go() -> List(Custom) { [One, Two] }\n"
 ---
-import * as $Gleam from "../gleam.d.ts";
+import * as _ from "../gleam.d.ts";
 import * as $OneTwoThree from "../one/two/three.d.ts";
 
-export function go(): $Gleam.List<$OneTwoThree.Custom$>;
+export function go(): _.List<$OneTwoThree.Custom$>;
 

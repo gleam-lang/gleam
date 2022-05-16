@@ -2648,9 +2648,9 @@ export class A extends CustomType {}\n"
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/dist/one/two.d.ts"),
-                text: r#"import * as $Gleam from "../gleam.d.ts";
+                text: r#"import * as _ from "../gleam.d.ts";
 
-export class A extends $Gleam.CustomType {}
+export class A extends _.CustomType {}
 
 export type A$ = A;
 "#
