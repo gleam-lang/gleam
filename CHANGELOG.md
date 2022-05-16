@@ -3,20 +3,20 @@
 ## Unreleased
 
 - Added the ability to replace a release up to one hour after it is published
-  using `gleam publish --replace`
+  using `gleam publish --replace`.
 - All commands that authenticate using the `ApiKeyCommand` trait (currently
   `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
   and `gleam hex unretire`) and now have access to environment variables for
-  username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
+  username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`).
 - The `gleam publish` command gains the `-y/--yes` flag to disable the "are you
-  sure" prompt
+  sure" prompt.
 - Clear outdated files from the build directory after compilation.
 - Fixed a bug where immediately calling the value that a case expression
   evaluates to could generate invalid JavaScript.
 - Fixed a bug where running a project on the Erlang target when the default
   project target is set to JavaScript.
-- The compiler can now generate TypeScript declaration files when targeting
-  JavaScript (#1563)
+- The compiler now generates TypeScript declaration files when targeting
+  JavaScript (#1563).
 
 ## v0.21.0 - 2022-04-24
 

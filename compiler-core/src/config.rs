@@ -81,7 +81,7 @@ pub struct PackageConfig {
     #[serde(default)]
     pub erlang: ErlangConfig,
     #[serde(default)]
-    pub javascript: JavascriptConfig,
+    pub javascript: JavaScriptConfig,
     #[serde(default = "erlang_target")]
     pub target: Target,
 }
@@ -430,7 +430,7 @@ pub struct ErlangConfig {
 }
 
 #[derive(Deserialize, Debug, PartialEq, Default, Clone, Copy)]
-pub struct JavascriptConfig {
+pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
 }
