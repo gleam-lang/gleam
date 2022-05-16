@@ -628,7 +628,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   both definitions.
 - Fix compiler bug where labelled arguments were being reordered incorrectly.
 
-# v0.10.0 - 2020-07-01
+## v0.10.0 - 2020-07-01
 
 [Release Blog Post](https://lpil.uk/blog/gleam-v0.10-released/)
 
@@ -636,12 +636,12 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed a bug where discards inside bit string patterns generated invalid
   code.
 
-# v0.10.0-rc2 - 2020-06-30
+## v0.10.0-rc2 - 2020-06-30
 
 - Fixed a bug where variables names would be incorrectly generated when using
   alternative patterns.
 
-# v0.10.0-rc1 - 2020-06-29
+## v0.10.0-rc1 - 2020-06-29
 
 - Single letter module names are now permitted.
 - Added support for bit string syntax.
