@@ -1246,7 +1246,11 @@ where
             name = n;
         }
         let _ = self.expect_one(&Token::LeftParen)?;
-        let args = Parser::series_of(self, &Parser::parse_fn_param, Some(&Token::Comma))?;
+        let args = Parser::series_of(
+            self,
+            &|parser| Parser::parse_fn_param(parser, is_anon),
+            Some(&Token::Comma),
+        )?;
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
@@ -1371,13 +1375,23 @@ where
     //   a _
     //   a _:A
     //   a a:A
-    fn parse_fn_param(&mut self) -> Result<Option<UntypedArg>, ParseError> {
+    fn parse_fn_param(&mut self, is_anon: bool) -> Result<Option<UntypedArg>, ParseError> {
         let (start, names, mut end) = match (self.tok0.take(), self.tok1.take()) {
             // labeled discard
             (
-                Some((start, Token::Name { name: label }, _)),
+                Some((start, Token::Name { name: label }, tok0_end)),
                 Some((_, Token::DiscardName { name }, end)),
             ) => {
+                if is_anon {
+                    return parse_error(
+                        ParseErrorType::UnexpectedLabel,
+                        SrcSpan {
+                            start,
+                            end: tok0_end,
+                        },
+                    );
+                }
+
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 (start, ArgNames::LabelledDiscard { name, label }, end)
@@ -1390,9 +1404,19 @@ where
             }
             // labeled name
             (
-                Some((start, Token::Name { name: label }, _)),
+                Some((start, Token::Name { name: label }, tok0_end)),
                 Some((_, Token::Name { name }, end)),
             ) => {
+                if is_anon {
+                    return parse_error(
+                        ParseErrorType::UnexpectedLabel,
+                        SrcSpan {
+                            start,
+                            end: tok0_end,
+                        },
+                    );
+                }
+
                 let _ = self.next_tok();
                 let _ = self.next_tok();
                 (start, ArgNames::NamedLabelled { name, label }, end)

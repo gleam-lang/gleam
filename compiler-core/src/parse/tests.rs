@@ -218,3 +218,17 @@ False -> 0
         }
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1613
+#[test]
+fn anonymous_function_labeled_arguments() {
+    assert_error!(
+        "let anon_subtract = fn (minuend a: Int, subtrahend b: Int) -> Int {
+  a - b
+}",
+        ParseError {
+            location: SrcSpan { start: 24, end: 31 },
+            error: ParseErrorType::UnexpectedLabel
+        }
+    );
+}
