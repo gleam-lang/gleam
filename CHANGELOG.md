@@ -18,6 +18,7 @@
 - The compiler can now generate TypeScript declaration files when targeting
   JavaScript (#1563)
 - Fixed a bug where argument labels were allowed for anonymous functions.
+- Generated HTML docs easter egg updated.
 
 ## v0.21.0 - 2022-04-24
 
