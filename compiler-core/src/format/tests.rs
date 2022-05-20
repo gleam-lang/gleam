@@ -3406,3 +3406,13 @@ fn single_empty_line_between_comments() {
 ",
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1640
+#[test]
+fn no_newline_before_comments() {
+    assert_format!(
+        "// foo
+// bar
+"
+    );
+}
