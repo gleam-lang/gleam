@@ -139,8 +139,8 @@ impl<'comments> Formatter<'comments> {
             }
         }
 
-        let imports = concat(Itertools::intersperse(imports.into_iter(), line()));
-        let declarations = concat(Itertools::intersperse(declarations.into_iter(), lines(2)));
+        let imports = join(imports.into_iter(), line());
+        let declarations = join(declarations.into_iter(), lines(2));
 
         let sep = if has_imports && has_declarations {
             lines(2)
@@ -317,9 +317,8 @@ impl<'comments> Formatter<'comments> {
                 } else {
                     || break_(",", ", ")
                 };
-                let elements =
-                    Itertools::intersperse(elements.iter().map(|e| self.const_expr(e)), comma());
-                list(concat(elements), None)
+                let elements = join(elements.iter().map(|e| self.const_expr(e)), comma());
+                list(elements, None)
             }
 
             Constant::Tuple { elements, .. } => "#"
@@ -398,13 +397,13 @@ impl<'comments> Formatter<'comments> {
         let mut comments = self.pop_doc_comments(limit).peekable();
         match comments.peek() {
             None => nil(),
-            Some(_) => concat(Itertools::intersperse(
+            Some(_) => join(
                 comments.map(|c| match c {
                     Some(c) => "///".to_doc().append(Document::String(c.to_string())),
                     None => unreachable!("empty lines dropped by pop_doc_comments"),
                 }),
                 line(),
-            ))
+            )
             .append(force_break())
             .append(line()),
         }
@@ -795,11 +794,7 @@ impl<'comments> Formatter<'comments> {
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
     ) -> Document<'a> {
-        let subjects_doc = concat(Itertools::intersperse(
-            subjects.iter().map(|s| self.expr(s)),
-            ", ".to_doc(),
-        ));
-
+        let subjects_doc = join(subjects.iter().map(|s| self.expr(s)), ", ".to_doc());
         let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
 
         force_break()
@@ -1149,17 +1144,12 @@ impl<'comments> Formatter<'comments> {
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: usize) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let after_position = clause.location.end;
-        let clause_doc = concat(Itertools::intersperse(
+        let clause_doc = join(
             std::iter::once(&clause.pattern)
                 .chain(&clause.alternative_patterns)
-                .map(|p| {
-                    concat(Itertools::intersperse(
-                        p.iter().map(|p| self.pattern(p)),
-                        ", ".to_doc(),
-                    ))
-                }),
+                .map(|p| join(p.iter().map(|p| self.pattern(p)), ", ".to_doc())),
             " | ".to_doc(),
-        ));
+        );
         let clause_doc = match &clause.guard {
             None => clause_doc,
             Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
@@ -1206,10 +1196,7 @@ impl<'comments> Formatter<'comments> {
             } else {
                 || break_(",", ", ")
             };
-        let elements = concat(Itertools::intersperse(
-            elements.iter().map(|e| self.wrap_expr(e)),
-            comma(),
-        ));
+        let elements = join(elements.iter().map(|e| self.wrap_expr(e)), comma());
         let tail = tail.map(|e| self.expr(e));
         list(elements, tail)
     }
@@ -1234,10 +1221,7 @@ impl<'comments> Formatter<'comments> {
             Pattern::Discard { name, .. } => name.to_doc(),
 
             Pattern::List { elements, tail, .. } => {
-                let elements = concat(Itertools::intersperse(
-                    elements.iter().map(|e| self.pattern(e)),
-                    break_(",", ", "),
-                ));
+                let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
                 let tail = tail.as_ref().map(|e| {
                     if e.is_discard() {
                         nil()
@@ -1436,7 +1420,7 @@ where
         return "()".to_doc();
     }
     break_("(", "(")
-        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(")")
@@ -1452,7 +1436,7 @@ where
     }
 
     break_("(", "(")
-        .append(concat(Itertools::intersperse(args, break_(",", ", "))))
+        .append(join(args, break_(",", ", ")))
         .append(break_(",", ", "))
         .append("..")
         .nest(INDENT)
@@ -1471,7 +1455,7 @@ fn bit_string<'a>(
         break_(",", ", ")
     };
     break_("<<", "<<")
-        .append(concat(Itertools::intersperse(segments.into_iter(), comma)))
+        .append(join(segments.into_iter(), comma))
         .nest(INDENT)
         .append(break_(",", ""))
         .append(">>")
@@ -1563,14 +1547,10 @@ where
     match segment {
         BitStringSegment { value, options, .. } if options.is_empty() => to_doc(value),
 
-        BitStringSegment { value, options, .. } => {
-            to_doc(value)
-                .append(":")
-                .append(concat(Itertools::intersperse(
-                    options.iter().map(|o| segment_option(o, |e| to_doc(e))),
-                    "-".to_doc(),
-                )))
-        }
+        BitStringSegment { value, options, .. } => to_doc(value).append(":").append(join(
+            options.iter().map(|o| segment_option(o, |e| to_doc(e))),
+            "-".to_doc(),
+        )),
     }
 }
 
