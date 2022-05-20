@@ -397,8 +397,7 @@ impl<'comments> Formatter<'comments> {
             Some(_) => concat(Itertools::intersperse(
                 comments.map(|c| match c {
                     Some(c) => "///".to_doc().append(Document::String(c.to_string())),
-                    // empty lines have been dropped by pop_doc_comments
-                    None => unreachable!(),
+                    None => unreachable!("empty lines dropped by pop_doc_comments"),
                 }),
                 line(),
             ))
