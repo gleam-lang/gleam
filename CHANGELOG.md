@@ -21,6 +21,8 @@
 - `gleam export erlang-shipment` can be used to create a directory of compiled
   Erlang bytecode that can be used as a deployment artefact to get your
   application live.
+- `gleam format` will now preserve (up to one) empty lines between consecutive
+  comments, as well as between comments and any following expression
 
 ## v0.21.0 - 2022-04-24
 
