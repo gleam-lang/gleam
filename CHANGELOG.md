@@ -26,6 +26,8 @@
   application live.
 - `gleam format` will now preserve (up to one) empty lines between consecutive
   comments, as well as between comments and any following expression
+- Fixed a bug where `gleam format` would output an unwanted newline at the top
+  of documents that only contain simple `//` comments.
 
 ## v0.21.0 - 2022-04-24
 
