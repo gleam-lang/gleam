@@ -3335,3 +3335,74 @@ fn negation_block() {
 "
     );
 }
+
+#[test]
+fn single_empty_line_between_comments() {
+    // empty line isn't added if it's not already present
+    assert_format!(
+        "pub fn foo() {
+  // foo
+  // bar
+  123
+}
+"
+    );
+
+    // single empty line between comments/statement preserved
+    assert_format!(
+        "pub fn foo() {
+  // foo
+
+  // bar
+
+  123
+}
+"
+    );
+
+    // multiple consecutive empty lines condensed into one
+    assert_format_rewrite!(
+        "pub fn foo() {
+  // foo
+
+
+  // bar
+
+
+  123
+}
+",
+        "pub fn foo() {
+  // foo
+
+  // bar
+
+  123
+}
+"
+    );
+
+    // freestanding comments keep empty lines
+    assert_format!(
+        "
+// foo
+
+// bar
+"
+    );
+
+    // freestanding comments condense consecutive empty lines
+    assert_format_rewrite!(
+        "
+// foo
+
+
+// bar
+",
+        "
+// foo
+
+// bar
+",
+    );
+}

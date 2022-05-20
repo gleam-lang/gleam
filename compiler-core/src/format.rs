@@ -76,24 +76,32 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    // Pop comments that occur before a byte-index in the source
-    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = &'comments str> {
-        let (popped, rest) = comments_before(self.comments, limit);
+    // Pop comments that occur before a byte-index in the source, consuming
+    // and retaining any empty lines contained within.
+    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = Option<&'comments str>> {
+        let (popped, rest, empty_lines) =
+            comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
+        self.empty_lines = empty_lines;
         popped
     }
 
-    // Pop doc comments that occur before a byte-index in the source
-    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = &'comments str> {
-        let (popped, rest) = comments_before(self.doc_comments, limit);
+    // Pop doc comments that occur before a byte-index in the source, consuming
+    // and dropping any empty lines contained within.
+    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = Option<&'comments str>> {
+        let (popped, rest, empty_lines) =
+            comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;
+        self.empty_lines = empty_lines;
         popped
     }
 
+    // Remove between 0 and `limit` empty lines following the current position,
+    // returning true if any empty lines were removed.
     fn pop_empty_lines(&mut self, limit: usize) -> bool {
         let mut end = 0;
-        for (i, &postition) in self.empty_lines.iter().enumerate() {
-            if postition > limit {
+        for (i, &position) in self.empty_lines.iter().enumerate() {
+            if position > limit {
                 break;
             }
             end = i + 1;
@@ -159,17 +167,18 @@ impl<'comments> Formatter<'comments> {
             lines(2),
         ));
 
+        // Now that `groups` has been collected, only freestanding comments (//)
+        // and doc comments (///) remain. Freestanding comments aren't associated
+        // with any statement, and are moved to the bottom of the module.
         let doc_comments = concat(self.doc_comments.iter().map(|comment| {
             line()
                 .append("///")
                 .append(Document::String(comment.content.to_string()))
         }));
-        let comments = concat(self.comments.iter().map(|comment| {
-            line()
-                .append("//")
-                .append(Document::String(comment.content.to_string()))
-        }));
-
+        let comments = match printed_comments(self.pop_comments(usize::MAX), false) {
+            Some(comments) => line().append(comments),
+            None => nil(),
+        };
         let module_comments = if !self.module_comments.is_empty() {
             let comments = self.module_comments.iter().map(|s| {
                 "////"
@@ -386,7 +395,11 @@ impl<'comments> Formatter<'comments> {
         match comments.peek() {
             None => nil(),
             Some(_) => concat(Itertools::intersperse(
-                comments.map(|c| "///".to_doc().append(Document::String(c.to_string()))),
+                comments.map(|c| match c {
+                    Some(c) => "///".to_doc().append(Document::String(c.to_string())),
+                    // empty lines have been dropped by pop_doc_comments
+                    None => unreachable!(),
+                }),
                 line(),
             ))
             .append(force_break())
@@ -500,7 +513,7 @@ impl<'comments> Formatter<'comments> {
         let body = self.expr(body);
 
         // Add any trailing comments
-        let body = match printed_comments(self.pop_comments(end_location)) {
+        let body = match printed_comments(self.pop_comments(end_location), false) {
             Some(comments) => body.append(line()).append(comments),
             None => body,
         };
@@ -1487,22 +1500,54 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
 }
 
 fn printed_comments<'a, 'comments>(
-    comments: impl IntoIterator<Item = &'comments str>,
+    comments: impl IntoIterator<Item = Option<&'comments str>>,
+    trailing_newline: bool,
 ) -> Option<Document<'a>> {
     let mut comments = comments.into_iter().peekable();
     let _ = comments.peek()?;
-    Some(concat(Itertools::intersperse(
-        comments.map(|c| "//".to_doc().append(Document::String(c.to_string()))),
-        line(),
-    )))
+
+    let mut doc = Vec::new();
+    while let Some(c) = comments.next() {
+        if let Some(c) = c {
+            doc.push("//".to_doc().append(Document::String(c.to_string())));
+            match comments.peek() {
+                // next line is a comment
+                Some(Some(_)) => doc.push(line()),
+                // next line is empty
+                Some(None) => {
+                    let _ = comments.next();
+                    match comments.peek() {
+                        Some(_) => doc.push(lines(2)),
+                        None => {
+                            if trailing_newline {
+                                doc.push(force_break());
+                                doc.push(lines(2));
+                            }
+                        }
+                    }
+                }
+                None => {
+                    if trailing_newline {
+                        doc.push(force_break());
+                        doc.push(line());
+                    }
+                }
+            }
+        } else {
+            // there will never be consecutive empty lines (None values),
+            // and whenever we peek a None, we advance past it
+            unreachable!()
+        }
+    }
+    Some(concat(doc))
 }
 
 fn commented<'a, 'comments>(
     doc: Document<'a>,
-    comments: impl IntoIterator<Item = &'comments str>,
+    comments: impl IntoIterator<Item = Option<&'comments str>>,
 ) -> Document<'a> {
-    match printed_comments(comments) {
-        Some(comments) => comments.append(force_break()).append(line()).append(doc),
+    match printed_comments(comments, true) {
+        Some(comments) => comments.append(doc),
         None => doc,
     }
 }
@@ -1578,20 +1623,48 @@ where
 
 pub fn comments_before<'a>(
     comments: &'a [Comment<'a>],
+    empty_lines: &'a [usize],
     limit: usize,
-) -> (impl Iterator<Item = &'a str>, &'a [Comment<'a>]) {
-    let end = comments
+    retain_empty_lines: bool,
+) -> (
+    impl Iterator<Item = Option<&'a str>>,
+    &'a [Comment<'a>],
+    &'a [usize],
+) {
+    let end_comments = comments
         .iter()
         .position(|c| c.start > limit)
         .unwrap_or(comments.len());
-    let popped = comments
-        .get(0..end)
-        .expect("Comments before slicing popped")
+    let end_empty_lines = empty_lines
         .iter()
-        .map(|c| c.content);
+        .position(|l| *l > limit)
+        .unwrap_or(empty_lines.len());
+    let popped_comments = comments
+        .get(0..end_comments)
+        .unwrap()
+        .iter()
+        .map(|c| (c.start, Some(c.content)));
+    let popped_empty_lines: Box<dyn Iterator<Item = _>> = if retain_empty_lines {
+        Box::new(
+            empty_lines
+                .get(0..end_empty_lines)
+                .unwrap()
+                .iter()
+                // compact consecutive empty lines into a single line
+                .coalesce(|a, b| if *a + 1 == *b { Ok(a) } else { Err((a, b)) })
+                .map(|l| (*l, None)),
+        )
+    } else {
+        Box::new(std::iter::empty())
+    };
+    let popped = popped_comments
+        .merge_by(popped_empty_lines, |(a, _), (b, _)| a < b)
+        .skip_while(|(_, comment_or_line)| comment_or_line.is_none())
+        .map(|(_, comment_or_line)| comment_or_line);
     (
         popped,
-        comments.get(end..).expect("Comments before slicing"),
+        comments.get(end_comments..).unwrap(),
+        empty_lines.get(end_empty_lines..).unwrap(),
     )
 }
 
