@@ -1508,35 +1508,33 @@ fn printed_comments<'a, 'comments>(
 
     let mut doc = Vec::new();
     while let Some(c) = comments.next() {
-        if let Some(c) = c {
-            doc.push("//".to_doc().append(Document::String(c.to_string())));
-            match comments.peek() {
-                // next line is a comment
-                Some(Some(_)) => doc.push(line()),
-                // next line is empty
-                Some(None) => {
-                    let _ = comments.next();
-                    match comments.peek() {
-                        Some(_) => doc.push(lines(2)),
-                        None => {
-                            if trailing_newline {
-                                doc.push(force_break());
-                                doc.push(lines(2));
-                            }
+        // There will never be consecutive empty lines (None values),
+        // and whenever we peek a None, we advance past it.
+        let c = c.expect("no consecutive empty lines");
+        doc.push("//".to_doc().append(Document::String(c.to_string())));
+        match comments.peek() {
+            // Next line is a comment
+            Some(Some(_)) => doc.push(line()),
+            // Next line is empty
+            Some(None) => {
+                let _ = comments.next();
+                match comments.peek() {
+                    Some(_) => doc.push(lines(2)),
+                    None => {
+                        if trailing_newline {
+                            doc.push(force_break());
+                            doc.push(lines(2));
                         }
                     }
                 }
-                None => {
-                    if trailing_newline {
-                        doc.push(force_break());
-                        doc.push(line());
-                    }
+            }
+            // We've reached the end, there are no more lines
+            None => {
+                if trailing_newline {
+                    doc.push(force_break());
+                    doc.push(line());
                 }
             }
-        } else {
-            // there will never be consecutive empty lines (None values),
-            // and whenever we peek a None, we advance past it
-            unreachable!()
         }
     }
     Some(concat(doc))
@@ -1641,30 +1639,24 @@ pub fn comments_before<'a>(
         .unwrap_or(empty_lines.len());
     let popped_comments = comments
         .get(0..end_comments)
-        .unwrap()
+        .expect("0..end_comments is guaranteed to be in bounds")
         .iter()
         .map(|c| (c.start, Some(c.content)));
-    let popped_empty_lines: Box<dyn Iterator<Item = _>> = if retain_empty_lines {
-        Box::new(
-            empty_lines
-                .get(0..end_empty_lines)
-                .unwrap()
-                .iter()
-                // compact consecutive empty lines into a single line
-                .coalesce(|a, b| if *a + 1 == *b { Ok(a) } else { Err((a, b)) })
-                .map(|l| (*l, None)),
-        )
-    } else {
-        Box::new(std::iter::empty())
-    };
+    let popped_empty_lines = if retain_empty_lines { empty_lines } else { &[] }
+        .get(0..end_empty_lines)
+        .unwrap_or(&[])
+        .iter()
+        // compact consecutive empty lines into a single line
+        .coalesce(|a, b| if *a + 1 == *b { Ok(a) } else { Err((a, b)) })
+        .map(|l| (*l, None));
     let popped = popped_comments
         .merge_by(popped_empty_lines, |(a, _), (b, _)| a < b)
         .skip_while(|(_, comment_or_line)| comment_or_line.is_none())
         .map(|(_, comment_or_line)| comment_or_line);
     (
         popped,
-        comments.get(end_comments..).unwrap(),
-        empty_lines.get(end_empty_lines..).unwrap(),
+        comments.get(end_comments..).expect("in bounds"),
+        empty_lines.get(end_empty_lines..).expect("in bounds"),
     )
 }
 
