@@ -162,40 +162,44 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
-        let groups = concat(Itertools::intersperse(
+        let groups = join(
             module.statements.iter().map(|t| self.target_group(t)),
             lines(2),
-        ));
+        );
 
         // Now that `groups` has been collected, only freestanding comments (//)
         // and doc comments (///) remain. Freestanding comments aren't associated
         // with any statement, and are moved to the bottom of the module.
-        let doc_comments = concat(self.doc_comments.iter().map(|comment| {
-            line()
-                .append("///")
-                .append(Document::String(comment.content.to_string()))
-        }));
+        let doc_comments = join(
+            self.doc_comments.iter().map(|comment| {
+                "///"
+                    .to_doc()
+                    .append(Document::String(comment.content.to_string()))
+            }),
+            line(),
+        );
+
         let comments = match printed_comments(self.pop_comments(usize::MAX), false) {
-            Some(comments) => line().append(comments),
+            Some(comments) => comments,
             None => nil(),
         };
+
         let module_comments = if !self.module_comments.is_empty() {
             let comments = self.module_comments.iter().map(|s| {
                 "////"
                     .to_doc()
                     .append(Document::String(s.content.to_string()))
-                    .append(line())
             });
-            concat(comments).append(line())
+            join(comments, line()).append(line())
         } else {
             nil()
         };
 
-        module_comments
-            .append(groups)
-            .append(doc_comments)
-            .append(comments)
-            .append(line())
+        let non_empty = vec![module_comments, groups, doc_comments, comments]
+            .into_iter()
+            .filter(|doc| !doc.is_empty());
+
+        join(non_empty, line()).append(line())
     }
 
     fn statement<'a>(&mut self, statement: &'a UntypedStatement) -> Document<'a> {

@@ -16,6 +16,8 @@
 #[cfg(test)]
 mod tests;
 
+use itertools::Itertools;
+
 use crate::{io::Utf8Writer, Result};
 
 #[macro_export]
@@ -98,6 +100,13 @@ impl<'a, D: Documentable<'a>> Documentable<'a> for Option<D> {
 
 pub fn concat<'a>(docs: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     Document::Vec(docs.into_iter().collect())
+}
+
+pub fn join<'a>(
+    docs: impl IntoIterator<Item = Document<'a>>,
+    separator: Document<'a>,
+) -> Document<'a> {
+    concat(Itertools::intersperse(docs.into_iter(), separator))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -314,5 +323,21 @@ impl<'a> Document<'a> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
         fmt(writer, limit, 0, docs)?;
         Ok(())
+    }
+
+    /// Returns true when the document contains no printable characters
+    /// (whitespace and newlines are considered printable characters).
+    pub fn is_empty(&self) -> bool {
+        use Document::*;
+        match self {
+            Line(n) => *n == 0,
+            ForceBreak => true,
+            String(s) => s.is_empty(),
+            Str(s) => s.is_empty(),
+            // assuming `broken` and `unbroken` are equivalent
+            Break { broken, .. } => broken.is_empty(),
+            FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => d.is_empty(),
+            Vec(docs) => docs.iter().all(|d| d.is_empty()),
+        }
     }
 }
