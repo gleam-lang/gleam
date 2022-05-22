@@ -5,8 +5,6 @@ PROJECT=$PROJECT_NAME_FROM_GLEAM
 BASE=$(dirname $0)
 COMMAND="${1-default}"
 
-# -mode embedded \
-
 run() {
   erl \
     -pa "$BASE"/*/ebin \
