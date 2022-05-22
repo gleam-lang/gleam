@@ -58,6 +58,7 @@ mod compile_package;
 mod config;
 mod dependencies;
 mod docs;
+mod export;
 mod format;
 mod fs;
 mod hex;
@@ -195,6 +196,16 @@ enum Command {
     /// Run the language server, to be used by editors
     #[clap(name = "lsp", hide = true)]
     LanguageServer,
+
+    /// Export something useful from the Gleam project
+    #[clap(subcommand)]
+    Export(ExportTarget),
+}
+
+#[derive(Subcommand, Debug, Clone, Copy)]
+pub enum ExportTarget {
+    /// Precompiled Erlang, suitable for deployment.
+    ErlangParcel,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -350,6 +361,8 @@ fn main() {
         Command::Clean => clean(),
 
         Command::LanguageServer => lsp::main(),
+
+        Command::Export(ExportTarget::ErlangParcel) => export::erlang_parcel(),
     };
 
     match result {
