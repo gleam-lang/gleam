@@ -110,27 +110,31 @@ fn print_compiling(text: &str) {
     print_colourful_prefix("  Compiling", text)
 }
 
-pub fn print_checking(text: &str) {
+pub(crate) fn print_exported(text: &str) {
+    print_colourful_prefix("   Exported", text)
+}
+
+pub(crate) fn print_checking(text: &str) {
     print_colourful_prefix("   Checking", text)
 }
 
-pub fn print_compiled(duration: Duration) {
+pub(crate) fn print_compiled(duration: Duration) {
     print_colourful_prefix("   Compiled", &format!("in {}", seconds(duration)))
 }
 
-pub fn print_checked(duration: Duration) {
+pub(crate) fn print_checked(duration: Duration) {
     print_colourful_prefix("    Checked", &format!("in {}", seconds(duration)))
 }
 
-pub fn print_running(text: &str) {
+pub(crate) fn print_running(text: &str) {
     print_colourful_prefix("    Running", text)
 }
 
-pub fn print_added(text: &str) {
+pub(crate) fn print_added(text: &str) {
     print_colourful_prefix("      Added", text)
 }
 
-pub fn print_generating_documentation() {
+pub(crate) fn print_generating_documentation() {
     print_colourful_prefix(" Generating", "documentation")
 }
 

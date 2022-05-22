@@ -3,10 +3,7 @@ use gleam_core::{
     paths, Result,
 };
 
-// TODO: copy files across
-// TODO: generate start script
 // TODO: start in embedded mode
-// TODO: print help information
 // TODO: test
 
 /// Generate a directory of precompiled Erlang along with a start script.
@@ -68,6 +65,20 @@ pub(crate) fn erlang_parcel() -> Result<()> {
         &include_str!("../templates/erlang-parcel-entrypoint.sh")
             .replace("$PROJECT_NAME_FROM_GLEAM", &package.config.name),
     )?;
+
+    crate::cli::print_exported(&package.config.name);
+
+    println!(
+        "
+Your Erlang package has been generated to {path}.
+
+It can be copied to a server with Erlang installed and run with the
+entrypoint.sh script.
+
+    {path}/entrypoint.sh run
+",
+        path = out.to_string_lossy()
+    );
 
     Ok(())
 }
