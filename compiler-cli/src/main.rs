@@ -205,7 +205,7 @@ enum Command {
 #[derive(Subcommand, Debug, Clone, Copy)]
 pub enum ExportTarget {
     /// Precompiled Erlang, suitable for deployment.
-    ErlangParcel,
+    ErlangShipment,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -362,7 +362,7 @@ fn main() {
 
         Command::LanguageServer => lsp::main(),
 
-        Command::Export(ExportTarget::ErlangParcel) => export::erlang_shipment(),
+        Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
     };
 
     match result {
