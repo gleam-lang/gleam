@@ -224,6 +224,8 @@ jobs:
           gleam run
           gleam test
           gleam docs build
+          gleam export erlang-shipment
+          ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
 
       - name: test/project_javascript on javascript target
