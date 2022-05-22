@@ -474,6 +474,20 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
         .map(|_| ())
 }
 
+// pub fn rename(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+//     tracing::debug!(from=?path, to=?to, "renaming_file");
+
+//     // TODO: include the destination in the error message
+//     std::fs::rename(&path, &to)
+//         .map_err(|err| Error::FileIo {
+//             action: FileIoAction::Rename,
+//             kind: FileKind::File,
+//             path: PathBuf::from(path.as_ref()),
+//             err: Some(err.to_string()),
+//         })
+//         .map(|_| ())
+// }
+
 pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_directory");
 
@@ -532,7 +546,7 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
     }
 }
 
-fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
+pub fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
     std::fs::canonicalize(path).map_err(|err| Error::FileIo {
         action: FileIoAction::Canonicalise,
         kind: FileKind::File,
