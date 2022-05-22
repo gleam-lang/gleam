@@ -75,7 +75,7 @@ Your Erlang package has been generated to {path}.
 It can be copied to a server with Erlang installed and run with the
 entrypoint.sh script.
 
-    {path}/entrypoint.sh run
+    {path}/entrypoint.sh
 ",
         path = out.to_string_lossy()
     );
