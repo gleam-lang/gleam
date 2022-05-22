@@ -362,7 +362,7 @@ fn main() {
 
         Command::LanguageServer => lsp::main(),
 
-        Command::Export(ExportTarget::ErlangParcel) => export::erlang_parcel(),
+        Command::Export(ExportTarget::ErlangParcel) => export::erlang_shipment(),
     };
 
     match result {

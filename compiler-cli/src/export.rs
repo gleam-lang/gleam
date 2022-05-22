@@ -14,11 +14,11 @@ use gleam_core::{
 /// - ebin
 /// - include
 /// - priv
-pub(crate) fn erlang_parcel() -> Result<()> {
+pub(crate) fn erlang_shipment() -> Result<()> {
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths::build_packages(mode, target);
-    let out = paths::erlang_parcel();
+    let out = paths::erlang_shipment();
 
     crate::fs::mkdir(&out)?;
 
@@ -61,7 +61,7 @@ pub(crate) fn erlang_parcel() -> Result<()> {
 
     // Write entrypoint script
     let entrypoint = out.join("entrypoint.sh");
-    let text = include_str!("../templates/erlang-parcel-entrypoint.sh")
+    let text = include_str!("../templates/erlang-shipment-entrypoint.sh")
         .replace("$PROJECT_NAME_FROM_GLEAM", &package.config.name);
     crate::fs::write(&entrypoint, &text)?;
     crate::fs::make_executable(&entrypoint)?;
@@ -70,7 +70,7 @@ pub(crate) fn erlang_parcel() -> Result<()> {
 
     println!(
         "
-Your Erlang parcel has been generated to {path}.
+Your Erlang shipment has been generated to {path}.
 
 It can be copied to a compatible server with Erlang installed and run with
 the entrypoint.sh script.
