@@ -18,6 +18,9 @@
   JavaScript (#1563)
 - Fixed a bug where argument labels were allowed for anonymous functions.
 - Generated HTML docs easter egg updated.
+- `gleam export erlang-shipment` can be used to create a directory of compiled
+  Erlang bytecode that can be used as a deployment artefact to get your
+  application live.
 
 ## v0.21.0 - 2022-04-24
 
