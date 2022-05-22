@@ -60,11 +60,11 @@ pub(crate) fn erlang_parcel() -> Result<()> {
     }
 
     // Write entrypoint script
-    crate::fs::write(
-        &out.join("entrypoint.sh"),
-        &include_str!("../templates/erlang-parcel-entrypoint.sh")
-            .replace("$PROJECT_NAME_FROM_GLEAM", &package.config.name),
-    )?;
+    let entrypoint = out.join("entrypoint.sh");
+    let text = include_str!("../templates/erlang-parcel-entrypoint.sh")
+        .replace("$PROJECT_NAME_FROM_GLEAM", &package.config.name);
+    crate::fs::write(&entrypoint, &text)?;
+    crate::fs::make_executable(&entrypoint)?;
 
     crate::cli::print_exported(&package.config.name);
 
