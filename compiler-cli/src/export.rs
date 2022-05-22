@@ -72,12 +72,13 @@ pub(crate) fn erlang_parcel() -> Result<()> {
         "
 Your Erlang package has been generated to {path}.
 
-It can be copied to a server with Erlang installed and run with the
-entrypoint.sh script.
+It can be copied to a compatible server with Erlang installed and run with
+the entrypoint.sh script.
 
-    {path}/entrypoint.sh
+    {entrypoint}
 ",
-        path = out.to_string_lossy()
+        path = out.to_string_lossy(),
+        entrypoint = entrypoint.to_string_lossy(),
     );
 
     Ok(())
