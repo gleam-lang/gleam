@@ -118,6 +118,10 @@ pub fn build_journal(mode: Mode, target: Target) -> PathBuf {
     build_packages(mode, target).join("gleam_build_journal")
 }
 
+pub fn erlang_parcel() -> PathBuf {
+    build().join("exports").join("erlang-parcel")
+}
+
 #[test]
 fn paths() {
     assert!(default_gleam_cache().ends_with("gleam"));
