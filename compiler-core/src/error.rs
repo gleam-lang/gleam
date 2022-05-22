@@ -295,6 +295,7 @@ pub enum FileIoAction {
     Create,
     WriteTo,
     Canonicalise,
+    UpdatePermissions,
     FindParent,
 }
 
@@ -312,6 +313,7 @@ impl FileIoAction {
             FileIoAction::WriteTo => "write to",
             FileIoAction::FindParent => "find the parent of",
             FileIoAction::Canonicalise => "canonicalise",
+            FileIoAction::UpdatePermissions => "update permissions of",
         }
     }
 }
