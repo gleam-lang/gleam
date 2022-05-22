@@ -70,7 +70,7 @@ pub(crate) fn erlang_parcel() -> Result<()> {
 
     println!(
         "
-Your Erlang package has been generated to {path}.
+Your Erlang parcel has been generated to {path}.
 
 It can be copied to a compatible server with Erlang installed and run with
 the entrypoint.sh script.

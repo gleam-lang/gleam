@@ -119,7 +119,7 @@ pub fn build_journal(mode: Mode, target: Target) -> PathBuf {
 }
 
 pub fn erlang_parcel() -> PathBuf {
-    build().join("exports").join("erlang-parcel")
+    build().join("erlang-parcel")
 }
 
 #[test]
