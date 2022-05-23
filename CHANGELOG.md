@@ -17,9 +17,9 @@
 - Clear outdated files from the build directory after compilation.
 - Fixed a bug where immediately calling the value that a case expression
   evaluates to could generate invalid JavaScript.
-- Fixed a bug where running a project on the Erlang target when the default
+- Fixed a bug where running a project on target Erlang when the default
   project target is set to JavaScript.
-- The compiler is now able to generate TypeScript declaration files when targeting
+- The compiler is now able to generate TypeScript declaration files on target
   JavaScript (#1563). To enable this edit `gleam.toml` like so:
   
   ```toml
