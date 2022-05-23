@@ -8,6 +8,10 @@
   `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
   and `gleam hex unretire`) and now have access to environment variables for
   username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`).
+  using `gleam publish --replace`
+- `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
+  and `gleam hex unretire` now have access to environment variables for
+  username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
 - The `gleam publish` command gains the `-y/--yes` flag to disable the "are you
   sure" prompt.
 - Clear outdated files from the build directory after compilation.
@@ -15,9 +19,17 @@
   evaluates to could generate invalid JavaScript.
 - Fixed a bug where running a project on the Erlang target when the default
   project target is set to JavaScript.
-- The compiler can now generate TypeScript declaration files when targeting
-  JavaScript (#1563)
+- The compiler is now able to generate TypeScript declaration files when targeting
+  JavaScript (#1563). To enable this edit `gleam.toml` like so:
+  ```toml
+  [javascript]
+  typescript_declarations: true
+  ```
 - Fixed a bug where argument labels were allowed for anonymous functions.
+- Generated HTML docs easter egg updated.
+- `gleam export erlang-shipment` can be used to create a directory of compiled
+  Erlang bytecode that can be used as a deployment artefact to get your
+  application live.
 
 ## v0.21.0 - 2022-04-24
 

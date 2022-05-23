@@ -291,9 +291,11 @@ pub enum FileIoAction {
     Read,
     Parse,
     Delete,
+    // Rename,
     Create,
     WriteTo,
     Canonicalise,
+    UpdatePermissions,
     FindParent,
 }
 
@@ -306,10 +308,12 @@ impl FileIoAction {
             FileIoAction::Read => "read",
             FileIoAction::Parse => "parse",
             FileIoAction::Delete => "delete",
+            // FileIoAction::Rename => "rename",
             FileIoAction::Create => "create",
             FileIoAction::WriteTo => "write to",
             FileIoAction::FindParent => "find the parent of",
-            FileIoAction::Canonicalise => "Canonicalise",
+            FileIoAction::Canonicalise => "canonicalise",
+            FileIoAction::UpdatePermissions => "update permissions of",
         }
     }
 }

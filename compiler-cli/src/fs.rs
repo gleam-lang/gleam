@@ -216,6 +216,27 @@ pub fn write(path: &Path, text: &str) -> Result<(), Error> {
     write_bytes(path, text.as_bytes())
 }
 
+#[cfg(target_family = "unix")]
+pub fn make_executable(path: impl AsRef<Path>) -> Result<(), Error> {
+    use std::os::unix::fs::PermissionsExt;
+    tracing::debug!(path = ?path.as_ref(), "setting_permissions");
+
+    std::fs::set_permissions(path.as_ref(), std::fs::Permissions::from_mode(0o755)).map_err(
+        |e| Error::FileIo {
+            action: FileIoAction::UpdatePermissions,
+            kind: FileKind::File,
+            path: path.as_ref().to_path_buf(),
+            err: Some(e.to_string()),
+        },
+    )?;
+    Ok(())
+}
+
+#[cfg(not(target_family = "unix"))]
+pub fn make_executable(_path: impl AsRef<Path>) -> Result<(), Error> {
+    Ok(())
+}
+
 pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
     tracing::debug!(path = ?path, "opening_file_writer");
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
@@ -240,7 +261,7 @@ pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
 }
 
 pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
-    tracing::debug!(path=?path, "deleting_directory");
+    tracing::debug!(path=?path, "writing_file");
 
     let dir_path = path.parent().ok_or_else(|| Error::FileIo {
         action: FileIoAction::FindParent,
@@ -474,6 +495,20 @@ pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Res
         .map(|_| ())
 }
 
+// pub fn rename(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
+//     tracing::debug!(from=?path, to=?to, "renaming_file");
+
+//     // TODO: include the destination in the error message
+//     std::fs::rename(&path, &to)
+//         .map_err(|err| Error::FileIo {
+//             action: FileIoAction::Rename,
+//             kind: FileKind::File,
+//             path: PathBuf::from(path.as_ref()),
+//             err: Some(err.to_string()),
+//         })
+//         .map(|_| ())
+// }
+
 pub fn copy_dir(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::debug!(from=?path, to=?to, "copying_directory");
 
@@ -532,7 +567,7 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
     }
 }
 
-fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
+pub fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
     std::fs::canonicalize(path).map_err(|err| Error::FileIo {
         action: FileIoAction::Canonicalise,
         kind: FileKind::File,
