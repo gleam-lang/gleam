@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- You are now allowed to use named accessors on types with multiple constructors if the 
+  accessor's name, position and type match (among the constructors). (#1610)
 - Added the ability to replace a release up to one hour after it is published
   using `gleam publish --replace`
 - `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
