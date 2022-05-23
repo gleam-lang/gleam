@@ -14,6 +14,8 @@
   evaluates to could generate invalid JavaScript.
 - Fixed a bug where running a project on target Erlang when the default
   project target is set to JavaScript.
+- Fixed a bug where running a project would run on target Erlang while the
+  default project target is set to JavaScript.
 - The compiler is now able to generate TypeScript declaration files on target
   JavaScript (#1563). To enable this edit `gleam.toml` like so:
   
