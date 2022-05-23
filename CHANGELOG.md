@@ -21,10 +21,12 @@
   project target is set to JavaScript.
 - The compiler is now able to generate TypeScript declaration files when targeting
   JavaScript (#1563). To enable this edit `gleam.toml` like so:
+  
   ```toml
   [javascript]
   typescript_declarations: true
   ```
+  
 - Fixed a bug where argument labels were allowed for anonymous functions.
 - Generated HTML docs easter egg updated.
 - `gleam export erlang-shipment` can be used to create a directory of compiled
