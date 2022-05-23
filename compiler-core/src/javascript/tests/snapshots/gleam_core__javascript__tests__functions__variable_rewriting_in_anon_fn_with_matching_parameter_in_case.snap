@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 337
+expression: "pub fn bad() {\n  fn(state) {\n    let state = case Nil {\n      _ -> state\n    }\n    state\n  }\n}\n"
+---
+export function bad() {
+  return (state) => {
+    let state$1 = (() => {
+      let $ = undefined;
+      return state;
+    })();
+    return state$1;
+  };
+}
+

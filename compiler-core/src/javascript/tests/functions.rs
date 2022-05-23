@@ -316,3 +316,33 @@ fn fn_return_fn_typescript() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1637
+#[test]
+fn variable_rewriting_in_anon_fn_with_matching_parameter() {
+    assert_js!(
+        r#"pub fn bad() {
+  fn(state) {
+    let state = state
+    state
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1637
+#[test]
+fn variable_rewriting_in_anon_fn_with_matching_parameter_in_case() {
+    assert_js!(
+        r#"pub fn bad() {
+  fn(state) {
+    let state = case Nil {
+      _ -> state
+    }
+    state
+  }
+}
+"#,
+    );
+}

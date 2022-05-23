@@ -758,7 +758,7 @@ impl<'module> Generator<'module> {
         // And there's a new scope
         let scope = self.current_scope_vars.clone();
         for name in arguments.iter().flat_map(Arg::get_variable_name) {
-            let _ = self.current_scope_vars.remove(name);
+            let _ = self.current_scope_vars.insert(name.to_string(), 0);
         }
 
         // This is a new function so unset the recorded name so that we don't
