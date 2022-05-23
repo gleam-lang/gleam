@@ -4,11 +4,6 @@
 
 - Added the ability to replace a release up to one hour after it is published
   using `gleam publish --replace`.
-- All commands that authenticate using the `ApiKeyCommand` trait (currently
-  `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
-  and `gleam hex unretire`) and now have access to environment variables for
-  username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`).
-  using `gleam publish --replace`
 - `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
   and `gleam hex unretire` now have access to environment variables for
   username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
