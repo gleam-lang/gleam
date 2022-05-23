@@ -17,6 +17,9 @@
 - The compiler can now generate TypeScript declaration files when targeting
   JavaScript (#1563)
 - Fixed a bug where argument labels were allowed for anonymous functions.
+- Fixed a bug where JavaScript code could be invalid if a variable is defined
+  inside an anonymous function with a parameter with the same name as the
+  variable.
 - Generated HTML docs easter egg updated.
 - `gleam export erlang-shipment` can be used to create a directory of compiled
   Erlang bytecode that can be used as a deployment artefact to get your
