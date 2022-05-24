@@ -132,3 +132,39 @@ fn let_left_side_fits_test() {
 
     assert_eq!("[1] = [1]", doc.clone().to_pretty_string(16));
 }
+
+#[test]
+fn empty_documents() {
+    // nil
+    assert!(nil().is_empty());
+
+    // lines
+    assert!(lines(0).is_empty());
+    assert!(!line().is_empty());
+
+    // force break
+    assert!(force_break().is_empty());
+
+    // strings
+    assert!("".to_doc().is_empty());
+    assert!(!"foo".to_doc().is_empty());
+    assert!(!" ".to_doc().is_empty());
+    assert!(!"\n".to_doc().is_empty());
+
+    // containers
+    assert!("".to_doc().nest(2).is_empty());
+    assert!(!"foo".to_doc().nest(2).is_empty());
+    assert!("".to_doc().nest_current().is_empty());
+    assert!(!"foo".to_doc().nest_current().is_empty());
+    assert!("".to_doc().group().is_empty());
+    assert!(!"foo".to_doc().group().is_empty());
+    assert!("".to_doc().flex_break().is_empty());
+    assert!(!"foo".to_doc().flex_break().is_empty());
+    assert!(break_("", "").is_empty());
+    assert!(!break_("foo", "foo").is_empty());
+    assert!(!break_("foo\nbar", "foo bar").is_empty());
+    assert!(!"foo".to_doc().flex_break().is_empty());
+    assert!("".to_doc().append("".to_doc()).is_empty());
+    assert!(!"foo".to_doc().append("".to_doc()).is_empty());
+    assert!(!"".to_doc().append("foo".to_doc()).is_empty());
+}
