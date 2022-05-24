@@ -3384,8 +3384,7 @@ fn single_empty_line_between_comments() {
 
     // freestanding comments keep empty lines
     assert_format!(
-        "
-// foo
+        "// foo
 
 // bar
 "
@@ -3393,14 +3392,12 @@ fn single_empty_line_between_comments() {
 
     // freestanding comments condense consecutive empty lines
     assert_format_rewrite!(
-        "
-// foo
+        "// foo
 
 
 // bar
 ",
-        "
-// foo
+        "// foo
 
 // bar
 ",
