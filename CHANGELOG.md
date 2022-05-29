@@ -39,7 +39,8 @@
 - Fixed a bug where `gleam format` would output an unwanted newline at the top
   of documents that only contain simple `//` comments.
 - No longer add `dev-dependencies` to generated `.app` Erlang files unless
-  we're compiling the root project (#1569)
+  we're compiling the root project (#1569). When using the package-compiler API
+  this behaviour is configurable.
 
 ## v0.21.0 - 2022-04-24
 
