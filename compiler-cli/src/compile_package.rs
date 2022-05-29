@@ -4,7 +4,7 @@ use crate::{
     CompilePackage,
 };
 use gleam_core::{
-    build::{package_compiler::DependencyMode, Mode, PackageCompiler},
+    build::{Mode, PackageCompiler, Target, TargetCodegenConfiguration},
     metadata,
     type_::Module,
     uid::UniqueIdGenerator,
@@ -18,6 +18,10 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut defined_modules = im::HashMap::new();
     let mut warnings = Vec::new();
     let config = config::read(options.package_directory.join("gleam.toml"))?;
+    let target= match options.target {
+        Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
+        Target::JavaScript => TargetCodegenConfiguration::JavaScript
+    };
 
     tracing::info!("Compiling package");
 
@@ -26,9 +30,8 @@ pub fn command(options: CompilePackage) -> Result<()> {
         &options.package_directory,
         &options.output_directory,
         &options.libraries_directory,
-        options.target,
+        &target,
         ids,
-        DependencyMode::ProdOnly,
         ProjectIO::new(),
         None,
     );

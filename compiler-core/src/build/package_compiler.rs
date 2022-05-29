@@ -21,11 +21,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DependencyMode {
-    ProdOnly,
-    IncludeDev,
-}
+use super::{TargetCodegenConfiguration, ErlangAppCodegenConfiguration};
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -33,7 +29,7 @@ pub struct PackageCompiler<'a, IO> {
     pub out: &'a Path,
     pub lib: &'a Path,
     pub root: &'a Path,
-    pub target: Target,
+    pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
     pub sources: Vec<Source>,
     pub ids: UniqueIdGenerator,
@@ -44,7 +40,6 @@ pub struct PackageCompiler<'a, IO> {
     pub compile_beam_bytecode: bool,
     pub silence_subprocess_stdout: bool,
     pub build_journal: Option<&'a mut HashSet<PathBuf>>,
-    pub dependency_mode: DependencyMode,
 }
 
 // TODO: ensure this is not a duplicate module
@@ -60,9 +55,8 @@ where
         root: &'a Path,
         out: &'a Path,
         lib: &'a Path,
-        target: Target,
+        target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
-        dependency_mode: DependencyMode,
         io: IO,
         build_journal: Option<&'a mut HashSet<PathBuf>>,
     ) -> Self {
@@ -74,7 +68,6 @@ where
             root,
             config,
             target,
-            dependency_mode,
             sources: vec![],
             write_metadata: true,
             perform_codegen: true,
@@ -114,7 +107,7 @@ where
         tracing::info!("Type checking modules");
         let mut modules = type_check(
             &self.config.name,
-            self.target,
+            self.target.target(),
             &self.ids,
             sequence,
             parsed_modules,
@@ -304,23 +297,22 @@ where
         }
 
         match self.target {
-            Target::JavaScript => self.perform_javascript_codegen(modules),
-            Target::Erlang => self.perform_erlang_codegen(modules),
+            TargetCodegenConfiguration::JavaScript => self.perform_javascript_codegen(modules),
+            TargetCodegenConfiguration::Erlang { app_file } => self.perform_erlang_codegen(modules, app_file.as_ref()),
         }
     }
 
-    fn perform_erlang_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+    fn perform_erlang_codegen(&mut self, modules: &[Module], app_file: Option<&ErlangAppCodegenConfiguration>) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
         let io = self.io.clone();
 
         Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
-        ErlangApp::new(&self.out.join("ebin"), self.dependency_mode).render(
-            io,
-            &self.config,
-            modules,
-        )?;
+        if let Some(config) = app_file {
+
+        ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps) .render( io, &self.config, modules)?;
+        }
 
         if self.write_entrypoint {
             self.render_entrypoint_module(&build_dir, &mut written)?;
@@ -452,11 +444,11 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
-fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String>) {
+fn module_deps_for_graph(target: &TargetCodegenConfiguration, module: &Parsed) -> (String, Vec<String>) {
     let name = module.name.clone();
     let deps: Vec<_> = module
         .ast
-        .dependencies(target)
+        .dependencies(target.target())
         .into_iter()
         .map(|(dep, _span)| dep)
         .collect();

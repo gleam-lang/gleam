@@ -1,5 +1,5 @@
 use crate::{
-    build::{package_compiler::DependencyMode, Module},
+    build::Module,
     config::{JavaScriptConfig, PackageConfig},
     erlang,
     io::{FileSystemWriter, Utf8Writer},
@@ -75,14 +75,14 @@ impl<'a> Erlang<'a> {
 #[derive(Debug)]
 pub struct ErlangApp<'a> {
     output_directory: &'a Path,
-    dependency_mode: DependencyMode,
+    include_dev_deps: bool,
 }
 
 impl<'a> ErlangApp<'a> {
-    pub fn new(output_directory: &'a Path, dependency_mode: DependencyMode) -> Self {
+    pub fn new(output_directory: &'a Path, include_dev_deps: bool) -> Self {
         Self {
             output_directory,
-            dependency_mode,
+            include_dev_deps,
         }
     }
 
@@ -120,7 +120,7 @@ impl<'a> ErlangApp<'a> {
                 config
                     .dev_dependencies
                     .keys()
-                    .take_while(|_| self.dependency_mode == DependencyMode::IncludeDev),
+                    .take_while(|_| self.include_dev_deps),
             )
             .chain(config.erlang.extra_applications.iter())
             .sorted()
