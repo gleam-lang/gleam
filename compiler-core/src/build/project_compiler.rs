@@ -25,7 +25,6 @@ use std::{
 
 use super::ErlangAppCodegenConfiguration;
 
-
 // On Windows we have to call rebar3 via a little wrapper script.
 //
 #[cfg(not(target_os = "windows"))]
@@ -363,10 +362,12 @@ where
         let artifact_path = out_path.join("build");
         let mode = self.mode();
         let target = match self.target() {
-            Target::Erlang => super::TargetCodegenConfiguration::Erlang { app_file: Some(ErlangAppCodegenConfiguration {
-                include_dev_deps: is_root
-            }) },
-            Target::JavaScript => super::TargetCodegenConfiguration::JavaScript
+            Target::Erlang => super::TargetCodegenConfiguration::Erlang {
+                app_file: Some(ErlangAppCodegenConfiguration {
+                    include_dev_deps: is_root,
+                }),
+            },
+            Target::JavaScript => super::TargetCodegenConfiguration::JavaScript,
         };
         let mut compiler = PackageCompiler::new(
             config,

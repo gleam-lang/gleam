@@ -49,9 +49,7 @@ macro_rules! assert_erlang_compile {
             &root,
             &out,
             &lib,
-            &TargetCodegenConfiguration::Erlang {
-                app_file: None,
-            },
+            &TargetCodegenConfiguration::Erlang { app_file: None },
             ids,
             file_writer,
             Some(&mut build_journal),
@@ -172,8 +170,8 @@ macro_rules! assert_no_warnings {
             &lib,
             &TargetCodegenConfiguration::Erlang {
                 app_file: Some(ErlangAppCodegenConfiguration {
-                    include_dev_deps: true
-                })
+                    include_dev_deps: true,
+                }),
             },
             ids,
             file_writer,
@@ -193,10 +191,7 @@ macro_rules! assert_no_warnings {
 
 #[test]
 fn package_compiler_test() {
-    assert_erlang_compile!(
-        vec![],
-        Ok(vec![])
-    );
+    assert_erlang_compile!(vec![], Ok(vec![]));
 
     assert_erlang_compile!(
         vec![Source {
@@ -205,12 +200,10 @@ fn package_compiler_test() {
             code: "".to_string(),
             origin: Origin::Src,
         }],
-        Ok(vec![
-            OutputFile {
-                text: "-module(one).\n".to_string(),
-                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
-            },
-        ])
+        Ok(vec![OutputFile {
+            text: "-module(one).\n".to_string(),
+            path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
+        },])
     );
 
     assert_erlang_compile!(
@@ -247,12 +240,10 @@ fn package_compiler_test() {
             path: PathBuf::from("src/one.gleam"),
             code: "".to_string(),
         }],
-        Ok(vec![
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
-                text: "-module(one).\n".to_string(),
-            },
-        ]),
+        Ok(vec![OutputFile {
+            path: PathBuf::from("_build/default/lib/the_package/build/one.erl"),
+            text: "-module(one).\n".to_string(),
+        },]),
     );
 
     // TODO: src modules cannot be allowed to import test modules
@@ -433,10 +424,9 @@ box(X) ->
             name: "one/two".to_string(),
             code: "pub type Box { Box }".to_string(),
         }],
-        Ok(vec![
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/build/one@two.erl"),
-                text: "-module(one@two).
+        Ok(vec![OutputFile {
+            path: PathBuf::from("_build/default/lib/the_package/build/one@two.erl"),
+            text: "-module(one@two).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -445,9 +435,8 @@ box(X) ->
 
 
 "
-                .to_string(),
-            }
-        ]),
+            .to_string(),
+        }]),
     );
 
     assert_erlang_compile!(
@@ -1908,8 +1897,8 @@ fn config_compilation_test() {
                 &lib,
                 &TargetCodegenConfiguration::Erlang {
                     app_file: Some(ErlangAppCodegenConfiguration {
-                        include_dev_deps: true
-                    })
+                        include_dev_deps: true,
+                    }),
                 },
                 ids,
                 file_writer,

@@ -21,7 +21,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::{TargetCodegenConfiguration, ErlangAppCodegenConfiguration};
+use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -298,11 +298,17 @@ where
 
         match self.target {
             TargetCodegenConfiguration::JavaScript => self.perform_javascript_codegen(modules),
-            TargetCodegenConfiguration::Erlang { app_file } => self.perform_erlang_codegen(modules, app_file.as_ref()),
+            TargetCodegenConfiguration::Erlang { app_file } => {
+                self.perform_erlang_codegen(modules, app_file.as_ref())
+            }
         }
     }
 
-    fn perform_erlang_codegen(&mut self, modules: &[Module], app_file: Option<&ErlangAppCodegenConfiguration>) -> Result<(), Error> {
+    fn perform_erlang_codegen(
+        &mut self,
+        modules: &[Module],
+        app_file: Option<&ErlangAppCodegenConfiguration>,
+    ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join("build");
         let include_dir = self.out.join("include");
@@ -310,8 +316,11 @@ where
 
         Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
         if let Some(config) = app_file {
-
-        ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps) .render( io, &self.config, modules)?;
+            ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps).render(
+                io,
+                &self.config,
+                modules,
+            )?;
         }
 
         if self.write_entrypoint {
@@ -444,7 +453,10 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
-fn module_deps_for_graph(target: &TargetCodegenConfiguration, module: &Parsed) -> (String, Vec<String>) {
+fn module_deps_for_graph(
+    target: &TargetCodegenConfiguration,
+    module: &Parsed,
+) -> (String, Vec<String>) {
     let name = module.name.clone();
     let deps: Vec<_> = module
         .ast
