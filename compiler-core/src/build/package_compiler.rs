@@ -99,7 +99,7 @@ where
         let sequence = dep_tree::toposort_deps(
             parsed_modules
                 .values()
-                .map(|m| module_deps_for_graph(self.target, m))
+                .map(|m| module_deps_for_graph(self.target.target(), m))
                 .collect(),
         )
         .map_err(convert_deps_tree_error)?;
@@ -454,13 +454,13 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 }
 
 fn module_deps_for_graph(
-    target: &TargetCodegenConfiguration,
+    target: Target,
     module: &Parsed,
 ) -> (String, Vec<String>) {
     let name = module.name.clone();
     let deps: Vec<_> = module
         .ast
-        .dependencies(target.target())
+        .dependencies(target)
         .into_iter()
         .map(|(dep, _span)| dep)
         .collect();
