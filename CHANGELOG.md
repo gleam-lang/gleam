@@ -28,6 +28,8 @@
 - Fixed a bug where JavaScript code could be invalid if a variable is defined
   inside an anonymous function with a parameter with the same name as the
   variable.
+- The project generator will no longer permit use of the reserved `gleam_`
+  prefix.
 - Generated HTML docs easter egg updated.
 - `gleam export erlang-shipment` can be used to create a directory of compiled
   Erlang bytecode that can be used as a deployment artefact to get your
