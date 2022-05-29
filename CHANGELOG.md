@@ -19,7 +19,7 @@
   
   ```toml
   [javascript]
-  typescript_declarations: true
+  typescript_declarations = true
   ```
   
 - Fixed a bug where argument labels were allowed for anonymous functions.
