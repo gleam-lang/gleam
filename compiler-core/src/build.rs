@@ -50,24 +50,23 @@ impl Target {
 pub enum TargetCodegenConfiguration {
     JavaScript,
     Erlang {
-        app_file: Option<ErlangAppCodegenConfiguration>
-    }
+        app_file: Option<ErlangAppCodegenConfiguration>,
+    },
 }
 
 impl TargetCodegenConfiguration {
     pub fn target(&self) -> Target {
         match self {
             Self::JavaScript => Target::JavaScript,
-            Self::Erlang { .. } => Target::Erlang
+            Self::Erlang { .. } => Target::Erlang,
         }
     }
 }
 
 #[derive(Debug)]
 pub struct ErlangAppCodegenConfiguration {
-    include_dev_deps: bool
+    include_dev_deps: bool,
 }
-
 
 #[derive(
     Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
