@@ -5,19 +5,25 @@
 - You are now allowed to use named accessors on types with multiple constructors if the 
   accessor's name, position and type match (among the constructors). (#1610)
 - Added the ability to replace a release up to one hour after it is published
-  using `gleam publish --replace`
+  using `gleam publish --replace`.
 - `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
   and `gleam hex unretire` now have access to environment variables for
   username (default key `HEXPM_USER`) and password (default key `HEXPM_PASS`)
 - The `gleam publish` command gains the `-y/--yes` flag to disable the "are you
-  sure" prompt
+  sure" prompt.
 - Clear outdated files from the build directory after compilation.
 - Fixed a bug where immediately calling the value that a case expression
   evaluates to could generate invalid JavaScript.
-- Fixed a bug where running a project on the Erlang target when the default
-  project target is set to JavaScript.
-- The compiler can now generate TypeScript declaration files when targeting
-  JavaScript (#1563)
+- Fixed a bug where the default project target is set to JavaScript,
+  but the project would run on target Erlang instead.
+- The compiler is now able to generate TypeScript declaration files on target
+  JavaScript (#1563). To enable this edit `gleam.toml` like so:
+  
+  ```toml
+  [javascript]
+  typescript_declarations = true
+  ```
+  
 - Fixed a bug where argument labels were allowed for anonymous functions.
 - Fixed a bug where JavaScript code could be invalid if a variable is defined
   inside an anonymous function with a parameter with the same name as the
@@ -641,7 +647,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   both definitions.
 - Fix compiler bug where labelled arguments were being reordered incorrectly.
 
-# v0.10.0 - 2020-07-01
+## v0.10.0 - 2020-07-01
 
 [Release Blog Post](https://lpil.uk/blog/gleam-v0.10-released/)
 
@@ -649,12 +655,12 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed a bug where discards inside bit string patterns generated invalid
   code.
 
-# v0.10.0-rc2 - 2020-06-30
+## v0.10.0-rc2 - 2020-06-30
 
 - Fixed a bug where variables names would be incorrectly generated when using
   alternative patterns.
 
-# v0.10.0-rc1 - 2020-06-29
+## v0.10.0-rc1 - 2020-06-29
 
 - Single letter module names are now permitted.
 - Added support for bit string syntax.

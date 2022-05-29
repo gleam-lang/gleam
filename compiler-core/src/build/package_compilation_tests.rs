@@ -6,7 +6,7 @@ use crate::{
         Origin, Target,
     },
     codegen,
-    config::{Docs, ErlangConfig, JavascriptConfig, PackageConfig, Repository},
+    config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
     erlang,
     io::test::FilesChannel,
     javascript, type_,
@@ -34,7 +34,7 @@ macro_rules! assert_erlang_compile {
                 application_start_module: None,
                 extra_applications: vec![],
             },
-            javascript: JavascriptConfig {
+            javascript: JavaScriptConfig {
                 typescript_declarations: false,
             },
             target: Target::Erlang,
@@ -93,7 +93,7 @@ macro_rules! assert_javascript_compile {
                 application_start_module: None,
                 extra_applications: vec![],
             },
-            javascript: JavascriptConfig {
+            javascript: JavaScriptConfig {
                 typescript_declarations: true,
             },
             target: Target::JavaScript,
@@ -152,7 +152,7 @@ macro_rules! assert_no_warnings {
                 application_start_module: None,
                 extra_applications: vec![],
             },
-            javascript: JavascriptConfig {
+            javascript: JavaScriptConfig {
                 typescript_declarations: false,
             },
             target: Target::Erlang,
