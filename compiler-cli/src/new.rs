@@ -219,7 +219,9 @@ pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
         name
     } else {
         get_foldername(&options.project_root)?
-    };
+    }
+    .trim()
+    .to_string();
     validate_name(&name)?;
     validate_root_folder(&name)?;
     let creator = Creator::new(options.clone(), name, version);
@@ -272,7 +274,12 @@ fn validate_root_folder(name: &str) -> Result<(), Error> {
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
-    if erlang::is_erlang_reserved_word(name) {
+    if name.starts_with("gleam_") {
+        Err(Error::InvalidProjectName {
+            name: name.to_string(),
+            reason: InvalidProjectNameReason::GleamPrefix,
+        })
+    } else if erlang::is_erlang_reserved_word(name) {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
             reason: InvalidProjectNameReason::ErlangReservedWord,

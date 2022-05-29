@@ -262,6 +262,7 @@ impl From<capnp::NotInSchema> for Error {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,
+    GleamPrefix,
     ErlangReservedWord,
     ErlangStandardLibraryModule,
     GleamReservedWord,
@@ -376,9 +377,8 @@ of the Gleam dependency modules."
             }
 
             Error::InvalidProjectName { name, reason } => {
-                let text = format!(
-                    "We were not able to create your project as `{}`
-{}
+                let text = wrap_format!(
+                    "We were not able to create your project as `{}` {}
 
 Please try again with a different project name.",
                     name,
@@ -392,9 +392,12 @@ Please try again with a different project name.",
                         InvalidProjectNameReason::GleamReservedModule =>
                             "is a reserved module name in Gleam.",
                         InvalidProjectNameReason::Format =>
-                            "does not have the correct format. Project names must start
-with a lowercase letter and may only contain lowercase letters,
+                            "does not have the correct format. Project names \
+must start with a lowercase letter and may only contain lowercase letters, \
 numbers and underscores.",
+                        InvalidProjectNameReason::GleamPrefix =>
+                            "has the reserved prefix `gleam_`. \
+This prefix is indended for official Gleam packages only.",
                     }
                 );
 
