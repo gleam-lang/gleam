@@ -1565,6 +1565,87 @@ mod tests {
     }
 
     #[test]
+    fn test_nonexhaustive_option_with_two_rows_and_guard() {
+        let mut compiler = Compiler::new();
+        let int_type = new_type(&mut compiler, Type::Int);
+        let option_type = new_type(
+            &mut compiler,
+            Type::Enum(vec![
+                ("Some".to_string(), vec![int_type]),
+                ("None".to_string(), Vec::new()),
+            ]),
+        );
+        let input = compiler.new_variable(option_type);
+        let result = compiler.compile(vec![
+            Row::new(
+                vec![Column::new(input, variant(option_type, 0, vec![int(4)]))],
+                Some(Guard { expression: 42, rows: Vec::new() }),
+                rhs(1),
+            ),
+            Row::new(
+                vec![Column::new(
+                    input,
+                    variant(option_type, 0, vec![bind("a")]),
+                )],
+                None,
+                rhs(2),
+            ),
+        ]);
+
+        let guard = Decision::Guard(
+            42,
+            rhs(1),
+            Box::new(Decision::Switch(
+                input,
+                vec![
+                    Case::new(
+                        Constructor::Variant(option_type, 0),
+                        vec![var(2, int_type)],
+                        success_with_bindings(vec![("a", var(2, int_type))], 2),
+                    ),
+                    Case::new(
+                        Constructor::Variant(option_type, 1),
+                        Vec::new(),
+                        failure(),
+                    ),
+                ],
+                None,
+            )),
+        );
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![
+                    Case::new(
+                        Constructor::Variant(option_type, 0),
+                        vec![var(1, int_type)],
+                        Decision::Switch(
+                            var(1, int_type),
+                            vec![Case::new(
+                                Constructor::Int(4),
+                                Vec::new(),
+                                guard
+                            )],
+                            Some(Box::new(success_with_bindings(
+                                vec![("a", var(1, int_type))],
+                                2
+                            )))
+                        ),
+                    ),
+                    Case::new(
+                        Constructor::Variant(option_type, 1),
+                        Vec::new(),
+                        failure()
+                    )
+                ],
+                None
+            )
+        );
+    }
+
+    #[test]
     fn test_exhaustive_guard() {
         let mut compiler = Compiler::new();
         let int_type = new_type(&mut compiler, Type::Int);
