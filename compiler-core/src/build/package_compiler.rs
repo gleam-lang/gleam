@@ -453,10 +453,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
-fn module_deps_for_graph(
-    target: Target,
-    module: &Parsed,
-) -> (String, Vec<String>) {
+fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String>) {
     let name = module.name.clone();
     let deps: Vec<_> = module
         .ast

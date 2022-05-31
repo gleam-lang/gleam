@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed a bug where doc comments would dissociate from their statements when
+  generating html documentation.
 - You are now allowed to use named accessors on types with multiple constructors if the 
   accessor's name, position and type match (among the constructors). (#1610)
 - Added the ability to replace a release up to one hour after it is published
