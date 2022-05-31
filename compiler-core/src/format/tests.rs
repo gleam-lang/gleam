@@ -3413,3 +3413,35 @@ fn no_newline_before_comments() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1647
+#[test]
+fn list_at_end_of_long_expr_line() {
+    assert_format!(
+        "pub fn example() {
+  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(a_field: Record(a_field: []))))
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1647
+#[test]
+fn list_at_end_of_long_pattern_line() {
+    assert_format!(
+        "pub fn example() {
+  assert LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong([]) =
+    1
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1647
+#[test]
+fn list_at_end_of_long_constant_line() {
+    assert_format!(
+        "const longlonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglonglong = []
+"
+    );
+}

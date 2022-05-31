@@ -317,8 +317,8 @@ impl<'comments> Formatter<'comments> {
                 } else {
                     || break_(",", ", ")
                 };
-                let elements = join(elements.iter().map(|e| self.const_expr(e)), comma());
-                list(elements, None)
+                let elements_document = join(elements.iter().map(|e| self.const_expr(e)), comma());
+                list(elements_document, elements.len(), None)
             }
 
             Constant::Tuple { elements, .. } => "#"
@@ -1196,9 +1196,9 @@ impl<'comments> Formatter<'comments> {
             } else {
                 || break_(",", ", ")
             };
-        let elements = join(elements.iter().map(|e| self.wrap_expr(e)), comma());
+        let elements_document = join(elements.iter().map(|e| self.wrap_expr(e)), comma());
         let tail = tail.map(|e| self.expr(e));
-        list(elements, tail)
+        list(elements_document, elements.len(), tail)
     }
 
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1221,7 +1221,8 @@ impl<'comments> Formatter<'comments> {
             Pattern::Discard { name, .. } => name.to_doc(),
 
             Pattern::List { elements, tail, .. } => {
-                let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
+                let elements_document =
+                    join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
                 let tail = tail.as_ref().map(|e| {
                     if e.is_discard() {
                         nil()
@@ -1229,7 +1230,7 @@ impl<'comments> Formatter<'comments> {
                         self.pattern(e)
                     }
                 });
-                list(elements, tail)
+                list(elements_document, elements.len(), tail)
             }
 
             Pattern::Constructor {
@@ -1462,8 +1463,15 @@ fn bit_string<'a>(
         .group()
 }
 
-fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let doc = break_("[", "[").append(elems);
+fn list<'a>(elements: Document<'a>, length: usize, tail: Option<Document<'a>>) -> Document<'a> {
+    if length == 0 {
+        return match tail {
+            Some(tail) => tail,
+            None => "[]".to_doc(),
+        };
+    }
+
+    let doc = break_("[", "[").append(elements);
 
     match tail {
         None => doc.nest(INDENT).append(break_(",", "")),
