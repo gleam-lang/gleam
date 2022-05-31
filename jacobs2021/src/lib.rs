@@ -237,7 +237,7 @@ struct Term {
 
 impl Term {
     fn new(variable: Variable, name: String, arguments: Vec<Variable>) -> Self {
-        Self { variable, name: name.into(), arguments }
+        Self { variable, name, arguments }
     }
 
     fn pattern_name(
