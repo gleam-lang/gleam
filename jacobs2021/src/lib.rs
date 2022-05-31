@@ -1562,6 +1562,8 @@ mod tests {
                 Some(Box::new(failure()))
             )
         );
+
+        assert_eq!(result.missing_patterns(), vec!["_".to_string()]);
     }
 
     #[test]
@@ -1642,6 +1644,11 @@ mod tests {
                 ],
                 None
             )
+        );
+
+        assert_eq!(
+            result.missing_patterns(),
+            vec!["None".to_string(), "Some(_)".to_string()]
         );
     }
 
