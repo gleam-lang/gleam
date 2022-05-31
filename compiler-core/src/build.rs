@@ -145,9 +145,13 @@ impl Module {
             })
             .collect();
 
+        // Order statements to avoid dissociating doc comments from them
+        let mut statements: Vec<_> = self.ast.statements.iter_mut().collect();
+        statements.sort_by(|a, b| a.location().start.cmp(&b.location().start));
+
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
-        for statement in &mut self.ast.statements {
+        for statement in &mut statements {
             let docs: Vec<&str> =
                 comments_before(&mut doc_comments, statement.location().start, &self.code);
             if !docs.is_empty() {
