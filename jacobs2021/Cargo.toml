@@ -1,0 +1,8 @@
+[package]
+name = "jacobs2021"
+version = "1.0.0"
+authors = ["Yorick Peterse <yorick@yorickpeterse.com>"]
+edition = "2021"
+
+[lib]
+doctest = false
