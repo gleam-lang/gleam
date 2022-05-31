@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+assertion_line: 665
+expression: "\npub fn one() { One }\npub type One { One }\n"
+---
+import { CustomType } from "../gleam.mjs";
+
+export class One extends CustomType {}
+
+export function one() {
+  return new One();
+}
+

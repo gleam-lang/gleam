@@ -1,5 +1,3 @@
-// TODO: snapshots for tests that use another module
-
 use crate::javascript::tests::CURRENT_PACKAGE;
 use crate::{assert_js, assert_ts_def};
 
@@ -657,6 +655,17 @@ fn opaque_types_typescript() {
   Cat(goes_outside: Bool)
   Dog(plays_fetch: Bool)
 }
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1650
+#[test]
+fn types_must_be_rendered_before_functions() {
+    assert_js!(
+        r#"
+pub fn one() { One }
+pub type One { One }
 "#
     );
 }

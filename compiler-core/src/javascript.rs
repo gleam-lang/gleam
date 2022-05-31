@@ -39,11 +39,12 @@ impl<'a> Generator<'a> {
 
     pub fn compile(&mut self) -> Output<'a> {
         let mut imports = self.collect_imports();
-        let statements = self
-            .module
-            .statements
-            .iter()
-            .flat_map(|s| self.statement(s));
+        let statements = self.collect_definitions().into_iter().chain(
+            self.module
+                .statements
+                .iter()
+                .flat_map(|s| self.statement(s)),
+        );
 
         // Two lines between each statement
         let mut statements: Vec<_> =
@@ -130,14 +131,11 @@ impl<'a> Generator<'a> {
         match statement {
             Statement::TypeAlias { .. } | Statement::ExternalType { .. } => vec![],
 
+            // Handled in collect_imports
             Statement::Import { .. } => vec![],
 
-            Statement::CustomType {
-                public,
-                constructors,
-                opaque,
-                ..
-            } => self.custom_type_definition(constructors, *public, *opaque),
+            // Handled in collect_definitions
+            Statement::CustomType { .. } => vec![],
 
             Statement::ModuleConstant {
                 public,
@@ -234,6 +232,28 @@ impl<'a> Generator<'a> {
         .nest(INDENT);
 
         docvec![head, class_body, line(), "}"]
+    }
+
+    fn collect_definitions(&mut self) -> Vec<Output<'a>> {
+        self.module
+            .statements
+            .iter()
+            .flat_map(|statement| match statement {
+                Statement::CustomType {
+                    public,
+                    constructors,
+                    opaque,
+                    ..
+                } => self.custom_type_definition(constructors, *public, *opaque),
+
+                Statement::Fn { .. }
+                | Statement::TypeAlias { .. }
+                | Statement::ExternalFn { .. }
+                | Statement::ExternalType { .. }
+                | Statement::Import { .. }
+                | Statement::ModuleConstant { .. } => vec![],
+            })
+            .collect()
     }
 
     fn collect_imports(&mut self) -> Imports<'a> {

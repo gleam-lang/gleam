@@ -1,14 +1,9 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 129
+assertion_line: 172
 expression: "\ntype Mine {\n  Mine(a: Int, b: Int)\n}\n\nconst labels = Mine(b: 2, a: 1)\nconst no_labels = Mine(3, 4)\n"
-
 ---
 import { CustomType } from "../gleam.mjs";
-
-const labels = new Mine(1, 2);
-
-const no_labels = new Mine(3, 4);
 
 class Mine extends CustomType {
   constructor(a, b) {
@@ -17,4 +12,8 @@ class Mine extends CustomType {
     this.b = b;
   }
 }
+
+const labels = new Mine(1, 2);
+
+const no_labels = new Mine(3, 4);
 
