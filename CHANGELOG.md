@@ -26,6 +26,8 @@
 - Fixed a bug where JavaScript code could be invalid if a variable is defined
   inside an anonymous function with a parameter with the same name as the
   variable.
+- Fixed a bug where importing a JavaScript function named "then" could produce
+  invalid code.
 - The project generator will no longer permit use of the reserved `gleam_`
   prefix.
 - Generated HTML docs easter egg updated.
