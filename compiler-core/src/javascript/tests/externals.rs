@@ -74,3 +74,9 @@ pub external fn new() -> Queue(a) = "queue" "new"
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1636
+#[test]
+fn external_fn_escaping() {
+    assert_js!(r#"pub external fn then(a) -> b = "./ffi.js" "then""#,);
+}

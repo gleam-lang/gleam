@@ -330,12 +330,16 @@ impl<'a> Generator<'a> {
         module: &'a str,
         fun: &'a str,
     ) {
+        let needs_escaping = !is_usable_js_identifier(name);
+        // TODO: handle the escaping here!!!!!!!!!!!
         let member = Member {
             name: fun.to_doc(),
-            alias: if name == fun {
+            alias: if name == fun && !needs_escaping {
                 None
+            } else if needs_escaping {
+                Some(Document::String(escape_identifier(name)))
             } else {
-                Some(maybe_escape_identifier_doc(name))
+                Some(name.to_doc())
             },
         };
         if public {

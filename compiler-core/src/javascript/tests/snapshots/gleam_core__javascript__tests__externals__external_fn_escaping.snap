@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 81
+expression: "pub external fn then(a) -> b = \"./ffi.js\" \"then\""
+---
+import { then as then$ } from "./ffi.js";
+
+export { then$ };
+
