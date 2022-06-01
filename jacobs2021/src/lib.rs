@@ -92,30 +92,16 @@ pub struct Variable {
     type_id: TypeId,
 }
 
-/// A pattern match guard to evaluate before executing a right-hand side.
-#[derive(Clone, Eq, PartialEq, Debug)]
-struct Guard {
-    /// The "expression" to test.
-    expression: usize,
-
-    /// The rows to compile as the fallback case.
-    ///
-    /// When generating the initial rows and columns from a user provided match,
-    /// this list of rows is empty. When the list of rows is compiler, we run a
-    /// one-time pass over the rows to populate these fallback rows.
-    rows: Vec<Row>,
-}
-
 /// A single case (or row) in a match expression/table.
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Row {
     columns: Vec<Column>,
-    guard: Option<Guard>,
+    guard: Option<usize>,
     body: Body,
 }
 
 impl Row {
-    fn new(columns: Vec<Column>, guard: Option<Guard>, body: Body) -> Self {
+    fn new(columns: Vec<Column>, guard: Option<usize>, body: Body) -> Self {
         Self { columns, guard, body }
     }
 
@@ -383,9 +369,7 @@ impl Compiler {
         }
     }
 
-    pub fn compile(mut self, mut rows: Vec<Row>) -> Match {
-        self.populate_guard_rows(&mut rows);
-
+    pub fn compile(mut self, rows: Vec<Row>) -> Match {
         Match {
             tree: self.compile_rows(rows),
             diagnostics: self.diagnostics,
@@ -415,9 +399,9 @@ impl Compiler {
 
             return if let Some(guard) = row.guard {
                 Decision::Guard(
-                    guard.expression,
+                    guard,
                     row.body,
-                    Box::new(self.compile_rows(guard.rows)),
+                    Box::new(self.compile_rows(rows)),
                 )
             } else {
                 Decision::Success(row.body)
@@ -428,40 +412,8 @@ impl Compiler {
 
         match self.variable_type(branch_var).clone() {
             Type::Int => {
-                let mut cases = Vec::new();
-                let mut fallback_rows = Vec::new();
-                let mut tested = HashSet::new();
-
-                for mut row in rows {
-                    if let Some(col) = row.remove_column(&branch_var) {
-                        for (pat, row) in col.pattern.flatten_or(row) {
-                            let (key, cons) = match pat {
-                                Pattern::Int(val) => {
-                                    ((val, val), Constructor::Int(val))
-                                }
-                                Pattern::Range(start, stop) => (
-                                    (start, stop),
-                                    Constructor::Range(start, stop),
-                                ),
-                                _ => unreachable!(),
-                            };
-
-                            if tested.contains(&key) {
-                                continue;
-                            }
-
-                            tested.insert(key);
-
-                            let sub_tree = self.compile_rows(vec![row]);
-
-                            cases.push(Case::new(cons, Vec::new(), sub_tree));
-                        }
-                    } else {
-                        fallback_rows.push(row);
-                    }
-                }
-
-                let fallback = Box::new(self.compile_rows(fallback_rows));
+                let (cases, fallback) =
+                    self.compile_int_cases(rows, branch_var);
 
                 Decision::Switch(branch_var, cases, Some(fallback))
             }
@@ -510,6 +462,58 @@ impl Compiler {
                 )
             }
         }
+    }
+
+    /// Compiles the cases and fallback cases for integer and range patterns.
+    ///
+    /// Integers have an infinite number of constructors, so we specialise the
+    /// compilation of integer and range patterns.
+    fn compile_int_cases(
+        &mut self,
+        rows: Vec<Row>,
+        branch_var: Variable,
+    ) -> (Vec<Case>, Box<Decision>) {
+        let mut raw_cases = Vec::new();
+        let mut fallback_rows = Vec::new();
+        let mut tested = HashSet::new();
+
+        for mut row in rows {
+            if let Some(col) = row.remove_column(&branch_var) {
+                for (pat, row) in col.pattern.flatten_or(row) {
+                    let (key, cons) = match pat {
+                        Pattern::Int(val) => {
+                            ((val, val), Constructor::Int(val))
+                        }
+                        Pattern::Range(start, stop) => {
+                            ((start, stop), Constructor::Range(start, stop))
+                        }
+                        _ => unreachable!(),
+                    };
+
+                    if tested.contains(&key) {
+                        continue;
+                    }
+
+                    tested.insert(key);
+                    raw_cases.push((cons, Vec::new(), vec![row]));
+                }
+            } else {
+                fallback_rows.push(row);
+            }
+        }
+
+        let cases = raw_cases
+            .into_iter()
+            .map(|(cons, vars, mut rows)| {
+                if rows[0].guard.is_some() {
+                    rows.extend(fallback_rows.iter().cloned());
+                }
+
+                Case::new(cons, vars, self.compile_rows(rows))
+            })
+            .collect();
+
+        (cases, Box::new(self.compile_rows(fallback_rows)))
     }
 
     /// Compiles the cases and sub cases for the constructor located at the
@@ -571,18 +575,6 @@ impl Compiler {
                 Case::new(cons, vars, self.compile_rows(rows))
             })
             .collect()
-    }
-
-    /// Assigns the rows to compile for the fallback cases of any guards.
-    fn populate_guard_rows(&self, rows: &mut Vec<Row>) {
-        for index in 0..rows.len() {
-            if rows[index].guard.is_none() {
-                continue;
-            }
-
-            rows[index].guard.as_mut().unwrap().rows =
-                rows[index + 1..].to_vec();
-        }
     }
 
     /// Moves variable-only patterns/tests into the right-hand side/body of a
@@ -1546,7 +1538,7 @@ mod tests {
 
         let result = compiler.compile(vec![Row::new(
             vec![Column::new(input, int(4))],
-            Some(Guard { expression: 42, rows: Vec::new() }),
+            Some(42),
             rhs(1),
         )]);
 
@@ -1581,7 +1573,7 @@ mod tests {
         let result = compiler.compile(vec![
             Row::new(
                 vec![Column::new(input, variant(option_type, 0, vec![int(4)]))],
-                Some(Guard { expression: 42, rows: Vec::new() }),
+                Some(42),
                 rhs(1),
             ),
             Row::new(
@@ -1593,27 +1585,6 @@ mod tests {
                 rhs(2),
             ),
         ]);
-
-        let guard = Decision::Guard(
-            42,
-            rhs(1),
-            Box::new(Decision::Switch(
-                input,
-                vec![
-                    Case::new(
-                        Constructor::Variant(option_type, 0),
-                        vec![var(2, int_type)],
-                        success_with_bindings(vec![("a", var(2, int_type))], 2),
-                    ),
-                    Case::new(
-                        Constructor::Variant(option_type, 1),
-                        Vec::new(),
-                        failure(),
-                    ),
-                ],
-                None,
-            )),
-        );
 
         assert_eq!(
             result.tree,
@@ -1628,7 +1599,14 @@ mod tests {
                             vec![Case::new(
                                 Constructor::Int(4),
                                 Vec::new(),
-                                guard
+                                Decision::Guard(
+                                    42,
+                                    rhs(1),
+                                    Box::new(success_with_bindings(
+                                        vec![("a", var(1, int_type))],
+                                        2
+                                    )),
+                                )
                             )],
                             Some(Box::new(success_with_bindings(
                                 vec![("a", var(1, int_type))],
@@ -1646,10 +1624,7 @@ mod tests {
             )
         );
 
-        assert_eq!(
-            result.missing_patterns(),
-            vec!["None".to_string(), "Some(_)".to_string()]
-        );
+        assert_eq!(result.missing_patterns(), vec!["None".to_string()]);
     }
 
     #[test]
@@ -1658,11 +1633,7 @@ mod tests {
         let int_type = new_type(&mut compiler, Type::Int);
         let input = compiler.new_variable(int_type);
         let result = compiler.compile(vec![
-            Row::new(
-                vec![Column::new(input, int(4))],
-                Some(Guard { expression: 42, rows: Vec::new() }),
-                rhs(1),
-            ),
+            Row::new(vec![Column::new(input, int(4))], Some(42), rhs(1)),
             Row::new(vec![Column::new(input, bind("a"))], None, rhs(2)),
         ]);
 
@@ -1680,6 +1651,149 @@ mod tests {
                     )
                 )],
                 Some(Box::new(success_with_bindings(vec![("a", input)], 2)))
+            )
+        );
+    }
+
+    #[test]
+    fn test_exhaustive_guard_with_bool() {
+        let mut compiler = Compiler::new();
+        let bool_type = new_type(&mut compiler, Type::Boolean);
+        let input = compiler.new_variable(bool_type);
+        let result = compiler.compile(vec![
+            Row::new(vec![Column::new(input, tt())], Some(42), rhs(1)),
+            Row::new(vec![Column::new(input, bind("a"))], None, rhs(2)),
+        ]);
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![
+                    Case::new(
+                        Constructor::False,
+                        Vec::new(),
+                        success_with_bindings(vec![("a", input)], 2)
+                    ),
+                    Case::new(
+                        Constructor::True,
+                        Vec::new(),
+                        Decision::Guard(
+                            42,
+                            rhs(1),
+                            Box::new(success_with_bindings(
+                                vec![("a", input)],
+                                2
+                            ))
+                        )
+                    )
+                ],
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn test_exhaustive_guard_with_int() {
+        let mut compiler = Compiler::new();
+        let int_type = new_type(&mut compiler, Type::Int);
+        let input = compiler.new_variable(int_type);
+        let result = compiler.compile(vec![
+            Row::new(vec![Column::new(input, int(1))], Some(42), rhs(1)),
+            Row::new(vec![Column::new(input, int(2))], None, rhs(2)),
+            Row::new(vec![Column::new(input, bind("b"))], None, rhs(3)),
+        ]);
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![
+                    Case::new(
+                        Constructor::Int(1),
+                        Vec::new(),
+                        Decision::Guard(
+                            42,
+                            rhs(1),
+                            Box::new(success_with_bindings(
+                                vec![("b", input)],
+                                3
+                            ))
+                        )
+                    ),
+                    Case::new(Constructor::Int(2), Vec::new(), success(2))
+                ],
+                Some(Box::new(success_with_bindings(vec![("b", input)], 3)))
+            )
+        );
+    }
+
+    #[test]
+    fn test_exhaustive_option_with_guard() {
+        let mut compiler = Compiler::new();
+        let int_type = new_type(&mut compiler, Type::Int);
+        let option_type = new_type(
+            &mut compiler,
+            Type::Enum(vec![
+                ("Some".to_string(), vec![int_type]),
+                ("None".to_string(), Vec::new()),
+            ]),
+        );
+        let input = compiler.new_variable(option_type);
+        let result = compiler.compile(vec![
+            Row::new(
+                vec![Column::new(input, variant(option_type, 1, Vec::new()))],
+                None,
+                rhs(1),
+            ),
+            Row::new(
+                vec![Column::new(
+                    input,
+                    variant(option_type, 0, vec![bind("a")]),
+                )],
+                Some(42),
+                rhs(2),
+            ),
+            Row::new(
+                vec![Column::new(
+                    input,
+                    variant(option_type, 0, vec![bind("a")]),
+                )],
+                None,
+                rhs(3),
+            ),
+        ]);
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![
+                    Case::new(
+                        Constructor::Variant(option_type, 0),
+                        vec![var(1, int_type)],
+                        Decision::Guard(
+                            42,
+                            Body {
+                                bindings: vec![(
+                                    "a".to_string(),
+                                    var(1, int_type)
+                                )],
+                                value: 2
+                            },
+                            Box::new(success_with_bindings(
+                                vec![("a", var(1, int_type))],
+                                3
+                            ))
+                        )
+                    ),
+                    Case::new(
+                        Constructor::Variant(option_type, 1),
+                        Vec::new(),
+                        success(1)
+                    ),
+                ],
+                None
             )
         );
     }

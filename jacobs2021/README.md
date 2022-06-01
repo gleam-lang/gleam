@@ -205,14 +205,7 @@ the match exhaustive.
 ## Guards
 
 Guards are supported as follows: each `Row` has a guard field, storing a
-`Option<Guard>`. A `Guard` has an expression to test/evaluate, and a list of
-rows to compile into a fallback case. When compiling a user-provided list of
-rows, we run a one-time pass over these rows to populate the fallback rows for
-any guards. This process is simple: for every row that has a guard, gather (and
-clone) all the rows that occur after it. This is implemented in the method
-`populate_guard_rows`.
-
-This setup does mean the use of guards in large match expression can result in
-large decision trees, but I'm not aware of a way around this. An easy way to
-manage this cost is to make the right-hand side values a small value, such as a
-basic block ID, instead of an entire AST node.
+`Option<usize>`, where the `usize` is just a dummy value for the guard; normally
+this would be (for example) an AST node to evaluate/lower. When we are about to
+produce a Success node for a row, we check if it defines a guard. If so, all
+remaining rows are compiled into the guard's fallback tree.
