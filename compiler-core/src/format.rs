@@ -705,7 +705,13 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::FieldAccess {
                 label, container, ..
-            } => self.expr(container).append(".").append(label.as_str()),
+            } => if let UntypedExpr::TupleIndex { .. } = container.as_ref() {
+                self.expr(container).surround("{", "}")
+            } else {
+                self.expr(container)
+            }
+            .append(".")
+            .append(label.as_str()),
 
             UntypedExpr::Tuple { elems, .. } => "#"
                 .to_doc()

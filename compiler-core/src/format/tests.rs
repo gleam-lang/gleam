@@ -3445,3 +3445,14 @@ fn list_at_end_of_long_constant_line() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1649
+#[test]
+fn dont_remove_braces_when_accessing_tuple() {
+    assert_format!(
+        r#"fn main() {
+  {typed.0}.type_
+}
+"#
+    );
+}
