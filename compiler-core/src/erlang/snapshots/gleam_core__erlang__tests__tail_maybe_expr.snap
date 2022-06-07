@@ -1,6 +1,0 @@
----
-source: compiler-core/src/erlang/tests.rs
-expression: "fn a() {\n  let a = [99]\n  let fake_tap = fn(x) { x }\n  let b = [\n    1,\n    2,\n    ..a\n    |> fake_tap\n  ]\n  b\n}\n"
----
--module(the_app).
-
