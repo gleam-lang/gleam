@@ -435,7 +435,7 @@ fn negation_block() {
 #[test]
 fn tail_maybe_expr_block() {
     assert_erl!(
-"pub fn a() {
+        "pub fn a() {
   let a = [99]
   let fake_tap = fn(x) { x }
   let b = [
@@ -445,7 +445,6 @@ fn tail_maybe_expr_block() {
     |> fake_tap
   ]
   b
-}
-"
+}"
     );
 }
