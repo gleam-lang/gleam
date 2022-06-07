@@ -430,3 +430,22 @@ fn negation_block() {
 }"
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1655
+#[test]
+fn tail_maybe_expr_block() {
+    assert_erl!(
+"pub fn a() {
+  let a = [99]
+  let fake_tap = fn(x) { x }
+  let b = [
+    1,
+    2,
+    ..a
+    |> fake_tap
+  ]
+  b
+}
+"
+    );
+}
