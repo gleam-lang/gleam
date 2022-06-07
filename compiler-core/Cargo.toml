@@ -7,7 +7,7 @@ license-file = "LICENCE"
 
 [dependencies]
 # Immutable data structures
-im = "15.0.0"
+im = "15.1.0"
 # Error message and warning formatting
 codespan-reporting = "0.11.1"
 termcolor = "1.1.2"
