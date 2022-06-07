@@ -909,7 +909,7 @@ fn expr_list<'a>(
         elements.iter().map(|e| maybe_block_expr(e, env)),
         break_(",", ", "),
     ));
-    list(elements, tail.as_ref().map(|e| expr(e, env)))
+    list(elements, tail.as_ref().map(|e| maybe_block_expr(e, env)))
 }
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
