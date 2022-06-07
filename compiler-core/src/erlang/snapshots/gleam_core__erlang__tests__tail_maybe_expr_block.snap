@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-expression: "pub fn a() {\n  let a = [99]\n  let fake_tap = fn(x) { x }\n  let b = [\n    1,\n    2,\n    ..a\n    |> fake_tap\n  ]\n  b\n}\n"
+expression: "pub fn a() {\n  let fake_tap = fn(x) { x }\n  let b = [99]\n  [\n    1,\n    2,\n    ..b\n    |> fake_tap\n  ]\n}\n"
 ---
 -module(the_app).
 -compile(no_auto_import).
@@ -9,13 +9,12 @@ expression: "pub fn a() {\n  let a = [99]\n  let fake_tap = fn(x) { x }\n  let b
 
 -spec a() -> list(integer()).
 a() ->
-    A = [99],
     Fake_tap = fun(X) -> X end,
-    B = [1,
-         2 |
-         begin
-             _pipe = A,
-             Fake_tap(_pipe)
-         end],
-    B.
+    B = [99],
+    [1,
+     2 |
+     begin
+         _pipe = B,
+         Fake_tap(_pipe)
+     end].
 
