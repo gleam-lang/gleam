@@ -383,7 +383,6 @@ impl<'a> Generator<'a> {
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if public { "export const " } else { "const " };
-        self.register_in_scope(name);
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
