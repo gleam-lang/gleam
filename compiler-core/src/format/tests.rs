@@ -3451,7 +3451,7 @@ fn list_at_end_of_long_constant_line() {
 fn dont_remove_braces_when_accessing_tuple() {
     assert_format!(
         r#"fn main() {
-  {typed.0}.type_
+  { typed.0 }.type_
 }
 "#
     );
