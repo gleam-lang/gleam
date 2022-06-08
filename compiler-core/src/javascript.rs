@@ -38,7 +38,15 @@ impl<'a> Generator<'a> {
     }
 
     pub fn compile(&mut self) -> Output<'a> {
+        // Determine what JavaScript imports we need to generate
         let mut imports = self.collect_imports();
+
+        // Determine what names are defined in the module scope so we know to
+        // rename any variables that are defined within functions using the same
+        // names.
+        self.register_module_definitions_in_scope();
+
+        // Generate JavaScript code for each statement
         let statements = self.collect_definitions().into_iter().chain(
             self.module
                 .statements
@@ -396,7 +404,6 @@ impl<'a> Generator<'a> {
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
-        self.register_in_scope(name);
         let argument_names = args
             .iter()
             .map(|arg| arg.names.get_variable_name())
@@ -447,6 +454,21 @@ impl<'a> Generator<'a> {
         let body = docvec!["return ", fun, args.clone()];
         let body = docvec![line(), body].nest(INDENT).group();
         docvec![head, name, args, " {", body, line(), "}"]
+    }
+
+    fn register_module_definitions_in_scope(&mut self) {
+        for statement in self.module.statements.iter() {
+            match statement {
+                Statement::ModuleConstant { name, .. } | Statement::Fn { name, .. } => {
+                    self.register_in_scope(name)
+                }
+                Statement::TypeAlias { .. }
+                | Statement::CustomType { .. }
+                | Statement::ExternalFn { .. }
+                | Statement::ExternalType { .. }
+                | Statement::Import { .. } => (),
+            }
+        }
     }
 }
 

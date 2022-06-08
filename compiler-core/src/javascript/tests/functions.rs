@@ -346,3 +346,19 @@ fn variable_rewriting_in_anon_fn_with_matching_parameter_in_case() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1508
+#[test]
+fn pipe_variable_rebinding() {
+    assert_js!(
+        "
+pub fn main() {
+  let version = 1 |> version()
+  version
+}
+
+pub fn version(n) {
+  Ok(1)
+}"
+    )
+}
