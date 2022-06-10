@@ -2,7 +2,7 @@ name: release-nightly
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '45 0 * * *'
 
 env:
   CARGO_TERM_COLOR: always
@@ -15,7 +15,7 @@ jobs:
     outputs:
       should_run: ${{ steps.should_run.outputs.should_run }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: print latest_commit
         run: echo ${{ github.sha }}
 
@@ -66,7 +66,7 @@ jobs:
             target: x86_64-pc-windows-msvc
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Update versions
         shell: bash
@@ -139,19 +139,22 @@ jobs:
           fi
 
       - name: Upload release archive
-        uses: softprops/action-gh-release@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: true
-          fail_on_unmatched_files: true
-          name: "Nightly"
-          tag_name: "nightly"
-          body: nightly release for ${{ env.DAY }}
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
+        shell: bash
+        run: |
+          for i in $(seq 5); do
+            hub release edit nightly \
+              --draft=false \
+              --prerelease \
+              --message=Nightly \
+              --message="nightly release for ${{ env.DAY }}" \
+              --attach="${{ env.ASSET }}" \
+              --attach="${{ env.ASSET }}.sha256" \
+              --attach="${{ env.ASSET }}.sha512" \
+            && break
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUB_VERBOSE: 1
 
   build-nightly-musl:
     runs-on: ubuntu-latest
@@ -159,7 +162,14 @@ jobs:
     needs: [ build-nightly-clean ]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+
+      - name: Install hub cli tool
+        shell: bash
+        run: |
+          v="2.14.2"
+          curl -sSL "https://github.com/github/hub/releases/download/v${v}/hub-linux-amd64-${v}.tgz" \
+          | tar -xvz -C / --strip-components=1 --wildcards '*/bin/hub'
 
       - name: Update versions
         shell: bash
@@ -212,16 +222,20 @@ jobs:
           ./gleam --version
 
       - name: Upload release archive
-        uses: softprops/action-gh-release@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: true
-          fail_on_unmatched_files: true
-          name: "Nightly"
-          tag_name: "nightly"
-          body: nightly release for ${{ env.DAY }}
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
+        shell: bash
+        run: |
+          git config --global --add safe.directory /__w/gleam/gleam
+          for i in $(seq 5); do
+            hub release edit nightly \
+              --draft=false \
+              --prerelease \
+              --message=Nightly \
+              --message="nightly release for ${{ env.DAY }}" \
+              --attach="${{ env.ASSET }}" \
+              --attach="${{ env.ASSET }}.sha256" \
+              --attach="${{ env.ASSET }}.sha512" \
+            && break
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUB_VERBOSE: 1
