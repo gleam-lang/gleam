@@ -49,6 +49,8 @@
 - Fixed a bug where the formatter could render a syntax error with lists on long
   unbreakable lines.
 - Fixed a bug where JavaScript variable names could be incorrectly reused.
+- Fixed a bug where `gleam format` would remove the braces around a tuple index
+  access when accessing a field of the returned element.
 - The `gleam compile-package` command no longer generates a `.app` file. This
   should now be done by the build tool that calls this command as it is
   responsible for handling dependencies.
