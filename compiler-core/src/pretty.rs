@@ -166,7 +166,8 @@ fn fits(mut limit: isize, mut docs: im::Vector<&Document<'_>>) -> bool {
 
             Document::Nest(_, doc) => docs.push_front(doc),
 
-            // TODO: Remove
+            // TODO: Remove. The Erlang output formatting will need to be
+            // improved when this is removed to compensate.
             Document::NestCurrent(doc) => docs.push_front(doc),
 
             Document::Group(doc) => docs.push_front(doc),
