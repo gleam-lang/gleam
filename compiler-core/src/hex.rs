@@ -9,9 +9,8 @@ use crate::{
     build::Mode,
     config::PackageConfig,
     io::{FileSystemIO, HttpClient, TarUnpacker},
-    paths,
-    project::{Manifest, ManifestPackage, ManifestPackageSource},
-    Error, Result,
+    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
+    paths, Error, Result,
 };
 
 pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----

@@ -1,6 +1,6 @@
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
-use crate::project::Manifest;
+use crate::manifest::Manifest;
 use crate::{Error, Result};
 use hexpm::version::{Range, Version};
 use http::Uri;
@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 #[cfg(test)]
-use crate::project::ManifestPackage;
+use crate::manifest::ManifestPackage;
 
 use crate::build::{Mode, Target};
 
@@ -383,7 +383,7 @@ fn manifest_package(
     version: &'static str,
     requirements: &'static [&'static str],
 ) -> ManifestPackage {
-    use crate::project::Base16Checksum;
+    use crate::manifest::Base16Checksum;
 
     ManifestPackage {
         name: name.into(),
@@ -391,7 +391,7 @@ fn manifest_package(
         build_tools: vec![],
         otp_app: None,
         requirements: requirements.iter().map(|e| (*e).to_string()).collect(),
-        source: crate::project::ManifestPackageSource::Hex {
+        source: crate::manifest::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },
     }

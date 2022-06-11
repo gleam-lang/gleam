@@ -215,8 +215,8 @@ jobs:
         run: |
           echo $PWD/ >> $GITHUB_PATH
           chmod +x ./gleam
-          sed -i 's/cargo run --quiet --/gleam/' */rebar.config */Makefile
-          sed -i 's/cargo run --/gleam/' */rebar.config */Makefile
+          sed -i 's/cargo run --quiet --/gleam/' */Makefile
+          sed -i 's/cargo run --/gleam/' */Makefile
         working-directory: ./test
 
       - name: test/project_erlang
@@ -249,10 +249,6 @@ jobs:
       - name: test/language JavaScript
         run: make clean javascript
         working-directory: ./test/language
-
-      - name: test/rebar_project
-        run: rebar3 eunit
-        working-directory: ./test/rebar_project
 
       - name: test/compile_package0
         run: make

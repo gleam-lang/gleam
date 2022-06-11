@@ -195,13 +195,6 @@ pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Er
     Ok(())
 }
 
-pub fn write_outputs(outputs: &[OutputFile]) -> Result<(), Error> {
-    for file in outputs {
-        write_output(file)?;
-    }
-    Ok(())
-}
-
 pub fn write_output_under(file: &OutputFile, base: &Path) -> Result<(), Error> {
     let OutputFile { path, text } = file;
     write(&base.join(path), text)
@@ -333,16 +326,6 @@ fn is_gleam_path_test() {
         Path::new("/some-prefix/one_2/a123.gleam"),
         Path::new("/some-prefix/")
     ));
-}
-
-pub fn gleam_files(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
-    walkdir::WalkDir::new(dir)
-        .follow_links(true)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.into_path())
-        .filter(move |d| is_gleam_path(d, dir))
 }
 
 pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {

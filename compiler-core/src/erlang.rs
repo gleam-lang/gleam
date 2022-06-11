@@ -9,10 +9,9 @@ mod tests;
 use crate::{
     ast::*,
     docvec,
-    io::{OutputFile, Utf8Writer},
+    io::Utf8Writer,
     line_numbers::LineNumbers,
     pretty::*,
-    project::Analysed,
     type_::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
         ValueConstructorVariant,
@@ -27,44 +26,6 @@ use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
-
-pub fn generate_erlang(analysed: &[Analysed]) -> Vec<OutputFile> {
-    let mut files = Vec::with_capacity(analysed.len() * 2);
-
-    for Analysed {
-        name,
-        origin,
-        source_base_path,
-        ast,
-        src,
-        ..
-    } in analysed
-    {
-        let gen_dir = source_base_path
-            .parent()
-            .expect("generate_erlang parent")
-            .join(crate::project::OUTPUT_DIR_NAME)
-            .join(origin.dir_name());
-        let erl_module_name = name.join("@");
-
-        for (name, text) in records(ast) {
-            files.push(OutputFile {
-                path: gen_dir.join(format!("{}_{}.hrl", erl_module_name, name)),
-                text,
-            })
-        }
-
-        let mut text = String::new();
-        let line_numbers = LineNumbers::new(src);
-        module(ast, &line_numbers, &mut text).expect("Buffer writing failed");
-        files.push(OutputFile {
-            path: gen_dir.join(format!("{}.erl", erl_module_name)),
-            text,
-        });
-    }
-
-    files
-}
 
 fn module_name_to_erlang(module: &str) -> Document<'_> {
     Document::String(module.replace('/', "@"))

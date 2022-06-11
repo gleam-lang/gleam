@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-use std::ffi::OsStr;
-use std::path::Path;
+use std::{collections::HashMap, ffi::OsStr, path::Path};
 
-use gleam_core::build::{Mode, Options, Package, ProjectCompiler, Target};
-use gleam_core::config::PackageConfig;
-use gleam_core::io::{FileSystemReader, FileSystemWriter};
-use gleam_core::project::{Base16Checksum, ManifestPackage, ManifestPackageSource};
-use gleam_core::Error;
+use gleam_core::{
+    build::{Mode, Options, Package, ProjectCompiler, Target},
+    config::PackageConfig,
+    io::{FileSystemReader, FileSystemWriter},
+    manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
+    Error,
+};
 
 use hexpm::version::Version;
 use serde::{Deserialize, Serialize};

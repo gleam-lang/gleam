@@ -11,9 +11,8 @@ use gleam_core::{
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, Utf8Writer, WrappedReader},
-    paths,
-    project::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
-    Error, Result,
+    manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
+    paths, Error, Result,
 };
 use hexpm::version::Version;
 use itertools::Itertools;

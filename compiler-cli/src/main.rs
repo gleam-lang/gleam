@@ -66,7 +66,6 @@ mod http;
 mod lsp;
 mod new;
 mod panic;
-mod project;
 mod publish;
 mod run;
 mod shell;
@@ -80,13 +79,11 @@ pub use gleam_core::{
 
 use gleam_core::{
     build::{Mode, Options, Target},
-    diagnostic::{Diagnostic, Level},
     hex::RetirementReason,
-    project::Analysed,
 };
 use hex::ApiKeyCommand as _;
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
 use strum::VariantNames;
@@ -308,8 +305,8 @@ fn main() {
     let result = match Command::parse() {
         Command::Build {
             target,
-            warnings_as_errors,
-        } => command_build(&stderr, target, warnings_as_errors),
+            warnings_as_errors: _,
+        } => command_build(target),
 
         Command::Check => command_check(),
 
@@ -379,13 +376,6 @@ fn main() {
     }
 }
 
-const REBAR_DEPRECATION_NOTICE: &str =
-    "The built-in rebar3 support is deprecated and will be removed in a
-future version of Gleam.
-
-Please switch to the new Gleam build tool or update your project to
-use the new `gleam compile-package` API with your existing build tool.";
-
 fn command_check() -> Result<(), Error> {
     let _ = build::main(Options {
         perform_codegen: false,
@@ -395,57 +385,12 @@ fn command_check() -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(
-    stderr: &termcolor::BufferWriter,
-    target: Option<Target>,
-    warnings_as_errors: bool,
-) -> Result<(), Error> {
-    let mut buffer = stderr.buffer();
-    let root = Path::new("./");
-
-    // Use new build tool if not in a rebar project
-    if !root.join("rebar.config").exists() {
-        return build::main(Options {
-            perform_codegen: true,
-            mode: Mode::Dev,
-            target,
-        })
-        .map(|_| ());
-    }
-
-    Diagnostic {
-        title: "Deprecated rebar3 build command".into(),
-        text: REBAR_DEPRECATION_NOTICE.into(),
-        hint: None,
-        level: Level::Warning,
-        location: None,
-    }
-    .write(&mut buffer);
-
-    // Read and type check project
-    let (_config, analysed) = project::read_and_analyse(&root)?;
-
-    // Generate Erlang code
-    let output_files = gleam_core::erlang::generate_erlang(&analysed);
-
-    // Print warnings
-    let warning_count = print_warnings(&analysed);
-
-    // Exit if warnings_as_errors and warnings
-    if warnings_as_errors && warning_count > 0 {
-        return Err(Error::ForbiddenWarnings {
-            count: warning_count,
-        });
-    }
-
-    // Reset output directory
-    fs::delete_dir(&root.join(project::OUTPUT_DIR_NAME))?;
-
-    // Delete the gen directory before generating the newly compiled files
-    fs::write_outputs(&output_files)?;
-
-    println!("Done!");
-
+fn command_build(target: Option<Target>) -> Result<(), Error> {
+    let _ = build::main(Options {
+        perform_codegen: true,
+        mode: Mode::Dev,
+        target,
+    })?;
     Ok(())
 }
 
@@ -468,14 +413,6 @@ fn initialise_logger() {
         .with_ansi(enable_colours)
         .without_time()
         .init();
-}
-
-fn print_warnings(analysed: &[Analysed]) -> usize {
-    analysed
-        .iter()
-        .flat_map(|a| &a.warnings)
-        .inspect(|w| print_warning(w))
-        .count()
 }
 
 fn print_warning(w: &Warning) {
