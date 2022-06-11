@@ -1038,12 +1038,13 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                     tuple(patterns.iter().map(|p| pattern(p, env)))
                 };
 
+                let guard = optional_clause_guard(guard.as_ref(), env);
                 if then_doc == None {
                     then_doc = Some(expr(then, env));
                 }
 
                 patterns_doc.append(
-                    optional_clause_guard(guard.as_ref(), env)
+                    guard
                         .append(" ->")
                         .append(line().append(then_doc.clone()).nest(INDENT).group()),
                 )

@@ -448,3 +448,19 @@ fn tail_maybe_expr_block() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1587
+#[test]
+fn guard_variable_rewriting() {
+    assert_erl!(
+        "pub fn main() {
+  case 1.0 {
+    a if a <. 0.0 -> {
+      let a = a
+      a
+    }
+  }
+}
+"
+    )
+}
