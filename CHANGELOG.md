@@ -42,6 +42,7 @@
   application live.
 - `gleam format` will now preserve (up to one) empty lines between consecutive
   comments, as well as between comments and any following expression
+- The deprecated rebar3 integration has been removed.
 - Fixed a bug where `gleam format` would output an unwanted newline at the top
   of documents that only contain simple `//` comments.
 - No longer add `dev-dependencies` to generated `.app` Erlang files unless
