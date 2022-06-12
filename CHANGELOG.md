@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.22.0-rc1 - 2022-06-12
 
 - Fixed a bug where doc comments would dissociate from their statements when
   generating html documentation.
@@ -20,12 +20,10 @@
   but the project would run on target Erlang instead.
 - The compiler is now able to generate TypeScript declaration files on target
   JavaScript (#1563). To enable this edit `gleam.toml` like so:
-
   ```toml
   [javascript]
   typescript_declarations = true
   ```
-
 - Fixed a bug where argument labels were allowed for anonymous functions.
 - Fixed a bug where JavaScript code could be invalid if a variable is defined
   inside an anonymous function with a parameter with the same name as the
