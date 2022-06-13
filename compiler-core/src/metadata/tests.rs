@@ -566,6 +566,17 @@ fn constant_record() {
 }
 
 #[test]
+fn constant_var() {
+    let module = constant_module(Constant::Var {
+        location: Default::default(),
+        name: "otherVar".to_string(),
+        typ: type_::int(),
+    });
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn constant_bit_string() {
     let module = constant_module(Constant::BitString {
         location: Default::default(),

@@ -3142,6 +3142,19 @@ fn tuple_constant() {
 }
 
 #[test]
+fn var_constant() {
+    assert_format!(
+        r#"const x = 1
+
+        const xAlias = x
+
+        fn int_identity(i: Int) -> { i }
+
+        const intIdentityAlias: fn(Int) -> Int = int_identity"#
+    );
+}
+
+#[test]
 fn let_as_expression() {
     assert_format!(
         "pub fn main() {

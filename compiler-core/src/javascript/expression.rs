@@ -1124,6 +1124,8 @@ pub(crate) fn constant_expression<'a>(
             feature: "Bit string syntax".to_string(),
             location: *location,
         }),
+        // TODO: Emit javascript for Constant::Var variant.
+        Constant::Var { .. } => unimplemented!(),
     }
 }
 

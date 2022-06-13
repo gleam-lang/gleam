@@ -368,6 +368,11 @@ impl<'comments> Formatter<'comments> {
                 .append(name.as_str())
                 .append(wrap_args(args.iter().map(|a| self.constant_call_arg(a))))
                 .group(),
+
+            Constant::Var {
+                name,
+                ..
+            } => name.to_doc(),
         }
     }
 
