@@ -289,6 +289,9 @@ impl<'a> ModuleEncoder<'a> {
                 builder.reborrow().set_tag(tag);
                 self.build_type(builder.reborrow().init_typ(), typ);
             }
+            
+            // TODO: ask about the expected behavior here.
+            Constant::Var { .. } => unimplemented!(),
         }
     }
 

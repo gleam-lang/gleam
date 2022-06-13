@@ -1658,6 +1658,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     field_map,
                 })
             }
+            // TODO: Implement type inference/checking for Constant::Var
+            Constant::Var { .. } => unimplemented!(),
         }?;
 
         // Check type annotation is accurate.

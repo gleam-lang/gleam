@@ -969,6 +969,9 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 tuple(std::iter::once(tag).chain(args))
             }
         }
+
+        // TODO: Implement erlang output for Constant::Var
+        Constant::Var { .. } => unimplemented!(),
     }
 }
 

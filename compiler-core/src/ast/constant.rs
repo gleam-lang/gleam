@@ -46,6 +46,12 @@ pub enum Constant<T, RecordTag> {
         location: SrcSpan,
         segments: Vec<BitStringSegment<Self, T>>,
     },
+
+    Var {
+        location: SrcSpan,
+        name: String,
+        typ: T,
+    },
 }
 
 impl TypedConstant {
@@ -54,12 +60,13 @@ impl TypedConstant {
             Constant::Int { .. } => crate::type_::int(),
             Constant::Float { .. } => crate::type_::float(),
             Constant::String { .. } => crate::type_::string(),
-            Constant::List { typ, .. } => typ.clone(),
-            Constant::Record { typ, .. } => typ.clone(),
             Constant::BitString { .. } => crate::type_::bit_string(),
             Constant::Tuple { elements, .. } => {
                 crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
+            Constant::List { typ, .. }
+            | Constant::Record { typ, .. }
+            | Constant::Var { typ, .. } => typ.clone(),
         }
     }
 }
@@ -79,7 +86,8 @@ impl<A, B> Constant<A, B> {
             | Constant::Tuple { location, .. }
             | Constant::String { location, .. }
             | Constant::Record { location, .. }
-            | Constant::BitString { location, .. } => *location,
+            | Constant::BitString { location, .. }
+            | Constant::Var { location, .. } => *location,
         }
     }
 
