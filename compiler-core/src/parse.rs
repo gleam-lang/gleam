@@ -1752,38 +1752,34 @@ where
             }
 
             // Function
-            Some((start, Token::Fn, end)) => {
+            Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
-                if for_const {
-                    parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
+                let _ = self.expect_one(&Token::LeftParen)?;
+                let args = Parser::series_of(
+                    self,
+                    &|x| Parser::parse_type(x, for_const),
+                    Some(&Token::Comma),
+                )?;
+                let _ = self.expect_one(&Token::RightParen)?;
+                let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
+                let retrn = self.parse_type(for_const)?;
+                if let Some(retrn) = retrn {
+                    Ok(Some(TypeAst::Fn {
+                        location: SrcSpan {
+                            start,
+                            end: retrn.location().end,
+                        },
+                        return_: Box::new(retrn),
+                        arguments: args,
+                    }))
                 } else {
-                    let _ = self.expect_one(&Token::LeftParen)?;
-                    let args = Parser::series_of(
-                        self,
-                        &|x| Parser::parse_type(x, for_const),
-                        Some(&Token::Comma),
-                    )?;
-                    let _ = self.expect_one(&Token::RightParen)?;
-                    let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
-                    let retrn = self.parse_type(for_const)?;
-                    if let Some(retrn) = retrn {
-                        Ok(Some(TypeAst::Fn {
-                            location: SrcSpan {
-                                start,
-                                end: retrn.location().end,
-                            },
-                            return_: Box::new(retrn),
-                            arguments: args,
-                        }))
-                    } else {
-                        parse_error(
-                            ParseErrorType::ExpectedType,
-                            SrcSpan {
-                                start: arr_s,
-                                end: arr_e,
-                            },
-                        )
-                    }
+                    parse_error(
+                        ParseErrorType::ExpectedType,
+                        SrcSpan {
+                            start: arr_s,
+                            end: arr_e,
+                        },
+                    )
                 }
             }
 
