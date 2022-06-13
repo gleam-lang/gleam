@@ -49,6 +49,7 @@ pub enum Constant<T, RecordTag> {
 
     Var {
         location: SrcSpan,
+        module: Option<String>,
         name: String,
         typ: T,
     },

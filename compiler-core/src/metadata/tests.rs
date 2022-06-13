@@ -569,6 +569,7 @@ fn constant_record() {
 fn constant_var() {
     let module = constant_module(Constant::Var {
         location: Default::default(),
+        module: None,
         name: "otherVar".to_string(),
         typ: type_::int(),
     });
