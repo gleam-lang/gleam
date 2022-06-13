@@ -2087,10 +2087,35 @@ where
             Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
                 if self.expect_one(&Token::Dot).is_ok() {
-                    let (_, upname, end) = self.expect_upname()?;
-                    self.parse_const_record_finish(start, Some(name), upname, end)
+                    match self.tok0.take() {
+                        Some((_, Token::UpName { name: upname }, end)) => {
+                            let _ = self.next_tok();
+                            self.parse_const_record_finish(start, Some(name), upname, end)
+                        }
+                        Some((_, Token::Name { name: end_name }, end)) => Ok(Some(Constant::Var {
+                            location: SrcSpan { start, end },
+                            module: Some(name),
+                            name: end_name,
+                            typ: (),
+                        })),
+                        Some((start, _, end)) => parse_error(
+                            ParseErrorType::UnexpectedToken {
+                                expected: vec!["UpName".to_string(), "Name".to_string()],
+                                hint: None,
+                            },
+                            SrcSpan { start, end },
+                        ),
+                        None => {
+                            parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
+                        }
+                    }
                 } else {
-                    parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
+                    Ok(Some(Constant::Var {
+                        location: SrcSpan { start, end },
+                        module: None,
+                        name,
+                        typ: (),
+                    }))
                 }
             }
 
