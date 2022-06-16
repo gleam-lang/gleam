@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The `gleam publish` confirmation prompt now accepts both "Y" and "y"
+
 ## v0.22.0 - 2022-06-12
 
 - New projects are created with `gleam_stdlib` v0.22.
