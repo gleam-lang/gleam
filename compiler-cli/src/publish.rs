@@ -74,7 +74,11 @@ impl PublishCommand {
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
 
-        if !i_am_sure && cli::ask("\nDo you wish to publish this package? [y/n]")? != "y" {
+        let should_publish = i_am_sure || {
+            let answer = cli::ask("\nDo you wish to publish this package? [y/n]")?;
+            answer == "y" || answer == "Y"
+        };
+        if !should_publish {
             println!("Not publishing.");
             std::process::exit(0);
         }
