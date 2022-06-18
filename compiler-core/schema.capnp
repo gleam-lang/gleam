@@ -136,6 +136,13 @@ struct Constant {
     }
 
     bitString @9 :List(BitStringSegment);
+
+    var :group {
+      module @10 :Text;
+      name @11 :Text;
+      typ @12 :Type;
+      constructor @13 :ValueConstructor;
+    }
   }
 }
 
