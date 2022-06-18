@@ -166,6 +166,7 @@ impl ModuleDecoder {
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
             Which::BitString(reader) => self.constant_bit_string(&reader?),
+            Which::Var(reader) => self.constant_var(&reader),
         }
     }
 
@@ -242,6 +243,23 @@ impl ModuleDecoder {
         Ok(Constant::BitString {
             location: Default::default(),
             segments: read_vec!(reader, self, bit_string_segment),
+        })
+    }
+
+    fn constant_var(&mut self, reader: &constant::var::Reader<'_>) -> Result<TypedConstant> {
+        let type_ = self.type_(&reader.get_typ()?)?;
+        let module = match reader.get_module()? {
+            "" => None,
+            module_str => Some(module_str),
+        };
+        let name = reader.get_name()?;
+        let constructor = self.value_constructor(&reader.get_constructor()?)?;
+        Ok(Constant::Var {
+            location: Default::default(),
+            module: module.map(String::from),
+            name: String::from(name),
+            constructor: Some(Arc::from(constructor)),
+            typ: type_,
         })
     }
 

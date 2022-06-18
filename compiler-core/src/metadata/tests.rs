@@ -567,13 +567,62 @@ fn constant_record() {
 
 #[test]
 fn constant_var() {
-    let module = constant_module(Constant::Var {
+    let one_original = Constant::Int {
+        location: Default::default(),
+        value: "1".to_string(),
+    };
+
+    let one = Constant::Var {
         location: Default::default(),
         module: None,
-        name: "otherVar".to_string(),
+        name: "one_original".to_string(),
         typ: type_::int(),
-        constructor: None,
-    });
+        constructor: Some(Arc::from(ValueConstructor {
+            public: true,
+            type_: type_::int(),
+            variant: ValueConstructorVariant::ModuleConstant {
+                literal: one_original.clone(),
+                location: SrcSpan::default(),
+                module: "one/two".into(),
+            },
+        })),
+    };
+
+    let module = Module {
+        package: "some_package".to_string(),
+        origin: Origin::Src,
+        name: vec!["a".to_string()],
+        types: HashMap::new(),
+        types_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [
+            (
+                "one".to_string(),
+                ValueConstructor {
+                    public: true,
+                    type_: type_::int(),
+                    variant: ValueConstructorVariant::ModuleConstant {
+                        literal: one,
+                        location: SrcSpan::default(),
+                        module: "one/two".into(),
+                    },
+                },
+            ),
+            (
+                "one_original".to_string(),
+                ValueConstructor {
+                    public: true,
+                    type_: type_::int(),
+                    variant: ValueConstructorVariant::ModuleConstant {
+                        literal: one_original,
+                        location: SrcSpan::default(),
+                        module: "one/two".into(),
+                    },
+                },
+            ),
+        ]
+        .into(),
+    };
 
     assert_eq!(roundtrip(&module), module);
 }

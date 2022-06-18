@@ -289,9 +289,28 @@ impl<'a> ModuleEncoder<'a> {
                 builder.reborrow().set_tag(tag);
                 self.build_type(builder.reborrow().init_typ(), typ);
             }
-            
-            // TODO: ask about the expected behavior here.
-            Constant::Var { .. } => unimplemented!(),
+
+            Constant::Var {
+                module,
+                name,
+                typ,
+                constructor,
+                ..
+            } => {
+                let mut builder = builder.init_var();
+                match module {
+                    Some(name) => builder.set_module(name),
+                    None => builder.set_module(""),
+                };
+                builder.set_name(name);
+                self.build_type(builder.reborrow().init_typ(), typ);
+                self.build_value_constructor(
+                    builder.reborrow().init_constructor(),
+                    constructor
+                        .as_ref()
+                        .expect("This is guaranteed to hold a value."),
+                );
+            }
         }
     }
 
