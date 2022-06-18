@@ -473,9 +473,10 @@ impl Compiler {
         rows: Vec<Row>,
         branch_var: Variable,
     ) -> (Vec<Case>, Box<Decision>) {
-        let mut raw_cases = Vec::new();
+        let mut raw_cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)> =
+            Vec::new();
         let mut fallback_rows = Vec::new();
-        let mut tested = HashSet::new();
+        let mut tested: HashMap<(i64, i64), usize> = HashMap::new();
 
         for mut row in rows {
             if let Some(col) = row.remove_column(&branch_var) {
@@ -490,11 +491,12 @@ impl Compiler {
                         _ => unreachable!(),
                     };
 
-                    if tested.contains(&key) {
+                    if let Some(index) = tested.get(&key) {
+                        raw_cases[*index].2.push(row);
                         continue;
                     }
 
-                    tested.insert(key);
+                    tested.insert(key, raw_cases.len());
                     raw_cases.push((cons, Vec::new(), vec![row]));
                 }
             } else {
@@ -502,13 +504,13 @@ impl Compiler {
             }
         }
 
+        for (_, _, rows) in &mut raw_cases {
+            rows.append(&mut fallback_rows.clone());
+        }
+
         let cases = raw_cases
             .into_iter()
-            .map(|(cons, vars, mut rows)| {
-                if rows[0].guard.is_some() {
-                    rows.extend(fallback_rows.iter().cloned());
-                }
-
+            .map(|(cons, vars, rows)| {
                 Case::new(cons, vars, self.compile_rows(rows))
             })
             .collect();
@@ -896,6 +898,36 @@ mod tests {
     }
 
     #[test]
+    fn test_compile_redundant_int() {
+        let mut compiler = Compiler::new();
+        let typ = new_type(&mut compiler, Type::Int);
+        let input = compiler.new_variable(typ);
+        let result = compile(
+            compiler,
+            input,
+            vec![
+                (int(1), rhs(1)),
+                (int(1), rhs(2)),
+                (int(2), rhs(3)),
+                (bind("a"), rhs(4)),
+            ],
+        );
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![
+                    Case::new(Constructor::Int(1), Vec::new(), success(1)),
+                    Case::new(Constructor::Int(2), Vec::new(), success(3)),
+                ],
+                Some(Box::new(success_with_bindings(vec![("a", input)], 4)))
+            )
+        );
+        assert_eq!(result.diagnostics.reachable, vec![1, 3, 4]);
+    }
+
+    #[test]
     fn test_compile_variable_pattern() {
         let mut compiler = Compiler::new();
         let typ = new_type(&mut compiler, Type::Boolean);
@@ -1014,7 +1046,7 @@ mod tests {
             compiler,
             input,
             vec![
-                (pair(int_type, int_type, int(4), bind("a")), rhs(1)),
+                (pair(int_type, int_type, int(4), int(5)), rhs(1)),
                 (pair(int_type, int_type, bind("a"), bind("b")), rhs(2)),
             ],
         );
@@ -1027,13 +1059,24 @@ mod tests {
                     Constructor::Pair(int_type, int_type),
                     vec![var(1, int_type), var(2, int_type)],
                     Decision::Switch(
-                        var(1, int_type),
+                        var(2, int_type),
                         vec![Case::new(
-                            Constructor::Int(4),
+                            Constructor::Int(5),
                             Vec::new(),
-                            success_with_bindings(
-                                vec![("a", var(2, int_type))],
-                                1
+                            Decision::Switch(
+                                var(1, int_type),
+                                vec![Case::new(
+                                    Constructor::Int(4),
+                                    Vec::new(),
+                                    success(1)
+                                )],
+                                Some(Box::new(success_with_bindings(
+                                    vec![
+                                        ("a", var(1, int_type)),
+                                        ("b", var(2, int_type))
+                                    ],
+                                    2
+                                )))
                             )
                         )],
                         Some(Box::new(success_with_bindings(
@@ -1730,6 +1773,40 @@ mod tests {
     }
 
     #[test]
+    fn test_exhaustive_guard_with_same_int() {
+        let mut compiler = Compiler::new();
+        let int_type = new_type(&mut compiler, Type::Int);
+        let input = compiler.new_variable(int_type);
+        let result = compiler.compile(vec![
+            Row::new(vec![Column::new(input, int(1))], Some(10), rhs(1)),
+            Row::new(vec![Column::new(input, int(1))], Some(20), rhs(2)),
+            Row::new(vec![Column::new(input, int(1))], None, rhs(3)),
+            Row::new(vec![Column::new(input, bind("b"))], None, rhs(4)),
+        ]);
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![Case::new(
+                    Constructor::Int(1),
+                    Vec::new(),
+                    Decision::Guard(
+                        10,
+                        rhs(1),
+                        Box::new(Decision::Guard(
+                            20,
+                            rhs(2),
+                            Box::new(success(3))
+                        ))
+                    )
+                )],
+                Some(Box::new(success_with_bindings(vec![("b", input)], 4)))
+            )
+        );
+    }
+
+    #[test]
     fn test_exhaustive_option_with_guard() {
         let mut compiler = Compiler::new();
         let int_type = new_type(&mut compiler, Type::Int);
@@ -1794,6 +1871,85 @@ mod tests {
                         success(1)
                     ),
                 ],
+                None
+            )
+        );
+    }
+
+    #[test]
+    fn test_compile_exhaustive_nested_int_with_guard() {
+        let mut compiler = Compiler::new();
+        let int_type = new_type(&mut compiler, Type::Int);
+        let tup_type = new_type(&mut compiler, Type::Pair(int_type, int_type));
+        let input = compiler.new_variable(tup_type);
+        let result = compiler.compile(vec![
+            Row::new(
+                vec![Column::new(
+                    input,
+                    pair(int_type, int_type, int(4), int(5)),
+                )],
+                Some(42),
+                rhs(1),
+            ),
+            Row::new(
+                vec![Column::new(
+                    input,
+                    pair(int_type, int_type, int(4), int(5)),
+                )],
+                None,
+                rhs(2),
+            ),
+            Row::new(
+                vec![Column::new(
+                    input,
+                    pair(int_type, int_type, bind("a"), bind("b")),
+                )],
+                None,
+                rhs(3),
+            ),
+        ]);
+
+        assert_eq!(
+            result.tree,
+            Decision::Switch(
+                input,
+                vec![Case::new(
+                    Constructor::Pair(int_type, int_type),
+                    vec![var(1, int_type), var(2, int_type)],
+                    Decision::Switch(
+                        var(2, int_type),
+                        vec![Case::new(
+                            Constructor::Int(5),
+                            Vec::new(),
+                            Decision::Switch(
+                                var(1, int_type),
+                                vec![Case::new(
+                                    Constructor::Int(4),
+                                    Vec::new(),
+                                    Decision::Guard(
+                                        42,
+                                        rhs(1),
+                                        Box::new(success(2)),
+                                    )
+                                )],
+                                Some(Box::new(success_with_bindings(
+                                    vec![
+                                        ("a", var(1, int_type)),
+                                        ("b", var(2, int_type))
+                                    ],
+                                    3
+                                )))
+                            )
+                        )],
+                        Some(Box::new(success_with_bindings(
+                            vec![
+                                ("a", var(1, int_type)),
+                                ("b", var(2, int_type))
+                            ],
+                            3
+                        )))
+                    )
+                )],
                 None
             )
         );
