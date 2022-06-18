@@ -1297,7 +1297,9 @@ fn module_constants() {
     pub const test_float: Float = 4.2
     pub const test_string = \"hey!\"
     pub const test_list = [1,2,3]
-    pub const test_tuple = #(\"yes!\", 42)",
+    pub const test_tuple = #(\"yes!\", 42)
+    pub const test_var1 = test_int1
+    pub const test_var2: Int = test_int1",
         vec![
             ("test_float", "Float"),
             ("test_int1", "Int"),
@@ -1308,6 +1310,8 @@ fn module_constants() {
             ("test_list", "List(Int)"),
             ("test_string", "String"),
             ("test_tuple", "#(String, Int)"),
+            ("test_var1", "Int"),
+            ("test_var2", "Int")
         ],
     );
 }
@@ -1318,6 +1322,22 @@ fn custom_type_module_constants() {
         "pub type Test { A }
         pub const test = A",
         vec![("A", "Test"), ("test", "Test")],
+    );
+}
+
+#[test]
+fn module_constant_functions() {
+    assert_module_infer!(
+        "pub fn int_identity(i: Int) -> Int { i }
+        pub const int_identity_alias1 = int_identity
+        pub const int_identity_alias2 = int_identity_alias1
+        pub const int_identity_alias3: fn(Int) -> Int = int_identity_alias2",
+        vec![
+            ("int_identity", "fn(Int) -> Int"),
+            ("int_identity_alias1", "fn(Int) -> Int"),
+            ("int_identity_alias2", "fn(Int) -> Int"),
+            ("int_identity_alias3", "fn(Int) -> Int"),
+        ]
     );
 }
 
