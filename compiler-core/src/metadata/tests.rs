@@ -572,6 +572,7 @@ fn constant_var() {
         module: None,
         name: "otherVar".to_string(),
         typ: type_::int(),
+        constructor: None,
     });
 
     assert_eq!(roundtrip(&module), module);
