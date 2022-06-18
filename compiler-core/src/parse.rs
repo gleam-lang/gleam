@@ -2082,7 +2082,7 @@ where
 
             Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
-                if self.expect_one(&Token::Dot).is_ok() {
+                if self.maybe_one(&Token::Dot).is_some() {
                     match self.tok0.take() {
                         Some((_, Token::UpName { name: upname }, end)) => {
                             let _ = self.next_tok();
