@@ -970,8 +970,15 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             }
         }
 
-        // TODO: Implement erlang output for Constant::Var
-        Constant::Var { .. } => unimplemented!(),
+        Constant::Var {
+            name, constructor, ..
+        } => var(
+            name,
+            constructor
+                .as_ref()
+                .expect("This is guaranteed to hold a value."),
+            env,
+        ),
     }
 }
 
