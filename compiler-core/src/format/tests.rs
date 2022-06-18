@@ -3146,11 +3146,14 @@ fn var_constant() {
     assert_format!(
         r#"const x = 1
 
-        const xAlias = x
+const x_alias = x
 
-        fn int_identity(i: Int) -> { i }
+fn f(i: Int) -> Int {
+  i
+}
 
-        const intIdentityAlias: fn(Int) -> Int = int_identity"#
+const f_alias: fn(Int) -> Int = f
+"#
     );
 }
 
