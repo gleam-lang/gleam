@@ -2092,6 +2092,7 @@ where
                             location: SrcSpan { start, end },
                             module: Some(name),
                             name: end_name,
+                            constructor: None,
                             typ: (),
                         })),
                         Some((start, _, end)) => parse_error(
@@ -2110,6 +2111,7 @@ where
                         location: SrcSpan { start, end },
                         module: None,
                         name,
+                        constructor: None,
                         typ: (),
                     }))
                 }
