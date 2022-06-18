@@ -1658,8 +1658,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     field_map,
                 })
             }
-            // TODO: Implement type inference/checking for Constant::Var
-            Constant::Var { .. } => unimplemented!(),
+            Constant::Var {
+                location,
+                module,
+                name,
+                ..
+            } => {
+                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                match constructor.variant {
+                    ValueConstructorVariant::ModuleConstant { .. }
+                    | ValueConstructorVariant::ModuleFn { .. } => Ok(Constant::Var {
+                        location,
+                        module,
+                        name,
+                        typ: Arc::clone(&constructor.type_),
+                        constructor: Some(Arc::from(constructor)),
+                    }),
+                    // constructor.variant cannot be a LocalVariable because module constants can
+                    // only be defined at module scope. It also cannot be a Record because then
+                    // this constant would have been parsed as a Constant::Record. Therefore this
+                    // code is unreachable.
+                    _ => unreachable!(),
+                }
+            }
         }?;
 
         // Check type annotation is accurate.
