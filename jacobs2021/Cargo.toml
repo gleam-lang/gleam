@@ -6,3 +6,6 @@ edition = "2021"
 
 [lib]
 doctest = false
+
+[dev-dependencies]
+similar-asserts = "^1.1"

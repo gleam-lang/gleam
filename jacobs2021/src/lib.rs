@@ -663,6 +663,7 @@ impl Compiler {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use similar_asserts::assert_eq;
 
     fn new_type(compiler: &mut Compiler, typ: Type) -> TypeId {
         let id = compiler.types.len();
