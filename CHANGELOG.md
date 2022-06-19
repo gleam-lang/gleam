@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.22.0 - 2022-06-12
+
+- New projects are created with `gleam_stdlib` v0.22.
+
 ## v0.22.0-rc1 - 2022-06-12
 
 - Fixed a bug where doc comments would dissociate from their statements when
