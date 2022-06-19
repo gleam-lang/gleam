@@ -1,6 +1,6 @@
 [package]
 name = "gleam-wasm"
-version = "0.22.0"
+version = "0.23.0-dev"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
