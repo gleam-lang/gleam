@@ -104,6 +104,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Julien D](https://github.com/silicium14)
  - [Justin Blake](https://github.com/blaix)
  - [Kapp Technology](https://github.com/kapp-technology)
+ - [Kayla Washburn](https://github.com/aslilac)
  - [Kieran Gill](https://github.com/kierangilliam)
  - [Lars Lillo Ulvestad](https://github.com/kodeFant)
  - [Lars Wikman](https://github.com/lawik)
