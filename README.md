@@ -37,6 +37,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Adam Bowen](https://github.com/adamnbowen)
  - [Adam Brodzinski](https://github.com/AdamBrodzinski)
  - [Adi Iyengar](https://github.com/thebugcatcher)
+ - [Alembic](https://github.com/team-alembic)
  - [Alex Manning](https://github.com/rawhat)
  - [Alexander Koutmos](https://github.com/akoutmos)
  - [Ali Farhadi](https://github.com/farhadi)
