@@ -1337,7 +1337,7 @@ fn todo_warning_test() {
     assert_warning!(
         "fn main() { 1 == todo }",
         Warning::Todo {
-            location: SrcSpan { start: 17, end: 31 },
+            location: SrcSpan { start: 17, end: 21 },
             typ: Arc::new(Type::Var {
                 type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
             }),
