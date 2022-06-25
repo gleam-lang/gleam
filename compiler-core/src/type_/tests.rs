@@ -1345,6 +1345,12 @@ fn todo_warning_test() {
             }),
         },
     );
+
+    assert_warning!(
+        "pub fn main() {
+        todo
+      }"
+    );
 }
 
 #[test]
