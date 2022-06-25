@@ -1331,7 +1331,6 @@ fn unknown_label() {
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/1669
 #[test]
 fn todo_warning_test() {
     assert_warning!(
@@ -1344,6 +1343,7 @@ fn todo_warning_test() {
         },
     );
 
+    // https://github.com/gleam-lang/gleam/issues/1669
     assert_warning!(
         "pub fn main() {
         todo
