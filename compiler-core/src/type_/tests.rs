@@ -1331,12 +1331,15 @@ fn unknown_label() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1669
 #[test]
 fn todo_warning_test() {
     assert_warning!(
-        "fn main() { 1 == todo }",
+        "fn main() {
+          1 == todo
+        }",
         Warning::Todo {
-            location: SrcSpan { start: 17, end: 21 },
+            location: SrcSpan { start: 27, end: 31 },
             typ: Arc::new(Type::Var {
                 type_: Arc::new(RefCell::new(TypeVar::Link { type_: int() })),
             }),
