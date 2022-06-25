@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- The `gleam publish` confirmation prompt now accepts both "Y" and "y"
+- The `gleam publish` confirmation prompt now accepts both "Y" and "y".
+- Fixed `todo` to let it return the correct line number while emitted as a warning.
 
 ## v0.22.0 - 2022-06-12
 
