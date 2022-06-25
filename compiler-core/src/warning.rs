@@ -30,8 +30,8 @@ impl Warning {
                         hint: None,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
-                            src: "todo".into(),
                             path: path.to_path_buf(),
+                            src: src.to_string(),
                             label: diagnostic::Label {
                                 text: Some("Todo found".into()),
                                 span: *location,
