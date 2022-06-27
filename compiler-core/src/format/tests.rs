@@ -3456,3 +3456,69 @@ fn dont_remove_braces_when_accessing_tuple() {
 "#
     );
 }
+
+#[test]
+fn do_not_add_needless_braces_in_let_binding() {
+    assert_format!(
+        "fn example() {
+  let is_enabled = False
+  let is_confirmed = False
+  let is_admin = True
+  let has_read_access = is_enabled && is_confirmed || is_admin
+}
+"
+    );
+}
+
+#[test]
+fn do_not_remove_required_braces_in_let_binding() {
+    assert_format!(
+        "fn example() {
+  let is_enabled = False
+  let is_confirmed = False
+  let is_admin = True
+  let has_read_access = is_enabled && { is_confirmed || is_admin }
+}
+"
+    );
+}
+
+#[test]
+fn do_not_add_needless_braces_in_case_guard() {
+    assert_format!(
+        "fn example() {
+  let is_enabled = False
+  let is_confirmed = False
+  let is_admin = True
+
+  case is_enabled, is_confirmed, is_admin {
+    // `{` and `}` will be stripped on save for me, changing the logic
+    is_enabled, is_confirmed, is_admin if is_enabled && is_confirmed || is_admin ->
+      // (enabled andalso confirmed) andor admin - does allow disabled admins
+      Nil
+    _, _, _ -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn do_not_remove_required_braces_case_guard() {
+    assert_format!(
+        "fn example() {
+  let is_enabled = False
+  let is_confirmed = False
+  let is_admin = True
+
+  case is_enabled, is_confirmed, is_admin {
+    // `{` and `}` will be stripped on save for me, changing the logic
+    is_enabled, is_confirmed, is_admin if is_enabled && { is_confirmed || is_admin } ->
+      // enabled andalso (admin andor confirmed) - does not allow disabled admins
+      Nil
+    _, _, _ -> Nil
+  }
+}
+"
+    );
+}
