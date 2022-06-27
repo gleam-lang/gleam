@@ -3,7 +3,7 @@
 ## Unreleased
 
 - The `gleam publish` confirmation prompt now accepts both "Y" and "y".
-- Fixed `todo` to let it return the correct line number while emitted as a warning.
+- Fixed a bug where `todo` would not emit the correct line number to the LSP while.
 
 ## v0.22.0 - 2022-06-12
 
