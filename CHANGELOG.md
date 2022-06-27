@@ -14,7 +14,7 @@
 - Fixed a bug where doc comments would dissociate from their statements when
   generating html documentation.
 - You are now allowed to use named accessors on types with multiple constructors if the
-  accessor's name, position and type match (among the constructors). (#1610)
+  accessor's name, position and type match (among the constructors) (#1610).
 - Added the ability to replace a release up to one hour after it is published
   using `gleam publish --replace`.
 - `gleam publish`, `gleam docs publish`, `gleam docs remove`, `gleam hex retire`,
@@ -101,16 +101,16 @@
 - Bools can now be negated with the `!` unary operator.
 - If the compiler version changes we now rebuild the project from scratch on
   next build command to avoid issues arising from reading metadata in an old
-  format. (#1547)
+  format (#1547).
 - Updated the "Unknown label" error message to match other error messages
-  (#1548)
-- Type holes are now permitted in function arguments and return annotations.
-  (#1519)
-- Unused module imports now emit a warning. (#1553)
+  (#1548).
+- Type holes are now permitted in function arguments and return annotations
+  (#1519).
+- Unused module imports now emit a warning (#1553).
 - The error message for failing to parse a multiline clauses without curly
-  braces has been improved with a hint on how to fix the issue. (#1555)
+  braces has been improved with a hint on how to fix the issue (#1555).
 - The error messages for when rebar3 or Erlang are missing from the machine has
-  been improved with a tip on how to install them. (#1567)
+  been improved with a tip on how to install them (#1567).
 - Corrected the hint given with certain int and float binary operator type
   errors.
 - Add support for `int` and `float` bitstring type when compiling to JavaScript.
