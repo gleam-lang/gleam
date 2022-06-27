@@ -3492,7 +3492,6 @@ fn do_not_add_needless_braces_in_case_guard() {
   let is_admin = True
 
   case is_enabled, is_confirmed, is_admin {
-    // `{` and `}` will be stripped on save for me, changing the logic
     is_enabled, is_confirmed, is_admin if is_enabled && is_confirmed || is_admin ->
       // (enabled andalso confirmed) andor admin - does allow disabled admins
       Nil
@@ -3512,7 +3511,6 @@ fn do_not_remove_required_braces_case_guard() {
   let is_admin = True
 
   case is_enabled, is_confirmed, is_admin {
-    // `{` and `}` will be stripped on save for me, changing the logic
     is_enabled, is_confirmed, is_admin if is_enabled && { is_confirmed || is_admin } ->
       // enabled andalso (admin andor confirmed) - does not allow disabled admins
       Nil
