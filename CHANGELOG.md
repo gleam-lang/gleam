@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.22.1 - 2022-06-27
 
 - The `gleam publish` confirmation prompt now accepts both "Y" and "y".
 - Fixed a bug where `todo` would not emit the correct line number to the LSP while.
