@@ -15,20 +15,28 @@ jobs:
     strategy:
       matrix:
         build:
+          - linux-amd64
           - macos
           - macos-arm64
           - windows-64bit
         toolchain: [stable]
         include:
+          - build: linux-amd64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
+            use-cross: false
           - build: macos-arm64
             os: macos-11
             target: aarch64-apple-darwin
+            use-cross: false
           - build: windows-64bit
             os: windows-latest
             target: x86_64-pc-windows-msvc
+            use-cross: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -52,6 +60,7 @@ jobs:
         with:
           command: build
           args: --release --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
 
       - name: Build archive
         shell: bash
@@ -90,59 +99,6 @@ jobs:
       - name: Upload release archive
         uses: softprops/action-gh-release@v1
         with:
-          draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
-
-  build-release-musl:
-    runs-on: ubuntu-latest
-    container: clux/muslrust:stable
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Link to predefined musl toolchain
-        run: |
-          ln -s /root/.cargo $HOME/.cargo
-          ln -s /root/.rustup $HOME/.rustup
-
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
-        with:
-          key: v1-linux-musl
-
-      - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
-
-      - name: Build archive
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-
-          ARCHIVE="gleam-$VERSION-linux-amd64.tar.gz"
-          cp "target/x86_64-unknown-linux-musl/release/gleam" "gleam"
-          tar -czvf "$ARCHIVE" "gleam"
-          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
-          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
-          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
-
-      - name: Ensure binary successfully boots
-        shell: bash
-        run: |
-          tar -xvzf "$ASSET"
-          ./gleam --version
-
-      - name: Upload release archive
-        uses: softprops/action-gh-release@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           draft: true
           prerelease: false
           fail_on_unmatched_files: true

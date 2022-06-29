@@ -11,6 +11,7 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_DEV_DEBUG: 0
   CARGO_PROFILE_TEST_DEBUG: 0
+  CROSS_CONTAINER_UID: 0
 
 jobs:
   test:
@@ -19,17 +20,24 @@ jobs:
     strategy:
       matrix:
         toolchain: [stable]
-        build: [linux-amd64, macos, windows]
+        build: [linux-amd64-gnu, linux-amd64-musl, macos, windows]
         include:
-          - build: linux-amd64
+          - build: linux-amd64-gnu
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            use-cross: false
+          - build: linux-amd64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
+            use-cross: false
           - build: windows
             os: windows-latest
             target: x86_64-pc-windows-msvc
+            use-cross: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -52,29 +60,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace
-
-  test-musl:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Link to predefined musl toolchain
-        run: |
-          ln -s /root/.cargo $HOME/.cargo
-          ln -s /root/.rustup $HOME/.rustup
-
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
-        with:
-          key: v1-linux-musl
-
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace
+          args: "--workspace --target ${{ matrix.target }}"
+          use-cross: ${{ matrix.use-cross }}
 
   test-wasm:
     runs-on: ubuntu-latest
