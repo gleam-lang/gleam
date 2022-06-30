@@ -171,4 +171,5 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Wojtek Mach](https://github.com/wojtekmach)
  - [YourMother-really](https://github.com/YourMother-really)
  - [Yu Matsuzawa](https://github.com/ymtszw)
+ - [Zsombor Gasparin](https://github.com/gasparinzsombor)
  - [Štefan Ľupták](https://github.com/stefanluptak)
