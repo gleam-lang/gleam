@@ -1691,7 +1691,7 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
             }
         }
 
@@ -1732,7 +1732,7 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
             }
         }
 
@@ -1768,7 +1768,7 @@ pub fn register_types<'a>(
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
-                let _ = environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
             }
         }
 
@@ -1867,20 +1867,20 @@ pub fn register_import(
                 }
 
                 if value_imported && type_imported {
-                    let _ = environment.init_usage(
+                    environment.init_usage(
                         imported_name.to_string(),
                         EntityKind::ImportedTypeAndConstructor,
                         *location,
                     );
                 } else if type_imported {
                     let _ = environment.imported_types.insert(imported_name.to_string());
-                    let _ = environment.init_usage(
+                    environment.init_usage(
                         imported_name.to_string(),
                         EntityKind::ImportedType,
                         *location,
                     );
                 } else if value_imported {
-                    let _ = match variant {
+                    match variant {
                         Some(&ValueConstructorVariant::Record { .. }) => environment.init_usage(
                             imported_name.to_string(),
                             EntityKind::ImportedConstructor,

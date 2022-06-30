@@ -501,7 +501,7 @@ impl LanguageServer {
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
                 self.create_new_compiler()?;
-                let _ = self.compile(connection)?;
+                self.compile(connection)?;
                 Ok(())
             }
 

@@ -128,10 +128,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         guard: Option<&'a TypedClauseGuard>,
     ) -> Result<CompiledPattern<'a>, Error> {
         for (subject, pattern) in subjects.iter().zip_eq(patterns) {
-            let _ = self.traverse_pattern(subject, pattern)?;
+            self.traverse_pattern(subject, pattern)?;
         }
         if let Some(guard) = guard {
-            let _ = self.push_guard_check(guard)?;
+            self.push_guard_check(guard)?;
         }
 
         Ok(self.take_compiled())
@@ -394,7 +394,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                 let mut offset = Offset::new();
                 for segment in segments {
-                    let _ = match segment.options.as_slice() {
+                    match segment.options.as_slice() {
                         [] | [Opt::Int { .. }] => {
                             self.push_byte_at(offset.bytes);
                             self.traverse_pattern(subject, &segment.value)?;

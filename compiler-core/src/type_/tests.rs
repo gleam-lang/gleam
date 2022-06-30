@@ -9,7 +9,7 @@ use std::path::PathBuf;
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
         let mut printer = pretty::Printer::new();
-        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -31,7 +31,7 @@ macro_rules! assert_infer {
 #[macro_export]
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
-        use crate::type_::{build_prelude, infer_module};
+        use $crate::type_::{build_prelude, infer_module};
         use crate::uid::UniqueIdGenerator;
         use itertools::Itertools;
         let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
