@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- OpenSSL swapped out for RustTLS.
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
   crash.
 - Fixed a bug alternative patterns with a clause containing a pipe with a pipe
