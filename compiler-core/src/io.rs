@@ -238,7 +238,7 @@ impl<'a> std::io::Write for WrappedWriter {
     }
 }
 
-impl<'a> std::fmt::Write for WrappedWriter {
+impl std::fmt::Write for WrappedWriter {
     fn write_str(&mut self, s: &str) -> std::fmt::Result {
         self.inner
             .write(s.as_bytes())
