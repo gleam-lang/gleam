@@ -228,7 +228,7 @@ impl WrappedWriter {
     }
 }
 
-impl<'a> std::io::Write for WrappedWriter {
+impl std::io::Write for WrappedWriter {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.inner.write(buf)
     }
