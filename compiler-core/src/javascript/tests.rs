@@ -25,8 +25,8 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
+        use $crate::{javascript::*, uid::UniqueIdGenerator};
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
@@ -167,8 +167,8 @@ macro_rules! assert_js {
 #[macro_export]
 macro_rules! assert_ts_def {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        use $crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
+        use $crate::{javascript::*, uid::UniqueIdGenerator};
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
