@@ -288,7 +288,7 @@ export function inspect(v) {
 
 function inspectObject(v) {
   let [keys, get] = getters(v);
-  let name = v.constructor.name;
+  let name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
   let props = [];
   for (let k of keys(v)) {
     props.push(`${inspect(k)}: ${inspect(get(v, k))}`);

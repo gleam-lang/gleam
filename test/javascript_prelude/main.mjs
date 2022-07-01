@@ -452,6 +452,13 @@ assertEqual(
   "//js(Set(1, 2, Ok(#(1, 2))))"
 );
 
+// Inspecting objects that have the null prototype
+let nullPrototypeObject = Object.create(null);
+assertEqual(inspect(nullPrototypeObject), "//js({})");
+nullPrototypeObject.one = 1;
+nullPrototypeObject.two = 2;
+assertEqual(inspect(nullPrototypeObject), '//js({ "one": 1, "two": 2 })');
+
 // Result.isOk
 
 assertEqual(new Ok(1).isOk(), true);
