@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where inspecting a JavaScript object with a null prototype would
+  crash.
+
 ## v0.22.1 - 2022-06-27
 
 - The `gleam publish` confirmation prompt now accepts both "Y" and "y".
