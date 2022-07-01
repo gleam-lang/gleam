@@ -17,7 +17,7 @@ pub struct Environment<'a> {
     pub imported_types: HashSet<String>,
 
     /// Values defined in the current function (or the prelude)
-    pub local_values: im::HashMap<String, ValueConstructor>,
+    pub scope: im::HashMap<String, ValueConstructor>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<String, TypeConstructor>,
@@ -82,7 +82,7 @@ impl<'a> Environment<'a> {
             unused_modules: HashMap::new(),
             imported_names: HashMap::new(),
             accessors: prelude.accessors.clone(),
-            local_values: prelude.values.clone().into(),
+            scope: prelude.values.clone().into(),
             importable_modules,
             imported_types: HashSet::new(),
             current_module,
@@ -112,7 +112,7 @@ impl<'a> Environment<'a> {
     }
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
-        let local_values = self.local_values.clone();
+        let local_values = self.scope.clone();
         self.entity_usages.push(HashMap::new());
         ScopeResetData { local_values }
     }
@@ -123,7 +123,7 @@ impl<'a> Environment<'a> {
             .pop()
             .expect("There was no top entity scope.");
         self.handle_unused(unused);
-        self.local_values = data.local_values;
+        self.scope = data.local_values;
     }
 
     pub fn next_uid(&mut self) -> u64 {
@@ -157,7 +157,7 @@ impl<'a> Environment<'a> {
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
     ) {
-        let _ = self.local_values.insert(
+        let _ = self.scope.insert(
             name,
             ValueConstructor {
                 public: false,
@@ -177,7 +177,7 @@ impl<'a> Environment<'a> {
     /// Lookup a variable in the current scope.
     ///
     pub fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
-        self.local_values.get(name)
+        self.scope.get(name)
     }
 
     /// Lookup a module constant in the current scope.
@@ -307,14 +307,13 @@ impl<'a> Environment<'a> {
         name: &str,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => {
-                self.local_values
-                    .get(name)
-                    .ok_or_else(|| UnknownValueConstructorError::Variable {
-                        name: name.to_string(),
-                        variables: self.local_value_names(),
-                    })
-            }
+            None => self
+                .scope
+                .get(name)
+                .ok_or_else(|| UnknownValueConstructorError::Variable {
+                    name: name.to_string(),
+                    variables: self.local_value_names(),
+                }),
 
             Some(m) => {
                 let module = self.imported_modules.get(m).ok_or_else(|| {
@@ -643,7 +642,7 @@ impl<'a> Environment<'a> {
     }
 
     pub fn local_value_names(&self) -> Vec<String> {
-        self.local_values
+        self.scope
             .keys()
             .filter(|&t| PIPE_VARIABLE != t)
             .map(|t| t.to_string())

@@ -62,7 +62,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             PatternMode::Alternative(assigned) => {
-                match self.environment.local_values.get(name) {
+                match self.environment.scope.get(name) {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.to_string());

@@ -434,7 +434,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // If the name is in the environment, use the original error from
                     // inferring the record access, so that we can suggest possible
                     // misspellings of field names
-                    if self.environment.local_values.contains_key(&name) {
+                    if self.environment.scope.contains_key(&name) {
                         module_access.map_err(|_| err)
                     } else {
                         module_access
@@ -1402,20 +1402,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
-            // Look in the local scope for a binding with this name
+            // Look in the current scope for a binding with this name
             None => {
-                let constructor = match self.environment.get_variable(name) {
-                    Some(var) => Ok(var.clone()),
-                    None => self
-                        .environment
-                        .get_module_const(name)
+                let constructor =
+                    self.environment
+                        .get_variable(name)
                         .cloned()
                         .ok_or_else(|| Error::UnknownVariable {
                             location: *location,
                             name: name.to_string(),
                             variables: self.environment.local_value_names(),
-                        }),
-                }?;
+                        })?;
 
                 // Note whether we are using an ungeneralised function so that we can
                 // tell if it is safe to generalise this function after inference has

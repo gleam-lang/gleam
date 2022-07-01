@@ -1309,19 +1309,18 @@ fn infer_statement(
         } => {
             let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
             let type_ = typed_expr.type_();
-
-            environment.insert_module_value(
-                &name,
-                ValueConstructor {
-                    public,
-                    variant: ValueConstructorVariant::ModuleConstant {
-                        location,
-                        literal: typed_expr.clone(),
-                        module: module_name.join("/"),
-                    },
-                    type_: type_.clone(),
+            let variant = ValueConstructor {
+                public,
+                variant: ValueConstructorVariant::ModuleConstant {
+                    location,
+                    literal: typed_expr.clone(),
+                    module: module_name.join("/"),
                 },
-            );
+                type_: type_.clone(),
+            };
+
+            environment.insert_variable(name.clone(), variant.variant.clone(), type_.clone());
+            environment.insert_module_value(&name, variant);
 
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);

@@ -50,11 +50,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let result = self.infer_each_expression(expressions);
 
         // Clean-up the pipe variables inserted so they cannot be used outside this pipeline
-        let _ = self
-            .expr_typer
-            .environment
-            .local_values
-            .remove(PIPE_VARIABLE);
+        let _ = self.expr_typer.environment.scope.remove(PIPE_VARIABLE);
 
         // Return any errors after clean-up
         result?;
