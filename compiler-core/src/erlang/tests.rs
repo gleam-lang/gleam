@@ -1,5 +1,6 @@
 mod assert;
 mod bit_strings;
+mod case;
 mod guards;
 mod numbers;
 mod patterns;

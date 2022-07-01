@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+assertion_line: 6
+expression: "\npub fn myfun(mt) {\n  case mt {\n    1 | _ ->\n      1\n      |> Ok\n  }\n  1\n  |> Ok\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([myfun/1]).
+
+-spec myfun(integer()) -> {ok, integer()} | {error, any()}.
+myfun(Mt) ->
+    case Mt of
+        1 ->
+            _pipe = 1,
+            {ok, _pipe};
+
+        _@1 ->
+            _pipe = 1,
+            {ok, _pipe}
+    end,
+    _pipe@1 = 1,
+    {ok, _pipe@1}.
+

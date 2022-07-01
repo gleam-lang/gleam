@@ -982,15 +982,18 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     } = clause;
 
     // These are required to get the alternative patterns working properly.
-    // Simply rendering the duplicate erlang clauses breaks the variable rewriting
+    // Simply rendering the duplicate erlang clauses breaks the variable
+    // rewriting because each pattern would define different (rewritten)
+    // variables names.
     let mut then_doc = None;
-    let erlang_vars = env.erl_function_scope_vars.clone();
+    let initial_erlang_vars = env.erl_function_scope_vars.clone();
+    let mut end_erlang_vars = im::HashMap::new();
 
     let docs = Itertools::intersperse(
         std::iter::once(pat)
             .chain(alternative_patterns)
             .map(|patterns| {
-                env.erl_function_scope_vars = erlang_vars.clone();
+                env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
                     let p = patterns.get(0).expect("Single pattern clause printing");
@@ -1002,6 +1005,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                 let guard = optional_clause_guard(guard.as_ref(), env);
                 if then_doc == None {
                     then_doc = Some(expr(then, env));
+                    end_erlang_vars = env.erl_function_scope_vars.clone();
                 }
 
                 patterns_doc.append(
@@ -1013,7 +1017,9 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
         ";".to_doc().append(lines(2)),
     );
 
-    concat(docs)
+    let doc = concat(docs);
+    env.erl_function_scope_vars = end_erlang_vars;
+    doc
 }
 
 fn optional_clause_guard<'a>(
