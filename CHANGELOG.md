@@ -4,6 +4,8 @@
 
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
   crash.
+- Fixed a bug alternative patterns with a clause containing a pipe with a pipe
+  after the case expresson could render incorrect Erlang.
 
 ## v0.22.1 - 2022-06-27
 
