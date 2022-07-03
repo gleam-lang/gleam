@@ -18,24 +18,33 @@ jobs:
     name: test
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         toolchain: [stable]
-        build: [linux-amd64-gnu, linux-amd64-musl, macos, windows]
+        target:
+          - x86_64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-gnu
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
         include:
-          - build: linux-amd64-gnu
-            os: ubuntu-latest
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             use-cross: false
-          - build: linux-amd64-musl
-            os: ubuntu-latest
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
-          - build: macos
-            os: macos-latest
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use-cross: true
+          - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
-          - build: windows
-            os: windows-latest
+          - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
     steps:
