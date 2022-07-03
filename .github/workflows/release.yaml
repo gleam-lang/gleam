@@ -14,27 +14,27 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build:
-          - linux-amd64
-          - macos
-          - macos-arm64
-          - windows-64bit
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
         toolchain: [stable]
         include:
-          - build: linux-amd64
-            os: ubuntu-latest
+          - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
-          - build: macos
-            os: macos-latest
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use-cross: true
+          - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
-          - build: macos-arm64
-            os: macos-11
+          - os: macos-11
             target: aarch64-apple-darwin
             use-cross: false
-          - build: windows-64bit
-            os: windows-latest
+          - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
     steps:
@@ -68,12 +68,12 @@ jobs:
           VERSION="${GITHUB_REF#refs/tags/}"
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
+            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
             rm gleam.exe
           else
-            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
+            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
             rm gleam
@@ -86,15 +86,16 @@ jobs:
       - name: Ensure binary successfully boots
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z x "$ASSET"
-            ./gleam.exe --version
-          elif [ "${{ matrix.build }}" = "macos-arm64" ]; then
-            echo We cannot test an ARM binary on a AMD64 runner
-          else
-            tar -xvzf "$ASSET"
-            ./gleam --version
-          fi
+          case "${{ matrix.target }}" in
+            x86_64-pc-windows-msvc)
+              7z x "$ASSET"
+              ./gleam.exe --version ;;
+            aarch64*)
+              echo "We cannot test an ARM binary on a AMD64 runner" ;;
+            *)
+              tar -xvzf "$ASSET"
+              ./gleam --version ;;
+          esac
 
       - name: Upload release archive
         uses: softprops/action-gh-release@v1
