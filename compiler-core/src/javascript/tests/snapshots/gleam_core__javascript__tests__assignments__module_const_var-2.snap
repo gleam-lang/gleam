@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\npub const int = 42\npub const int_alias = int \npub const compound: #(Int, Int) = #(int, int_alias)\n"
+---
+export const int: number;
+
+export const int_alias: number;
+
+export const compound: [number, number];
+

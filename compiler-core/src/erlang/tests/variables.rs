@@ -75,3 +75,20 @@ pub fn main() {
 }"#
     );
 }
+
+#[test]
+fn module_const_vars() {
+    assert_erl!(
+        "const int = 42
+const int_alias = int
+pub fn use_int_alias() { int_alias }
+
+fn int_identity(i: Int) { i }
+const int_identity_alias: fn(Int) -> Int = int_identity
+pub fn use_int_identity_alias() { int_identity_alias(42) }
+
+const compound: #(Int, fn(Int) -> Int, fn(Int) -> Int) = #(int, int_identity, int_identity_alias)
+pub fn use_compound() { compound.1(compound.0) }
+"
+    )
+}

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/erlang/tests/variables.rs
+expression: "const int = 42\nconst int_alias = int\npub fn use_int_alias() { int_alias }\n\nfn int_identity(i: Int) { i }\nconst int_identity_alias: fn(Int) -> Int = int_identity\npub fn use_int_identity_alias() { int_identity_alias(42) }\n\nconst compound: #(Int, fn(Int) -> Int, fn(Int) -> Int) = #(int, int_identity, int_identity_alias)\npub fn use_compound() { compound.1(compound.0) }\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([use_int_alias/0, use_int_identity_alias/0, use_compound/0]).
+
+-spec use_int_alias() -> integer().
+use_int_alias() ->
+    42.
+
+-spec int_identity(integer()) -> integer().
+int_identity(I) ->
+    I.
+
+-spec use_int_identity_alias() -> integer().
+use_int_identity_alias() ->
+    fun int_identity/1(42).
+
+-spec use_compound() -> integer().
+use_compound() ->
+    (erlang:element(2, {42, fun int_identity/1, fun int_identity/1}))(
+        erlang:element(1, {42, fun int_identity/1, fun int_identity/1})
+    ).
+
