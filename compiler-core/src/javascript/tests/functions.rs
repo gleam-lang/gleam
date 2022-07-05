@@ -379,5 +379,26 @@ fn pipe_shadow_import() {
             |> println
           println
         }"#
+    );
+}
+
+#[test]
+fn module_const_fn() {
+    assert_js!(
+        r#"
+pub fn int_identity(i: Int) -> Int { i }
+pub const int_identity_alias: fn(Int) -> Int = int_identity
+pub fn use_int_identity_alias() { int_identity_alias(42) }
+
+pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = #(int_identity, int_identity_alias)
+pub fn use_compound() { compound.0(compound.1(42)) }"#
+    );
+
+    assert_ts_def!(
+        r#"
+pub fn int_identity(i: Int) -> Int { i }
+pub const int_identity_alias: fn(Int) -> Int = int_identity
+pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = 
+    #(int_identity, int_identity_alias)"#
     )
 }

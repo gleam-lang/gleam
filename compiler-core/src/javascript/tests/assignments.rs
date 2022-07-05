@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn tuple_matching() {
@@ -142,5 +142,26 @@ pub fn debug(x) {
   fn(x) { x + 1 }
 }
 "#,
+    );
+}
+
+#[test]
+fn module_const_var() {
+    assert_js!(
+        r#"
+pub const int = 42
+pub const int_alias = int 
+pub fn use_int_alias() { int_alias }
+
+pub const compound: #(Int, Int) = #(int, int_alias)
+pub fn use_compound() { compound.0 + compound.1 }
+"#
+    );
+    assert_ts_def!(
+        r#"
+pub const int = 42
+pub const int_alias = int 
+pub const compound: #(Int, Int) = #(int, int_alias)
+"#
     );
 }

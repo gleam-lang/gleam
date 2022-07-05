@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\npub fn int_identity(i: Int) -> Int { i }\npub const int_identity_alias: fn(Int) -> Int = int_identity\npub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = \n    #(int_identity, int_identity_alias)"
+---
+export const int_identity_alias: (x0: number) => number;
+
+export const compound: [(x0: number) => number, (x0: number) => number];
+
+export function int_identity(i: number): number;
+
