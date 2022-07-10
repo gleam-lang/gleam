@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The format used by the formatter has been improved.
 - OpenSSL swapped out for RustTLS.
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
   crash.
