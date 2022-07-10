@@ -5,13 +5,16 @@ use gleam_core::{
     Error, Result,
 };
 
-use crate::{cli, fs};
+use crate::{cli, dependencies::UseManifest, fs};
 
 pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
-    let manifest =
-        crate::dependencies::download(cli::Reporter::new(), Some((packages.to_vec(), dev)))?;
+    let manifest = crate::dependencies::download(
+        cli::Reporter::new(),
+        Some((packages.to_vec(), dev)),
+        UseManifest::Yes,
+    )?;
 
     // Read gleam.toml so we can insert new deps into it
     let mut toml = fs::read("gleam.toml")?

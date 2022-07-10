@@ -7,7 +7,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{build_lock::BuildLock, fs::ProjectIO, telemetry::NullTelemetry};
+use crate::{
+    build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
+};
 use gleam_core::{
     ast::{SrcSpan, TypedExpr},
     build::{self, Module, ProjectCompiler},
@@ -1004,7 +1006,7 @@ where
     pub fn new(config: PackageConfig, io: IO) -> Result<Self> {
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
-        let manifest = crate::dependencies::download(telemetry, None)?;
+        let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
 
         let options = build::Options {
             mode: build::Mode::Dev,

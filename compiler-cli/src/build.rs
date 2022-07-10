@@ -5,11 +5,11 @@ use gleam_core::{
     Result,
 };
 
-use crate::{build_lock::BuildLock, cli, fs};
+use crate::{build_lock::BuildLock, cli, dependencies::UseManifest, fs};
 
 pub fn main(options: Options) -> Result<Package> {
     let lock = BuildLock::new()?;
-    let manifest = crate::dependencies::download(cli::Reporter::new(), None)?;
+    let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 
     let perform_codegen = options.perform_codegen;
     let root_config = crate::config::root_config()?;
