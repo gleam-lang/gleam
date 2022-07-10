@@ -103,6 +103,10 @@ pub enum UseManifest {
     No,
 }
 
+pub fn update() -> Result<()> {
+    download(cli::Reporter::new(), None, UseManifest::No).map(|_| ())
+}
+
 pub fn download<Telem: Telemetry>(
     telemetry: Telem,
     new_package: Option<(Vec<String>, bool)>,
