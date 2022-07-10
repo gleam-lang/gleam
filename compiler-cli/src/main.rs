@@ -124,6 +124,9 @@ enum Command {
     #[clap(subcommand)]
     Deps(Dependencies),
 
+    /// Update dependency packages to their latest versions
+    Update,
+
     /// Work with the Hex package manager
     #[clap(subcommand)]
     Hex(Hex),
@@ -332,9 +335,7 @@ fn main() {
             dependencies::download(cli::Reporter::new(), None, UseManifest::Yes).map(|_| ())
         }
 
-        Command::Deps(Dependencies::Update) => {
-            dependencies::download(cli::Reporter::new(), None, UseManifest::No).map(|_| ())
-        }
+        Command::Deps(Dependencies::Update) => dependencies::update(),
 
         Command::New(options) => new::create(options, VERSION),
 
@@ -362,6 +363,8 @@ fn main() {
         }
 
         Command::Add { packages, dev } => add::command(packages, dev),
+
+        Command::Update => dependencies::update(),
 
         Command::Clean => clean(),
 
