@@ -33,6 +33,7 @@ pub fn list() -> Result<()> {
         Mode::Dev,
         &config,
         &cli::Reporter::new(),
+        UseManifest::Yes,
     )?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
@@ -96,9 +97,19 @@ zzz 0.4.0
     )
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum UseManifest {
+    Yes,
+    No,
+}
+
 pub fn download<Telem: Telemetry>(
     telemetry: Telem,
     new_package: Option<(Vec<String>, bool)>,
+    // If true we read the manifest from disc. If not set then we ignore any
+    // manifest which will result in the latest versions of the dependency
+    // packages being resolved (not the locked ones).
+    use_manifest: UseManifest,
 ) -> Result<Manifest> {
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
@@ -132,8 +143,13 @@ pub fn download<Telem: Telemetry>(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
-    let (manifest_updated, manifest) =
-        get_manifest(runtime.handle().clone(), mode, &config, &telemetry)?;
+    let (manifest_updated, manifest) = get_manifest(
+        runtime.handle().clone(),
+        mode,
+        &config,
+        &telemetry,
+        use_manifest,
+    )?;
     let local = LocalPackages::read_from_disc()?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
@@ -404,10 +420,23 @@ fn get_manifest<Telem: Telemetry>(
     mode: Mode,
     config: &PackageConfig,
     telemetry: &Telem,
+    use_manifest: UseManifest,
 ) -> Result<(bool, Manifest)> {
-    // If there's no manifest then resolve the versions anew
-    if !paths::manifest().exists() {
-        tracing::info!("manifest_not_present");
+    // If there's no manifest (or we have been asked not to use it) then resolve
+    // the versions anew
+    let should_resolve = match use_manifest {
+        _ if !paths::manifest().exists() => {
+            tracing::info!("manifest_not_present");
+            true
+        }
+        UseManifest::No => {
+            tracing::info!("ignoring_manifest");
+            true
+        }
+        UseManifest::Yes => false,
+    };
+
+    if should_resolve {
         let manifest = resolve_versions(runtime, mode, config, None, telemetry)?;
         return Ok((true, manifest));
     }

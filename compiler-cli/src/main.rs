@@ -72,6 +72,7 @@ mod shell;
 mod telemetry;
 
 use config::root_config;
+use dependencies::UseManifest;
 pub use gleam_core::{
     error::{Error, Result},
     warning::Warning,
@@ -257,6 +258,9 @@ enum Dependencies {
 
     /// Download all dependency packages
     Download,
+
+    /// Update dependency packages to their latest versions
+    Update,
 }
 
 #[derive(Subcommand, Debug)]
@@ -325,7 +329,11 @@ fn main() {
         Command::Deps(Dependencies::List) => dependencies::list(),
 
         Command::Deps(Dependencies::Download) => {
-            dependencies::download(cli::Reporter::new(), None).map(|_| ())
+            dependencies::download(cli::Reporter::new(), None, UseManifest::Yes).map(|_| ())
+        }
+
+        Command::Deps(Dependencies::Update) => {
+            dependencies::download(cli::Reporter::new(), None, UseManifest::No).map(|_| ())
         }
 
         Command::New(options) => new::create(options, VERSION),
