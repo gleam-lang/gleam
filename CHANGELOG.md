@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The `gleam update` command can now be used to update dependency packages to
+  their latest versions.
 - The format used by the formatter has been improved.
 - OpenSSL swapped out for RustTLS.
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
