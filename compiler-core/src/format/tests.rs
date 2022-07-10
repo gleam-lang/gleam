@@ -3456,3 +3456,21 @@ fn dont_remove_braces_when_accessing_tuple() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1681
+#[test]
+fn wrap_case_subjects() {
+    assert_format!(
+        r#"fn main() {
+  case
+    "This is a really really long string to force wrapping",
+    "This is a really really long string to force wrapping",
+    "This is a really really long string to force wrapping",
+    "This is a really really long string to force wrapping"
+  {
+    _, _, _, _ -> Nil
+  }
+}
+"#
+    );
+}

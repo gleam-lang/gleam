@@ -800,13 +800,20 @@ impl<'comments> Formatter<'comments> {
         subjects: &'a [UntypedExpr],
         clauses: &'a [UntypedClause],
     ) -> Document<'a> {
-        let subjects_doc = join(subjects.iter().map(|s| self.expr(s)), ", ".to_doc());
+        let subjects_doc = break_("case", "case ")
+            .append(join(
+                subjects.iter().map(|s| self.expr(s)),
+                break_(",", ", "),
+            ))
+            .nest(INDENT)
+            .append(break_("", " "))
+            .append("{")
+            .group();
+
         let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
 
         force_break()
-            .append("case ")
             .append(subjects_doc)
-            .append(" {")
             .append(
                 line()
                     .append(force_break())
