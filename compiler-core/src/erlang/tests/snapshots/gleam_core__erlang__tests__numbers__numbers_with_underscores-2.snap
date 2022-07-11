@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/erlang/tests/numbers.rs
+assertion_line: 14
+expression: "\nconst i = 100_000\nconst f = 100_000.00101\npub fn main() {\n  i\n  f\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> float().
+main() ->
+    100000,
+    100000.00101.
+

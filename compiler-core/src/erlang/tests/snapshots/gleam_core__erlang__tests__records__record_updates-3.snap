@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 246
+expression: "\npub type Person { Person(name: String, age: Int) }\n\nfn main() {\n    let p = Person(\"Quinn\", 27)\n    let new_p = Person(..p, age: 28, name: \"Riley\")\n    new_p\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export_type([person/0]).
+
+-type person() :: {person, binary(), integer()}.
+
+-spec main() -> person().
+main() ->
+    P = {person, <<"Quinn"/utf8>>, 27},
+    New_p = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
+    New_p.
+
