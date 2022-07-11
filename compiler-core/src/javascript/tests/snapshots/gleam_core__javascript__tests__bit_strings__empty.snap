@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/bit_strings.rs
 assertion_line: 5
 expression: "\nfn go() {\n  <<>>\n}\n"
-
 ---
 import { toBitString } from "../gleam.mjs";
 

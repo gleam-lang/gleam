@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 99
+assertion_line: 142
 expression: "import other.{Two}\nconst a = Two\n"
-
 ---
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";

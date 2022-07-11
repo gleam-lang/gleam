@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
+assertion_line: 1365
 expression: "fn main() { 5 }"
 ---
 

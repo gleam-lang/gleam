@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 700
+assertion_line: 704
 expression: Nil.2
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:1

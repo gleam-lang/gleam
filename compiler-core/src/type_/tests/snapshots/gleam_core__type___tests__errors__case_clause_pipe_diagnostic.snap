@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1359
+assertion_line: 1459
 expression: "\npub fn change(x: String) -> String {\n  \"\"\n}\n\npub fn parse(input: BitString) -> String {\n  case input {\n    <<>> -> 1\n    <<\"(\":utf8, b:binary>> ->\n      parse(input)\n      |> change\n  }\n}"
-
 ---
 error: Type mismatch
    ┌─ /src/one/two.gleam:9:5
@@ -22,5 +21,4 @@ Expected type:
 Found type:
 
     String
-
 

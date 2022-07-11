@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 876
+assertion_line: 957
 expression: "external type PrivateType\npub external fn go(PrivateType) -> Int = \"\" \"\""
-
 ---
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:2:1

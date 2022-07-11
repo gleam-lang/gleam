@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 519
+assertion_line: 538
 expression: "let #(a, b) = 1 a"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:5
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     #(a, b)
-
 

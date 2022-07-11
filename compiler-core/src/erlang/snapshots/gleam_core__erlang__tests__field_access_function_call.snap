@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests.rs
 assertion_line: 290
 expression: "\ntype FnBox {\n  FnBox(f: fn(Int) -> Int)\n}\nfn main() {\n    let b = FnBox(f: fn(x) { x })\n    b.f(5)\n}\n"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

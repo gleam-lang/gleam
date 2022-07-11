@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 105
+assertion_line: 122
 expression: "fn id(x) { x }\npub fn main() {\n  1\n  |> id\n}\n"
-
 ---
 function id(x) {
   return x;

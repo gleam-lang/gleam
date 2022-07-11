@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 187
+assertion_line: 186
 expression: "case <<1>> { <<1:unsigned-signed>> -> 1 }"
-
 ---
 error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:27

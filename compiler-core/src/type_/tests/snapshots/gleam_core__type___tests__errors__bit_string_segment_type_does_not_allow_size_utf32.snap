@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 272
+assertion_line: 271
 expression: "case <<1>> { <<1:utf32-size(5)>> -> a }"
-
 ---
 error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:18

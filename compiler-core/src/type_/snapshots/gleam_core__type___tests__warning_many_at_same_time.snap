@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
+assertion_line: 1370
 expression: "\nfn main() { let five = 5 }"
 ---
 

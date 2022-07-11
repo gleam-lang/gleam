@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 705
+assertion_line: 709
 expression: "fn(a) { a.2 }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:9

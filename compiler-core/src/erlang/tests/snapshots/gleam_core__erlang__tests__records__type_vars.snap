@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
 assertion_line: 32
-expression: "record_definition(\"PetCat\",\n                  &[(\"name\", type_::generic_var(1)),\n                    (\"is_cute\", type_::unbound_var(1)),\n                    (\"linked\", type_::link(type_::int()))])"
-
+expression: "record_definition(\"PetCat\",\n    &[(\"name\", type_::generic_var(1)), (\"is_cute\", type_::unbound_var(1)),\n                (\"linked\", type_::link(type_::int()))])"
 ---
 -record(pet_cat, {name :: any(), is_cute :: any(), linked :: integer()}).
 

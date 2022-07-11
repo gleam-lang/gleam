@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 963
+assertion_line: 1029
 expression: "\npub type Box(a) { Box(inner: a) }\npub fn main(box: Box(Box(Int))) { box.inner.unknown }"
-
 ---
 error: Unknown record field
   ┌─ /src/one/two.gleam:3:35

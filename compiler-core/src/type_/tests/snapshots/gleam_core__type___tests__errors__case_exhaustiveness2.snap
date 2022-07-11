@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1483
+assertion_line: 1549
 expression: "\npub fn main(r) {\n    case r {\n        Error(_) -> Nil\n    }\n}\n"
-
 ---
 error: Not exhaustive pattern match
   ┌─ /src/one/two.gleam:3:5

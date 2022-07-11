@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1261
 expression: "\nfn foo(x: List(Int)) { x }\nfn main(y: List(something)) {\n  foo(y)\n}"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:7
@@ -16,5 +16,4 @@ Expected type:
 Found type:
 
     List(something)
-
 

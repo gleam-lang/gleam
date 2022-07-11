@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 56
+assertion_line: 67
 expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
-
 ---
 import { CustomType, throwError } from "../gleam.mjs";
 

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 805
+assertion_line: 886
 expression: "fn main() {\n            let #(y, [..x]): #(x, List(x)) = #(\"one\", [1,2,3])\n            x\n        }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:2:46
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     #(String, List(Int))
-
 

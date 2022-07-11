@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/try_.rs
 assertion_line: 17
 expression: "pub fn x(f) {\n  try x = 1 |> f\n  Ok(x)\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

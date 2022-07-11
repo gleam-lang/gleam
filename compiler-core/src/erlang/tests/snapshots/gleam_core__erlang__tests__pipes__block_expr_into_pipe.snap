@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/pipes.rs
 assertion_line: 23
 expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  |> id\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

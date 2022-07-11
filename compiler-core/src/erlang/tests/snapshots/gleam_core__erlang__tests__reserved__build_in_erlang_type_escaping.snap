@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/reserved.rs
 assertion_line: 5
 expression: pub external type Map
-
 ---
 -module(the_app).
 -compile(no_auto_import).

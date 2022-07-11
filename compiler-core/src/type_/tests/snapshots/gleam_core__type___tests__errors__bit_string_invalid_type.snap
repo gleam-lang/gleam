@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 110
+assertion_line: 109
 expression: "fn x() { \"test\" }\n\nfn main() {\n    let a = <<1:size(x())>>\n    a\n}"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:22
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     String
-
 

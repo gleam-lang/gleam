@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 542
+assertion_line: 614
 expression: "pub type Thing {\n  Thing(in: Int, class: Nil)\n}\n"
-
 ---
 import { CustomType } from "../gleam.mjs";
 

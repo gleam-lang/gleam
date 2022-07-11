@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 29
+assertion_line: 40
 expression: "\nfn go() {\n    True && True\n    False || False\n}\n"
-
 ---
 function go() {
   true && true;

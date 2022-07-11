@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/pipes.rs
 assertion_line: 59
 expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

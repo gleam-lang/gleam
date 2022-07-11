@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 188
+assertion_line: 186
 expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
 ---
 import * as _ from "../gleam.d.ts";

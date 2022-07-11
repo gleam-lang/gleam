@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 116
+assertion_line: 141
 expression: "pub fn negate(x) {\n    !x\n}"
-
 ---
 export function negate(x) {
   return !x;

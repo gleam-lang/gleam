@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/lists.rs
 assertion_line: 5
 expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
-
 ---
 import { toList } from "../gleam.mjs";
 

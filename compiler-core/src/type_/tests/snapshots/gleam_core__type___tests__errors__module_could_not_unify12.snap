@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 830
+assertion_line: 911
 expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        }\n\n        pub fn create_person(age: Float) {\n            let x: Person = Person(name: \"Quinn\", age: age)\n            x\n        }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:7:56
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     Float
-
 

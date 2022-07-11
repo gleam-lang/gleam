@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 91
+assertion_line: 108
 expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
-
 ---
 import { throwError } from "../gleam.mjs";
 

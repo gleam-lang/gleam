@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
+assertion_line: 192
 expression: "\nfn go(x) {\n  let <<_:16, _:8>> = x\n}\n"
 ---
 import { throwError } from "../gleam.mjs";

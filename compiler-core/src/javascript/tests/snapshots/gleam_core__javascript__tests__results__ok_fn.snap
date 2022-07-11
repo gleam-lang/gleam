@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/results.rs
 assertion_line: 15
 expression: "pub fn main() { Ok }"
-
 ---
 import { Ok } from "../gleam.mjs";
 

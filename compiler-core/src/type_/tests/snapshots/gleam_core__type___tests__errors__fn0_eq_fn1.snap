@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 329
+assertion_line: 328
 expression: "fn() { 1 } == fn(x) { x + 1 }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:15
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     fn(Int) -> Int
-
 

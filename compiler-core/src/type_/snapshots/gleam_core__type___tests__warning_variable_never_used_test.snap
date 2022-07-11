@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
+assertion_line: 1356
 expression: "\npub fn foo() { Ok(5) }\npub fn main() { let five = foo() }"
 ---
 

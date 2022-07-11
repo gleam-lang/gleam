@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1364
+assertion_line: 1430
 expression: "external fn main() -> List(_) = \"\" \"\""
-
 ---
 error: Unexpected type hole
   ┌─ /src/one/two.gleam:1:28

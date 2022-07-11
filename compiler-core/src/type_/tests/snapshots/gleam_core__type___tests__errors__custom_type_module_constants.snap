@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1149
+assertion_line: 1230
 expression: "type X { X }\nconst x = unknown.X"
-
 ---
 error: Unknown module
   ┌─ /src/one/two.gleam:2:11

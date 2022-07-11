@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 860
+assertion_line: 926
 expression: "external fn go(List(a, b)) -> a = \"\" \"\""
-
 ---
 error: Incorrect arity
   ┌─ /src/one/two.gleam:1:16

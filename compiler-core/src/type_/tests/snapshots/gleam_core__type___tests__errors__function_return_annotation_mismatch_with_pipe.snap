@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 437
+assertion_line: 441
 expression: "pub fn main() -> String {\n            1\n            |> add_two\n         }\n          \n         fn add_two(i: Int) -> Int {\n            i + 2\n         }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:2:13
@@ -21,5 +20,4 @@ Expected type:
 Found type:
 
     Int
-
 

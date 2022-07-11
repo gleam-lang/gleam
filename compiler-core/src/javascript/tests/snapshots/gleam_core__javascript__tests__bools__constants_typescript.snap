@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 29
 expression: "\npub const a = True\npub const b = False\npub const c = Nil\n"
 ---
 export const a: boolean;

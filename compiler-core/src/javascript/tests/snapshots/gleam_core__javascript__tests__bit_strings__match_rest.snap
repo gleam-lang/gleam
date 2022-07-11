@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
-assertion_line: 203
+assertion_line: 225
 expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
 ---
 import { throwError, toBitString } from "../gleam.mjs";

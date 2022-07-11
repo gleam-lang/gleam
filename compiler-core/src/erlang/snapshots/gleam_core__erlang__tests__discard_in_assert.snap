@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests.rs
 assertion_line: 392
 expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

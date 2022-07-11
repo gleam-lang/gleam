@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 359
+assertion_line: 363
 expression: "case 1 { a -> 1 b -> 2.0 }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:17
@@ -20,5 +19,4 @@ Expected type:
 Found type:
 
     Float
-
 

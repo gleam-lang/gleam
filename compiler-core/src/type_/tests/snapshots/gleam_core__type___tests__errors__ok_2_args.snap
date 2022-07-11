@@ -1,14 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 514
+assertion_line: 518
 expression: "let Ok(1, x) = 1 x"
-
 ---
 error: Incorrect arity
   ┌─ /src/one/two.gleam:1:5
   │
 1 │ let Ok(1, x) = 1 x
   │     ^^^^^^^^ Expected 1 argument, got 2
-
 
 

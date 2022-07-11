@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 128
+assertion_line: 143
 expression: "\npub type Person {\n    Teacher(name: Nil, age: Int)\n    Student(name: String, age: Int)\n}\npub fn get_age(person: Person) { person.age }"
 ---
 -module(the_app).

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 264
+assertion_line: 281
 expression: "pub fn main(arguments, eval) {\n  #(arguments, eval)\n}\n"
-
 ---
 export function main(arguments$, eval$) {
   return [arguments$, eval$];

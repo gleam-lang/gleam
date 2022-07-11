@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 735
+assertion_line: 816
 expression: "fn go() { 1 + 2.0 }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:15
@@ -19,6 +18,5 @@ But this argument has this type:
     Float
 
 Hint: the +. operator can be used with Floats
-
 
 

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 785
+assertion_line: 866
 expression: "fn main() { let x: String = 5 x }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:29
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     Int
-
 

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1565
+assertion_line: 1631
 expression: "\nfn go(x, y) {\n  x + y\n}\n\nfn main(x) {\n  1\n  |> go\n}\n"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:8:6
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     fn(Int) -> a
-
 

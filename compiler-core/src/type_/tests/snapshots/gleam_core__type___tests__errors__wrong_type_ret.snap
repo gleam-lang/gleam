@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1273
 expression: "pub fn main(x: something) -> Int {\n  let y = x\n  y\n}"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:3
@@ -19,5 +19,4 @@ Expected type:
 Found type:
 
     something
-
 

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 399
+assertion_line: 403
 expression: "fn() -> Result(Nil, Nil) {\n            let a = 1\n            try _ = Error(1)\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            // comments\n            Ok(Nil)\n        }"
-
 ---
 error: Type mismatch
    ┌─ /src/one/two.gleam:3:13
@@ -26,5 +25,4 @@ Expected type:
 Found type:
 
     Result(Nil, Int)
-
 

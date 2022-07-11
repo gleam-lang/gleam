@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/assert.rs
 assertion_line: 39
 expression: "pub fn go() {\n  assert Ok(y) = Ok(1)\n  assert Ok(y) = Ok(1)\n  y\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

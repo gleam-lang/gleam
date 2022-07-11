@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 926
+assertion_line: 992
 expression: "type IntMap = IllMap(Int, Int)"
-
 ---
 error: Unknown type
   ┌─ /src/one/two.gleam:1:15

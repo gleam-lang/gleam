@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/assignments.rs
 assertion_line: 16
 expression: "fn go(x) { assert 1 = x }"
-
 ---
 import { throwError } from "../gleam.mjs";
 

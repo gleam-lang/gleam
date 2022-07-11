@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 374
+assertion_line: 378
 expression: "case 1, 2.0 { a, b -> a + b }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:27
@@ -19,6 +18,5 @@ But this argument has this type:
     Float
 
 Hint: the +. operator can be used with Floats
-
 
 

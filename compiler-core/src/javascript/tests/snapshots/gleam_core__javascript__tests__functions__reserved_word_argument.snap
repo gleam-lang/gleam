@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 233
+assertion_line: 250
 expression: "pub fn main(with) {\n  with\n}\n"
-
 ---
 export function main(with$) {
   return with$;

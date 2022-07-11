@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/try_.rs
 assertion_line: 5
 expression: "\npub fn main() {\n    try a = Ok(1)\n    try b = Ok(2)\n    Ok(a + b)\n}\n"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

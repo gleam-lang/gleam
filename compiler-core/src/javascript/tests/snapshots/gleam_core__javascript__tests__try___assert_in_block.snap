@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/try_.rs
 assertion_line: 63
 expression: "pub fn main(x) {\n  assert Ok(y) = {\n    try z = x\n    Ok(z + 1)\n  }\n  y\n}"
-
 ---
 import { Ok, throwError } from "../gleam.mjs";
 

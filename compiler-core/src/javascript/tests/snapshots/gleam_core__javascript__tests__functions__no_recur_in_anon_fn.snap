@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 151
+assertion_line: 168
 expression: "pub fn main() {\n  fn() { main() }\n  1\n}\n"
-
 ---
 export function main() {
   () => { return main(); };

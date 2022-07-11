@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/modules.rs
 assertion_line: 186
 expression: "import one/two/three.{Custom, One, Two}\n\npub fn go() -> List(Custom) { [One, Two] }\n"
-
 ---
 import { toList } from "../gleam.mjs";
 import * as $three from "../one/two/three.mjs";

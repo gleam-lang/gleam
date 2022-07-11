@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 749
+assertion_line: 830
 expression: "\nfn bar() -> Int {\n    5\n}\n\nfn run(one: fn() -> String) {\n    one()\n}\n\nfn demo() {\n    run(bar)\n}"
-
 ---
 error: Type mismatch
    ┌─ /src/one/two.gleam:11:9
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     fn() -> Int
-
 

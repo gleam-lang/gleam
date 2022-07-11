@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 524
+assertion_line: 543
 expression: "[1.0] == [1]"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:10
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     List(Int)
-
 

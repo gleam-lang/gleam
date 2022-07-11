@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/try_.rs
 assertion_line: 5
 expression: "pub fn main(x) {\n  try y = x\n  try z = y\n  Ok(z)\n}"
-
 ---
 import { Ok } from "../gleam.mjs";
 

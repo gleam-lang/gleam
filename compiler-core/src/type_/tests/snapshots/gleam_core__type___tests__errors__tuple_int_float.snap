@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 514
+assertion_line: 533
 expression: "#(1.0, 2, 3) == #(1, 2, 3)"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:17
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     #(Int, Int, Int)
-
 

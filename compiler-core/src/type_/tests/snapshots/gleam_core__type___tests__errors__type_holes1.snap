@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1358
+assertion_line: 1424
 expression: "type A { A(_) };"
-
 ---
 error: Unexpected type hole
   ┌─ /src/one/two.gleam:1:12

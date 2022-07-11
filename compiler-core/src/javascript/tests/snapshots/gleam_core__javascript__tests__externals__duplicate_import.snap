@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 44
+assertion_line: 54
 expression: "pub external fn one() -> Nil = \"./the/module.mjs\" \"dup\"\npub external fn two() -> Nil = \"./the/module.mjs\" \"dup\"\n"
-
 ---
 import { dup as one, dup as two } from "./the/module.mjs";
 

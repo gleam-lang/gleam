@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/results.rs
 assertion_line: 49
 expression: "import gleam\npub fn main() { gleam.Error }"
-
 ---
 import * as $gleam from "../gleam.mjs";
 

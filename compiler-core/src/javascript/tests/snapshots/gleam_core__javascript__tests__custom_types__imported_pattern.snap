@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 521
+assertion_line: 593
 expression: "import other.{Two}\n\npub fn main(x) {\n  case x {\n    Two(a: 1, ..) -> 1\n    other.Two(b: 2, c: c, ..) -> c\n    _ -> 3\n  }\n}\n"
-
 ---
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1078
+assertion_line: 1144
 expression: "type Box { Box(x: Int) }\ntype Boxy { Box(Int) }"
-
 ---
 error: Duplicate definition
   ┌─ /src/one/two.gleam:1:12

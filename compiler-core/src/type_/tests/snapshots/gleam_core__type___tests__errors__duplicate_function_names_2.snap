@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1045
+assertion_line: 1111
 expression: "fn dupe() { 1 }\nfn dupe() { 2.0 }"
-
 ---
 error: Duplicate definition
   ┌─ /src/one/two.gleam:1:1

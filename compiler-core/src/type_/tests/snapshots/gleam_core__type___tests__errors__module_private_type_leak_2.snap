@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 858
+assertion_line: 939
 expression: "external type PrivateType\nexternal fn go() -> PrivateType = \"\" \"\"\npub fn leak_type() { go() }"
-
 ---
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:3:1

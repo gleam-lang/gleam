@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/statement_if.rs
 assertion_line: 14
 expression: "if erlang {\n  pub fn main() { 1 }\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

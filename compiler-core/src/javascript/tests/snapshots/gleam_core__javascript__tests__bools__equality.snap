@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 70
+assertion_line: 95
 expression: "\nfn go(a, b) {\n  a == True\n  a != True\n  a == False\n  a != False\n  a == a\n  a != a\n  b == Nil\n  b != Nil\n  b == b\n}\n"
-
 ---
 function go(a, b) {
   a === true;

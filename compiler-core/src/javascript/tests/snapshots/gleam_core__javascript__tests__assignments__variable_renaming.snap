@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/assignments.rs
 assertion_line: 34
 expression: "\n\nfn go(x, foo) {\n  let a = 1\n  foo(a)\n  let a = 2\n  foo(a)\n  let #(a, 3) = x\n  let b = a\n  foo(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  foo(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
-
 ---
 import { throwError } from "../gleam.mjs";
 

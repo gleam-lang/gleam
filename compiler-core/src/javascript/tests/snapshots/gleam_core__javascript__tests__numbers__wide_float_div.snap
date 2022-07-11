@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/numbers.rs
 assertion_line: 74
 expression: "\nfn go() {\n  111111111111111111111111111111. /. 22222222222222222222222222222222222.\n}\n"
-
 ---
 import { divideFloat } from "../gleam.mjs";
 

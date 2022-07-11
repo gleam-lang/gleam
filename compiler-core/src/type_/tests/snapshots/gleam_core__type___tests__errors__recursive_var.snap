@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 504
+assertion_line: 508
 expression: "let id = fn(x) { x(x) } 1"
-
 ---
 error: Recursive type
   ┌─ /src/one/two.gleam:1:20

@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/guards.rs
 assertion_line: 253
 expression: "\n    type Test { Test(x: Int, y: Float) }\n    pub fn main() {\n      let x = Test(1, 3.0)\n      case x {\n        _ if x == Test(1, 1.0) -> 1\n        _ if x == Test(y: 2.0, x: 2) -> 2\n        _ if x != Test(2, 3.0) -> 2\n        _ -> 0\n      }\n    }\n"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

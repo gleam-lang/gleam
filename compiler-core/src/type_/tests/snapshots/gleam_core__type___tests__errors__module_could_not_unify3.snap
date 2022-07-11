@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 740
+assertion_line: 821
 expression: "\nfn id(x: a, y: a) { x }\npub fn x() { id(1, 1.0) }"
-
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:20
@@ -17,5 +16,4 @@ Expected type:
 Found type:
 
     Float
-
 

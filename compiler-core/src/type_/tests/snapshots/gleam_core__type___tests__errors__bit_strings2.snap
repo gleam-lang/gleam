@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 122
+assertion_line: 121
 expression: "let <<x:utf8>> = <<1>> x"
-
 ---
 error: Invalid bit string segment
   ┌─ /src/one/two.gleam:1:7

@@ -2,7 +2,6 @@
 source: compiler-core/src/erlang/tests/assert.rs
 assertion_line: 17
 expression: "pub fn go(x) {\n  assert [1, a, b, c] = x\n  [a, b, c]\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

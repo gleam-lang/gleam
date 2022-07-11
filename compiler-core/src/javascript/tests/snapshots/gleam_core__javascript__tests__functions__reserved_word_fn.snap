@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 175
+assertion_line: 192
 expression: "pub fn class() {\n  Nil\n}\n"
-
 ---
 export function class$() {
   return undefined;

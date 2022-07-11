@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 70
+assertion_line: 98
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
-
 ---
 import * as $other from "../other.mjs";
 import { Two as Three } from "../other.mjs";

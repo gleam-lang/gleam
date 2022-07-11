@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1412
+assertion_line: 1478
 expression: "\npub fn main(b) {\n    let True = b\n    Nil\n}\n"
-
 ---
 error: Not exhaustive pattern match
   ┌─ /src/one/two.gleam:3:5

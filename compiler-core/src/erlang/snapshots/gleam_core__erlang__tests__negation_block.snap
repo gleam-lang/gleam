@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 424
+assertion_line: 425
 expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
-
 ---
 -module(the_app).
 -compile(no_auto_import).

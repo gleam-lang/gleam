@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 254
+assertion_line: 271
 expression: "pub fn main(with: Int) -> Nil {\n  main(with - 1)\n}\n"
-
 ---
 export function main(loop$with) {
   while (true) {

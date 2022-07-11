@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 334
+assertion_line: 333
 expression: x
-
 ---
 error: Unknown variable
   ┌─ /src/one/two.gleam:1:1

@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 943
+assertion_line: 1009
 expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
-
 ---
 error: Invalid guard variable
   ┌─ /src/one/two.gleam:2:27

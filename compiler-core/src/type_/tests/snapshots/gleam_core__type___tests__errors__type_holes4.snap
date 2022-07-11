@@ -1,8 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1376
+assertion_line: 1442
 expression: type X = List(_)
-
 ---
 error: Unexpected type hole
   ┌─ /src/one/two.gleam:1:15
