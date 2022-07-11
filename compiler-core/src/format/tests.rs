@@ -3474,3 +3474,20 @@ fn wrap_case_subjects() {
 "#
     );
 }
+
+// A bug reported on Discord. This would cause a compiler crash.
+#[test]
+fn multiple_empty_line_collapse_bug() {
+    assert_format_rewrite!(
+        r#"// Comment
+
+
+
+const x = 1
+"#,
+        r#"// Comment
+
+const x = 1
+"#
+    );
+}

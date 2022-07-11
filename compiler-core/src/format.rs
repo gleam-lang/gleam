@@ -1650,9 +1650,16 @@ pub fn comments_before<'a>(
         .get(0..end_empty_lines)
         .unwrap_or(&[])
         .iter()
+        .map(|i| (i, i))
         // compact consecutive empty lines into a single line
-        .coalesce(|a, b| if *a + 1 == *b { Ok(a) } else { Err((a, b)) })
-        .map(|l| (*l, None));
+        .coalesce(|(a_start, a_end), (b_start, b_end)| {
+            if *a_end + 1 == *b_start {
+                Ok((a_start, b_end))
+            } else {
+                Err(((a_start, a_end), (b_start, b_end)))
+            }
+        })
+        .map(|l| (*l.0, None));
     let popped = popped_comments
         .merge_by(popped_empty_lines, |(a, _), (b, _)| a < b)
         .skip_while(|(_, comment_or_line)| comment_or_line.is_none())
