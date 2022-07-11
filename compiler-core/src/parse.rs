@@ -385,6 +385,14 @@ where
             // var lower_name and UpName
             Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
+                if self.maybe_one(&Token::Equal).is_some() {
+                    return parse_error(
+                        ParseErrorType::InvalidAssignmentStatement, 
+                        SrcSpan{
+                            start, end
+                        },
+                    );
+                }
                 UntypedExpr::Var {
                     location: SrcSpan { start, end },
                     name,

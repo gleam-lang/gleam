@@ -71,6 +71,13 @@ and can contain a-z, 0-9, or _.",
 contain a-z, A-Z, or 0-9.",
                 )],
             ),
+            ParseErrorType::InvalidAssignmentStatement => (
+                "This is not a valid assignment statement.",
+                vec![
+                    "Hint: Use let for binding".to_string(),
+                    "See: https://gleam.run/book/tour/let-bindings".to_string(),
+                ],
+            ),
             ParseErrorType::InvalidBitStringSegment => (
                 "This is not a valid BitString segment option.",
                 vec![
@@ -200,6 +207,7 @@ pub enum ParseErrorType {
     ExtraSeparator,          // #(1,,) <- the 2nd comma is an extra separator
     IncorrectName,           // UpName or DiscardName used when Name was expected
     IncorrectUpName,         // Name or DiscardName used when UpName was expected
+    InvalidAssignmentStatement,
     InvalidBitStringSegment, // <<7:hello>> `hello` is an invalid bitstring segment
     InvalidBitStringUnit,    // in <<1:unit(x)>> x must be 1 <= x <= 256
     InvalidTailPattern,      // only name and _name are allowed after ".." in list pattern
