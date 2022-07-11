@@ -246,3 +246,13 @@ fn anon_function_no_body() {
         }
     );
 }
+fn missing_let_binding() {
+    assert_error!(
+        "let bar = 42;
+         foo = bar;",
+        ParseError {
+            location: SrcSpan { start: 23, end: 26 },
+            error: ParseErrorType::InvalidAssignmentStatement
+        }
+    );
+}
