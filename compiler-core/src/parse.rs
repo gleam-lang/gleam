@@ -564,19 +564,12 @@ where
 
             // if it reaches this code block, there must be no "let" or "assert" at the beginning of the expression
             Some((start, Token::Equal, end)) => {
-                return parse_error(
-                    ParseErrorType::NoLetBinding,
-                    SrcSpan { start, end }
-                )
+                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
             }
 
             Some((start, Token::Colon, end)) => {
-                return parse_error(
-                    ParseErrorType::NoLetBinding,
-                    SrcSpan { start, end }
-                )
+                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
             }
-
 
             t0 => {
                 self.tok0 = t0;
@@ -705,8 +698,8 @@ where
             error: ParseErrorType::ExpectedEqual,
             location: SrcSpan {
                 start: pattern.location().start,
-                end: pattern.location().end
-            }
+                end: pattern.location().end,
+            },
         })?;
         let value = self.parse_expression()?.ok_or(ParseError {
             error: ParseErrorType::ExpectedValue,
@@ -2510,14 +2503,13 @@ where
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
-            Some((start, _, end)) => { 
-                parse_error(
+            Some((start, _, end)) => parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,
                     hint: None,
                 },
                 SrcSpan { start, end },
-            )}
+            ),
         }
     }
 
