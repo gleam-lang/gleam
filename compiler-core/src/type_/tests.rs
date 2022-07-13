@@ -1352,6 +1352,13 @@ fn todo_warning_test() {
 }
 
 #[test]
+fn empty_func_warning_test() {
+    assert_warning!(
+        "pub fn main() { foo() }
+        pub fn foo() { }");
+}
+
+#[test]
 fn warning_variable_never_used_test() {
     assert_warning!(
         "

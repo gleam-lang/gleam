@@ -1254,13 +1254,14 @@ where
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
-        if let Some((body, _)) = self.parse_expression_seq()? {
-            let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
-            let end = return_annotation
-                .as_ref()
-                .map(|l| l.location().end)
-                .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
-            Ok(Some(Statement::Fn {
+        let some_body = self.parse_expression_seq()?;
+        let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
+        let end = return_annotation
+            .as_ref()
+            .map(|l| l.location().end)
+            .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
+        match some_body {
+            Some((body, _)) => Ok(Some(Statement::Fn {
                 doc: None,
                 location: SrcSpan { start, end },
                 end_position: rbr_e - 1,
@@ -1270,9 +1271,18 @@ where
                 body,
                 return_type: (),
                 return_annotation,
+            })),
+            None =>  Ok(Some(Statement::Fn {
+                doc: None,
+                location: SrcSpan { start, end },
+                end_position: rbr_e - 1,
+                public,
+                name,
+                arguments: args,
+                body: UntypedExpr::Todo { location: SrcSpan {start, end}, label: None },
+                return_type: (),
+                return_annotation,
             }))
-        } else {
-            self.next_tok_unexpected(vec!["The body of a function".to_string()])
         }
     }
 
