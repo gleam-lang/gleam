@@ -1355,7 +1355,8 @@ fn todo_warning_test() {
 fn empty_func_warning_test() {
     assert_warning!(
         "pub fn main() { foo() }
-        pub fn foo() { }");
+        pub fn foo() { }"
+    );
 }
 
 #[test]
