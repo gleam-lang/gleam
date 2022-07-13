@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "pub fn main() { foo() }\n        pub fn foo() { }"
+---
+
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:2:9
+  │
+2 │         pub fn foo() { }
+  │         ^^^^^^^^^^^^ Todo found
+
+This code will crash if it is run. Be sure to remove this todo before running your program.
+
