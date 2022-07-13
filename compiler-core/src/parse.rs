@@ -1272,17 +1272,20 @@ where
                 return_type: (),
                 return_annotation,
             })),
-            None =>  Ok(Some(Statement::Fn {
+            None => Ok(Some(Statement::Fn {
                 doc: None,
                 location: SrcSpan { start, end },
                 end_position: rbr_e - 1,
                 public,
                 name,
                 arguments: args,
-                body: UntypedExpr::Todo { location: SrcSpan {start, end}, label: None },
+                body: UntypedExpr::Todo {
+                    location: SrcSpan { start, end },
+                    label: None,
+                },
                 return_type: (),
                 return_annotation,
-            }))
+            })),
         }
     }
 
