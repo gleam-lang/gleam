@@ -248,11 +248,51 @@ fn anon_function_no_body() {
 }
 fn missing_let_binding() {
     assert_error!(
-        "let bar = 42;
-         foo = bar;",
+        "foo = 32",
         ParseError {
-            location: SrcSpan { start: 23, end: 26 },
-            error: ParseErrorType::InvalidAssignmentStatement
+            location: SrcSpan { start: 4, end: 5 },
+            error: ParseErrorType::NoLetBinding
+        }
+    );
+    assert_error!(
+        "foo:Int = 32",
+        ParseError {
+            location: SrcSpan { start: 3, end: 4 },
+            error: ParseErrorType::NoLetBinding
+        }
+    );
+    assert_error!(
+        "let bar:Int = 32
+        bar = 42",
+        ParseError {
+            location: SrcSpan { start: 29, end: 30 },
+            error: ParseErrorType::NoLetBinding
+        }
+    );
+    assert_error!(
+        "[x] = [2]",
+        ParseError {
+            location: SrcSpan { start: 4, end: 5 },
+            error: ParseErrorType::NoLetBinding
+        }
+    );
+}
+
+#[test]
+fn no_eq_after_binding() {
+    assert_error!(
+        "let foo",
+        ParseError {
+            location: SrcSpan { start: 4, end: 7 },
+            error: ParseErrorType::ExpectedEqual
+        }
+    );
+    assert_error!(
+        "let foo
+        foo = 4",
+        ParseError {
+            location: SrcSpan { start: 4, end: 7 },
+            error: ParseErrorType::ExpectedEqual
         }
     );
 }
