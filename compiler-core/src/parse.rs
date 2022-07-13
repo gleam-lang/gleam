@@ -385,14 +385,6 @@ where
             // var lower_name and UpName
             Some((start, Token::Name { name } | Token::UpName { name }, end)) => {
                 let _ = self.next_tok();
-                if self.maybe_one(&Token::Equal).is_some() {
-                    return parse_error(
-                        ParseErrorType::InvalidAssignmentStatement, 
-                        SrcSpan{
-                            start, end
-                        },
-                    );
-                }
                 UntypedExpr::Var {
                     location: SrcSpan { start, end },
                     name,
@@ -570,6 +562,22 @@ where
                 }
             }
 
+            // if it reaches this code block, there must be no "let" or "assert" at the beginning of the expression
+            Some((start, Token::Equal, end)) => {
+                return parse_error(
+                    ParseErrorType::NoLetBinding,
+                    SrcSpan { start, end }
+                )
+            }
+
+            Some((start, Token::Colon, end)) => {
+                return parse_error(
+                    ParseErrorType::NoLetBinding,
+                    SrcSpan { start, end }
+                )
+            }
+
+
             t0 => {
                 self.tok0 = t0;
                 return Ok(None);
@@ -693,7 +701,13 @@ where
             ])?;
         };
         let annotation = self.parse_type_annotation(&Token::Colon, false)?;
-        let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
+        let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
+            error: ParseErrorType::ExpectedEqual,
+            location: SrcSpan {
+                start: pattern.location().start,
+                end: pattern.location().end
+            }
+        })?;
         let value = self.parse_expression()?.ok_or(ParseError {
             error: ParseErrorType::ExpectedValue,
             location: SrcSpan {
@@ -2496,13 +2510,14 @@ where
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
-            Some((start, _, end)) => parse_error(
+            Some((start, _, end)) => { 
+                parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,
                     hint: None,
                 },
                 SrcSpan { start, end },
-            ),
+            )}
         }
     }
 
