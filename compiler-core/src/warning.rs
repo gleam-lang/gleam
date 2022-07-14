@@ -21,7 +21,6 @@ pub enum Warning {
 
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
-        #[allow(clippy::unwrap_used)]
         match self {
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo { kind, location, .. } => {
