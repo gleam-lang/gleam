@@ -1260,33 +1260,27 @@ where
             .as_ref()
             .map(|l| l.location().end)
             .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
-        match some_body {
-            Some((body, _)) => Ok(Some(Statement::Fn {
-                doc: None,
+        let body = match some_body {
+            None if is_anon => {
+                return self.next_tok_unexpected(vec!["The body of a function".into()]);
+            }
+            None => UntypedExpr::Todo {
                 location: SrcSpan { start, end },
-                end_position: rbr_e - 1,
-                public,
-                name,
-                arguments: args,
-                body,
-                return_type: (),
-                return_annotation,
-            })),
-            None => Ok(Some(Statement::Fn {
-                doc: None,
-                location: SrcSpan { start, end },
-                end_position: rbr_e - 1,
-                public,
-                name,
-                arguments: args,
-                body: UntypedExpr::Todo {
-                    location: SrcSpan { start, end },
-                    label: None,
-                },
-                return_type: (),
-                return_annotation,
-            })),
-        }
+                label: None,
+            },
+            Some((body, _)) => body,
+        };
+        Ok(Some(Statement::Fn {
+            doc: None,
+            location: SrcSpan { start, end },
+            end_position: rbr_e - 1,
+            public,
+            name,
+            arguments: args,
+            body,
+            return_type: (),
+            return_annotation,
+        }))
     }
 
     // Starts after "fn"
