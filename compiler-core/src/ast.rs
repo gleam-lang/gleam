@@ -1176,3 +1176,9 @@ impl<A> BitStringSegmentOption<A> {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TodoKind {
+    Keyword,
+    EmptyFunction,
+}

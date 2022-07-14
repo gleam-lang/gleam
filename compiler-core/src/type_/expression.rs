@@ -4,7 +4,7 @@ use vec1::Vec1;
 use super::{pipe::PipeTyper, *};
 use crate::ast::{
     Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
-    ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TypeAst, TypedArg,
+    ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst, TypedArg,
     TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
     UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
@@ -72,8 +72,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
             UntypedExpr::Todo {
-                location, label, ..
-            } => Ok(self.infer_todo(location, label)),
+                location,
+                label,
+                kind,
+                ..
+            } => Ok(self.infer_todo(location, kind, label)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
@@ -189,9 +192,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         PipeTyper::infer(self, expressions)
     }
 
-    fn infer_todo(&mut self, location: SrcSpan, label: Option<String>) -> TypedExpr {
+    fn infer_todo(
+        &mut self,
+        location: SrcSpan,
+        kind: TodoKind,
+        label: Option<String>,
+    ) -> TypedExpr {
         let typ = self.new_unbound_var();
         self.environment.warnings.push(Warning::Todo {
+            kind,
             location,
             typ: typ.clone(),
         });

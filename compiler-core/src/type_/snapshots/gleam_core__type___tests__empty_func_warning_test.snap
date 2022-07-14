@@ -1,13 +1,15 @@
 ---
 source: compiler-core/src/type_/tests.rs
+assertion_line: 1357
 expression: "pub fn main() { foo() }\n        pub fn foo() { }"
 ---
 
-warning: Todo found
+warning: Unimplemented function
   ┌─ /src/warning/wrn.gleam:2:9
   │
 2 │         pub fn foo() { }
-  │         ^^^^^^^^^^^^ Todo found
+  │         ^^^^^^^^^^^^ This code is incomplete
 
-This code will crash if it is run. Be sure to remove this todo before running your program.
+This code will crash if it is run. Be sure to finish this before running
+your program.
 

@@ -1,5 +1,7 @@
 use crate::{
+    ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
+    error::wrap,
     type_,
 };
 use std::io::Write;
@@ -22,22 +24,31 @@ impl Warning {
         #[allow(clippy::unwrap_used)]
         match self {
             Self::Type { path, warning, src } => match warning {
-                type_::Warning::Todo { location, .. } => {
-                    let text = "This code will crash if it is run. Be sure to remove this todo before running your program.".into();
+                type_::Warning::Todo { kind, location, .. } => {
+                    let text = wrap(
+                        "This code will crash if it is run. \
+Be sure to finish this before running your program.",
+                    );
+                    let title = match kind {
+                        TodoKind::Keyword => "Todo found",
+                        TodoKind::EmptyFunction => "Unimplemented function",
+                    }
+                    .into();
+
                     Diagnostic {
-                        title: "Todo found".into(),
+                        title,
                         text,
-                        hint: None,
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             path: path.to_path_buf(),
                             src: src.to_string(),
                             label: diagnostic::Label {
-                                text: Some("Todo found".into()),
+                                text: Some("This code is incomplete".into()),
                                 span: *location,
                             },
                             extra_labels: Vec::new(),
                         }),
+                        hint: None,
                     }
                 }
 

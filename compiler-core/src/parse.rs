@@ -57,7 +57,7 @@ mod token;
 use crate::ast::{
     Arg, ArgNames, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
     Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TypeAst,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TodoKind, TypeAst,
     UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
     CAPTURE_VARIABLE,
@@ -402,6 +402,7 @@ where
                 }
                 UntypedExpr::Todo {
                     location: SrcSpan { start, end },
+                    kind: TodoKind::Keyword,
                     label,
                 }
             }
@@ -1265,6 +1266,7 @@ where
                 return self.next_tok_unexpected(vec!["The body of a function".into()]);
             }
             None => UntypedExpr::Todo {
+                kind: TodoKind::EmptyFunction,
                 location: SrcSpan { start, end },
                 label: None,
             },

@@ -1,5 +1,5 @@
 use crate::{
-    ast::{BinOp, SrcSpan},
+    ast::{BinOp, SrcSpan, TodoKind},
     type_::Type,
 };
 
@@ -222,6 +222,7 @@ pub enum Error {
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
     Todo {
+        kind: TodoKind,
         location: SrcSpan,
         typ: Arc<Type>,
     },

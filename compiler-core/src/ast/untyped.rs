@@ -100,6 +100,7 @@ pub enum UntypedExpr {
     },
 
     Todo {
+        kind: TodoKind,
         location: SrcSpan,
         label: Option<String>,
     },
