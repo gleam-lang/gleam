@@ -891,7 +891,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::LtEqFloat { .. } => 4,
 
             ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } => {
-                6
+                5
             }
         }
     }
