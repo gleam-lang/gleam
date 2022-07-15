@@ -1277,67 +1277,63 @@ impl<'comments> Formatter<'comments> {
             .append(self.pattern(&arg.value))
     }
 
+    pub fn clause_guard_bin_op<'a>(
+        &mut self,
+        name: &'a str,
+        name_precedence: u8,
+        left: &'a UntypedClauseGuard,
+        right: &'a UntypedClauseGuard,
+    ) -> Document<'a> {
+        let left_precedence = left.precedence();
+        let right_precedence = right.precedence();
+        let left = self.clause_guard(left);
+        let right = self.clause_guard(right);
+        self.operator_side(left, name_precedence, left_precedence)
+            .append(name)
+            .append(self.operator_side(right, name_precedence, right_precedence - 1))
+    }
+
     fn clause_guard<'a>(&mut self, clause_guard: &'a UntypedClauseGuard) -> Document<'a> {
         match clause_guard {
-            ClauseGuard::And { left, right, .. } => self
-                .clause_guard(left)
-                .append(" && ")
-                .append(self.clause_guard(right)),
+            ClauseGuard::And { left, right, .. } => {
+                self.clause_guard_bin_op(" && ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::Or { left, right, .. } => {
+                self.clause_guard_bin_op(" || ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::Equals { left, right, .. } => {
+                self.clause_guard_bin_op(" == ", clause_guard.precedence(), left, right)
+            }
 
-            ClauseGuard::Or { left, right, .. } => self
-                .clause_guard(left)
-                .append(" || ")
-                .append(self.clause_guard(right)),
+            ClauseGuard::NotEquals { left, right, .. } => {
+                self.clause_guard_bin_op(" != ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::GtInt { left, right, .. } => {
+                self.clause_guard_bin_op(" > ", clause_guard.precedence(), left, right)
+            }
 
-            ClauseGuard::Equals { left, right, .. } => self
-                .clause_guard(left)
-                .append(" == ")
-                .append(self.clause_guard(right)),
+            ClauseGuard::GtEqInt { left, right, .. } => {
+                self.clause_guard_bin_op(" >= ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::LtInt { left, right, .. } => {
+                self.clause_guard_bin_op(" < ", clause_guard.precedence(), left, right)
+            }
 
-            ClauseGuard::NotEquals { left, right, .. } => self
-                .clause_guard(left)
-                .append(" != ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::GtInt { left, right, .. } => self
-                .clause_guard(left)
-                .append(" > ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::GtEqInt { left, right, .. } => self
-                .clause_guard(left)
-                .append(" >= ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::LtInt { left, right, .. } => self
-                .clause_guard(left)
-                .append(" < ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::LtEqInt { left, right, .. } => self
-                .clause_guard(left)
-                .append(" <= ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::GtFloat { left, right, .. } => self
-                .clause_guard(left)
-                .append(" >. ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::GtEqFloat { left, right, .. } => self
-                .clause_guard(left)
-                .append(" >=. ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::LtFloat { left, right, .. } => self
-                .clause_guard(left)
-                .append(" <. ")
-                .append(self.clause_guard(right)),
-
-            ClauseGuard::LtEqFloat { left, right, .. } => self
-                .clause_guard(left)
-                .append(" <=. ")
-                .append(self.clause_guard(right)),
+            ClauseGuard::LtEqInt { left, right, .. } => {
+                self.clause_guard_bin_op(" <= ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::GtFloat { left, right, .. } => {
+                self.clause_guard_bin_op(" >. ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::GtEqFloat { left, right, .. } => {
+                self.clause_guard_bin_op(" >=. ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::LtFloat { left, right, .. } => {
+                self.clause_guard_bin_op(" <. ", clause_guard.precedence(), left, right)
+            }
+            ClauseGuard::LtEqFloat { left, right, .. } => {
+                self.clause_guard_bin_op(" <=. ", clause_guard.precedence(), left, right)
+            }
 
             ClauseGuard::Var { name, .. } => name.to_doc(),
 

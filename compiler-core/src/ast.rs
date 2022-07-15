@@ -873,6 +873,28 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::LtEqFloat { location, .. } => *location,
         }
     }
+
+    pub fn precedence(&self) -> u8 {
+        match self {
+            ClauseGuard::Or { .. } => 1,
+            ClauseGuard::And { .. } => 2,
+
+            ClauseGuard::Equals { .. } | ClauseGuard::NotEquals { .. } => 3,
+
+            ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. } => 4,
+
+            ClauseGuard::Constant(_) | ClauseGuard::Var { .. } | ClauseGuard::TupleIndex { .. } => {
+                6
+            }
+        }
+    }
 }
 
 impl TypedClauseGuard {

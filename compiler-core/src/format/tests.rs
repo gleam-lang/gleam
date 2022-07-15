@@ -3491,3 +3491,43 @@ const x = 1
 "#
     );
 }
+
+#[test]
+fn do_not_remove_required_braces_case_guard() {
+    assert_format!(
+        "fn main() {
+  let is_enabled = False
+  let is_confirmed = False
+  let is_admin = True
+  case is_enabled, is_confirmed, is_admin {
+    // `{` and `}` will be stripped on save for me, changing the logic
+    is_enabled, is_confirmed, is_admin if True && { False || True } ->
+      // enabled andalso (admin andor confirmed) - does not allow disabled admins
+      Nil
+    _, _, _ -> Nil
+  }
+}
+"
+    );
+
+    assert_format!(
+      "fn main() {
+        let foo = True;
+        case foo {
+          foo if True != { 1 == 2 } -> Nil
+          _ -> Nil  
+        }        
+      }"
+    );
+
+    assert_format!(
+      "fn main() {
+        let foo = True;
+        let bar = False;
+        case foo {
+          foo if True != { 1 == { bar == foo } } -> Nil,
+          _ -> Nil  
+        }        
+      }"
+    );
+}
