@@ -13,6 +13,8 @@
   empty lines in a row.
 - Fixed a bug alternative patterns with a clause containing a pipe with a pipe
   after the case expresson could render incorrect Erlang.
+- Fixed a bug where formatter would strip curly braces around case guards due 
+to lack of precedence.
 
 ## v0.22.1 - 2022-06-27
 
