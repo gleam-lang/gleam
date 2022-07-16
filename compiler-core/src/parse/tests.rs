@@ -246,6 +246,8 @@ fn anon_function_no_body() {
         }
     );
 }
+
+#[test]
 fn missing_let_binding() {
     assert_error!(
         "foo = 32",
