@@ -92,15 +92,14 @@ fn server_capabilities() -> lsp::ServerCapabilities {
         )),
         selection_range_provider: None,
         hover_provider: Some(HoverProviderCapability::Simple(true)),
-        // completion_provider: Some(lsp::CompletionOptions {
-        //     resolve_provider: None,
-        //     trigger_characters: Some(vec![".".into()]), // TODO: can we include pipe here?
-        //     all_commit_characters: None,
-        //     work_done_progress_options: lsp::WorkDoneProgressOptions {
-        //         work_done_progress: None,
-        //     },
-        // }),
-        completion_provider: None,
+        completion_provider: Some(lsp::CompletionOptions {
+            resolve_provider: None,
+            trigger_characters: Some(vec![".".into(), " ".into()]),
+            all_commit_characters: None,
+            work_done_progress_options: lsp::WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        }),
         signature_help_provider: None,
         definition_provider: Some(lsp::OneOf::Left(true)),
         type_definition_provider: None,
@@ -638,63 +637,27 @@ impl LanguageServer {
     // TODO: imported module values
     // TODO: imported module types
     // TODO: record accessors
-    fn completion(&self, params: lsp::CompletionParams) -> Result<Vec<lsp::CompletionItem>> {
+    fn completion(
+        &self,
+        params: lsp::CompletionParams,
+    ) -> Result<Option<Vec<lsp::CompletionItem>>> {
         // Look up the type information for the module being hovered in
         let module = match self.module_for_uri(&params.text_document_position.text_document.uri) {
             Some(module) => module,
             // If we don't have a compiled version of the module for this URI
             // then there's nothing to show, so return None.
-            None => return Ok(vec![]),
+            None => return Ok(None),
         };
 
-        let mut items = vec![];
+        // TODO: Use the node for completion if it is an import
+        let _ = self.node_at_position(&params.text_document_position);
+        let items = vec![];
 
-        // TODO: replace this with one that includes private values too
-        for (name, _constructor) in module.ast.type_info.values.iter() {
-            items.push(lsp::CompletionItem {
-                label: name.clone(),
-                kind: None,
-                documentation: None,
-                ..Default::default()
-            })
+        if items.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(items))
         }
-
-        // TODO: replace this with one that includes private types too
-        for (name, _constructor) in module.ast.type_info.types.iter() {
-            items.push(lsp::CompletionItem {
-                label: name.clone(),
-                kind: None,
-                documentation: None,
-                ..Default::default()
-            })
-        }
-
-        items.push(lsp::CompletionItem {
-            label: "import gleam/result".into(),
-            kind: None,
-            documentation: None,
-            ..Default::default()
-        });
-        items.push(lsp::CompletionItem {
-            label: "import gleam/map".into(),
-            kind: None,
-            documentation: None,
-            ..Default::default()
-        });
-        items.push(lsp::CompletionItem {
-            label: "import gleam/list".into(),
-            kind: None,
-            documentation: None,
-            ..Default::default()
-        });
-        items.push(lsp::CompletionItem {
-            label: "list.map".into(),
-            kind: None,
-            documentation: None,
-            ..Default::default()
-        });
-
-        Ok(items)
     }
 
     fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
