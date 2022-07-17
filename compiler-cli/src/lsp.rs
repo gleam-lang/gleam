@@ -641,13 +641,12 @@ impl LanguageServer {
         &self,
         params: lsp::CompletionParams,
     ) -> Result<Option<Vec<lsp::CompletionItem>>> {
-        // Look up the type information for the module being hovered in
-        let module = match self.module_for_uri(&params.text_document_position.text_document.uri) {
-            Some(module) => module,
-            // If we don't have a compiled version of the module for this URI
-            // then there's nothing to show, so return None.
-            None => return Ok(None),
-        };
+        // let _module = match self.module_for_uri(&params.text_document_position.text_document.uri) {
+        //     Some(module) => module,
+        //     // If we don't have a compiled version of the module for this URI
+        //     // then there's nothing to show, so return None.
+        //     None => return Ok(None),
+        // };
 
         // TODO: Use the node for completion if it is an import
         let _ = self.node_at_position(&params.text_document_position);
