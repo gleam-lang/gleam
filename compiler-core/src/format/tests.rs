@@ -3570,7 +3570,10 @@ fn remove_braces_case_guard() {
 }
 "
     );
+}
 
+#[test]
+fn remove_braces_case_guard_2() {
     assert_format_rewrite!(
         "fn main() {
   let foo = #(10, [0])
@@ -3588,5 +3591,29 @@ fn remove_braces_case_guard() {
   }
 }
 "
+    );
+}
+
+#[test]
+fn const_multi_line_string_breaks() {
+    assert_format!(
+        r#"const string = [
+  "hello
+world",
+]
+"#
+    );
+}
+
+#[test]
+fn expr_multi_line_string_breaks() {
+    assert_format!(
+        r#"pub fn main() {
+  let string = [
+    "hello
+world",
+  ]
+}
+"#
     );
 }

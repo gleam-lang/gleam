@@ -309,7 +309,7 @@ impl<'comments> Formatter<'comments> {
         match value {
             Constant::Int { value, .. } | Constant::Float { value, .. } => value.to_doc(),
 
-            Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+            Constant::String { value, .. } => self.string(value),
 
             Constant::List { elements, .. } => {
                 let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
@@ -646,7 +646,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Float { value, .. } => value.to_doc(),
 
-            UntypedExpr::String { value, .. } => value.to_doc().surround("\"", "\""),
+            UntypedExpr::String { value, .. } => self.string(value),
 
             UntypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
 
@@ -732,6 +732,15 @@ impl<'comments> Formatter<'comments> {
             } => self.record_update(constructor, spread, args),
         };
         commented(document, comments)
+    }
+
+    fn string<'a>(&self, string: &'a String) -> Document<'a> {
+        let doc = string.to_doc().surround("\"", "\"");
+        if dbg!(string.contains("\n")) {
+            docvec![force_break(), doc]
+        } else {
+            doc
+        }
     }
 
     fn pattern_constructor<'a>(
@@ -1221,7 +1230,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Float { value, .. } => value.to_doc(),
 
-            Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+            Pattern::String { value, .. } => self.string(value),
 
             Pattern::Var { name, .. } => name.to_doc(),
 
