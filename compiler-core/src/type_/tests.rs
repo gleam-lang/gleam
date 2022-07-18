@@ -31,9 +31,9 @@ macro_rules! assert_infer {
 #[macro_export]
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
-        use $crate::uid::UniqueIdGenerator;
         use itertools::Itertools;
         use $crate::type_::{build_prelude, infer_module};
+        use $crate::uid::UniqueIdGenerator;
         let (ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
