@@ -22,7 +22,7 @@ macro_rules! assert_erl {
             type_::{build_prelude, infer_module},
             uid::UniqueIdGenerator,
         };
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["the_app".to_string()];
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -32,7 +32,7 @@ macro_rules! assert_erl {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let ast = infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,

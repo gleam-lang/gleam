@@ -736,7 +736,7 @@ impl<'comments> Formatter<'comments> {
 
     fn string<'a>(&self, string: &'a String) -> Document<'a> {
         let doc = string.to_doc().surround("\"", "\"");
-        if dbg!(string.contains("\n")) {
+        if string.contains('\n') {
             docvec![force_break(), doc]
         } else {
             doc
