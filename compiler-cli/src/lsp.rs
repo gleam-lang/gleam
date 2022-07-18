@@ -11,8 +11,8 @@ use crate::{
     build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
 };
 use gleam_core::{
-    ast::{SrcSpan, TypedExpr},
-    build::{self, Module, ProjectCompiler},
+    ast::SrcSpan,
+    build::{self, Located, Module, ProjectCompiler},
     config::PackageConfig,
     diagnostic::{self, Level},
     io::{CommandExecutor, FileSystemIO},
@@ -567,7 +567,7 @@ impl LanguageServer {
 
             "textDocument/completion" => {
                 let params = cast_request::<Completion>(request).expect("cast Completion");
-                let completions = self.completion(params)?;
+                let completions = self.completion(params);
                 Ok(serde_json::to_value(completions).expect("Completions to json"))
             }
 
@@ -637,34 +637,59 @@ impl LanguageServer {
     // TODO: imported module values
     // TODO: imported module types
     // TODO: record accessors
-    fn completion(
-        &self,
-        params: lsp::CompletionParams,
-    ) -> Result<Option<Vec<lsp::CompletionItem>>> {
-        // let _module = match self.module_for_uri(&params.text_document_position.text_document.uri) {
-        //     Some(module) => module,
-        //     // If we don't have a compiled version of the module for this URI
-        //     // then there's nothing to show, so return None.
-        //     None => return Ok(None),
-        // };
-
+    fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
         // TODO: Use the node for completion if it is an import
-        let _ = self.node_at_position(&params.text_document_position);
-        let items = vec![];
+        let (_line_numbers, found) = self.node_at_position(&params.text_document_position)?;
 
-        if items.is_empty() {
-            Ok(None)
-        } else {
-            Ok(Some(items))
+        match found {
+            // TODO: autocompletion for expressions
+            Located::Expression(_expression) => None,
+
+            // Let's assume it's an import until we have fault tolerant parsing
+            // and can actually identify imports
+            // TODO: test
+            Located::OutsideAnyStatement => {
+                let compiler = self.compiler.as_ref()?;
+                // TODO: Test
+                let dependencies_modules = compiler
+                    .project_compiler
+                    .get_importable_modules()
+                    .keys()
+                    .cloned();
+                // TODO: Test
+                let project_modules = compiler
+                    .modules
+                    .iter()
+                    // TODO: We should autocomplete test modules if we are in the test dir
+                    // TODO: Test
+                    .filter(|(_name, module)| module.origin.is_src())
+                    .map(|(name, _module)| name)
+                    .cloned();
+                let modules = dependencies_modules
+                    .chain(project_modules)
+                    .map(|label| lsp::CompletionItem {
+                        label,
+                        kind: None,
+                        documentation: None,
+                        ..Default::default()
+                    })
+                    .collect();
+                Some(modules)
+            }
         }
     }
 
     fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
         let params = params.text_document_position_params;
 
-        let (line_numbers, expression) = match self.node_at_position(&params) {
+        let (line_numbers, found) = match self.node_at_position(&params) {
             Some(value) => value,
             None => return Ok(None),
+        };
+
+        let expression = match found {
+            Located::Expression(expression) => expression,
+            Located::OutsideAnyStatement => return Ok(None),
         };
 
         // Show the type of the hovered node to the user
@@ -684,12 +709,12 @@ impl LanguageServer {
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
-    ) -> Option<(LineNumbers, &TypedExpr)> {
+    ) -> Option<(LineNumbers, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let expression = module.find_node(byte_index)?;
-        Some((line_numbers, expression))
+        let node = module.find_node(byte_index)?;
+        Some((line_numbers, node))
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {

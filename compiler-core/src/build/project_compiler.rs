@@ -94,6 +94,10 @@ where
         }
     }
 
+    pub fn get_importable_modules(&self) -> &im::HashMap<String, type_::Module> {
+        &self.importable_modules
+    }
+
     // TODO: test
     pub fn checkpoint(&self) -> CheckpointState {
         CheckpointState {

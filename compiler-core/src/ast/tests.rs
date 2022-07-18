@@ -2,12 +2,37 @@ use std::sync::Arc;
 
 use crate::{
     ast::{SrcSpan, TypedExpr},
+    build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
         RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
+
+use super::TypedModule;
+
+fn compile_module(src: &str) -> TypedModule {
+    use crate::type_::{build_prelude, infer_module};
+    let (ast, _) = crate::parse::parse_module(src).expect("syntax error");
+    let ids = UniqueIdGenerator::new();
+    let mut modules = im::HashMap::new();
+    // DUPE: preludeinsertion
+    // TODO: Currently we do this here and also in the tests. It would be better
+    // to have one place where we create all this required state for use in each
+    // place.
+    let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+    infer_module(
+        crate::build::Target::Erlang,
+        &ids,
+        ast,
+        crate::build::Origin::Src,
+        "thepackage",
+        &modules,
+        &mut vec![],
+    )
+    .expect("should successfully infer")
+}
 
 fn compile_expression(src: &str) -> TypedExpr {
     let ast = crate::parse::parse_expression_sequence(src).expect("syntax error");
@@ -441,4 +466,24 @@ fn find_node_bool() {
     assert_eq!(negate.find_node(3), Some(&bool));
     assert_eq!(negate.find_node(4), Some(&bool));
     assert_eq!(negate.find_node(5), None);
+}
+
+#[test]
+fn find_node_import() {
+    let module = compile_module(
+        r#"
+
+pub fn main() {
+  Nil
+}
+
+"#,
+    );
+
+    assert_eq!(module.find_node(0), Some(Located::OutsideAnyStatement));
+    assert_eq!(module.find_node(1), Some(Located::OutsideAnyStatement));
+    assert_ne!(module.find_node(2), Some(Located::OutsideAnyStatement));
+    assert_ne!(module.find_node(22), Some(Located::OutsideAnyStatement));
+    assert_eq!(module.find_node(23), Some(Located::OutsideAnyStatement));
+    assert_eq!(module.find_node(24), Some(Located::OutsideAnyStatement));
 }

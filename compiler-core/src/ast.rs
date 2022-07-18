@@ -10,7 +10,7 @@ pub use self::untyped::UntypedExpr;
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
-use crate::build::Target;
+use crate::build::{Located, Target};
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
 
@@ -39,8 +39,21 @@ pub struct Module<Info, Statements> {
 }
 
 impl TypedModule {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
-        self.statements.iter().find_map(|s| s.find_node(byte_index))
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+        let mut in_any_statement = false;
+
+        for statement in &self.statements {
+            if let Some(node) = statement.find_node(byte_index) {
+                return Some(Located::Expression(node));
+            }
+            in_any_statement = in_any_statement || statement.location().contains(byte_index)
+        }
+
+        if !in_any_statement {
+            return Some(Located::OutsideAnyStatement);
+        }
+
+        None
     }
 }
 

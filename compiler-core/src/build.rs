@@ -12,7 +12,7 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
-use crate::ast::{TypedExpr, TypedStatement};
+use crate::ast::{DefinitionLocation, TypedExpr, TypedStatement};
 use crate::{
     ast::{SrcSpan, Statement, TypedModule},
     config::{self, PackageConfig},
@@ -128,7 +128,7 @@ impl Module {
         self.origin == Origin::Test
     }
 
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         self.ast.find_node(byte_index)
     }
 
@@ -182,10 +182,42 @@ impl Module {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Located<'a> {
+    Expression(&'a TypedExpr),
+
+    /// This variant is returned when the focused location is not within any
+    /// statements, in which case let's assume it's going to be an import and
+    /// offer autocompletion for that.
+    ///
+    // TODO: replace this with `Import` once we have a fault tolerant parser and
+    // can parse a module with a partially written import.
+    OutsideAnyStatement,
+}
+
+impl<'a> Located<'a> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        match self {
+            Self::Expression(expression) => expression.definition_location(),
+            Self::OutsideAnyStatement => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Origin {
     Src,
     Test,
+}
+
+impl Origin {
+    /// Returns `true` if the origin is [`Src`].
+    ///
+    /// [`Src`]: Origin::Src
+    #[must_use]
+    pub fn is_src(&self) -> bool {
+        matches!(self, Self::Src)
+    }
 }
 
 fn comments_before<'a>(
