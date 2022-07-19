@@ -1,5 +1,6 @@
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType, ParseError, ParseErrorType};
+use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
 
@@ -7,6 +8,16 @@ macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");
         assert_eq!(($src, $error), ($src, result),);
+    };
+    ($src:expr) => {
+        let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");
+        let error = crate::error::Error::Parse {
+            src: $src.to_string(),
+            path: PathBuf::from("/src/parse/error.gleam"),
+            error: result,
+        };
+        let result = error.pretty_string();
+        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
     };
 }
 
@@ -248,7 +259,7 @@ fn anon_function_no_body() {
 }
 
 #[test]
-fn missing_let_binding() {
+fn no_let_binding() {
     assert_error!(
         "foo = 32",
         ParseError {
@@ -296,5 +307,35 @@ fn no_eq_after_binding() {
             location: SrcSpan { start: 4, end: 7 },
             error: ParseErrorType::ExpectedEqual
         }
+    );
+}
+
+#[test]
+fn no_let_binding_snapshot_1() {
+    assert_error!("foo = 4");
+}
+
+#[test]
+fn no_let_binding_snapshot_2() {
+    assert_error!("foo:Int = 4");
+}
+
+#[test]
+fn no_let_binding_snapshot_3() {
+    assert_error!(
+        "let bar:Int = 32
+        bar = 42"
+    );
+}
+
+#[test]
+fn no_eq_after_binding_snapshot_1() {
+    assert_error!("let foo");
+}
+#[test]
+fn no_eq_after_binding_snapshot_2() {
+    assert_error!(
+        "let foo
+        foo = 4"
     );
 }
