@@ -362,3 +362,22 @@ pub fn version(n) {
 }"
     )
 }
+
+#[test]
+fn pipe_shadow_import() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["foo".to_string()],
+            "pub fn println(x: String) {  }"
+        ),
+        r#"
+        import foo.{println}
+        pub fn main() {
+          let println =
+            "bugger"
+            |> println
+          println
+        }"#
+    )
+}
