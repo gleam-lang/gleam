@@ -461,11 +461,13 @@ impl<'a> Generator<'a> {
                 Statement::ModuleConstant { name, .. } | Statement::Fn { name, .. } => {
                     self.register_in_scope(name)
                 }
+                Statement::Import { unqualified, .. } => unqualified
+                    .iter()
+                    .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
                 Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalFn { .. }
-                | Statement::ExternalType { .. }
-                | Statement::Import { .. } => (),
+                | Statement::ExternalType { .. } => (),
             }
         }
     }
