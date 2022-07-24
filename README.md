@@ -76,6 +76,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Elliott Pogue](https://github.com/epogue)
  - [Eric Meadows-Jönsson](https://github.com/ericmj)
  - [Erik Terpstra](https://github.com/eterps)
+ - [Felix Sandelin](https://github.com/felixsandelin)
  - [Fernando Farias](https://github.com/nandofarias)
  - [Florian Kraft](https://github.com/floriank)
  - [fly.io](https://github.com/superfly)
