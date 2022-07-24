@@ -8,6 +8,8 @@
 - The format used by the formatter has been improved.
 - OpenSSL swapped out for RustTLS.
 - The LSP will now provide autocompletion for imports.
+- A helpful error message is now returned when assignments are missing either a
+  keyword or a value.
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
   crash.
 - Fixed a bug where the formatter could crash if source code contained 3 or more
