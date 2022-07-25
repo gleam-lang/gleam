@@ -316,6 +316,10 @@ export function isEqual(x, y) {
       unequalSets(a, b);
     if (unequal) return false;
 
+    if (typeof a.equals === "function" && a.equals(b)) {
+      continue;
+    }
+
     let [keys, get] = getters(a);
     for (const k of keys(a)) {
       values.push(get(a, k), get(b, k));
