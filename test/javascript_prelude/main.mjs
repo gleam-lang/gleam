@@ -262,6 +262,58 @@ assertEqual(new ExampleB(1), new ExampleB(1));
 assertNotEqual(new ExampleA(1), new ExampleA(2));
 assertNotEqual(new ExampleA(1), new ExampleB(1));
 
+// Custom .equals() method
+class NoCustomEquals {
+  constructor(id, notImportant) {
+    this.id = id;
+    this.notImportant = notImportant;
+  }
+}
+class HasCustomEqualsThatThrows {
+  constructor(id, notImportant) {
+    this.id = id;
+    this.notImportant = notImportant;
+  }
+  equals() {
+    throw "not today";
+  }
+}
+class HasCustomEquals {
+  constructor(id, notImportant) {
+    this.id = id;
+    this.notImportant = notImportant;
+  }
+  equals(o) {
+    return this.id === o.id;
+  }
+}
+function testCustomEquals(o) {
+  this.id === o.id;
+}
+const hasEqualsField = {
+  id: 1,
+  notImportant: 2,
+  equals: testCustomEquals,
+};
+const hasEqualsField2 = {
+  id: 1,
+  notImportant: 3,
+  equals: testCustomEquals,
+};
+// no custom equals, use structural equality
+assertEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 1));
+assertNotEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 2));
+// custom equals throws, fallback to structural equality
+assertEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 1));
+assertNotEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 2));
+// custom equals works, use it
+assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 1));
+assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 2));
+assertNotEqual(new HasCustomEquals(1, 1), new HasCustomEquals(2, 1));
+// custom equals defined on object instead of prototype, don't use it
+assertEqual(hasEqualsField, { ...hasEqualsField });
+assertNotEqual(hasEqualsField, hasEqualsField2);
+
 // Equality between Gleam prelude types from different packages
 //
 // The prelude is not global, each package gets one to fit into the JavaScript
