@@ -20,6 +20,7 @@
   after the case expresson could render incorrect Erlang.
 - Fixed a bug where formatter would strip curly braces around case guards even
   when they are required to specify boolean precedence.
+- In JavaScript, if an object has defined an `equals` method in it's prototype, Gleam will now use this method when checking for equality.
 
 ## v0.22.1 - 2022-06-27
 
