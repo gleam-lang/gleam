@@ -21,3 +21,16 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn piped(){
+  assert_erl!(
+    r#"
+     pub fn main(){
+      "lets"
+      |> todo("pipe")
+      |> todo("other todo")
+    }
+    "#
+  );
+}
