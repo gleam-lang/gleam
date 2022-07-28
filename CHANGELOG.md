@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-- Fixed a bug where piping to `todo` would generate invalid code.
+- Fixed a bug where piping to `todo` would generate invalid Erlang code.
 - The `gleam update` command can now be used to update dependency packages to
   their latest versions.
 - Module functions with empty bodies are no longer syntax errors.
