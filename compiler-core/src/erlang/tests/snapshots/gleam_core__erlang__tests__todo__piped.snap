@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/erlang/tests/todo.rs
+expression: "\n     pub fn main(){\n      \"lets\"\n      |> todo(\"pipe\")\n      |> todo(\"other todo\")\n    }\n    "
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> any().
+main() ->
+    _pipe = <<"lets"/utf8>>,
+    _pipe@1 = (erlang:error(#{gleam_error => todo,
+                              message => <<"pipe"/utf8>>,
+                              module => <<"the_app"/utf8>>,
+                              function => <<"main"/utf8>>,
+                              line => 4}))(_pipe),
+    (erlang:error(#{gleam_error => todo,
+                    message => <<"other todo"/utf8>>,
+                    module => <<"the_app"/utf8>>,
+                    function => <<"main"/utf8>>,
+                    line => 5}))(_pipe@1).
+
