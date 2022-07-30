@@ -17,6 +17,7 @@ const INDENT: isize = 2;
 pub struct Printer {
     names: im::HashMap<u64, String>,
     uid: u64,
+    repeated_types: im::HashSet<String>,
 }
 
 impl Printer {
@@ -47,12 +48,25 @@ impl Printer {
     // for TypeVar::Link'd types.
     pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
         match typ {
-            Type::App { name, args, .. } => {
+            Type::App {
+                name, args, module, ..
+            } => {
                 if args.is_empty() {
-                    Document::String(name.clone())
+                    let typ_name = name.clone();
+                    if self.repeated_types.contains(&typ_name) {
+                        Document::String([module.join("."), typ_name].join("."))
+                    } else {
+                        let _ = self.repeated_types.insert(typ_name);
+                        Document::String(name.clone())
+                    }
                 } else {
-                    Document::String(name.clone())
-                        .append("(")
+                    let typ_name = name.clone();
+                    let doc = if self.repeated_types.contains(&typ_name) {
+                        Document::String([module.join("."), typ_name].join("."))
+                    } else {
+                        Document::String(typ_name)
+                    };
+                    doc.append("(")
                         .append(self.args_to_gleam_doc(args))
                         .append(")")
                 }
@@ -84,10 +98,15 @@ impl Printer {
 
     pub fn generic_type_var<'a>(&mut self, id: u64) -> Document<'a> {
         match self.names.get(&id) {
-            Some(n) => Document::String(n.clone()),
+            Some(n) => {
+                let typ_name = n.clone();
+                let _ = self.repeated_types.insert(typ_name);
+                Document::String(n.clone())
+            }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
+                let _ = self.repeated_types.insert(n.clone());
                 Document::String(n)
             }
         }
