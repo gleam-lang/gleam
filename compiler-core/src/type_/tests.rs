@@ -2041,3 +2041,11 @@ fn module_name_validation() {
 
     assert!(validate_module_name(&["ok".to_string(), "pub".to_string()]).is_err());
 }
+
+#[test]
+fn test() {
+    assert_no_warnings!(
+        (vec!["foo".to_string()], "pub type Thing { Thing }"),
+        "import foo; pub type Thing { Thing }; pub fn main() { Thing == one.Thing }",
+    );
+}
