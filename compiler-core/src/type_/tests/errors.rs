@@ -1699,7 +1699,7 @@ fn negate_string() {
 #[test]
 fn ambiguous_type_error() {
     assert_with_module_error!(
-        (vec!["foo".to_string()], "pub type Thing { Thing }"), 
+        (vec!["foo".to_string()], "pub type Thing { Thing }"),
         "import foo; pub type Thing { Thing }; 
         pub fn main() { 
             [Thing] == [foo.Thing]; 

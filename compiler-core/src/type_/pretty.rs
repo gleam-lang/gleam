@@ -18,7 +18,7 @@ pub struct Printer {
     names: im::HashMap<u64, String>,
     uid: u64,
     repeated_types: im::HashSet<String>,
-    reserved_types: im::HashSet<String>
+    reserved_types: im::HashSet<String>,
 }
 
 impl Printer {
@@ -34,7 +34,9 @@ impl Printer {
     ///
     pub fn pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
         let mut buffer = String::with_capacity(initial_indent);
-        self.reserved_types = ["Int", "Nil", "Float", "List", "String", "Bool"].into_iter().collect();
+        self.reserved_types = ["Int", "Nil", "Float", "List", "String", "Bool"]
+            .into_iter()
+            .collect();
         for _ in 0..initial_indent {
             buffer.push(' ');
         }
@@ -55,7 +57,10 @@ impl Printer {
             } => {
                 if args.is_empty() {
                     let typ_name = name.clone();
-                    if self.repeated_types.contains(&typ_name) && !self.reserved_types.contains(&typ_name) && !module.is_empty() {
+                    if self.repeated_types.contains(&typ_name)
+                        && !self.reserved_types.contains(&typ_name)
+                        && !module.is_empty()
+                    {
                         Document::String([module.join("."), typ_name].join("."))
                     } else {
                         let _ = self.repeated_types.insert(typ_name);
@@ -63,7 +68,10 @@ impl Printer {
                     }
                 } else {
                     let typ_name = name.clone();
-                    let doc = if self.repeated_types.contains(&typ_name) && !self.reserved_types.contains(&typ_name) && !module.is_empty() {
+                    let doc = if self.repeated_types.contains(&typ_name)
+                        && !self.reserved_types.contains(&typ_name)
+                        && !module.is_empty()
+                    {
                         Document::String([module.join("."), typ_name].join("."))
                     } else {
                         Document::String(typ_name)
