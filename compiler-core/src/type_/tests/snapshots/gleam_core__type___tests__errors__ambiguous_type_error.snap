@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "import foo; pub type Thing { Thing }; \n        pub fn main() { \n            [Thing] == [foo.Thing]; \n        }"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:24
+  │
+3 │             [Thing] == [foo.Thing]; 
+  │                        ^^^^^^^^^^^
+
+Expected type:
+
+    List(Thing)
+
+Found type:
+
+    List(foo.Thing)
+
