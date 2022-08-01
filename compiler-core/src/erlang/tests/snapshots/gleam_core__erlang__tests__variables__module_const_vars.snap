@@ -17,7 +17,7 @@ int_identity(I) ->
 
 -spec use_int_identity_alias() -> integer().
 use_int_identity_alias() ->
-    fun int_identity/1(42).
+    int_identity(42).
 
 -spec use_compound() -> integer().
 use_compound() ->

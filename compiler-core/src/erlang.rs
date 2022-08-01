@@ -1180,6 +1180,26 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a
     )
 }
 
+fn module_fn_with_args<'a>(
+    variant: &'a ValueConstructorVariant,
+    args: Vec<Document<'a>>,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if let ValueConstructorVariant::ModuleFn { module, name, .. } = variant {
+        let args = wrap_args(args);
+        if module == env.module {
+            atom(name.to_string()).append(args)
+        } else {
+            atom(module.join("@"))
+                .append(":")
+                .append(atom(name.to_string()))
+                .append(args)
+        }
+    } else {
+        panic!("module_fn_with_args was passed a ValueConstructorVariant that wasn't a ModuleFn.")
+    }
+}
+
 fn docs_args_call<'a>(
     fun: &'a TypedExpr,
     mut args: Vec<Document<'a>>,
@@ -1202,21 +1222,31 @@ fn docs_args_call<'a>(
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                    variant: variant @ ValueConstructorVariant::ModuleFn { .. },
                     ..
                 },
             ..
-        } => {
-            let args = wrap_args(args);
-            if module == env.module {
-                atom(name.to_string()).append(args)
-            } else {
-                atom(module.join("@"))
-                    .append(":")
-                    .append(atom(name.to_string()))
-                    .append(args)
-            }
-        }
+        } => module_fn_with_args(variant, args, env),
+
+        // Match against a Constant::Var that contains a function.
+        // We want this to be emitted like a normal function call, not a function variable
+        // substitution.
+        TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleConstant {
+                            literal:
+                                Constant::Var {
+                                    constructor: Some(ref constructor),
+                                    ..
+                                },
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } => module_fn_with_args(&constructor.variant, args, env),
 
         TypedExpr::ModuleSelect {
             module_name,
