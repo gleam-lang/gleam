@@ -1245,7 +1245,7 @@ fn docs_args_call<'a>(
             ..
         } if constructor.variant.is_module_fn() => {
             if let ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant {
-                module_fn_with_args(&module, &name, args, env)
+                module_fn_with_args(module, name, args, env)
             } else {
                 unreachable!("The above clause guard ensures that this is a module fn")
             }
