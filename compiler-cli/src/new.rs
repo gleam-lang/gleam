@@ -215,15 +215,16 @@ pub fn hello_world_test() {
 }
 
 pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
+    let root_folder = get_foldername(&options.project_root)?;
     let name = if let Some(name) = options.name.clone() {
         name
     } else {
-        get_foldername(&options.project_root)?
+        root_folder.clone()
     }
     .trim()
     .to_string();
     validate_name(&name)?;
-    validate_root_folder(&name)?;
+    validate_root_folder(&root_folder)?;
     let creator = Creator::new(options.clone(), name, version);
 
     creator.run()?;
