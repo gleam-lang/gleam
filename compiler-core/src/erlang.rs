@@ -1181,22 +1181,19 @@ fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a
 }
 
 fn module_fn_with_args<'a>(
-    variant: &'a ValueConstructorVariant,
+    module: &'a [String],
+    name: &'a str,
     args: Vec<Document<'a>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    if let ValueConstructorVariant::ModuleFn { module, name, .. } = variant {
-        let args = wrap_args(args);
-        if module == env.module {
-            atom(name.to_string()).append(args)
-        } else {
-            atom(module.join("@"))
-                .append(":")
-                .append(atom(name.to_string()))
-                .append(args)
-        }
+    let args = wrap_args(args);
+    if module == env.module {
+        atom(name.to_string()).append(args)
     } else {
-        panic!("module_fn_with_args was passed a ValueConstructorVariant that wasn't a ModuleFn.")
+        atom(module.join("@"))
+            .append(":")
+            .append(atom(name.to_string()))
+            .append(args)
     }
 }
 
@@ -1222,11 +1219,11 @@ fn docs_args_call<'a>(
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant: variant @ ValueConstructorVariant::ModuleFn { .. },
+                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
                     ..
                 },
             ..
-        } => module_fn_with_args(variant, args, env),
+        } => module_fn_with_args(module, name, args, env),
 
         // Match against a Constant::Var that contains a function.
         // We want this to be emitted like a normal function call, not a function variable
@@ -1246,7 +1243,13 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } => module_fn_with_args(&constructor.variant, args, env),
+        } if constructor.variant.is_module_fn() => {
+            if let ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant {
+                module_fn_with_args(&module, &name, args, env)
+            } else {
+                unreachable!("The above clause guard ensures that this is a module fn")
+            }
+        }
 
         TypedExpr::ModuleSelect {
             module_name,

@@ -338,6 +338,14 @@ impl ValueConstructorVariant {
     pub fn is_local_variable(&self) -> bool {
         matches!(self, Self::LocalVariable { .. })
     }
+
+    /// Returns `true` if the value constructor variant is [`ModuleFn`].
+    ///
+    /// [`ModuleFn`]: ValueConstructorVariant::ModuleFn
+    #[must_use]
+    pub fn is_module_fn(&self) -> bool {
+        matches!(self, Self::ModuleFn { .. })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
