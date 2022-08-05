@@ -43,7 +43,7 @@ macro_rules! assert_module_infer {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         let ast = infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             crate::build::Origin::Src,

@@ -36,7 +36,7 @@ macro_rules! assert_js {
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
-        let dep = crate::type_::infer_module(
+        let dep = $crate::type_::infer_module(
             crate::build::Target::JavaScript,
             &ids,
             ast,
@@ -178,7 +178,7 @@ macro_rules! assert_ts_def {
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
-        let dep = crate::type_::infer_module(
+        let dep = $crate::type_::infer_module(
             crate::build::Target::JavaScript,
             &ids,
             ast,
