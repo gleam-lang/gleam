@@ -577,7 +577,7 @@ fn constant_var() {
         module: None,
         name: "one_original".to_string(),
         typ: type_::int(),
-        constructor: Some(Arc::from(ValueConstructor {
+        constructor: Some(Box::from(ValueConstructor {
             public: true,
             type_: type_::int(),
             variant: ValueConstructorVariant::ModuleConstant {
