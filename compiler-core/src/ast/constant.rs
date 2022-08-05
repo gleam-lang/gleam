@@ -51,7 +51,7 @@ pub enum Constant<T, RecordTag> {
         location: SrcSpan,
         module: Option<String>,
         name: String,
-        constructor: Option<Arc<ValueConstructor>>,
+        constructor: Option<Box<ValueConstructor>>,
         typ: T,
     },
 }

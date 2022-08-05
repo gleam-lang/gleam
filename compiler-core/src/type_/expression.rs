@@ -1672,7 +1672,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module,
                         name,
                         typ: Arc::clone(&constructor.type_),
-                        constructor: Some(Arc::from(constructor)),
+                        constructor: Some(Box::from(constructor)),
                     }),
                     // constructor.variant cannot be a LocalVariable because module constants can
                     // only be defined at module scope. It also cannot be a Record because then

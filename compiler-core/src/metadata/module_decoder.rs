@@ -258,7 +258,7 @@ impl ModuleDecoder {
             location: Default::default(),
             module: module.map(String::from),
             name: String::from(name),
-            constructor: Some(Arc::from(constructor)),
+            constructor: Some(Box::from(constructor)),
             typ: type_,
         })
     }
