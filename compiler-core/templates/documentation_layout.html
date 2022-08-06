@@ -174,6 +174,18 @@
           }
         </script>
       </h2>
+
+      <div class="search">
+        <div class="search-input-wrap">
+          <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search {{ project_name }}" aria-label="Search {{ project_name }}" autocomplete="off">
+          <label for="search-input" class="search-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+            <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+          </label>
+        </div>
+        <div id="search-results" class="search-results"></div>
+      </div>
     </header>
 
     <div class="page">
@@ -262,6 +274,8 @@
 
     <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/elixir.min.js"></script>
 
+    <script src="https://unpkg.com/lunr@2.3.9/lunr.min.js"></script>
+    
     <script src="{{ unnest }}/highlightjs-gleam.js?v={{ gleam_version }}"></script>
 
     <script src="{{ unnest }}/gleam.js?v={{ gleam_version }}"></script>

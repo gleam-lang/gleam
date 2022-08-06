@@ -13,6 +13,8 @@ use crate::{
 };
 use askama::Template;
 use itertools::Itertools;
+use serde::Serialize;
+use serde_json::to_string as serde_to_string;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -47,6 +49,8 @@ pub fn generate_html(
 
     let mut files = vec![];
 
+    let mut search_indexes = vec![];
+
     let modules_links: Vec<_> = modules
         .clone()
         .map(|m| {
@@ -79,6 +83,15 @@ pub fn generate_html(
             path: PathBuf::from(&page.path),
             text: temp.render().expect("Page template rendering"),
         });
+
+        search_indexes.push(SearchIndex {
+            doc: config.name.to_string(),
+            title: config.name.to_string(),
+            content,
+            // TODO: use full URL
+            url: page.path.to_string(),
+            rel_url: page.path.to_string(),
+        })
     }
 
     // Generate module documentation pages
@@ -94,6 +107,8 @@ pub fn generate_html(
             unnest = ".".to_string();
         }
 
+        let page_title = format!("{} - {}", name, config.name);
+
         let template = ModuleTemplate {
             gleam_version: VERSION,
             unnest,
@@ -102,7 +117,7 @@ pub fn generate_html(
             documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
             modules: &modules_links,
             project_name: &config.name,
-            page_title: &format!("{} - {}", name, config.name),
+            page_title: &page_title,
             module_name: name,
             project_version: &config.version.to_string(),
             functions: module
@@ -134,9 +149,25 @@ pub fn generate_html(
                 .render()
                 .expect("Module documentation template rendering"),
         });
+
+        search_indexes.push(SearchIndex {
+            doc: module.name.to_string(),
+            title: page_title.to_string(),
+            // TOODO: get text content, not HTML
+            content: template.to_string(),
+            // TODO: get full url
+            url: format!("{}.html", module.name),
+            rel_url: format!("{}.html", module.name),
+        })
     }
 
     // Render static assets
+
+    files.push(OutputFile {
+        path: PathBuf::from("search-data.json"),
+        text: serde_to_string(&search_indexes).expect("search index serialization"),
+    });
+
     files.push(OutputFile {
         path: PathBuf::from("index.css"),
         text: std::include_str!("../templates/index.css").to_string(),
@@ -400,4 +431,12 @@ struct ModuleTemplate<'a> {
     types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
+}
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+struct SearchIndex {
+    doc: String,
+    title: String,
+    content: String,
+    url: String,
+    rel_url: String,
 }
