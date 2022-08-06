@@ -27,6 +27,7 @@ lazy_static = "1.4.0"
 strsim = "0.10.0"
 # Data (de)serialisation
 serde = { version = "1.0.130", features = ["derive"] }
+serde_json = "*"
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
 # Enum trait impl macros
