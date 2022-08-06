@@ -122,6 +122,20 @@ jobs:
           command: fmt
           args: --all -- --check
 
+  prettier:
+    name: prettier
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "16"
+
+      - name: Check formatting
+        run: npm run check-format
+
   validate-deps:
     name: validate-deps
     runs-on: ubuntu-latest
