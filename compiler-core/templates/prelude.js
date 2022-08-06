@@ -316,10 +316,11 @@ export function isEqual(x, y) {
       unequalSets(a, b);
     if (unequal) return false;
 
-    const proto = Object.getPrototypeOf(a)
+    const proto = Object.getPrototypeOf(a);
     if (proto !== null && typeof proto.equals === "function") {
       try {
-        if (a.equals(b)) continue; else return false;
+        if (a.equals(b)) continue;
+        else return false;
       } catch {}
     }
 
