@@ -35,11 +35,9 @@
   --sidebar-toggle-size: 33px;
 
   /* etc */
-  --shadow:
-    0 0 0 1px rgba(50, 50, 93, .075),
-    0 0 1px #e9ecef,
-    0 2px 4px -2px rgba(138, 141, 151, .6);
-  --nav-shadow: 0 0 6px 2px rgba(0, 0, 0, .1);
+  --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px #e9ecef,
+    0 2px 4px -2px rgba(138, 141, 151, 0.6);
+  --nav-shadow: 0 0 6px 2px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -215,9 +213,9 @@ p code {
 
 #project-version {
   --half-small-gap: calc(var(--small-gap) / 2);
-  --icon-size: .75em;
+  --icon-size: 0.75em;
   flex-shrink: 0;
-  font-size: .9rem;
+  font-size: 0.9rem;
   font-weight: normal;
   margin-left: var(--half-small-gap);
 }
@@ -235,7 +233,7 @@ p code {
 #project-version select {
   appearance: none;
   -webkit-appearance: none;
-  padding: .6rem calc(1.3 * var(--icon-size)) .6rem var(--half-small-gap);
+  padding: 0.6rem calc(1.3 * var(--icon-size)) 0.6rem var(--half-small-gap);
   position: relative;
   z-index: 1;
 }
@@ -280,7 +278,7 @@ p code {
 
 .sidebar {
   background-color: var(--background);
-  font-size: .95rem;
+  font-size: 0.95rem;
   max-height: calc(100vh - var(--header-height));
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -289,7 +287,7 @@ p code {
   padding-left: var(--gap);
   position: fixed;
   top: var(--header-height);
-  transition: transform .5s ease;
+  transition: transform 0.5s ease;
   width: var(--sidebar-width);
   z-index: 100;
 }
@@ -311,7 +309,7 @@ p code {
 
 .sidebar .sidebar-toggle {
   color: var(--pink);
-  font-size: calc(.8 * var(--sidebar-toggle-size));
+  font-size: calc(0.8 * var(--sidebar-toggle-size));
 }
 
 body.drawer-closed .label-open,
@@ -327,7 +325,7 @@ body.drawer-open .label-closed {
 }
 
 .display-controls .control {
-  margin: .5rem 0;
+  margin: 0.5rem 0;
 }
 
 .display-controls .control:not(:first-child) {
@@ -337,7 +335,7 @@ body.drawer-open .label-closed {
 .toggle {
   align-items: center;
   display: flex;
-  font-size: .96rem;
+  font-size: 0.96rem;
 }
 
 .toggle-0 .label:not(.label-0),
@@ -350,7 +348,7 @@ body.drawer-open .label-closed {
 }
 
 .label .icon {
-  margin: 0 .28rem;
+  margin: 0 0.28rem;
 }
 
 /* Module members (types, functions) */
@@ -434,8 +432,8 @@ body.drawer-open .label-closed {
 
 .constructor-item .icon {
   flex-shrink: 0;
-  font-size: .7rem;
-  margin: 0 .88rem;
+  font-size: 0.7rem;
+  margin: 0 0.88rem;
 }
 
 .constructor-name {
@@ -503,8 +501,8 @@ table tr:nth-child(2n) {
   position: absolute;
   right: 2px;
   bottom: 2px;
-  opacity: .2;
-  font-size: .9rem;
+  opacity: 0.2;
+  font-size: 0.9rem;
 }
 
 .pride-button {
@@ -568,17 +566,34 @@ body.theme-dark {
   --inline-code: #ff9d35;
 
   --bg: #292d3e;
-  --bg-tint-1: #3e4251; --bg-tint-2: #535664; --bg-tint-3: #696c77; --bg-tint-4: #7e818b;
-  --bg-shade-1: #242837; --bg-shade-2: #202431; --bg-shade-3: #1c1f2b;
-  --bg-mono-1: #33384d; --bg-mono-2: #3d435d; --bg-mono-3: #474e6c; --bg-mono-4: #51597b;
+  --bg-tint-1: #3e4251;
+  --bg-tint-2: #535664;
+  --bg-tint-3: #696c77;
+  --bg-tint-4: #7e818b;
+  --bg-shade-1: #242837;
+  --bg-shade-2: #202431;
+  --bg-shade-3: #1c1f2b;
+  --bg-mono-1: #33384d;
+  --bg-mono-2: #3d435d;
+  --bg-mono-3: #474e6c;
+  --bg-mono-4: #51597b;
 
   --fg: #cac0a9;
-  --fg-tint-1: #fdf2d8; --fg-tint-2: #fdf3dc; --fg-tint-3: #fdf5e0;
-  --fg-shade-1: #e3d8be; --fg-shade-2: #cac0a9; --fg-shade-3: #b1a894; --fg-shade-4: #97907f;
+  --fg-tint-1: #fdf2d8;
+  --fg-tint-2: #fdf3dc;
+  --fg-tint-3: #fdf5e0;
+  --fg-shade-1: #e3d8be;
+  --fg-shade-2: #cac0a9;
+  --fg-shade-3: #b1a894;
+  --fg-shade-4: #97907f;
 
-  --orange-shade-1: #e58d2f; --orange-shade-2: #cc7d2a; --orange-shade-3: #b26d25;
+  --orange-shade-1: #e58d2f;
+  --orange-shade-2: #cc7d2a;
+  --orange-shade-3: #b26d25;
 
-  --taupe-mono-1: #fdf1d4; --taupe-mono-2: #fce9bc; --taupe-mono-3: #fbe1a3;
+  --taupe-mono-1: #fdf1d4;
+  --taupe-mono-2: #fce9bc;
+  --taupe-mono-3: #fbe1a3;
 
   /* Theme Overrides */
 
@@ -591,11 +606,9 @@ body.theme-dark {
   --links: var(--pink);
   --text: var(--taupe-mono-1);
 
-  --shadow:
-    0 0 0 1px rgba(50, 50, 93, .075),
-    0 0 1px var(--fg-shade-3),
-    0 2px 4px -2px rgba(138, 141, 151, .2);
-  --nav-shadow: 0 0 5px 5px rgba(0, 0, 0, .1);
+  --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px var(--fg-shade-3),
+    0 2px 4px -2px rgba(138, 141, 151, 0.2);
+  --nav-shadow: 0 0 5px 5px rgba(0, 0, 0, 0.1);
 }
 
 body.theme-dark {
@@ -610,7 +623,6 @@ body.theme-dark .page-header {
 body.theme-dark .page-header h2 {
   color: var(--fg-shade-1);
 }
-
 
 body.theme-dark .page-header a,
 body.theme-dark .page-header a:visited {
