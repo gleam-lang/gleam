@@ -133,6 +133,9 @@ jobs:
         with:
           node-version: "16"
 
+      - name: Clean-install dependencies
+        run: npm ci
+
       - name: Check formatting
         run: npm run check-format
 
