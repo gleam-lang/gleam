@@ -101,7 +101,7 @@ hljs.registerLanguage("gleam", function (hljs) {
     ],
   };
 });
-document.querySelectorAll("pre code").forEach(block => {
+document.querySelectorAll("pre code").forEach((block) => {
   if (block.className === "") {
     block.classList.add("gleam");
   }

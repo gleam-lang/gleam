@@ -6,3 +6,4 @@
 .idea/*
 erl_crash.dump
 *.lock
+node_modules/
