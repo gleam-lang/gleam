@@ -546,8 +546,11 @@ window.Gleam = (function () {
 
   const initSearch = function () {
     const request = new XMLHttpRequest();
-    // TODO: support for relative URLS, as when deploying to github pages
-    request.open("GET", `/search-data-${window.searchIndexVersion}.json`, true);
+    request.open(
+      "GET",
+      `${window.configHomepage}/search-data-${window.searchIndexVersion}.json`,
+      true
+    );
 
     request.onload = function () {
       if (request.status >= 200 && request.status < 400) {
