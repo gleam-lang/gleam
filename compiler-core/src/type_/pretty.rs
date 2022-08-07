@@ -56,8 +56,8 @@ impl Printer {
             Type::App {
                 name, args, module, ..
             } => {
-                let doc = if self.name_clashes_if_unqualified(&name, &module) {
-                    qualify_type_name(module, &name)
+                let doc = if self.name_clashes_if_unqualified(name, module) {
+                    qualify_type_name(module, name)
                 } else {
                     let _ = self.printed_types.insert(name.clone(), module.clone());
                     Document::String(name.clone())

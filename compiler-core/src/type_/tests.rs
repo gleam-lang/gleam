@@ -9,7 +9,7 @@ use std::path::PathBuf;
 #[macro_export]
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
-        let mut printer = crate::type_::pretty::Printer::new();
+        let mut printer = $crate::type_::pretty::Printer::new();
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let mut modules = im::HashMap::new();
@@ -47,7 +47,7 @@ macro_rules! assert_module_infer {
             $crate::build::Target::Erlang,
             &ids,
             ast,
-            crate::build::Origin::Src,
+            $crate::build::Origin::Src,
             "thepackage",
             &modules,
             &mut vec![],
