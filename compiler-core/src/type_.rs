@@ -1931,15 +1931,13 @@ pub fn register_import(
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: *previous,
-                        name: name.to_string(),
+                        name,
                     });
                 }
 
                 // Register the name as imported so it can't be imported a
                 // second time in future
-                let _ = environment
-                    .imported_names
-                    .insert(imported_name.clone(), *location);
+                let _ = environment.imported_names.insert(imported_name, *location);
 
                 // When the module has no unqualified imports, we track its usage
                 // so we can warn if not used by the end of the type checking
