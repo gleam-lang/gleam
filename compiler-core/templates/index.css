@@ -852,7 +852,7 @@ body.theme-dark .pride .blue {
 }
 .search-result:hover,
 .search-result.active {
-  background-color: var(--background);
+  background-color: var(--code-background);
 }
 .search-result-title {
   display: block;
