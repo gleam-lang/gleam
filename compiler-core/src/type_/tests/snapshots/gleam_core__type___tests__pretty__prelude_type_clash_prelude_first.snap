@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+assertion_line: 29
+expression: "print(tuple(vec![bool(), custom_bool()]))"
+---
+#(Bool, one/two.Bool)

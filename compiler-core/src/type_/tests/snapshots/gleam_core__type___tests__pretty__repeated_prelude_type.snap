@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+assertion_line: 24
+expression: "print(tuple(vec![int(), int(), int()]))"
+---
+#(Int, Int, Int)

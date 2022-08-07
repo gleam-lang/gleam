@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+assertion_line: 34
+expression: "print(tuple(vec![custom_bool(), bool()]))"
+---
+#(Bool, gleam.Bool)

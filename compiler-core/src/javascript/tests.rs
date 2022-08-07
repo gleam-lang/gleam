@@ -37,7 +37,7 @@ macro_rules! assert_js {
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
             crate::build::Origin::Src,
@@ -179,7 +179,7 @@ macro_rules! assert_ts_def {
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
             crate::build::Origin::Src,

@@ -22,6 +22,8 @@
   when they are required to specify boolean precedence.
 - Fixed a bug where `gleam new` would not in some situations not validate the
   target directory correctly.
+- Qualifiers are now used when multiple types have the same name in an error
+  message.
 - In JavaScript, if an object has defined an `equals` method in it's prototype,
   Gleam will now use this method when checking for equality.
 - Functions can now be defined and referenced in constant expressions.
