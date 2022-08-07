@@ -1,6 +1,8 @@
 use super::{Type, TypeVar};
-use crate::pretty::{nil, *};
-use crate::type_::prelude::is_prelude_type_name;
+use crate::{
+    docvec,
+    pretty::{nil, *},
+};
 use itertools::Itertools;
 use std::sync::Arc;
 
@@ -14,11 +16,13 @@ use pretty_assertions::assert_eq;
 
 const INDENT: isize = 2;
 
+// TODO: use references instead of cloning strings and vectors
 #[derive(Debug, Default)]
 pub struct Printer {
     names: im::HashMap<u64, String>,
     uid: u64,
-    repeated_types: im::HashSet<String>,
+    // A mapping of printd type names to the module that they are defined in.
+    printed_types: im::HashMap<String, Vec<String>>,
 }
 
 impl Printer {
@@ -52,14 +56,10 @@ impl Printer {
             Type::App {
                 name, args, module, ..
             } => {
-                let typ_name = name.clone();
-                let doc = if self.repeated_types.contains(&typ_name)
-                    && !is_prelude_type_name(&typ_name)
-                    && !module.is_empty()
-                {
-                    Document::String([module.join("."), typ_name].join("."))
+                let doc = if self.name_clashes_if_unqualified(&name, &module) {
+                    qualify_type_name(module, &name)
                 } else {
-                    let _ = self.repeated_types.insert(typ_name);
+                    let _ = self.printed_types.insert(name.clone(), module.clone());
                     Document::String(name.clone())
                 };
                 if args.is_empty() {
@@ -88,6 +88,14 @@ impl Printer {
         }
     }
 
+    fn name_clashes_if_unqualified(&mut self, type_: &String, module: &[String]) -> bool {
+        match self.printed_types.get(type_) {
+            None => false,
+            Some(previous_module) if module == previous_module => false,
+            Some(_different_module) => true,
+        }
+    }
+
     fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { type_: ref typ, .. } => self.print(typ),
@@ -99,13 +107,13 @@ impl Printer {
         match self.names.get(&id) {
             Some(n) => {
                 let typ_name = n.clone();
-                let _ = self.repeated_types.insert(typ_name);
+                let _ = self.printed_types.insert(typ_name, vec![]);
                 Document::String(n.clone())
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
-                let _ = self.repeated_types.insert(n.clone());
+                let _ = self.printed_types.insert(n.clone(), vec![]);
                 Document::String(n)
             }
         }
@@ -147,6 +155,14 @@ impl Printer {
             .nest(INDENT)
             .append(break_(",", ""))
             .group()
+    }
+}
+
+fn qualify_type_name(module: &[String], typ_name: &str) -> Document<'static> {
+    if module.is_empty() {
+        docvec!["gleam.", Document::String(typ_name.to_string())]
+    } else {
+        Document::String([&module.join("/"), typ_name].join("."))
     }
 }
 

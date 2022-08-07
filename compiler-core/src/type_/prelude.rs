@@ -13,13 +13,6 @@ const RESULT: &str = "Result";
 const STRING: &str = "String";
 const UTF_CODEPOINT: &str = "UtfCodepoint";
 
-pub fn is_prelude_type_name(name: &str) -> bool {
-    match name {
-        BIT_STRING | BOOL | FLOAT | INT | LIST | NIL | RESULT | STRING | UTF_CODEPOINT => true,
-        _ => false,
-    }
-}
-
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
