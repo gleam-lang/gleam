@@ -201,11 +201,6 @@ window.Gleam = (function () {
         hideSearch();
       } else {
         showSearch();
-        // scroll search input into view, workaround for iOS Safari
-        window.scroll(0, -1);
-        setTimeout(function () {
-          window.scroll(0, 0);
-        }, 0);
       }
       if (input === currentInput) {
         return;
