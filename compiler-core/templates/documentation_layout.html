@@ -138,44 +138,45 @@
         <svg class="label label-open icon icon-x-circle" alt="Close Menu" title="Close Menu"><use xlink:href="#icon-x-circle"></use></svg>
       </button>
 
-      <h2>
-        <a href="{{ unnest }}/">{{ project_name }}</a>
-        <span id="project-version">
-          <span> - v{{ project_version }} </span>
-        </span>
-        <script>
-          "use strict";
+      <div class="page-header-h2-wrap">
+        <h2>
+          <a href="{{ unnest }}/">{{ project_name }}</a>
+          <span id="project-version">
+            <span> - v{{ project_version }} </span>
+          </span>
+          <script>
+            "use strict";
 
-          if ("undefined" !== typeof versionNodes) {
-            const currentVersion = "v{{ project_version }}";
-            if (! versionNodes.find(element => element.version === currentVersion)) {
-              versionNodes.unshift({ version: currentVersion, url: "#" });
+            if ("undefined" !== typeof versionNodes) {
+              const currentVersion = "v{{ project_version }}";
+              if (! versionNodes.find(element => element.version === currentVersion)) {
+                versionNodes.unshift({ version: currentVersion, url: "#" });
+              }
+              document.querySelector("#project-version").innerHTML =
+                versionNodes.reduce(
+                  (acc, element) => {
+                    const status =
+                      currentVersion === element.version ? "selected disabled" : "";
+                    return `
+                      ${acc}
+                        <option value="${element.url}" ${status}>
+                          ${element.version}
+                        </option>
+                    `;
+                  },
+                  `
+                  <form autocomplete="off">
+                    <select onchange="window.location.href = this.value">
+                  `
+                ) + `
+                    </select>
+                    <svg class="icon icon-chevrons-down"><use xlink:href="#icon-chevrons-down"></use></svg>
+                  </form>
+                `;
             }
-            document.querySelector("#project-version").innerHTML =
-              versionNodes.reduce(
-                (acc, element) => {
-                  const status =
-                    currentVersion === element.version ? "selected disabled" : "";
-                  return `
-                    ${acc}
-                      <option value="${element.url}" ${status}>
-                        ${element.version}
-                      </option>
-                  `;
-                },
-                `
-                <form autocomplete="off">
-                  <select onchange="window.location.href = this.value">
-                `
-              ) + `
-                  </select>
-                  <svg class="icon icon-chevrons-down"><use xlink:href="#icon-chevrons-down"></use></svg>
-                </form>
-              `;
-          }
-        </script>
-      </h2>
-
+          </script>
+        </h2>
+      </div>
       <div class="search">
         <div class="search-input-wrap">
           <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search {{ project_name }}" aria-label="Search {{ project_name }}" autocomplete="off">
