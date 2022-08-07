@@ -1920,6 +1920,27 @@ pub fn register_import(
             }
 
             if unqualified.is_empty() {
+                let imported_name = module
+                    .clone()
+                    .last()
+                    .expect("import statement without module name")
+                    .clone();
+                // Check if value already was imported
+                if let Some(previous) = environment.imported_names.get(&imported_name) {
+                    let name = module.join("/");
+                    return Err(Error::DuplicateImport {
+                        location: *location,
+                        previous_location: *previous,
+                        name: name.to_string(),
+                    });
+                }
+
+                // Register the name as imported so it can't be imported a
+                // second time in future
+                let _ = environment
+                    .imported_names
+                    .insert(imported_name.clone(), *location);
+
                 // When the module has no unqualified imports, we track its usage
                 // so we can warn if not used by the end of the type checking
                 let _ = environment
