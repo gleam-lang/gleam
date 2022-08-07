@@ -33,6 +33,7 @@
   --tiny-gap: calc(var(--small-gap) / 2);
   --large-gap: calc(var(--gap) * 2);
   --sidebar-toggle-size: 33px;
+  --search-height: 4rem;
 
   /* etc */
   --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px #e9ecef,
@@ -740,7 +741,7 @@ body.theme-dark .pride .blue {
   position: relative;
   z-index: 2;
   flex-grow: 1;
-  height: 4rem;
+  height: var(--search-height);
   padding: 0.5rem;
   transition: padding linear 200ms;
 }
@@ -830,7 +831,7 @@ body.theme-dark .pride .blue {
   left: 0;
   display: none;
   width: 100%;
-  max-height: calc(100% - 4rem);
+  max-height: calc(100% - var(--search-height));
   overflow-y: auto;
   background-color: var(--background);
   border-bottom-right-radius: 4px;
@@ -1026,7 +1027,7 @@ body.theme-dark .pride .blue {
   padding: 0;
 }
 .search-active .search-input-wrap {
-  height: 4rem;
+  height: var(--search-height);
   border-radius: 0;
 }
 @media (min-width: 919px) {
@@ -1065,7 +1066,7 @@ body.theme-dark .pride .blue {
   }
 }
 .search-active .main-header {
-  padding-top: 4rem;
+  padding-top: var(--search-height);
 }
 @media (min-width: 919px) {
   .search-active .main-header {
