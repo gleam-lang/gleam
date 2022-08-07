@@ -79,6 +79,8 @@ pub struct PackageConfig {
     #[serde(default)]
     pub links: Vec<Link>,
     #[serde(default)]
+    pub homepage: String,
+    #[serde(default)]
     pub erlang: ErlangConfig,
     #[serde(default)]
     pub javascript: JavaScriptConfig,
@@ -416,6 +418,7 @@ impl Default for PackageConfig {
             dev_dependencies: Default::default(),
             licences: Default::default(),
             links: Default::default(),
+            homepage: Default::default(),
             target: Target::Erlang,
         }
     }

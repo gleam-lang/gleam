@@ -83,6 +83,7 @@ pub fn generate_html(
             project_version: &config.version.to_string(),
             content: render_markdown(&content),
             search_index_version: &search_index_version,
+            config_homepage: &config.homepage,
         };
 
         files.push(OutputFile {
@@ -94,8 +95,7 @@ pub fn generate_html(
             doc: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            // TODO: get full url
-            url: format!("/{}", page.path),
+            url: format!("{}/{}", config.homepage, page.path),
             rel_url: format!("/{}", page.path),
         })
     }
@@ -167,8 +167,7 @@ pub fn generate_html(
                     constructors,
                     import_synonyms(&module.name, typ.name)
                 ),
-                // TODO: get full url
-                url: format!("/{}.html#{}", module.name, typ.name),
+                url: format!("{}/{}.html#{}", config.homepage, module.name, typ.name),
                 rel_url: format!("/{}.html#{}", module.name, typ.name),
             })
         });
@@ -182,8 +181,7 @@ pub fn generate_html(
                     constant.text_documentation,
                     import_synonyms(&module.name, constant.name)
                 ),
-                // TODO: get full url
-                url: format!("/{}.html#{}", module.name, constant.name),
+                url: format!("{}/{}.html#{}", config.homepage, module.name, constant.name),
                 rel_url: format!("/{}.html#{}", module.name, constant.name),
             })
         });
@@ -197,8 +195,7 @@ pub fn generate_html(
                     function.text_documentation,
                     import_synonyms(&module.name, function.name)
                 ),
-                // TODO: get full url
-                url: format!("/{}.html#{}", module.name, function.name),
+                url: format!("{}/{}.html#{}", config.homepage, module.name, function.name),
                 rel_url: format!("/{}.html#{}", module.name, function.name),
             })
         });
@@ -206,8 +203,7 @@ pub fn generate_html(
             doc: module.name.to_string(),
             title: module.name.to_string(),
             content: module.ast.documentation.iter().join("\n"),
-            // TODO: get full url
-            url: format!("/{}.html", module.name),
+            url: format!("{}/{}.html", config.homepage, module.name),
             rel_url: format!("/{}.html", module.name),
         });
 
@@ -226,6 +222,7 @@ pub fn generate_html(
             types,
             constants,
             search_index_version: &search_index_version,
+            config_homepage: &config.homepage,
         };
 
         files.push(OutputFile {
@@ -337,7 +334,8 @@ fn text_documentation(doc: &Option<String>) -> String {
         .unwrap_or_else(|| "".to_string())
         .to_string();
 
-    raw_text
+    // TODO: parse markdown properly and extract the text nodes
+    raw_text.replace("```gleam", "").replace("```", "")
 }
 
 fn markdown_documentation(doc: &Option<String>) -> String {
@@ -537,6 +535,7 @@ struct PageTemplate<'a> {
     modules: &'a [Link],
     content: String,
     search_index_version: &'a str,
+    config_homepage: &'a str,
 }
 
 #[derive(Template)]
@@ -556,6 +555,7 @@ struct ModuleTemplate<'a> {
     constants: Vec<Constant<'a>>,
     documentation: String,
     search_index_version: &'a str,
+    config_homepage: &'a str,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
