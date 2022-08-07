@@ -543,17 +543,6 @@ window.Gleam = (function () {
       }
     });
   };
-  function escapeHtml(unsafe) {
-    // TODO: do this in rust?
-    return unsafe
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;")
-      .replace(/```gleam/g, "")
-      .replace(/```/g, "");
-  }
 
   const initSearch = function () {
     const request = new XMLHttpRequest();
@@ -575,7 +564,6 @@ window.Gleam = (function () {
           this.metadataWhitelist = ["position"];
 
           for (let i = 0; i < docs.length; i++) {
-            docs[i].content = escapeHtml(docs[i].content);
             this.add({
               id: i,
               title: docs[i].title,
