@@ -173,6 +173,10 @@ window.Gleam = (function () {
   };
 
   const searchLoaded = (index, docs) => {
+    const preview_words_after = 10;
+    const preview_words_before = 5;
+    const previews = 3;
+
     var index = index;
     var docs = docs;
     var searchInput = document.getElementById("search-input");
@@ -276,9 +280,6 @@ window.Gleam = (function () {
           );
         }, batchMillis);
       }
-      const preview_words_after = 10;
-      const preview_words_before = 5;
-      const previews = 3;
 
       function addResult(resultsList, result) {
         var doc = docs[result.ref];
@@ -442,7 +443,7 @@ window.Gleam = (function () {
         }
         var resultRelUrl = document.createElement("span");
         resultRelUrl.classList.add("search-result-rel-url");
-        resultRelUrl.innerText = doc.relUrl;
+        resultRelUrl.innerText = doc.rel_url;
         resultTitle.appendChild(resultRelUrl);
       }
 
@@ -555,7 +556,7 @@ window.Gleam = (function () {
           this.ref("id");
           this.field("title", { boost: 200 });
           this.field("content", { boost: 2 });
-          this.field("relUrl");
+          this.field("rel_url");
           this.metadataWhitelist = ["position"];
 
           for (let i = 0; i < docs.length; i++) {
@@ -563,7 +564,7 @@ window.Gleam = (function () {
               id: i,
               title: docs[i].title,
               content: docs[i].content,
-              relUrl: docs[i].rel_url,
+              rel_url: docs[i].rel_url,
             });
           }
         });

@@ -88,9 +88,9 @@ pub fn generate_html(
             doc: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            // TODO: use full URL
-            url: page.path.to_string(),
-            rel_url: page.path.to_string(),
+            // TODO: get full url
+            url: format!("/{}", page.path),
+            rel_url: format!("/{}", page.path),
         })
     }
 
@@ -109,6 +109,95 @@ pub fn generate_html(
 
         let page_title = format!("{} - {}", name, config.name);
 
+        let functions: Vec<Function<'_>> = module
+            .ast
+            .statements
+            .iter()
+            .flat_map(|statement| function(&source_links, statement))
+            .sorted()
+            .collect();
+
+        let types: Vec<Type<'_>> = module
+            .ast
+            .statements
+            .iter()
+            .flat_map(|statement| type_(&source_links, statement))
+            .sorted()
+            .collect();
+
+        let constants: Vec<Constant<'_>> = module
+            .ast
+            .statements
+            .iter()
+            .flat_map(|statement| constant(&source_links, statement))
+            .sorted()
+            .collect();
+
+        types.iter().for_each(|typ| {
+            let constructors = typ
+                .constructors
+                .iter()
+                .map(|constructor| {
+                    let arguments = constructor
+                        .arguments
+                        .iter()
+                        .map(|argument| format!("{}\n{}", argument.name, argument.doc))
+                        .join("\n");
+
+                    format!(
+                        "{}\n{}\n{}",
+                        constructor.definition, constructor.text_documentation, arguments
+                    )
+                })
+                .join("\n");
+
+            search_indexes.push(SearchIndex {
+                doc: module.name.to_string(),
+                title: typ.name.to_string(),
+                content: format!(
+                    "{}\n{}\n{}\n{}",
+                    typ.name, typ.text_documentation, typ.definition, constructors
+                ),
+                // TODO: get full url
+                url: format!("/{}.html#{}", module.name, typ.name),
+                rel_url: format!("/{}.html#{}", module.name, typ.name),
+            })
+        });
+        constants.iter().for_each(|constant| {
+            search_indexes.push(SearchIndex {
+                doc: module.name.to_string(),
+                title: constant.name.to_string(),
+                content: format!(
+                    "{}\n{}\n{}",
+                    constant.name, constant.definition, constant.text_documentation
+                ),
+                // TODO: get full url
+                url: format!("/{}.html#{}", module.name, constant.name),
+                rel_url: format!("/{}.html#{}", module.name, constant.name),
+            })
+        });
+        functions.iter().for_each(|function| {
+            search_indexes.push(SearchIndex {
+                doc: module.name.to_string(),
+                title: function.name.to_string(),
+                content: format!(
+                    "{}\n{}\n{}",
+                    function.name, function.signature, function.text_documentation
+                ),
+                // TODO: get full url
+                url: format!("/{}.html#{}", module.name, function.name),
+                rel_url: format!("/{}.html#{}", module.name, function.name),
+            })
+        });
+        search_indexes.push(SearchIndex {
+            doc: module.name.to_string(),
+            title: module.name.to_string(),
+            content: module.ast.documentation.iter().join("\n"),
+            // TODO: get full url
+            url: format!("/{}.html", module.name),
+            rel_url: format!("/{}.html", module.name),
+        });
+
         let template = ModuleTemplate {
             gleam_version: VERSION,
             unnest,
@@ -120,27 +209,9 @@ pub fn generate_html(
             page_title: &page_title,
             module_name: name,
             project_version: &config.version.to_string(),
-            functions: module
-                .ast
-                .statements
-                .iter()
-                .flat_map(|statement| function(&source_links, statement))
-                .sorted()
-                .collect(),
-            types: module
-                .ast
-                .statements
-                .iter()
-                .flat_map(|statement| type_(&source_links, statement))
-                .sorted()
-                .collect(),
-            constants: module
-                .ast
-                .statements
-                .iter()
-                .flat_map(|statement| constant(&source_links, statement))
-                .sorted()
-                .collect(),
+            functions,
+            types,
+            constants,
         };
 
         files.push(OutputFile {
@@ -149,16 +220,6 @@ pub fn generate_html(
                 .render()
                 .expect("Module documentation template rendering"),
         });
-
-        search_indexes.push(SearchIndex {
-            doc: module.name.to_string(),
-            title: page_title.to_string(),
-            // TOODO: get text content, not HTML
-            content: template.to_string(),
-            // TODO: get full url
-            url: format!("{}.html", module.name),
-            rel_url: format!("{}.html", module.name),
-        })
     }
 
     // Render static assets
@@ -204,6 +265,7 @@ fn function<'a>(
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             signature: print(formatter.external_fn_signature(true, name, args, retrn)),
             source_url: source_links.url(location),
         }),
@@ -219,12 +281,20 @@ fn function<'a>(
         } => Some(Function {
             name,
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
             source_url: source_links.url(location),
         }),
 
         _ => None,
     }
+}
+
+fn text_documentation(doc: &Option<String>) -> String {
+    doc.as_ref()
+        .map(|it| it.to_string())
+        .unwrap_or_else(|| "".to_string())
+        .to_string()
 }
 
 fn markdown_documentation(doc: &Option<String>) -> String {
@@ -253,6 +323,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             name,
             definition: print(formatter.external_type(true, name, args)),
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),
         }),
@@ -273,11 +344,13 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             // documentation and we could add things like colours, etc.
             definition: print(formatter.custom_type(true, false, name, parameters, cs, location)),
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             constructors: cs
                 .iter()
                 .map(|constructor| TypeConstructor {
                     definition: print(formatter.record_constructor(constructor)),
                     documentation: markdown_documentation(&constructor.documentation),
+                    text_documentation: text_documentation(&constructor.documentation),
                     arguments: constructor
                         .arguments
                         .iter()
@@ -305,6 +378,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             name,
             definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),
         }),
@@ -321,6 +395,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             name,
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             constructors: vec![],
             source_url: source_links.url(location),
         }),
@@ -346,6 +421,7 @@ fn constant<'a>(
             name,
             definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),
+            text_documentation: text_documentation(doc),
             source_url: source_links.url(location),
         }),
 
@@ -368,6 +444,7 @@ struct Function<'a> {
     name: &'a str,
     signature: String,
     documentation: String,
+    text_documentation: String,
     source_url: String,
 }
 
@@ -375,6 +452,7 @@ struct Function<'a> {
 struct TypeConstructor {
     definition: String,
     documentation: String,
+    text_documentation: String,
     arguments: Vec<TypeConstructorArg>,
 }
 
@@ -390,6 +468,7 @@ struct Type<'a> {
     definition: String,
     documentation: String,
     constructors: Vec<TypeConstructor>,
+    text_documentation: String,
     source_url: String,
 }
 
@@ -398,6 +477,7 @@ struct Constant<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
+    text_documentation: String,
     source_url: String,
 }
 
@@ -432,6 +512,7 @@ struct ModuleTemplate<'a> {
     constants: Vec<Constant<'a>>,
     documentation: String,
 }
+
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct SearchIndex {
     doc: String,
