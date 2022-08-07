@@ -155,8 +155,8 @@ pub fn generate_html(
                 doc: module.name.to_string(),
                 title: typ.name.to_string(),
                 content: format!(
-                    "{}\n{}\n{}\n{}",
-                    typ.name, typ.text_documentation, typ.definition, constructors
+                    "{}\n{}\n{}",
+                    typ.definition, typ.text_documentation, constructors
                 ),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, typ.name),
@@ -167,10 +167,7 @@ pub fn generate_html(
             search_indexes.push(SearchIndex {
                 doc: module.name.to_string(),
                 title: constant.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    constant.name, constant.definition, constant.text_documentation
-                ),
+                content: format!("{}\n{}", constant.definition, constant.text_documentation),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, constant.name),
                 rel_url: format!("/{}.html#{}", module.name, constant.name),
@@ -180,10 +177,7 @@ pub fn generate_html(
             search_indexes.push(SearchIndex {
                 doc: module.name.to_string(),
                 title: function.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    function.name, function.signature, function.text_documentation
-                ),
+                content: format!("{}\n{}", function.signature, function.text_documentation),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, function.name),
                 rel_url: format!("/{}.html#{}", module.name, function.name),

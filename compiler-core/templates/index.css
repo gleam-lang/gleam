@@ -779,7 +779,7 @@ body.theme-dark .pride .blue {
   outline: 0;
 }
 .search-input:focus + .search-label .search-icon {
-  color: #7253ed;
+  color: var(--pink);
 }
 .search-label {
   position: absolute;
@@ -895,7 +895,7 @@ body.theme-dark .pride .blue {
   width: 1rem;
   height: 1rem;
   margin-right: 0.5rem;
-  color: #7253ed;
+  color: var(--pink);
   flex-shrink: 0;
 }
 .search-result-doc .search-result-doc-title {
@@ -930,8 +930,7 @@ body.theme-dark .pride .blue {
   border-left: 1px solid;
   border-left-color: #eeebee;
   font-size: 11px !important;
-  /* TODO: make it wrap lines, remove overflow hack */
-  overflow: hidden;
+  white-space: initial !important;
 }
 @media (min-width: 31.25rem) {
   .search-result-previews {
@@ -983,7 +982,7 @@ body.theme-dark .pride .blue {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1;
+  z-index: 101;
   width: 0;
   height: 0;
   background-color: rgba(0, 0, 0, 0.3);
