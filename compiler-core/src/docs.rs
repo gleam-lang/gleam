@@ -260,11 +260,11 @@ pub fn generate_html(
 }
 
 fn escape_html_content(it: String) -> String {
-    it.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#39;")
+    it.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('\"', "&quot;")
+        .replace('\'', "&#39;")
 }
 
 fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
@@ -331,8 +331,7 @@ fn text_documentation(doc: &Option<String>) -> String {
     let raw_text = doc
         .as_ref()
         .map(|it| it.to_string())
-        .unwrap_or_else(|| "".to_string())
-        .to_string();
+        .unwrap_or_else(|| "".to_string());
 
     // TODO: parse markdown properly and extract the text nodes
     raw_text.replace("```gleam", "").replace("```", "")
