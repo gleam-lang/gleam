@@ -155,8 +155,11 @@ pub fn generate_html(
                 doc: module.name.to_string(),
                 title: typ.name.to_string(),
                 content: format!(
-                    "{}\n{}\n{}",
-                    typ.definition, typ.text_documentation, constructors
+                    "{}\n{}\n{}\n{}",
+                    typ.definition,
+                    typ.text_documentation,
+                    constructors,
+                    import_synonyms(&module.name, typ.name)
                 ),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, typ.name),
@@ -167,7 +170,12 @@ pub fn generate_html(
             search_indexes.push(SearchIndex {
                 doc: module.name.to_string(),
                 title: constant.name.to_string(),
-                content: format!("{}\n{}", constant.definition, constant.text_documentation),
+                content: format!(
+                    "{}\n{}\n{}",
+                    constant.definition,
+                    constant.text_documentation,
+                    import_synonyms(&module.name, constant.name)
+                ),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, constant.name),
                 rel_url: format!("/{}.html#{}", module.name, constant.name),
@@ -177,7 +185,12 @@ pub fn generate_html(
             search_indexes.push(SearchIndex {
                 doc: module.name.to_string(),
                 title: function.name.to_string(),
-                content: format!("{}\n{}", function.signature, function.text_documentation),
+                content: format!(
+                    "{}\n{}\n{}",
+                    function.signature,
+                    function.text_documentation,
+                    import_synonyms(&module.name, function.name)
+                ),
                 // TODO: get full url
                 url: format!("/{}.html#{}", module.name, function.name),
                 rel_url: format!("/{}.html#{}", module.name, function.name),
@@ -239,6 +252,10 @@ pub fn generate_html(
     });
 
     files
+}
+
+fn import_synonyms(parent: &str, child: &str) -> String {
+    format!("Synonyms:\n{}.{}\n{} {}", parent, child, parent, child)
 }
 
 fn function<'a>(
