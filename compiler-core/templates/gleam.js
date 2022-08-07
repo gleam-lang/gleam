@@ -163,27 +163,21 @@ window.Gleam = (function () {
     }
   };
 
-  const addEvent = (el, type, handler) => {
+  const addEvent = function (el, type, handler) {
     if (el.attachEvent) el.attachEvent("on" + type, handler);
     else el.addEventListener(type, handler);
   };
-  const removeEvent = (el, type, handler) => {
-    if (el.detachEvent) el.detachEvent("on" + type, handler);
-    else el.removeEventListener(type, handler);
-  };
 
-  const searchLoaded = (index, docs) => {
+  const searchLoaded = function (index, docs) {
     const preview_words_after = 10;
     const preview_words_before = 5;
     const previews = 3;
 
-    var index = index;
-    var docs = docs;
-    var searchInput = document.getElementById("search-input");
-    var searchNavButton = document.getElementById("search-nav-button");
-    var searchResults = document.getElementById("search-results");
-    var currentInput;
-    var currentSearchIndex = 0;
+    const searchInput = document.getElementById("search-input");
+    const searchNavButton = document.getElementById("search-nav-button");
+    const searchResults = document.getElementById("search-results");
+    let currentInput;
+    let currentSearchIndex = 0;
 
     function showSearch() {
       document.documentElement.classList.add("search-active");
@@ -192,7 +186,9 @@ window.Gleam = (function () {
     searchNavButton.addEventListener("click", function (e) {
       e.stopPropagation();
       showSearch();
-      setTimeout(() => searchInput.focus(), 0);
+      setTimeout(function () {
+        searchInput.focus();
+      }, 0);
     });
 
     function hideSearch() {
@@ -202,7 +198,7 @@ window.Gleam = (function () {
     function update(shouldHideSearch) {
       currentSearchIndex++;
 
-      var input = searchInput.value;
+      const input = searchInput.value;
       if (input === "") {
         if (shouldHideSearch) {
           hideSearch();
@@ -219,8 +215,8 @@ window.Gleam = (function () {
         return;
       }
 
-      var results = index.query(function (query) {
-        var tokens = lunr.tokenizer(input);
+      let results = index.query(function (query) {
+        const tokens = lunr.tokenizer(input);
         query.term(tokens, {
           boost: 10,
         });
@@ -230,7 +226,7 @@ window.Gleam = (function () {
       });
 
       if (results.length == 0 && input.length > 2) {
-        var tokens = lunr.tokenizer(input).filter(function (token, i) {
+        const tokens = lunr.tokenizer(input).filter(function (token, i) {
           return token.str.length < 20;
         });
         if (tokens.length > 0) {
@@ -243,12 +239,12 @@ window.Gleam = (function () {
       }
 
       if (results.length == 0) {
-        var noResultsDiv = document.createElement("div");
+        const noResultsDiv = document.createElement("div");
         noResultsDiv.classList.add("search-no-result");
         noResultsDiv.innerText = "No results found";
         searchResults.appendChild(noResultsDiv);
       } else {
-        var resultsList = document.createElement("ul");
+        const resultsList = document.createElement("ul");
         resultsList.classList.add("search-results-list");
         searchResults.appendChild(resultsList);
 
@@ -266,7 +262,7 @@ window.Gleam = (function () {
         if (searchIndex != currentSearchIndex) {
           return;
         }
-        for (var i = start; i < start + batchSize; i++) {
+        for (let i = start; i < start + batchSize; i++) {
           if (i == results.length) {
             return;
           }
@@ -285,57 +281,60 @@ window.Gleam = (function () {
       }
 
       function addResult(resultsList, result) {
-        var doc = docs[result.ref];
-        var resultsListItem = document.createElement("li");
+        const doc = docs[result.ref];
+        const resultsListItem = document.createElement("li");
         resultsListItem.classList.add("search-results-list-item");
         resultsList.appendChild(resultsListItem);
-        var resultLink = document.createElement("a");
+        const resultLink = document.createElement("a");
         resultLink.classList.add("search-result");
         resultLink.setAttribute("href", doc.url);
         resultsListItem.appendChild(resultLink);
-        var resultTitle = document.createElement("div");
+        const resultTitle = document.createElement("div");
         resultTitle.classList.add("search-result-title");
         resultLink.appendChild(resultTitle);
-        var resultDoc = document.createElement("div");
+        const resultDoc = document.createElement("div");
         resultDoc.classList.add("search-result-doc");
         resultDoc.innerHTML =
           '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#icon-svg-doc"></use></svg>';
         resultTitle.appendChild(resultDoc);
-        var resultDocTitle = document.createElement("div");
+        const resultDocTitle = document.createElement("div");
         resultDocTitle.classList.add("search-result-doc-title");
         resultDocTitle.innerHTML = doc.doc;
         resultDoc.appendChild(resultDocTitle);
-        var resultDocOrSection = resultDocTitle;
+        let resultDocOrSection = resultDocTitle;
         if (doc.doc != doc.title) {
           resultDoc.classList.add("search-result-doc-parent");
-          var resultSection = document.createElement("div");
+          const resultSection = document.createElement("div");
           resultSection.classList.add("search-result-section");
           resultSection.innerHTML = doc.title;
           resultTitle.appendChild(resultSection);
           resultDocOrSection = resultSection;
         }
-        var metadata = result.matchData.metadata;
-        var titlePositions = [];
-        var contentPositions = [];
-        for (var j in metadata) {
-          var meta = metadata[j];
+        const metadata = result.matchData.metadata;
+        const titlePositions = [];
+        const contentPositions = [];
+        for (let j in metadata) {
+          const meta = metadata[j];
           if (meta.title) {
-            var positions = meta.title.position;
-            for (var k in positions) {
+            const positions = meta.title.position;
+            for (let k in positions) {
               titlePositions.push(positions[k]);
             }
           }
           if (meta.content) {
-            var positions = meta.content.position;
-            for (var k in positions) {
-              var position = positions[k];
-              var previewStart = position[0];
-              var previewEnd = position[0] + position[1];
-              var ellipsesBefore = true;
-              var ellipsesAfter = true;
-              for (var k = 0; k < preview_words_before; k++) {
-                var nextSpace = doc.content.lastIndexOf(" ", previewStart - 2);
-                var nextDot = doc.content.lastIndexOf(". ", previewStart - 2);
+            const positions = meta.content.position;
+            for (let k in positions) {
+              const position = positions[k];
+              let previewStart = position[0];
+              let previewEnd = position[0] + position[1];
+              let ellipsesBefore = true;
+              let ellipsesAfter = true;
+              for (let k = 0; k < preview_words_before; k++) {
+                const nextSpace = doc.content.lastIndexOf(
+                  " ",
+                  previewStart - 2
+                );
+                const nextDot = doc.content.lastIndexOf(". ", previewStart - 2);
                 if (nextDot >= 0 && nextDot > nextSpace) {
                   previewStart = nextDot + 1;
                   ellipsesBefore = false;
@@ -348,9 +347,9 @@ window.Gleam = (function () {
                 }
                 previewStart = nextSpace + 1;
               }
-              for (var k = 0; k < preview_words_after; k++) {
-                var nextSpace = doc.content.indexOf(" ", previewEnd + 1);
-                var nextDot = doc.content.indexOf(". ", previewEnd + 1);
+              for (let k = 0; k < preview_words_after; k++) {
+                const nextSpace = doc.content.indexOf(" ", previewEnd + 1);
+                const nextDot = doc.content.indexOf(". ", previewEnd + 1);
                 if (nextDot >= 0 && nextDot < nextSpace) {
                   previewEnd = nextDot;
                   ellipsesAfter = false;
@@ -390,16 +389,16 @@ window.Gleam = (function () {
           contentPositions.sort(function (p1, p2) {
             return p1.highlight[0] - p2.highlight[0];
           });
-          var contentPosition = contentPositions[0];
-          var previewPosition = {
+          let contentPosition = contentPositions[0];
+          let previewPosition = {
             highlight: [contentPosition.highlight],
             previewStart: contentPosition.previewStart,
             previewEnd: contentPosition.previewEnd,
             ellipsesBefore: contentPosition.ellipsesBefore,
             ellipsesAfter: contentPosition.ellipsesAfter,
           };
-          var previewPositions = [previewPosition];
-          for (var j = 1; j < contentPositions.length; j++) {
+          const previewPositions = [previewPosition];
+          for (let j = 1; j < contentPositions.length; j++) {
             contentPosition = contentPositions[j];
             if (previewPosition.previewEnd < contentPosition.previewStart) {
               previewPosition = {
@@ -416,17 +415,17 @@ window.Gleam = (function () {
               previewPosition.ellipsesAfter = contentPosition.ellipsesAfter;
             }
           }
-          var resultPreviews = document.createElement("div");
+          const resultPreviews = document.createElement("div");
           resultPreviews.classList.add("search-result-previews");
           resultLink.appendChild(resultPreviews);
-          var content = doc.content;
+          const content = doc.content;
           for (
-            var j = 0;
+            let j = 0;
             j < Math.min(previewPositions.length, previews);
             j++
           ) {
-            var position = previewPositions[j];
-            var resultPreview = document.createElement("div");
+            const position = previewPositions[j];
+            const resultPreview = document.createElement("div");
             resultPreview.classList.add("search-result-preview");
             resultPreviews.appendChild(resultPreview);
             if (position.ellipsesBefore) {
@@ -444,26 +443,26 @@ window.Gleam = (function () {
             }
           }
         }
-        var resultRelUrl = document.createElement("span");
+        const resultRelUrl = document.createElement("span");
         resultRelUrl.classList.add("search-result-rel-url");
         resultRelUrl.innerText = doc.rel_url;
         resultTitle.appendChild(resultRelUrl);
       }
 
       function addHighlightedText(parent, text, start, end, positions) {
-        var index = start;
-        for (var i in positions) {
-          var position = positions[i];
-          var span = document.createElement("span");
+        let index = start;
+        for (let i in positions) {
+          const position = positions[i];
+          const span = document.createElement("span");
           span.innerHTML = text.substring(index, position[0]);
           parent.appendChild(span);
           index = position[0] + position[1];
-          var highlight = document.createElement("span");
+          const highlight = document.createElement("span");
           highlight.classList.add("search-result-highlight");
           highlight.innerHTML = text.substring(position[0], index);
           parent.appendChild(highlight);
         }
-        var span = document.createElement("span");
+        const span = document.createElement("span");
         span.innerHTML = text.substring(index, end);
         parent.appendChild(span);
       }
@@ -488,14 +487,15 @@ window.Gleam = (function () {
     });
 
     addEvent(searchInput, "keydown", function (e) {
+      let active;
       switch (e.keyCode) {
         case 38: // arrow up
           e.preventDefault();
-          var active = document.querySelector(".search-result.active");
+          active = document.querySelector(".search-result.active");
           if (active) {
             active.classList.remove("active");
             if (active.parentElement.previousSibling) {
-              var previous =
+              const previous =
                 active.parentElement.previousSibling.querySelector(
                   ".search-result"
                 );
@@ -505,10 +505,10 @@ window.Gleam = (function () {
           return;
         case 40: // arrow down
           e.preventDefault();
-          var active = document.querySelector(".search-result.active");
+          active = document.querySelector(".search-result.active");
           if (active) {
             if (active.parentElement.nextSibling) {
-              var next =
+              const next =
                 active.parentElement.nextSibling.querySelector(
                   ".search-result"
                 );
@@ -516,7 +516,7 @@ window.Gleam = (function () {
               next.classList.add("active");
             }
           } else {
-            var next = document.querySelector(".search-result");
+            const next = document.querySelector(".search-result");
             if (next) {
               next.classList.add("active");
             }
@@ -524,11 +524,11 @@ window.Gleam = (function () {
           return;
         case 13: // enter
           e.preventDefault();
-          var active = document.querySelector(".search-result.active");
+          active = document.querySelector(".search-result.active");
           if (active) {
             active.click();
           } else {
-            var first = document.querySelector(".search-result");
+            const first = document.querySelector(".search-result");
             if (first) {
               first.click();
             }
@@ -554,12 +554,12 @@ window.Gleam = (function () {
 
     request.onload = function () {
       if (request.status >= 200 && request.status < 400) {
-        var docs = JSON.parse(request.responseText);
+        const docs = JSON.parse(request.responseText);
 
         // enable support for hyphenated search words
         lunr.tokenizer.separator = /[\s/]+/;
 
-        var index = lunr(function () {
+        const index = lunr(function () {
           this.ref("id");
           this.field("title", { boost: 200 });
           this.field("content", { boost: 2 });
@@ -592,7 +592,7 @@ window.Gleam = (function () {
   };
 
   const init = function () {
-    for (const property in gleamConfig) {
+    for (let property in gleamConfig) {
       initProperty(property);
       const toggle = document.querySelector(`#${property}-toggle`);
       toggle.addEventListener("click", function (event) {
