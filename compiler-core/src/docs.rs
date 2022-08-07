@@ -1,6 +1,6 @@
 mod source_links;
 
-use std::path::PathBuf;
+use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
     ast::{Statement, TypedStatement},
@@ -25,6 +25,11 @@ pub fn generate_html(
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
     let modules = analysed.iter().filter(|module| !module.is_test());
+    let search_index_version = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("get current timestamp")
+        .as_secs()
+        .to_string();
 
     // Define user-supplied (or README) pages
     let pages: Vec<_> = docs_pages
@@ -77,6 +82,7 @@ pub fn generate_html(
             page_title: &config.name,
             project_version: &config.version.to_string(),
             content: render_markdown(&content),
+            search_index_version: &search_index_version,
         };
 
         files.push(OutputFile {
@@ -219,6 +225,7 @@ pub fn generate_html(
             functions,
             types,
             constants,
+            search_index_version: &search_index_version,
         };
 
         files.push(OutputFile {
@@ -232,7 +239,7 @@ pub fn generate_html(
     // Render static assets
 
     files.push(OutputFile {
-        path: PathBuf::from("search-data.json"),
+        path: PathBuf::from(format!("search-data-{}.json", search_index_version)),
         text: serde_to_string(&search_indexes).expect("search index serialization"),
     });
 
@@ -504,6 +511,7 @@ struct PageTemplate<'a> {
     links: &'a [Link],
     modules: &'a [Link],
     content: String,
+    search_index_version: &'a str,
 }
 
 #[derive(Template)]
@@ -522,6 +530,7 @@ struct ModuleTemplate<'a> {
     types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
+    search_index_version: &'a str,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
