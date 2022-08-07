@@ -30,6 +30,7 @@ macro_rules! assert_erlang_compile {
             dev_dependencies: [].into(),
             repository: Repository::None,
             links: vec![],
+            homepage: Default::default(),
             erlang: ErlangConfig {
                 application_start_module: None,
                 extra_applications: vec![],
@@ -89,6 +90,7 @@ macro_rules! assert_javascript_compile {
             dev_dependencies: [].into(),
             repository: Repository::None,
             links: vec![],
+            homepage: Default::default(),
             erlang: ErlangConfig {
                 application_start_module: None,
                 extra_applications: vec![],
@@ -148,6 +150,7 @@ macro_rules! assert_no_warnings {
             dev_dependencies: [].into(),
             repository: Repository::None,
             links: vec![],
+            homepage: Default::default(),
             erlang: ErlangConfig {
                 application_start_module: None,
                 extra_applications: vec![],
@@ -1931,6 +1934,7 @@ fn config_compilation_test() {
             erlang: Default::default(),
             javascript: Default::default(),
             links: vec![],
+            homepage: Default::default(),
             target: Target::Erlang,
         }
     }
