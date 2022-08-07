@@ -930,6 +930,7 @@ body.theme-dark .pride .blue {
   border-left: 1px solid;
   border-left-color: #eeebee;
   font-size: 11px !important;
+  /* TODO: fix it by not adding at the parent? */
   white-space: initial !important;
 }
 @media (min-width: 31.25rem) {
