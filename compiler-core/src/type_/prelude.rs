@@ -3,10 +3,27 @@ use crate::{ast::SrcSpan, build::Origin, uid::UniqueIdGenerator};
 use super::{Module, Type, TypeConstructor, TypeVar, ValueConstructor, ValueConstructorVariant};
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
 
+const BIT_STRING: &str = "BitString";
+const BOOL: &str = "Bool";
+const FLOAT: &str = "Float";
+const INT: &str = "Int";
+const LIST: &str = "List";
+const NIL: &str = "Nil";
+const RESULT: &str = "Result";
+const STRING: &str = "String";
+const UTF_CODEPOINT: &str = "UtfCodepoint";
+
+pub fn is_prelude_type_name(name: &str) -> bool {
+    match name {
+        BIT_STRING | BOOL | FLOAT | INT | LIST | NIL | RESULT | STRING | UTF_CODEPOINT => true,
+        _ => false,
+    }
+}
+
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: "Int".to_string(),
+        name: INT.to_string(),
         module: vec![],
         args: vec![],
     })
@@ -16,7 +33,7 @@ pub fn float() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "Float".to_string(),
+        name: FLOAT.to_string(),
         module: vec![],
     })
 }
@@ -25,7 +42,7 @@ pub fn bool() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "Bool".to_string(),
+        name: BOOL.to_string(),
         module: vec![],
     })
 }
@@ -34,7 +51,7 @@ pub fn string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "String".to_string(),
+        name: STRING.to_string(),
         module: vec![],
     })
 }
@@ -43,7 +60,7 @@ pub fn nil() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "Nil".to_string(),
+        name: NIL.to_string(),
         module: vec![],
     })
 }
@@ -51,7 +68,7 @@ pub fn nil() -> Arc<Type> {
 pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: "List".to_string(),
+        name: LIST.to_string(),
         module: vec![],
         args: vec![t],
     })
@@ -60,7 +77,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: "Result".to_string(),
+        name: RESULT.to_string(),
         module: vec![],
         args: vec![a, e],
     })
@@ -78,7 +95,7 @@ pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "BitString".to_string(),
+        name: BIT_STRING.to_string(),
         module: vec![],
     })
 }
@@ -87,7 +104,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: "UtfCodepoint".to_string(),
+        name: UTF_CODEPOINT.to_string(),
         module: vec![],
     })
 }
@@ -129,7 +146,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     };
 
     let _ = prelude.types.insert(
-        "Int".to_string(),
+        INT.to_string(),
         TypeConstructor {
             parameters: vec![],
             typ: int(),
@@ -140,7 +157,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types_constructors.insert(
-        "Bool".to_string(),
+        BOOL.to_string(),
         vec!["True".to_string(), "False".to_string()],
     );
 
@@ -171,7 +188,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.types.insert(
-        "Bool".to_string(),
+        BOOL.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -183,7 +200,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
 
     let list_parameter = generic_var(ids.next());
     let _ = prelude.types.insert(
-        "List".to_string(),
+        LIST.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![list_parameter.clone()],
@@ -194,7 +211,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        "Float".to_string(),
+        FLOAT.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -205,7 +222,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        "String".to_string(),
+        STRING.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -218,7 +235,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let result_value = generic_var(ids.next());
     let result_error = generic_var(ids.next());
     let _ = prelude.types.insert(
-        "Result".to_string(),
+        RESULT.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![result_value.clone(), result_error.clone()],
@@ -229,16 +246,16 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types_constructors.insert(
-        "Result".to_string(),
+        RESULT.to_string(),
         vec!["Ok".to_string(), "Error".to_string()],
     );
 
     let _ = prelude.values.insert(
-        "Nil".to_string(),
+        NIL.to_string(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "Nil".to_string(),
+                name: NIL.to_string(),
                 arity: 0,
                 field_map: None,
                 location: SrcSpan::default(),
@@ -247,7 +264,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.types.insert(
-        "Nil".to_string(),
+        NIL.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -269,7 +286,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        "UtfCodepoint".to_string(),
+        UTF_CODEPOINT.to_string(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
