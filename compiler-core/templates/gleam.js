@@ -296,7 +296,7 @@ window.Gleam = (function () {
         var resultDoc = document.createElement("div");
         resultDoc.classList.add("search-result-doc");
         resultDoc.innerHTML =
-          '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#svg-doc"></use></svg>';
+          '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#icon-svg-doc"></use></svg>';
         resultTitle.appendChild(resultDoc);
         var resultDocTitle = document.createElement("div");
         resultDocTitle.classList.add("search-result-doc-title");
@@ -540,6 +540,18 @@ window.Gleam = (function () {
       }
     });
   };
+  function escapeHtml(unsafe) {
+    // TODO: do this in rust?
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;")
+      .replace(/```gleam/g, "")
+      .replace(/```/g, "");
+  }
+
   const initSearch = function () {
     const request = new XMLHttpRequest();
     // TODO: support for relative URLS, as when deploying to github pages
@@ -560,6 +572,7 @@ window.Gleam = (function () {
           this.metadataWhitelist = ["position"];
 
           for (let i = 0; i < docs.length; i++) {
+            docs[i].content = escapeHtml(docs[i].content);
             this.add({
               id: i,
               title: docs[i].title,
