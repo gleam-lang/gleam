@@ -180,8 +180,8 @@ window.Gleam = (function () {
     var index = index;
     var docs = docs;
     var searchInput = document.getElementById("search-input");
+    var searchNavButton = document.getElementById("search-nav-button");
     var searchResults = document.getElementById("search-results");
-    var mainHeader = document.getElementById("main-header");
     var currentInput;
     var currentSearchIndex = 0;
 
@@ -189,16 +189,24 @@ window.Gleam = (function () {
       document.documentElement.classList.add("search-active");
     }
 
+    searchNavButton.addEventListener("click", function (e) {
+      e.stopPropagation();
+      showSearch();
+      setTimeout(() => searchInput.focus(), 0);
+    });
+
     function hideSearch() {
       document.documentElement.classList.remove("search-active");
     }
 
-    function update() {
+    function update(shouldHideSearch) {
       currentSearchIndex++;
 
       var input = searchInput.value;
       if (input === "") {
-        hideSearch();
+        if (shouldHideSearch) {
+          hideSearch();
+        }
       } else {
         showSearch();
       }
@@ -462,7 +470,7 @@ window.Gleam = (function () {
     }
 
     addEvent(searchInput, "focus", function () {
-      setTimeout(update, 0);
+      setTimeout(() => update(false), 0);
     });
 
     addEvent(searchInput, "keyup", function (e) {
@@ -476,7 +484,7 @@ window.Gleam = (function () {
           e.preventDefault();
           return;
       }
-      update();
+      update(true);
     });
 
     addEvent(searchInput, "keydown", function (e) {
