@@ -195,17 +195,11 @@ window.Gleam = (function () {
       document.documentElement.classList.remove("search-active");
     }
 
-    function update(shouldHideSearch) {
+    function update() {
       currentSearchIndex++;
 
       const input = searchInput.value;
-      if (input === "") {
-        if (shouldHideSearch) {
-          hideSearch();
-        }
-      } else {
-        showSearch();
-      }
+      showSearch();
       if (input === currentInput) {
         return;
       }
@@ -469,7 +463,7 @@ window.Gleam = (function () {
     }
 
     addEvent(searchInput, "focus", function () {
-      setTimeout(() => update(false), 0);
+      setTimeout(update, 0);
     });
 
     addEvent(searchInput, "keyup", function (e) {
@@ -483,7 +477,7 @@ window.Gleam = (function () {
           e.preventDefault();
           return;
       }
-      update(true);
+      update();
     });
 
     addEvent(searchInput, "keydown", function (e) {
