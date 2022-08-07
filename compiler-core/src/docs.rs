@@ -240,7 +240,8 @@ pub fn generate_html(
 
     files.push(OutputFile {
         path: PathBuf::from(format!("search-data-{}.json", search_index_version)),
-        text: serde_to_string(&search_indexes).expect("search index serialization"),
+        text: serde_to_string(&escape_html_contents(search_indexes))
+            .expect("search index serialization"),
     });
 
     files.push(OutputFile {
@@ -259,6 +260,27 @@ pub fn generate_html(
     });
 
     files
+}
+
+fn escape_html_content(it: String) -> String {
+    it.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+}
+
+fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
+    indexes
+        .into_iter()
+        .map(|idx| SearchIndex {
+            doc: idx.doc,
+            title: idx.title,
+            content: escape_html_content(idx.content),
+            url: idx.url,
+            rel_url: idx.rel_url,
+        })
+        .collect::<Vec<SearchIndex>>()
 }
 
 fn import_synonyms(parent: &str, child: &str) -> String {
@@ -309,10 +331,13 @@ fn function<'a>(
 }
 
 fn text_documentation(doc: &Option<String>) -> String {
-    doc.as_ref()
+    let raw_text = doc
+        .as_ref()
         .map(|it| it.to_string())
         .unwrap_or_else(|| "".to_string())
-        .to_string()
+        .to_string();
+
+    raw_text
 }
 
 fn markdown_documentation(doc: &Option<String>) -> String {
