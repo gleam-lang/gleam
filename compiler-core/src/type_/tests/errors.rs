@@ -105,7 +105,7 @@ macro_rules! assert_error {
 }
 
 macro_rules! assert_with_module_error {
-    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    (($name:expr, $module_src:literal), $src:expr $(,)?) => {
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
@@ -115,7 +115,6 @@ macro_rules! assert_with_module_error {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
-        $(
         let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
@@ -129,7 +128,65 @@ macro_rules! assert_with_module_error {
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
-        )*
+
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let error = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut vec![],
+        )
+        .expect_err("should infer an error");
+        let error = crate::error::Error::Type {
+            src: $src.to_string(),
+            path: PathBuf::from("/src/one/two.gleam"),
+            error,
+        };
+        let output = error.pretty_string();
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    (($name:expr, $module_src:literal),($name2:expr, $module_src2:literal), $src:expr $(,)?) => {
+        let mut warnings = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        // Repeatedly create importable modules for each one given
+        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        ast.name = $name;
+        let module = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert($name.join("/"), module.type_info);
+
+        let (mut ast2, _) = crate::parse::parse_module($module_src2).expect("syntax error");
+        ast2.name = $name2;
+        let module = infer_module(
+            Target::Erlang,
+            &ids,
+            ast2,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert($name2.join("/"), module.type_info);
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
@@ -1704,5 +1761,47 @@ fn ambiguous_type_error() {
         pub fn main() { 
             [Thing] == [foo.Thing]; 
         }",
+    );
+}
+
+#[test]
+fn ambiguous_import_error_no_unqualified() {
+    assert_with_module_error!(
+        (
+            vec!["foo".to_string(), "sub".to_string()],
+            "pub fn bar() { 1 }"
+        ),
+        (
+            vec!["foo2".to_string(), "sub".to_string()],
+            "pub fn bar() { 1 }"
+        ),
+        "
+        import foo/sub
+        import foo2/sub
+        pub fn main() {
+            foo.bar()
+        }
+        ",
+    );
+}
+
+#[test]
+fn ambiguous_import_error_with_unqualified() {
+    assert_with_module_error!(
+        (
+            vec!["foo".to_string(), "sub".to_string()],
+            "pub fn bar() { 1 }"
+        ),
+        (
+            vec!["foo2".to_string(), "sub".to_string()],
+            "pub fn bar() { 1 }"
+        ),
+        "
+        import foo/sub
+        import foo2/sub.{bar}
+        pub fn main() {
+            foo.bar()
+        }
+        ",
     );
 }
