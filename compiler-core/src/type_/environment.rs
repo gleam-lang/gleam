@@ -3,6 +3,22 @@ use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator};
 use super::*;
 use std::collections::HashMap;
 
+#[derive(Debug, PartialEq, Default, Clone)]
+pub struct ImportedNameSrcSpan {
+    pub start: usize,
+    pub end: usize,
+    pub qualified_part: String,
+}
+
+impl ImportedNameSrcSpan {
+    pub fn to_src_span(&self) -> SrcSpan {
+        SrcSpan {
+            start: self.start,
+            end: self.end,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Environment<'a> {
     pub current_module: &'a [String],
@@ -10,7 +26,7 @@ pub struct Environment<'a> {
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
-    pub imported_names: HashMap<String, SrcSpan>,
+    pub imported_names: HashMap<String, ImportedNameSrcSpan>,
     pub importable_modules: &'a im::HashMap<String, Module>,
     pub imported_modules: HashMap<String, Module>,
     pub unused_modules: HashMap<String, SrcSpan>,

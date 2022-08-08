@@ -1664,6 +1664,24 @@ fn unused_variable_warnings_test() {
 }
 
 #[test]
+fn same_imports_multiple_times_no_warnings() {
+    assert_no_warnings!(
+        (
+            vec!["gleam".to_string(), "foo".to_string()],
+            "
+            pub fn bar() { 1 }
+            pub fn zoo() { 1 }
+            "
+        ),
+        "
+        import gleam/foo.{bar}
+        import gleam/foo.{zoo}
+        pub fn go() { bar() + zoo() }
+        "
+    );
+}
+
+#[test]
 fn unused_imported_module_warnings_test() {
     assert_warning!(
         (
