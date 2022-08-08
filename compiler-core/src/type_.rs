@@ -1808,7 +1808,7 @@ pub fn register_import(
                     .get(&name)
                     .ok_or_else(|| Error::UnknownModule {
                         location: *location,
-                        name,
+                        name: name.clone(),
                         imported_modules: environment.imported_modules.keys().cloned().collect(),
                     })?;
 
@@ -1837,16 +1837,21 @@ pub fn register_import(
                 if let Some(previous) = environment.imported_names.get(imported_name) {
                     return Err(Error::DuplicateImport {
                         location: *location,
-                        previous_location: *previous,
+                        previous_location: previous.to_src_span(),
                         name: name.to_string(),
                     });
                 }
 
                 // Register the name as imported so it can't be imported a
                 // second time in future
-                let _ = environment
-                    .imported_names
-                    .insert(imported_name.clone(), *location);
+                let _ = environment.imported_names.insert(
+                    imported_name.clone(),
+                    ImportedNameSrcSpan {
+                        start: location.start,
+                        end: location.end,
+                        qualified_part: name.clone(),
+                    },
+                );
 
                 // Register the unqualified import if it is a value
                 if let Some(value) = module_info.values.get(name) {
@@ -1928,22 +1933,32 @@ pub fn register_import(
             }
 
             let imported_name = module
-                .clone()
                 .last()
                 .expect("import statement without module name")
                 .clone();
             // Check if value already was imported
             if let Some(previous) = environment.imported_names.get(&imported_name) {
-                return Err(Error::DuplicateImport {
-                    location: *location,
-                    previous_location: *previous,
-                    name: imported_name,
-                });
+                // The same qualified name can be imported twice, as in two different qualifications
+                // ie: import one/two/three.{one}; import one/two/three.{two}
+                if name != previous.qualified_part {
+                    return Err(Error::DuplicateImport {
+                        location: *location,
+                        previous_location: previous.to_src_span(),
+                        name: imported_name,
+                    });
+                }
             }
 
             // Register the name as imported so it can't be imported a
             // second time in future
-            let _ = environment.imported_names.insert(imported_name, *location);
+            let _ = environment.imported_names.insert(
+                imported_name,
+                ImportedNameSrcSpan {
+                    start: location.start,
+                    end: location.end,
+                    qualified_part: name.to_string(),
+                },
+            );
 
             // Insert imported module into scope
             // TODO: use a reference to the module to avoid copying

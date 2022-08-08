@@ -1779,7 +1779,7 @@ fn ambiguous_import_error_no_unqualified() {
         import foo/sub
         import foo2/sub
         pub fn main() {
-            foo.bar()
+            sub.bar()
         }
         ",
     );
@@ -1800,7 +1800,7 @@ fn ambiguous_import_error_with_unqualified() {
         import foo/sub
         import foo2/sub.{bar}
         pub fn main() {
-            foo.bar()
+            sub.bar()
         }
         ",
     );
