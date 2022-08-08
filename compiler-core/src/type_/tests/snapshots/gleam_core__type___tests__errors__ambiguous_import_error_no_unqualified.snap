@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1790
-expression: "\n        import foo/sub\n        import foo2/sub.{bar}\n        pub fn main() {\n            foo.bar()\n        }\n        "
+expression: "\n        import foo/sub\n        import foo2/sub\n        pub fn main() {\n            foo.bar()\n        }\n        "
 ---
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:16
   │
 2 │         import foo/sub
   │                ^^^^^^^ First imported here
-3 │         import foo2/sub.{bar}
+3 │         import foo2/sub
   │                ^^^^^^^^ Reimported here
 
 sub has been imported multiple times.
