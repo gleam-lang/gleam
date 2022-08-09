@@ -1688,7 +1688,7 @@ fn unused_imported_module_with_alias_warnings_test() {
         "import gleam/foo as bar",
         Warning::UnusedImportedModule {
             name: "bar".to_string(),
-            location: SrcSpan { start: 7, end: 16 },
+            location: SrcSpan { start: 7, end: 23 },
         }
     );
 }
