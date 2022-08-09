@@ -48,3 +48,23 @@ pub external fn push(Queue(a), a) -> Queue(a) = "queue" "in"
 "#,
     );
 }
+
+#[test]
+fn result_typescript() {
+    assert_ts_def!(
+        r#"pub fn map(result, fun) {
+            case result {
+              Ok(a) -> Ok(fun(a))
+              Error(e) -> Error(e)
+            }
+          }"#,
+    );
+}
+
+#[test]
+fn task_typescript() {
+    assert_ts_def!(
+        r#"pub external type Promise(value)
+    pub type Task(a) = fn() -> Promise(a)"#,
+    );
+}
