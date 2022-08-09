@@ -6,7 +6,7 @@ error: Duplicate import
   ┌─ /src/one/two.gleam:2:16
   │
 2 │         import one as two
-  │                ^^^ First imported here
+  │                ^^^^^^^^^^ First imported here
 3 │         import two
   │                ^^^ Reimported here
 
