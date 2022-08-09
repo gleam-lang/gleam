@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub fn map(result, fun) {\n            case result {\n              Ok(a) -> Ok(fun(a))\n              Error(e) -> Error(e)\n            }\n          }"
+---
+import * as _ from "../gleam.d.ts";
+
+export function map<S, T, V>(result: _.Result<T, S>, fun: (x0: T) => V): _.Result<
+  V,
+  S
+>;
+

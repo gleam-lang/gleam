@@ -90,11 +90,10 @@ fn collect_generic_usages<'a>(
 fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
         Type::Var { type_: typ } => match typ.borrow().deref() {
-            TypeVar::Generic { id, .. } => {
+            TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Unbound { .. } => (),
             TypeVar::Link { type_: typ } => generic_ids(typ, ids),
         },
         Type::App { args, .. } => {
@@ -449,7 +448,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     .as_ref()
                     .map(|s| super::maybe_escape_identifier_doc(s))
                     .unwrap_or_else(|| Document::String(format!("{}", i)));
-                docvec![name, ": ", self.print_type(&arg.type_)]
+                docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
             line(),
@@ -462,7 +461,12 @@ impl<'a> TypeScriptGenerator<'a> {
                         .as_ref()
                         .map(|s| super::maybe_escape_identifier_doc(s))
                         .unwrap_or_else(|| Document::String(format!("x{}", i)));
-                    docvec![name, ": ", self.print_type(&arg.type_), ";"]
+                    docvec![
+                        name,
+                        ": ",
+                        self.do_print_force_generic_param(&arg.type_),
+                        ";"
+                    ]
                 }),
                 line(),
             )),
@@ -495,6 +499,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let generic_names: Vec<Document<'_>> = generic_usages
             .iter()
             .filter(|(_id, use_count)| **use_count > 1)
+            .sorted_by_key(|x| x.0)
             .map(|(id, _use_count)| id_to_type_var(*id))
             .collect();
 
@@ -544,6 +549,7 @@ impl<'a> TypeScriptGenerator<'a> {
         let generic_names: Vec<Document<'_>> = generic_usages
             .iter()
             .filter(|(_id, use_count)| **use_count > 1)
+            .sorted_by_key(|x| x.0)
             .map(|(id, _use_count)| id_to_type_var(*id))
             .collect();
 
@@ -614,7 +620,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages),
+            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages, false),
 
             Type::App {
                 name, module, args, ..
@@ -630,22 +636,45 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
+    fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
+        match type_ {
+            Type::Var { type_: typ } => self.print_var(&typ.borrow(), None, true),
+
+            Type::App {
+                name, module, args, ..
+            } if module.is_empty() => self.print_prelude_type(name, args, None),
+
+            Type::App {
+                name, args, module, ..
+            } => self.print_type_app(name, args, module, None),
+
+            Type::Fn { args, retrn } => self.print_fn(args, retrn, None),
+
+            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.do_print(e, None))),
+        }
+    }
+
     fn print_var(
         &mut self,
         type_: &TypeVar,
         generic_usages: Option<&HashMap<u64, u64>>,
+        force_generic_id: bool,
     ) -> Document<'static> {
         match type_ {
-            TypeVar::Generic { id } => match &generic_usages {
+            TypeVar::Unbound { id } | TypeVar::Generic { id } => match &generic_usages {
                 Some(usages) => match usages.get(id) {
                     Some(&0) => super::nil(),
                     Some(&1) => "any".to_doc(),
                     _ => id_to_type_var(*id),
                 },
-                None => id_to_type_var(*id),
+                None => {
+                    if force_generic_id {
+                        id_to_type_var(*id)
+                    } else {
+                        "any".to_doc()
+                    }
+                }
             },
-            // Shouldn't get here unless something went wrong
-            TypeVar::Unbound { .. } => "any".to_doc(),
             TypeVar::Link { type_: typ } => self.do_print(typ, generic_usages),
         }
     }

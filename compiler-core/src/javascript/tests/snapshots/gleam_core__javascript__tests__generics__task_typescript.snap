@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/generics.rs
+expression: "pub external type Promise(value)\n    pub type Task(a) = fn() -> Promise(a)"
+---
+export type Promise$<Value> = any;
+
+export type Task = () => Promise$<any>;
+
