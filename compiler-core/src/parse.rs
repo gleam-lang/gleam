@@ -1894,13 +1894,16 @@ where
         if self.maybe_one(&Token::Dot).is_some() {
             let _ = self.expect_one(&Token::LeftBrace)?;
             unqualified = self.parse_unqualified_imports()?;
-            let _ = self.expect_one(&Token::RightBrace)?;
+            let (_, e) = self.expect_one(&Token::RightBrace)?;
+            end = e;
         }
 
         // Parse as_name
         let mut as_name = None;
         if self.maybe_one(&Token::As).is_some() {
-            as_name = Some(self.expect_name()?.1)
+            let (_, name, e) = self.expect_name()?;
+            as_name = Some(name);
+            end = e;
         }
 
         Ok(Some(Statement::Import {
