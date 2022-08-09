@@ -1805,3 +1805,153 @@ fn ambiguous_import_error_with_unqualified() {
         ",
     );
 }
+
+#[test]
+fn same_imports_multiple_times() {
+    assert_with_module_error!(
+        (
+            vec!["gleam".to_string(), "foo".to_string()],
+            "
+            pub fn bar() { 1 }
+            pub fn zoo() { 1 }
+            "
+        ),
+        "
+        import gleam/foo.{bar}
+        import gleam/foo.{zoo}
+        pub fn go() { bar() + zoo() }
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_1() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one
+        import two as one
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_2() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one as two
+        import two
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_3() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one as x
+        import two as x
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_4() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one.{fn1}
+        import two.{fn2} as one
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_5() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one.{fn1} as two
+        import two.{fn2}
+        "
+    );
+}
+
+#[test]
+fn same_imports_multiple_times_6() {
+    assert_with_module_error!(
+        (
+            vec!["one".to_string(),],
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            vec!["two".to_string(),],
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one.{fn1} as x
+        import two.{fn2} as x
+        "
+    );
+}

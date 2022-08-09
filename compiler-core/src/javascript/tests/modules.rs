@@ -151,22 +151,6 @@ pub fn go() { three.go() }
 }
 
 #[test]
-fn same_import_multiple_times() {
-    assert_js!(
-        (
-            CURRENT_PACKAGE,
-            vec!["one".to_string(), "two".to_string(), "three".to_string()],
-            r#"pub fn one() { 1 } pub fn two() { 2 }"#
-        ),
-        r#"import one/two/three.{one}
-import one/two/three.{two}
-
-pub fn go() { one() + two() }
-"#,
-    );
-}
-
-#[test]
 fn imported_external_types_dont_get_rendered() {
     assert_js!(
         (
