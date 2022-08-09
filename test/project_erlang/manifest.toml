@@ -3,11 +3,11 @@
 
 packages = [
   { name = "certifi", version = "2.9.0", build_tools = ["rebar3"], requirements = [], otp_app = "certifi", source = "hex", outer_checksum = "266DA46BDB06D6C6D35FDE799BCB28D36D985D424AD7C08B5BB48F5B5CDD4641" },
-  { name = "cowboy", version = "2.9.0", build_tools = ["make", "rebar3"], requirements = ["ranch", "cowlib"], otp_app = "cowboy", source = "hex", outer_checksum = "2C729F934B4E1AA149AFF882F57C6372C15399A20D54F65C8D67BEF583021BDE" },
+  { name = "cowboy", version = "2.9.0", build_tools = ["make", "rebar3"], requirements = ["cowlib", "ranch"], otp_app = "cowboy", source = "hex", outer_checksum = "2C729F934B4E1AA149AFF882F57C6372C15399A20D54F65C8D67BEF583021BDE" },
   { name = "cowlib", version = "2.11.0", build_tools = ["make", "rebar3"], requirements = [], otp_app = "cowlib", source = "hex", outer_checksum = "2B3E9DA0B21C4565751A6D4901C20D1B4CC25CBB7FD50D91D2AB6DD287BC86A9" },
   { name = "first_gleam_publish_package", version = "2.2.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "5C8F611B3B8A2F640F7668A710759F549D6104AC1D5E702465E001A73DBCF2D4" },
   { name = "gleam_erlang", version = "0.15.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "0C22868854FBF76F16D5B8BEFCC58C4EEAB85FF0C37214CFD06C2E3A56ACB2AC" },
-  { name = "gleam_stdlib", version = "0.22.2", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "DC96E01BFCF4CC40F388ECA194BC97F4F28392DA464AD09F8A3101A206631328" },
+  { name = "gleam_stdlib", version = "0.22.3", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "F2C2D389B06426E1289D5419F89BDE8E0F7F35A40B2BBB3C88188481F0D44A9F" },
   { name = "gleeunit", version = "0.6.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "A006864621DB80C4FBB0746580703502FD81A4D38D23FCB20A8120984D353DF0" },
   { name = "ranch", version = "1.8.0", build_tools = ["make", "rebar3"], requirements = [], otp_app = "ranch", source = "hex", outer_checksum = "49FBCFD3682FAB1F5D109351B61257676DA1A2FDBE295904176D5E521A2DDFE5" },
 ]
