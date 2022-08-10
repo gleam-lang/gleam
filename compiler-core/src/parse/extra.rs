@@ -1,6 +1,8 @@
+use serde::Serialize;
+
 use crate::ast::SrcSpan;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Serialize, Debug, PartialEq, Default)]
 pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
     pub doc_comments: Vec<SrcSpan>,

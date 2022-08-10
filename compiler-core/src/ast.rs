@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use serde::Serialize;
 
 pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
@@ -30,7 +31,7 @@ pub type TypedModule = Module<type_::Module, TypedStatement>;
 
 pub type UntypedModule = Module<(), TargetGroup>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Module<Info, Statements> {
     pub name: Vec<String>,
     pub documentation: Vec<String>,
@@ -170,7 +171,7 @@ pub type UntypedArg = Arg<()>;
 pub type TypedExternalFnArg = ExternalFnArg<Arc<Type>>;
 pub type UntypedExternalFnArg = ExternalFnArg<()>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Arg<T> {
     pub names: ArgNames,
     pub location: SrcSpan,
@@ -193,8 +194,8 @@ impl<A> Arg<A> {
     }
 }
 
-impl<A> ExternalFnArg<A> {
-    pub fn set_type<B>(self, t: B) -> ExternalFnArg<B> {
+impl<A: Serialize> ExternalFnArg<A> {
+    pub fn set_type<B: Serialize>(self, t: B) -> ExternalFnArg<B> {
         ExternalFnArg {
             location: self.location,
             label: self.label,
@@ -204,7 +205,7 @@ impl<A> ExternalFnArg<A> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum ArgNames {
     Discard { name: String },
     LabelledDiscard { label: String, name: String },
@@ -223,15 +224,15 @@ impl ArgNames {
 
 pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RecordConstructor<T> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct RecordConstructor<T: Serialize> {
     pub location: SrcSpan,
     pub name: String,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<String>,
 }
 
-impl<A> RecordConstructor<A> {
+impl<A: Serialize> RecordConstructor<A> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.documentation = Some(new_doc);
     }
@@ -239,8 +240,8 @@ impl<A> RecordConstructor<A> {
 
 pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct RecordConstructorArg<T> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct RecordConstructorArg<T: Serialize> {
     pub label: Option<String>,
     pub ast: TypeAst,
     pub location: SrcSpan,
@@ -248,13 +249,13 @@ pub struct RecordConstructorArg<T> {
     pub doc: Option<String>,
 }
 
-impl<T: PartialEq> RecordConstructorArg<T> {
+impl<T: PartialEq + Serialize> RecordConstructorArg<T> {
     pub fn put_doc(&mut self, new_doc: String) {
         self.doc = Some(new_doc);
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum TypeAst {
     Constructor {
         location: SrcSpan,
@@ -373,8 +374,13 @@ impl TypeAst {
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String, String>;
 pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub enum Statement<
+    T: Serialize,
+    Expr: Serialize,
+    ConstantRecordTag: Serialize,
+    PackageName: Serialize,
+> {
     /// A function definition
     ///
     /// # Example(s)
@@ -532,7 +538,7 @@ impl TypedStatement {
     }
 }
 
-impl<A, B, C, E> Statement<A, B, C, E> {
+impl<A: Serialize, B: Serialize, C: Serialize, E: Serialize> Statement<A, B, C, E> {
     pub fn location(&self) -> &SrcSpan {
         match self {
             Statement::Fn { location, .. }
@@ -560,7 +566,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
     pub name: String,
@@ -578,7 +584,7 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Serialize, Debug, Clone, PartialEq, Copy)]
 pub enum Layer {
     Value,
     Type,
@@ -597,15 +603,15 @@ impl Layer {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ExternalFnArg<T> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct ExternalFnArg<T: Serialize> {
     pub location: SrcSpan,
     pub label: Option<String>,
     pub annotation: TypeAst,
     pub type_: T,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BinOp {
     // Boolean logic
     And,
@@ -689,8 +695,8 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct CallArg<A> {
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub struct CallArg<A: Serialize> {
     pub label: Option<String>,
     pub location: SrcSpan,
     pub value: A,
@@ -711,20 +717,20 @@ impl CallArg<UntypedExpr> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct RecordUpdateSpread {
     pub base: Box<UntypedExpr>,
     pub location: SrcSpan,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct UntypedRecordUpdateArg {
     pub label: String,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct TypedRecordUpdateArg {
     pub label: String,
     pub location: SrcSpan,
@@ -747,8 +753,13 @@ pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, String>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct Clause<
+    Expr: Serialize,
+    PatternConstructor: Serialize,
+    Type: Serialize,
+    RecordTag: Serialize,
+> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<PatternConstructor, Type>,
     pub alternative_patterns: Vec<MultiPattern<PatternConstructor, Type>>,
@@ -776,8 +787,8 @@ impl TypedClause {
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
 pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum ClauseGuard<Type, RecordTag> {
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub enum ClauseGuard<Type: Serialize, RecordTag: Serialize> {
     Equals {
         location: SrcSpan,
         left: Box<Self>,
@@ -866,7 +877,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     Constant(Constant<Type, RecordTag>),
 }
 
-impl<A, B> ClauseGuard<A, B> {
+impl<A: Serialize, B: Serialize> ClauseGuard<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
             ClauseGuard::Constant(constant) => constant.location(),
@@ -933,7 +944,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Serialize, Debug, PartialEq, Default, Clone, Copy)]
 pub struct SrcSpan {
     pub start: usize,
     pub end: usize,
@@ -954,8 +965,8 @@ pub struct DefinitionLocation<'module> {
 pub type UntypedPattern = Pattern<(), ()>;
 pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Pattern<Constructor, Type> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub enum Pattern<Constructor: Serialize, Type: Serialize> {
     Int {
         location: SrcSpan,
         value: String,
@@ -1029,7 +1040,7 @@ pub enum Pattern<Constructor, Type> {
     },
 }
 
-impl<A, B> Pattern<A, B> {
+impl<A: Serialize, B: Serialize> Pattern<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Pattern::Assign { pattern, .. } => pattern.location(),
@@ -1053,13 +1064,13 @@ impl<A, B> Pattern<A, B> {
         matches!(self, Self::Discard { .. })
     }
 }
-impl<A, B> HasLocation for Pattern<A, B> {
+impl<A: Serialize, B: Serialize> HasLocation for Pattern<A, B> {
     fn location(&self) -> SrcSpan {
         self.location()
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
 pub enum AssignmentKind {
     Let,
     Assert,
@@ -1076,8 +1087,8 @@ pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Typ
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
 pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct BitStringSegment<Value, Type> {
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct BitStringSegment<Value: Serialize, Type: Serialize> {
     pub location: SrcSpan,
     pub value: Box<Value>,
     pub options: Vec<BitStringSegmentOption<Value>>,
@@ -1092,8 +1103,8 @@ impl TypedExprBitStringSegment {
 
 pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum BitStringSegmentOption<Value> {
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub enum BitStringSegmentOption<Value: Serialize> {
     Binary {
         location: SrcSpan,
     },
@@ -1166,7 +1177,7 @@ pub enum BitStringSegmentOption<Value> {
     },
 }
 
-impl<A> BitStringSegmentOption<A> {
+impl<A: Serialize> BitStringSegmentOption<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             BitStringSegmentOption::Binary { location }
@@ -1212,7 +1223,7 @@ impl<A> BitStringSegmentOption<A> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TodoKind {
     Keyword,
     EmptyFunction,

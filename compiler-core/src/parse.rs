@@ -66,6 +66,7 @@ use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
+use serde::Serialize;
 use std::cmp::Ordering;
 use std::str::FromStr;
 use token::Token;
@@ -2217,7 +2218,7 @@ where
     // thats why these functions take functions
     //
     // patern (: option)?
-    fn parse_bit_string_segment<A>(
+    fn parse_bit_string_segment<A: Serialize>(
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
@@ -2259,7 +2260,7 @@ where
     //   size(1)
     //   size(five)
     //   utf8
-    fn parse_bit_string_segment_option<A>(
+    fn parse_bit_string_segment_option<A: Serialize>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
         to_int_segment: &impl Fn(String, usize, usize) -> A,
@@ -2829,7 +2830,7 @@ fn bit_string_const_int(value: String, start: usize, end: usize) -> UntypedConst
     }
 }
 
-fn str_to_bit_string_segment_option<A>(
+fn str_to_bit_string_segment_option<A: Serialize>(
     lit: &str,
     location: SrcSpan,
 ) -> Option<BitStringSegmentOption<A>> {

@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::ast::{BitStringSegmentOption, SrcSpan};
 use crate::type_::Type;
 use std::sync::Arc;
@@ -6,20 +8,20 @@ use std::sync::Arc;
 //  Public Interface
 //
 
-pub fn type_options_for_value<T>(
+pub fn type_options_for_value<T: Serialize>(
     input_options: &[BitStringSegmentOption<T>],
 ) -> Result<Arc<Type>, Error> {
     type_options(input_options, true, false)
 }
 
-pub fn type_options_for_pattern<T>(
+pub fn type_options_for_pattern<T: Serialize>(
     input_options: &[BitStringSegmentOption<T>],
     must_have_size: bool,
 ) -> Result<Arc<Type>, Error> {
     type_options(input_options, false, must_have_size)
 }
 
-struct SegmentOptionCategories<'a, T> {
+struct SegmentOptionCategories<'a, T: Serialize> {
     typ: Option<&'a BitStringSegmentOption<T>>,
     signed: Option<&'a BitStringSegmentOption<T>>,
     endian: Option<&'a BitStringSegmentOption<T>>,
@@ -27,7 +29,7 @@ struct SegmentOptionCategories<'a, T> {
     size: Option<&'a BitStringSegmentOption<T>>,
 }
 
-impl<T> SegmentOptionCategories<'_, T> {
+impl<T: Serialize> SegmentOptionCategories<'_, T> {
     fn new() -> Self {
         SegmentOptionCategories {
             typ: None,
@@ -58,7 +60,7 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 }
 
-fn type_options<T>(
+fn type_options<T: Serialize>(
     input_options: &[BitStringSegmentOption<T>],
     value_mode: bool,
     must_have_size: bool,
@@ -245,7 +247,7 @@ fn type_options<T>(
     }
 }
 
-fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
+fn is_unicode<T: Serialize>(opt: &BitStringSegmentOption<T>) -> bool {
     use BitStringSegmentOption::*;
 
     matches!(

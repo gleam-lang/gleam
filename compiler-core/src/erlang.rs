@@ -22,6 +22,7 @@ use heck::ToSnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
+use serde::Serialize;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 
 const INDENT: isize = 4;
@@ -619,7 +620,7 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
+fn bit_string_segment<'a, Value: 'a + Serialize, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
     options: &'a [BitStringSegmentOption<Value>],
     mut size_to_doc: SizeToDoc,

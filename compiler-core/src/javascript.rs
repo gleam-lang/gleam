@@ -9,6 +9,7 @@ use std::path::Path;
 
 use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
+use serde::Serialize;
 
 use self::import::{Imports, Member};
 
@@ -432,7 +433,7 @@ impl<'a> Generator<'a> {
         ])
     }
 
-    fn global_external_function<T>(
+    fn global_external_function<T: Serialize>(
         &mut self,
         public: bool,
         name: &'a str,
@@ -473,7 +474,7 @@ impl<'a> Generator<'a> {
     }
 }
 
-fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
+fn external_fn_args<T: Serialize>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
     wrap_args(
         arguments
             .iter()

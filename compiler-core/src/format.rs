@@ -11,6 +11,7 @@ use crate::{
     Error, Result,
 };
 use itertools::Itertools;
+use serde::Serialize;
 use std::{path::Path, sync::Arc};
 use vec1::Vec1;
 
@@ -305,7 +306,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
+    fn const_expr<'a, A: Serialize, B: Serialize>(
+        &mut self,
+        value: &'a Constant<A, B>,
+    ) -> Document<'a> {
         match value {
             Constant::Int { value, .. } | Constant::Float { value, .. } => value.to_doc(),
 
@@ -529,7 +533,7 @@ impl<'comments> Formatter<'comments> {
             .append("}")
     }
 
-    pub fn external_fn_signature<'a, A>(
+    pub fn external_fn_signature<'a, A: Serialize>(
         &mut self,
         public: bool,
         name: &'a str,
@@ -961,7 +965,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    pub fn record_constructor<'a, A>(
+    pub fn record_constructor<'a, A: Serialize>(
         &mut self,
         constructor: &'a RecordConstructor<A>,
     ) -> Document<'a> {
@@ -999,7 +1003,7 @@ impl<'comments> Formatter<'comments> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
-    pub fn custom_type<'a, A>(
+    pub fn custom_type<'a, A: Serialize>(
         &mut self,
         public: bool,
         opaque: bool,
@@ -1084,13 +1088,13 @@ impl<'comments> Formatter<'comments> {
         }))
     }
 
-    fn external_fn_arg<'a, A>(&mut self, arg: &'a ExternalFnArg<A>) -> Document<'a> {
+    fn external_fn_arg<'a, A: Serialize>(&mut self, arg: &'a ExternalFnArg<A>) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
         let doc = label(&arg.label).append(self.type_ast(&arg.annotation));
         commented(doc.group(), comments)
     }
 
-    fn external_fn_args<'a, A>(&mut self, args: &'a [ExternalFnArg<A>]) -> Document<'a> {
+    fn external_fn_args<'a, A: Serialize>(&mut self, args: &'a [ExternalFnArg<A>]) -> Document<'a> {
         wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
     }
 
@@ -1356,7 +1360,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn constant_call_arg<'a, A, B>(&mut self, arg: &'a CallArg<Constant<A, B>>) -> Document<'a> {
+    fn constant_call_arg<'a, A: Serialize, B: Serialize>(
+        &mut self,
+        arg: &'a CallArg<Constant<A, B>>,
+    ) -> Document<'a> {
         match &arg.label {
             None => self.const_expr(&arg.value),
             Some(s) => s.to_doc().append(": ").append(self.const_expr(&arg.value)),
@@ -1565,7 +1572,7 @@ fn commented<'a, 'comments>(
     }
 }
 
-fn bit_string_segment<Value, Type, ToDoc>(
+fn bit_string_segment<Value: Serialize, Type: Serialize, ToDoc>(
     segment: &BitStringSegment<Value, Type>,
     mut to_doc: ToDoc,
 ) -> Document<'_>
@@ -1582,7 +1589,7 @@ where
     }
 }
 
-fn segment_option<ToDoc, Value>(
+fn segment_option<ToDoc, Value: Serialize>(
     option: &BitStringSegmentOption<Value>,
     mut to_doc: ToDoc,
 ) -> Document<'_>

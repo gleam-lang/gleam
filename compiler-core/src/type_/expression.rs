@@ -529,7 +529,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(Constant::BitString { location, segments })
     }
 
-    fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(
+    fn infer_bit_segment<UntypedValue: Serialize, TypedValue: Serialize, InferFn>(
         &mut self,
         value: UntypedValue,
         options: Vec<BitStringSegmentOption<UntypedValue>>,

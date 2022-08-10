@@ -15,6 +15,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
+use serde::Serialize;
 
 use crate::{
     ast::{
@@ -45,7 +46,7 @@ pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum Type {
     /// A nominal (named) type such as `Int`, `Float`, or a programmer defined
     /// custom type such as `Person`. The type can take other types as
@@ -246,14 +247,14 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
     t
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct AccessorsMap {
     pub public: bool,
     pub type_: Arc<Type>,
     pub accessors: HashMap<String, RecordAccessor>,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub struct RecordAccessor {
     // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
@@ -261,7 +262,7 @@ pub struct RecordAccessor {
     pub type_: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
     LocalVariable { location: SrcSpan },
@@ -348,7 +349,7 @@ impl ValueConstructorVariant {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum ModuleValueConstructor {
     Record {
         name: String,
@@ -378,7 +379,7 @@ impl ModuleValueConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct Module {
     pub name: Vec<String>,
     pub origin: Origin,
@@ -389,7 +390,7 @@ pub struct Module {
     pub accessors: HashMap<String, AccessorsMap>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum PatternConstructor {
     Record {
         name: String,
@@ -397,7 +398,7 @@ pub enum PatternConstructor {
     },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum TypeVar {
     /// Unbound is an unbound variable. It is one specific type but we don't
     /// know what yet in the inference process. It has a unique id which can be used to
@@ -465,7 +466,7 @@ impl TypeVar {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
@@ -474,7 +475,7 @@ pub struct TypeConstructor {
     pub typ: Arc<Type>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
     pub public: bool,
     pub variant: ValueConstructorVariant,
@@ -1347,7 +1348,7 @@ fn infer_statement(
     }
 }
 
-fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
+fn infer_bit_string_segment_option<UntypedValue: Serialize, TypedValue: Serialize, Typer>(
     segment_option: BitStringSegmentOption<UntypedValue>,
     mut type_check: Typer,
 ) -> Result<BitStringSegmentOption<TypedValue>, Error>
@@ -1417,7 +1418,7 @@ where
 
 pub type TypedCallArg = CallArg<TypedExpr>;
 
-fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
+fn assert_no_labelled_arguments<A: Serialize>(args: &[CallArg<A>]) -> Result<(), Error> {
     for arg in args {
         if let Some(label) = &arg.label {
             return Err(Error::UnexpectedLabelledArg {
@@ -1585,7 +1586,7 @@ fn make_type_vars(
         .try_collect()
 }
 
-fn custom_type_accessors<A>(
+fn custom_type_accessors<A: Serialize>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
@@ -1610,7 +1611,7 @@ fn custom_type_accessors<A>(
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields<A>(
+fn get_compatible_record_fields<A: Serialize>(
     constructors: &[RecordConstructor<A>],
 ) -> Vec<(usize, &str, &TypeAst)> {
     let mut compatible = vec![];

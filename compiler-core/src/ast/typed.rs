@@ -2,8 +2,9 @@ use super::*;
 use crate::type_::{bool, HasType, Type};
 
 use lazy_static::lazy_static;
+use serde::Serialize;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub enum TypedExpr {
     Int {
         location: SrcSpan,

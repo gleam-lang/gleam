@@ -4,8 +4,8 @@ use crate::type_::{FieldMap, HasType};
 pub type TypedConstant = Constant<Arc<Type>, String>;
 pub type UntypedConstant = Constant<(), ()>;
 
-#[derive(Debug, PartialEq, Clone)]
-pub enum Constant<T, RecordTag> {
+#[derive(Serialize, Debug, PartialEq, Clone)]
+pub enum Constant<T: Serialize, RecordTag: Serialize> {
     Int {
         location: SrcSpan,
         value: String,
@@ -79,7 +79,7 @@ impl HasType for TypedConstant {
     }
 }
 
-impl<A, B> Constant<A, B> {
+impl<A: Serialize, B: Serialize> Constant<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Constant::Int { location, .. }
@@ -101,7 +101,7 @@ impl<A, B> Constant<A, B> {
     }
 }
 
-impl<A, B> HasLocation for Constant<A, B> {
+impl<A: Serialize, B: Serialize> HasLocation for Constant<A, B> {
     fn location(&self) -> SrcSpan {
         self.location()
     }

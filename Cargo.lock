@@ -2151,6 +2151,9 @@ name = "vec1"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fc1631c774f0f9570797191e01247cbefde789eebfbf128074cb934115a6133"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "version_check"

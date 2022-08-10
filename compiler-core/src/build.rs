@@ -107,7 +107,7 @@ impl Package {
     }
 }
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub struct Module {
     pub name: String,
     pub code: String,
@@ -204,7 +204,7 @@ impl<'a> Located<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Serialize, Debug, Clone, Copy, PartialEq)]
 pub enum Origin {
     Src,
     Test,

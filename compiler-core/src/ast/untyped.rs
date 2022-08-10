@@ -2,7 +2,7 @@ use vec1::Vec1;
 
 use super::*;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Serialize, Debug, PartialEq, Clone)]
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,

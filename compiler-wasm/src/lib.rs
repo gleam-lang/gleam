@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path};
 
 use gleam_core::{
-    build::{Mode, Options, Package, ProjectCompiler, Target},
+    build::{Mode, Module, Options, Package, ProjectCompiler, Target},
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
@@ -55,6 +55,19 @@ pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, Stri
         compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
 
     Ok(gather_compiled_files(&wfs, options.target).unwrap())
+}
+
+pub fn get_modules_(options: CompileOptions) -> Result<Vec<Module>, String> {
+    let mut wfs = WasmFileSystem::new();
+
+    for (path, source) in options.source_files.iter() {
+        write_source_file(source, path, &mut wfs);
+    }
+
+    let _package =
+        compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
+
+    Ok(_package.modules)
 }
 
 fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
@@ -160,6 +173,21 @@ pub fn compile(options: JsValue) -> JsValue {
     match options.into_serde() {
         Ok(compile_options) => {
             let result = compile_(compile_options);
+            JsValue::from_serde(&result)
+        }
+        Err(error) => JsValue::from_serde::<Result<HashMap<String, String>, String>>(&Err(
+            format!("Invalid options passed to `compile`: `{}`", error),
+        )),
+    }
+    .expect("should never fail")
+}
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn get_modules(options: JsValue) -> JsValue {
+    match options.into_serde() {
+        Ok(compile_options) => {
+            let result = get_modules_(compile_options);
             JsValue::from_serde(&result)
         }
         Err(error) => JsValue::from_serde::<Result<HashMap<String, String>, String>>(&Err(
