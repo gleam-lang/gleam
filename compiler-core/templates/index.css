@@ -747,6 +747,7 @@ body.theme-dark .pride .blue {
 }
 @media (min-width: 919px) {
   .search {
+    margin-left: var(--small-gap);
     display: block;
     position: relative !important;
     width: auto !important;
@@ -784,7 +785,7 @@ body.theme-dark .pride .blue {
   padding-bottom: 0.5rem;
   padding-left: 2.5rem;
   font-size: 16px;
-  background-color: var(--background);
+  background-color: transparent;
   color: var(--text);
   border-top: 0;
   border-right: 0;
@@ -796,9 +797,9 @@ body.theme-dark .pride .blue {
   .search-input {
     padding-top: 1rem;
     padding-bottom: 1rem;
-    padding-left: 3.5rem;
+    padding-left: 2.3rem;
     font-size: 14px;
-    background-color: var(--background);
+    background-color: transparent;
     transition: padding-left linear 200ms;
   }
 }
@@ -816,7 +817,7 @@ body.theme-dark .pride .blue {
 }
 @media (min-width: 919px) {
   .search-label {
-    padding-left: 2rem;
+    padding-left: 0.6rem;
     transition: padding-left linear 200ms;
   }
 }
