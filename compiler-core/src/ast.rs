@@ -44,7 +44,7 @@ impl TypedModule {
 
         for statement in &self.statements {
             if let Some(node) = statement.find_node(byte_index) {
-                return Some(Located::Expression(node));
+                return Some(node);
             }
             in_any_statement = in_any_statement || statement.location().contains(byte_index)
         }
@@ -518,7 +518,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
 }
 
 impl TypedStatement {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         match self {
             Statement::Fn { body, .. } => body.find_node(byte_index),
 
@@ -697,7 +697,7 @@ pub struct CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
@@ -733,7 +733,7 @@ pub struct TypedRecordUpdateArg {
 }
 
 impl TypedRecordUpdateArg {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
@@ -768,7 +768,7 @@ impl TypedClause {
         }
     }
 
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         self.then.find_node(byte_index)
     }
 }
@@ -1085,7 +1085,7 @@ pub struct BitStringSegment<Value, Type> {
 }
 
 impl TypedExprBitStringSegment {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
