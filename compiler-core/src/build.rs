@@ -202,7 +202,7 @@ impl<'a> Located<'a> {
         match self {
             Self::Expression(expression) => expression.definition_location(),
             Self::OutsideAnyStatement => None,
-            Self::Pattern(pattern, _type) => pattern.definition_location(),
+            Self::Pattern(pattern, _type) => None,
         }
     }
 }

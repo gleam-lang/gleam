@@ -1099,10 +1099,6 @@ impl Pattern<PatternConstructor, Arc<Type>> {
             | Pattern::BitString { .. } => None,
         }
     }
-
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
-        todo!("definition_location");
-    }
 }
 
 impl<A, B> HasLocation for Pattern<A, B> {
