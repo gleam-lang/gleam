@@ -59,7 +59,7 @@ pub async fn publish_package<Http: HttpClient>(
     hexpm::publish_package_response(response).map_err(Error::hex)
 }
 
-#[derive(Debug, strum::EnumString, strum::EnumVariantNames, Clone, Copy, PartialEq)]
+#[derive(Debug, strum::EnumString, strum::EnumVariantNames, Clone, Copy, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum RetirementReason {
     Other,

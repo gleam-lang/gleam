@@ -50,7 +50,7 @@ pub trait Writer: std::io::Write + Utf8Writer {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OutputFile {
     pub text: String,
     pub path: PathBuf,

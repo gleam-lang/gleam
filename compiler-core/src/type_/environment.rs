@@ -47,7 +47,7 @@ pub struct Environment<'a> {
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntityKind {
     PrivateConstant,
     // String here is the type constructor's type name

@@ -2,13 +2,13 @@ use crate::ast::SrcSpan;
 use crate::error::wrap;
 use heck::{ToSnakeCase, ToUpperCamelCase};
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
     pub error: LexicalErrorType,
     pub location: SrcSpan,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LexicalErrorType {
     BadStringEscape,       // string contains an unescaped slash
     DigitOutOfRadix,       // 0x012 , 2 is out of radix
@@ -21,7 +21,7 @@ pub enum LexicalErrorType {
     BadUpname { name: String },
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct ParseError {
     pub error: ParseErrorType,
     pub location: SrcSpan,
@@ -195,7 +195,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ParseErrorType {
     ExpectedEqual,           // expect "="
     ExpectedExpr,            // after "->" in a case clause

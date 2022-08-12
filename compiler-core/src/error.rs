@@ -259,7 +259,7 @@ impl From<capnp::NotInSchema> for Error {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,
     GleamPrefix,
@@ -269,7 +269,7 @@ pub enum InvalidProjectNameReason {
     GleamReservedModule,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum StandardIoAction {
     Read,
     Write,
@@ -284,7 +284,7 @@ impl StandardIoAction {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum FileIoAction {
     Link,
     Open,
@@ -319,7 +319,7 @@ impl FileIoAction {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FileKind {
     File,
     Directory,
@@ -2317,7 +2317,7 @@ fn hint_string_message() -> String {
     wrap("Strings can be joined using the `append` or `concat` functions from the `gleam/string` module")
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Unformatted {
     pub source: PathBuf,
     pub destination: PathBuf,

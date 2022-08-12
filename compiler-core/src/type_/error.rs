@@ -318,7 +318,7 @@ impl Warning {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UnknownValueConstructorError {
     Variable {
         name: String,
@@ -370,7 +370,7 @@ pub fn convert_get_value_constructor_error(
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UnknownTypeConstructorError {
     Type {
         name: String,

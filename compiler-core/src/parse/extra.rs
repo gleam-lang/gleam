@@ -1,6 +1,6 @@
 use crate::ast::SrcSpan;
 
-#[derive(Debug, PartialEq, Default)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
     pub doc_comments: Vec<SrcSpan>,
@@ -14,7 +14,7 @@ impl ModuleExtra {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Comment<'a> {
     pub start: usize,
     pub content: &'a str,
