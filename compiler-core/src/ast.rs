@@ -30,7 +30,7 @@ pub type TypedModule = Module<type_::Module, TypedStatement>;
 
 pub type UntypedModule = Module<(), TargetGroup>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
     pub name: Vec<String>,
     pub documentation: Vec<String>,
@@ -204,7 +204,7 @@ impl<A> ExternalFnArg<A> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
     Discard { name: String },
     LabelledDiscard { label: String, name: String },
@@ -560,7 +560,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
     pub name: String,
@@ -578,7 +578,7 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum Layer {
     Value,
     Type,
@@ -689,7 +689,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
     pub label: Option<String>,
     pub location: SrcSpan,
@@ -933,7 +933,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub struct SrcSpan {
     pub start: usize,
     pub end: usize,
@@ -945,7 +945,7 @@ impl SrcSpan {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct DefinitionLocation<'module> {
     pub module: Option<&'module str>,
     pub span: SrcSpan,
@@ -1059,7 +1059,7 @@ impl<A, B> HasLocation for Pattern<A, B> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssignmentKind {
     Let,
     Assert,
@@ -1076,7 +1076,7 @@ pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Typ
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
 pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BitStringSegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
@@ -1092,7 +1092,7 @@ impl TypedExprBitStringSegment {
 
 pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum BitStringSegmentOption<Value> {
     Binary {
         location: SrcSpan,

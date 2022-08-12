@@ -14,7 +14,7 @@ use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc};
 // Only supports absolute paths. For now. In future we could have a explicit
 // current directory, or say that the current directory is always the root.
 //
-#[derive(Clone, Default, Debug, PartialEq)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
     files: Rc<RefCell<HashMap<PathBuf, InMemoryFile>>>,
 }
@@ -148,7 +148,7 @@ impl FileSystemReader for InMemoryFileSystem {
 //
 // Not thread safe. The compiler is single threaded, so that's OK.
 //
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct InMemoryFile {
     buffer: Rc<RefCell<Vec<u8>>>,
 }

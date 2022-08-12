@@ -389,7 +389,7 @@ pub struct Module {
     pub accessors: HashMap<String, AccessorsMap>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternConstructor {
     Record {
         name: String,

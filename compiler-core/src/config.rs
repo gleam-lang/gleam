@@ -23,7 +23,7 @@ fn erlang_target() -> Target {
 
 pub type Dependencies = HashMap<String, Range>;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
     pub licence: String,
 }
@@ -421,7 +421,7 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
     pub application_start_module: Option<String>,
@@ -429,13 +429,13 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
     GitHub { user: String, repo: String },
@@ -469,20 +469,20 @@ impl Default for Repository {
     }
 }
 
-#[derive(Deserialize, Default, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: PathBuf,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]

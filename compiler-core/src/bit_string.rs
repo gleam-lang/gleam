@@ -269,7 +269,7 @@ pub struct Error {
     pub error: ErrorType,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorType {
     ConflictingEndiannessOptions { existing_endianness: String },
     ConflictingSignednessOptions { existing_signed: String },

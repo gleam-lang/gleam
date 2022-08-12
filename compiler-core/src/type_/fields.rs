@@ -3,7 +3,7 @@ use crate::ast::{CallArg, SrcSpan};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
     pub arity: usize,
     pub fields: HashMap<String, usize>,
