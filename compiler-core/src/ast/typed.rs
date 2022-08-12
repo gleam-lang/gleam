@@ -191,14 +191,13 @@ impl TypedExpr {
             Self::Call { fun, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| fun.find_node(byte_index))
-                .or(Some(self)),
+                .or_else(|| fun.find_node(byte_index)),
 
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
 
-            Self::Assignment { value, .. } => value.find_node(byte_index),
+            Self::Assignment { value, .. } => value.find_node(byte_index).or(Some(self)),
 
             Self::Try { value, then, .. } => value
                 .find_node(byte_index)

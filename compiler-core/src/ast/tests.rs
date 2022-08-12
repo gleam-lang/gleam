@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    ast::{SrcSpan, TypedExpr},
+    ast::{AssignmentKind, Pattern, SrcSpan, TypedExpr},
     build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
@@ -334,11 +334,60 @@ fn find_node_call() {
     };
 
     assert_eq!(expr.find_node(11), Some(&retrn));
-    assert_eq!(expr.find_node(14), Some(&expr));
+    assert_eq!(expr.find_node(14), None);
     assert_eq!(expr.find_node(15), Some(&arg1));
-    assert_eq!(expr.find_node(16), Some(&expr));
+    assert_eq!(expr.find_node(16), None);
     assert_eq!(expr.find_node(18), Some(&arg2));
-    assert_eq!(expr.find_node(19), Some(&expr));
+    assert_eq!(expr.find_node(19), None);
+}
+
+#[test]
+fn find_node_assignment() {
+    let expr = compile_expression("let a = 123");
+
+    let assignment = TypedExpr::Assignment {
+        location: SrcSpan { start: 0, end: 11 },
+        typ: Arc::new(Type::App {
+            public: true,
+            module: vec![],
+            name: "Int".to_string(),
+            args: vec![],
+        }),
+        value: Box::new(TypedExpr::Int {
+            location: SrcSpan { start: 8, end: 11 },
+            typ: Arc::new(Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            }),
+            value: "123".to_string(),
+        }),
+        pattern: Pattern::Var {
+            location: SrcSpan { start: 4, end: 5 },
+            name: "a".to_string(),
+        },
+        kind: AssignmentKind::Let,
+    };
+
+    let val = TypedExpr::Int {
+        location: SrcSpan { start: 8, end: 11 },
+        value: "123".into(),
+        typ: type_::int(),
+    };
+
+    assert_eq!(expr.find_node(0), Some(&assignment));
+    assert_eq!(expr.find_node(1), Some(&assignment));
+    assert_eq!(expr.find_node(2), Some(&assignment));
+    assert_eq!(expr.find_node(3), Some(&assignment));
+    assert_eq!(expr.find_node(4), Some(&assignment));
+    assert_eq!(expr.find_node(5), Some(&assignment));
+    assert_eq!(expr.find_node(5), Some(&assignment));
+    assert_eq!(expr.find_node(6), Some(&assignment));
+    assert_eq!(expr.find_node(7), Some(&assignment));
+    assert_eq!(expr.find_node(8), Some(&val));
+    assert_eq!(expr.find_node(9), Some(&val));
+    assert_eq!(expr.find_node(10), Some(&val));
 }
 
 #[test]
