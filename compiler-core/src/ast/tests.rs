@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    ast::{SrcSpan, TypedExpr},
+    ast::{SrcSpan, TypedExpr, TypedPattern},
     build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
@@ -350,12 +350,22 @@ fn find_node_assignment() {
         value: "123".into(),
         typ: type_::int(),
     };
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 4, end: 5 },
+        name: "a".to_string(),
+    };
 
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "Int".to_string(),
+        args: vec![],
+    };
     assert_eq!(expr.find_node(0), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(4), Some(Located::Pattern(&ptn, typ)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(6), Some(Located::Expression(&expr)));
@@ -363,6 +373,46 @@ fn find_node_assignment() {
     assert_eq!(expr.find_node(8), Some(Located::Expression(&val)));
     assert_eq!(expr.find_node(9), Some(Located::Expression(&val)));
     assert_eq!(expr.find_node(10), Some(Located::Expression(&val)));
+}
+
+#[test]
+fn find_node_tuple_constructor_assignment() {
+    let module = compile_module("pub type D { D(a: Int) }; pub fn abc(r: D) { assert D(a) = r }");
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 54, end: 55 },
+        name: "a".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "Int".to_string(),
+        args: vec![],
+    };
+    assert_eq!(module.find_node(54), Some(Located::Pattern(&ptn, typ)));
+}
+
+#[test]
+fn find_node_tuple_assignment() {
+    let expr = compile_expression("let #(a, b) = #(123, 456)");
+
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 6, end: 7 },
+        name: "a".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "Int".to_string(),
+        args: vec![],
+    };
+
+    assert_eq!(expr.find_node(0), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(6), Some(Located::Pattern(&ptn, typ)));
 }
 
 #[test]

@@ -185,23 +185,35 @@ impl TypedExpr {
             Self::Negate { value, .. } => value
                 .find_node(byte_index)
                 .or(Some(Located::Expression(self))),
+
             Self::Fn { body, .. } => body
                 .find_node(byte_index)
                 .or(Some(Located::Expression(self))),
+
             Self::Call { fun, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| fun.find_node(byte_index)),
+
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
-            Self::Assignment { value, .. } => value
+
+            Self::Assignment {
+                value,
+                pattern,
+                typ,
+                ..
+            } => value
                 .find_node(byte_index)
+                .or_else(|| pattern.find_node(byte_index, typ))
                 .or(Some(Located::Expression(self))),
+
             Self::Try { value, then, .. } => value
                 .find_node(byte_index)
                 .or_else(|| then.find_node(byte_index))
                 .or(Some(Located::Expression(self))),
+
             Self::Case {
                 subjects, clauses, ..
             } => subjects
@@ -232,8 +244,6 @@ impl TypedExpr {
                 .or(Some(Located::Expression(self))),
         }
     }
-    // This could be optimised in places to exit early if the first of a series
-    // of expressions is after the byte index.
 
     pub fn non_zero_compile_time_number(&self) -> bool {
         use regex::Regex;

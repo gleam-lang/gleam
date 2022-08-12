@@ -702,6 +702,12 @@ impl CallArg<TypedExpr> {
     }
 }
 
+impl CallArg<Pattern<PatternConstructor, Arc<Type>>> {
+    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located<'_>> {
+        self.value.find_node(byte_index, typ)
+    }
+}
+
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
@@ -1053,6 +1059,52 @@ impl<A, B> Pattern<A, B> {
         matches!(self, Self::Discard { .. })
     }
 }
+
+impl Pattern<PatternConstructor, Arc<Type>> {
+    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            // TODO: How not to clone the type?
+            | Pattern::Var { .. } => Some(Located::Pattern(self, typ.clone())),
+
+            Pattern::Tuple { elems, .. } => match typ {
+                Type::Tuple {
+                    elems: type_elems, ..
+                } => elems
+                    .iter()
+                    .zip(type_elems)
+                    .find_map(|(p, t)| p.find_node(byte_index, t)),
+                _ => None,
+            },
+            Pattern::Constructor {
+                arguments, type_, ..
+            } => match type_.as_ref() {
+                Type::Fn { args, .. } => arguments
+                    .iter()
+                    .zip(args)
+                    .find_map(|(p, t)| p.find_node(byte_index, t)),
+                _ => None,
+            },
+            // TODO: handle these cases
+            Pattern::VarUsage { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::BitString { .. } => None,
+        }
+    }
+
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        todo!("definition_location");
+    }
+}
+
 impl<A, B> HasLocation for Pattern<A, B> {
     fn location(&self) -> SrcSpan {
         self.location()

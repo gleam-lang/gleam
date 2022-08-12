@@ -12,7 +12,8 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
-use crate::ast::{DefinitionLocation, TypedExpr, TypedStatement};
+use crate::ast::{DefinitionLocation, TypedExpr, TypedPattern, TypedStatement};
+use crate::type_::Type;
 use crate::{
     ast::{SrcSpan, Statement, TypedModule},
     config::{self, PackageConfig},
@@ -185,6 +186,7 @@ impl Module {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Expression(&'a TypedExpr),
+    Pattern(&'a TypedPattern, Type),
 
     /// This variant is returned when the focused location is not within any
     /// statements, in which case let's assume it's going to be an import and
@@ -200,6 +202,7 @@ impl<'a> Located<'a> {
         match self {
             Self::Expression(expression) => expression.definition_location(),
             Self::OutsideAnyStatement => None,
+            Self::Pattern(pattern, _type) => pattern.definition_location(),
         }
     }
 }

@@ -644,6 +644,8 @@ impl LanguageServer {
         match found {
             // TODO: autocompletion for expressions
             Located::Expression(_expression) => None,
+            // TODO: autocompletion for patterns
+            Located::Pattern(_pattern, _typ) => None,
 
             // Let's assume it's an import until we have fault tolerant parsing
             // and can actually identify imports
@@ -687,23 +689,36 @@ impl LanguageServer {
             None => return Ok(None),
         };
 
-        let expression = match found {
-            Located::Expression(expression) => expression,
-            Located::OutsideAnyStatement => return Ok(None),
-        };
-
-        // Show the type of the hovered node to the user
-        let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
-        let contents = format!(
-            "```gleam
+        match found {
+            Located::Expression(expression) => {
+                // Show the type of the hovered node to the user
+                let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+                let contents = format!(
+                    "```gleam
 {}
 ```",
-            type_
-        );
-        Ok(Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(contents)),
-            range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
-        }))
+                    type_
+                );
+                Ok(Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(contents)),
+                    range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
+                }))
+            }
+            Located::Pattern(pattern, typ) => {
+                let type_ = Printer::new().pretty_print(&typ, 0);
+                let contents = format!(
+                    "```gleam
+{}
+```",
+                    type_
+                );
+                Ok(Some(Hover {
+                    contents: HoverContents::Scalar(MarkedString::String(contents)),
+                    range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
+                }))
+            }
+            Located::OutsideAnyStatement => Ok(None),
+        }
     }
 
     fn node_at_position(
