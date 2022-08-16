@@ -19,6 +19,8 @@
   crash.
 - Fixed a bug where the formatter could crash if source code contained 3 or more
   empty lines in a row.
+- Fixed a bug where the formatter would remove braces from blocks used as the
+  subject of a case expression.
 - Fixed a bug alternative patterns with a clause containing a pipe with a pipe
   after the case expresson could render incorrect Erlang.
 - Fixed a bug where formatter would strip curly braces around case guards even
