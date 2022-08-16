@@ -365,7 +365,7 @@ fn find_node_assignment() {
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Pattern(&ptn, typ)));
+    assert_eq!(expr.find_node(4), Some(Located::Pattern(&ptn, &typ)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(6), Some(Located::Expression(&expr)));
@@ -389,7 +389,7 @@ fn find_node_tuple_constructor_assignment() {
         name: "Int".to_string(),
         args: vec![],
     };
-    assert_eq!(module.find_node(54), Some(Located::Pattern(&ptn, typ)));
+    assert_eq!(module.find_node(54), Some(Located::Pattern(&ptn, &typ)));
 }
 
 #[test]
@@ -412,7 +412,7 @@ fn find_node_tuple_assignment() {
     assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(6), Some(Located::Pattern(&ptn, typ)));
+    assert_eq!(expr.find_node(6), Some(Located::Pattern(&ptn, &typ)));
 }
 
 #[test]
