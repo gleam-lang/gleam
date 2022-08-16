@@ -1,12 +1,14 @@
 # Changelog
 
 ## Unreleased
+
 - Fixed a bug where piping to `todo` would generate invalid Erlang code.
 - The `gleam update` command can now be used to update dependency packages to
   their latest versions.
 - Module functions with empty bodies are no longer syntax errors.
 - The format used by the formatter has been improved.
 - OpenSSL swapped out for RustTLS.
+- Generated HTML documentation now includes a search bar.
 - The LSP will now provide autocompletion for imports.
 - A helpful error message is now returned when assignments are missing either a
   keyword or a value.
