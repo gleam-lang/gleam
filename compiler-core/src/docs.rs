@@ -95,8 +95,7 @@ pub fn generate_html(
             doc: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            url: format!("{}/{}", &unnest, page.path),
-            rel_url: format!("/{}", page.path),
+            url: format!("{}/{}", page.path),
         })
     }
 
@@ -163,7 +162,6 @@ pub fn generate_html(
                     import_synonyms(&module.name, typ.name)
                 ),
                 url: format!("{}.html#{}", module.name, typ.name),
-                rel_url: format!("/{}.html#{}", module.name, typ.name),
             })
         });
         constants.iter().for_each(|constant| {
@@ -177,7 +175,6 @@ pub fn generate_html(
                     import_synonyms(&module.name, constant.name)
                 ),
                 url: format!("{}.html#{}", module.name, constant.name),
-                rel_url: format!("/{}.html#{}", module.name, constant.name),
             })
         });
         functions.iter().for_each(|function| {
@@ -191,7 +188,6 @@ pub fn generate_html(
                     import_synonyms(&module.name, function.name)
                 ),
                 url: format!("{}.html#{}", module.name, function.name),
-                rel_url: format!("/{}.html#{}", module.name, function.name),
             })
         });
         search_indexes.push(SearchIndex {
@@ -199,7 +195,6 @@ pub fn generate_html(
             title: module.name.to_string(),
             content: module.ast.documentation.iter().join("\n"),
             url: format!("{}.html", module.name),
-            rel_url: format!("/{}.html", module.name),
         });
 
         let template = ModuleTemplate {
@@ -301,7 +296,6 @@ fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
             title: idx.title,
             content: escape_html_content(idx.content),
             url: idx.url,
-            rel_url: idx.rel_url,
         })
         .collect::<Vec<SearchIndex>>()
 }
@@ -587,5 +581,4 @@ struct SearchIndex {
     title: String,
     content: String,
     url: String,
-    rel_url: String,
 }

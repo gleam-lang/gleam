@@ -550,7 +550,6 @@ window.Gleam = (function () {
       this.metadataWhitelist = ["position"];
 
       for (let [i, entry] of docs.entries()) {
-        console.log("inserting", entry);
         this.add({
           id: i,
           title: entry.title,
