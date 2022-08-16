@@ -34,8 +34,7 @@
        *   callback: (value) => {...},
        * }, ...};
        */
-      window.searchIndexVersion = '{{ search_index_version }}';
-      window.configHomepage = '{{ config_homepage }}';
+      window.unnest = '{{ unnest }}';
       const gleamConfig = {
         theme: {
           values: (() => {
@@ -178,7 +177,7 @@
       </h2>
       <div class="search">
         <div class="search-input-wrap">
-          <input type="text" id="search-input" class="search-input" tabindex="0" placeholder="Search {{ project_name }}" aria-label="Search {{ project_name }}" autocomplete="off">
+          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search {{ project_name }}" autocomplete="off">
           <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
         </div>
         <div id="search-results" class="search-results"></div>
@@ -295,6 +294,9 @@
     
     <script src="{{ unnest }}/highlightjs-gleam.js?v={{ gleam_version }}"></script>
 
-    <script src="{{ unnest }}/gleam.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/gleam.js?v={{ rendering_timestamp }}"></script>
+
+    <!-- Load the search index using JSONP to avoid CORS issues -->
+    <script src="{{ unnest }}/search-data.js?v={{ rendering_timestamp }}"></script>
   </body>
 </html>

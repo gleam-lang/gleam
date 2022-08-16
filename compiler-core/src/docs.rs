@@ -25,7 +25,7 @@ pub fn generate_html(
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
     let modules = analysed.iter().filter(|module| !module.is_test());
-    let search_index_version = SystemTime::now()
+    let rendering_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("get current timestamp")
         .as_secs()
@@ -71,10 +71,10 @@ pub fn generate_html(
     // Generate user-supplied (or README) pages
     for page in docs_pages {
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
+        let unnest = page_unnest(&page.path);
 
         let temp = PageTemplate {
             gleam_version: VERSION,
-            unnest: ".".to_string(),
             links: &links,
             pages: &pages,
             modules: &modules_links,
@@ -82,8 +82,8 @@ pub fn generate_html(
             page_title: &config.name,
             project_version: &config.version.to_string(),
             content: render_markdown(&content),
-            search_index_version: &search_index_version,
-            config_homepage: &config.homepage,
+            rendering_timestamp: &rendering_timestamp,
+            unnest: &unnest,
         };
 
         files.push(OutputFile {
@@ -95,7 +95,7 @@ pub fn generate_html(
             doc: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            url: format!("{}/{}", config.homepage, page.path),
+            url: format!("{}/{}", &unnest, page.path),
             rel_url: format!("/{}", page.path),
         })
     }
@@ -103,15 +103,10 @@ pub fn generate_html(
     // Generate module documentation pages
     for module in modules {
         let name = module.name.clone();
+        let unnest = page_unnest(&module.name);
 
         // Read module src & create line number lookup structure
         let source_links = SourceLinker::new(config, module);
-
-        let mut unnest: String =
-            Itertools::intersperse(module.name.split('/').skip(1).map(|_| ".."), "/").collect();
-        if unnest.is_empty() {
-            unnest = ".".to_string();
-        }
 
         let page_title = format!("{} - {}", name, config.name);
 
@@ -167,7 +162,7 @@ pub fn generate_html(
                     constructors,
                     import_synonyms(&module.name, typ.name)
                 ),
-                url: format!("{}/{}.html#{}", config.homepage, module.name, typ.name),
+                url: format!("{}.html#{}", module.name, typ.name),
                 rel_url: format!("/{}.html#{}", module.name, typ.name),
             })
         });
@@ -181,7 +176,7 @@ pub fn generate_html(
                     constant.text_documentation,
                     import_synonyms(&module.name, constant.name)
                 ),
-                url: format!("{}/{}.html#{}", config.homepage, module.name, constant.name),
+                url: format!("{}.html#{}", module.name, constant.name),
                 rel_url: format!("/{}.html#{}", module.name, constant.name),
             })
         });
@@ -195,7 +190,7 @@ pub fn generate_html(
                     function.text_documentation,
                     import_synonyms(&module.name, function.name)
                 ),
-                url: format!("{}/{}.html#{}", config.homepage, module.name, function.name),
+                url: format!("{}.html#{}", module.name, function.name),
                 rel_url: format!("/{}.html#{}", module.name, function.name),
             })
         });
@@ -203,7 +198,7 @@ pub fn generate_html(
             doc: module.name.to_string(),
             title: module.name.to_string(),
             content: module.ast.documentation.iter().join("\n"),
-            url: format!("{}/{}.html", config.homepage, module.name),
+            url: format!("{}.html", module.name),
             rel_url: format!("/{}.html", module.name),
         });
 
@@ -221,8 +216,7 @@ pub fn generate_html(
             functions,
             types,
             constants,
-            search_index_version: &search_index_version,
-            config_homepage: &config.homepage,
+            rendering_timestamp: &rendering_timestamp,
         };
 
         files.push(OutputFile {
@@ -236,9 +230,12 @@ pub fn generate_html(
     // Render static assets
 
     files.push(OutputFile {
-        path: PathBuf::from(format!("search-data-{}.json", search_index_version)),
-        text: serde_to_string(&escape_html_contents(search_indexes))
-            .expect("search index serialization"),
+        path: PathBuf::from("search-data.js"),
+        text: format!(
+            "window.Gleam.initSearch({});",
+            serde_to_string(&escape_html_contents(search_indexes))
+                .expect("search index serialization")
+        ),
     });
 
     files.push(OutputFile {
@@ -257,6 +254,35 @@ pub fn generate_html(
     });
 
     files
+}
+
+fn page_unnest(path: &str) -> String {
+    let unnest = path
+        .strip_prefix("/")
+        .unwrap_or(path)
+        .split("/")
+        .skip(1)
+        .map(|_| "..")
+        .join("/");
+    if unnest == "" {
+        ".".to_string()
+    } else {
+        unnest
+    }
+}
+
+#[test]
+fn page_unnest_test() {
+    // Pages
+    assert_eq!(page_unnest("wibble.html"), ".");
+    assert_eq!(page_unnest("/wibble.html"), ".");
+    assert_eq!(page_unnest("/wibble/woo.html"), "..");
+    assert_eq!(page_unnest("/wibble/wobble/woo.html"), "../..");
+
+    // Modules
+    assert_eq!(page_unnest("string"), ".");
+    assert_eq!(page_unnest("gleam/string"), "..");
+    assert_eq!(page_unnest("gleam/string/inspect"), "../..");
 }
 
 fn escape_html_content(it: String) -> String {
@@ -525,7 +551,7 @@ struct Constant<'a> {
 #[template(path = "documentation_page.html")]
 struct PageTemplate<'a> {
     gleam_version: &'a str,
-    unnest: String,
+    unnest: &'a str,
     page_title: &'a str,
     project_name: &'a str,
     project_version: &'a str,
@@ -533,8 +559,7 @@ struct PageTemplate<'a> {
     links: &'a [Link],
     modules: &'a [Link],
     content: String,
-    search_index_version: &'a str,
-    config_homepage: &'a str,
+    rendering_timestamp: &'a str,
 }
 
 #[derive(Template)]
@@ -553,8 +578,7 @@ struct ModuleTemplate<'a> {
     types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
-    search_index_version: &'a str,
-    config_homepage: &'a str,
+    rendering_timestamp: &'a str,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]

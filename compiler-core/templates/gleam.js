@@ -538,51 +538,29 @@ window.Gleam = (function () {
     });
   };
 
-  const initSearch = function () {
-    const request = new XMLHttpRequest();
-    request.open(
-      "GET",
-      `${window.configHomepage}/search-data-${window.searchIndexVersion}.json`,
-      true
-    );
+  self.initSearch = function initSeach(docs) {
+    // enable support for hyphenated search words
+    lunr.tokenizer.separator = /[\s/]+/;
 
-    request.onload = function () {
-      if (request.status >= 200 && request.status < 400) {
-        const docs = JSON.parse(request.responseText);
+    const index = lunr(function () {
+      this.ref("id");
+      this.field("title", { boost: 200 });
+      this.field("content", { boost: 2 });
+      this.field("rel_url");
+      this.metadataWhitelist = ["position"];
 
-        // enable support for hyphenated search words
-        lunr.tokenizer.separator = /[\s/]+/;
-
-        const index = lunr(function () {
-          this.ref("id");
-          this.field("title", { boost: 200 });
-          this.field("content", { boost: 2 });
-          this.field("rel_url");
-          this.metadataWhitelist = ["position"];
-
-          for (let i = 0; i < docs.length; i++) {
-            this.add({
-              id: i,
-              title: docs[i].title,
-              content: docs[i].content,
-              rel_url: docs[i].rel_url,
-            });
-          }
+      for (let [i, entry] of docs.entries()) {
+        console.log("inserting", entry);
+        this.add({
+          id: i,
+          title: entry.title,
+          content: entry.content,
+          rel_url: `${window.unnest}/${entry.rel_url}`,
         });
-
-        searchLoaded(index, docs);
-      } else {
-        console.log(
-          "Error loading ajax request. Request status:" + request.status
-        );
       }
-    };
+    });
 
-    request.onerror = function () {
-      console.log("There was a connection error");
-    };
-
-    request.send();
+    searchLoaded(index, docs);
   };
 
   const init = function () {
@@ -622,8 +600,6 @@ window.Gleam = (function () {
           "$2<wbr>$1"
         );
       });
-
-    initSearch();
   };
 
   /* Initialise */
