@@ -281,7 +281,7 @@ window.Gleam = (function () {
         resultsList.appendChild(resultsListItem);
         const resultLink = document.createElement("a");
         resultLink.classList.add("search-result");
-        resultLink.setAttribute("href", doc.url);
+        resultLink.setAttribute("href", `${window.unnest}/${doc.url}`);
         resultsListItem.appendChild(resultLink);
         const resultTitle = document.createElement("div");
         resultTitle.classList.add("search-result-title");
@@ -439,7 +439,7 @@ window.Gleam = (function () {
         }
         const resultRelUrl = document.createElement("span");
         resultRelUrl.classList.add("search-result-rel-url");
-        resultRelUrl.innerText = doc.rel_url;
+        resultRelUrl.innerText = doc.url;
         resultTitle.appendChild(resultRelUrl);
       }
 
@@ -546,7 +546,7 @@ window.Gleam = (function () {
       this.ref("id");
       this.field("title", { boost: 200 });
       this.field("content", { boost: 2 });
-      this.field("rel_url");
+      this.field("url");
       this.metadataWhitelist = ["position"];
 
       for (let [i, entry] of docs.entries()) {
@@ -554,7 +554,7 @@ window.Gleam = (function () {
           id: i,
           title: entry.title,
           content: entry.content,
-          rel_url: `${window.unnest}/${entry.rel_url}`,
+          url: `${window.unnest}/${entry.url}`,
         });
       }
     });

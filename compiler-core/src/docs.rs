@@ -95,7 +95,7 @@ pub fn generate_html(
             doc: config.name.to_string(),
             title: config.name.to_string(),
             content,
-            url: format!("{}/{}", page.path),
+            url: page.path.to_string(),
         })
     }
 
