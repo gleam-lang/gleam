@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 301
+expression: "pub type Thing {\n  Thing(a: Int, b: Int)\n}\n\npub fn identity(x) { x }\n\npub fn main() {\n  let thing = Thing(1, 2)\n  Thing(..thing |> identity, b: 1000)\n}"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([identity/1, main/0]).
+-export_type([thing/0]).
+
+-type thing() :: {thing, integer(), integer()}.
+
+-spec identity(I) -> I.
+identity(X) ->
+    X.
+
+-spec main() -> thing().
+main() ->
+    Thing = {thing, 1, 2},
+    erlang:setelement(
+        3,
+        begin
+            _pipe = Thing,
+            identity(_pipe)
+        end,
+        1000
+    ).
+

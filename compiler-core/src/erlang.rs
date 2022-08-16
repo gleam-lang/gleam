@@ -1311,7 +1311,9 @@ fn record_update<'a>(
     args: &'a [TypedRecordUpdateArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    args.iter().fold(expr(spread, env), |tuple_doc, arg| {
+    let expr_doc = maybe_block_expr(spread, env);
+
+    args.iter().fold(expr_doc, |tuple_doc, arg| {
         // Increment the index by 2, because the first element
         // is the name of the record, so our fields are 2-indexed
         let index_doc = (arg.index + 2).to_doc();
@@ -1336,11 +1338,19 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    match &expression {
+    if needs_wrapping_in_block(expression) {
+        begin_end(expr(expression, env))
+    } else {
+        expr(expression, env)
+    }
+}
+
+fn needs_wrapping_in_block(expression: &TypedExpr) -> bool {
+    match expression {
         TypedExpr::Pipeline { .. } | TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
-            begin_end(expr(expression, env))
+            true
         }
-        _ => expr(expression, env),
+        _ => false,
     }
 }
 
@@ -1503,7 +1513,7 @@ fn negate<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
     let index_doc = Document::String(format!("{}", (index + 1)));
-    let tuple_doc = expr(tuple, env);
+    let tuple_doc = maybe_block_expr(tuple, env);
     "erlang:element"
         .to_doc()
         .append(wrap_args([index_doc, tuple_doc]))

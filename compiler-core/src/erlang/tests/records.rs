@@ -294,3 +294,37 @@ const test = A
 pub fn a() { A }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1698
+#[test]
+fn pipe_update_subject() {
+    assert_erl!(
+        "pub type Thing {
+  Thing(a: Int, b: Int)
+}
+
+pub fn identity(x) { x }
+
+pub fn main() {
+  let thing = Thing(1, 2)
+  Thing(..thing |> identity, b: 1000)
+}"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1698
+#[test]
+fn record_access_block() {
+    assert_erl!(
+        "pub type Thing {
+  Thing(a: Int, b: Int)
+}
+
+pub fn main() {
+  {
+    let thing = Thing(1, 2)
+    thing
+  }.a
+}"
+    );
+}
