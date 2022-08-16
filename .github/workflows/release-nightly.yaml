@@ -49,21 +49,29 @@ jobs:
     needs: [ build-nightly-clean ]
     strategy:
       matrix:
-        build:
-          - macos
-          - macos-arm64
-          - windows-64bit
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - aarch64-apple-darwin
+          - x86_64-pc-windows-msvc
         toolchain: [stable]
         include:
-          - build: macos
-            os: macos-latest
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use-cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use-cross: true
+          - os: macos-latest
             target: x86_64-apple-darwin
-          - build: macos-arm64
-            os: macos-11
+            use-cross: false
+          - os: macos-11
             target: aarch64-apple-darwin
-          - build: windows-64bit
-            os: windows-latest
+            use-cross: false
+          - os: windows-latest
             target: x86_64-pc-windows-msvc
+            use-cross: false
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -101,6 +109,7 @@ jobs:
         with:
           command: build
           args: --release --target ${{ matrix.target }}
+          use-cross: ${{ matrix.use-cross }}
 
       - name: Build archive
         shell: bash
@@ -109,12 +118,12 @@ jobs:
           DAY=$(date +"%y%m%d")
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.zip"
+            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.zip"
             cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
             7z a "$ARCHIVE" "gleam.exe"
             rm gleam.exe
           else
-            ARCHIVE="gleam-$VERSION-${{ matrix.build }}.tar.gz"
+            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.tar.gz"
             cp "target/${{ matrix.target }}/release/gleam" "gleam"
             tar -czvf "$ARCHIVE" "gleam"
             rm gleam
@@ -128,15 +137,16 @@ jobs:
       - name: Ensure binary successfully boots
         shell: bash
         run: |
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            7z x "$ASSET"
-            ./gleam.exe --version
-          elif [ "${{ matrix.build }}" = "macos-arm64" ]; then
-            echo We cannot test an ARM binary on a AMD64 runner
-          else
-            tar -xvzf "$ASSET"
-            ./gleam --version
-          fi
+          case "${{ matrix.target }}" in
+            x86_64-pc-windows-msvc)
+              7z x "$ASSET"
+              ./gleam.exe --version ;;
+            aarch64*)
+              echo "We cannot test an ARM binary on a AMD64 runner" ;;
+            *)
+              tar -xvzf "$ASSET"
+              ./gleam --version ;;
+          esac
 
       - name: Upload release archive
         shell: bash
