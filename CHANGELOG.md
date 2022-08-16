@@ -27,6 +27,9 @@
   when they are required to specify boolean precedence.
 - Fixed a bug where `gleam new` would not in some situations not validate the
   target directory correctly.
+- Fixed a bug where pipes inside record update subjects could generate invalid
+  Erlang.
+- Fixed a bug where pipes inside record access could generate invalid Erlang.
 - Qualifiers are now used when multiple types have the same name in an error
   message.
 - In JavaScript, if an object has defined an `equals` method in it's prototype,
