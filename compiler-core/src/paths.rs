@@ -69,7 +69,7 @@ fn packages_cache() -> PathBuf {
 }
 
 pub fn default_gleam_cache() -> PathBuf {
-    dirs::cache_dir()
+    dirs_next::cache_dir()
         .expect("Failed to determine user cache directory")
         .join("gleam")
 }

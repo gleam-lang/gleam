@@ -41,7 +41,7 @@ vec1 = "1.8.0"
 # Hex package manager client
 hexpm = "2.0.0"
 # XDG directory locations
-dirs = "4.0.0"
+dirs-next = "2.0.0"
 # HTTP types
 http = "0.2.5"
 # Byte collections
