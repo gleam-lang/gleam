@@ -253,13 +253,13 @@ pub fn generate_html(
 
 fn page_unnest(path: &str) -> String {
     let unnest = path
-        .strip_prefix("/")
+        .strip_prefix('/')
         .unwrap_or(path)
-        .split("/")
+        .split('/')
         .skip(1)
         .map(|_| "..")
         .join("/");
-    if unnest == "" {
+    if unnest.is_empty() {
         ".".to_string()
     } else {
         unnest

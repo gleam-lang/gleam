@@ -58,7 +58,7 @@ macro_rules! assert_module_infer {
             .values
             .iter()
             .map(|(k, v)| {
-                let mut printer = crate::type_::pretty::Printer::new();
+                let mut printer = $crate::type_::pretty::Printer::new();
                 (k.clone(), printer.pretty_print(&v.type_, 0))
             })
             .sorted()
