@@ -726,7 +726,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let ann_typ = self
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            self.unify(ann_typ, value_type)
+            self.unify(ann_typ, value_type.clone())
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
@@ -734,6 +734,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             typ,
             pattern,
+            pattern_type: value_type,
             value: Box::new(value),
             then: Box::new(then),
         })

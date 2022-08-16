@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{cell::RefCell, sync::Arc};
 
 use crate::{
     ast::{SrcSpan, TypedExpr, TypedPattern},
     build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
-        RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
+        RecordAccessor, Type, TypeVar, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -105,8 +105,8 @@ fn compile_expression(src: &str) -> TypedExpr {
 fn find_node_todo() {
     let expr = compile_expression(r#" todo "#);
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(5), None);
 }
 
@@ -114,8 +114,8 @@ fn find_node_todo() {
 fn find_node_todo_with_string() {
     let expr = compile_expression(r#" todo("ok") "#);
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(10), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(10), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(11), None);
 }
 
@@ -123,8 +123,8 @@ fn find_node_todo_with_string() {
 fn find_node_string() {
     let expr = compile_expression(r#" "ok" "#);
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(5), None);
 }
 
@@ -132,8 +132,8 @@ fn find_node_string() {
 fn find_node_float() {
     let expr = compile_expression(r#" 1.02 "#);
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(5), None);
 }
 
@@ -141,8 +141,8 @@ fn find_node_float() {
 fn find_node_int() {
     let expr = compile_expression(r#" 1302 "#);
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(5), None);
 }
 
@@ -166,8 +166,8 @@ wibble"#,
     };
 
     assert_eq!(expr.find_node(14), None);
-    assert_eq!(expr.find_node(15), Some(Located::Expression(&var)));
-    assert_eq!(expr.find_node(20), Some(Located::Expression(&var)));
+    assert_eq!(expr.find_node(15), Some(Located::Expression(var.clone())));
+    assert_eq!(expr.find_node(20), Some(Located::Expression(var.clone())));
     assert_eq!(expr.find_node(21), None);
 }
 
@@ -202,15 +202,15 @@ fn find_node_list() {
         value: "3".into(),
     };
 
-    assert_eq!(list.find_node(0), Some(Located::Expression(&list)));
-    assert_eq!(list.find_node(1), Some(Located::Expression(&int1)));
-    assert_eq!(list.find_node(2), Some(Located::Expression(&list)));
-    assert_eq!(list.find_node(3), Some(Located::Expression(&list)));
-    assert_eq!(list.find_node(4), Some(Located::Expression(&int2)));
-    assert_eq!(list.find_node(5), Some(Located::Expression(&list)));
-    assert_eq!(list.find_node(6), Some(Located::Expression(&list)));
-    assert_eq!(list.find_node(7), Some(Located::Expression(&int3)));
-    assert_eq!(list.find_node(8), Some(Located::Expression(&list)));
+    assert_eq!(list.find_node(0), Some(Located::Expression(list.clone())));
+    assert_eq!(list.find_node(1), Some(Located::Expression(int1.clone())));
+    assert_eq!(list.find_node(2), Some(Located::Expression(list.clone())));
+    assert_eq!(list.find_node(3), Some(Located::Expression(list.clone())));
+    assert_eq!(list.find_node(4), Some(Located::Expression(int2.clone())));
+    assert_eq!(list.find_node(5), Some(Located::Expression(list.clone())));
+    assert_eq!(list.find_node(6), Some(Located::Expression(list.clone())));
+    assert_eq!(list.find_node(7), Some(Located::Expression(int3.clone())));
+    assert_eq!(list.find_node(8), Some(Located::Expression(list.clone())));
     assert_eq!(list.find_node(9), None);
 }
 
@@ -234,16 +234,16 @@ fn find_node_tuple() {
         value: "3".into(),
     };
 
-    assert_eq!(tuple.find_node(0), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(1), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(2), Some(Located::Expression(&int1)));
-    assert_eq!(tuple.find_node(3), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(4), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(5), Some(Located::Expression(&int2)));
-    assert_eq!(tuple.find_node(6), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(7), Some(Located::Expression(&tuple)));
-    assert_eq!(tuple.find_node(8), Some(Located::Expression(&int3)));
-    assert_eq!(tuple.find_node(9), Some(Located::Expression(&tuple)));
+    assert_eq!(tuple.find_node(0), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(1), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(2), Some(Located::Expression(int1.clone())));
+    assert_eq!(tuple.find_node(3), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(4), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(5), Some(Located::Expression(int2.clone())));
+    assert_eq!(tuple.find_node(6), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(7), Some(Located::Expression(tuple.clone())));
+    assert_eq!(tuple.find_node(8), Some(Located::Expression(int3.clone())));
+    assert_eq!(tuple.find_node(9), Some(Located::Expression(tuple.clone())));
     assert_eq!(tuple.find_node(10), None);
 }
 
@@ -268,9 +268,9 @@ fn find_node_tuple_index() {
         typ: type_::int(),
     };
 
-    assert_eq!(expr.find_node(2), Some(Located::Expression(&int)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(2), Some(Located::Expression(int.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(6), None);
 }
 
@@ -288,8 +288,8 @@ fn find_node_module_select() {
     };
 
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(2), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(3), None);
 }
 
@@ -303,11 +303,11 @@ fn find_node_fn() {
         typ: type_::int(),
     };
 
-    assert_eq!(expr.find_node(0), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(6), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(7), Some(Located::Expression(&int)));
-    assert_eq!(expr.find_node(8), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(9), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(0), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(6), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(7), Some(Located::Expression(int.clone())));
+    assert_eq!(expr.find_node(8), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(9), Some(Located::Expression(expr.clone())));
     assert_eq!(expr.find_node(10), None);
 }
 
@@ -333,11 +333,11 @@ fn find_node_call() {
         typ: type_::int(),
     };
 
-    assert_eq!(expr.find_node(11), Some(Located::Expression(&retrn)));
+    assert_eq!(expr.find_node(11), Some(Located::Expression(retrn)));
     assert_eq!(expr.find_node(14), None);
-    assert_eq!(expr.find_node(15), Some(Located::Expression(&arg1)));
+    assert_eq!(expr.find_node(15), Some(Located::Expression(arg1)));
     assert_eq!(expr.find_node(16), None);
-    assert_eq!(expr.find_node(18), Some(Located::Expression(&arg2)));
+    assert_eq!(expr.find_node(18), Some(Located::Expression(arg2)));
     assert_eq!(expr.find_node(19), None);
 }
 
@@ -361,18 +361,18 @@ fn find_node_assignment() {
         name: "Int".to_string(),
         args: vec![],
     };
-    assert_eq!(expr.find_node(0), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Pattern(&ptn, &typ)));
-    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(6), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(7), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(8), Some(Located::Expression(&val)));
-    assert_eq!(expr.find_node(9), Some(Located::Expression(&val)));
-    assert_eq!(expr.find_node(10), Some(Located::Expression(&val)));
+    assert_eq!(expr.find_node(0), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(1), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(2), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(3), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Pattern(ptn, typ)));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(6), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(7), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(8), Some(Located::Expression(val.clone())));
+    assert_eq!(expr.find_node(9), Some(Located::Expression(val.clone())));
+    assert_eq!(expr.find_node(10), Some(Located::Expression(val.clone())));
 }
 
 #[test]
@@ -389,7 +389,7 @@ fn find_node_tuple_constructor_assignment() {
         name: "Int".to_string(),
         args: vec![],
     };
-    assert_eq!(module.find_node(54), Some(Located::Pattern(&ptn, &typ)));
+    assert_eq!(module.find_node(54), Some(Located::Pattern(ptn, typ)));
 }
 
 #[test]
@@ -408,11 +408,11 @@ fn find_node_tuple_assignment() {
         args: vec![],
     };
 
-    assert_eq!(expr.find_node(0), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(5), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(6), Some(Located::Pattern(&ptn, &typ)));
+    assert_eq!(expr.find_node(0), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(4), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr.clone())));
+    assert_eq!(expr.find_node(6), Some(Located::Pattern(ptn, typ)));
 }
 
 #[test]
@@ -431,17 +431,30 @@ fn find_node_record_access() {
         typ: type_::int(),
     };
 
-    assert_eq!(access.find_node(4), Some(Located::Expression(&string)));
-    assert_eq!(access.find_node(9), Some(Located::Expression(&string)));
-    assert_eq!(access.find_node(12), Some(Located::Expression(&int)));
-    assert_eq!(access.find_node(14), Some(Located::Expression(&access)));
-    assert_eq!(access.find_node(18), Some(Located::Expression(&access)));
+    assert_eq!(
+        access.find_node(4),
+        Some(Located::Expression(string.clone()))
+    );
+    assert_eq!(
+        access.find_node(9),
+        Some(Located::Expression(string.clone()))
+    );
+    assert_eq!(access.find_node(12), Some(Located::Expression(int)));
+    assert_eq!(
+        access.find_node(14),
+        Some(Located::Expression(access.clone()))
+    );
+    assert_eq!(
+        access.find_node(18),
+        Some(Located::Expression(access.clone()))
+    );
     assert_eq!(access.find_node(19), None);
 }
 
 #[test]
 fn find_node_record_update() {
     let update = compile_expression(r#"Cat(..Cat("Nubi", 3), age: 4)"#);
+    let located = Some(Located::Expression(update.clone()));
 
     let int = TypedExpr::Int {
         location: SrcSpan { start: 27, end: 28 },
@@ -449,10 +462,10 @@ fn find_node_record_update() {
         typ: type_::int(),
     };
 
-    assert_eq!(update.find_node(0), Some(Located::Expression(&update)));
-    assert_eq!(update.find_node(3), Some(Located::Expression(&update)));
-    assert_eq!(update.find_node(27), Some(Located::Expression(&int)));
-    assert_eq!(update.find_node(28), Some(Located::Expression(&update)));
+    assert_eq!(update.find_node(0), located);
+    assert_eq!(update.find_node(3), located);
+    assert_eq!(update.find_node(27), Some(Located::Expression(int)));
+    assert_eq!(update.find_node(28), located);
     assert_eq!(update.find_node(29), None);
 }
 
@@ -472,9 +485,26 @@ fn find_node_try() {
         typ: type_::int(),
     };
 
-    assert_eq!(try_.find_node(0), Some(Located::Expression(&try_)));
-    assert_eq!(try_.find_node(11), Some(Located::Expression(&int1)));
-    assert_eq!(try_.find_node(17), Some(Located::Expression(&int2)));
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 4, end: 5 },
+        name: "x".to_string(),
+    };
+
+    let typ = Type::Var {
+        type_: Arc::new(RefCell::new(TypeVar::Link {
+            type_: Arc::new(Type::App {
+                public: true,
+                module: vec![],
+                name: "Int".to_string(),
+                args: vec![],
+            }),
+        })),
+    };
+
+    assert_eq!(try_.find_node(0), Some(Located::Expression(try_.clone())));
+    assert_eq!(try_.find_node(4), Some(Located::Pattern(ptn, typ)));
+    assert_eq!(try_.find_node(11), Some(Located::Expression(int1.clone())));
+    assert_eq!(try_.find_node(17), Some(Located::Expression(int2.clone())));
     assert_eq!(try_.find_node(19), None);
 }
 
@@ -506,11 +536,11 @@ case 1, 2 {
         typ: type_::int(),
     };
 
-    assert_eq!(case.find_node(1), Some(Located::Expression(&case)));
-    assert_eq!(case.find_node(6), Some(Located::Expression(&int1)));
-    assert_eq!(case.find_node(9), Some(Located::Expression(&int2)));
-    assert_eq!(case.find_node(23), Some(Located::Expression(&int3)));
-    assert_eq!(case.find_node(25), Some(Located::Expression(&case)));
+    assert_eq!(case.find_node(1), Some(Located::Expression(case.clone())));
+    assert_eq!(case.find_node(6), Some(Located::Expression(int1.clone())));
+    assert_eq!(case.find_node(9), Some(Located::Expression(int2.clone())));
+    assert_eq!(case.find_node(23), Some(Located::Expression(int3.clone())));
+    assert_eq!(case.find_node(25), Some(Located::Expression(case.clone())));
     assert_eq!(case.find_node(26), None);
 }
 
@@ -534,11 +564,14 @@ fn find_node_bool() {
         name: "True".into(),
     };
 
-    assert_eq!(negate.find_node(0), Some(Located::Expression(&negate)));
-    assert_eq!(negate.find_node(1), Some(Located::Expression(&bool)));
-    assert_eq!(negate.find_node(2), Some(Located::Expression(&bool)));
-    assert_eq!(negate.find_node(3), Some(Located::Expression(&bool)));
-    assert_eq!(negate.find_node(4), Some(Located::Expression(&bool)));
+    assert_eq!(
+        negate.find_node(0),
+        Some(Located::Expression(negate.clone()))
+    );
+    assert_eq!(negate.find_node(1), Some(Located::Expression(bool.clone())));
+    assert_eq!(negate.find_node(2), Some(Located::Expression(bool.clone())));
+    assert_eq!(negate.find_node(3), Some(Located::Expression(bool.clone())));
+    assert_eq!(negate.find_node(4), Some(Located::Expression(bool.clone())));
     assert_eq!(negate.find_node(5), None);
 }
 
@@ -560,4 +593,66 @@ pub fn main() {
     assert_ne!(module.find_node(22), Some(Located::OutsideAnyStatement));
     assert_eq!(module.find_node(23), Some(Located::OutsideAnyStatement));
     assert_eq!(module.find_node(24), Some(Located::OutsideAnyStatement));
+}
+
+#[test]
+fn find_node_try_pattern() {
+    let try_ = compile_expression(r#"try #(cccc, dddd) = Ok(#("a", 1)) Ok(Nil)"#);
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 6, end: 10 },
+        name: "cccc".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "String".to_string(),
+        args: vec![],
+    };
+    assert_eq!(try_.find_node(0), Some(Located::Expression(try_.clone())));
+    assert_eq!(try_.find_node(6), Some(Located::Pattern(ptn, typ)));
+
+    let ptn = TypedPattern::Var {
+        location: SrcSpan { start: 12, end: 16 },
+        name: "dddd".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "Int".to_string(),
+        args: vec![],
+    };
+    assert_eq!(try_.find_node(12), Some(Located::Pattern(ptn, typ)));
+}
+
+#[test]
+fn find_node_try_pattern_discard() {
+    let try_ = compile_expression(r#"try #(_ccc, _ddd) = Ok(#("a", 1)) Ok(Nil)"#);
+    let ptn = TypedPattern::Discard {
+        location: SrcSpan { start: 6, end: 10 },
+        name: "_ccc".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "String".to_string(),
+        args: vec![],
+    };
+    assert_eq!(try_.find_node(0), Some(Located::Expression(try_.clone())));
+    assert_eq!(try_.find_node(6), Some(Located::Pattern(ptn, typ)));
+
+    let ptn = TypedPattern::Discard {
+        location: SrcSpan { start: 12, end: 16 },
+        name: "_ddd".to_string(),
+    };
+
+    let typ = Type::App {
+        public: true,
+        module: vec![],
+        name: "Int".to_string(),
+        args: vec![],
+    };
+    assert_eq!(try_.find_node(12), Some(Located::Pattern(ptn, typ)));
 }

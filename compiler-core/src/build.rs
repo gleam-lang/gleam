@@ -129,7 +129,7 @@ impl Module {
         self.origin == Origin::Test
     }
 
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         self.ast.find_node(byte_index)
     }
 
@@ -184,9 +184,9 @@ impl Module {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Located<'a> {
-    Expression(&'a TypedExpr),
-    Pattern(&'a TypedPattern, &'a Type),
+pub enum Located {
+    Expression(TypedExpr),
+    Pattern(TypedPattern, Type),
 
     /// This variant is returned when the focused location is not within any
     /// statements, in which case let's assume it's going to be an import and
@@ -197,7 +197,7 @@ pub enum Located<'a> {
     OutsideAnyStatement,
 }
 
-impl<'a> Located<'a> {
+impl Located {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Expression(expression) => expression.definition_location(),

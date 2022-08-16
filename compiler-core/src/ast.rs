@@ -11,9 +11,12 @@ pub use self::untyped::UntypedExpr;
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::build::{Located, Target};
-use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use crate::type_::{
+    self, ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
+};
 use std::sync::Arc;
 
+use lazy_static::__Deref;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 
@@ -39,7 +42,7 @@ pub struct Module<Info, Statements> {
 }
 
 impl TypedModule {
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         let mut in_any_statement = false;
 
         for statement in &self.statements {
@@ -518,7 +521,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
 }
 
 impl TypedStatement {
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         match self {
             Statement::Fn { body, .. } => body.find_node(byte_index),
 
@@ -697,13 +700,13 @@ pub struct CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         self.value.find_node(byte_index)
     }
 }
 
 impl CallArg<Pattern<PatternConstructor, Arc<Type>>> {
-    pub fn find_node<'a>(&'a self, byte_index: usize, typ: &'a Type) -> Option<Located<'a>> {
+    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located> {
         self.value.find_node(byte_index, typ)
     }
 }
@@ -739,7 +742,7 @@ pub struct TypedRecordUpdateArg {
 }
 
 impl TypedRecordUpdateArg {
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         self.value.find_node(byte_index)
     }
 }
@@ -774,7 +777,7 @@ impl TypedClause {
         }
     }
 
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         self.then.find_node(byte_index)
     }
 }
@@ -1061,7 +1064,7 @@ impl<A, B> Pattern<A, B> {
 }
 
 impl Pattern<PatternConstructor, Arc<Type>> {
-    pub fn find_node<'a>(&'a self, byte_index: usize, typ: &'a Type) -> Option<Located<'a>> {
+    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located> {
         if !self.location().contains(byte_index) {
             return None;
         }
@@ -1070,9 +1073,14 @@ impl Pattern<PatternConstructor, Arc<Type>> {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. } => Some(Located::Pattern(self, typ)),
+            | Pattern::Discard { .. }
+            | Pattern::Var { .. } => Some(Located::Pattern(self.clone(), typ.clone())),
 
             Pattern::Tuple { elems, .. } => match typ {
+                Type::Var { type_ } => match type_.borrow().deref() {
+                    TypeVar::Link { type_ } => self.find_node(byte_index, type_),
+                    _ => None,
+                },
                 Type::Tuple {
                     elems: type_elems, ..
                 } => elems
@@ -1093,7 +1101,6 @@ impl Pattern<PatternConstructor, Arc<Type>> {
             // TODO: handle these cases
             Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
-            | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::BitString { .. } => None,
         }
@@ -1132,7 +1139,7 @@ pub struct BitStringSegment<Value, Type> {
 }
 
 impl TypedExprBitStringSegment {
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: usize) -> Option<Located> {
         self.value.find_node(byte_index)
     }
 }

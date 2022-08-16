@@ -724,7 +724,7 @@ impl LanguageServer {
     fn node_at_position(
         &self,
         params: &lsp::TextDocumentPositionParams,
-    ) -> Option<(LineNumbers, Located<'_>)> {
+    ) -> Option<(LineNumbers, Located)> {
         let module = self.module_for_uri(&params.text_document.uri)?;
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
