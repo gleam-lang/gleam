@@ -3633,3 +3633,22 @@ world",
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1724
+#[test]
+fn case_subject_block() {
+    assert_format!(
+        r#"pub fn main() {
+  case
+    {
+      assert Ok(x) = thing()
+      assert Ok(y) = thing()
+      x + y
+    }
+  {
+    _ -> Nil
+  }
+}
+"#
+    );
+}
