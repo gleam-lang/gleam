@@ -703,7 +703,7 @@ impl CallArg<TypedExpr> {
 }
 
 impl CallArg<Pattern<PatternConstructor, Arc<Type>>> {
-    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located<'_>> {
+    pub fn find_node<'a>(&'a self, byte_index: usize, typ: &'a Type) -> Option<Located<'a>> {
         self.value.find_node(byte_index, typ)
     }
 }
@@ -1061,7 +1061,7 @@ impl<A, B> Pattern<A, B> {
 }
 
 impl Pattern<PatternConstructor, Arc<Type>> {
-    pub fn find_node(&self, byte_index: usize, typ: &Type) -> Option<Located<'_>> {
+    pub fn find_node<'a>(&'a self, byte_index: usize, typ: &'a Type) -> Option<Located<'a>> {
         if !self.location().contains(byte_index) {
             return None;
         }
@@ -1070,8 +1070,7 @@ impl Pattern<PatternConstructor, Arc<Type>> {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            // TODO: How not to clone the type?
-            | Pattern::Var { .. } => Some(Located::Pattern(self, typ.clone())),
+            | Pattern::Var { .. } => Some(Located::Pattern(self, typ)),
 
             Pattern::Tuple { elems, .. } => match typ {
                 Type::Tuple {

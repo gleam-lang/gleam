@@ -186,7 +186,7 @@ impl Module {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Expression(&'a TypedExpr),
-    Pattern(&'a TypedPattern, Type),
+    Pattern(&'a TypedPattern, &'a Type),
 
     /// This variant is returned when the focused location is not within any
     /// statements, in which case let's assume it's going to be an import and
