@@ -354,6 +354,17 @@ pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
         }))
 }
 
+pub fn private_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .require_git(false)
+        .build()
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(ignore::DirEntry::into_path)
+}
+
 pub fn erlang_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
     Ok(read_dir(dir)?
         .flat_map(Result::ok)

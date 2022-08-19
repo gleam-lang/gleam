@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The `gleam publish` command now adds the `priv` directory and any `NOTICE`
+  file to the tarball.
 - Fixed a bug where piping to `todo` would generate invalid Erlang code.
 - The `gleam update` command can now be used to update dependency packages to
   their latest versions.
