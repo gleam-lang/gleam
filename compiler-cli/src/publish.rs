@@ -222,6 +222,9 @@ fn project_files() -> Result<Vec<PathBuf>> {
     let mut files: Vec<PathBuf> = fs::gleam_files_excluding_gitignore(src)
         .chain(fs::native_files(src)?)
         .collect();
+    let private = Path::new("priv");
+    let mut private_files: Vec<PathBuf> = fs::private_files_excluding_gitignore(private).collect();
+    files.append(&mut private_files);
     let mut add = |path| {
         let path = PathBuf::from(path);
         if path.exists() {
@@ -238,6 +241,9 @@ fn project_files() -> Result<Vec<PathBuf>> {
     add("LICENCE.md");
     add("LICENSE.txt");
     add("LICENCE.txt");
+    add("NOTICE");
+    add("NOTICE.md");
+    add("NOTICE.txt");
     Ok(files)
 }
 
