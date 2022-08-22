@@ -273,7 +273,7 @@ impl<'comments> Formatter<'comments> {
                             .iter()
                             .sorted_by(|a, b| a.name.cmp(&b.name))
                             .map(|e| e.to_doc()),
-                        break_(",", ", ").flex_break(),
+                        flex_break(",", ", "),
                     );
                     let unqualified = break_("", "")
                         .append(concat(unqualified))
@@ -313,7 +313,7 @@ impl<'comments> Formatter<'comments> {
 
             Constant::List { elements, .. } => {
                 let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
-                    || break_(",", ", ").flex_break()
+                    || flex_break(",", ", ")
                 } else {
                     || break_(",", ", ")
                 };
@@ -1216,7 +1216,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let comma: fn() -> Document<'a> =
             if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
-                || break_(",", ", ").flex_break()
+                || flex_break(",", ", ")
             } else {
                 || break_(",", ", ")
             };
@@ -1471,7 +1471,7 @@ fn bit_string<'a>(
     is_simple: bool,
 ) -> Document<'a> {
     let comma = if is_simple {
-        break_(",", ", ").flex_break()
+        flex_break(",", ", ")
     } else {
         break_(",", ", ")
     };

@@ -8,24 +8,26 @@ use pretty_assertions::assert_eq;
 #[test]
 fn fits_test() {
     // Negative limits never fit
-    assert!(!fits(-1, vector![]));
+    assert!(!fits(-1, 0, vector![]));
 
     // If no more documents it always fits
-    assert!(fits(0, vector![]));
+    assert!(fits(0, 0, vector![]));
 
     // ForceBreak never fits
-    assert!(!fits(100, vector![(0, Unbroken, ForceBreak)]));
-    assert!(!fits(100, vector![(0, Broken, ForceBreak)]));
+    assert!(!fits(100, 0, vector![(0, Unbroken, &ForceBreak)]));
+    assert!(!fits(100, 0, vector![(0, Broken, &ForceBreak)]));
 
     // Break in Broken fits always
     assert!(fits(
         1,
+        0,
         vector![(
             0,
             Broken,
-            Break {
+            &Break {
                 broken: "12",
                 unbroken: "",
+                kind: BreakKind::Strict,
             }
         )]
     ));
@@ -33,113 +35,68 @@ fn fits_test() {
     // Break in Unbroken mode fits if `unbroken` fits
     assert!(fits(
         3,
+        0,
         vector![(
             0,
             Unbroken,
-            Break {
+            &Break {
                 broken: "",
                 unbroken: "123",
+                kind: BreakKind::Strict,
             }
         )]
     ));
     assert!(!fits(
         2,
+        0,
         vector![(
             0,
             Unbroken,
-            Break {
+            &Break {
                 broken: "",
                 unbroken: "123",
+                kind: BreakKind::Strict,
             }
         )]
     ));
 
     // Line always fits
-    assert!(fits(0, vector![(0, Broken, Line(100))]));
-    assert!(fits(0, vector![(0, Unbroken, Line(100))]));
+    assert!(fits(0, 0, vector![(0, Broken, &Line(100))]));
+    assert!(fits(0, 0, vector![(0, Unbroken, &Line(100))]));
 
     // String fits if smaller than limit
-    assert!(fits(5, vector![(0, Broken, String("Hello".to_string()))]));
-    assert!(fits(5, vector![(0, Unbroken, String("Hello".to_string()))]));
-    assert!(!fits(4, vector![(0, Broken, String("Hello".to_string()))]));
-    assert!(!fits(
-        4,
-        vector![(0, Unbroken, String("Hello".to_string()))]
-    ));
+    let doc = String("Hello".to_string());
+    assert!(fits(5, 0, vector![(0, Broken, &doc)]));
+    let doc = String("Hello".to_string());
+    assert!(fits(5, 0, vector![(0, Unbroken, &doc)]));
+    let doc = String("Hello".to_string());
+    assert!(!fits(4, 0, vector![(0, Broken, &doc)]));
+    let doc = String("Hello".to_string());
+    assert!(!fits(4, 0, vector![(0, Unbroken, &doc)]));
 
     // Cons fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![(
-            0,
-            Broken,
-            String("1".to_string()).append(String("2".to_string()))
-        )]
-    ));
-    assert!(fits(
-        2,
-        vector![(
-            0,
-            Unbroken,
-            String("1".to_string()).append(String("2".to_string()))
-        )]
-    ));
-    assert!(!fits(
-        1,
-        vector![(
-            0,
-            Broken,
-            String("1".to_string()).append(String("2".to_string()))
-        )]
-    ));
-    assert!(!fits(
-        1,
-        vector![(
-            0,
-            Unbroken,
-            String("1".to_string()).append(String("2".to_string()))
-        )]
-    ));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(fits(2, 0, vector![(0, Unbroken, &doc,)]));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
+    let doc = String("1".to_string()).append(String("2".to_string()));
+    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![(0, Broken, Nest(1, Box::new(String("12".to_string())),))]
-    ));
-    assert!(fits(
-        2,
-        vector![(0, Unbroken, Nest(1, Box::new(String("12".to_string())),))]
-    ));
-    assert!(!fits(
-        1,
-        vector![(0, Broken, Nest(1, Box::new(String("12".to_string())),))]
-    ));
-    assert!(!fits(
-        1,
-        vector![(0, Unbroken, Nest(1, Box::new(String("12".to_string()))))]
-    ));
+    let doc = Nest(1, Box::new(String("12".to_string())));
+    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
+    assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
+    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
+    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
-    assert!(fits(
-        2,
-        vector![(0, Broken, NestCurrent(Box::new(String("12".to_string())),))]
-    ));
-    assert!(fits(
-        2,
-        vector![(
-            0,
-            Unbroken,
-            NestCurrent(Box::new(String("12".to_string())),)
-        )]
-    ));
-    assert!(!fits(
-        1,
-        vector![(0, Broken, NestCurrent(Box::new(String("12".to_string())),))]
-    ));
-    assert!(!fits(
-        1,
-        vector![(0, Unbroken, NestCurrent(Box::new(String("12".to_string()))))]
-    ));
+    let doc = NestCurrent(Box::new(String("12".to_string())));
+    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
+    assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
+    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
+    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 }
 
 #[test]
@@ -148,21 +105,23 @@ fn format_test() {
     assert_eq!("Hi".to_string(), doc.to_pretty_string(10));
 
     let doc = String("Hi".to_string()).append(String(", world!".to_string()));
-    assert_eq!("Hi, world!".to_string(), doc.to_pretty_string(10));
+    assert_eq!("Hi, world!".to_string(), doc.clone().to_pretty_string(10));
 
-    let doc = Break {
+    let doc = &Break {
         broken: "broken",
         unbroken: "unbroken",
+        kind: BreakKind::Strict,
     }
     .group();
-    assert_eq!("unbroken".to_string(), doc.to_pretty_string(10));
+    assert_eq!("unbroken".to_string(), doc.clone().to_pretty_string(10));
 
-    let doc = Break {
+    let doc = &Break {
         broken: "broken",
         unbroken: "unbroken",
+        kind: BreakKind::Strict,
     }
     .group();
-    assert_eq!("broken\n".to_string(), doc.to_pretty_string(5));
+    assert_eq!("broken\n".to_string(), doc.clone().to_pretty_string(5));
 
     let doc = Nest(
         2,
@@ -178,6 +137,14 @@ fn format_test() {
     let doc = ForceBreak.append(Break {
         broken: "broken",
         unbroken: "unbroken",
+        kind: BreakKind::Strict,
+    });
+    assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
+
+    let doc = ForceBreak.append(Break {
+        broken: "broken",
+        unbroken: "unbroken",
+        kind: BreakKind::Flex,
     });
     assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
 }
@@ -232,12 +199,9 @@ fn empty_documents() {
     assert!(!"foo".to_doc().nest_current().is_empty());
     assert!("".to_doc().group().is_empty());
     assert!(!"foo".to_doc().group().is_empty());
-    assert!("".to_doc().flex_break().is_empty());
-    assert!(!"foo".to_doc().flex_break().is_empty());
     assert!(break_("", "").is_empty());
     assert!(!break_("foo", "foo").is_empty());
     assert!(!break_("foo\nbar", "foo bar").is_empty());
-    assert!(!"foo".to_doc().flex_break().is_empty());
     assert!("".to_doc().append("".to_doc()).is_empty());
     assert!(!"foo".to_doc().append("".to_doc()).is_empty());
     assert!(!"".to_doc().append("foo".to_doc()).is_empty());

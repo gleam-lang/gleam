@@ -121,7 +121,11 @@ pub enum Document<'a> {
     FlexBreak(Box<Self>),
 
     /// Renders `broken` if group is broken, `unbroken` otherwise
-    Break { broken: &'a str, unbroken: &'a str },
+    Break {
+        broken: &'a str,
+        unbroken: &'a str,
+        kind: BreakKind,
+    },
 
     /// Join multiple documents together
     Vec(Vec<Self>),
@@ -148,9 +152,13 @@ enum Mode {
     Unbroken,
 }
 
-fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> bool {
+fn fits(
+    mut limit: isize,
+    mut current_width: isize,
+    mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
+) -> bool {
     loop {
-        if limit < 0 {
+        if current_width > limit {
             return false;
         };
 
@@ -164,22 +172,22 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
 
             Document::ForceBreak => return false,
 
-            Document::Nest(i, doc) => docs.push_front((i + indent, mode, *doc)),
+            Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
 
             // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front((indent, mode, *doc)),
+            Document::NestCurrent(doc) => docs.push_front((indent, mode, doc)),
 
-            Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, *doc)),
+            Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
                 Mode::Broken => return true,
-                Mode::Unbroken => limit -= unbroken.len() as isize,
+                Mode::Unbroken => current_width += unbroken.len() as isize,
             },
 
-            Document::FlexBreak(doc) => docs.push_front((indent, mode, *doc)),
+            Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
 
             Document::Vec(vec) => {
                 for doc in vec.into_iter().rev() {
@@ -190,7 +198,13 @@ fn fits(mut limit: isize, mut docs: im::Vector<(isize, Mode, Document<'_>)>) -> 
     }
 }
 
-fn fmt(
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BreakKind {
+    Flex,
+    Strict,
+}
+
+fn format(
     writer: &mut impl Utf8Writer,
     limit: isize,
     mut width: isize,
@@ -210,7 +224,33 @@ fn fmt(
                 width = indent;
             }
 
-            Document::Break { broken, unbroken } => {
+            // Flex breaks are NOT conditional to the mode
+            Document::Break {
+                broken,
+                unbroken,
+                kind: BreakKind::Flex,
+            } => {
+                let unbroken_width = width + unbroken.len() as isize;
+
+                if fits(limit, unbroken_width, docs.clone()) {
+                    writer.str_write(unbroken)?;
+                    width = unbroken_width;
+                } else {
+                    writer.str_write(broken)?;
+                    writer.str_write("\n")?;
+                    for _ in 0..indent {
+                        writer.str_write(" ")?;
+                    }
+                    width = indent;
+                }
+            }
+
+            // Strict breaks are conditional to the mode
+            Document::Break {
+                broken,
+                unbroken,
+                kind: BreakKind::Strict,
+            } => {
                 width = match mode {
                     Mode::Unbroken => {
                         writer.str_write(unbroken)?;
@@ -253,8 +293,8 @@ fn fmt(
 
             Document::Group(doc) | Document::FlexBreak(doc) => {
                 // TODO: don't clone the doc
-                let group_docs = im::vector![(indent, Mode::Unbroken, (**doc).clone())];
-                if fits(limit - width, group_docs) {
+                let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
+                if fits(limit, width, group_docs) {
                     docs.push_front((indent, Mode::Unbroken, doc));
                 } else {
                     docs.push_front((indent, Mode::Broken, doc));
@@ -282,16 +322,24 @@ pub fn force_break<'a>() -> Document<'a> {
 }
 
 pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
-    Document::Break { broken, unbroken }
+    Document::Break {
+        broken,
+        unbroken,
+        kind: BreakKind::Strict,
+    }
+}
+
+pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
+    Document::Break {
+        broken,
+        unbroken,
+        kind: BreakKind::Flex,
+    }
 }
 
 impl<'a> Document<'a> {
     pub fn group(self) -> Self {
         Self::Group(Box::new(self))
-    }
-
-    pub fn flex_break(self) -> Self {
-        Self::FlexBreak(Box::new(self))
     }
 
     pub fn nest(self, indent: isize) -> Self {
@@ -325,7 +373,7 @@ impl<'a> Document<'a> {
 
     pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
-        fmt(writer, limit, 0, docs)?;
+        format(writer, limit, 0, docs)?;
         Ok(())
     }
 
