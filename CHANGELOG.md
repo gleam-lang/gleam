@@ -4,7 +4,6 @@
 
 - The `gleam publish` command now adds the `priv` directory and any `NOTICE`
   file to the tarball.
-- Fixed a bug where piping to `todo` would generate invalid Erlang code.
 - The `gleam update` command can now be used to update dependency packages to
   their latest versions.
 - Module functions with empty bodies are no longer syntax errors.
@@ -14,9 +13,15 @@
 - The LSP will now provide autocompletion for imports.
 - A helpful error message is now returned when assignments are missing either a
   keyword or a value.
+- Qualifiers are now used when multiple types have the same name in an error
+  message.
+- In JavaScript, if an object has defined an `equals` method in it's prototype,
+  Gleam will now use this method when checking for equality.
+- Functions can now be defined and referenced in constant expressions.
 - An error is now raised if a module is imported multiple times.
 - Fixed a bug where defining a variable with the same name as an unqualified
   import would produce invalid JavaScript.
+- Fixed a bug where piping to `todo` would generate invalid Erlang code.
 - Fixed a bug where inspecting a JavaScript object with a null prototype would
   crash.
 - Fixed a bug where the formatter could crash if source code contained 3 or more
@@ -32,11 +37,6 @@
 - Fixed a bug where pipes inside record update subjects could generate invalid
   Erlang.
 - Fixed a bug where pipes inside record access could generate invalid Erlang.
-- Qualifiers are now used when multiple types have the same name in an error
-  message.
-- In JavaScript, if an object has defined an `equals` method in it's prototype,
-  Gleam will now use this method when checking for equality.
-- Functions can now be defined and referenced in constant expressions.
 
 ## v0.22.1 - 2022-06-27
 
