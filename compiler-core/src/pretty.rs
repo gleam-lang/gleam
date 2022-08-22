@@ -11,6 +11,7 @@
 //!
 //! - `ForceBreak` from Prettier.
 //! - `FlexBreak` from Elixir.
+//! - `Fits` (next_break_fits) from Elixir.
 #![allow(clippy::wrong_self_convention)]
 
 #[cfg(test)]
@@ -162,12 +163,30 @@ pub enum Document<'a> {
 
     /// A str to render
     Str(&'a str),
+
+    /// Specify whether the next break can fit or not.
+    Fits { document: Box<Self>, enabled: bool },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Mode {
     Broken,
     Unbroken,
+
+    //
+    // These are used for the Fits variant, taken from Elixir's
+    // Inspect.Algebra's `fits` extension.
+    //
+    /// Broken and forced to remain broken
+    BrokenFixed,
+    /// Unbroken and forced to remain unbroken
+    UnbrokenFixed,
+}
+
+impl Mode {
+    fn is_fixed(&self) -> bool {
+        matches!(self, Mode::BrokenFixed | Mode::UnbrokenFixed)
+    }
 }
 
 fn fits(
@@ -195,14 +214,16 @@ fn fits(
             // TODO: Remove
             Document::NestCurrent(doc) => docs.push_front((indent, mode, doc)),
 
+            Document::Group(doc) if mode.is_fixed() => docs.push_front((indent, mode, doc)),
+
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
 
             Document::Str(s) => limit -= s.len() as isize,
             Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
-                Mode::Broken => return true,
-                Mode::Unbroken => current_width += unbroken.len() as isize,
+                Mode::Broken | Mode::BrokenFixed => return true,
+                Mode::Unbroken | Mode::UnbrokenFixed => current_width += unbroken.len() as isize,
             },
 
             Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
@@ -211,6 +232,19 @@ fn fits(
                 for doc in vec.iter().rev() {
                     docs.push_front((indent, mode.clone(), doc));
                 }
+            }
+
+            Document::Fits { document, .. } if mode.is_fixed() => {
+                docs.push_front((indent, mode, document));
+            }
+
+            Document::Fits { document, enabled } => {
+                let mode = if *enabled {
+                    Mode::BrokenFixed
+                } else {
+                    Mode::UnbrokenFixed
+                };
+                docs.push_front((indent, mode, document));
             }
         }
     }
@@ -270,11 +304,12 @@ fn format(
                 kind: BreakKind::Strict,
             } => {
                 width = match mode {
-                    Mode::Unbroken => {
+                    Mode::Unbroken | Mode::UnbrokenFixed => {
                         writer.str_write(unbroken)?;
                         width + unbroken.len() as isize
                     }
-                    Mode::Broken => {
+
+                    Mode::Broken | Mode::BrokenFixed => {
                         writer.str_write(broken)?;
                         writer.str_write("\n")?;
                         for _ in 0..indent {
@@ -317,6 +352,10 @@ fn format(
                 } else {
                     docs.push_front((indent, Mode::Broken, doc));
                 }
+            }
+
+            Document::Fits { document, .. } => {
+                docs.push_front((indent, mode, document));
             }
         }
     }
@@ -368,6 +407,13 @@ impl<'a> Document<'a> {
         Self::NestCurrent(Box::new(self))
     }
 
+    pub fn next_break_fits(self) -> Self {
+        Self::Fits {
+            document: Box::new(self),
+            enabled: true,
+        }
+    }
+
     pub fn append(self, second: impl Documentable<'a>) -> Self {
         match self {
             Self::Vec(mut vec) => {
@@ -406,7 +452,9 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => d.is_empty(),
+            Fits { document: d, .. } | FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => {
+                d.is_empty()
+            }
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }

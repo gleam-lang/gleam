@@ -5,6 +5,17 @@ use super::*;
 use im::vector;
 use pretty_assertions::assert_eq;
 
+//
+//
+//
+//
+// TODO: port Fits tests for Elixir to verify this implementation is correct
+//
+//
+//
+//
+//
+
 #[test]
 fn fits_test() {
     // Negative limits never fit
