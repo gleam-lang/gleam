@@ -406,8 +406,8 @@ impl<'comments> Formatter<'comments> {
                 }),
                 line(),
             )
-            .append(force_break())
-            .append(line()),
+            .append(line())
+            .force_break(),
         }
     }
 
@@ -553,7 +553,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
         let body = match body {
-            UntypedExpr::Case { .. } => force_break().append(self.expr(body)),
+            UntypedExpr::Case { .. } => self.expr(body).force_break(),
             _ => self.expr(body),
         };
 
@@ -578,7 +578,6 @@ impl<'comments> Formatter<'comments> {
     fn sequence<'a>(&mut self, expressions: &'a [UntypedExpr]) -> Document<'a> {
         let count = expressions.len();
         let mut documents = Vec::with_capacity(count * 2);
-        documents.push(force_break());
         for (i, expression) in expressions.iter().enumerate() {
             let preceeding_newline = self.pop_empty_lines(expression.start_byte_index());
             if i != 0 && preceeding_newline {
@@ -588,7 +587,7 @@ impl<'comments> Formatter<'comments> {
             }
             documents.push(self.expr(expression).group());
         }
-        documents.to_doc()
+        documents.to_doc().force_break()
     }
 
     fn assignment<'a>(
@@ -614,7 +613,7 @@ impl<'comments> Formatter<'comments> {
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
         let doc = if then.is_some() {
-            force_break().append(keyword)
+            keyword.to_doc().force_break()
         } else {
             keyword.to_doc()
         }
@@ -739,7 +738,7 @@ impl<'comments> Formatter<'comments> {
     fn string<'a>(&self, string: &'a String) -> Document<'a> {
         let doc = string.to_doc().surround("\"", "\"");
         if string.contains('\n') {
-            docvec![force_break(), doc]
+            doc.force_break()
         } else {
             doc
         }
@@ -823,16 +822,11 @@ impl<'comments> Formatter<'comments> {
 
         let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
 
-        force_break()
-            .append(subjects_doc)
-            .append(
-                line()
-                    .append(force_break())
-                    .append(clauses_doc)
-                    .nest(INDENT),
-            )
+        subjects_doc
+            .append(line().append(clauses_doc).nest(INDENT))
             .append(line())
             .append("}")
+            .force_break()
     }
 
     pub fn record_update<'a>(
@@ -879,7 +873,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn pipeline<'a>(&mut self, expressions: &'a Vec1<UntypedExpr>) -> Document<'a> {
-        let mut docs = vec![force_break(); expressions.len() * 3];
+        let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.binop_precedence();
         let first = self.wrap_expr(first);
@@ -901,7 +895,7 @@ impl<'comments> Formatter<'comments> {
             docs.push(self.operator_side(doc, 4, expr.binop_precedence()));
         }
 
-        docs.to_doc()
+        docs.to_doc().force_break()
     }
 
     fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {
@@ -1100,10 +1094,10 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Assignment { .. }
             | UntypedExpr::Try { .. } => "{"
                 .to_doc()
-                .append(force_break())
                 .append(line().append(self.expr(expr)).nest(INDENT))
                 .append(line())
-                .append("}"),
+                .append("}")
+                .force_break(),
 
             _ => self.expr(expr),
         }
@@ -1144,8 +1138,8 @@ impl<'comments> Formatter<'comments> {
                 .to_doc()
                 .append(line().append(self.expr(expr)).nest(INDENT).group())
                 .append(line())
-                .append(force_break())
-                .append("}"),
+                .append("}")
+                .force_break(),
 
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
@@ -1537,7 +1531,6 @@ fn printed_comments<'a, 'comments>(
                     Some(_) => doc.push(lines(2)),
                     None => {
                         if trailing_newline {
-                            doc.push(force_break());
                             doc.push(lines(2));
                         }
                     }
@@ -1546,13 +1539,17 @@ fn printed_comments<'a, 'comments>(
             // We've reached the end, there are no more lines
             None => {
                 if trailing_newline {
-                    doc.push(force_break());
                     doc.push(line());
                 }
             }
         }
     }
-    Some(concat(doc))
+    let doc = concat(doc);
+    if trailing_newline {
+        Some(doc.force_break())
+    } else {
+        Some(doc)
+    }
 }
 
 fn commented<'a, 'comments>(
