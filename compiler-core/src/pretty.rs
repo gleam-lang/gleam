@@ -190,7 +190,7 @@ fn fits(
             Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
 
             Document::Vec(vec) => {
-                for doc in vec.into_iter().rev() {
+                for doc in vec.iter().rev() {
                     docs.push_front((indent, mode.clone(), doc));
                 }
             }
