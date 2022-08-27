@@ -18,6 +18,8 @@
 - In JavaScript, if an object has defined an `equals` method in it's prototype,
   Gleam will now use this method when checking for equality.
 - Functions can now be defined and referenced in constant expressions.
+- An error is now raised if the record update syntax is used with a custom type
+  that has multiple constructors.
 - An error is now raised if a module is imported multiple times.
 - Fixed a bug where defining a type named `CustomeType` would product invalid
   JavaScript.
