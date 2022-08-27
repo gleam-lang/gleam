@@ -19,6 +19,8 @@
   Gleam will now use this method when checking for equality.
 - Functions can now be defined and referenced in constant expressions.
 - An error is now raised if a module is imported multiple times.
+- Fixed a bug where defining a type named `CustomeType` would product invalid
+  JavaScript.
 - Fixed a bug where defining a variable with the same name as an unqualified
   import would produce invalid JavaScript.
 - Fixed a bug where piping to `todo` would generate invalid Erlang code.
