@@ -2191,9 +2191,9 @@ const x = two.A"#
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/dist/one/two.mjs"),
-                text: "import { CustomType } from \"../gleam.mjs\";
+                text: "import { CustomType as $CustomType } from \"../gleam.mjs\";
 
-export class A extends CustomType {}\n"
+export class A extends $CustomType {}\n"
                     .to_string(),
             },
             OutputFile {

@@ -3,13 +3,13 @@ source: compiler-core/src/javascript/tests/bools.rs
 assertion_line: 67
 expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
 ---
-import { CustomType, throwError } from "../gleam.mjs";
+import { CustomType as $CustomType, throwError } from "../gleam.mjs";
 
-export class True extends CustomType {}
+export class True extends $CustomType {}
 
-export class False extends CustomType {}
+export class False extends $CustomType {}
 
-export class Nil extends CustomType {}
+export class Nil extends $CustomType {}
 
 function go(x, y) {
   if (!(x instanceof True)) {

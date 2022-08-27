@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 assertion_line: 614
 expression: "pub type Thing {\n  Thing(in: Int, class: Nil)\n}\n"
 ---
-import { CustomType } from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
 
-export class Thing extends CustomType {
+export class Thing extends $CustomType {
   constructor(in$, class$) {
     super();
     this.in = in$;

@@ -61,55 +61,55 @@ impl<'a> Generator<'a> {
         // Import any prelude functions that have been used
 
         if self.tracker.ok_used {
-            self.register_prelude_usage(&mut imports, "Ok");
+            self.register_prelude_usage(&mut imports, "Ok", None);
         };
 
         if self.tracker.error_used {
-            self.register_prelude_usage(&mut imports, "Error");
+            self.register_prelude_usage(&mut imports, "Error", None);
         };
 
         if self.tracker.list_used {
-            self.register_prelude_usage(&mut imports, "toList");
+            self.register_prelude_usage(&mut imports, "toList", None);
         };
 
         if self.tracker.custom_type_used {
-            self.register_prelude_usage(&mut imports, "CustomType");
+            self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
         };
 
         if self.tracker.throw_error_used {
-            self.register_prelude_usage(&mut imports, "throwError");
+            self.register_prelude_usage(&mut imports, "throwError", None);
         };
 
         if self.tracker.float_division_used {
-            self.register_prelude_usage(&mut imports, "divideFloat");
+            self.register_prelude_usage(&mut imports, "divideFloat", None);
         };
 
         if self.tracker.int_division_used {
-            self.register_prelude_usage(&mut imports, "divideInt");
+            self.register_prelude_usage(&mut imports, "divideInt", None);
         };
 
         if self.tracker.object_equality_used {
-            self.register_prelude_usage(&mut imports, "isEqual");
+            self.register_prelude_usage(&mut imports, "isEqual", None);
         };
 
         if self.tracker.bit_string_literal_used {
-            self.register_prelude_usage(&mut imports, "toBitString");
+            self.register_prelude_usage(&mut imports, "toBitString", None);
         };
 
         if self.tracker.sized_integer_segment_used {
-            self.register_prelude_usage(&mut imports, "sizedInteger");
+            self.register_prelude_usage(&mut imports, "sizedInteger", None);
         };
 
         if self.tracker.string_bit_string_segment_used {
-            self.register_prelude_usage(&mut imports, "stringBits");
+            self.register_prelude_usage(&mut imports, "stringBits", None);
         };
 
         if self.tracker.codepoint_bit_string_segment_used {
-            self.register_prelude_usage(&mut imports, "codepointBits");
+            self.register_prelude_usage(&mut imports, "codepointBits", None);
         };
 
         if self.tracker.float_bit_string_segment_used {
-            self.register_prelude_usage(&mut imports, "float64Bits");
+            self.register_prelude_usage(&mut imports, "float64Bits", None);
         };
 
         // Put it all together
@@ -126,11 +126,16 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn register_prelude_usage(&self, imports: &mut Imports<'a>, name: &'static str) {
+    fn register_prelude_usage(
+        &self,
+        imports: &mut Imports<'a>,
+        name: &'static str,
+        alias: Option<&'static str>,
+    ) {
         let path = self.import_path(&self.module.type_info.package, &["gleam".to_string()]);
         let member = Member {
             name: name.to_doc(),
-            alias: None,
+            alias: alias.map(|a| a.to_doc()),
         };
         imports.register_module(path, [], [member]);
     }
@@ -206,7 +211,7 @@ impl<'a> Generator<'a> {
         } else {
             "class "
         };
-        let head = docvec![head, &constructor.name, " extends CustomType {"];
+        let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
         if constructor.arguments.is_empty() {
             return head.append("}");

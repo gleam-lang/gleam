@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/records.rs
 assertion_line: 47
 expression: "\npub type Person {\n    Teacher(name: Nil, age: Int)\n    Student(name: String, age: Int)\n}\npub fn get_age(person: Person) { person.age }"
 ---
-import { CustomType } from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
 
-export class Teacher extends CustomType {
+export class Teacher extends $CustomType {
   constructor(name, age) {
     super();
     this.name = name;
@@ -13,7 +13,7 @@ export class Teacher extends CustomType {
   }
 }
 
-export class Student extends CustomType {
+export class Student extends $CustomType {
   constructor(name, age) {
     super();
     this.name = name;

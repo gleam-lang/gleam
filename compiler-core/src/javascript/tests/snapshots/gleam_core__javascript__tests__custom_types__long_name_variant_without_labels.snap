@@ -3,9 +3,9 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 assertion_line: 227
 expression: "\ntype TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNameAndSeveralArguments(String, String, String, String, String)\n}\n\n\nfn go() {\n  TypeWithALongNameAndSeveralArguments\n}\n"
 ---
-import { CustomType } from "../gleam.mjs";
+import { CustomType as $CustomType } from "../gleam.mjs";
 
-class TypeWithALongNameAndSeveralArguments extends CustomType {
+class TypeWithALongNameAndSeveralArguments extends $CustomType {
   constructor(x0, x1, x2, x3, x4) {
     super();
     this[0] = x0;
