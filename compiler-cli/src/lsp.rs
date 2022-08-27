@@ -11,7 +11,7 @@ use crate::{
     build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
 };
 use gleam_core::{
-    ast::SrcSpan,
+    ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
     config::PackageConfig,
     diagnostic::{self, Level},
@@ -630,7 +630,6 @@ impl LanguageServer {
     }
 
     // TODO: function & constructor labels
-    // TODO: importable modules
     // TODO: module types (including private)
     // TODO: module values (including private)
     // TODO: locally defined variables
@@ -638,45 +637,51 @@ impl LanguageServer {
     // TODO: imported module types
     // TODO: record accessors
     fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
-        // TODO: Use the node for completion if it is an import
-        let (_line_numbers, found) = self.node_at_position(&params.text_document_position)?;
+        let found = self
+            .node_at_position(&params.text_document_position)
+            .map(|(_, found)| found);
 
         match found {
-            // TODO: autocompletion for expressions
-            Located::Expression(_expression) => None,
-
-            // Let's assume it's an import until we have fault tolerant parsing
-            // and can actually identify imports
             // TODO: test
-            Located::OutsideAnyStatement => {
-                let compiler = self.compiler.as_ref()?;
-                // TODO: Test
-                let dependencies_modules = compiler
-                    .project_compiler
-                    .get_importable_modules()
-                    .keys()
-                    .cloned();
-                // TODO: Test
-                let project_modules = compiler
-                    .modules
-                    .iter()
-                    // TODO: We should autocomplete test modules if we are in the test dir
-                    // TODO: Test
-                    .filter(|(_name, module)| module.origin.is_src())
-                    .map(|(name, _module)| name)
-                    .cloned();
-                let modules = dependencies_modules
-                    .chain(project_modules)
-                    .map(|label| lsp::CompletionItem {
-                        label,
-                        kind: None,
-                        documentation: None,
-                        ..Default::default()
-                    })
-                    .collect();
-                Some(modules)
+            None | Some(Located::Statement(Statement::Import { .. })) => {
+                self.completion_for_import()
             }
+
+            // TODO: autocompletion for other statements
+            Some(Located::Statement(_expression)) => None,
+
+            // TODO: autocompletion for expressions
+            Some(Located::Expression(_expression)) => None,
         }
+    }
+
+    fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {
+        let compiler = self.compiler.as_ref()?;
+        // TODO: Test
+        let dependencies_modules = compiler
+            .project_compiler
+            .get_importable_modules()
+            .keys()
+            .cloned();
+        // TODO: Test
+        let project_modules = compiler
+            .modules
+            .iter()
+            // TODO: We should autocomplete test modules if we are in the test dir
+            // TODO: Test
+            .filter(|(_name, module)| module.origin.is_src())
+            .map(|(name, _module)| name)
+            .cloned();
+        let modules = dependencies_modules
+            .chain(project_modules)
+            .map(|label| lsp::CompletionItem {
+                label,
+                kind: None,
+                documentation: None,
+                ..Default::default()
+            })
+            .collect();
+        Some(modules)
     }
 
     fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
@@ -689,7 +694,7 @@ impl LanguageServer {
 
         let expression = match found {
             Located::Expression(expression) => expression,
-            Located::OutsideAnyStatement => return Ok(None),
+            Located::Statement(_) => return Ok(None),
         };
 
         // Show the type of the hovered node to the user
@@ -710,10 +715,14 @@ impl LanguageServer {
         &self,
         params: &lsp::TextDocumentPositionParams,
     ) -> Option<(LineNumbers, Located<'_>)> {
-        let module = self.module_for_uri(&params.text_document.uri)?;
+        let module = self.module_for_uri(&params.text_document.uri);
+        tracing::warn!("module: {:?}", module.map(|m| &m.name));
+        let module = module?;
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let node = module.find_node(byte_index)?;
+        let node = module.find_node(byte_index);
+        tracing::warn!("node: {:?}", node);
+        let node = node?;
         Some((line_numbers, node))
     }
 

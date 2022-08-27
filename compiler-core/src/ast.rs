@@ -40,20 +40,9 @@ pub struct Module<Info, Statements> {
 
 impl TypedModule {
     pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
-        let mut in_any_statement = false;
-
-        for statement in &self.statements {
-            if let Some(node) = statement.find_node(byte_index) {
-                return Some(Located::Expression(node));
-            }
-            in_any_statement = in_any_statement || statement.location().contains(byte_index)
-        }
-
-        if !in_any_statement {
-            return Some(Located::OutsideAnyStatement);
-        }
-
-        None
+        self.statements
+            .iter()
+            .find_map(|statement| statement.find_node(byte_index))
     }
 }
 
@@ -518,22 +507,32 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
 }
 
 impl TypedStatement {
-    pub fn find_node(&self, byte_index: usize) -> Option<&TypedExpr> {
-        match self {
-            Statement::Fn { body, .. } => body.find_node(byte_index),
+    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+        // TODO: test
+        if !self.location().contains(byte_index) {
+            return None;
+        }
 
+        match self {
+            // TODO: test
+            Statement::Fn { body, .. } => match body.find_node(byte_index) {
+                Some(expression) => Some(Located::Expression(expression)),
+                None => Some(Located::Statement(self)),
+            },
+
+            // TODO: test
             Statement::TypeAlias { .. }
             | Statement::CustomType { .. }
             | Statement::ExternalFn { .. }
             | Statement::ExternalType { .. }
             | Statement::Import { .. }
-            | Statement::ModuleConstant { .. } => None,
+            | Statement::ModuleConstant { .. } => Some(Located::Statement(self)),
         }
     }
 }
 
 impl<A, B, C, E> Statement<A, B, C, E> {
-    pub fn location(&self) -> &SrcSpan {
+    pub fn location(&self) -> SrcSpan {
         match self {
             Statement::Fn { location, .. }
             | Statement::Import { location, .. }
@@ -541,7 +540,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             | Statement::CustomType { location, .. }
             | Statement::ExternalFn { location, .. }
             | Statement::ExternalType { location, .. }
-            | Statement::ModuleConstant { location, .. } => location,
+            | Statement::ModuleConstant { location, .. } => *location,
         }
     }
 

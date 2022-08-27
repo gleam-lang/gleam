@@ -185,21 +185,17 @@ impl Module {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Expression(&'a TypedExpr),
-
-    /// This variant is returned when the focused location is not within any
-    /// statements, in which case let's assume it's going to be an import and
-    /// offer autocompletion for that.
-    ///
-    // TODO: replace this with `Import` once we have a fault tolerant parser and
-    // can parse a module with a partially written import.
-    OutsideAnyStatement,
+    Statement(&'a TypedStatement),
 }
 
 impl<'a> Located<'a> {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Expression(expression) => expression.definition_location(),
-            Self::OutsideAnyStatement => None,
+            Self::Statement(statement) => Some(DefinitionLocation {
+                module: None,
+                span: statement.location(),
+            }),
         }
     }
 }

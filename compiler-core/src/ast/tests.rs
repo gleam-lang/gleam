@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use crate::{
     ast::{SrcSpan, TypedExpr},
-    build::Located,
     type_::{
         self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
         RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
@@ -469,7 +468,7 @@ fn find_node_bool() {
 }
 
 #[test]
-fn find_node_import() {
+fn find_node_statement_fn() {
     let module = compile_module(
         r#"
 
@@ -480,10 +479,33 @@ pub fn main() {
 "#,
     );
 
-    assert_eq!(module.find_node(0), Some(Located::OutsideAnyStatement));
-    assert_eq!(module.find_node(1), Some(Located::OutsideAnyStatement));
-    assert_ne!(module.find_node(2), Some(Located::OutsideAnyStatement));
-    assert_ne!(module.find_node(22), Some(Located::OutsideAnyStatement));
-    assert_eq!(module.find_node(23), Some(Located::OutsideAnyStatement));
-    assert_eq!(module.find_node(24), Some(Located::OutsideAnyStatement));
+    assert!(module.find_node(0).is_none());
+    assert!(module.find_node(1).is_none());
+
+    // The fn
+    assert!(module.find_node(2).is_some());
+    assert!(module.find_node(14).is_some());
+
+    assert!(module.find_node(15).is_none());
+    assert!(module.find_node(16).is_none());
+    assert!(module.find_node(17).is_none());
+}
+
+#[test]
+fn find_node_statement_import() {
+    let module = compile_module(
+        r#"
+import gleam
+"#,
+    );
+
+    assert!(module.find_node(0).is_none());
+    assert!(module.find_node(7).is_none());
+
+    // The import
+    assert!(module.find_node(8).is_some());
+    assert!(module.find_node(12).is_some());
+
+    assert!(module.find_node(13).is_none());
+    assert!(module.find_node(14).is_none());
 }
