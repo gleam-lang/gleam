@@ -54,6 +54,7 @@ fn compile_expression(src: &str) -> TypedExpr {
         args: vec![],
     });
     let variant = ValueConstructorVariant::Record {
+        constructors_count: 1,
         name: "Cat".into(),
         arity: 2,
         location: SrcSpan { start: 12, end: 15 },
@@ -448,6 +449,7 @@ fn find_node_bool() {
         constructor: ValueConstructor {
             public: true,
             variant: ValueConstructorVariant::Record {
+                constructors_count: 2,
                 name: "True".into(),
                 arity: 0,
                 field_map: None,

@@ -4,16 +4,16 @@ use crate::parse::token::Token;
 use std::char;
 
 #[derive(Debug)]
-pub struct Lexer<T: Iterator<Item = (usize, char)>> {
+pub struct Lexer<T: Iterator<Item = (u32, char)>> {
     chars: T,
     pending: Vec<Spanned>,
     chr0: Option<char>,
     chr1: Option<char>,
-    loc0: usize,
-    loc1: usize,
-    location: usize,
+    loc0: u32,
+    loc1: u32,
+    location: u32,
 }
-pub type Spanned = (usize, Token, usize);
+pub type Spanned = (u32, Token, u32);
 pub type LexResult = Result<Spanned, LexicalError>;
 
 pub fn str_to_keyword(word: &str) -> Option<Token> {
@@ -38,22 +38,23 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
 }
 
 pub fn make_tokenizer(source: &str) -> impl Iterator<Item = LexResult> + '_ {
-    let nlh = NewlineHandler::new(source.char_indices());
+    let chars = source.char_indices().map(|(i, c)| (i as u32, c));
+    let nlh = NewlineHandler::new(chars);
     Lexer::new(nlh)
 }
 
 // The newline handler is an iterator which collapses different newline
 // types into \n always.
 #[derive(Debug)]
-pub struct NewlineHandler<T: Iterator<Item = (usize, char)>> {
+pub struct NewlineHandler<T: Iterator<Item = (u32, char)>> {
     source: T,
-    chr0: Option<(usize, char)>,
-    chr1: Option<(usize, char)>,
+    chr0: Option<(u32, char)>,
+    chr1: Option<(u32, char)>,
 }
 
 impl<T> NewlineHandler<T>
 where
-    T: Iterator<Item = (usize, char)>,
+    T: Iterator<Item = (u32, char)>,
 {
     pub fn new(source: T) -> Self {
         let mut nlh = NewlineHandler {
@@ -66,7 +67,7 @@ where
         nlh
     }
 
-    fn shift(&mut self) -> Option<(usize, char)> {
+    fn shift(&mut self) -> Option<(u32, char)> {
         let result = self.chr0;
         self.chr0 = self.chr1;
         self.chr1 = self.source.next();
@@ -76,9 +77,9 @@ where
 
 impl<T> Iterator for NewlineHandler<T>
 where
-    T: Iterator<Item = (usize, char)>,
+    T: Iterator<Item = (u32, char)>,
 {
-    type Item = (usize, char);
+    type Item = (u32, char);
 
     fn next(&mut self) -> Option<Self::Item> {
         // Collapse \r\n into \n
@@ -98,7 +99,7 @@ where
 
 impl<T> Lexer<T>
 where
-    T: Iterator<Item = (usize, char)>,
+    T: Iterator<Item = (u32, char)>,
 {
     pub fn new(input: T) -> Self {
         let mut lxr = Lexer {
@@ -562,7 +563,7 @@ where
     }
 
     // Lex a hex/octal/decimal/binary number without a decimal point.
-    fn lex_number_radix(&mut self, start_pos: usize, radix: u32, prefix: &str) -> LexResult {
+    fn lex_number_radix(&mut self, start_pos: u32, radix: u32, prefix: &str) -> LexResult {
         let num = self.radix_run(radix);
         if num.is_empty() {
             let location = self.get_pos() - 1;
@@ -798,7 +799,7 @@ where
     }
 
     // Helper function to retrieve the current position.
-    fn get_pos(&self) -> usize {
+    fn get_pos(&self) -> u32 {
         self.loc0
     }
 
@@ -810,7 +811,7 @@ where
 
 impl<T> Iterator for Lexer<T>
 where
-    T: Iterator<Item = (usize, char)>,
+    T: Iterator<Item = (u32, char)>,
 {
     type Item = LexResult;
 

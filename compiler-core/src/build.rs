@@ -128,7 +128,7 @@ impl Module {
         self.origin == Origin::Test
     }
 
-    pub fn find_node(&self, byte_index: usize) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.ast.find_node(byte_index)
     }
 
@@ -218,7 +218,7 @@ impl Origin {
 
 fn comments_before<'a>(
     comment_spans: &mut Peekable<impl Iterator<Item = &'a SrcSpan>>,
-    byte: usize,
+    byte: u32,
     src: &'a str,
 ) -> Vec<&'a str> {
     let mut comments = vec![];

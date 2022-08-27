@@ -1324,83 +1324,100 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map_err(|e| convert_get_value_constructor_error(e, location))?
             .clone();
 
-        if let ValueConstructor {
-            variant:
-                ValueConstructorVariant::Record {
-                    field_map: Some(field_map),
-                    ..
-                },
-            ..
-        } = value_constructor
-        {
-            if let Type::Fn { retrn, .. } = value_constructor.type_.as_ref() {
-                let spread = self.infer(*spread.base)?;
-                let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
-
-                // Check that the spread variable unifies with the return type of the constructor
-                self.unify(return_type, spread.type_())
-                    .map_err(|e| convert_unify_error(e, spread.location()))?;
-
-                let args: Vec<TypedRecordUpdateArg> = args
-                    .iter()
-                    .map(
-                        |UntypedRecordUpdateArg {
-                             label,
-                             value,
-                             location,
-                         }| {
-                            let value = self.infer(value.clone())?;
-                            let spread_field = self.infer_known_record_access(
-                                spread.clone(),
-                                label.to_string(),
-                                *location,
-                            )?;
-
-                            // Check that the update argument unifies with the corresponding
-                            // field in the record contained within the spread variable. We
-                            // need to check the spread, and not the constructor, in order
-                            // to handle polymorphic types.
-                            self.unify(spread_field.type_(), value.type_())
-                                .map_err(|e| convert_unify_error(e, value.location()))?;
-
-                            match field_map.fields.get(label) {
-                                None => panic!(
-                                    "Failed to lookup record field after successfully inferring that field",
-                                ),
-                                Some(p) => Ok(TypedRecordUpdateArg {
-                                    location: *location,
-                                    label: label.to_string(),
-                                    value,
-                                    index: *p,
-                                }),
-                            }
-                        },
-                    )
-                    .try_collect()?;
-
-                if args.is_empty() {
-                    self.environment
-                        .warnings
-                        .push(Warning::NoFieldsRecordUpdate { location });
-                }
-
-                if args.len() == field_map.arity {
-                    self.environment
-                        .warnings
-                        .push(Warning::AllFieldsRecordUpdate { location });
-                }
-
-                return Ok(TypedExpr::RecordUpdate {
-                    location,
-                    typ: spread.type_(),
-                    spread: Box::new(spread),
-                    args,
+        // It must be a record with a field map for us to be able to update it
+        let (field_map, constructors_count) = match &value_constructor.variant {
+            ValueConstructorVariant::Record {
+                field_map: Some(field_map),
+                constructors_count,
+                ..
+            } => (field_map, *constructors_count),
+            _ => {
+                return Err(Error::RecordUpdateInvalidConstructor {
+                    location: constructor.location(),
                 });
             }
         };
 
-        Err(Error::RecordUpdateInvalidConstructor {
-            location: constructor.location(),
+        // We can only update a record if it is the only variant of its type.
+        // If a record has multiple variants it cannot be safely updated as it
+        // could be one of the other variants.
+        if constructors_count != 1 {
+            return Err(Error::UpdateMultiConstructorType {
+                location: constructor.location(),
+            });
+        }
+
+        // The type must be a function for it to be a record constructor
+        let retrn = match value_constructor.type_.as_ref() {
+            Type::Fn { retrn, .. } => retrn,
+            _ => {
+                return Err(Error::RecordUpdateInvalidConstructor {
+                    location: constructor.location(),
+                })
+            }
+        };
+
+        let spread = self.infer(*spread.base)?;
+        let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
+
+        // Check that the spread variable unifies with the return type of the constructor
+        self.unify(return_type, spread.type_())
+            .map_err(|e| convert_unify_error(e, spread.location()))?;
+
+        let args: Vec<TypedRecordUpdateArg> = args
+            .iter()
+            .map(
+                |UntypedRecordUpdateArg {
+                     label,
+                     value,
+                     location,
+                 }| {
+                    let value = self.infer(value.clone())?;
+                    let spread_field = self.infer_known_record_access(
+                        spread.clone(),
+                        label.to_string(),
+                        *location,
+                    )?;
+
+                    // Check that the update argument unifies with the corresponding
+                    // field in the record contained within the spread variable. We
+                    // need to check the spread, and not the constructor, in order
+                    // to handle polymorphic types.
+                    self.unify(spread_field.type_(), value.type_())
+                        .map_err(|e| convert_unify_error(e, value.location()))?;
+
+                    match field_map.fields.get(label) {
+                        None => panic!(
+                            "Failed to lookup record field after successfully inferring that field",
+                        ),
+                        Some(p) => Ok(TypedRecordUpdateArg {
+                            location: *location,
+                            label: label.to_string(),
+                            value,
+                            index: *p,
+                        }),
+                    }
+                },
+            )
+            .try_collect()?;
+
+        if args.is_empty() {
+            self.environment
+                .warnings
+                .push(Warning::NoFieldsRecordUpdate { location });
+        }
+
+        if args.len() == field_map.arity as usize {
+            self.environment
+                .warnings
+                .push(Warning::AllFieldsRecordUpdate { location });
+        }
+
+        Ok(TypedExpr::RecordUpdate {
+            location,
+            typ: spread.type_(),
+            spread: Box::new(spread),
+            args,
         })
     }
 

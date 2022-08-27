@@ -1955,3 +1955,19 @@ fn same_imports_multiple_times_6() {
         "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1705
+#[test]
+fn update_multi_variant_record() {
+    assert_module_error!(
+        "
+pub type Point {
+  Point2(a: Int, b: Int)
+  Point3(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  Point3(..Point2(a: 1, b: 2))
+}"
+    );
+}

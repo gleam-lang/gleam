@@ -63,8 +63,11 @@ impl Diagnostic {
         let labels = location
             .labels()
             .map(|l| {
-                let label =
-                    CodespanLabel::new(LabelStyle::Primary, (), (l.span.start)..(l.span.end));
+                let label = CodespanLabel::new(
+                    LabelStyle::Primary,
+                    (),
+                    (l.span.start as usize)..(l.span.end as usize),
+                );
                 match &l.text {
                     None => label,
                     Some(text) => label.with_message(text.clone()),

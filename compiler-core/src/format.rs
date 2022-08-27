@@ -50,7 +50,7 @@ struct Intermediate<'a> {
     comments: Vec<Comment<'a>>,
     doc_comments: Vec<Comment<'a>>,
     module_comments: Vec<Comment<'a>>,
-    empty_lines: &'a [usize],
+    empty_lines: &'a [u32],
 }
 
 /// Hayleigh's bane
@@ -59,7 +59,7 @@ pub struct Formatter<'a> {
     comments: &'a [Comment<'a>],
     doc_comments: &'a [Comment<'a>],
     module_comments: &'a [Comment<'a>],
-    empty_lines: &'a [usize],
+    empty_lines: &'a [u32],
 }
 
 impl<'comments> Formatter<'comments> {
@@ -78,7 +78,7 @@ impl<'comments> Formatter<'comments> {
 
     // Pop comments that occur before a byte-index in the source, consuming
     // and retaining any empty lines contained within.
-    fn pop_comments(&mut self, limit: usize) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
@@ -88,7 +88,7 @@ impl<'comments> Formatter<'comments> {
 
     // Pop doc comments that occur before a byte-index in the source, consuming
     // and dropping any empty lines contained within.
-    fn pop_doc_comments(&mut self, limit: usize) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_doc_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
         let (popped, rest, empty_lines) =
             comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;
@@ -98,7 +98,7 @@ impl<'comments> Formatter<'comments> {
 
     // Remove between 0 and `limit` empty lines following the current position,
     // returning true if any empty lines were removed.
-    fn pop_empty_lines(&mut self, limit: usize) -> bool {
+    fn pop_empty_lines(&mut self, limit: u32) -> bool {
         let mut end = 0;
         for (i, &position) in self.empty_lines.iter().enumerate() {
             if position > limit {
@@ -179,7 +179,7 @@ impl<'comments> Formatter<'comments> {
             line(),
         );
 
-        let comments = match printed_comments(self.pop_comments(usize::MAX), false) {
+        let comments = match printed_comments(self.pop_comments(u32::MAX), false) {
             Some(comments) => comments,
             None => nil(),
         };
@@ -395,7 +395,7 @@ impl<'comments> Formatter<'comments> {
         comments.append(self.statement(s)).group()
     }
 
-    fn doc_comments<'a>(&mut self, limit: usize) -> Document<'a> {
+    fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {
         let mut comments = self.pop_doc_comments(limit).peekable();
         match comments.peek() {
             None => nil(),
@@ -498,7 +498,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [UntypedArg],
         return_annotation: &'a Option<TypeAst>,
         body: &'a UntypedExpr,
-        end_location: usize,
+        end_location: u32,
     ) -> Document<'a> {
         // Fn name and args
         let head = pub_(*public)
@@ -821,7 +821,12 @@ impl<'comments> Formatter<'comments> {
             .append("{")
             .group();
 
-        let clauses_doc = concat(clauses.iter().enumerate().map(|(i, c)| self.clause(c, i)));
+        let clauses_doc = concat(
+            clauses
+                .iter()
+                .enumerate()
+                .map(|(i, c)| self.clause(c, i as u32)),
+        );
 
         force_break()
             .append(subjects_doc)
@@ -1165,7 +1170,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn clause<'a>(&mut self, clause: &'a UntypedClause, index: usize) -> Document<'a> {
+    fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
         let after_position = clause.location.end;
         let clause_doc = join(
@@ -1632,13 +1637,13 @@ where
 
 pub fn comments_before<'a>(
     comments: &'a [Comment<'a>],
-    empty_lines: &'a [usize],
-    limit: usize,
+    empty_lines: &'a [u32],
+    limit: u32,
     retain_empty_lines: bool,
 ) -> (
     impl Iterator<Item = Option<&'a str>>,
     &'a [Comment<'a>],
-    &'a [usize],
+    &'a [u32],
 ) {
     let end_comments = comments
         .iter()

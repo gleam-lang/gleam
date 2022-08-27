@@ -394,13 +394,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         if with_spread {
                             // Using the spread operator when you have already provided variables for all of the
                             // record's fields throws an error
-                            if pattern_args.len() == field_map.arity {
+                            if pattern_args.len() == field_map.arity as usize {
                                 return Err(Error::UnnecessarySpreadOperator {
                                     location: SrcSpan {
                                         start: location.end - 3,
                                         end: location.end - 1,
                                     },
-                                    arity: field_map.arity,
+                                    arity: field_map.arity as usize,
                                 });
                             }
 
@@ -421,7 +421,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .position(|a| a.label.is_some())
                                 .unwrap_or(pattern_args.len());
 
-                            while pattern_args.len() < field_map.arity {
+                            while pattern_args.len() < field_map.arity as usize {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
                                         name: "_".to_string(),

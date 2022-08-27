@@ -79,6 +79,10 @@ pub enum Error {
         labels: Vec<String>,
     },
 
+    UpdateMultiConstructorType {
+        location: SrcSpan,
+    },
+
     UnnecessarySpreadOperator {
         location: SrcSpan,
         arity: usize,

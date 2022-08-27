@@ -373,7 +373,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         None => self.push_int(index),
                         Some(FieldMap { fields, .. }) => {
                             let find = |(key, &val)| {
-                                if val == index {
+                                if val as usize == index {
                                     Some(key)
                                 } else {
                                     None

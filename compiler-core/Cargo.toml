@@ -78,3 +78,5 @@ capnpc = "0.14.4"
 pretty_assertions = "1.0.0"
 # Snapshot testing to make test maintenance easier
 insta = "1.8.0"
+# Random value generation
+rand = "0.8.5"

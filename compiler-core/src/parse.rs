@@ -681,7 +681,7 @@ where
     // An assignment, with `Let` or `Assert` already consumed
     fn parse_assignment(
         &mut self,
-        start: usize,
+        start: u32,
         kind: AssignmentKind,
     ) -> Result<UntypedExpr, ParseError> {
         let pattern = if let Some(p) = self.parse_pattern()? {
@@ -729,7 +729,7 @@ where
     //
     //   In order to parse an expr sequence, you must try to parse an expr, if it is a `try`
     //   you MUST parse another expr, if it is some other expr, you MAY parse another expr
-    fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, usize)>, ParseError> {
+    fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, u32)>, ParseError> {
         // assignment
         if let Some(start) = self.maybe_try_start() {
             let pattern = if let Some(p) = self.parse_pattern()? {
@@ -785,7 +785,7 @@ where
     }
 
     // try
-    fn maybe_try_start(&mut self) -> Option<usize> {
+    fn maybe_try_start(&mut self) -> Option<u32> {
         match self.tok0 {
             Some((start, Token::Try, _)) => {
                 let _ = self.next_tok();
@@ -1130,7 +1130,7 @@ where
     //   UpName( args )
     fn expect_constructor_pattern(
         &mut self,
-        module: Option<(usize, String, usize)>,
+        module: Option<(u32, String, u32)>,
     ) -> Result<UntypedPattern, ParseError> {
         let (mut start, name, end) = self.expect_upname()?;
         let (args, with_spread, end) = self.parse_constructor_pattern_args(end)?;
@@ -1152,8 +1152,8 @@ where
     //   ( args )
     fn parse_constructor_pattern_args(
         &mut self,
-        upname_end: usize,
-    ) -> Result<(Vec<CallArg<UntypedPattern>>, bool, usize), ParseError> {
+        upname_end: u32,
+    ) -> Result<(Vec<CallArg<UntypedPattern>>, bool, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = Parser::series_of(
                 self,
@@ -1252,7 +1252,7 @@ where
     //   pub fn a(name name: String) -> String { .. }
     fn parse_function(
         &mut self,
-        start: usize,
+        start: u32,
         public: bool,
         is_anon: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
@@ -1307,7 +1307,7 @@ where
     //   pub external fn a(name: String) -> String = "x" "y"
     fn parse_external_fn(
         &mut self,
-        start: usize,
+        start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, _) = self.expect_name()?;
@@ -1533,7 +1533,7 @@ where
     //   pub external type A(a, b, c)
     fn parse_external_type(
         &mut self,
-        start: usize,
+        start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, args, end) = self.expect_type_name()?;
@@ -1557,7 +1557,7 @@ where
     //   type NamedBox(inner_type) { Box(String, inner: inner_type) }
     fn parse_custom_type(
         &mut self,
-        start: usize,
+        start: u32,
         public: bool,
         opaque: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
@@ -1636,7 +1636,7 @@ where
     // examples:
     //   A
     //   A(one, two)
-    fn expect_type_name(&mut self) -> Result<(usize, String, Vec<String>, usize), ParseError> {
+    fn expect_type_name(&mut self) -> Result<(u32, String, Vec<String>, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
@@ -1655,7 +1655,7 @@ where
     //   (a, b)
     fn parse_type_constructor_args(
         &mut self,
-    ) -> Result<(Vec<RecordConstructorArg<()>>, usize), ParseError> {
+    ) -> Result<(Vec<RecordConstructorArg<()>>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = Parser::series_of(
                 self,
@@ -1816,10 +1816,10 @@ where
     fn parse_type_name_finish(
         &mut self,
         for_const: bool,
-        start: usize,
+        start: u32,
         module: Option<String>,
         name: String,
-        end: usize,
+        end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args = self.parse_types(for_const)?;
@@ -2135,10 +2135,10 @@ where
     // Parse the '( .. )' of a const type constructor
     fn parse_const_record_finish(
         &mut self,
-        start: usize,
+        start: u32,
         module: Option<String>,
         name: String,
-        end: usize,
+        end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
@@ -2221,7 +2221,7 @@ where
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(String, usize, usize) -> A,
+        to_int_segment: &impl Fn(String, u32, u32) -> A,
     ) -> Result<Option<BitStringSegment<A, ()>>, ParseError>
     where
         A: HasLocation,
@@ -2262,7 +2262,7 @@ where
     fn parse_bit_string_segment_option<A>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(String, usize, usize) -> A,
+        to_int_segment: &impl Fn(String, u32, u32) -> A,
     ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
@@ -2371,7 +2371,7 @@ where
     //
 
     // Expect a particular token, advances the token stream
-    fn expect_one(&mut self, wanted: &Token) -> Result<(usize, usize), ParseError> {
+    fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string()]),
@@ -2379,7 +2379,7 @@ where
     }
 
     // Expect a Name else a token dependent helpful error
-    fn expect_name(&mut self) -> Result<(usize, String, usize), ParseError> {
+    fn expect_name(&mut self) -> Result<(u32, String, u32), ParseError> {
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
@@ -2401,7 +2401,7 @@ where
     }
 
     // Expect an UpName else a token dependent helpful error
-    fn expect_upname(&mut self) -> Result<(usize, String, usize), ParseError> {
+    fn expect_upname(&mut self) -> Result<(u32, String, u32), ParseError> {
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
@@ -2437,7 +2437,7 @@ where
     }
 
     // Expect a String else error
-    fn expect_string(&mut self) -> Result<(usize, String, usize), ParseError> {
+    fn expect_string(&mut self) -> Result<(u32, String, u32), ParseError> {
         match self.next_tok() {
             Some((start, Token::String { value }, end)) => Ok((start, value, end)),
             _ => self.next_tok_unexpected(vec!["a string".to_string()]),
@@ -2445,7 +2445,7 @@ where
     }
 
     // If the next token matches the requested, consume it and return (start, end)
-    fn maybe_one(&mut self, tok: &Token) -> Option<(usize, usize)> {
+    fn maybe_one(&mut self, tok: &Token) -> Option<(u32, u32)> {
         match self.tok0.take() {
             Some((s, t, e)) if t == *tok => {
                 let _ = self.next_tok();
@@ -2483,7 +2483,7 @@ where
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
-    fn maybe_name(&mut self) -> Option<(usize, String, usize)> {
+    fn maybe_name(&mut self) -> Option<(u32, String, u32)> {
         match self.tok0.take() {
             Some((s, Token::Name { name }, e)) => {
                 let _ = self.next_tok();
@@ -2497,7 +2497,7 @@ where
     }
 
     // if next token is an UpName, consume it and return relevant info, otherwise, return none
-    fn maybe_upname(&mut self) -> Option<(usize, String, usize)> {
+    fn maybe_upname(&mut self) -> Option<(u32, String, u32)> {
         match self.tok0.take() {
             Some((s, Token::UpName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2511,7 +2511,7 @@ where
     }
 
     // if next token is a DiscardName, consume it and return relevant info, otherwise, return none
-    fn maybe_discard_name(&mut self) -> Option<(usize, String, usize)> {
+    fn maybe_discard_name(&mut self) -> Option<(u32, String, u32)> {
         match self.tok0.take() {
             Some((s, Token::DiscardName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2808,21 +2808,21 @@ fn clause_guard_reduction(
 // Bitstrings in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_string_pattern_int(value: String, start: usize, end: usize) -> UntypedPattern {
+fn bit_string_pattern_int(value: String, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_expr_int(value: String, start: usize, end: usize) -> UntypedExpr {
+fn bit_string_expr_int(value: String, start: u32, end: u32) -> UntypedExpr {
     UntypedExpr::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_const_int(value: String, start: usize, end: usize) -> UntypedConstant {
+fn bit_string_const_int(value: String, start: u32, end: u32) -> UntypedConstant {
     Constant::Int {
         location: SrcSpan { start, end },
         value,
@@ -2900,8 +2900,8 @@ pub enum ParserArg {
 pub fn make_call(
     fun: UntypedExpr,
     args: Vec<ParserArg>,
-    start: usize,
-    end: usize,
+    start: u32,
+    end: u32,
 ) -> Result<UntypedExpr, ParseError> {
     let mut num_holes = 0;
     let args = args

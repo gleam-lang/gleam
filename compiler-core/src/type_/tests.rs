@@ -252,8 +252,8 @@ fn field_map_reorder_test() {
     };
 
     struct Case {
-        arity: usize,
-        fields: HashMap<String, usize>,
+        arity: u32,
+        fields: HashMap<String, u32>,
         args: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), Error>,
         expected_args: Vec<CallArg<UntypedExpr>>,

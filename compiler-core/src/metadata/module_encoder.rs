@@ -169,8 +169,8 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {
-        builder.set_start(span.start as u16);
-        builder.set_end(span.end as u16);
+        builder.set_start(span.start);
+        builder.set_end(span.end);
     }
 
     fn build_value_constructor_variant(
@@ -200,11 +200,13 @@ impl<'a> ModuleEncoder<'a> {
                 arity,
                 location,
                 module,
+                constructors_count,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
                 builder.set_module(module);
-                builder.set_arity(*arity as u16);
+                builder.set_arity(*arity);
+                builder.set_constructors_count(*constructors_count);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }
@@ -243,12 +245,12 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn build_field_map(&mut self, mut builder: field_map::Builder<'_>, field_map: &FieldMap) {
-        builder.set_arity(field_map.arity as u32);
+        builder.set_arity(field_map.arity);
         let mut builder = builder.init_fields(field_map.fields.len() as u32);
         for (i, (name, &position)) in field_map.fields.iter().enumerate() {
             let mut field = builder.reborrow().get(i as u32);
             field.set_key(name);
-            field.init_value().set_value(position as u16);
+            field.init_value().set_value(position);
         }
     }
 

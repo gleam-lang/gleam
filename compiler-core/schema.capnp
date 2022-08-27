@@ -98,13 +98,14 @@ struct ValueConstructorVariant {
       fieldMap @10 :Option(FieldMap);
       location @11 :SrcSpan;
       module @12 :Text;
+      constructorsCount @13 :UInt16;
     }
   }
 }
 
 struct SrcSpan {
-  start @0 :UInt16;
-  end @1 :UInt16;
+  start @0 :UInt32;
+  end @1 :UInt32;
 }
 
 # Cap'n Proto only permits pointer types to be used as type parameters
@@ -112,9 +113,14 @@ struct BoxedUInt16 {
   value @0 :UInt16;
 }
 
+# Cap'n Proto only permits pointer types to be used as type parameters
+struct BoxedUInt32 {
+  value @0 :UInt32;
+}
+
 struct FieldMap {
   arity @0 :UInt32;
-  fields @1 :List(Property(BoxedUInt16));
+  fields @1 :List(Property(BoxedUInt32));
 }
 
 struct Constant {

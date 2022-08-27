@@ -1445,7 +1445,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             constructor: ModuleValueConstructor::Record { name, arity, .. },
             ..
         } => {
-            let chars = incrementing_args_list(*arity);
+            let chars = incrementing_args_list(*arity as usize);
             "fun("
                 .to_doc()
                 .append(Document::String(chars.clone()))

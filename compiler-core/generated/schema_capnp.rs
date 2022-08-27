@@ -58,6 +58,7 @@ pub mod property { /* Value */
     pub fn get_key(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_key(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -65,6 +66,7 @@ pub mod property { /* Value */
     pub fn get_value(self) -> ::capnp::Result<<Value as ::capnp::traits::Owned<'a>>::Reader> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_value(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -133,6 +135,7 @@ pub mod property { /* Value */
     pub fn init_key(self, size: u32) -> ::capnp::text::Builder<'a> {
       self.builder.get_pointer_field(0).init_text(size)
     }
+    #[inline]
     pub fn has_key(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -152,6 +155,7 @@ pub mod property { /* Value */
     pub fn init_value(self, ) -> <Value as ::capnp::traits::Owned<'a>>::Builder {
       ::capnp::any_pointer::Builder::new(self.builder.get_pointer_field(1)).init_as()
     }
+    #[inline]
     pub fn has_value(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -231,6 +235,7 @@ pub mod option { /* Value */
     pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
       self.reader.total_size()
     }
+    #[inline]
     pub fn has_some(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 1 { return false; }
       !self.reader.get_pointer_field(0).is_null()
@@ -323,6 +328,7 @@ pub mod option { /* Value */
       self.builder.set_data_field::<u16>(0, 1);
       ::capnp::any_pointer::Builder::new(self.builder.get_pointer_field(0)).init_as()
     }
+    #[inline]
     pub fn has_some(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 1 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -419,6 +425,7 @@ pub mod module {
     pub fn get_name(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_name(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -426,6 +433,7 @@ pub mod module {
     pub fn get_types(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::type_constructor::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_types(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -433,6 +441,7 @@ pub mod module {
     pub fn get_values(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::value_constructor::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_values(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
@@ -440,6 +449,7 @@ pub mod module {
     pub fn get_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::accessors_map::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_accessors(&self) -> bool {
       !self.reader.get_pointer_field(3).is_null()
     }
@@ -447,6 +457,7 @@ pub mod module {
     pub fn get_package(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(4), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_package(&self) -> bool {
       !self.reader.get_pointer_field(4).is_null()
     }
@@ -454,6 +465,7 @@ pub mod module {
     pub fn get_types_constructors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(5), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_types_constructors(&self) -> bool {
       !self.reader.get_pointer_field(5).is_null()
     }
@@ -519,6 +531,7 @@ pub mod module {
     pub fn init_name(self, size: u32) -> ::capnp::text_list::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
+    #[inline]
     pub fn has_name(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -534,6 +547,7 @@ pub mod module {
     pub fn init_types(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::type_constructor::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
+    #[inline]
     pub fn has_types(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -549,6 +563,7 @@ pub mod module {
     pub fn init_values(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::value_constructor::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
     }
+    #[inline]
     pub fn has_values(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
     }
@@ -564,6 +579,7 @@ pub mod module {
     pub fn init_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::accessors_map::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(3), size)
     }
+    #[inline]
     pub fn has_accessors(&self) -> bool {
       !self.builder.get_pointer_field(3).is_null()
     }
@@ -579,6 +595,7 @@ pub mod module {
     pub fn init_package(self, size: u32) -> ::capnp::text::Builder<'a> {
       self.builder.get_pointer_field(4).init_text(size)
     }
+    #[inline]
     pub fn has_package(&self) -> bool {
       !self.builder.get_pointer_field(4).is_null()
     }
@@ -594,6 +611,7 @@ pub mod module {
     pub fn init_types_constructors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::text_list::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(5), size)
     }
+    #[inline]
     pub fn has_types_constructors(&self) -> bool {
       !self.builder.get_pointer_field(5).is_null()
     }
@@ -664,6 +682,7 @@ pub mod type_constructor {
     pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -671,6 +690,7 @@ pub mod type_constructor {
     pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_parameters(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -678,6 +698,7 @@ pub mod type_constructor {
     pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_module(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
@@ -743,6 +764,7 @@ pub mod type_constructor {
     pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -758,6 +780,7 @@ pub mod type_constructor {
     pub fn init_parameters(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
+    #[inline]
     pub fn has_parameters(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -773,6 +796,7 @@ pub mod type_constructor {
     pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
     }
+    #[inline]
     pub fn has_module(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
     }
@@ -846,6 +870,7 @@ pub mod accessors_map {
     pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -853,6 +878,7 @@ pub mod accessors_map {
     pub fn get_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_accessors(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -918,6 +944,7 @@ pub mod accessors_map {
     pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -933,6 +960,7 @@ pub mod accessors_map {
     pub fn init_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
+    #[inline]
     pub fn has_accessors(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -1006,6 +1034,7 @@ pub mod record_accessor {
     pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -1017,6 +1046,7 @@ pub mod record_accessor {
     pub fn get_label(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_label(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -1082,6 +1112,7 @@ pub mod record_accessor {
     pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -1105,6 +1136,7 @@ pub mod record_accessor {
     pub fn init_label(self, size: u32) -> ::capnp::text::Builder<'a> {
       self.builder.get_pointer_field(1).init_text(size)
     }
+    #[inline]
     pub fn has_label(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -1379,6 +1411,7 @@ pub mod type_ {
       pub fn get_name(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -1386,6 +1419,7 @@ pub mod type_ {
       pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -1393,6 +1427,7 @@ pub mod type_ {
       pub fn get_parameters(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_parameters(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -1458,6 +1493,7 @@ pub mod type_ {
       pub fn init_name(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(0).init_text(size)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -1473,6 +1509,7 @@ pub mod type_ {
       pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -1488,6 +1525,7 @@ pub mod type_ {
       pub fn init_parameters(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
       }
+      #[inline]
       pub fn has_parameters(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -1558,6 +1596,7 @@ pub mod type_ {
       pub fn get_arguments(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_arguments(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -1565,6 +1604,7 @@ pub mod type_ {
       pub fn get_return(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_return(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -1630,6 +1670,7 @@ pub mod type_ {
       pub fn init_arguments(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
       }
+      #[inline]
       pub fn has_arguments(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -1645,6 +1686,7 @@ pub mod type_ {
       pub fn init_return(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
       }
+      #[inline]
       pub fn has_return(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -1843,6 +1885,7 @@ pub mod type_ {
       pub fn get_elements(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::type_::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_elements(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -1908,6 +1951,7 @@ pub mod type_ {
       pub fn init_elements(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::type_::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
       }
+      #[inline]
       pub fn has_elements(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -1979,6 +2023,7 @@ pub mod value_constructor {
     pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -1986,6 +2031,7 @@ pub mod value_constructor {
     pub fn get_variant(self) -> ::capnp::Result<crate::schema_capnp::value_constructor_variant::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_variant(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -2051,6 +2097,7 @@ pub mod value_constructor {
     pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -2066,6 +2113,7 @@ pub mod value_constructor {
     pub fn init_variant(self, ) -> crate::schema_capnp::value_constructor_variant::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
     }
+    #[inline]
     pub fn has_variant(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -2237,6 +2285,7 @@ pub mod value_constructor_variant {
       self.builder.get_pointer_field(1).clear();
       self.builder.get_pointer_field(2).clear();
       self.builder.get_pointer_field(3).clear();
+      self.builder.set_data_field::<u16>(2, 0u16);
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
@@ -2333,6 +2382,7 @@ pub mod value_constructor_variant {
       pub fn get_literal(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_literal(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -2340,6 +2390,7 @@ pub mod value_constructor_variant {
       pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -2347,6 +2398,7 @@ pub mod value_constructor_variant {
       pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -2412,6 +2464,7 @@ pub mod value_constructor_variant {
       pub fn init_literal(self, ) -> crate::schema_capnp::constant::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
       }
+      #[inline]
       pub fn has_literal(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -2427,6 +2480,7 @@ pub mod value_constructor_variant {
       pub fn init_location(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -2442,6 +2496,7 @@ pub mod value_constructor_variant {
       pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(2).init_text(size)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -2518,6 +2573,7 @@ pub mod value_constructor_variant {
       pub fn get_name(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -2525,6 +2581,7 @@ pub mod value_constructor_variant {
       pub fn get_field_map(self) -> ::capnp::Result<crate::schema_capnp::option::Reader<'a,crate::schema_capnp::field_map::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_field_map(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -2532,6 +2589,7 @@ pub mod value_constructor_variant {
       pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -2543,6 +2601,7 @@ pub mod value_constructor_variant {
       pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.reader.get_pointer_field(3).is_null()
       }
@@ -2608,6 +2667,7 @@ pub mod value_constructor_variant {
       pub fn init_name(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(0).init_text(size)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -2623,6 +2683,7 @@ pub mod value_constructor_variant {
       pub fn init_field_map(self, ) -> crate::schema_capnp::option::Builder<'a,crate::schema_capnp::field_map::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
       }
+      #[inline]
       pub fn has_field_map(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -2638,6 +2699,7 @@ pub mod value_constructor_variant {
       pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -2661,6 +2723,7 @@ pub mod value_constructor_variant {
       pub fn init_location(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(3), 0)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.builder.get_pointer_field(3).is_null()
       }
@@ -2737,6 +2800,7 @@ pub mod value_constructor_variant {
       pub fn get_name(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -2748,6 +2812,7 @@ pub mod value_constructor_variant {
       pub fn get_field_map(self) -> ::capnp::Result<crate::schema_capnp::option::Reader<'a,crate::schema_capnp::field_map::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_field_map(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -2755,6 +2820,7 @@ pub mod value_constructor_variant {
       pub fn get_location(self) -> ::capnp::Result<crate::schema_capnp::src_span::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -2762,8 +2828,13 @@ pub mod value_constructor_variant {
       pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(3).is_null()
+      }
+      #[inline]
+      pub fn get_constructors_count(self) -> u16 {
+        self.reader.get_data_field::<u16>(2)
       }
     }
 
@@ -2827,6 +2898,7 @@ pub mod value_constructor_variant {
       pub fn init_name(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(0).init_text(size)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -2850,6 +2922,7 @@ pub mod value_constructor_variant {
       pub fn init_field_map(self, ) -> crate::schema_capnp::option::Builder<'a,crate::schema_capnp::field_map::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
       }
+      #[inline]
       pub fn has_field_map(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -2865,6 +2938,7 @@ pub mod value_constructor_variant {
       pub fn init_location(self, ) -> crate::schema_capnp::src_span::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
       }
+      #[inline]
       pub fn has_location(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -2880,8 +2954,17 @@ pub mod value_constructor_variant {
       pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(3).init_text(size)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(3).is_null()
+      }
+      #[inline]
+      pub fn get_constructors_count(self) -> u16 {
+        self.builder.get_data_field::<u16>(2)
+      }
+      #[inline]
+      pub fn set_constructors_count(&mut self, value: u16)  {
+        self.builder.set_data_field::<u16>(2, value);
       }
     }
 
@@ -2954,12 +3037,12 @@ pub mod src_span {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_start(self) -> u16 {
-      self.reader.get_data_field::<u16>(0)
+    pub fn get_start(self) -> u32 {
+      self.reader.get_data_field::<u32>(0)
     }
     #[inline]
-    pub fn get_end(self) -> u16 {
-      self.reader.get_data_field::<u16>(1)
+    pub fn get_end(self) -> u32 {
+      self.reader.get_data_field::<u32>(1)
     }
   }
 
@@ -3012,20 +3095,20 @@ pub mod src_span {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn get_start(self) -> u16 {
-      self.builder.get_data_field::<u16>(0)
+    pub fn get_start(self) -> u32 {
+      self.builder.get_data_field::<u32>(0)
     }
     #[inline]
-    pub fn set_start(&mut self, value: u16)  {
-      self.builder.set_data_field::<u16>(0, value);
+    pub fn set_start(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(0, value);
     }
     #[inline]
-    pub fn get_end(self) -> u16 {
-      self.builder.get_data_field::<u16>(1)
+    pub fn get_end(self) -> u32 {
+      self.builder.get_data_field::<u32>(1)
     }
     #[inline]
-    pub fn set_end(&mut self, value: u16)  {
-      self.builder.set_data_field::<u16>(1, value);
+    pub fn set_end(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(1, value);
     }
   }
 
@@ -3169,6 +3252,131 @@ pub mod boxed_u_int16 {
   }
 }
 
+pub mod boxed_u_int32 {
+  #[derive(Copy, Clone)]
+  pub struct Owned(());
+  impl <'a> ::capnp::traits::Owned<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+  impl <'a> ::capnp::traits::OwnedStruct<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+  impl ::capnp::traits::Pipelined for Owned { type Pipeline = Pipeline; }
+
+  #[derive(Clone, Copy)]
+  pub struct Reader<'a> { reader: ::capnp::private::layout::StructReader<'a> }
+
+  impl <'a,> ::capnp::traits::HasTypeId for Reader<'a,>  {
+    #[inline]
+    fn type_id() -> u64 { _private::TYPE_ID }
+  }
+  impl <'a,> ::capnp::traits::FromStructReader<'a> for Reader<'a,>  {
+    fn new(reader: ::capnp::private::layout::StructReader<'a>) -> Reader<'a,> {
+      Reader { reader,  }
+    }
+  }
+
+  impl <'a,> ::capnp::traits::FromPointerReader<'a> for Reader<'a,>  {
+    fn get_from_pointer(reader: &::capnp::private::layout::PointerReader<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Reader<'a,>> {
+      ::core::result::Result::Ok(::capnp::traits::FromStructReader::new(reader.get_struct(default)?))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::IntoInternalStructReader<'a> for Reader<'a,>  {
+    fn into_internal_struct_reader(self) -> ::capnp::private::layout::StructReader<'a> {
+      self.reader
+    }
+  }
+
+  impl <'a,> ::capnp::traits::Imbue<'a> for Reader<'a,>  {
+    fn imbue(&mut self, cap_table: &'a ::capnp::private::layout::CapTable) {
+      self.reader.imbue(::capnp::private::layout::CapTableReader::Plain(cap_table))
+    }
+  }
+
+  impl <'a,> Reader<'a,>  {
+    pub fn reborrow(&self) -> Reader<'_,> {
+      Reader { .. *self }
+    }
+
+    pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+      self.reader.total_size()
+    }
+    #[inline]
+    pub fn get_value(self) -> u32 {
+      self.reader.get_data_field::<u32>(0)
+    }
+  }
+
+  pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
+  impl <'a,> ::capnp::traits::HasStructSize for Builder<'a,>  {
+    #[inline]
+    fn struct_size() -> ::capnp::private::layout::StructSize { _private::STRUCT_SIZE }
+  }
+  impl <'a,> ::capnp::traits::HasTypeId for Builder<'a,>  {
+    #[inline]
+    fn type_id() -> u64 { _private::TYPE_ID }
+  }
+  impl <'a,> ::capnp::traits::FromStructBuilder<'a> for Builder<'a,>  {
+    fn new(builder: ::capnp::private::layout::StructBuilder<'a>) -> Builder<'a, > {
+      Builder { builder,  }
+    }
+  }
+
+  impl <'a,> ::capnp::traits::ImbueMut<'a> for Builder<'a,>  {
+    fn imbue_mut(&mut self, cap_table: &'a mut ::capnp::private::layout::CapTable) {
+      self.builder.imbue(::capnp::private::layout::CapTableBuilder::Plain(cap_table))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::FromPointerBuilder<'a> for Builder<'a,>  {
+    fn init_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, _size: u32) -> Builder<'a,> {
+      ::capnp::traits::FromStructBuilder::new(builder.init_struct(_private::STRUCT_SIZE))
+    }
+    fn get_from_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Builder<'a,>> {
+      ::core::result::Result::Ok(::capnp::traits::FromStructBuilder::new(builder.get_struct(_private::STRUCT_SIZE, default)?))
+    }
+  }
+
+  impl <'a,> ::capnp::traits::SetPointerBuilder for Reader<'a,>  {
+    fn set_pointer_builder<'b>(pointer: ::capnp::private::layout::PointerBuilder<'b>, value: Reader<'a,>, canonicalize: bool) -> ::capnp::Result<()> { pointer.set_struct(&value.reader, canonicalize) }
+  }
+
+  impl <'a,> Builder<'a,>  {
+    pub fn into_reader(self) -> Reader<'a,> {
+      ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+    }
+    pub fn reborrow(&mut self) -> Builder<'_,> {
+      Builder { .. *self }
+    }
+    pub fn reborrow_as_reader(&self) -> Reader<'_,> {
+      ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+    }
+
+    pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+      self.builder.into_reader().total_size()
+    }
+    #[inline]
+    pub fn get_value(self) -> u32 {
+      self.builder.get_data_field::<u32>(0)
+    }
+    #[inline]
+    pub fn set_value(&mut self, value: u32)  {
+      self.builder.set_data_field::<u32>(0, value);
+    }
+  }
+
+  pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
+  impl ::capnp::capability::FromTypelessPipeline for Pipeline {
+    fn new(typeless: ::capnp::any_pointer::Pipeline) -> Pipeline {
+      Pipeline { _typeless: typeless,  }
+    }
+  }
+  impl Pipeline  {
+  }
+  mod _private {
+    use capnp::private::layout;
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 0 };
+    pub const TYPE_ID: u64 = 0x882d_57d2_f133_7de5;
+  }
+}
+
 pub mod field_map {
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -3220,9 +3428,10 @@ pub mod field_map {
       self.reader.get_data_field::<u32>(0)
     }
     #[inline]
-    pub fn get_fields(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int16::Owned>>> {
+    pub fn get_fields(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int32::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_fields(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -3285,17 +3494,18 @@ pub mod field_map {
       self.builder.set_data_field::<u32>(0, value);
     }
     #[inline]
-    pub fn get_fields(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int16::Owned>>> {
+    pub fn get_fields(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int32::Owned>>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_fields(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int16::Owned>>) -> ::capnp::Result<()> {
+    pub fn set_fields(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int32::Owned>>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
     }
     #[inline]
-    pub fn init_fields(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int16::Owned>> {
+    pub fn init_fields(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::boxed_u_int32::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
+    #[inline]
     pub fn has_fields(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -3364,22 +3574,27 @@ pub mod constant {
     pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
       self.reader.total_size()
     }
+    #[inline]
     pub fn has_int(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 0 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
+    #[inline]
     pub fn has_float(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 1 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
+    #[inline]
     pub fn has_string(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 2 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
+    #[inline]
     pub fn has_tuple(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 3 { return false; }
       !self.reader.get_pointer_field(0).is_null()
     }
+    #[inline]
     pub fn has_bit_string(&self) -> bool {
       if self.reader.get_data_field::<u16>(0) != 6 { return false; }
       !self.reader.get_pointer_field(0).is_null()
@@ -3490,6 +3705,7 @@ pub mod constant {
       self.builder.set_data_field::<u16>(0, 0);
       self.builder.get_pointer_field(0).init_text(size)
     }
+    #[inline]
     pub fn has_int(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 0 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -3504,6 +3720,7 @@ pub mod constant {
       self.builder.set_data_field::<u16>(0, 1);
       self.builder.get_pointer_field(0).init_text(size)
     }
+    #[inline]
     pub fn has_float(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 1 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -3518,6 +3735,7 @@ pub mod constant {
       self.builder.set_data_field::<u16>(0, 2);
       self.builder.get_pointer_field(0).init_text(size)
     }
+    #[inline]
     pub fn has_string(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 2 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -3532,6 +3750,7 @@ pub mod constant {
       self.builder.set_data_field::<u16>(0, 3);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
+    #[inline]
     pub fn has_tuple(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 3 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -3561,6 +3780,7 @@ pub mod constant {
       self.builder.set_data_field::<u16>(0, 6);
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
     }
+    #[inline]
     pub fn has_bit_string(&self) -> bool {
       if self.builder.get_data_field::<u16>(0) != 6 { return false; }
       !self.builder.get_pointer_field(0).is_null()
@@ -3698,6 +3918,7 @@ pub mod constant {
       pub fn get_elements(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_elements(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -3705,6 +3926,7 @@ pub mod constant {
       pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_type(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -3770,6 +3992,7 @@ pub mod constant {
       pub fn init_elements(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
       }
+      #[inline]
       pub fn has_elements(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -3785,6 +4008,7 @@ pub mod constant {
       pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
       }
+      #[inline]
       pub fn has_type(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -3858,6 +4082,7 @@ pub mod constant {
       pub fn get_args(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_args(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -3865,6 +4090,7 @@ pub mod constant {
       pub fn get_tag(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_tag(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -3872,6 +4098,7 @@ pub mod constant {
       pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_typ(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -3937,6 +4164,7 @@ pub mod constant {
       pub fn init_args(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
       }
+      #[inline]
       pub fn has_args(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -3952,6 +4180,7 @@ pub mod constant {
       pub fn init_tag(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(1).init_text(size)
       }
+      #[inline]
       pub fn has_tag(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -3967,6 +4196,7 @@ pub mod constant {
       pub fn init_typ(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
       }
+      #[inline]
       pub fn has_typ(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -4040,6 +4270,7 @@ pub mod constant {
       pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -4047,6 +4278,7 @@ pub mod constant {
       pub fn get_name(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.reader.get_pointer_field(1).is_null()
       }
@@ -4054,6 +4286,7 @@ pub mod constant {
       pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_typ(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
@@ -4061,6 +4294,7 @@ pub mod constant {
       pub fn get_constructor(self) -> ::capnp::Result<crate::schema_capnp::value_constructor::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(3), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_constructor(&self) -> bool {
         !self.reader.get_pointer_field(3).is_null()
       }
@@ -4126,6 +4360,7 @@ pub mod constant {
       pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(0).init_text(size)
       }
+      #[inline]
       pub fn has_module(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }
@@ -4141,6 +4376,7 @@ pub mod constant {
       pub fn init_name(self, size: u32) -> ::capnp::text::Builder<'a> {
         self.builder.get_pointer_field(1).init_text(size)
       }
+      #[inline]
       pub fn has_name(&self) -> bool {
         !self.builder.get_pointer_field(1).is_null()
       }
@@ -4156,6 +4392,7 @@ pub mod constant {
       pub fn init_typ(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
       }
+      #[inline]
       pub fn has_typ(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
@@ -4171,6 +4408,7 @@ pub mod constant {
       pub fn init_constructor(self, ) -> crate::schema_capnp::value_constructor::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(3), 0)
       }
+      #[inline]
       pub fn has_constructor(&self) -> bool {
         !self.builder.get_pointer_field(3).is_null()
       }
@@ -4248,6 +4486,7 @@ pub mod bit_string_segment {
     pub fn get_value(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_value(&self) -> bool {
       !self.reader.get_pointer_field(0).is_null()
     }
@@ -4255,6 +4494,7 @@ pub mod bit_string_segment {
     pub fn get_options(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_string_segment_option::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_options(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
@@ -4262,6 +4502,7 @@ pub mod bit_string_segment {
     pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
@@ -4327,6 +4568,7 @@ pub mod bit_string_segment {
     pub fn init_value(self, ) -> crate::schema_capnp::constant::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
     }
+    #[inline]
     pub fn has_value(&self) -> bool {
       !self.builder.get_pointer_field(0).is_null()
     }
@@ -4342,6 +4584,7 @@ pub mod bit_string_segment {
     pub fn init_options(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_string_segment_option::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
+    #[inline]
     pub fn has_options(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
@@ -4357,6 +4600,7 @@ pub mod bit_string_segment {
     pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
     }
+    #[inline]
     pub fn has_type(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
     }
@@ -4824,6 +5068,7 @@ pub mod bit_string_segment_option {
       pub fn get_value(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
       }
+      #[inline]
       pub fn has_value(&self) -> bool {
         !self.reader.get_pointer_field(0).is_null()
       }
@@ -4893,6 +5138,7 @@ pub mod bit_string_segment_option {
       pub fn init_value(self, ) -> crate::schema_capnp::constant::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
       }
+      #[inline]
       pub fn has_value(&self) -> bool {
         !self.builder.get_pointer_field(0).is_null()
       }

@@ -319,7 +319,7 @@ impl<'module> Generator<'module> {
         type_: Arc<Type>,
         qualifier: Option<&'a str>,
         name: &'a str,
-        arity: usize,
+        arity: u16,
     ) -> Document<'a> {
         if qualifier.is_none() && type_.is_result_constructor() {
             if name == "Ok" {

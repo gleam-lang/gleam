@@ -80,6 +80,24 @@ impl<'a> Documentable<'a> for u64 {
     }
 }
 
+impl<'a> Documentable<'a> for u32 {
+    fn to_doc(self) -> Document<'a> {
+        Document::String(format!("{}", self))
+    }
+}
+
+impl<'a> Documentable<'a> for u16 {
+    fn to_doc(self) -> Document<'a> {
+        Document::String(format!("{}", self))
+    }
+}
+
+impl<'a> Documentable<'a> for u8 {
+    fn to_doc(self) -> Document<'a> {
+        Document::String(format!("{}", self))
+    }
+}
+
 impl<'a> Documentable<'a> for Document<'a> {
     fn to_doc(self) -> Document<'a> {
         self

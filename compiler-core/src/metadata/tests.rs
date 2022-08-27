@@ -1,3 +1,4 @@
+use rand::Rng;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
 use super::*;
@@ -326,6 +327,8 @@ fn module_fn_value_with_field_map() {
 
 #[test]
 fn record_value() {
+    let mut random = rand::thread_rng();
+
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
@@ -342,10 +345,11 @@ fn record_value() {
                     name: "one".to_string(),
                     module: "themodule".to_string(),
                     field_map: None,
-                    arity: 5,
+                    arity: random.gen(),
+                    constructors_count: random.gen(),
                     location: SrcSpan {
-                        start: 144,
-                        end: 155,
+                        start: random.gen(),
+                        end: random.gen(),
                     },
                 },
             },
@@ -358,6 +362,8 @@ fn record_value() {
 
 #[test]
 fn record_value_with_field_map() {
+    let mut random = rand::thread_rng();
+
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
@@ -374,11 +380,19 @@ fn record_value_with_field_map() {
                     module: "themodule".to_string(),
                     name: "one".to_string(),
                     field_map: Some(FieldMap {
-                        arity: 20,
-                        fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
+                        arity: random.gen(),
+                        fields: [
+                            ("ok".to_string(), random.gen()),
+                            ("ko".to_string(), random.gen()),
+                        ]
+                        .into(),
                     }),
-                    arity: 5,
-                    location: SrcSpan { start: 5, end: 11 },
+                    arity: random.gen(),
+                    constructors_count: random.gen(),
+                    location: SrcSpan {
+                        start: random.gen(),
+                        end: random.gen(),
+                    },
                 },
             },
         )]

@@ -177,7 +177,7 @@ impl UntypedExpr {
         }
     }
 
-    pub fn start_byte_index(&self) -> usize {
+    pub fn start_byte_index(&self) -> u32 {
         match self {
             Self::Sequence {
                 expressions,

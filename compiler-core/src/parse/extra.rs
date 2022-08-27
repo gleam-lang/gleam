@@ -5,7 +5,7 @@ pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
     pub doc_comments: Vec<SrcSpan>,
     pub comments: Vec<SrcSpan>,
-    pub empty_lines: Vec<usize>,
+    pub empty_lines: Vec<u32>,
 }
 
 impl ModuleExtra {
@@ -16,17 +16,19 @@ impl ModuleExtra {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Comment<'a> {
-    pub start: usize,
+    pub start: u32,
     pub content: &'a str,
 }
 
 impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {
     fn from(src: (&SrcSpan, &'a str)) -> Comment<'a> {
+        let start = src.0.start;
+        let end = src.0.end as usize;
         Comment {
-            start: src.0.start,
+            start,
             content: src
                 .1
-                .get(src.0.start..src.0.end)
+                .get(start as usize..end)
                 .expect("From span to comment"),
         }
     }

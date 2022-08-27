@@ -156,7 +156,7 @@ pub enum TypedExpr {
 impl TypedExpr {
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
-    pub fn find_node(&self, byte_index: usize) -> Option<&Self> {
+    pub fn find_node(&self, byte_index: u32) -> Option<&Self> {
         if !self.location().contains(byte_index) {
             return None;
         }

@@ -1,39 +1,45 @@
 #[derive(Debug)]
 pub struct LineNumbers {
-    line_starts: Vec<usize>,
-    length: usize,
+    line_starts: Vec<u32>,
+    length: u32,
 }
 
 impl LineNumbers {
     pub fn new(src: &str) -> Self {
         Self {
-            length: src.len(),
+            length: src.len() as u32,
             line_starts: std::iter::once(0)
-                .chain(src.match_indices('\n').map(|(i, _)| i + 1))
+                .chain(src.match_indices('\n').map(|(i, _)| i as u32 + 1))
                 .collect(),
         }
     }
 
     /// Get the line number for a byte index
-    pub fn line_number(&self, byte_index: usize) -> usize {
+    pub fn line_number(&self, byte_index: u32) -> u32 {
         self.line_starts
             .binary_search(&byte_index)
-            .unwrap_or_else(|next_line| next_line - 1)
+            .unwrap_or_else(|next_line| next_line - 1) as u32
             + 1
     }
 
     // TODO: handle unicode characters that may be more than 1 byte in width
-    pub fn line_and_column_number(&self, byte_index: usize) -> LineColumn {
+    pub fn line_and_column_number(&self, byte_index: u32) -> LineColumn {
         let line = self.line_number(byte_index);
-        let column = byte_index - self.line_starts.get(line - 1).copied().unwrap_or_default() + 1;
+        let column = byte_index
+            - self
+                .line_starts
+                .get(line as usize - 1)
+                .copied()
+                .unwrap_or_default()
+            + 1;
         LineColumn { line, column }
     }
 
     // TODO: handle unicode characters that may be more than 1 byte in width
     /// 0 indexed line and character to byte index
-    pub fn byte_index(&self, line: u32, character: u32) -> usize {
+    pub fn byte_index(&self, line: u32, character: u32) -> u32 {
         match self.line_starts.get((line) as usize) {
-            Some(line_index) => *line_index + character as usize,
+            Some(line_index) => *line_index + character,
             None => self.length,
         }
     }
@@ -51,12 +57,12 @@ pub fn main() {
 
     assert_eq!(line_numbers.byte_index(0, 0), 0);
     assert_eq!(line_numbers.byte_index(0, 4), 4);
-    assert_eq!(line_numbers.byte_index(100, 1), src.len());
+    assert_eq!(line_numbers.byte_index(100, 1), src.len() as u32);
     assert_eq!(line_numbers.byte_index(2, 1), 18);
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct LineColumn {
-    pub line: usize,
-    pub column: usize,
+    pub line: u32,
+    pub column: u32,
 }

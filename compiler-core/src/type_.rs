@@ -285,10 +285,11 @@ pub enum ValueConstructorVariant {
     /// A constructor for a custom type
     Record {
         name: String,
-        arity: usize,
+        arity: u16,
         field_map: Option<FieldMap>,
         location: SrcSpan,
         module: String,
+        constructors_count: u16,
     },
 }
 
@@ -352,7 +353,7 @@ impl ValueConstructorVariant {
 pub enum ModuleValueConstructor {
     Record {
         name: String,
-        arity: usize,
+        arity: u16,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
         location: SrcSpan,
@@ -723,17 +724,17 @@ fn register_values<'a>(
             let _ = environment.ungeneralised_functions.insert(name.to_string());
 
             // Create the field map so we can reorder labels for usage of this function
-            let mut field_map = FieldMap::new(args.len());
+            let mut field_map = FieldMap::new(args.len() as u32);
             for (i, arg) in args.iter().enumerate() {
                 if let ArgNames::NamedLabelled { label, .. }
                 | ArgNames::LabelledDiscard { label, .. } = &arg.names
                 {
-                    field_map
-                        .insert(label.clone(), i)
-                        .map_err(|_| Error::DuplicateField {
+                    field_map.insert(label.clone(), i as u32).map_err(|_| {
+                        Error::DuplicateField {
                             label: label.to_string(),
                             location: *location,
-                        })?;
+                        }
+                    })?;
                 }
             }
             let field_map = field_map.into_option();
@@ -787,17 +788,17 @@ fn register_values<'a>(
             let (typ, field_map) = environment.in_new_scope(|environment| {
                 let return_type = hydrator.type_from_ast(retrn, environment)?;
                 let mut args_types = Vec::with_capacity(args.len());
-                let mut field_map = FieldMap::new(args.len());
+                let mut field_map = FieldMap::new(args.len() as u32);
                 for (i, arg) in args.iter().enumerate() {
                     let t = hydrator.type_from_ast(&arg.annotation, environment)?;
                     args_types.push(t);
                     if let Some(label) = &arg.label {
-                        field_map
-                            .insert(label.clone(), i)
-                            .map_err(|_| Error::DuplicateField {
+                        field_map.insert(label.clone(), i as u32).map_err(|_| {
+                            Error::DuplicateField {
                                 label: label.to_string(),
                                 location: *location,
-                            })?;
+                            }
+                        })?;
                     }
                 }
                 let field_map = field_map.into_option();
@@ -878,7 +879,7 @@ fn register_values<'a>(
             for constructor in constructors {
                 assert_unique_value_name(names, &constructor.name, &constructor.location)?;
 
-                let mut field_map = FieldMap::new(constructor.arguments.len());
+                let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
                 let mut args_types = Vec::with_capacity(constructor.arguments.len());
                 for (i, RecordConstructorArg { label, ast, .. }) in
                     constructor.arguments.iter().enumerate()
@@ -886,12 +887,12 @@ fn register_values<'a>(
                     let t = hydrator.type_from_ast(ast, environment)?;
                     args_types.push(t);
                     if let Some(label) = label {
-                        field_map
-                            .insert(label.clone(), i)
-                            .map_err(|_| Error::DuplicateField {
+                        field_map.insert(label.clone(), i as u32).map_err(|_| {
+                            Error::DuplicateField {
                                 label: label.to_string(),
                                 location: *location,
-                            })?;
+                            }
+                        })?;
                     }
                 }
                 let field_map = field_map.into_option();
@@ -900,6 +901,14 @@ fn register_values<'a>(
                     0 => typ.clone(),
                     _ => fn_(args_types, typ.clone()),
                 };
+                let constructor_info = ValueConstructorVariant::Record {
+                    constructors_count: constructors.len() as u16,
+                    name: constructor.name.clone(),
+                    arity: constructor.arguments.len() as u16,
+                    field_map: field_map.clone(),
+                    location: constructor.location,
+                    module: module_name.join("/"),
+                };
 
                 if !opaque {
                     environment.insert_module_value(
@@ -907,13 +916,7 @@ fn register_values<'a>(
                         ValueConstructor {
                             public: *public,
                             type_: typ.clone(),
-                            variant: ValueConstructorVariant::Record {
-                                name: constructor.name.clone(),
-                                arity: constructor.arguments.len(),
-                                field_map: field_map.clone(),
-                                location: constructor.location,
-                                module: module_name.join("/"),
-                            },
+                            variant: constructor_info.clone(),
                         },
                     );
                 }
@@ -926,17 +929,7 @@ fn register_values<'a>(
                     );
                 }
 
-                environment.insert_variable(
-                    constructor.name.clone(),
-                    ValueConstructorVariant::Record {
-                        name: constructor.name.clone(),
-                        arity: constructor.arguments.len(),
-                        field_map,
-                        location: constructor.location,
-                        module: module_name.join("/"),
-                    },
-                    typ,
-                );
+                environment.insert_variable(constructor.name.clone(), constructor_info, typ);
             }
         }
 

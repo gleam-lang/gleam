@@ -5,22 +5,22 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
-    pub arity: usize,
-    pub fields: HashMap<String, usize>,
+    pub arity: u32,
+    pub fields: HashMap<String, u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct DuplicateField;
 
 impl FieldMap {
-    pub fn new(arity: usize) -> Self {
+    pub fn new(arity: u32) -> Self {
         Self {
             arity,
             fields: HashMap::new(),
         }
     }
 
-    pub fn insert(&mut self, label: String, index: usize) -> Result<(), DuplicateField> {
+    pub fn insert(&mut self, label: String, index: u32) -> Result<(), DuplicateField> {
         match self.fields.insert(label, index) {
             Some(_) => Err(DuplicateField),
             None => Ok(()),
@@ -43,11 +43,11 @@ impl FieldMap {
         let mut seen_labels = std::collections::HashSet::new();
         let mut unknown_labels = Vec::new();
 
-        if self.arity != args.len() {
+        if self.arity as usize != args.len() {
             return Err(Error::IncorrectArity {
                 labels: self.incorrect_arity_labels(args),
                 location,
-                expected: self.arity,
+                expected: self.arity as usize,
                 given: args.len(),
             });
         }
@@ -99,7 +99,7 @@ impl FieldMap {
             };
 
             // If the argument is already in the right place
-            if position == i {
+            if position as usize == i {
                 let _ = seen_labels.insert(label.clone());
                 i += 1;
             } else {
@@ -111,7 +111,7 @@ impl FieldMap {
                 }
                 let _ = seen_labels.insert(label.clone());
 
-                args.swap(position, i);
+                args.swap(position as usize, i);
             }
         }
 

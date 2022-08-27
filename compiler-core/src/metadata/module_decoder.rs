@@ -363,8 +363,8 @@ impl ModuleDecoder {
 
     fn src_span(&self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
         Ok(SrcSpan {
-            start: reader.get_start() as usize,
-            end: reader.get_end() as usize,
+            start: reader.get_start(),
+            end: reader.get_end(),
         })
     }
 
@@ -388,7 +388,8 @@ impl ModuleDecoder {
         Ok(ValueConstructorVariant::Record {
             name: reader.get_name()?.to_string(),
             module: reader.get_module()?.to_string(),
-            arity: reader.get_arity() as usize,
+            arity: reader.get_arity(),
+            constructors_count: reader.get_constructors_count(),
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
         })
@@ -401,15 +402,15 @@ impl ModuleDecoder {
             Which::Some(reader) => Some({
                 let reader = reader?;
                 FieldMap {
-                    arity: reader.get_arity() as usize,
-                    fields: read_hashmap!(&reader.get_fields()?, self, usize),
+                    arity: reader.get_arity(),
+                    fields: read_hashmap!(&reader.get_fields()?, self, u32),
                 }
             }),
         })
     }
 
-    fn usize(&self, i: &boxed_u_int16::Reader<'_>) -> Result<usize> {
-        Ok(i.get_value() as usize)
+    fn u32(&self, i: &boxed_u_int32::Reader<'_>) -> Result<u32> {
+        Ok(i.get_value())
     }
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {

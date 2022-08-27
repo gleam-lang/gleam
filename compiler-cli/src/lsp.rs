@@ -1065,14 +1065,15 @@ where
 fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
     let start = line_numbers.line_and_column_number(location.start);
     let end = line_numbers.line_and_column_number(location.end);
+
     Range {
         start: Position {
-            line: start.line as u32 - 1,
-            character: start.column as u32 - 1,
+            line: start.line - 1,
+            character: start.column - 1,
         },
         end: Position {
-            line: end.line as u32 - 1,
-            character: end.column as u32 - 1,
+            line: end.line - 1,
+            character: end.column - 1,
         },
     }
 }

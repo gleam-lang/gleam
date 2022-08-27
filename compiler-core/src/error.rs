@@ -1304,6 +1304,34 @@ assigned variables to all of them."
                     }
                 }
 
+                TypeError::UpdateMultiConstructorType { location } => {
+                    let text = "This type has multiple constructors so it cannot be safely updated.
+If this value was one of the other variants then the update would be
+produce incorrect results.
+
+Consider pattern matching on it with a case expression and then
+constructing a new record with its values."
+                        .into();
+
+                    Diagnostic {
+                        title: "Unsafe record update".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some(
+                                    "I can't tell this is always the right constructor".into(),
+                                ),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 TypeError::UnknownType {
                     location,
                     name,
@@ -1931,8 +1959,8 @@ These values are not matched:
 
                 let adjusted_location = if error.error == ParseErrorType::UnexpectedEof {
                     crate::ast::SrcSpan {
-                        start: src.len() - 1,
-                        end: src.len() - 1,
+                        start: (src.len() - 1) as u32,
+                        end: (src.len() - 1) as u32,
                     }
                 } else {
                     error.location
