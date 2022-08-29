@@ -106,4 +106,8 @@ impl FileSystemReader for WasmFileSystem {
         tracing::trace!("read_dir {:?}", path);
         self.imfs.read_dir(path)
     }
+
+    fn current_dir(&self) -> Result<PathBuf, Error> {
+        self.imfs.current_dir()
+    }
 }

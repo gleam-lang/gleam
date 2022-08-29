@@ -137,6 +137,10 @@ impl FileSystemReader for InMemoryFileSystem {
 
         Ok(read_dir)
     }
+
+    fn current_dir(&self) -> Result<PathBuf, Error> {
+        Ok(PathBuf::from("/"))
+    }
 }
 
 // An in memory sharable that can be used in place of a real file. It is a

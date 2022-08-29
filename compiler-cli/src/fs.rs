@@ -80,6 +80,15 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
                 .collect()
         })
     }
+
+    fn current_dir(&self) -> Result<PathBuf, Error> {
+        std::env::current_dir().map_err(|e| Error::FileIo {
+            action: FileIoAction::Read,
+            kind: FileKind::Directory,
+            path: PathBuf::from("."),
+            err: Some(e.to_string()),
+        })
+    }
 }
 
 impl FileSystemWriter for ProjectIO {
