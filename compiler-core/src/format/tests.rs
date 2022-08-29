@@ -3652,3 +3652,13 @@ fn case_subject_block() {
 "#
     );
 }
+
+#[test]
+fn qualified_const_fn() {
+    assert_format!(
+        r#"import other
+
+const x = other.function
+"#
+    );
+}
