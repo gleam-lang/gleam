@@ -537,7 +537,7 @@ where
                 self.parse_assignment(start, AssignmentKind::Assert)?
             }
 
-            // helpful error on possibly trying to group with "("
+            // helpful error on possibly trying to group with ""
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
             }
@@ -2083,41 +2083,47 @@ where
                 self.parse_const_record_finish(start, None, name, end)
             }
 
-            Some((start, Token::Name { name }, end)) => {
-                let _ = self.next_tok();
-                if self.maybe_one(&Token::Dot).is_some() {
-                    match self.tok0.take() {
-                        Some((_, Token::UpName { name: upname }, end)) => {
-                            let _ = self.next_tok();
-                            self.parse_const_record_finish(start, Some(name), upname, end)
-                        }
-                        Some((_, Token::Name { name: end_name }, end)) => Ok(Some(Constant::Var {
+            Some((start, Token::Name { name }, _)) if self.peek_tok1() == Some(&Token::Dot) => {
+                let _ = self.next_tok(); // name
+                let _ = self.next_tok(); // dot
+
+                match self.tok0.take() {
+                    Some((_, Token::UpName { name: upname }, end)) => {
+                        let _ = self.next_tok(); // upname
+                        self.parse_const_record_finish(start, Some(name), upname, end)
+                    }
+                    Some((_, Token::Name { name: end_name }, end)) => {
+                        let _ = self.next_tok(); // upname
+                        Ok(Some(Constant::Var {
                             location: SrcSpan { start, end },
                             module: Some(name),
                             name: end_name,
                             constructor: None,
                             typ: (),
-                        })),
-                        Some((start, _, end)) => parse_error(
-                            ParseErrorType::UnexpectedToken {
-                                expected: vec!["UpName".to_string(), "Name".to_string()],
-                                hint: None,
-                            },
-                            SrcSpan { start, end },
-                        ),
-                        None => {
-                            parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
-                        }
+                        }))
                     }
-                } else {
-                    Ok(Some(Constant::Var {
-                        location: SrcSpan { start, end },
-                        module: None,
-                        name,
-                        constructor: None,
-                        typ: (),
-                    }))
+                    Some((start, _, end)) => parse_error(
+                        ParseErrorType::UnexpectedToken {
+                            expected: vec!["UpName".to_string(), "Name".to_string()],
+                            hint: None,
+                        },
+                        SrcSpan { start, end },
+                    ),
+                    None => {
+                        parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
+                    }
                 }
+            }
+
+            Some((start, Token::Name { name }, end)) => {
+                let _ = self.next_tok(); // name
+                Ok(Some(Constant::Var {
+                    location: SrcSpan { start, end },
+                    module: None,
+                    name,
+                    constructor: None,
+                    typ: (),
+                }))
             }
 
             // Helpful error for fn
@@ -2442,6 +2448,10 @@ where
             Some((start, Token::String { value }, end)) => Ok((start, value, end)),
             _ => self.next_tok_unexpected(vec!["a string".to_string()]),
         }
+    }
+
+    fn peek_tok1(&mut self) -> Option<&Token> {
+        self.tok1.as_ref().map(|(_, token, _)| token)
     }
 
     // If the next token matches the requested, consume it and return (start, end)
@@ -2807,7 +2817,7 @@ fn clause_guard_reduction(
 //
 // Bitstrings in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
-// rustier way to do this :)
+// rustier way to do this :
 fn bit_string_pattern_int(value: String, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
