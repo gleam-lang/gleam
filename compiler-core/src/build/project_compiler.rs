@@ -345,7 +345,9 @@ where
         let project_dir = paths::build_deps_package(name);
         let mix_build_dir = project_dir.join("_build").join(mix_target);
         // Absolute build path is needed for mix to make accurate symlinks
-        let mix_build_path = std::env::current_dir()
+        let mix_build_path = self
+            .io
+            .current_dir()
             .expect("Project root")
             .join(&mix_build_dir);
         let mix_build_lib_dir = mix_build_dir.join("lib");
@@ -413,17 +415,28 @@ where
     }
 
     fn maybe_link_elixir_libs(&mut self, build_dir: &PathBuf) -> Result<(), Error> {
-        let elixir_libs = ["elixir", "logger", "mix"];
+        // These Elixir core libs will be loaded with the current project
+        // Each should be linked into build/{target}/erlang if:
+        // - It isn't already
+        // - Its ebin dir doesn't exist (e.g. Elixir's path changed)
+        let elixir_libs = ["eex", "elixir", "logger", "mix"];
 
+        // The pathfinder is a file in build/{target}/erlang
+        // It contains the full path for each Elixir core lib we need, new-line delimited
+        // The pathfinder saves us from repeatedly loading Elixir to get this info
         let mut update_links = false;
         let pathfinder_name = "gleam_elixir_paths";
         let pathfinder = build_dir.join(pathfinder_name);
         if !self.io.is_file(&pathfinder) {
+            // The pathfinder must be written
+            // Any existing core lib links will get updated
             update_links = true;
             // TODO: test
             let env = [("TERM", "dumb".into())];
+            // Prepare the libs for Erlang's code:lib_dir function
             let elixir_atoms: Vec<String> =
                 elixir_libs.iter().map(|lib| format!(":{}", lib)).collect();
+            // Use Elixir to find its core lib paths and write the pathfinder file
             let args = [
                 "--eval".into(),
                 format!(
@@ -449,6 +462,7 @@ where
             }
         }
 
+        // Read the pathfinder's lines into a vector
         let elixir_paths: Vec<PathBuf> = self
             .io
             .read(&pathfinder)?
@@ -456,10 +470,14 @@ where
             .map(PathBuf::from)
             .collect();
         for source in elixir_paths {
+            // Get the core lib name from its path
             let name = source
                 .as_path()
                 .file_name()
                 .expect(&format!("Unexpanded path in {}", pathfinder_name));
+            // If links don't need updating
+            // Or build/{target}/erlang/{name}/ebin already exists
+            // Then this item is done
             let dest = build_dir.join(name);
             let ebin = dest.join("ebin");
             if !update_links || self.io.is_directory(&ebin) {
@@ -467,6 +485,7 @@ where
             }
             // TODO: unit test
             if self.io.is_directory(&dest) {
+                // Delete the existing link
                 self.io.delete(&dest)?;
             }
             tracing::debug!(

@@ -124,6 +124,7 @@ pub trait FileSystemReader {
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
+    fn current_dir(&self) -> Result<PathBuf, Error>;
 }
 
 pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
@@ -356,6 +357,10 @@ pub mod test {
         }
 
         fn read_dir(&self, _path: &Path) -> Result<ReadDir> {
+            unimplemented!()
+        }
+
+        fn current_dir(&self) -> Result<PathBuf, Error> {
             unimplemented!()
         }
     }
