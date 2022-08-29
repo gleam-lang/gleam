@@ -2817,7 +2817,7 @@ fn clause_guard_reduction(
 //
 // Bitstrings in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
-// rustier way to do this :
+// rustier way to do this :)
 fn bit_string_pattern_int(value: String, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
