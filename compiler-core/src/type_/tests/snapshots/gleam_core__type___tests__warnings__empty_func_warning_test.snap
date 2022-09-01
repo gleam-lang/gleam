@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 213
+expression: "pub fn main() { foo() }\n        pub fn foo() { }"
+---
+
+warning: Unimplemented function
+  ┌─ /src/warning/wrn.gleam:2:9
+  │
+2 │         pub fn foo() { }
+  │         ^^^^^^^^^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish this before running
+your program.
+

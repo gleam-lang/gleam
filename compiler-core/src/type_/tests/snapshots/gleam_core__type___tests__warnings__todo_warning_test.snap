@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 201
+expression: "pub fn main() {\n        todo\n      }"
+---
+
+warning: Todo found
+  ┌─ /src/warning/wrn.gleam:2:9
+  │
+2 │         todo
+  │         ^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish this before running
+your program.
+
