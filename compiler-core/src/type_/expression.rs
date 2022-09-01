@@ -1542,6 +1542,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } if args.is_empty() => {
+                // Register the module as having been used if it was imported
+                if let Some(ref module) = &module {
+                    _ = self.environment.unused_modules.remove(module);
+                }
+
+                // Type check the record constructor
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let (tag, field_map) = match &constructor.variant {
@@ -1579,6 +1585,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
+                // Register the module as having been used if it was imported
+                if let Some(ref module) = &module {
+                    _ = self.environment.unused_modules.remove(module);
+                }
+
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let (tag, field_map) = match &constructor.variant {
@@ -1681,6 +1692,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 name,
                 ..
             } => {
+                // Register the module as having been used if it was imported
+                if let Some(ref module) = &module {
+                    _ = self.environment.unused_modules.remove(module);
+                }
+
+                // Infer the type of this constant
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }

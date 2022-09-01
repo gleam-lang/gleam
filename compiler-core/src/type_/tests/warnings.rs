@@ -676,3 +676,29 @@ pub fn main(s) {
 }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1742
+#[test]
+fn imported_function_referenced_in_constant() {
+    assert_no_warnings!(
+        (vec!["one".to_string()], "pub fn two() { 2 }"),
+        "
+import one
+
+pub const make_two = one.two
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1742
+#[test]
+fn imported_constructor_referenced_in_constant() {
+    assert_no_warnings!(
+        (vec!["one".to_string()], "pub type Two { Two(Int) }"),
+        "
+import one
+
+pub const make_two = one.Two
+"
+    );
+}
