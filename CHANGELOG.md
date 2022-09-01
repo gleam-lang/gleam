@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.23.0-rc1 - 2022-09-01
 
 - Gleam can now build dependency packages that are managed using Mix.
 - The `gleam publish` command now adds the `priv` directory and any `NOTICE`
