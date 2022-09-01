@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 318
+assertion_line: 330
 expression: "pub type Thing {\n  Thing(a: Int, b: Int)\n}\n\npub fn main() {\n  {\n    let thing = Thing(1, 2)\n    thing\n  }.a\n}"
 ---
 -module(the_app).

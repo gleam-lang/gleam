@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 455
+assertion_line: 561
 expression: "let x: Result(Nil, Nil) = {\n            let a_var = 1\n            try _ = Error(1)\n            Ok(Nil)\n        }"
 ---
 error: Type mismatch

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 151
+assertion_line: 257
 expression: "case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }"
 ---
 error: Type mismatch

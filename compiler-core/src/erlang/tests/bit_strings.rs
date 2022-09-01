@@ -14,7 +14,10 @@ fn bit_strings() {
 }
 "#
     );
+}
 
+#[test]
+fn bit_strings1() {
     assert_erl!(
         r#"pub fn x() { 2 }
 fn main() {
@@ -25,7 +28,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn bit_strings2() {
     assert_erl!(
         r#"pub fn main() {
   let a = 1
@@ -34,7 +40,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn bit_strings3() {
     assert_erl!(
         r#"pub fn main() {
   let a = <<"test":utf8>>
@@ -43,7 +52,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn bit_strings4() {
     assert_erl!(
         r#"fn x() { 1 }
 pub fn main() {
@@ -68,7 +80,10 @@ pub fn bitstring_discard(x) -> Bool {
 }
                     "#
     );
+}
 
+#[test]
+fn bit_string_discard1() {
     assert_erl!(
         r#"
 pub fn bitstring_discard(x) -> Bool {

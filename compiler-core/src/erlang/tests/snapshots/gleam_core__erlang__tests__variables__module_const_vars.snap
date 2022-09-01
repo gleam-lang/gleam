@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 81
 expression: "const int = 42\nconst int_alias = int\npub fn use_int_alias() { int_alias }\n\nfn int_identity(i: Int) { i }\nconst int_identity_alias: fn(Int) -> Int = int_identity\npub fn use_int_identity_alias() { int_identity_alias(42) }\n\nconst compound: #(Int, fn(Int) -> Int, fn(Int) -> Int) = #(int, int_identity, int_identity_alias)\npub fn use_compound() { compound.1(compound.0) }\n"
 ---
 -module(the_app).

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 523
+assertion_line: 629
 expression: let x = 1 x.whatever
 ---
 error: Unknown record field

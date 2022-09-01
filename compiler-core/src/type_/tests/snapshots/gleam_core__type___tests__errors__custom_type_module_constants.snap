@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1230
+assertion_line: 1336
 expression: "type X { X }\nconst x = unknown.X"
 ---
 error: Unknown module

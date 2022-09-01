@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 348
+assertion_line: 454
 expression: "let add = fn(x, y) { x + y } 1 |> add(unknown)"
 ---
 error: Unknown variable

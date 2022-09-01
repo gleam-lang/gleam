@@ -1,17 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 206
-expression: "pub fn run() { case 1, 2 { a, b -> a } }"
+assertion_line: 148
+expression: "pub fn tail(list) { case list { [x, ..] -> x } }"
 ---
 -module(the_app).
 -compile(no_auto_import).
 
--export([run/0]).
+-export([tail/1]).
 
--spec run() -> integer().
-run() ->
-    case {1, 2} of
-        {A, B} ->
-            A
+-spec tail(list(L)) -> L.
+tail(List) ->
+    case List of
+        [X | _@1] ->
+            X
     end.
 

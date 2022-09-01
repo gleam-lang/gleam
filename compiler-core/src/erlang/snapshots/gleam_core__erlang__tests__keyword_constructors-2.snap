@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 387
+assertion_line: 453
 expression: "pub type X { Fun(Int) }"
 ---
 -module(the_app).

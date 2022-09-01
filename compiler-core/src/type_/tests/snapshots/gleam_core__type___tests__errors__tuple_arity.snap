@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 679
+assertion_line: 785
 expression: "case #(1, 2) { #(1, _, _, _) -> 1 }"
 ---
 error: Incorrect arity

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1018
+assertion_line: 1124
 expression: "\npub type Box(a) { Box(inner: a) }\npub fn main(box: Box(Int)) { box.unknown }\n"
 ---
 error: Unknown record field

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 658
+assertion_line: 764
 expression: "case [1] { [x] | [] as x -> 1 }"
 ---
 error: Type mismatch

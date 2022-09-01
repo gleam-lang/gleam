@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1424
+assertion_line: 1530
 expression: "type A { A(_) };"
 ---
 error: Unexpected type hole

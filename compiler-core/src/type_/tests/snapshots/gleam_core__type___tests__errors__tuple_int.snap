@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 538
+assertion_line: 644
 expression: "let #(a, b) = 1 a"
 ---
 error: Type mismatch

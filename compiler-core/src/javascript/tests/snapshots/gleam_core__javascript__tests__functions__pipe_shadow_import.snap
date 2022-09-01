@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 377
 expression: "\n        import foo.{println}\n        pub fn main() {\n          let println =\n            \"bugger\"\n            |> println\n          println\n        }"
 ---
 import * as $foo from "../foo.mjs";

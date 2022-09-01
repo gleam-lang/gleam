@@ -41,14 +41,20 @@ pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_sho
   the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
 }"#,
     );
+}
 
+#[test]
+fn function_formatting1() {
     assert_js!(
         r#"
 pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
 x + y
 }"#,
     );
+}
 
+#[test]
+fn function_formatting2() {
     assert_js!(
         r#"
 pub fn add(x, y) {
@@ -59,7 +65,10 @@ pub fn long() {
   add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, add(1, 1)))))))))))))))
 }"#,
     );
+}
 
+#[test]
+fn function_formatting3() {
     assert_js!(
         r#"
 pub fn math(x, y) {

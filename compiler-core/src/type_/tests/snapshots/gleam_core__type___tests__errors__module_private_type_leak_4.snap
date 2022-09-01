@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 957
+assertion_line: 1063
 expression: "external type PrivateType\npub external fn go(PrivateType) -> Int = \"\" \"\""
 ---
 error: Private type used in public interface

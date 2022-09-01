@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1135
+assertion_line: 1241
 expression: "external fn dupe(x) -> x = \"\" \"\"\nfn dupe() { 1 }"
 ---
 error: Duplicate definition

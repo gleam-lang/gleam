@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 192
+assertion_line: 201
 expression: "pub fn class() {\n  Nil\n}\n"
 ---
 export function class$() {

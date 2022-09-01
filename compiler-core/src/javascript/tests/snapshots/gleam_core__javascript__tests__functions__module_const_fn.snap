@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 396
 expression: "\npub fn int_identity(i: Int) -> Int { i }\npub const int_identity_alias: fn(Int) -> Int = int_identity\npub fn use_int_identity_alias() { int_identity_alias(42) }\n\npub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = #(int_identity, int_identity_alias)\npub fn use_compound() { compound.0(compound.1(42)) }"
 ---
 export const int_identity_alias = int_identity;

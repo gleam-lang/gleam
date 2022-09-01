@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 181
+assertion_line: 287
 expression: "let x = <<1:signed-unsigned>> x"
 ---
 error: Invalid bit string segment

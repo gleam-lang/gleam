@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1315
+assertion_line: 1421
 expression: "\n pub type Person {\n   Person(name: String)\n };\n pub fn update_person(person: Person) {\n   Person(..person, one: 5)\n }"
 ---
 error: Unknown record field

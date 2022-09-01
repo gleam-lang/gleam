@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1430
+assertion_line: 1536
 expression: "external fn main() -> List(_) = \"\" \"\""
 ---
 error: Unexpected type hole

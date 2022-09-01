@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 673
+assertion_line: 779
 expression: "let x = 1 case #(1, 2) { #(1, y) | #(x, y) -> 1 }"
 ---
 error: Extra alternative pattern variable

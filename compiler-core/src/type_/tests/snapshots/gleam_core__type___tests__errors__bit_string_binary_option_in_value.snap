@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 298
+assertion_line: 404
 expression: "let x = <<<<1:1>>:binary>> x"
 ---
 error: Invalid bit string segment

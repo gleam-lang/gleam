@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 150
 expression: "\npub const int = 42\npub const int_alias = int \npub fn use_int_alias() { int_alias }\n\npub const compound: #(Int, Int) = #(int, int_alias)\npub fn use_compound() { compound.0 + compound.1 }\n"
 ---
 export const int = 42;

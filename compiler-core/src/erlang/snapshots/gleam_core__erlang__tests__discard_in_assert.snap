@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 392
+assertion_line: 458
 expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
 ---
 -module(the_app).

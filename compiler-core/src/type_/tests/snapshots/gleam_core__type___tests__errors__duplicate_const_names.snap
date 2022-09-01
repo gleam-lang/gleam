@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1180
+assertion_line: 1286
 expression: "const duplicate = 1;\npub const duplicate = 1"
 ---
 error: Duplicate constant definition

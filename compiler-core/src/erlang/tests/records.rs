@@ -228,7 +228,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_updates1() {
     // Record updates with field accesses
     assert_erl!(
         r#"
@@ -241,7 +244,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_updates2() {
     // Record updates with multiple fields
     assert_erl!(
         r#"
@@ -254,7 +260,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_updates3() {
     // Record updates when record is returned from function
     assert_erl!(
         r#"
@@ -270,7 +279,10 @@ fn return_person() {
 }
 "#
     );
+}
 
+#[test]
+fn record_updates4() {
     // Record updates when record is field on another record
     assert_erl!(
         r#"

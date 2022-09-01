@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 251
+assertion_line: 357
 expression: "let x = <<1:utf16-unit(5)>> x"
 ---
 error: Invalid bit string segment

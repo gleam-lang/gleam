@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 196
+assertion_line: 302
 expression: "case <<1>> { <<1:native-big>> -> 1 }"
 ---
 error: Invalid bit string segment

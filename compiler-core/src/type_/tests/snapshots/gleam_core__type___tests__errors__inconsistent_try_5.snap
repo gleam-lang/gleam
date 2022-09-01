@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 744
+assertion_line: 850
 expression: "try x = Error(1) Error(\"Not this one\") Error(\"This one\")"
 ---
 error: Type mismatch

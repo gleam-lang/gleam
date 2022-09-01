@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 724
+assertion_line: 830
 expression: try x = Error(1) try y = Error(1.) Ok(x)
 ---
 error: Type mismatch

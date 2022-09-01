@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 315
 expression: foo = 4
 ---
 error: Syntax error

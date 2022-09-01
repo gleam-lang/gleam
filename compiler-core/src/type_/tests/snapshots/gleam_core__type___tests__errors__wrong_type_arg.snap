@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1261
+assertion_line: 1367
 expression: "\nfn foo(x: List(Int)) { x }\nfn main(y: List(something)) {\n  foo(y)\n}"
 ---
 error: Type mismatch

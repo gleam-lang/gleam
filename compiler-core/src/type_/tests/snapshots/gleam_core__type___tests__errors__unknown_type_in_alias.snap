@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 992
+assertion_line: 1098
 expression: "type IntMap = IllMap(Int, Int)"
 ---
 error: Unknown type

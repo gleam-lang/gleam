@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 563
+assertion_line: 669
 expression: "case #(1, 1.0) { #(x, _) | #(_, x) -> 1 }"
 ---
 error: Type mismatch

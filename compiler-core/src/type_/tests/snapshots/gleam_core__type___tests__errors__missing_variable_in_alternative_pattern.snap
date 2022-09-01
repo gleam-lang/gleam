@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1448
+assertion_line: 1554
 expression: "case [] { [x] | [] -> x _ -> 0 }"
 ---
 error: Missing alternative pattern variable

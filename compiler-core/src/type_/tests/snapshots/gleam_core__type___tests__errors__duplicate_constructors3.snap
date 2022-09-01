@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1162
+assertion_line: 1268
 expression: "type Boxy { Box(Int) Box(Float) }"
 ---
 error: Duplicate definition

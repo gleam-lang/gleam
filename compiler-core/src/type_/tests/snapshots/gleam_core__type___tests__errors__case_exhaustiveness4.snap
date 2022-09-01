@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1581
+assertion_line: 1687
 expression: "\npub type Media {\n    Audio(BitString)\n    Video(BitString)\n    Text(String)\n}\npub fn main(m) {\n    case m {\n        Video(_) -> m\n    }\n}\n"
 ---
 error: Not exhaustive pattern match

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1549
+assertion_line: 1655
 expression: "\npub fn main(r) {\n    case r {\n        Error(_) -> Nil\n    }\n}\n"
 ---
 error: Not exhaustive pattern match

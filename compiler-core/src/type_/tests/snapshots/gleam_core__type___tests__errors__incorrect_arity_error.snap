@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 353
+assertion_line: 459
 expression: "let id = fn(x) { x } id()"
 ---
 error: Incorrect arity

@@ -13,7 +13,10 @@ pub fn main(args) {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_1() {
     assert_erl!(
         r#"
 pub fn main(args) {
@@ -24,7 +27,10 @@ pub fn main(args) {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_2() {
     assert_erl!(
         r#"
 pub fn main(args) {
@@ -35,7 +41,10 @@ pub fn main(args) {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_3() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -46,7 +55,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_4() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -57,7 +69,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_5() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -68,7 +83,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_6() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -79,7 +97,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_7() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -90,7 +111,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_8() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -101,7 +125,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_9() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -113,7 +140,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn clause_guards_10() {
     assert_erl!(
         r#"
 pub fn main() {
@@ -358,7 +388,10 @@ pub fn main(arg) {
 }
 "#
     );
+}
 
+#[test]
+fn only_guards1() {
     assert_erl!(
         r#"
 pub const bits = <<1, "ok":utf8, 3, 4:50>>
@@ -371,7 +404,10 @@ pub fn main(arg) {
 }
 "#
     );
+}
 
+#[test]
+fn only_guards2() {
     assert_erl!(
         r#"
 pub const constant = #(1, 2.0)
@@ -384,7 +420,10 @@ pub fn main(arg) {
 }
 "#
     );
+}
 
+#[test]
+fn only_guards3() {
     assert_erl!(
         r#"
 pub const float_value = 3.14

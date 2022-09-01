@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 558
+assertion_line: 664
 expression: "let x = 1.0 case x { _ if x -> 1 }"
 ---
 error: Type mismatch

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1197
+assertion_line: 1303
 expression: "pub const group_id: Int = \"42\""
 ---
 error: Type mismatch

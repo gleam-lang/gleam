@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1153
+assertion_line: 1259
 expression: "type Boxy { Box(Int) }\ntype Box { Box(x: Int) }"
 ---
 error: Duplicate definition

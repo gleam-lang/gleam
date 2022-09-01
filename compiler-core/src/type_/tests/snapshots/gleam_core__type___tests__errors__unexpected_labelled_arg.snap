@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 973
+assertion_line: 1079
 expression: "fn id(x) { x } fn y() { id(x: 4) }"
 ---
 error: Unexpected labelled argument

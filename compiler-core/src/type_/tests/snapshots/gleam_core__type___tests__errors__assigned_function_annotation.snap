@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 388
+assertion_line: 494
 expression: "let f = fn(x: Int) { x } f(1.0)"
 ---
 error: Type mismatch

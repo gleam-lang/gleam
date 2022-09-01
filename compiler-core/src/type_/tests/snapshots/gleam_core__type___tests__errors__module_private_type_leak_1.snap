@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 931
+assertion_line: 1037
 expression: "external type PrivateType\npub external fn leak_type() -> PrivateType = \"\" \"\""
 ---
 error: Private type used in public interface
