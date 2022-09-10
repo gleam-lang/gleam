@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.23.0-rc2 - Unreleased
+
+- Fixed a bug where LSP hovering would fail to locate the expression.
+
 ## v0.23.0-rc1 - 2022-09-01
 
 - Gleam can now build dependency packages that are managed using Mix.
