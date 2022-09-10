@@ -508,25 +508,19 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
 
 impl TypedStatement {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        // TODO: test
-        if !self.location().contains(byte_index) {
-            return None;
+        // TODO: test. Note that the fn src-span covers the function head, not
+        // the entire statement.
+        if let Statement::Fn { body, .. } = self {
+            if let Some(expression) = body.find_node(byte_index) {
+                return Some(Located::Expression(expression));
+            }
         }
 
-        match self {
-            // TODO: test
-            Statement::Fn { body, .. } => match body.find_node(byte_index) {
-                Some(expression) => Some(Located::Expression(expression)),
-                None => Some(Located::Statement(self)),
-            },
-
-            // TODO: test
-            Statement::TypeAlias { .. }
-            | Statement::CustomType { .. }
-            | Statement::ExternalFn { .. }
-            | Statement::ExternalType { .. }
-            | Statement::Import { .. }
-            | Statement::ModuleConstant { .. } => Some(Located::Statement(self)),
+        // TODO: test
+        if self.location().contains(byte_index) {
+            Some(Located::Statement(self))
+        } else {
+            None
         }
     }
 }

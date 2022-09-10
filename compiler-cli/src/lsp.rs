@@ -716,12 +716,10 @@ impl LanguageServer {
         params: &lsp::TextDocumentPositionParams,
     ) -> Option<(LineNumbers, Located<'_>)> {
         let module = self.module_for_uri(&params.text_document.uri);
-        tracing::warn!("module: {:?}", module.map(|m| &m.name));
         let module = module?;
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
         let node = module.find_node(byte_index);
-        tracing::warn!("node: {:?}", node);
         let node = node?;
         Some((line_numbers, node))
     }
