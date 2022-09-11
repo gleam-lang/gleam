@@ -1938,7 +1938,7 @@ pub fn register_import(
             // Insert imported module into scope
             let _ = environment
                 .imported_modules
-                .insert(module_name, (*location, &module_info));
+                .insert(module_name, (*location, module_info));
             Ok(())
         }
 

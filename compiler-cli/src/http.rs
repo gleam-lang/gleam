@@ -3,13 +3,18 @@ use std::convert::TryInto;
 use async_trait::async_trait;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref REQWEST_CLIENT: reqwest::Client = reqwest::Client::new();
+}
 
 #[derive(Debug)]
-pub struct HttpClient(reqwest::Client);
+pub struct HttpClient;
 
 impl HttpClient {
     pub fn new() -> Self {
-        Self(reqwest::Client::new())
+        Self
     }
 
     pub fn boxed() -> Box<Self> {
@@ -23,7 +28,7 @@ impl gleam_core::io::HttpClient for HttpClient {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
-        let mut response = self.0.execute(request).await.map_err(Error::http)?;
+        let mut response = REQWEST_CLIENT.execute(request).await.map_err(Error::http)?;
         let mut builder = Response::builder()
             .status(response.status())
             .version(response.version());
