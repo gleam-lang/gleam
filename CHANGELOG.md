@@ -7,7 +7,8 @@
 ## v0.23.0-rc1 - 2022-09-01
 
 - Gleam can now build dependency packages that are managed using Mix.
-- Writing to disc is now buffered. In testing this doubles performance when
+- Compiler performance has been improved by buffering disc writing and by lazily
+  loading TLS certs.
   compiling the standard library.
 - The `gleam publish` command now adds the `priv` directory and any `NOTICE`
   file to the tarball.
