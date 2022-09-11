@@ -1936,10 +1936,9 @@ pub fn register_import(
                 .insert(module_name.clone(), *location);
 
             // Insert imported module into scope
-            // TODO: use a reference to the module to avoid copying
             let _ = environment
                 .imported_modules
-                .insert(module_name, (*location, module_info.clone()));
+                .insert(module_name, (*location, &module_info));
             Ok(())
         }
 

@@ -15,7 +15,7 @@ pub struct Environment<'a> {
 
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
-    pub imported_modules: HashMap<String, (SrcSpan, Module)>,
+    pub imported_modules: HashMap<String, (SrcSpan, &'a Module)>,
     pub unused_modules: HashMap<String, SrcSpan>,
     pub imported_types: HashSet<String>,
 
