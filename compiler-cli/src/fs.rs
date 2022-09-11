@@ -259,7 +259,8 @@ pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
         path: path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
-    Ok(WrappedWriter::new(path, Box::new(file)))
+    let buffered_writer = io::BufWriter::new(file);
+    Ok(WrappedWriter::new(path, Box::new(buffered_writer)))
 }
 
 pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
