@@ -10,9 +10,12 @@ pub struct Environment<'a> {
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
-    pub imported_names: HashMap<String, SrcSpan>,
+    pub unqualified_imported_names: HashMap<String, SrcSpan>,
     pub importable_modules: &'a im::HashMap<String, Module>,
-    pub imported_modules: HashMap<String, Module>,
+
+    /// Modules that have been imported by the current module, along with the
+    /// location of the import statement where they were imported.
+    pub imported_modules: HashMap<String, (SrcSpan, Module)>,
     pub unused_modules: HashMap<String, SrcSpan>,
     pub imported_types: HashSet<String>,
 
@@ -80,7 +83,7 @@ impl<'a> Environment<'a> {
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
             unused_modules: HashMap::new(),
-            imported_names: HashMap::new(),
+            unqualified_imported_names: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
@@ -238,7 +241,7 @@ impl<'a> Environment<'a> {
                 }),
 
             Some(m) => {
-                let module = self.imported_modules.get(m).ok_or_else(|| {
+                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self
@@ -316,7 +319,7 @@ impl<'a> Environment<'a> {
                 }),
 
             Some(m) => {
-                let module = self.imported_modules.get(m).ok_or_else(|| {
+                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
                         name: name.to_string(),
                         imported_modules: self

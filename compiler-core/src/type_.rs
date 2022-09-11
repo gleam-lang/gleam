@@ -1827,7 +1827,7 @@ pub fn register_import(
                 let imported_name = as_name.as_ref().unwrap_or(name);
 
                 // Check if value already was imported
-                if let Some(previous) = environment.imported_names.get(imported_name) {
+                if let Some(previous) = environment.unqualified_imported_names.get(imported_name) {
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: *previous,
@@ -1838,7 +1838,7 @@ pub fn register_import(
                 // Register the name as imported so it can't be imported a
                 // second time in future
                 let _ = environment
-                    .imported_names
+                    .unqualified_imported_names
                     .insert(imported_name.clone(), *location);
 
                 // Register the unqualified import if it is a value
@@ -1920,11 +1920,11 @@ pub fn register_import(
                     .insert(module_name.clone(), *location);
             }
 
-            // Check if value already was imported
-            if let Some(previous) = environment.imported_names.get(&module_name) {
+            // Check if a module was already imported with this name
+            if let Some((previous_location, _)) = environment.imported_modules.get(&module_name) {
                 return Err(Error::DuplicateImport {
                     location: *location,
-                    previous_location: *previous,
+                    previous_location: *previous_location,
                     name: module_name,
                 });
             }
@@ -1932,14 +1932,14 @@ pub fn register_import(
             // Register the name as imported so it can't be imported a
             // second time in future
             let _ = environment
-                .imported_names
+                .unqualified_imported_names
                 .insert(module_name.clone(), *location);
 
             // Insert imported module into scope
             // TODO: use a reference to the module to avoid copying
             let _ = environment
                 .imported_modules
-                .insert(module_name, module_info.clone());
+                .insert(module_name, (*location, module_info.clone()));
             Ok(())
         }
 

@@ -1163,7 +1163,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         let (module_name, constructor) = {
-            let module = self
+            let (_, module) = self
                 .environment
                 .imported_modules
                 .get(module_alias)
@@ -1460,7 +1460,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Look in an imported module for a binding with this name
             Some(module_name) => {
-                let module = &self
+                let (_, module) = &self
                     .environment
                     .imported_modules
                     .get(module_name)
@@ -1621,6 +1621,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .imported_modules
                             .get(module_name)
                             .expect("Failed to find previously located module import")
+                            .1
                             .name
                             .join("/"),
                         typ: constructor.type_.clone(),
