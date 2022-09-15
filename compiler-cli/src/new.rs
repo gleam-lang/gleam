@@ -11,7 +11,7 @@ use strum::{Display, EnumString, EnumVariantNames};
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.22";
+const GLEAM_STDLIB_VERSION: &str = "0.23";
 const GLEEUNIT_VERSION: &str = "0.6";
 const ERLANG_OTP_VERSION: &str = "23.2";
 
