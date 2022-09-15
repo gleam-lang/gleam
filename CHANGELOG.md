@@ -11,7 +11,8 @@
 
 - Gleam can now build dependency packages that are managed using Mix.
 - Compiler performance has been improved by buffering disc writing and by lazily
-  loading TLS certs.
+  loading TLS certs. In testing this doubles performance when compiling the
+  standard library.
 - The `gleam publish` command now adds the `priv` directory and any `NOTICE`
   file to the tarball.
 - The `gleam update` command can now be used to update dependency packages to
