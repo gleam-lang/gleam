@@ -2,6 +2,8 @@
 
 ## v0.23.0-rc2 - Unreleased
 
+- New Gleam projects are created using GitHub actions erlef/setup-beam@v1.13.0
+  and actions/checkout@3.0.0.
 - Fixed a bug where LSP hovering would fail to locate the expression.
 
 ## v0.23.0-rc1 - 2022-09-01

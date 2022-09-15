@@ -194,10 +194,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2.0.0
+        uses: actions/checkout@v3.0.0
 
       - name: Install Erlang
-        uses: erlef/setup-beam@v1.9.0
+        uses: erlef/setup-beam@v1.13.0
         with:
           otp-version: "23.2"
           elixir-version: "1.13.4"
