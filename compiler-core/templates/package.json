@@ -6,6 +6,6 @@
     "lunr": "^2.3.9"
   },
   "scripts": {
-    "esbuild": "esbuild --bundle index.js --outdir=./dist"
+    "esbuild": "esbuild index.js --bundle --minify --outdir=./dist"
   }
 }
