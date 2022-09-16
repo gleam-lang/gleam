@@ -1,5 +1,7 @@
 "use strict";
 
+import lunr from "lunr";
+
 window.Gleam = (function () {
   /* Global Object */
   const self = {};

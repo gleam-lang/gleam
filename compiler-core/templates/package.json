@@ -1,0 +1,11 @@
+{
+  "devDependencies": {
+    "@highlightjs/cdn-assets": "^10.5.0",
+    "esbuild": "^0.15.7",
+    "highlight.js": "^11.6.0",
+    "lunr": "^2.3.9"
+  },
+  "scripts": {
+    "esbuild": "esbuild --bundle index.js --outdir=./dist"
+  }
+}

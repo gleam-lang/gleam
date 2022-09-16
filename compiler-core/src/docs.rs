@@ -234,18 +234,13 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("index.css"),
-        text: std::include_str!("../templates/index.css").to_string(),
+        path: PathBuf::from("dist/index.js"),
+        text: std::include_str!("../templates/dist/index.js").to_string(),
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("gleam.js"),
-        text: std::include_str!("../templates/gleam.js").to_string(),
-    });
-
-    files.push(OutputFile {
-        path: PathBuf::from("highlightjs-gleam.js"),
-        text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
+        path: PathBuf::from("dist/index.css"),
+        text: std::include_str!("../templates/dist/index.css").to_string(),
     });
 
     files
