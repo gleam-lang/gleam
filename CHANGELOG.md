@@ -1,5 +1,7 @@
 # Changelog
 
+## v0.23.0 - 2022-09-15
+
 ## v0.23.0-rc2 - 2022-09-15
 
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.13.0
