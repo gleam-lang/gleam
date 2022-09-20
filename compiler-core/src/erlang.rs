@@ -732,6 +732,7 @@ fn bin_op<'a>(
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
         BinOp::ModuloInt => "rem",
+        BinOp::Concatenate => todo!("Erlang <> operator"),
     };
 
     let left_expr = match left {
