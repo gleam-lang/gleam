@@ -635,6 +635,7 @@ pub enum BinOp {
 
 impl BinOp {
     pub fn precedence(&self) -> u8 {
+        // Ensure that this matches the other precedence function for guards
         match self {
             Self::Or => 1,
 
@@ -887,6 +888,7 @@ impl<A, B> ClauseGuard<A, B> {
     }
 
     pub fn precedence(&self) -> u8 {
+        // Ensure that this matches the other precedence function for guards
         match self {
             ClauseGuard::Or { .. } => 1,
             ClauseGuard::And { .. } => 2,
