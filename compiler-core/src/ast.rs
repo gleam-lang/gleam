@@ -1026,6 +1026,14 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
         segments: Vec<BitStringSegment<Self, Type>>,
     },
+
+    Concatenate {
+        location: SrcSpan,
+        left_location: SrcSpan,
+        right_location: SrcSpan,
+        left_side_string: String,
+        right_side_assignment: String,
+    },
 }
 
 impl<A, B> Pattern<A, B> {
@@ -1041,6 +1049,7 @@ impl<A, B> Pattern<A, B> {
             | Pattern::String { location, .. }
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
+            | Pattern::Concatenate { location, .. }
             | Pattern::BitString { location, .. } => *location,
         }
     }

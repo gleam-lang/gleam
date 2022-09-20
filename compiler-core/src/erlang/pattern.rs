@@ -50,6 +50,12 @@ pub(super) fn to_doc<'a>(
                 .iter()
                 .map(|s| pattern_segment(&s.value, &s.options, vars, env)),
         ),
+
+        Pattern::Concatenate {
+            left_side_string: left,
+            right_side_assignment: right,
+            ..
+        } => docvec![string(left), " <> ", right],
     }
 }
 

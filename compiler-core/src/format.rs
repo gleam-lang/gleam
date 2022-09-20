@@ -1289,6 +1289,12 @@ impl<'comments> Formatter<'comments> {
                     .map(|s| bit_string_segment(s, |e| self.pattern(e))),
                 false,
             ),
+
+            Pattern::Concatenate {
+                left_side_string: left,
+                right_side_assignment: right,
+                ..
+            } => docvec![self.string(left), " <> ", right],
         };
         commented(doc, comments)
     }
