@@ -11,7 +11,7 @@ expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> name -> name\n    
 -spec go(binary()) -> binary().
 go(X) ->
     case X of
-        <<"Hello, "/utf8, name/binary>> ->
+        <<"Hello, "/utf8, Name/binary>> ->
             Name;
 
         _@1 ->

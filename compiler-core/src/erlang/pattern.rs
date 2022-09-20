@@ -1,3 +1,5 @@
+use heck::ToPascalCase;
+
 use super::*;
 
 pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
@@ -55,7 +57,13 @@ pub(super) fn to_doc<'a>(
             left_side_string: left,
             right_side_assignment: right,
             ..
-        } => docvec!["<<\"", left, "\"/utf8, ", right, "/binary>>"],
+        } => docvec![
+            "<<\"",
+            left,
+            "\"/utf8, ",
+            Document::String(right.to_pascal_case()),
+            "/binary>>"
+        ],
     }
 }
 
