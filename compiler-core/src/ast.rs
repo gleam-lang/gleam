@@ -628,6 +628,9 @@ pub enum BinOp {
     DivInt,
     DivFloat,
     ModuloInt,
+
+    // Strings
+    Concatenate,
 }
 
 impl BinOp {
@@ -648,10 +651,12 @@ impl BinOp {
             | Self::GtEqFloat
             | Self::GtFloat => 4,
 
-            // Pipe is 5
-            Self::AddInt | Self::AddFloat | Self::SubInt | Self::SubFloat => 6,
+            Self::Concatenate => 5,
 
-            Self::MultInt | Self::MultFloat | Self::DivInt | Self::DivFloat | Self::ModuloInt => 7,
+            // Pipe is 6
+            Self::AddInt | Self::AddFloat | Self::SubInt | Self::SubFloat => 7,
+
+            Self::MultInt | Self::MultFloat | Self::DivInt | Self::DivFloat | Self::ModuloInt => 8,
         }
     }
 
@@ -678,6 +683,7 @@ impl BinOp {
             Self::DivInt => "/",
             Self::DivFloat => "/.",
             Self::ModuloInt => "%",
+            Self::Concatenate => "<>",
         }
     }
 }

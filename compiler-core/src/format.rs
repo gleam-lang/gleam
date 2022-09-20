@@ -1440,6 +1440,7 @@ impl<'a> Documentable<'a> for &'a BinOp {
             BinOp::DivInt => " / ",
             BinOp::DivFloat => " /. ",
             BinOp::ModuloInt => " % ",
+            BinOp::Concatenate => " <> ",
         }
         .to_doc()
     }

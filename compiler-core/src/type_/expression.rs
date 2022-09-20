@@ -612,6 +612,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             BinOp::DivInt => (int(), int()),
             BinOp::DivFloat => (float(), float()),
             BinOp::ModuloInt => (int(), int()),
+            BinOp::Concatenate => (string(), string()),
         };
 
         let left = self.infer(left)?;

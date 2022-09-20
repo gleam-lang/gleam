@@ -834,7 +834,9 @@ impl<'module> Generator<'module> {
             BinOp::NotEq => self.equal(left, right, false),
             BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
             BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
-            BinOp::AddInt | BinOp::AddFloat => self.print_bin_op(left, right, "+"),
+            BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => {
+                self.print_bin_op(left, right, "+")
+            }
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt => self.mult_int(left, right),
             BinOp::MultFloat => self.print_bin_op(left, right, "*"),
@@ -1241,7 +1243,8 @@ impl BinOp {
             | BinOp::MultFloat
             | BinOp::DivInt
             | BinOp::DivFloat
-            | BinOp::ModuloInt => true,
+            | BinOp::ModuloInt
+            | BinOp::Concatenate => true,
             BinOp::MultInt => false,
         }
     }
