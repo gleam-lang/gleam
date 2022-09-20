@@ -8,6 +8,7 @@ mod pipes;
 mod records;
 mod reserved;
 mod statement_if;
+mod strings;
 mod todo;
 mod try_;
 mod variables;
