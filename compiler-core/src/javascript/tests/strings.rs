@@ -61,3 +61,17 @@ fn go() {
 "#,
     );
 }
+
+#[test]
+fn string_prefix() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " <> name -> name
+    _ -> "Unknown"
+  }
+}
+"#,
+    );
+}

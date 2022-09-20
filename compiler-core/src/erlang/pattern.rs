@@ -55,7 +55,7 @@ pub(super) fn to_doc<'a>(
             left_side_string: left,
             right_side_assignment: right,
             ..
-        } => docvec![string(left), " <> ", right],
+        } => docvec!["<<\"", left, "\"/utf8, ", right, "/binary>>"],
     }
 }
 
