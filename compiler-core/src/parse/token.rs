@@ -34,6 +34,8 @@ pub enum Token {
     GreaterDot,      // '>.'
     LessEqualDot,    // '<=.'
     GreaterEqualDot, // '>=.'
+    // String Operators
+    LtGt, // '<>'
     // Other Punctuation
     Colon,
     Comma,
@@ -164,6 +166,7 @@ impl fmt::Display for Token {
             Token::Todo => "todo",
             Token::Try => "try",
             Token::Type => "type",
+            Token::LtGt => "<>",
         };
         write!(f, "\"{}\"", s)
     }

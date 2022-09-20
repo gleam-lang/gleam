@@ -326,6 +326,11 @@ where
                 let tok_start = self.get_pos();
                 let _ = self.next_char();
                 match self.chr0 {
+                    Some('>') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::LtGt, tok_end));
+                    }
                     Some('<') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
