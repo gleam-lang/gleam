@@ -21,3 +21,17 @@ pub fn go(x, y, z) {
 "#,
     );
 }
+
+#[test]
+fn string_prefix() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " <> name -> name
+    _ -> "Unknown"
+  }
+}
+"#,
+    );
+}

@@ -244,6 +244,31 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 })
             }
 
+            Pattern::Concatenate {
+                location,
+                left_location,
+                right_location,
+                left_side_string,
+                right_side_assignment,
+            } => {
+                // The entire concatenate pattern must be a string
+                self.environment
+                    .unify(type_, string())
+                    .map_err(|e| convert_unify_error(e, location))?;
+
+                // The right hand side assigns a variable, the suffix of the string
+                self.insert_variable(right_side_assignment.as_ref(), string(), right_location)
+                    .map_err(|e| convert_unify_error(e, location))?;
+
+                Ok(Pattern::Concatenate {
+                    location,
+                    left_location,
+                    right_location,
+                    left_side_string,
+                    right_side_assignment,
+                })
+            }
+
             Pattern::Assign {
                 name,
                 pattern,

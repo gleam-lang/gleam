@@ -11,6 +11,7 @@ enum Index<'a> {
     IntFromSlice(usize, usize),
     FloatAt(usize),
     SliceAfter(usize),
+    StringPrefixSlice(usize),
 }
 
 #[derive(Debug)]
@@ -77,6 +78,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::Int(i));
     }
 
+    fn push_string_prefix_slice(&mut self, i: usize) {
+        self.path.push(Index::StringPrefixSlice(i));
+    }
+
     fn push_byte_at(&mut self, i: usize) {
         self.path.push(Index::ByteAt(i));
     }
@@ -118,6 +123,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Index::IntFromSlice(start, end) => docvec!(".intFromSlice(", start, ", ", end, ")"),
             Index::FloatAt(i) => docvec!(".floatAt(", i, ")"),
             Index::SliceAfter(i) => docvec!(".sliceAfter(", i, ")"),
+            Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
         }))
     }
 
@@ -347,6 +353,18 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
+            Pattern::Concatenate {
+                left_side_string,
+                right_side_assignment,
+                ..
+            } => {
+                self.push_string_prefix_check(subject.clone(), left_side_string);
+                self.push_string_prefix_slice(left_side_string.len());
+                self.push_assignment(subject.clone(), right_side_assignment.as_ref());
+                self.pop();
+                Ok(())
+            }
+
             Pattern::Constructor {
                 constructor:
                     PatternConstructor::Record {
@@ -465,6 +483,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             var,
             name,
         });
+    }
+
+    fn push_string_prefix_check(&mut self, subject: Document<'a>, prefix: &'a str) {
+        self.checks.push(Check::StringPrefix {
+            prefix,
+            subject,
+            path: self.path_document(),
+        })
     }
 
     fn push_booly_check(&mut self, subject: Document<'a>, expected_to_be_truthy: bool) {
@@ -587,6 +613,11 @@ pub enum Check<'a> {
         expected_bytes: usize,
         has_tail_spread: bool,
     },
+    StringPrefix {
+        subject: Document<'a>,
+        path: Document<'a>,
+        prefix: &'a str,
+    },
     Booly {
         subject: Document<'a>,
         path: Document<'a>,
@@ -682,6 +713,14 @@ impl<'a> Check<'a> {
                 } else {
                     docvec!["!(", subject, path, length_check, ")",]
                 }
+            }
+            Check::StringPrefix {
+                subject,
+                path,
+                prefix,
+            } => {
+                let prefix = super::expression::string(prefix);
+                docvec![subject, path, ".startsWith(", prefix, ")"]
             }
         }
     }
