@@ -525,6 +525,24 @@ fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
         .group()
 }
 
+fn string_concatenate<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = string_concatenate_argument(left, env);
+    let right = string_concatenate_argument(right, env);
+    bit_string([left, right].into_iter())
+}
+
+fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    let value = match value {
+        TypedExpr::String { value, .. } => value.to_doc(),
+        _ => maybe_block_expr(value, env),
+    };
+    value.append("/binary")
+}
+
 fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
         .nest_current()
@@ -732,7 +750,7 @@ fn bin_op<'a>(
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
         BinOp::ModuloInt => "rem",
-        BinOp::Concatenate => todo!("Erlang <> operator"),
+        BinOp::Concatenate => return string_concatenate(left, right, env),
     };
 
     let left_expr = match left {
