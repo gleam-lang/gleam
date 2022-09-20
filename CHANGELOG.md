@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where TypeScript defintions may have incorrect type parameters.
+
 ## v0.23.0 - 2022-09-15
 
 [Release Blog Post](https://gleam.run/news/gleam-v0.23-released/)
