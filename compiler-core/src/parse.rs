@@ -2676,6 +2676,7 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
         Token::StarDot => Some(BinOp::MultFloat),
         Token::Slash => Some(BinOp::DivInt),
         Token::SlashDot => Some(BinOp::DivFloat),
+        Token::LtGt => Some(BinOp::Concatenate),
         _ => None,
     }
 }
