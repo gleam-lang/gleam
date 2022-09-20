@@ -50,3 +50,14 @@ fn go(a) {
 "#,
     );
 }
+
+#[test]
+fn string_concat() {
+    assert_js!(
+        r#"
+fn go() {
+  "Hello, " <> "Joe"
+}
+"#,
+    );
+}
