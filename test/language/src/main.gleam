@@ -41,6 +41,7 @@ pub fn main() -> Int {
       suite("negation", negation_tests()),
       suite("bit string match", bit_string_match_tests()),
       suite("anonymous functions", anonymous_function_tests()),
+      suite("string pattern matching", string_pattern_matching_tests()),
     ])
 
   case stats.failures {
@@ -108,8 +109,15 @@ fn float_tests() -> List(Test) {
 }
 
 fn strings_tests() -> List(Test) {
-  [equality_test("Empty", "", ""), equality_test("Newlines", "
-", "\n")]
+  [
+    equality_test("Empty", "", ""),
+    equality_test(
+      "Newlines",
+      "
+",
+      "\n",
+    ),
+  ]
 }
 
 fn identity(x) {
@@ -1349,6 +1357,22 @@ fn anonymous_function_tests() {
             x
           }
           f(1)
+        },
+      )
+    }),
+  ]
+}
+
+fn string_pattern_matching_tests() {
+  [
+    "case \"12345\" { \"0\" <> rest -> rest \"123\" <> rest -> rest _ -> \"\" }"
+    |> example(fn() {
+      assert_equal(
+        "45",
+        case "12345" {
+          "0" <> rest -> rest
+          "123" <> rest -> rest
+          _ -> ""
         },
       )
     }),
