@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+assertion_line: 56
+expression: "\nfn go() {\n  \"Hello, \" <> \"Joe\"\n}\n"
+---
+function go() {
+  return "Hello, " + "Joe";
+}
+
