@@ -1628,6 +1628,21 @@ fn assert_as_expression() {
     assert_infer!("assert 1 = 1", "Int");
 }
 
+#[test]
+fn string_concat_ok() {
+    assert_infer!(r#" "1" <> "2" "#, "String");
+}
+
+#[test]
+fn string_concat_ko_1() {
+    assert_error!(r#" "1" <> 2 "#);
+}
+
+#[test]
+fn string_concat_ko_2() {
+    assert_error!(r#" 1 <> "2" "#);
+}
+
 // https://github.com/gleam-lang/gleam/issues/1087
 #[test]
 fn generic_inner_access() {
