@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The `<>` operator can now be used for string concatenation and for string
+  prefix pattern matching.
 - Fixed a bug where TypeScript defintions may have incorrect type parameters.
 
 ## v0.23.0 - 2022-09-15
