@@ -1290,18 +1290,14 @@ impl<'comments> Formatter<'comments> {
                 false,
             ),
 
-            Pattern::Concatenate {
-                left,
-                right_assignment: right,
-                ..
-            } => {
-                let docs = left
-                    .iter()
-                    .map(|p| self.concatenate_pattern_part(p))
-                    .chain(std::iter::once(right.to_doc()));
-                Itertools::intersperse(docs, " <> ".to_doc())
-                    .collect_vec()
-                    .to_doc()
+            Pattern::Concatenate { left, right, .. } => {
+                let mut docs = Vec::with_capacity(left.len() * 2 + 3);
+                for part in left {
+                    docs.push(self.concatenate_pattern_part(part));
+                    docs.push(" <> ".to_doc());
+                }
+                docs.push(self.concatenate_pattern_part(right));
+                docs.to_doc()
             }
         };
         commented(doc, comments)

@@ -247,8 +247,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Concatenate {
                 location,
                 left,
-                right_location,
-                right_assignment: right_side_assignment,
+                right,
             } => {
                 // The entire concatenate pattern must be a string
                 self.environment
@@ -268,15 +267,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
-                // The right hand side assigns a variable, the suffix of the string
-                self.insert_variable(right_side_assignment.as_ref(), string(), right_location)
-                    .map_err(|e| convert_unify_error(e, location))?;
+                match &right {
+                    // The right hand side is a string literal, so there's nothing to check.
+                    ConcatenatePatternPart::String { .. } => Ok(()),
+
+                    // The right hand side assigns a variable, the suffix of the
+                    // string, so register the variable in the scope.
+                    ConcatenatePatternPart::Assign { location, name } => {
+                        self.insert_variable(name.as_ref(), string(), *location)
+                    }
+                }
+                .map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::Concatenate {
                     location,
                     left,
-                    right_location,
-                    right_assignment: right_side_assignment,
+                    right,
                 })
             }
 
