@@ -370,8 +370,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             self.push_string_prefix_slice(offset);
                         }
 
-                        // This part is a string literal, we slice off the
-                        // prefix and assign it to a variable.
+                        // This part is a variable which must be referenced in
+                        // an equality comparison in the guard for this clause.
+                        // We slice of an amount the same size as that value
+                        // that is being used in the guard and assign it for the
+                        // equality check.
+                        // TODO: do it
+                        // TODO: check that if we can't assign multiple values
+                        // with the same name
                         ConcatenatePatternPart::Assign { .. } => todo!("js assign left part"),
                     }
                 }
