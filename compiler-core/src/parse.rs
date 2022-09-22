@@ -56,11 +56,11 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
-    Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TodoKind, TypeAst,
-    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
-    UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
-    CAPTURE_VARIABLE,
+    Clause, ClauseGuard, ConcatenatePatternPart, Constant, ExternalFnArg, HasLocation, Module,
+    Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement,
+    TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -838,6 +838,7 @@ where
                 // "Hello, " <> name -> ...
                 if let Some((_, Token::LtGt, _)) = self.tok0 {
                     let _ = self.next_tok();
+                    let left = vec![ConcatenatePatternPart::String { location, value }];
                     let (r_start, name, r_end) = self.expect_name()?;
 
                     Pattern::Concatenate {
@@ -845,13 +846,12 @@ where
                             start: location.start,
                             end: r_end,
                         },
-                        left_location: location,
+                        left,
                         right_location: SrcSpan {
                             start: r_start,
                             end: r_end,
                         },
-                        left_side_string: value,
-                        right_side_assignment: name,
+                        right_assignment: name,
                     }
 
                 // Full string matching

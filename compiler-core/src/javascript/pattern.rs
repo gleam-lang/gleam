@@ -354,13 +354,22 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             Pattern::Concatenate {
-                left_side_string,
-                right_side_assignment,
+                left,
+                right_assignment,
                 ..
             } => {
-                self.push_string_prefix_check(subject.clone(), left_side_string);
-                self.push_string_prefix_slice(left_side_string.len());
-                self.push_assignment(subject.clone(), right_side_assignment.as_ref());
+                for part in left {
+                    let mut offset = 0;
+                    match part {
+                        ConcatenatePatternPart::String { value, .. } => {
+                            offset += value.len();
+                            self.push_string_prefix_check(subject.clone(), value);
+                            self.push_string_prefix_slice(offset);
+                        }
+                        ConcatenatePatternPart::Assign { .. } => todo!("js assign part"),
+                    }
+                }
+                self.push_assignment(subject.clone(), right_assignment.as_ref());
                 self.pop();
                 Ok(())
             }

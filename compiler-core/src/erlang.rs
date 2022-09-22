@@ -1365,12 +1365,10 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 }
 
 fn needs_wrapping_in_block(expression: &TypedExpr) -> bool {
-    match expression {
-        TypedExpr::Pipeline { .. } | TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. } => {
-            true
-        }
-        _ => false,
-    }
+    matches!(
+        expression,
+        TypedExpr::Pipeline { .. } | TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. }
+    )
 }
 
 fn todo<'a>(message: &'a Option<String>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
