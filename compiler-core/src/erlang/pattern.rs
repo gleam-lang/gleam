@@ -1,5 +1,3 @@
-use heck::ToPascalCase;
-
 use super::*;
 
 pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
@@ -54,16 +52,30 @@ pub(super) fn to_doc<'a>(
         ),
 
         Pattern::Concatenate {
-            left_side_string: left,
-            right_side_assignment: right,
-            ..
-        } => docvec![
-            "<<\"",
             left,
-            "\"/utf8, ",
-            Document::String(right.to_pascal_case()),
-            "/binary>>"
-        ],
+            right_assignment: right,
+            ..
+        } => {
+            let mut docs = Vec::with_capacity(left.len() * 2 + 5);
+            docs.push("<<".to_doc());
+            for item in left {
+                docs.push(concatenate_pattern_part_to_doc(item, env));
+                docs.push(", ".to_doc());
+            }
+            docs.push(env.local_var_name(right));
+            docs.push("/binary>>".to_doc());
+            docs.to_doc()
+        }
+    }
+}
+
+fn concatenate_pattern_part_to_doc<'a>(
+    part: &'a ConcatenatePatternPart,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    match part {
+        ConcatenatePatternPart::String { value, .. } => docvec!['"', value, "\"/utf8"],
+        ConcatenatePatternPart::Assign { name, .. } => docvec![env.local_var_name(name), "/binary"],
     }
 }
 
