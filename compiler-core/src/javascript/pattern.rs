@@ -353,24 +353,48 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::Concatenate {
-                left,
-                right_assignment,
-                ..
-            } => {
+            Pattern::Concatenate { left, right, .. } => {
+                let mut pushes = 0; // How many slices we've made into the string
+                let mut offset = 0; // How far into the string we have sliced
+
+                // Each `x <> ...`
                 for part in left {
-                    let mut offset = 0;
                     match part {
+                        // This part is a string literal, so we check that the
+                        // string has the expected prefix and then slice it off
+                        // for the next part to use the suffix.
                         ConcatenatePatternPart::String { value, .. } => {
+                            pushes += 1;
                             offset += value.len();
                             self.push_string_prefix_check(subject.clone(), value);
                             self.push_string_prefix_slice(offset);
                         }
-                        ConcatenatePatternPart::Assign { .. } => todo!("js assign part"),
+
+                        // This part is a string literal, we slice off the
+                        // prefix and assign it to a variable.
+                        ConcatenatePatternPart::Assign { .. } => todo!("js assign left part"),
                     }
                 }
-                self.push_assignment(subject.clone(), right_assignment.as_ref());
-                self.pop();
+
+                // The final `... <> y`
+                match right {
+                    // The final part is a string literal, in which case we
+                    // check to see if the given string has the specified suffix
+                    ConcatenatePatternPart::String { value, .. } => {
+                        self.push_equality_check(subject.clone(), expression::string(value));
+                    }
+
+                    // The final part is a variable, in which case we assign the
+                    // remaining suffix to a variable.
+                    ConcatenatePatternPart::Assign { name, .. } => {
+                        self.push_assignment(subject.clone(), name)
+                    }
+                }
+
+                // Reset the stack back to before all this slicing
+                for _ in 0..pushes {
+                    self.pop();
+                }
                 Ok(())
             }
 
