@@ -357,7 +357,11 @@ where
         let dest = paths::build_package(mode, target, name);
 
         // Elixir core libs must be loaded
-        self.maybe_link_elixir_libs(&build_dir)?;
+        package_compiler::maybe_link_elixir_libs(
+            &self.io,
+            &build_dir,
+            self.silence_subprocess_stdout,
+        )?;
 
         // Prevent Mix.Compilers.ApplicationTracer warnings
         // mix would make this if it didn't exist, but we make it anyway as
@@ -412,90 +416,6 @@ where
                 err: None,
             })
         }
-    }
-
-    fn maybe_link_elixir_libs(&mut self, build_dir: &PathBuf) -> Result<(), Error> {
-        // These Elixir core libs will be loaded with the current project
-        // Each should be linked into build/{target}/erlang if:
-        // - It isn't already
-        // - Its ebin dir doesn't exist (e.g. Elixir's path changed)
-        let elixir_libs = ["eex", "elixir", "logger", "mix"];
-
-        // The pathfinder is a file in build/{target}/erlang
-        // It contains the full path for each Elixir core lib we need, new-line delimited
-        // The pathfinder saves us from repeatedly loading Elixir to get this info
-        let mut update_links = false;
-        let pathfinder_name = "gleam_elixir_paths";
-        let pathfinder = build_dir.join(pathfinder_name);
-        if !self.io.is_file(&pathfinder) {
-            // The pathfinder must be written
-            // Any existing core lib links will get updated
-            update_links = true;
-            // TODO: test
-            let env = [("TERM", "dumb".into())];
-            // Prepare the libs for Erlang's code:lib_dir function
-            let elixir_atoms: Vec<String> =
-                elixir_libs.iter().map(|lib| format!(":{}", lib)).collect();
-            // Use Elixir to find its core lib paths and write the pathfinder file
-            let args = [
-                "--eval".into(),
-                format!(
-                    "File.write!(\"{}\", [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(\"\\n\"))",
-                    pathfinder_name,
-                    elixir_atoms.join(", "),
-                )
-                .into(),
-            ];
-            tracing::debug!("writing_elixir_paths_to_build");
-            let status = self.io.exec(
-                "elixir",
-                &args,
-                &env,
-                Some(&build_dir),
-                self.silence_subprocess_stdout,
-            )?;
-            if status != 0 {
-                return Err(Error::ShellCommand {
-                    program: "elixir".to_string(),
-                    err: None,
-                });
-            }
-        }
-
-        // Read the pathfinder's lines into a vector
-        let elixir_paths: Vec<PathBuf> = self
-            .io
-            .read(&pathfinder)?
-            .split('\n')
-            .map(PathBuf::from)
-            .collect();
-        for source in elixir_paths {
-            // Get the core lib name from its path
-            let name = source
-                .as_path()
-                .file_name()
-                .expect(&format!("Unexpanded path in {}", pathfinder_name));
-            // If links don't need updating
-            // Or build/{target}/erlang/{name}/ebin already exists
-            // Then this item is done
-            let dest = build_dir.join(name);
-            let ebin = dest.join("ebin");
-            if !update_links || self.io.is_directory(&ebin) {
-                continue;
-            }
-            // TODO: unit test
-            if self.io.is_directory(&dest) {
-                // Delete the existing link
-                self.io.delete(&dest)?;
-            }
-            tracing::debug!(
-                "linking_{}_to_build",
-                name.to_str().unwrap_or("elixir_core_lib"),
-            );
-            self.io.symlink_dir(&source, &dest)?;
-        }
-
-        Ok(())
     }
 
     fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {

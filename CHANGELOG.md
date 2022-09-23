@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Gleam can now compile Elixir files within a project's `src` directory.
 - The `<>` operator can now be used for string concatenation and for string
   prefix pattern matching.
 - Fixed a bug where TypeScript defintions may have incorrect type parameters.
