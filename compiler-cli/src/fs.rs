@@ -360,10 +360,7 @@ pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
                 .unwrap_or_default()
                 .to_str()
                 .unwrap_or_default();
-            match extension {
-                "erl" | "hrl" | "ex" | "js" | "mjs" => true,
-                _ => false,
-            }
+            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs")
         }))
 }
 

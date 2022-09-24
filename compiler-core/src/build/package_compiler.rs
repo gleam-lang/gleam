@@ -157,15 +157,11 @@ where
 
         let tmp_journal = self.lib.join("gleam_build_journal.tmp");
         if self.io.is_file(&tmp_journal) {
-            // Read the temporary journal's lines into a vector
-            let beam_paths: Vec<PathBuf> = self
-                .io
-                .read(&tmp_journal)?
-                .split('\n')
-                .map(PathBuf::from)
-                .collect();
-            for beam_path in beam_paths {
-                self.add_build_journal(beam_path);
+            // Consume the temporary journal
+            // Each line is a `.beam` file path
+            let read_tmp_journal = self.io.read(&tmp_journal)?;
+            for beam_path in read_tmp_journal.split('\n') {
+                self.add_build_journal(PathBuf::from(beam_path));
             }
             self.io.delete_file(&tmp_journal)?;
         }
@@ -215,6 +211,8 @@ where
     ) -> Result<()> {
         self.io.mkdir(&out)?;
 
+        // If `src` contains any `.ex` files, Elixir core libs must be loaded
+        let mut check_elixir_libs = true;
         for entry in self.io.read_dir(src_path)? {
             let path = entry.expect("copy_native_files dir_entry").pathbuf;
 
@@ -234,12 +232,15 @@ where
                     let _ = to_compile_modules.insert(relative_path.clone());
                 }
                 "ex" => {
-                    // Elixir core libs must be loaded
-                    maybe_link_elixir_libs(
-                        &self.io,
-                        &self.lib.to_path_buf(),
-                        self.silence_subprocess_stdout,
-                    )?;
+                    if check_elixir_libs {
+                        maybe_link_elixir_libs(
+                            &self.io,
+                            &self.lib.to_path_buf(),
+                            self.silence_subprocess_stdout,
+                        )?;
+                        // Check Elixir libs just once
+                        check_elixir_libs = false;
+                    }
                     let _ = to_compile_modules.insert(relative_path.clone());
                 }
                 _ => continue,
@@ -521,24 +522,19 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
         }
     }
 
-    // Read the pathfinder's lines into a vector
-    let elixir_paths: Vec<PathBuf> = io
-        .read(&pathfinder)?
-        .split('\n')
-        .map(PathBuf::from)
-        .collect();
-    for source in elixir_paths {
-        // Get the core lib name from its path
+    // Each pathfinder line is a system path for an Elixir core library
+    let read_pathfinder = io.read(&pathfinder)?;
+    for lib_path in read_pathfinder.split('\n') {
+        let source = PathBuf::from(lib_path);
         let name = source
             .as_path()
             .file_name()
             .expect(&format!("Unexpanded path in {}", pathfinder_name));
-        // If links don't need updating
-        // Or build/{target}/erlang/{name}/ebin already exists
-        // Then this item is done
         let dest = build_dir.join(name);
         let ebin = dest.join("ebin");
         if !update_links || io.is_directory(&ebin) {
+            // Either links don't need updating
+            // Or this library is already linked
             continue;
         }
         // TODO: unit test

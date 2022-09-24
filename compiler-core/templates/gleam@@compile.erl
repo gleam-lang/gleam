@@ -15,8 +15,14 @@ main(Args) ->
     ok = add_lib_to_erlang_path(Lib),
     ok = filelib:ensure_dir([Out, $/]),
     {ErlangOk, ErlangBeams} = compile_erlang(ErlangModules, Out),
-    {ElixirOk, ElixirBeams} = compile_elixir(ElixirModules, Out),
-    JournalOk = write_journal(ErlangBeams ++ ElixirBeams, Lib),
+    {ElixirOk, ElixirBeams} = case ErlangOk of
+        true -> compile_elixir(ElixirModules, Out);
+        false -> {false, []}
+    end,
+    JournalOk = case ErlangBeams ++ ElixirBeams of
+        [] -> true;
+        Beams -> write_journal(Beams, Lib)
+    end,
     case ErlangOk and ElixirOk and JournalOk of
         true -> ok;
         false -> erlang:halt(1)
@@ -76,9 +82,25 @@ worker_loop(Parent, Out) ->
     end.
 
 compile_elixir(Modules, Out) ->
+    Error = [
+        "The program elixir was not found. Is it installed?",
+        $\n,
+        "Documentation for installing Elixir can be viewed here:",
+        $\n,
+        "https://gleam.run/getting-started/"
+    ],
     case Modules of
         [] -> {true, []};
-        _ -> do_compile_elixir(Modules, Out)
+        _ ->
+            log({starting, "compiler.app"}),
+            ok = application:start(compiler),
+            log({starting, "elixir.app"}),
+            case application:start(elixir) of
+                ok -> do_compile_elixir(Modules, Out);
+                _ ->
+                    io:put_chars([Error, $\n]),
+                    {false, []}
+            end
     end.
 
 do_compile_elixir(Modules, Out) ->
@@ -89,8 +111,7 @@ do_compile_elixir(Modules, Out) ->
     OutBin = list_to_binary(Out),
     Options = [{dest, OutBin}],
     ShouldLog = should_log(),
-    ok = application:start(compiler),
-    ok = application:start(elixir),
+    % Silence "redefining module" warnings
     'Elixir.Code':compiler_options([{ignore_module_conflict, true}]),
     case 'Elixir.Kernel.ParallelCompiler':compile_to_path(ModuleBins, OutBin, Options) of
         {ok, ModuleAtoms, _} ->
@@ -111,13 +132,10 @@ do_compile_elixir(Modules, Out) ->
     end.
 
 write_journal(Beams, Lib) ->
-    NewLine = io_lib:nl(),
-    Contents = [string:join(Beams, NewLine), NewLine],
     Journal = filename:join(Lib, "gleam_build_journal.tmp"),
-    case file:write_file(Journal, Contents) of
-        ok ->
-            log({wrote, Journal}),
-            true;
+    log({writing, Journal}),
+    case file:write_file(Journal, string:join(Beams, "\n")) of
+        ok -> true;
         {error, Reason} ->
             log({failed_to_write, Journal, Reason}),
             false
