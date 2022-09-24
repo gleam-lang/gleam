@@ -840,15 +840,18 @@ where
                     let _ = self.next_tok();
                     let left = vec![ConcatenatePatternPart::String { location, value }];
                     let (r_start, name, r_end) = self.expect_name()?;
-                    let right = ConcatenatePatternPart::Assign {
-                        location: SrcSpan::new(r_start, r_end),
-                        name,
-                    };
 
                     Pattern::Concatenate {
-                        location: SrcSpan::new(location.start, r_end),
+                        location: SrcSpan {
+                            start: location.start,
+                            end: r_end,
+                        },
                         left,
-                        right,
+                        right_location: SrcSpan {
+                            start: r_start,
+                            end: r_end,
+                        },
+                        right_assignment: name,
                     }
 
                 // Full string matching

@@ -51,15 +51,19 @@ pub(super) fn to_doc<'a>(
                 .map(|s| pattern_segment(&s.value, &s.options, vars, env)),
         ),
 
-        Pattern::Concatenate { left, right, .. } => {
+        Pattern::Concatenate {
+            left,
+            right_assignment: right,
+            ..
+        } => {
             let mut docs = Vec::with_capacity(left.len() * 2 + 5);
             docs.push("<<".to_doc());
             for item in left {
                 docs.push(concatenate_pattern_part_to_doc(item, env));
                 docs.push(", ".to_doc());
             }
-            docs.push(concatenate_pattern_part_to_doc(right, env));
-            docs.push(">>".to_doc());
+            docs.push(env.local_var_name(right));
+            docs.push("/binary>>".to_doc());
             docs.to_doc()
         }
     }
