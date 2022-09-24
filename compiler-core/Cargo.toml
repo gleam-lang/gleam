@@ -59,7 +59,7 @@ tar = "0.4.37"
 # gzip compression
 flate2 = "1.0.22"
 # Helper for wrapping text onto lines based upon width
-textwrap = { version = "0.15.0", features = ["terminal_size"] }
+textwrap = { version = "=0.15.0", features = ["terminal_size"] }
 # base encoding
 base16 = "0.2.1"
 # toml config file parsing
