@@ -941,9 +941,6 @@ pub struct SrcSpan {
 }
 
 impl SrcSpan {
-    pub fn new(start: u32, end: u32) -> Self {
-        SrcSpan { start, end }
-    }
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index < self.end
     }
@@ -1035,7 +1032,8 @@ pub enum Pattern<Constructor, Type> {
     Concatenate {
         location: SrcSpan,
         left: Vec<ConcatenatePatternPart>,
-        right: ConcatenatePatternPart,
+        right_location: SrcSpan,
+        right_assignment: String, // TODO: permit this to be a variable. Convert to ConcatenatePatternPart
     },
 }
 
