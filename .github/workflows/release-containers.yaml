@@ -21,7 +21,7 @@ jobs:
           - node-slim
           - node-alpine
 
-    steps: 
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v2
 
@@ -58,7 +58,7 @@ jobs:
       - name: Download Gleam archive from GitHub release
         run: |
           VERSION=${{ steps.versions.outputs.v_version }}
-          URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-aarch64-unknown-linux-musl.tar.gz
+          URL=https://github.com/${{ github.repository }}/releases/download/$VERSION/gleam-$VERSION-x86_64-unknown-linux-musl.tar.gz
           echo Downloading $URL
           curl -Lo gleam.tar.gz $URL
 
