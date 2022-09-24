@@ -5,7 +5,7 @@ use itertools::Itertools;
 ///! and variables bindings.
 ///!
 use super::*;
-use crate::ast::{ConcatenatePatternPart, UntypedPatternBitStringSegment};
+use crate::ast::UntypedPatternBitStringSegment;
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
@@ -246,27 +246,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::Concatenate {
                 location,
-                left,
+                left_location,
                 right_location,
-                right_assignment: right_side_assignment,
+                left_side_string,
+                right_side_assignment,
             } => {
                 // The entire concatenate pattern must be a string
                 self.environment
                     .unify(type_, string())
                     .map_err(|e| convert_unify_error(e, location))?;
-
-                for part in &left {
-                    match part {
-                        // A string literal is always valid.
-                        ConcatenatePatternPart::String { .. } => (),
-
-                        // TODO: guard check
-                        // If a variable is assigned we need to ensure that the
-                        // guard checks equality with it so that we know the
-                        // length of the substring.
-                        ConcatenatePatternPart::Assign { .. } => todo!("type concat assign"),
-                    }
-                }
 
                 // The right hand side assigns a variable, the suffix of the string
                 self.insert_variable(right_side_assignment.as_ref(), string(), right_location)
@@ -274,9 +262,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 Ok(Pattern::Concatenate {
                     location,
-                    left,
+                    left_location,
                     right_location,
-                    right_assignment: right_side_assignment,
+                    left_side_string,
+                    right_side_assignment,
                 })
             }
 
@@ -376,12 +365,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
                     self.environment
-                        .unify(tuple(elems_types.clone()), type_)
+                        .unify(tuple(elems_types.clone()), type_.clone())
                         .map_err(|e| convert_unify_error(e, location))?;
                     let elems = elems
                         .into_iter()
                         .zip(elems_types)
-                        .map(|(pattern, type_)| self.unify(pattern, type_))
+                        .map(|(pattern, typ)| self.unify(pattern, typ))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }

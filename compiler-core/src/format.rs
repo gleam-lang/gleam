@@ -1291,27 +1291,12 @@ impl<'comments> Formatter<'comments> {
             ),
 
             Pattern::Concatenate {
-                left,
-                right_assignment: right,
+                left_side_string: left,
+                right_side_assignment: right,
                 ..
-            } => {
-                let docs = left
-                    .iter()
-                    .map(|p| self.concatenate_pattern_part(p))
-                    .chain(std::iter::once(right.to_doc()));
-                Itertools::intersperse(docs, " <> ".to_doc())
-                    .collect_vec()
-                    .to_doc()
-            }
+            } => docvec![self.string(left), " <> ", right],
         };
         commented(doc, comments)
-    }
-
-    fn concatenate_pattern_part<'a>(&mut self, part: &'a ConcatenatePatternPart) -> Document<'a> {
-        match part {
-            ConcatenatePatternPart::Assign { name, .. } => name.to_doc(),
-            ConcatenatePatternPart::String { value, .. } => self.string(value),
-        }
     }
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {

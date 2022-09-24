@@ -1031,24 +1031,11 @@ pub enum Pattern<Constructor, Type> {
 
     Concatenate {
         location: SrcSpan,
-        left: Vec<ConcatenatePatternPart>,
+        left_location: SrcSpan,
         right_location: SrcSpan,
-        right_assignment: String, // TODO: permit this to be a variable. Convert to ConcatenatePatternPart
+        left_side_string: String,
+        right_side_assignment: String,
     },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ConcatenatePatternPart {
-    String { location: SrcSpan, value: String },
-    Assign { location: SrcSpan, name: String },
-}
-
-impl ConcatenatePatternPart {
-    pub fn location(&self) -> SrcSpan {
-        match self {
-            Self::String { location, .. } | Self::Assign { location, .. } => *location,
-        }
-    }
 }
 
 impl<A, B> Pattern<A, B> {
