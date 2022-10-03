@@ -66,3 +66,14 @@ pub fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn string_of_number_concat() {
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  x <> "1"
+}
+"#,
+    );
+}

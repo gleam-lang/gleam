@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 72
+expression: "\npub fn go(x) {\n  x <> \"1\"\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(binary()) -> binary().
+go(X) ->
+    <<X/binary, "1"/utf8>>.
+
