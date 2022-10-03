@@ -283,6 +283,8 @@ fn find_node_module_select() {
         module_name: "name".into(),
         module_alias: "alias".into(),
         constructor: ModuleValueConstructor::Fn {
+            module: vec!["module".into()],
+            name: "function".into(),
             location: SrcSpan { start: 1, end: 55 },
         },
     };

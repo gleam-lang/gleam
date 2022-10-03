@@ -1201,13 +1201,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
+
+        let constructor = match &constructor.variant {
+            variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
+                variant.to_module_value_constructor(Arc::clone(&type_), &module, &name)
+            }
+
+            variant @ ValueConstructorVariant::LocalVariable { .. }
+            | variant @ ValueConstructorVariant::ModuleConstant { .. }
+            | variant @ ValueConstructorVariant::Record { .. } => {
+                variant.to_module_value_constructor(Arc::clone(&type_), &module_name, &label)
+            }
+        };
+
         Ok(TypedExpr::ModuleSelect {
             label,
-            typ: type_.clone(),
+            typ: Arc::clone(&type_),
             location: select_location,
             module_name: module_name.join("/"),
             module_alias: module_alias.to_string(),
-            constructor: constructor.variant.to_module_value_constructor(type_),
+            constructor,
         })
     }
 
@@ -1615,23 +1628,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // TODO: resvisit this. It is rather awkward at present how we
                 // have to convert to this other data structure.
                 let fun = match &module {
-                    Some(module_name) => TypedExpr::ModuleSelect {
-                        label: name.clone(),
-                        module_name: self
+                    Some(module_name) => {
+                        let typ = Arc::clone(&constructor.type_);
+                        let module_name = self
                             .environment
                             .imported_modules
                             .get(module_name)
                             .expect("Failed to find previously located module import")
                             .1
                             .name
-                            .join("/"),
-                        typ: constructor.type_.clone(),
-                        module_alias: module_name.clone(),
-                        constructor: constructor
-                            .variant
-                            .to_module_value_constructor(constructor.type_.clone()),
-                        location,
-                    },
+                            .join("/");
+                        let module_value_constructor = ModuleValueConstructor::Record {
+                            name: name.clone(),
+                            field_map: field_map.clone(),
+                            arity: args.len() as u16,
+                            type_: Arc::clone(&typ),
+                            location: constructor.variant.definition_location(),
+                        };
+
+                        TypedExpr::ModuleSelect {
+                            label: name.clone(),
+                            module_alias: module_name.clone(),
+                            module_name,
+                            typ,
+                            constructor: module_value_constructor,
+                            location,
+                        }
+                    }
 
                     None => TypedExpr::Var {
                         constructor,
