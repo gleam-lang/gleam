@@ -75,3 +75,18 @@ pub fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn discard_concat_rest_pattern() {
+    // We can discard the right hand side, it parses and type checks ok
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " <> _ -> Nil
+    _ -> Nil
+  }
+}
+"#,
+    );
+}

@@ -360,7 +360,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
                 self.push_string_prefix_slice(left_side_string.len());
-                self.push_assignment(subject.clone(), right_side_assignment.as_ref());
+                if let AssignName::Variable(right) = right_side_assignment {
+                    self.push_assignment(subject.clone(), right.as_ref());
+                }
                 self.pop();
                 Ok(())
             }

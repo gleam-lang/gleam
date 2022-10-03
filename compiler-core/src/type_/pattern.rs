@@ -5,7 +5,7 @@ use itertools::Itertools;
 ///! and variables bindings.
 ///!
 use super::*;
-use crate::ast::UntypedPatternBitStringSegment;
+use crate::ast::{AssignName, UntypedPatternBitStringSegment};
 use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
@@ -256,9 +256,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .unify(type_, string())
                     .map_err(|e| convert_unify_error(e, location))?;
 
-                // The right hand side assigns a variable, the suffix of the string
-                self.insert_variable(right_side_assignment.as_ref(), string(), right_location)
-                    .map_err(|e| convert_unify_error(e, location))?;
+                // The right hand side may assign a variable, which is the suffix of the string
+                if let AssignName::Variable(right) = &right_side_assignment {
+                    self.insert_variable(right.as_ref(), string(), right_location)
+                        .map_err(|e| convert_unify_error(e, location))?;
+                };
 
                 Ok(Pattern::Concatenate {
                     location,

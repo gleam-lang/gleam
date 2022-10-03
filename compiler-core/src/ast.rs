@@ -1029,13 +1029,22 @@ pub enum Pattern<Constructor, Type> {
         segments: Vec<BitStringSegment<Self, Type>>,
     },
 
+    // "prefix" <> variable
     Concatenate {
         location: SrcSpan,
         left_location: SrcSpan,
         right_location: SrcSpan,
         left_side_string: String,
-        right_side_assignment: String,
+        /// The variable on the right hand side of the `<>`. It is `None` if the
+        /// variable stars with `_` (it is a discard and assigns no variable).
+        right_side_assignment: AssignName,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AssignName {
+    Variable(String),
+    Discard(String),
 }
 
 impl<A, B> Pattern<A, B> {
