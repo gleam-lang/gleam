@@ -10,5 +10,5 @@ expression: "import atom\npub fn main() {\n  atom.make(\"ok\")\n}\n"
 
 -spec main() -> binary().
 main() ->
-    atom:make(<<"ok"/utf8>>).
+    erlang:binary_to_atom(<<"ok"/utf8>>).
 

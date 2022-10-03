@@ -294,7 +294,12 @@ pub enum ValueConstructorVariant {
 }
 
 impl ValueConstructorVariant {
-    fn to_module_value_constructor(&self, type_: Arc<Type>) -> ModuleValueConstructor {
+    fn to_module_value_constructor(
+        &self,
+        type_: Arc<Type>,
+        module_name: &[String],
+        function_name: &str,
+    ) -> ModuleValueConstructor {
         match self {
             Self::Record {
                 name,
@@ -318,11 +323,22 @@ impl ValueConstructorVariant {
                 location: *location,
             },
 
-            Self::LocalVariable { location, .. } | Self::ModuleFn { location, .. } => {
-                ModuleValueConstructor::Fn {
-                    location: *location,
-                }
-            }
+            Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
+                name: function_name.to_string(),
+                module: module_name.to_vec(),
+                location: *location,
+            },
+
+            Self::ModuleFn {
+                name,
+                module,
+                location,
+                ..
+            } => ModuleValueConstructor::Fn {
+                name: name.clone(),
+                module: module.clone(),
+                location: *location,
+            },
         }
     }
 
@@ -361,6 +377,20 @@ pub enum ModuleValueConstructor {
 
     Fn {
         location: SrcSpan,
+        /// The name of the module and the function
+        /// Typically this will be the module that this constructor belongs to
+        /// and the name that was used for the function. However it could also
+        /// point to some other module and function when this is an `external fn`.
+        ///
+        /// This function has module "themodule" and name "wibble"
+        ///     pub fn wibble() { Nil }
+        ///
+        /// This function has module "other" and name "whoop"
+        ///     pub external fn wibble() -> Nil =
+        ///       "other" "whoop"
+        ///
+        module: Vec<String>,
+        name: String,
     },
 
     Constant {
@@ -372,7 +402,7 @@ pub enum ModuleValueConstructor {
 impl ModuleValueConstructor {
     pub fn location(&self) -> SrcSpan {
         match self {
-            ModuleValueConstructor::Fn { location }
+            ModuleValueConstructor::Fn { location, .. }
             | ModuleValueConstructor::Record { location, .. }
             | ModuleValueConstructor::Constant { location, .. } => *location,
         }

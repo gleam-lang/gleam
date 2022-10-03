@@ -1271,15 +1271,21 @@ fn docs_args_call<'a>(
         }
 
         TypedExpr::ModuleSelect {
-            module_name,
-            label,
-            constructor: ModuleValueConstructor::Fn { .. },
+            constructor: ModuleValueConstructor::Fn { module, name, .. },
             ..
         } => {
             let args = wrap_args(args);
-            atom(module_name.replace('/', "@"))
+            // We use the constructor Fn variant's `module` and function `name`.
+            // It would also be valid to use the module and label as in the
+            // Gleam code, but using the variant can result in an optimisation
+            // in which the target function is used for `external fn`s, removing
+            // one layer of wrapping.
+            // This also enables an optimisation in the Erlang compiler in which
+            // some Erlang BIFs can be replaced with literals if their arguments
+            // are literals, such as `binary_to_atom`.
+            atom(module.join("@"))
                 .append(":")
-                .append(atom(label.to_string()))
+                .append(atom(name.to_string()))
                 .append(args)
         }
 
