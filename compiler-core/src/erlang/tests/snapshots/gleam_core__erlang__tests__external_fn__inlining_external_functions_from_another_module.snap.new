@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 47
+expression: "import atom\npub fn main() {\n  atom.make(\"ok\")\n}\n"
+---
+-module(my@mod).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> binary().
+main() ->
+    atom:make(<<"ok"/utf8>>).
+
