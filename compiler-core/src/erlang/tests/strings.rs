@@ -35,3 +35,19 @@ pub fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn rest_variable_rewriting() {
+    // This test checks that the the variable on the right hand side of <> has
+    // it's name written correctly when it shadows an existing variable
+    assert_erl!(
+        r#"
+pub fn go(x) {
+  case x {
+    "Hello, " <> x -> x
+    _ -> "Unknown"
+  }
+}
+"#,
+    );
+}
