@@ -536,11 +536,10 @@ fn string_concatenate<'a>(
 }
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    let value = match value {
-        TypedExpr::String { value, .. } => value.to_doc(),
-        _ => maybe_block_expr(value, env),
-    };
-    value.append("/binary")
+    match value {
+        TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
+        _ => maybe_block_expr(value, env).append("/binary"),
+    }
 }
 
 fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
