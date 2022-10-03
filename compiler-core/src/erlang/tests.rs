@@ -1,6 +1,7 @@
 mod assert;
 mod bit_strings;
 mod case;
+mod external_fn;
 mod guards;
 mod numbers;
 mod patterns;
@@ -104,11 +105,6 @@ fn integration_test1_2() {
 }
 
 #[test]
-fn integration_test1_3() {
-    assert_erl!(r#"pub external fn run() -> Int = "Elixir.MyApp" "run""#);
-}
-
-#[test]
 fn integration_test1_4() {
     assert_erl!(
         r#"fn inc(x) { x + 1 }
@@ -152,14 +148,6 @@ fn integration_test5() {
 #[test]
 fn integration_test6() {
     assert_erl!(r#"pub fn x() { let x = 1 let x = x + 1 x }"#);
-}
-
-#[test]
-fn integration_test7() {
-    assert_erl!(
-        r#"pub external fn receive() -> Int = "try" "and"
-                    pub fn catch(x) { receive() }"#
-    );
 }
 
 #[test]
@@ -209,34 +197,6 @@ fn integration_test13() {
         r#"pub type State{ Start(Int) End(Int) }
             pub fn build(constructor : fn(Int) -> a) -> a { constructor(1) }
             pub fn main() { build(End) }"#
-    );
-}
-
-#[test]
-fn integration_test14() {
-    // Private external function calls are simply inlined
-    assert_erl!(
-        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
-pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
-    );
-}
-
-#[test]
-fn integration_test4() {
-    // Public external function calls are inlined but the wrapper function is
-    // also printed in the erlang output and exported
-    assert_erl!(
-        r#"pub external fn go(x: Int, y: Int) -> Int = "m" "f"
-                    fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
-    );
-}
-
-#[test]
-fn integration_test15() {
-    // Private external function references are inlined
-    assert_erl!(
-        r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
-pub fn x() { go }"#
     );
 }
 
