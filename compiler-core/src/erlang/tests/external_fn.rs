@@ -40,3 +40,39 @@ fn private_local_function_references() {
 pub fn x() { go }"#
     );
 }
+
+// TODO: link to the issue
+#[test]
+fn inlining_external_functions_from_another_module() {
+    assert_erl!(
+        (
+            "lib",
+            vec!["atom".to_string()],
+            "pub external type Atom
+pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
+        ),
+        "import atom
+pub fn main() {
+  atom.make(\"ok\")
+}
+"
+    );
+}
+
+// TODO: link to the issue
+#[test]
+fn unqualified_inlining_external_functions_from_another_module() {
+    assert_erl!(
+        (
+            "lib",
+            vec!["atom".to_string()],
+            "pub external type Atom
+pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
+        ),
+        "import atom.{make}
+pub fn main() {
+  make(\"ok\")
+}
+"
+    );
+}
