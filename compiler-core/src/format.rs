@@ -1294,7 +1294,13 @@ impl<'comments> Formatter<'comments> {
                 left_side_string: left,
                 right_side_assignment: right,
                 ..
-            } => docvec![self.string(left), " <> ", right],
+            } => {
+                let right = match right {
+                    AssignName::Variable(name) => name.to_doc(),
+                    AssignName::Discard(name) => name.to_doc(),
+                };
+                docvec![self.string(left), " <> ", right]
+            }
         };
         commented(doc, comments)
     }

@@ -55,13 +55,13 @@ pub(super) fn to_doc<'a>(
             left_side_string: left,
             right_side_assignment: right,
             ..
-        } => docvec![
-            "<<\"",
-            left,
-            "\"/utf8, ",
-            env.next_local_var_name(right),
-            "/binary>>"
-        ],
+        } => {
+            let right = match right {
+                AssignName::Variable(right) => env.next_local_var_name(right),
+                AssignName::Discard(_) => "_".to_doc(),
+            };
+            docvec!["<<\"", left, "\"/utf8, ", right, "/binary>>"]
+        }
     }
 }
 

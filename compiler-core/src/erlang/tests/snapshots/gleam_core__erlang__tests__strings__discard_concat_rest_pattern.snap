@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 58
+expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> _ -> Nil\n    _ -> Nil\n  }\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/1]).
+
+-spec go(binary()) -> nil.
+go(X) ->
+    case X of
+        <<"Hello, "/utf8, _/binary>> ->
+            nil;
+
+        _@1 ->
+            nil
+    end.
+
