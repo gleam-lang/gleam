@@ -164,6 +164,10 @@ p code {
   max-width: var(--content-width);
 }
 
+.content img {
+  max-width: 100vw;
+}
+
 /* Page header */
 
 .page-header {
