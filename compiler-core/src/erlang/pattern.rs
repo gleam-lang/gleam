@@ -1,5 +1,3 @@
-use heck::ToPascalCase;
-
 use super::*;
 
 pub(super) fn pattern<'a>(p: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
