@@ -65,7 +65,7 @@ macro_rules! assert_js {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
+    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
         use std::path::Path;
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -102,7 +102,7 @@ macro_rules! assert_js {
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $erl.to_string()));
+        assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
@@ -134,7 +134,7 @@ macro_rules! assert_js {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    ($src:expr, $erl:expr $(,)?) => {{
+    ($src:expr, $js:expr $(,)?) => {{
         use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = im::HashMap::new();
@@ -160,7 +160,7 @@ macro_rules! assert_js {
         let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
         module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $erl.to_string()));
+        assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
 
@@ -206,7 +206,7 @@ macro_rules! assert_ts_def {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $erl:expr $(,)?) => {{
+    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
         use std::path::Path;
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -242,7 +242,7 @@ macro_rules! assert_ts_def {
         .expect("should successfully infer");
         let mut output = String::new();
         ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $erl.to_string()));
+        assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
@@ -273,7 +273,7 @@ macro_rules! assert_ts_def {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    ($src:expr, $erl:expr $(,)?) => {{
+    ($src:expr, $js:expr $(,)?) => {{
         use crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = im::HashMap::new();
@@ -298,6 +298,6 @@ macro_rules! assert_ts_def {
         .expect("should successfully infer");
         let mut output = String::new();
         ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
-        assert_eq!(($src, output), ($src, $erl.to_string()));
+        assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }

@@ -14,7 +14,7 @@ fn integration_test7() {
 }
 
 #[test]
-fn integration_test14() {
+fn private_external_function_calls() {
     // Private external function calls are inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
@@ -23,7 +23,7 @@ pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"#
 }
 
 #[test]
-fn integration_test4() {
+fn public_local_function_calls() {
     // Public external function calls are inlined but the wrapper function is
     // also printed in the erlang output and exported
     assert_erl!(
@@ -33,7 +33,7 @@ fn integration_test4() {
 }
 
 #[test]
-fn integration_test15() {
+fn private_local_function_references() {
     // Private external function references are inlined
     assert_erl!(
         r#"external fn go(x: Int, y: Int) -> Int = "m" "f"
