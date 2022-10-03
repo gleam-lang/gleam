@@ -61,7 +61,7 @@ pub(super) fn to_doc<'a>(
             "<<\"",
             left,
             "\"/utf8, ",
-            Document::String(right.to_pascal_case()),
+            env.next_local_var_name(right),
             "/binary>>"
         ],
     }
