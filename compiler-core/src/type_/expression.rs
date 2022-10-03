@@ -1204,12 +1204,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let constructor = match &constructor.variant {
             variant @ ValueConstructorVariant::ModuleFn { name, module, .. } => {
-                variant.to_module_value_constructor(Arc::clone(&type_), &module, &name)
+                variant.to_module_value_constructor(Arc::clone(&type_), module, name)
             }
 
-            variant @ ValueConstructorVariant::LocalVariable { .. }
-            | variant @ ValueConstructorVariant::ModuleConstant { .. }
-            | variant @ ValueConstructorVariant::Record { .. } => {
+            variant @ (ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::Record { .. }) => {
                 variant.to_module_value_constructor(Arc::clone(&type_), &module_name, &label)
             }
         };
