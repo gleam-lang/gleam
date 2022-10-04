@@ -823,6 +823,7 @@ where
                 self.tok0 = Some((start, tok, end));
                 self.expect_constructor_pattern(None)?
             }
+
             Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
                 Pattern::Discard {
@@ -830,6 +831,10 @@ where
                     name,
                 }
             }
+
+            // TODO: add a helpful error message explaining why we can't use a
+            // pattern on the lhs if they try to do so. The error would not be
+            // emitted here unfortunately.
             Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
                 let location = SrcSpan { start, end };
