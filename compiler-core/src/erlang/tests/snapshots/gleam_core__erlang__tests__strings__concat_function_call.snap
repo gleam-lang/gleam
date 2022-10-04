@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 83
+expression: "\nfn x() {\n  \"\"\n}\n\npub fn go() {\n  x() <> x()\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec x() -> binary().
+x() ->
+    <<""/utf8>>.
+
+-spec go() -> binary().
+go() ->
+    <<(x())/binary, (x())/binary>>.
+
