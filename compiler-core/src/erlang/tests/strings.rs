@@ -77,3 +77,18 @@ pub fn go(x) {
 "#,
     );
 }
+
+#[test]
+fn concat_function_call() {
+    assert_erl!(
+        r#"
+fn x() {
+  ""
+}
+
+pub fn go() {
+  x() <> x()
+}
+"#,
+    );
+}
