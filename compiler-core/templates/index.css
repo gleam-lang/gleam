@@ -165,7 +165,7 @@ p code {
 }
 
 .content img {
-  max-width: 100vw;
+  max-width: 100%;
 }
 
 /* Page header */
