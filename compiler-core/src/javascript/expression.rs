@@ -16,6 +16,7 @@ pub(crate) struct Generator<'module> {
     function_arguments: Vec<Option<&'module str>>,
     current_scope_vars: im::HashMap<String, usize>,
     pub tail_position: bool,
+    pub in_iife: bool,
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
     pub tracker: &'module mut UsageTracker,
@@ -47,6 +48,7 @@ impl<'module> Generator<'module> {
             tail_recursion_used: false,
             current_scope_vars,
             tail_position: true,
+            in_iife: false,
         }
     }
 
@@ -281,12 +283,24 @@ impl<'module> Generator<'module> {
         &mut self,
         expression: &'a TypedExpr,
     ) -> Output<'a> {
+        // Save initial state
         let tail = self.tail_position;
+        let iife = self.in_iife;
+
+        // Set state for in this iife
         self.tail_position = true;
+        self.in_iife = true;
         let current_scope_vars = self.current_scope_vars.clone();
+
+        // Generate the expression
         let result = self.expression(expression);
+
+        // Reset
+        self.in_iife = iife;
         self.tail_position = tail;
         self.current_scope_vars = current_scope_vars;
+
+        // Wrap in iife document
         Ok(self.immediately_involked_function_expression_document(result?))
     }
 
@@ -704,6 +718,7 @@ impl<'module> Generator<'module> {
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
                 if self.function_name == Some(name)
+                    && !self.in_iife
                     && self.tail_position
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {

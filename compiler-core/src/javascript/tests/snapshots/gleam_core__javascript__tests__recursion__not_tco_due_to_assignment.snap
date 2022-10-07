@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+assertion_line: 36
+expression: "\npub fn main(x) {\n  let z = {\n    let y = x\n    main(y - 1)\n  }\n  z\n}\n"
+---
+export function main(x) {
+  let z = (() => {
+    let y = x;
+    return main(y - 1);
+  })();
+  return z;
+}
+
