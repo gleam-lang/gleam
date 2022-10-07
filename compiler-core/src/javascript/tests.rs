@@ -13,6 +13,7 @@ mod modules;
 mod numbers;
 mod prelude;
 mod records;
+mod recursion;
 mod results;
 mod strings;
 mod todo;

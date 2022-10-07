@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+assertion_line: 19
+expression: "\npub fn main(x) {\n  case x {\n    0 -> Nil\n    _ -> {\n      let y = x\n      main(y - 1)\n    }\n  }\n}\n"
+---
+export function main(loop$x) {
+  while (true) {
+    let x = loop$x;
+    if (x === 0) {
+      return undefined;
+    } else {
+      let y = x;
+      loop$x = y - 1;
+    }
+  }
+}
+
