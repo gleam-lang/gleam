@@ -8,6 +8,8 @@
 - If you attempt to use the method call syntax (`thing.method()`) on a value
   without that field the error message will now include a hint explaining that
   Gleam is not object oriented and does not have methods.
+- Fixed a bug in the formatter where multiple line documentation comments for
+  custom type constructor fields could be formatted incorrectly.
 
 ## v0.23.0 - 2022-09-15
 
