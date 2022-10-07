@@ -407,15 +407,15 @@ impl<'comments> Formatter<'comments> {
         let mut comments = self.pop_doc_comments(limit).peekable();
         match comments.peek() {
             None => nil(),
-            Some(_) => join(
-                comments.map(|c| match c {
-                    Some(c) => "///".to_doc().append(Document::String(c.to_string())),
-                    None => unreachable!("empty lines dropped by pop_doc_comments"),
-                }),
-                line(),
-            )
-            .append(force_break())
-            .append(line()),
+            Some(_) => force_break()
+                .append(join(
+                    comments.map(|c| match c {
+                        Some(c) => "///".to_doc().append(Document::String(c.to_string())),
+                        None => unreachable!("empty lines dropped by pop_doc_comments"),
+                    }),
+                    line(),
+                ))
+                .append(line()),
         }
     }
 

@@ -3676,3 +3676,21 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1757
+#[test]
+fn multiple_line_custom_type_constructor_field_doc_comments() {
+    assert_format!(
+        r#"pub type Thingy {
+  Thingy(
+    /// One?
+    /// One!
+    one: One,
+    /// Two?
+    /// Two!
+    two: Two,
+  )
+}
+"#
+    );
+}
