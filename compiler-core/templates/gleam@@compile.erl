@@ -98,7 +98,7 @@ compile_elixir(Modules, Out) ->
             case application:start(elixir) of
                 ok -> do_compile_elixir(Modules, Out);
                 _ ->
-                    io:put_chars([Error, $\n]),
+                    io:put_chars(standard_error, [Error, $\n]),
                     {false, []}
             end
     end.
@@ -110,8 +110,10 @@ do_compile_elixir(Modules, Out) ->
     end, Modules),
     OutBin = list_to_binary(Out),
     Options = [{dest, OutBin}],
-    ShouldLog = should_log(),
-    % Silence "redefining module" warnings
+    % Silence "redefining module" warnings.
+    % Compiled modules in the build directory are added to the code path.
+    % These warnings result from recompiling loaded modules.
+    % TODO: This line can likely be removed if/when the build directory is cleaned before every compilation.
     'Elixir.Code':compiler_options([{ignore_module_conflict, true}]),
     case 'Elixir.Kernel.ParallelCompiler':compile_to_path(ModuleBins, OutBin, Options) of
         {ok, ModuleAtoms, _} ->
@@ -121,7 +123,9 @@ do_compile_elixir(Modules, Out) ->
                 Beam
             end,
             {true, lists:map(ToBeam, ModuleAtoms)};
-        {error, Errors, _} when ShouldLog ->
+        {error, Errors, _} ->
+            % Log all filenames associated with modules that failed to compile.
+            % Note: The compiler prints compilation errors upon encountering them.
             ErrorFiles = lists:usort([File || {File, _, _} <- Errors]),
             Log = fun(File) ->
                 log({failed, binary_to_list(File)})
@@ -161,10 +165,7 @@ configure_logging() ->
     persistent_term:put(gleam_logging_enabled, Enabled).
 
 log(Term) ->
-    case should_log() of
+    case persistent_term:get(gleam_logging_enabled) of
         true -> erlang:display(Term), ok;
         false -> ok
     end.
-
-should_log() ->
-    persistent_term:get(gleam_logging_enabled).
