@@ -70,6 +70,7 @@ pub enum Error {
         typ: Arc<Type>,
         label: String,
         fields: Vec<String>,
+        situation: Option<UnknownRecordFieldSituation>,
     },
 
     IncorrectArity {
@@ -221,6 +222,18 @@ pub enum Error {
         location: SrcSpan,
         unmatched: Vec<String>,
     },
+}
+
+impl Error {
+    pub fn call_situation(mut self) -> Self {
+        if let Error::UnknownRecordField {
+            ref mut situation, ..
+        } = self
+        {
+            *situation = Some(UnknownRecordFieldSituation::FunctionCall);
+        }
+        self
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -523,6 +536,12 @@ fn unify_enclosed_type_test() {
             })
         )
     );
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnknownRecordFieldSituation {
+    /// This unknown record field is being called as a function. i.e. `record.field()`
+    FunctionCall,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

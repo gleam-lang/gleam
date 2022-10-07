@@ -1762,3 +1762,18 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn hint_for_method_call() {
+    assert_module_error!(
+        "
+pub type User {
+  User(id: Int, name: String)
+}
+
+pub fn main(user: User) {
+  user.login()
+}
+"
+    );
+}

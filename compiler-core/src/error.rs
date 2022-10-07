@@ -5,7 +5,7 @@ use crate::{
     bit_string,
     diagnostic::Level,
     javascript,
-    type_::{pretty::Printer, UnifyErrorSituation},
+    type_::{pretty::Printer, UnifyErrorSituation, UnknownRecordFieldSituation},
 };
 use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
@@ -1038,16 +1038,21 @@ Hint: Add some type annotations and try again."
                 }
 
                 TypeError::UnknownRecordField {
+                    situation,
                     location,
                     typ,
                     label,
                     fields,
                 } => {
                     let mut printer = Printer::new();
+
+                    // Give a hint about what type this value has.
                     let mut text = format!(
                         "The value being accessed has this type:\n\n{}\n",
                         printer.pretty_print(typ, 4)
                     );
+
+                    // Give a hint about what record fields this value has, if any.
                     if fields.is_empty() {
                         text.push_str("\nIt does not have any fields.");
                     } else {
@@ -1057,6 +1062,24 @@ Hint: Add some type annotations and try again."
                         text.push_str("\n    .");
                         text.push_str(field);
                     }
+
+                    // Give a hint about Gleam not having OOP methods if it
+                    // looks like they might be trying to call one.
+                    match situation {
+                        Some(UnknownRecordFieldSituation::FunctionCall) => {
+                            let msg = wrap(
+                                "Gleam is not object oriented, so if you are trying \
+to call a method on this value you may want to use the function syntax instead.",
+                            );
+                            text.push_str("\n\n");
+                            text.push_str(&msg);
+                            text.push_str("\n\n    ");
+                            text.push_str(label);
+                            text.push_str("(value)");
+                        }
+                        None => (),
+                    }
+
                     let label = did_you_mean(label, fields)
                         .unwrap_or_else(|| "This field does not exist".into());
                     Diagnostic {

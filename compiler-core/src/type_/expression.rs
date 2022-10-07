@@ -355,7 +355,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
+        let (fun, args, typ) = self
+            .do_infer_call(fun, args, location)
+            .map_err(Error::call_situation)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -1253,6 +1255,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Error constructor helper function
         let unknown_field = |fields| Error::UnknownRecordField {
+            situation: None,
             typ: record.type_(),
             location,
             label: label.clone(),
