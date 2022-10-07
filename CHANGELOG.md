@@ -10,6 +10,8 @@
   Gleam is not object oriented and does not have methods.
 - Fixed a bug in the formatter where multiple line documentation comments for
   custom type constructor fields could be formatted incorrectly.
+- Fixed a bug where tail call optimisation could be incorrectly applied when
+  compiling to JavaScript in some situations.
 
 ## v0.23.0 - 2022-09-15
 
