@@ -339,3 +339,25 @@ fn no_eq_after_binding_snapshot_2() {
         foo = 4"
     );
 }
+
+#[test]
+fn discard_left_hand_side_of_concat_pattern() {
+    assert_error!(
+        r#"
+        case "" {
+          _ <> rest -> rest
+        }
+        "#
+    );
+}
+
+#[test]
+fn assign_left_hand_side_of_concat_pattern() {
+    assert_error!(
+        r#"
+        case "" {
+          first <> rest -> rest
+        }
+        "#
+    );
+}

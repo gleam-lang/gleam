@@ -188,8 +188,18 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             }
             ParseErrorType::ExpectedBoolean => (
                 "Did you mean to negate a boolean?",
-                // TODO (HarryET): Get a hint for missing boolean
+                // TODO: (HarryET): Get a hint for missing boolean
                 vec![],
+            ),
+            ParseErrorType::ConcatPatternVariableLeftHandSide => (
+                "This must be a string literal",
+                vec![
+                    "We can't tell what size this prefix should be so we don't know".into(),
+                    "how to handle this pattern.".into(),
+                    "".into(),
+                    "If you want to match one character consider using `pop_grapheme`".into(),
+                    "from the stdlib's `gleam/string` module".into(),
+                ],
             ),
         }
     }
@@ -236,6 +246,8 @@ pub enum ParseErrorType {
         hint: Option<String>,
     },
     ExpectedBoolean,
+    // A variable was assigned or discarded on the left hand side of a <> pattern
+    ConcatPatternVariableLeftHandSide,
 }
 
 impl LexicalError {

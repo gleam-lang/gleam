@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 345
+expression: "\n        case \"\" {\n          _ <> rest -> rest\n        }\n        "
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:11
+  │
+3 │           _ <> rest -> rest
+  │           ^ This must be a string literal
+
+We can't tell what size this prefix should be so we don't know
+how to handle this pattern.
+
+If you want to match one character consider using `pop_grapheme`
+from the stdlib's `gleam/string` module
+

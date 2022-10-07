@@ -801,6 +801,12 @@ where
             // Pattern::Var or Pattern::Constructor start
             Some((start, Token::Name { name }, end)) => {
                 let _ = self.next_tok();
+
+                // A variable is not permitted on the left hand side of a `<>`
+                if let Some((_, Token::LtGt, _)) = self.tok0.as_ref() {
+                    return concat_pattern_variable_left_hand_side_error(start, end);
+                }
+
                 if self.maybe_one(&Token::Dot).is_some() {
                     self.expect_constructor_pattern(Some((start, name, end)))?
                 } else {
@@ -826,15 +832,18 @@ where
 
             Some((start, Token::DiscardName { name }, end)) => {
                 let _ = self.next_tok();
+
+                // A discard is not permitted on the left hand side of a `<>`
+                if let Some((_, Token::LtGt, _)) = self.tok0.as_ref() {
+                    return concat_pattern_variable_left_hand_side_error(start, end);
+                }
+
                 Pattern::Discard {
                     location: SrcSpan { start, end },
                     name,
                 }
             }
 
-            // TODO: add a helpful error message explaining why we can't use a
-            // pattern on the lhs if they try to do so. The error would not be
-            // emitted here unfortunately.
             Some((start, Token::String { value }, end)) => {
                 let _ = self.next_tok();
                 let location = SrcSpan { start, end };
@@ -2631,6 +2640,13 @@ where
         self.tok1 = nxt.take();
         t
     }
+}
+
+fn concat_pattern_variable_left_hand_side_error<T>(start: u32, end: u32) -> Result<T, ParseError> {
+    Err(ParseError {
+        error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+        location: SrcSpan::new(start, end),
+    })
 }
 
 // Operator Precedence Parsing
