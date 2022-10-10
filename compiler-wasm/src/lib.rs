@@ -157,14 +157,14 @@ pub fn init(debug: bool) {
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn compile(options: JsValue) -> JsValue {
-    match options.into_serde() {
+    match serde_wasm_bindgen::from_value(options) {
         Ok(compile_options) => {
             let result = compile_(compile_options);
-            JsValue::from_serde(&result)
+            serde_wasm_bindgen::to_value(&result)
         }
-        Err(error) => JsValue::from_serde::<Result<HashMap<String, String>, String>>(&Err(
-            format!("Invalid options passed to `compile`: `{}`", error),
-        )),
+        Err(error) => serde_wasm_bindgen::to_value::<Result<HashMap<String, String>, String>>(
+            &Err(format!("Invalid options passed to `compile`: `{}`", error)),
+        ),
     }
     .expect("should never fail")
 }
@@ -184,9 +184,8 @@ mod test {
     fn compile_wrapper(options: CompileOptions) -> Result<HashMap<String, String>, String> {
         init(false);
 
-        compile(JsValue::from_serde(&options).unwrap())
-            .into_serde()
-            .unwrap()
+        let result = compile(serde_wasm_bindgen::to_value(&options).unwrap());
+        serde_wasm_bindgen::from_value(result).unwrap()
     }
 
     #[wasm_bindgen_test]
