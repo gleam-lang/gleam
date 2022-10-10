@@ -3694,3 +3694,15 @@ fn multiple_line_custom_type_constructor_field_doc_comments() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1786
+#[test]
+fn multiple_line_documentation_comment_statement_grouping() {
+    assert_format!(
+        r#"/// This is the first line of the documenation comment.
+/// This is the second line of the documenation comment.
+/// This is the third line of the documenation comment.
+pub external type Map(key, value)
+"#
+    );
+}

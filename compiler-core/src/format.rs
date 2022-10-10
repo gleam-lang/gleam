@@ -400,7 +400,7 @@ impl<'comments> Formatter<'comments> {
 
     fn documented_statement<'a>(&mut self, s: &'a UntypedStatement) -> Document<'a> {
         let comments = self.doc_comments(s.location().start);
-        comments.append(self.statement(s)).group()
+        comments.append(self.statement(s).group()).group()
     }
 
     fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {
@@ -1586,7 +1586,7 @@ fn commented<'a, 'comments>(
     comments: impl IntoIterator<Item = Option<&'comments str>>,
 ) -> Document<'a> {
     match printed_comments(comments, true) {
-        Some(comments) => comments.append(doc),
+        Some(comments) => comments.append(doc.group()),
         None => doc,
     }
 }
