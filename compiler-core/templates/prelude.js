@@ -386,6 +386,14 @@ function structurallyCompatibleObjects(a, b) {
   );
 }
 
+export function moduloInt(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a % b | 0;
+  }
+}
+
 export function divideInt(a, b) {
   return divideFloat(a, b) | 0;
 }

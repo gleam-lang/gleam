@@ -855,7 +855,7 @@ impl<'module> Generator<'module> {
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt => self.mult_int(left, right),
             BinOp::MultFloat => self.print_bin_op(left, right, "*"),
-            BinOp::ModuloInt => self.print_bin_op(left, right, "%"),
+            BinOp::ModuloInt => self.modulo_int(left, right),
             BinOp::DivInt => self.div_int(left, right),
             BinOp::DivFloat => self.div_float(left, right),
         }
@@ -872,6 +872,13 @@ impl<'module> Generator<'module> {
         let right = self.not_in_tail_position(|gen| gen.expression(right))?;
         self.tracker.int_division_used = true;
         Ok(docvec!("divideInt", wrap_args([left, right])))
+    }
+
+    fn modulo_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
+        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        self.tracker.int_modulo_used = true;
+        Ok(docvec!("moduloInt", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {

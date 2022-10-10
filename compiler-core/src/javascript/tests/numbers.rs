@@ -50,6 +50,7 @@ fn go() {
 "#,
     );
 }
+
 #[test]
 fn float_operators() {
     assert_js!(
@@ -142,4 +143,15 @@ fn go() {
 }
 "#,
     )
+}
+
+#[test]
+fn modulo() {
+    assert_js!(
+        r#"
+fn go() {
+  5 % 0 // => 0
+}
+"#,
+    );
 }

@@ -72,6 +72,8 @@ export function inspect(value: any): string;
 
 export function isEqual(a: any, b: any): boolean;
 
+export function moduloInt(a: number, b: number): number;
+
 export function divideInt(a: number, b: number): number;
 
 export function divideFloat(a: number, b: number): number;
