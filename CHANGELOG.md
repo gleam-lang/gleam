@@ -13,8 +13,8 @@
   custom type constructor fields could be formatted incorrectly.
 - Fixed a bug where tail call optimisation could be incorrectly applied when
   compiling to JavaScript in some situations.
-- Fixed a bug where the modulo operator would return NaN results when the right
-  hand side was zero when compiling to JavaScript.
+- Fixed a bug where the remainder operator would return NaN results when the
+  right hand side was zero when compiling to JavaScript.
 - Fixed a bug where images added to HTML documentation via documentation
   comments would not have a max width.
 

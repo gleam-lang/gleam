@@ -146,7 +146,7 @@ fn go() {
 }
 
 #[test]
-fn modulo() {
+fn remainder() {
     assert_js!(
         r#"
 fn go() {

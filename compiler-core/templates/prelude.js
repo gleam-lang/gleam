@@ -386,7 +386,7 @@ function structurallyCompatibleObjects(a, b) {
   );
 }
 
-export function moduloInt(a, b) {
+export function remainderInt(a, b) {
   if (b === 0) {
     return 0;
   } else {
