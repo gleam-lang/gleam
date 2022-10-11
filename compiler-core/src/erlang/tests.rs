@@ -165,7 +165,7 @@ fn integration_test1_6() {
     assert_erl!(
         r#"pub fn and(x, y) { x && y }
 pub fn or(x, y) { x || y }
-pub fn modulo(x, y) { x % y }
+pub fn remainder(x, y) { x % y }
 pub fn fdiv(x, y) { x /. y }
             "#
     );
