@@ -33,7 +33,7 @@ pub fn main() -> Int {
       suite("call returned function", call_returned_function_tests()),
       suite("floats", floats_tests()),
       suite("ints", ints_tests()),
-      suite("modulo", modulo_tests()),
+      suite("remainder", remainder_tests()),
       suite("mod with numbers", mod_with_numbers_tests()),
       suite("record update", record_update_tests()),
       suite("record access", record_access_tests()),
@@ -1152,7 +1152,7 @@ fn ints_tests() -> List(Test) {
   ]
 }
 
-fn modulo_tests() -> List(Test) {
+fn remainder_tests() -> List(Test) {
   [
     "1 % 1"
     |> example(fn() { assert_equal(0, 1 % 1) }),
@@ -1166,6 +1166,13 @@ fn modulo_tests() -> List(Test) {
     |> example(fn() { assert_equal(1, 3 % -2) }),
     "3 % -0"
     |> example(fn() { assert_equal(0, 3 % -0) }),
+
+    "-13 % 3"
+    |> example(fn() { assert_equal(-1, -13 % 3) }),
+    "13 % -3"
+    |> example(fn() { assert_equal(1, 13 % -3) }),
+    "-13 % -3"
+    |> example(fn() { assert_equal(-1, 13 % -3) }),
   ]
 }
 
