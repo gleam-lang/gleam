@@ -1172,7 +1172,7 @@ fn remainder_tests() -> List(Test) {
     "13 % -3"
     |> example(fn() { assert_equal(1, 13 % -3) }),
     "-13 % -3"
-    |> example(fn() { assert_equal(-1, 13 % -3) }),
+    |> example(fn() { assert_equal(-1, -13 % -3) }),
   ]
 }
 
