@@ -2727,7 +2727,7 @@ fn tok_to_binop(t: &Token) -> Option<BinOp> {
         Token::Minus => Some(BinOp::SubInt),
         Token::PlusDot => Some(BinOp::AddFloat),
         Token::MinusDot => Some(BinOp::SubFloat),
-        Token::Percent => Some(BinOp::ModuloInt),
+        Token::Percent => Some(BinOp::RemainderInt),
         Token::Star => Some(BinOp::MultInt),
         Token::StarDot => Some(BinOp::MultFloat),
         Token::Slash => Some(BinOp::DivInt),

@@ -855,7 +855,7 @@ impl<'module> Generator<'module> {
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
             BinOp::MultInt => self.mult_int(left, right),
             BinOp::MultFloat => self.print_bin_op(left, right, "*"),
-            BinOp::ModuloInt => self.remainder_int(left, right),
+            BinOp::RemainderInt => self.remainder_int(left, right),
             BinOp::DivInt => self.div_int(left, right),
             BinOp::DivFloat => self.div_float(left, right),
         }
@@ -1265,7 +1265,7 @@ impl BinOp {
             | BinOp::MultFloat
             | BinOp::DivInt
             | BinOp::DivFloat
-            | BinOp::ModuloInt
+            | BinOp::RemainderInt
             | BinOp::Concatenate => true,
             BinOp::MultInt => false,
         }

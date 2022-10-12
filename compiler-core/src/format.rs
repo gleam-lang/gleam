@@ -1451,7 +1451,7 @@ impl<'a> Documentable<'a> for &'a BinOp {
             BinOp::MultFloat => " *. ",
             BinOp::DivInt => " / ",
             BinOp::DivFloat => " /. ",
-            BinOp::ModuloInt => " % ",
+            BinOp::RemainderInt => " % ",
             BinOp::Concatenate => " <> ",
         }
         .to_doc()

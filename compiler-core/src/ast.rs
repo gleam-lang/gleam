@@ -627,7 +627,7 @@ pub enum BinOp {
     MultFloat,
     DivInt,
     DivFloat,
-    ModuloInt,
+    RemainderInt,
 
     // Strings
     Concatenate,
@@ -657,7 +657,11 @@ impl BinOp {
             // Pipe is 6
             Self::AddInt | Self::AddFloat | Self::SubInt | Self::SubFloat => 7,
 
-            Self::MultInt | Self::MultFloat | Self::DivInt | Self::DivFloat | Self::ModuloInt => 8,
+            Self::MultInt
+            | Self::MultFloat
+            | Self::DivInt
+            | Self::DivFloat
+            | Self::RemainderInt => 8,
         }
     }
 
@@ -683,7 +687,7 @@ impl BinOp {
             Self::MultFloat => "*.",
             Self::DivInt => "/",
             Self::DivFloat => "/.",
-            Self::ModuloInt => "%",
+            Self::RemainderInt => "%",
             Self::Concatenate => "<>",
         }
     }
