@@ -732,7 +732,7 @@ fn bin_op<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let div_zero = match name {
-        BinOp::DivInt | BinOp::ModuloInt => Some("0"),
+        BinOp::DivInt | BinOp::RemainderInt => Some("0"),
         BinOp::DivFloat => Some("0.0"),
         _ => None,
     };
@@ -753,7 +753,7 @@ fn bin_op<'a>(
         BinOp::MultFloat => "*",
         BinOp::DivInt => "div",
         BinOp::DivFloat => "/",
-        BinOp::ModuloInt => "rem",
+        BinOp::RemainderInt => "rem",
         BinOp::Concatenate => return string_concatenate(left, right, env),
     };
 

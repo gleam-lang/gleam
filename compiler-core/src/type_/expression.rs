@@ -613,7 +613,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             BinOp::MultFloat => (float(), float()),
             BinOp::DivInt => (int(), int()),
             BinOp::DivFloat => (float(), float()),
-            BinOp::ModuloInt => (int(), int()),
+            BinOp::RemainderInt => (int(), int()),
             BinOp::Concatenate => (string(), string()),
         };
 
