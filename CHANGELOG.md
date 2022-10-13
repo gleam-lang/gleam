@@ -5,7 +5,7 @@
 - Gleam can now compile Elixir files within a project's `src` directory.
 - The `<>` operator can now be used for string concatenation and for string
   prefix pattern matching.
-- Fixed a bug where TypeScript defintions may have incorrect type parameters.
+- Fixed a bug where TypeScript definitions may have incorrect type parameters.
 - If you attempt to use the method call syntax (`thing.method()`) on a value
   without that field the error message will now include a hint explaining that
   Gleam is not object oriented and does not have methods.
@@ -298,7 +298,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 ## v0.18.1 - 2021-12-12
 
 - Fixed a bug where pipe expressions in record updates and operator expressions
-  could geneate incorrect Erlang code.
+  could generate incorrect Erlang code.
 - The `priv` directory is now copied to the output directory for rebar3 packages
   prior to compilation. This is required for some packages to compile.
 - Fixed a bug where deps that fail to compile would be skipped when compilation
@@ -354,7 +354,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 ## v0.17.0-rc2 - 2021-09-19
 
 - Errors thrown when no case clause or assignment pattern matches the subject
-  value now include more debugging information when targetting JavaScript.
+  value now include more debugging information when targeting JavaScript.
 - New projects are generated using `gleam_stdlib` v0.17.1.
 
 ## v0.17.0-rc1 - 2021-09-11
@@ -435,7 +435,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   cause an error to be reported.
 - Argument docs for custom type constructors are now rendered in the HTML
   documentation.
-- Patterns can be used with `try` expresssions when compiling to JavaScript.
+- Patterns can be used with `try` expressions when compiling to JavaScript.
 - Types and record constructors can now be aliased with an uppercase name when
   imported. Aliasing them with a lowercase name is no longer permitted.
 - Fixed a bug where nested import paths could be rendered incorrectly in
@@ -510,7 +510,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
   expressions.
 - Assignments using `let` and `assert` are now expressions and no longer require
   a following expression in their containing block. They are now themselves
-  expessions.
+  expressions.
 - Fixed a bug where tuple indexing could incorrectly claim a tuple is not of
   type tuple in some circumstances.
 - Glean `new` command now checks if target folder exists, if so it returns
@@ -617,7 +617,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed a bug where the formatter would incorrectly remove blocks around some
   binary operators.
 - Constants can now be defined after they are used in functions
-- The parser has been rewitten from scratch, dramatically improving error
+- The parser has been rewritten from scratch, dramatically improving error
   messages and compilation times.
 - `1-1` and `a-1` are now parsed as `1 - 1` and `a - 1`
 - Further information has been added to the error messages when a function
@@ -841,7 +841,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Fixed bug where a doing an unqualified import of a type constructor and
   giving it an alias would use the wrong name if it contained any values.
 - Fixed a bug trying to access an imported constructor which contained values.
-- Fixed a compiler crash that occured when trying to unify a tuple with something
+- Fixed a compiler crash that occurred when trying to unify a tuple with something
   other than another tuple or a variable.
 - Added support for tuple literals in guards.
 
@@ -875,7 +875,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - Using the same variable name multiple times in the same pattern will now
   raise an error.
 - Discard can now be omitted in list tails in patterns, ie `[x, ..]` is the
-  same as `[x, .._]`. The former is the prefered version and is emitted by the
+  same as `[x, .._]`. The former is the preferred version and is emitted by the
   formatter.
 
 ## v0.7.1 - 2020-03-03
@@ -905,7 +905,7 @@ Dedicated to the memory of Muhammad Shaheer, a good and caring man.
 - The format of compiler error messages printed to the console has been
   improved by upgrading to a newer version of the codespan-reporting library.
 - Type variables in the given and expected types will now be printed with the
-  same name in type error messages if they are equivilent.
+  same name in type error messages if they are equivalent.
 - A friendly error message is rendered when a case expression clause has the
   incorrect number of patterns for the subjects.
 - A friendly error message is rendered when a .gleam file cannot be read.
