@@ -13,7 +13,7 @@ use std::{
 use tar::{Archive, Entry};
 
 pub trait Reader: std::io::Read {
-    /// A wrapper around `std::io::Write` that has Gleam's error handling.
+    /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
         self.read(buffer).map_err(|e| self.convert_err(e))
     }
