@@ -87,7 +87,7 @@ compile_elixir(Modules, Out) ->
         $\n,
         "Documentation for installing Elixir can be viewed here:",
         $\n,
-        "https://gleam.run/getting-started/"
+        "https://elixir-lang.org/install.html"
     ],
     case Modules of
         [] -> {true, []};
