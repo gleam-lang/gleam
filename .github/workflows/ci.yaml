@@ -89,39 +89,26 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
-      - name: Build Gleam
+      - name: Install Gleam
         uses: actions-rs/cargo@v1
         with:
-          command: build
-          args: "--workspace --target ${{ matrix.target }}"
+          command: install
+          args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked"
           use-cross: ${{ matrix.use-cross }}
-
-      # We rename the binary to gleam.exe on all other platforms to match
-      # Windows so that the commands below can be the same for all platforms
-      - name: Rename Gleam binary
-        run: cp "target/${{ matrix.target }}/debug/gleam" "target/${{ matrix.target }}/debug/gleam.exe"
-        if: ${{ matrix.os != 'windows-latest' }}
-
-      - name: Add Gleam to PATH
-        run: echo "$PWD/target/${{ matrix.target }}/debug" >> $GITHUB_PATH
-
-      - name: Debug
-        run: |
-          ls "$PWD/target/${{ matrix.target }}/debug"
 
       - name: test/project_javascript on javascript target
         run: |
-          gleam.exe run
-          gleam.exe test
-          gleam.exe docs build
+          gleam run
+          gleam test
+          gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_javascript on erlang target
         run: |
-          gleam.exe run --target erlang
-          gleam.exe test --target erlang
-          gleam.exe docs build
+          gleam run --target erlang
+          gleam test --target erlang
+          gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
 
