@@ -97,17 +97,10 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
-      - name: test/project_erlang on Erlang target
+      - name: test/project_erlang
         run: |
-          gleam run --target erlang
-          gleam test --target erlang
-          gleam docs build
-        working-directory: ./test/project_erlang
-
-      - name: test/project_erlang on JavaScript target
-        run: |
-          gleam run --target javascript
-          gleam test --target javascript
+          gleam run
+          gleam test
           gleam docs build
         working-directory: ./test/project_erlang
 
@@ -118,18 +111,10 @@ jobs:
         working-directory: ./test/project_erlang
         if: ${{ matrix.os != 'windows-latest' }} # erlang-shipment does not support Windows
 
-      - name: test/project_javascript on javascript target
+      - name: test/project_javascript
         run: |
-          gleam run --target javascript
-          gleam test --target javascript
-          gleam docs build
-        working-directory: ./test/project_javascript
-        if: ${{ matrix.run-integration-tests }}
-
-      - name: test/project_javascript on erlang target
-        run: |
-          gleam run --target erlang
-          gleam test --target erlang
+          gleam run
+          gleam test
           gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
