@@ -33,32 +33,26 @@ jobs:
             target: x86_64-unknown-linux-gnu
             use-cross: false
             run-integration-tests: true
-            gleam-name: gleam
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
             run-integration-tests: true
-            gleam-name: gleam
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-            gleam-name: gleam
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-            gleam-name: gleam
           - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
             run-integration-tests: true
-            gleam-name: gleam
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
             run-integration-tests: true
-            gleam-name: gleam.exe
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -102,6 +96,10 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
+      - name: Rename Windows Gleam binary
+        run: cp "$PWD/target/${{ matrix.target }}/debug/gleam.exe" "$PWD/target/${{ matrix.target }}/debug/gleam"
+        if: ${{ matrix.os == 'windows-latest' }}
+
       - name: Add Gleam to PATH
         run: echo "$PWD/target/${{ matrix.target }}/debug" >> $GITHUB_PATH
 
@@ -111,17 +109,17 @@ jobs:
 
       - name: test/project_javascript on javascript target
         run: |
-          ${{ matrix.gleam-name }} run
-          ${{ matrix.gleam-name }} test
-          ${{ matrix.gleam-name }} docs build
+          gleam run
+          gleam test
+          gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_javascript on erlang target
         run: |
-          ${{ matrix.gleam-name }} run --target erlang
-          ${{ matrix.gleam-name }} test --target erlang
-          ${{ matrix.gleam-name }} docs build
+          gleam run --target erlang
+          gleam test --target erlang
+          gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
 
