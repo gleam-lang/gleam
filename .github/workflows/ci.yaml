@@ -75,7 +75,7 @@ jobs:
       - name: Build Gleam
         uses: actions-rs/cargo@v1
         with:
-          command: run
+          command: build
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
