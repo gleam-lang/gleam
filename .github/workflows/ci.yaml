@@ -82,18 +82,18 @@ jobs:
         with:
           key: v1-${{ matrix.target }}
 
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: "--workspace --target ${{ matrix.target }}"
-          use-cross: ${{ matrix.use-cross }}
-
       - name: Install Gleam
         uses: actions-rs/cargo@v1
         with:
           command: install
           args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked"
+          use-cross: ${{ matrix.use-cross }}
+
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
       - name: test/project_javascript on javascript target
