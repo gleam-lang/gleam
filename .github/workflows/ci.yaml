@@ -32,21 +32,27 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             use-cross: false
+            run-integration-tests: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             use-cross: true
+            run-integration-tests: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             use-cross: true
+            run-integration-tests: false # Cannot run aarch64 binaries on x86_64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             use-cross: true
+            run-integration-tests: false # Cannot run aarch64 binaries on x86_64
           - os: macos-latest
             target: x86_64-apple-darwin
             use-cross: false
+            run-integration-tests: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
+            run-integration-tests: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -102,6 +108,7 @@ jobs:
           gleam test
           gleam docs build
         working-directory: ./test/project_javascript
+        if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_javascript on erlang target
         run: |
@@ -109,6 +116,7 @@ jobs:
           gleam test --target erlang
           gleam docs build
         working-directory: ./test/project_javascript
+        if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
     runs-on: ubuntu-latest
