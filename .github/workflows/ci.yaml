@@ -52,7 +52,7 @@ jobs:
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             use-cross: false
-            run-integration-tests: true # https://github.com/erlef/setup-beam/issues/147
+            run-integration-tests: false # https://github.com/erlef/setup-beam/issues/147
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
