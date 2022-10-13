@@ -103,6 +103,7 @@ jobs:
           gleam test
           gleam docs build
         working-directory: ./test/project_erlang
+        if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_erlang export erlang-shipment
         run: |
