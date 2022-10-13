@@ -66,11 +66,16 @@ jobs:
           default: true
           profile: minimal
 
-      - name: Install Erlang
+      - name: Install Erlang (non-macos)
         uses: erlef/setup-beam@v1.13.0
         with:
           otp-version: "23.2"
           elixir-version: "1.13.4"
+        if: ${{ matrix.os != 'macos-latest' }} # setup-beam does not support macOS
+
+      - name: Install Erlang (macos)
+        run: brew install erlang
+        if: ${{ matrix.os == 'macos-latest' }} # setup-beam does not support macOS
 
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v1
