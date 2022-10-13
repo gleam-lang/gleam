@@ -97,10 +97,31 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
+      - name: test/project_erlang on Erlang target
+        run: |
+          gleam run --target erlang
+          gleam test --target erlang
+          gleam docs build
+        working-directory: ./test/project_erlang
+
+      - name: test/project_erlang on JavaScript target
+        run: |
+          gleam run --target javascript
+          gleam test --target javascript
+          gleam docs build
+        working-directory: ./test/project_erlang
+
+      - name: test/project_erlang export erlang-shipment
+        run: |
+          gleam export erlang-shipment
+          ./build/erlang-shipment/entrypoint.sh run
+        working-directory: ./test/project_erlang
+        if: ${{ matrix.os != 'windows-latest' }} # erlang-shipment does not support Windows
+
       - name: test/project_javascript on javascript target
         run: |
-          gleam run
-          gleam test
+          gleam run --target javascript
+          gleam test --target javascript
           gleam docs build
         working-directory: ./test/project_javascript
         if: ${{ matrix.run-integration-tests }}
@@ -111,6 +132,25 @@ jobs:
           gleam test --target erlang
           gleam docs build
         working-directory: ./test/project_javascript
+        if: ${{ matrix.run-integration-tests }}
+
+      - name: Test project generation
+        run: |
+          gleam new lib_project
+          cd lib_project
+          gleam run
+          gleam test
+          gleam docs build
+
+          # Assert that module metadata has been written
+          ls build/dev/erlang/lib_project/build/lib_project.gleam_module
+
+          # Assert that HTML docs have been written
+          ls build/dev/docs/lib_project/index.html
+          ls build/dev/docs/lib_project/index.css
+          ls build/dev/docs/lib_project/gleam.js
+          ls build/dev/docs/lib_project/index.html
+          ls build/dev/docs/lib_project/lib_project.html
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
@@ -257,29 +297,6 @@ jobs:
           sed -i 's/cargo run --/gleam/' */Makefile
         working-directory: ./test
 
-      - name: test/project_erlang
-        run: |
-          gleam run
-          gleam test
-          gleam docs build
-          gleam export erlang-shipment
-          ./build/erlang-shipment/entrypoint.sh run
-        working-directory: ./test/project_erlang
-
-      - name: test/project_javascript on javascript target
-        run: |
-          gleam run
-          gleam test
-          gleam docs build
-        working-directory: ./test/project_javascript
-
-      - name: test/project_javascript on erlang target
-        run: |
-          gleam run --target erlang
-          gleam test --target erlang
-          gleam docs build
-        working-directory: ./test/project_javascript
-
       - name: test/language Erlang
         run: make clean erlang
         working-directory: ./test/language
@@ -300,20 +317,3 @@ jobs:
         run: make
         working-directory: ./test/javascript_prelude
 
-      - name: Test lib template
-        run: |
-          gleam new lib_project --template=lib
-          cd lib_project
-          gleam run
-          gleam test
-          gleam docs build
-
-          # Assert that module metadata has been written
-          ls build/dev/erlang/lib_project/build/lib_project.gleam_module
-
-          # Assert that HTML docs have been written
-          ls build/dev/docs/lib_project/index.html
-          ls build/dev/docs/lib_project/index.css
-          ls build/dev/docs/lib_project/gleam.js
-          ls build/dev/docs/lib_project/index.html
-          ls build/dev/docs/lib_project/lib_project.html
