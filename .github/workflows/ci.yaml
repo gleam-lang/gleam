@@ -72,18 +72,28 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
+      - name: Build Gleam
+        uses: actions-rs/cargo@v1
+        with:
+          command: run
+          args: "--workspace --target ${{ matrix.target }}"
+          use-cross: ${{ matrix.use-cross }}
+
+      - name: Add Gleam to PATH
+        run: echo "$PWD/target/dev/" >> $GITHUB_PATH
+
       - name: test/project_javascript on javascript target
         run: |
-          cargo run -- run
-          cargo run -- test
-          cargo run -- docs build
+          gleam run
+          gleam test
+          gleam docs build
         working-directory: ./test/project_javascript
 
       - name: test/project_javascript on erlang target
         run: |
-          cargo run -- run --target erlang
-          cargo run -- test --target erlang
-          cargo run -- docs build
+          gleam run --target erlang
+          gleam test --target erlang
+          gleam docs build
         working-directory: ./test/project_javascript
 
   test-wasm:
