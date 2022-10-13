@@ -72,6 +72,20 @@ jobs:
           args: "--workspace --target ${{ matrix.target }}"
           use-cross: ${{ matrix.use-cross }}
 
+      - name: test/project_javascript on javascript target
+        run: |
+          cargo run -- run
+          cargo run -- test
+          cargo run -- docs build
+        working-directory: ./test/project_javascript
+
+      - name: test/project_javascript on erlang target
+        run: |
+          cargo run -- run --target erlang
+          cargo run -- test --target erlang
+          cargo run -- docs build
+        working-directory: ./test/project_javascript
+
   test-wasm:
     runs-on: ubuntu-latest
     steps:
