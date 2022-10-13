@@ -80,7 +80,13 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
 
       - name: Add Gleam to PATH
-        run: echo "$PWD/target/dev/" >> $GITHUB_PATH
+        run: echo "$PWD/target/dev" >> $GITHUB_PATH
+
+      - name: Debug
+        run: |
+          echo "$PATH"
+          ls -la "$PWD/target"
+          ls -la "$PWD/target/dev"
 
       - name: test/project_javascript on javascript target
         run: |
