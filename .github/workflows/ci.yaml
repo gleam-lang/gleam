@@ -99,6 +99,10 @@ jobs:
       - name: Add Gleam to PATH
         run: echo "$PWD/target/${{ matrix.target }}/debug" >> $GITHUB_PATH
 
+      - name: Debug
+        run: |
+          ls "$PWD/target/${{ matrix.target }}/debug"
+
       - name: test/project_javascript on javascript target
         run: |
           gleam run
