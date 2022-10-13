@@ -88,6 +88,7 @@ jobs:
           command: install
           args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked"
           use-cross: ${{ matrix.use-cross }}
+        if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
         uses: actions-rs/cargo@v1
