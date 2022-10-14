@@ -152,6 +152,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Sebastian Porto](https://github.com/sporto)
  - [Shunji Lin](https://github.com/shunjilin)
  - [Shuqian Hon](https://github.com/honsq90)
+ - [Signal Insights](https://github.com/signalinsights)
  - [Simone Vittori](https://github.com/simonewebdesign)
  - [Strand Communications](https://github.com/strandcom)
  - [t bjornrud](https://github.com/bjornrud)
