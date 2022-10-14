@@ -23,6 +23,11 @@ use std::{
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
 
+#[cfg(not(target_os = "windows"))]
+const ELIXIR_EXECUTABLE: &str = "elixir";
+#[cfg(target_os = "windows")]
+const ELIXIR_EXECUTABLE: &str = "elixir.bat";
+
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -500,7 +505,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
         let args = [
             "--eval".into(),
             format!(
-                "File.write!(\"{}\", [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(\"\\n\"))",
+                ":ok = File.write(~s({}), [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(~s(\\n)))",
                 pathfinder_name,
                 elixir_atoms.join(", "),
             )
@@ -508,7 +513,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
         ];
         tracing::debug!("writing_elixir_paths_to_build");
         let status = io.exec(
-            "elixir",
+            ELIXIR_EXECUTABLE,
             &args,
             &env,
             Some(&build_dir),

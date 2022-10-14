@@ -31,6 +31,11 @@ const REBAR_EXECUTABLE: &str = "rebar3";
 #[cfg(target_os = "windows")]
 const REBAR_EXECUTABLE: &str = "rebar3.cmd";
 
+#[cfg(not(target_os = "windows"))]
+const ELIXIR_EXECUTABLE: &str = "elixir";
+#[cfg(target_os = "windows")]
+const ELIXIR_EXECUTABLE: &str = "elixir.bat";
+
 #[derive(Debug)]
 pub struct Options {
     pub mode: Mode,
@@ -395,7 +400,7 @@ where
             "--no-protocol-consolidation".into(),
         ];
         let status = self.io.exec(
-            "elixir",
+            ELIXIR_EXECUTABLE,
             &args,
             &env,
             Some(&project_dir),
