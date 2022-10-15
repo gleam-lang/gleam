@@ -7,7 +7,6 @@ import mod_with_numbers_0123456789
 import record_update
 import shadowed_module.{ShadowPerson}
 import gleam
-import port.{Port}
 
 pub fn main() -> Int {
   let stats =
@@ -1166,7 +1165,6 @@ fn remainder_tests() -> List(Test) {
     |> example(fn() { assert_equal(1, 3 % -2) }),
     "3 % -0"
     |> example(fn() { assert_equal(0, 3 % -0) }),
-
     "-13 % 3"
     |> example(fn() { assert_equal(-1, -13 % 3) }),
     "13 % -3"
@@ -1255,13 +1253,6 @@ fn unicode_overflow_tests() {
     |> example(fn() { assert_equal(False, "🌵" == "5") }),
   ]
 }
-
-type PortMonitorFlag {
-  Port
-}
-
-pub external fn go(Port) -> Nil =
-  "" ""
 
 fn id(x) {
   x
