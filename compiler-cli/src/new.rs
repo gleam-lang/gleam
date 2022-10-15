@@ -14,6 +14,7 @@ use crate::NewOptions;
 const GLEAM_STDLIB_VERSION: &str = "0.23";
 const GLEEUNIT_VERSION: &str = "0.6";
 const ERLANG_OTP_VERSION: &str = "25.1";
+const ELIXIR_VERSION: &str = "1.14.1";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
@@ -157,11 +158,12 @@ jobs:
         with:
           otp-version: "{}"
           gleam-version: "{}"
+          # elixir-version: "{}"
       - run: gleam format --check src test
       - run: gleam deps download
       - run: gleam test
 "#,
-                ERLANG_OTP_VERSION, self.gleam_version
+                ERLANG_OTP_VERSION, self.gleam_version, ELIXIR_VERSION,
             ),
         )
     }
