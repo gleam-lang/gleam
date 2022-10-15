@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.24.0-rc1 - 2022-10-15
 
 - Gleam can now compile Elixir files within a project's `src` directory.
 - The `<>` operator can now be used for string concatenation and for string
