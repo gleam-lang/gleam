@@ -15,6 +15,7 @@
   compiling to JavaScript in some situations.
 - Fixed a bug where the remainder operator would return NaN results when the
   right hand side was zero when compiling to JavaScript.
+- Fixed a bug where Elixir dependencies would fail to compile on Windows.
 - Fixed a bug where images added to HTML documentation via documentation
   comments would not have a max width.
 
