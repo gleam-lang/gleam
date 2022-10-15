@@ -69,7 +69,7 @@ jobs:
       - name: Install Erlang (non-macos)
         uses: erlef/setup-beam@v1.13.0
         with:
-          otp-version: "23.2"
+          otp-version: "25.1"
           elixir-version: "1.13.4"
           rebar3-version: "3.16.1"
         if: ${{ matrix.os != 'macos-latest' }} # setup-beam does not support macOS
@@ -270,7 +270,7 @@ jobs:
       - name: Install Erlang
         uses: erlef/setup-beam@v1.13.0
         with:
-          otp-version: "23.2"
+          otp-version: "25.1"
           elixir-version: "1.13.4"
           rebar3-version: "3.16.1"
 

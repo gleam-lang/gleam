@@ -13,7 +13,7 @@ use crate::NewOptions;
 
 const GLEAM_STDLIB_VERSION: &str = "0.23";
 const GLEEUNIT_VERSION: &str = "0.6";
-const ERLANG_OTP_VERSION: &str = "23.2";
+const ERLANG_OTP_VERSION: &str = "25.1";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
 #[strum(serialize_all = "kebab_case")]
