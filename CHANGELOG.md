@@ -6,6 +6,7 @@
 - The `<>` operator can now be used for string concatenation and for string
   prefix pattern matching.
 - Fixed a bug where TypeScript definitions may have incorrect type parameters.
+- New projects depend on `gleam_stdlib` v0.24.
 - New projects' GitHub Actions config specifies Erlang/OTP 25.1 and suggest
   Elixir 1.14.1.
 - If you attempt to use the method call syntax (`thing.method()`) on a value
