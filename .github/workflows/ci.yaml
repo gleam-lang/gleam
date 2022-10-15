@@ -71,7 +71,6 @@ jobs:
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
-          rebar3-version: "3.16.1"
         if: ${{ matrix.os != 'macos-latest' }} # setup-beam does not support macOS
 
       - name: Install Erlang (macos)
@@ -272,7 +271,6 @@ jobs:
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
-          rebar3-version: "3.16.1"
 
       - name: Download Gleam binary from previous job
         uses: actions/download-artifact@v2
