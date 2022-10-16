@@ -1777,3 +1777,17 @@ pub fn main(user: User) {
 "
     );
 }
+
+#[test]
+fn unknown_imported_module_type() {
+    assert_with_module_error!(
+        (vec!["one".to_string(), "two".to_string()], ""),
+        "
+import one/two
+
+pub fn main(_x: two.Thing) {
+  Nil
+}
+"
+    );
+}

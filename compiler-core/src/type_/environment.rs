@@ -240,10 +240,10 @@ impl<'a> Environment<'a> {
                     type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
                 }),
 
-            Some(m) => {
-                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
+            Some(module_name) => {
+                let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: name.to_string(),
+                        name: module_name.to_string(),
                         imported_modules: self
                             .importable_modules
                             .keys()
@@ -251,7 +251,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
-                let _ = self.unused_modules.remove(m);
+                let _ = self.unused_modules.remove(module_name);
                 module
                     .types
                     .get(name)
@@ -318,10 +318,10 @@ impl<'a> Environment<'a> {
                     variables: self.local_value_names(),
                 }),
 
-            Some(m) => {
-                let (_, module) = self.imported_modules.get(m).ok_or_else(|| {
+            Some(module_name) => {
+                let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
-                        name: name.to_string(),
+                        name: module_name.to_string(),
                         imported_modules: self
                             .importable_modules
                             .keys()
@@ -329,7 +329,7 @@ impl<'a> Environment<'a> {
                             .collect(),
                     }
                 })?;
-                let _ = self.unused_modules.remove(m);
+                let _ = self.unused_modules.remove(module_name);
                 module
                     .values
                     .get(name)

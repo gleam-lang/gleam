@@ -14,3 +14,19 @@ pub const a = other
         vec![("a", "Int")],
     );
 }
+
+#[test]
+fn imported_constant_record() {
+    assert_infer_with_module!(
+        (
+            vec!["one".to_string(), "two".to_string()],
+            "pub type Thing { Thing(Int) }"
+        ),
+        "
+import one/two
+
+pub const a = two.Thing(1)
+",
+        vec![("a", "Thing")],
+    );
+}

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1783
+expression: "\nimport one/two\n\npub fn main(_x: two.Thing) {\n  Nil\n}\n"
+---
+error: Unknown module type
+  ┌─ /src/one/two.gleam:4:17
+  │
+4 │ pub fn main(_x: two.Thing) {
+  │                 ^^^^^^^^^
+
+The module `one/two` does not have a `Thing` type.
+

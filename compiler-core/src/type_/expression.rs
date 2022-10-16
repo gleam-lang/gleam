@@ -1631,12 +1631,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // TODO: resvisit this. It is rather awkward at present how we
                 // have to convert to this other data structure.
                 let fun = match &module {
-                    Some(module_name) => {
+                    Some(module_alias) => {
                         let typ = Arc::clone(&constructor.type_);
                         let module_name = self
                             .environment
                             .imported_modules
-                            .get(module_name)
+                            .get(module_alias)
                             .expect("Failed to find previously located module import")
                             .1
                             .name
@@ -1651,7 +1651,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         TypedExpr::ModuleSelect {
                             label: name.clone(),
-                            module_alias: module_name.clone(),
+                            module_alias: module_alias.clone(),
                             module_name,
                             typ,
                             constructor: module_value_constructor,
