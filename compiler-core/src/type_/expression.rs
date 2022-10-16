@@ -1959,11 +1959,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
-                        body_typer.environment.insert_variable(
+                        body_typer.environment.insert_local_variable(
                             name.to_string(),
-                            ValueConstructorVariant::LocalVariable {
-                                location: arg.location,
-                            },
+                            arg.location,
                             t,
                         );
                         body_typer.environment.init_usage(

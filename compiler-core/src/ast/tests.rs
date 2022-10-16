@@ -64,7 +64,7 @@ fn compile_expression(src: &str) -> TypedExpr {
         }),
         module: "mymod".into(),
     };
-    environment.insert_module_variable(
+    environment.insert_variable(
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),

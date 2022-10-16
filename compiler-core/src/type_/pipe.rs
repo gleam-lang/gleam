@@ -153,9 +153,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn push_assignment_no_update(&mut self, expression: TypedExpr) {
         let location = expression.location();
         // Insert the variable for use in type checking the rest of the pipeline
-        self.expr_typer.environment.insert_variable(
+        self.expr_typer.environment.insert_local_variable(
             PIPE_VARIABLE.to_string(),
-            ValueConstructorVariant::LocalVariable { location },
+            location,
             expression.type_(),
         );
         // Add the assignment to the AST
