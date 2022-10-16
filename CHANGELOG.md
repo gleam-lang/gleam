@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0-rc2 - Unreleased
+
+- Fixed a bug where imported and qualified record constructors used in constant
+  expressions could fail to resolve.
+
 ## 0.24.0-rc1 - 2022-10-15
 
 - Gleam can now compile Elixir files within a project's `src` directory.
