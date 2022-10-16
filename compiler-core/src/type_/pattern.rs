@@ -53,9 +53,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let _ = self.initial_pattern_vars.insert(name.to_string());
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
-                self.environment.insert_variable(
+                self.environment.insert_local_variable(
                     name.to_string(),
-                    ValueConstructorVariant::LocalVariable { location },
+                    location,
                     typ,
                 );
                 Ok(())

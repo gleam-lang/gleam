@@ -785,7 +785,7 @@ fn register_values<'a>(
             let _ = hydrators.insert(name.clone(), hydrator);
 
             // Insert the function into the environment
-            environment.insert_module_variable(
+            environment.insert_variable(
                 name.clone(),
                 ValueConstructorVariant::ModuleFn {
                     name: name.clone(),
@@ -855,7 +855,7 @@ fn register_values<'a>(
             );
 
             // Insert function into module's internal scope
-            environment.insert_module_variable(
+            environment.insert_variable(
                 name.clone(),
                 ValueConstructorVariant::ModuleFn {
                     name: fun.clone(),
@@ -961,7 +961,7 @@ fn register_values<'a>(
                     );
                 }
 
-                environment.insert_module_variable(constructor.name.clone(), constructor_info, typ, *public);
+                environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
             }
         }
 
@@ -1100,7 +1100,7 @@ fn infer_statement(
             let typ = if safe_to_generalise {
                 let _ = environment.ungeneralised_functions.remove(&name);
                 let typ = generalise(typ, 0);
-                environment.insert_module_variable(
+                environment.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
@@ -1353,7 +1353,7 @@ fn infer_statement(
                 type_: type_.clone(),
             };
 
-            environment.insert_module_variable(name.clone(), variant.variant.clone(), type_.clone(), public);
+            environment.insert_variable(name.clone(), variant.variant.clone(), type_.clone(), public);
             environment.insert_module_value(&name, variant);
 
             if !public {
@@ -1876,7 +1876,7 @@ pub fn register_import(
 
                 // Register the unqualified import if it is a value
                 if let Some(value) = module_info.values.get(name) {
-                    environment.insert_module_variable(
+                    environment.insert_variable(
                         imported_name.clone(),
                         value.variant.clone(),
                         value.type_.clone(),

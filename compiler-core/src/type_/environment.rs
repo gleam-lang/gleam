@@ -154,17 +154,17 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_variable(
+    pub fn insert_local_variable(
         &mut self,
         name: String,
-        variant: ValueConstructorVariant,
+        location: SrcSpan,
         typ: Arc<Type>,
     ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
                 public: false,
-                variant,
+                variant: ValueConstructorVariant::LocalVariable { location },
                 type_: typ,
             },
         );
@@ -172,7 +172,7 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_module_variable(
+    pub fn insert_variable(
         &mut self,
         name: String,
         variant: ValueConstructorVariant,
