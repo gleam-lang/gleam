@@ -170,6 +170,25 @@ impl<'a> Environment<'a> {
         );
     }
 
+    /// Insert a variable in the current scope.
+    ///
+    pub fn insert_module_variable(
+        &mut self,
+        name: String,
+        variant: ValueConstructorVariant,
+        typ: Arc<Type>,
+        public: bool
+    ) {
+        let _ = self.scope.insert(
+            name,
+            ValueConstructor {
+                public,
+                variant,
+                type_: typ,
+            },
+        );
+    }
+
     /// Insert a value into the current module.
     /// Errors if the module already has a value with that name.
     ///
