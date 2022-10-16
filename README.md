@@ -84,6 +84,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Graeme Coupar](https://github.com/obmarg)
  - [Guilherme de Maio](https://github.com/nirev)
  - [Gustavo Villa](https://github.com/gfvcastro)
+ - [Harry Bairstow](https://github.com/harryet)
  - [Hayleigh Thompson](https://github.com/hayleigh-dot-dev)
  - [Henry Warren](https://github.com/henrysdev)
  - [human154](https://github.com/human154)
