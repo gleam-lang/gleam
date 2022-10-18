@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.24.0-rc2 - Unreleased
+## 0.24.0-rc2 - 2022-10-18
 
 - Fixed a bug where imported and qualified record constructors used in constant
   expressions could fail to resolve.
