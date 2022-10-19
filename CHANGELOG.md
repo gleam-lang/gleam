@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0-rc3 - Unreleased
+
+- Fixed a bug where the OOP method call error hint would be shown on too many
+  errors.
+
 ## 0.24.0-rc2 - 2022-10-18
 
 - Fixed a bug where imported and qualified record constructors used in constant
