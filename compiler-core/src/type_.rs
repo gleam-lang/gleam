@@ -11,7 +11,7 @@ pub mod pretty;
 mod tests;
 
 pub use environment::*;
-pub use error::{Error, UnifyErrorSituation, UnknownRecordFieldSituation, Warning};
+pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
@@ -1979,4 +1979,12 @@ pub fn register_import(
         | Statement::ExternalType { .. }
         | Statement::ModuleConstant { .. } => Ok(()),
     }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum FieldAccessUsage {
+    /// Used as `thing.field()`
+    MethodCall,
+    /// Used as `thing.field`
+    Other,
 }

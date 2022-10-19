@@ -164,7 +164,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label,
                 container,
                 ..
-            } => self.infer_field_access(*container, label, location),
+            } => self.infer_field_access(*container, label, location, FieldAccessUsage::Other),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -355,9 +355,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self
-            .do_infer_call(fun, args, location)
-            .map_err(Error::call_situation)?;
+        let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -431,11 +429,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         container: UntypedExpr,
         label: String,
         access_location: SrcSpan,
+        usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
         // of an imported module, so attempt to infer the container as a module access.
         // TODO: Remove this cloning
-        match self.infer_record_access(container.clone(), label.clone(), access_location) {
+        match self.infer_record_access(container.clone(), label.clone(), access_location, usage) {
             Ok(record_access) => Ok(record_access),
             Err(err) => match container {
                 UntypedExpr::Var { name, location, .. } => {
@@ -1231,11 +1230,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: UntypedExpr,
         label: String,
         location: SrcSpan,
+        usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         // Infer the type of the (presumed) record
         let record = self.infer(record)?;
 
-        self.infer_known_record_access(record, label, location)
+        self.infer_known_record_access(record, label, location, usage)
     }
 
     fn infer_known_record_access(
@@ -1243,6 +1243,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         record: TypedExpr,
         label: String,
         location: SrcSpan,
+        usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
         let record = Box::new(record);
 
@@ -1255,7 +1256,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Error constructor helper function
         let unknown_field = |fields| Error::UnknownRecordField {
-            situation: None,
+            usage,
             typ: record.type_(),
             location,
             label: label.clone(),
@@ -1394,6 +1395,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         spread.clone(),
                         label.to_string(),
                         *location,
+                        FieldAccessUsage::Other,
                     )?;
 
                     // Check that the update argument unifies with the corresponding
@@ -1820,7 +1822,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
     ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-        let fun = self.infer(fun)?;
+        let fun = match fun {
+            UntypedExpr::FieldAccess {
+                location,
+                label,
+                container,
+            } => self.infer_field_access(*container, label, location, FieldAccessUsage::MethodCall),
+
+            fun => self.infer(fun),
+        }?;
+
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
         Ok((fun, args, typ))
     }

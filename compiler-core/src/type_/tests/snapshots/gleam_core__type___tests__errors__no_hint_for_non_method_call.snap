@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1783
+expression: "\npub type User {\n  User(id: Int, name: String)\n}\n\nfn login(user: User) {\n  user\n}\n\npub fn main(user: User) {\n  login(user.wibble)\n}\n"
+---
+error: Unknown record field
+   ┌─ /src/one/two.gleam:11:9
+   │
+11 │   login(user.wibble)
+   │         ^^^^^^^^^^^ Did you mean `id`?
+
+The value being accessed has this type:
+
+    User
+
+It has these fields:
+
+    .id
+    .name
+
