@@ -4,6 +4,8 @@
 
 - Fixed a bug where the OOP method call error hint would be shown on too many
   errors.
+- Fixed a bug where the string concatenate operator could produce invalid Erlang
+  code when working with constant values.
 
 ## 0.24.0-rc2 - 2022-10-18
 
