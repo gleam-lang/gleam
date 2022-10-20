@@ -44,7 +44,7 @@ macro_rules! assert_infer_with_module {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
@@ -130,7 +130,7 @@ macro_rules! assert_module_infer {
 #[macro_export]
 macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -184,7 +184,7 @@ macro_rules! assert_module_error {
 #[macro_export]
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -245,7 +245,7 @@ macro_rules! assert_with_module_error {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
