@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.24.0-rc3 - Unreleased
+## 0.24.0-rc3 - 2022-10-20
 
 - Fixed a bug where the OOP method call error hint would be shown on too many
   errors.
