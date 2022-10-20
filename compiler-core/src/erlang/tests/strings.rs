@@ -92,3 +92,34 @@ pub fn go() {
 "#,
     );
 }
+
+#[test]
+fn concat_constant() {
+    assert_erl!(
+        r#"
+const a = "Hello, "
+const b = "Joe!"
+
+pub fn go() {
+  a <> b
+}
+"#,
+    );
+}
+
+#[test]
+fn concat_constant_fn() {
+    assert_erl!(
+        r#"
+const cs = s
+
+fn s() {
+  "s"
+}
+
+pub fn go() {
+  cs() <> cs()
+}
+"#,
+    );
+}
