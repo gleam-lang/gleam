@@ -1078,7 +1078,7 @@ to call a method on this value you may want to use the function syntax instead."
                             text.push_str(label);
                             text.push_str("(value)");
                         }
-                        _ => (),
+                        FieldAccessUsage::Other => (),
                     }
 
                     let label = did_you_mean(label, fields)
