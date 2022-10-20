@@ -537,12 +537,35 @@ fn string_concatenate<'a>(
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     match value {
-        TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
-        TypedExpr::Var { name, .. } => docvec![env.local_var_name(name), "/binary"],
+        TypedExpr::Var {
+            constructor:
+                ValueConstructor {
+                    variant:
+                        ValueConstructorVariant::ModuleConstant {
+                            literal: Constant::String { value, .. },
+                            ..
+                        },
+                    ..
+                },
+            ..
+        }
+        | TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
+
+        TypedExpr::Var {
+            name,
+            constructor:
+                ValueConstructor {
+                    variant: ValueConstructorVariant::LocalVariable { .. },
+                    ..
+                },
+            ..
+        } => docvec![env.local_var_name(name), "/binary"],
+
         TypedExpr::BinOp {
             name: BinOp::Concatenate,
             ..
         } => docvec![expr(value, env), "/binary"],
+
         _ => docvec!["(", expr(value, env), ")/binary"],
     }
 }

@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 98
+expression: "\nconst a = \"Hello, \"\nconst b = \"Joe!\"\n\npub fn go() {\n  a <> b\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([go/0]).
+
+-spec go() -> binary().
+go() ->
+    <<"Hello, "/utf8, "Joe!"/utf8>>.
+
