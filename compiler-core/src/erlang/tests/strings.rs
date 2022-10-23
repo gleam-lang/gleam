@@ -123,3 +123,18 @@ pub fn go() {
 "#,
     );
 }
+
+#[test]
+fn pipe_concat() {
+    assert_erl!(
+        r#"
+fn id(x) {
+  x
+}
+
+pub fn main() {
+  { "" |> id } <> { "" |> id }
+}
+"#,
+    );
+}

@@ -566,7 +566,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
             ..
         } => docvec![expr(value, env), "/binary"],
 
-        _ => docvec!["(", expr(value, env), ")/binary"],
+        _ => docvec!["(", maybe_block_expr(value, env), ")/binary"],
     }
 }
 
