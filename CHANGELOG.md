@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0-rc4 - Unreleased
+
+- Fixed a bug where the string concatenate operator could produce invalid Erlang
+  code when working with pipe expressions.
+
 ## 0.24.0-rc3 - 2022-10-20
 
 - Fixed a bug where the OOP method call error hint would be shown on too many
