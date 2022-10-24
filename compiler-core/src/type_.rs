@@ -961,7 +961,12 @@ fn register_values<'a>(
                     );
                 }
 
-                environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
+                environment.insert_variable(
+                    constructor.name.clone(),
+                    constructor_info,
+                    typ,
+                    *public,
+                );
             }
         }
 
@@ -1353,7 +1358,12 @@ fn infer_statement(
                 type_: type_.clone(),
             };
 
-            environment.insert_variable(name.clone(), variant.variant.clone(), type_.clone(), public);
+            environment.insert_variable(
+                name.clone(),
+                variant.variant.clone(),
+                type_.clone(),
+                public,
+            );
             environment.insert_module_value(&name, variant);
 
             if !public {
