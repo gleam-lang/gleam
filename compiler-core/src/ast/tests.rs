@@ -68,7 +68,7 @@ fn compile_expression(src: &str) -> TypedExpr {
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
-        true
+        true,
     );
 
     environment.insert_accessors(
