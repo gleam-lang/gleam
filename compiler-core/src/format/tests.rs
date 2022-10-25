@@ -3716,3 +3716,98 @@ fn use_1() {
 "#
     );
 }
+
+#[test]
+fn use_2() {
+    assert_format!(
+        r#"pub fn main() {
+  use user <- login()
+}
+"#
+    );
+}
+
+#[test]
+fn use_3() {
+    assert_format!(
+        r#"pub fn main() {
+  use one, two, three, four <- get_multiple_things()
+}
+"#
+    );
+}
+
+#[test]
+fn use_4() {
+    assert_format!(
+        r#"pub fn main() {
+  use
+    one,
+    two,
+    three,
+    four,
+    five,
+    six,
+    seven,
+    eight,
+    nine,
+    ten,
+    eleven
+  <- get_multiple_things_with_a_longer_function
+}
+"#
+    );
+}
+
+#[test]
+fn use_5() {
+    assert_format!(
+        r#"pub fn main() {
+  use
+    one,
+    two,
+    three,
+    four,
+    five,
+    six,
+    seven,
+    eight,
+    nine,
+    ten,
+    eleven
+  <- get_multiple_things_with_a_longer_function(a, b, c, d)
+}
+"#
+    );
+}
+
+#[test]
+fn use_6() {
+    assert_format!(
+        r#"pub fn main() {
+  use
+    one,
+    two,
+    three,
+    four,
+    five,
+    six,
+    seven,
+    eight,
+    nine,
+    ten,
+    eleven
+  <- get_multiple_things_with_a_longer_function(
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+  )
+}
+"#
+    );
+}

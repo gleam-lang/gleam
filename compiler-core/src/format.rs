@@ -700,7 +700,9 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.assignment(pattern, value, None, Some(*kind), annotation),
 
-            UntypedExpr::Use { .. } => todo!("format use"),
+            UntypedExpr::Use {
+                call, assignments, ..
+            } => self.use_(assignments, call),
 
             UntypedExpr::Try {
                 value,
@@ -1386,6 +1388,26 @@ impl<'comments> Formatter<'comments> {
 
     fn negate<'a>(&mut self, value: &'a UntypedExpr) -> Document<'a> {
         docvec!["!", self.wrap_expr(value)]
+    }
+
+    fn use_<'a>(
+        &mut self,
+        assignments: &'a [(String, SrcSpan)],
+        call: &'a UntypedExpr,
+    ) -> Document<'a> {
+        let call = self.expr(call);
+
+        if assignments.is_empty() {
+            docvec!["use <- ", call]
+        } else {
+            let assignments = assignments.iter().map(|(name, _)| name.to_doc());
+            let assignments = Itertools::intersperse(assignments, break_(",", ", "));
+            let left = ["use".to_doc(), break_("", " ")]
+                .into_iter()
+                .chain(assignments);
+            let left = concat(left).nest(INDENT).append(break_("", " "));
+            docvec![left, "<- ", call].group()
+        }
     }
 }
 
