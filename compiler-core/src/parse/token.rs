@@ -74,6 +74,7 @@ pub enum Token {
     Todo,
     Try,
     Type,
+    Use,
 }
 
 impl Token {
@@ -165,6 +166,7 @@ impl fmt::Display for Token {
             Token::Pub => "pub",
             Token::Todo => "todo",
             Token::Try => "try",
+            Token::Use => "use",
             Token::Type => "type",
             Token::LtGt => "<>",
         };
