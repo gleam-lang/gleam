@@ -691,20 +691,25 @@ where
     // use a, b, c <- function(a, b)
     // use a, b, c, <- function(a, b)
     fn parse_use(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
-        // The values assigned, if any
-        let args = Parser::series_of(
+        let assignments = Parser::series_of(
             self,
-            &|parser| parser.expect_name().map(Some),
+            &|parser| parser.parse_use_assignment(),
             Some(&Token::Comma),
         )?;
 
         _ = self.expect_one(&Token::LArrow)?;
+        let call = self.expect_expression_unit()?;
 
-        let call = self.parse_expression_unit()?;
+        Ok(UntypedExpr::Use {
+            location: SrcSpan::new(start, call.location().end),
+            assignments,
+            call: Box::new(call),
+        })
+    }
 
-        dbg!((args, call));
-
-        todo!("parse_use")
+    fn parse_use_assignment(&mut self) -> Result<Option<(String, SrcSpan)>, ParseError> {
+        let (start, name, end) = self.expect_name()?;
+        Ok(Some((name, SrcSpan::new(start, end))))
     }
 
     // An assignment, with `Let` or `Assert` already consumed
@@ -2432,6 +2437,14 @@ where
 
     fn expect_expression(&mut self) -> Result<UntypedExpr, ParseError> {
         if let Some(e) = self.parse_expression()? {
+            Ok(e)
+        } else {
+            self.next_tok_unexpected(vec!["An expression".to_string()])
+        }
+    }
+
+    fn expect_expression_unit(&mut self) -> Result<UntypedExpr, ParseError> {
+        if let Some(e) = self.parse_expression_unit()? {
             Ok(e)
         } else {
             self.next_tok_unexpected(vec!["An expression".to_string()])

@@ -76,6 +76,12 @@ pub enum UntypedExpr {
         annotation: Option<TypeAst>,
     },
 
+    Use {
+        location: SrcSpan,
+        call: Box<Self>,
+        assignments: Vec<(String, SrcSpan)>,
+    },
+
     Case {
         location: SrcSpan,
         subjects: Vec<Self>,
@@ -129,6 +135,7 @@ impl UntypedExpr {
             Self::Try { then, .. } => then.location(),
             Self::PipeLine { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
+            | Self::Use { location, .. }
             | Self::Var { location, .. }
             | Self::Int { location, .. }
             | Self::Todo { location, .. }
