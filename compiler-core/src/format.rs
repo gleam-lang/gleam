@@ -700,6 +700,8 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.assignment(pattern, value, None, Some(*kind), annotation),
 
+            UntypedExpr::Use { .. } => todo!("format use"),
+
             UntypedExpr::Try {
                 value,
                 pattern,

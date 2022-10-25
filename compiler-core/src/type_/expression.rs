@@ -130,6 +130,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => self.infer_try(pattern, *value, *then, &annotation, location),
 
+            UntypedExpr::Use { .. } => todo!("infer use"),
+
             UntypedExpr::Case {
                 location,
                 subjects,
