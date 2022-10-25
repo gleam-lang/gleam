@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "0.24.0"
+version = "0.25.0-dev"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -31,7 +31,7 @@ serde_json = "*"
 # Cap'n Proto binary format runtime
 capnp = "0.14.3"
 # Enum trait impl macros
-strum = { version = "0.24.0", features = ["derive"] }
+strum = { version = "0.25.0-dev", features = ["derive"] }
 # Template rendering
 askama = "0.10.5"
 # Markdown parsing

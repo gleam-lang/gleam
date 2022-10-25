@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "0.24.0"
+version = "0.25.0-dev"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -31,7 +31,7 @@ toml = "0.5.8"
 ignore = "0.4.18"
 walkdir = "2.3.2"
 # Enum trait impl macros
-strum = { version = "0.24.0", features = ["derive"] }
+strum = { version = "0.25.0-dev", features = ["derive"] }
 # Check for tty
 atty = "0.2.14"
 # Hex package manager client
