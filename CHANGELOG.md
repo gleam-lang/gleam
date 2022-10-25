@@ -2,6 +2,8 @@
 
 ## 0.24.0 - 2022-10-25
 
+[Release blog post](https://gleam.run/news/gleam-v0.24-released/)
+
 ## 0.24.0-rc4 - 2022-10-23
 
 - Fixed a bug where the string concatenate operator could produce invalid Erlang
