@@ -342,6 +342,11 @@ where
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::LessDot, tok_end));
                     }
+                    Some('-') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::LArrow, tok_end));
+                    }
                     Some('=') => {
                         let _ = self.next_char();
                         match self.chr0 {
