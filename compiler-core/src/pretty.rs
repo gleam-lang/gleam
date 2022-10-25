@@ -152,9 +152,6 @@ pub enum Document<'a> {
     Nest(isize, Box<Self>),
 
     /// Nests the given document to the current cursor position
-    NestCurrent(Box<Self>),
-
-    /// Nests the given document to the current cursor position
     Group(Box<Self>),
 
     /// A string to render
@@ -207,9 +204,6 @@ fn fits(
             Document::Line(_) => return true,
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
-
-            // TODO: Remove
-            Document::NestCurrent(doc) => docs.push_front((indent, mode, doc)),
 
             Document::Group(doc) if mode.is_forced() => docs.push_front((indent, mode, doc)),
 
@@ -322,10 +316,6 @@ fn format(
                 docs.push_front((indent + i, mode, doc));
             }
 
-            Document::NestCurrent(doc) => {
-                docs.push_front((width, mode, doc));
-            }
-
             Document::Group(doc) | Document::FlexBreak(doc) => {
                 let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
                 if fits(limit, width, group_docs) {
@@ -380,10 +370,6 @@ impl<'a> Document<'a> {
         Self::Nest(indent, Box::new(self))
     }
 
-    pub fn nest_current(self) -> Self {
-        Self::NestCurrent(Box::new(self))
-    }
-
     pub fn force_break(self) -> Self {
         Self::ForceBroken(Box::new(self))
     }
@@ -425,7 +411,7 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => d.is_empty(),
+            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | Group(d) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }

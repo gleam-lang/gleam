@@ -14,21 +14,21 @@ go() ->
         {ok, Y} -> {ok, Y};
         _try ->
             erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 2})
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _try,
+                        module => <<"the_app"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2})
     end,
     {ok, Y@3} = case {ok, 1} of
         {ok, Y@2} -> {ok, Y@2};
         _try@1 ->
             erlang:error(#{gleam_error => assert,
-                           message => <<"Assertion pattern match failed"/utf8>>,
-                           value => _try@1,
-                           module => <<"the_app"/utf8>>,
-                           function => <<"go"/utf8>>,
-                           line => 3})
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _try@1,
+                        module => <<"the_app"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 3})
     end,
     Y@3.
 

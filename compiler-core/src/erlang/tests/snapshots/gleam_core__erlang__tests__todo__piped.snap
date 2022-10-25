@@ -12,13 +12,13 @@ expression: "\n     pub fn main(){\n      \"lets\"\n      |> todo(\"pipe\")\n   
 main() ->
     _pipe = <<"lets"/utf8>>,
     _pipe@1 = (erlang:error(#{gleam_error => todo,
-                              message => <<"pipe"/utf8>>,
-                              module => <<"the_app"/utf8>>,
-                              function => <<"main"/utf8>>,
-                              line => 4}))(_pipe),
+            message => <<"pipe"/utf8>>,
+            module => <<"the_app"/utf8>>,
+            function => <<"main"/utf8>>,
+            line => 4}))(_pipe),
     (erlang:error(#{gleam_error => todo,
-                    message => <<"other todo"/utf8>>,
-                    module => <<"the_app"/utf8>>,
-                    function => <<"main"/utf8>>,
-                    line => 5}))(_pipe@1).
+            message => <<"other todo"/utf8>>,
+            module => <<"the_app"/utf8>>,
+            function => <<"main"/utf8>>,
+            line => 5}))(_pipe@1).
 

@@ -520,7 +520,7 @@ fn string(value: &str) -> Document<'_> {
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
-        .nest_current()
+        .nest(INDENT)
         .surround("{", "}")
         .group()
 }
@@ -572,7 +572,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
 
 fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
-        .nest_current()
+        .nest(INDENT)
         .surround("<<", ">>")
         .group()
 }
@@ -925,7 +925,7 @@ fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
         elems
     };
 
-    elems.to_doc().nest_current().surround("[", "]").group()
+    elems.to_doc().nest(INDENT).surround("[", "]").group()
 }
 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
@@ -996,7 +996,7 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 elements.iter().map(|e| const_inline(e, env)),
                 break_(",", ", "),
             );
-            concat(elements).nest_current().surround("[", "]").group()
+            concat(elements).nest(INDENT).surround("[", "]").group()
         }
 
         Constant::BitString { segments, .. } => bit_string(
@@ -1444,7 +1444,7 @@ fn erlang_error<'a>(
         .append(env.line_numbers.line_number(location.start));
     let error = "#{"
         .to_doc()
-        .append(fields_doc.group().nest_current())
+        .append(fields_doc.group().nest(INDENT))
         .append("}");
     docvec!["erlang:error", wrap_args([error.group()])]
 }

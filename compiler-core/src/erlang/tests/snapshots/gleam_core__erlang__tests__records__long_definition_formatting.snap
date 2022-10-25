@@ -8,10 +8,10 @@ expression: "record_definition(\"PetCat\",\n    &[(\"name\", type_::generic_var(
     is_cute :: any(),
     linked :: integer(),
     whatever :: list({nil,
-                      list({nil, nil, nil}),
-                      nil,
-                      list({nil, nil, nil}),
-                      nil,
-                      list({nil, nil, nil})})
+        list({nil, nil, nil}),
+        nil,
+        list({nil, nil, nil}),
+        nil,
+        list({nil, nil, nil})})
 }).
 

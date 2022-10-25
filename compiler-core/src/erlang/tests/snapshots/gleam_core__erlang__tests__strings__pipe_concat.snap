@@ -15,11 +15,11 @@ id(X) ->
 -spec main() -> binary().
 main() ->
     <<(begin
-          _pipe = <<""/utf8>>,
-          id(_pipe)
-      end)/binary,
-      (begin
-          _pipe@1 = <<""/utf8>>,
-          id(_pipe@1)
-      end)/binary>>.
+            _pipe = <<""/utf8>>,
+            id(_pipe)
+        end)/binary,
+        (begin
+            _pipe@1 = <<""/utf8>>,
+            id(_pipe@1)
+        end)/binary>>.
 

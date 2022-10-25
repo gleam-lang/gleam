@@ -11,8 +11,8 @@ expression: "\npub fn main() {\n  todo\n}\n"
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => todo,
-                   message => <<"This has not yet been implemented"/utf8>>,
-                   module => <<"the_app"/utf8>>,
-                   function => <<"main"/utf8>>,
-                   line => 3}).
+            message => <<"This has not yet been implemented"/utf8>>,
+            module => <<"the_app"/utf8>>,
+            function => <<"main"/utf8>>,
+            line => 3}).
 

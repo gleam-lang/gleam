@@ -15,9 +15,9 @@ expression: "\npub type Car { Car(make: String, model: String, driver: Person) }
 -spec main() -> person().
 main() ->
     Car = {car,
-           <<"Amphicar"/utf8>>,
-           <<"Model 770"/utf8>>,
-           {person, <<"John Doe"/utf8>>, 27}},
+        <<"Amphicar"/utf8>>,
+        <<"Model 770"/utf8>>,
+        {person, <<"John Doe"/utf8>>, 27}},
     New_p = erlang:setelement(3, erlang:element(4, Car), 28),
     New_p.
 

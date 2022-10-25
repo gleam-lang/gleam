@@ -11,7 +11,7 @@ expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 -spec x(fun((integer()) -> K)) -> {K}.
 x(F) ->
     {begin
-         _pipe = 1,
-         F(_pipe)
-     end}.
+            _pipe = 1,
+            F(_pipe)
+        end}.
 
