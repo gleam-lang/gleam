@@ -691,11 +691,11 @@ where
     // use a, b, c <- function(a, b)
     // use a, b, c, <- function(a, b)
     fn parse_use(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
-        let assignments = Parser::series_of(
-            self,
-            &|parser| parser.parse_use_assignment(),
-            Some(&Token::Comma),
-        )?;
+        let assignments = if let Some((_, Token::LArrow, _)) = self.tok0 {
+            vec![]
+        } else {
+            Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?
+        };
 
         _ = self.expect_one(&Token::LArrow)?;
         let call = self.expect_expression_unit()?;

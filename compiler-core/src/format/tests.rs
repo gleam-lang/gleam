@@ -3706,3 +3706,13 @@ pub external type Map(key, value)
 "#
     );
 }
+
+#[test]
+fn use_1() {
+    assert_format!(
+        r#"pub fn main() {
+  use <- benchmark("thingy")
+}
+"#
+    );
+}
