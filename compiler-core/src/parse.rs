@@ -537,6 +537,11 @@ where
                 self.parse_assignment(start, AssignmentKind::Assert)?
             }
 
+            Some((start, Token::Use, _)) => {
+                let _ = self.next_tok();
+                self.parse_use(start)?
+            }
+
             // helpful error on possibly trying to group with ""
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
@@ -676,6 +681,30 @@ where
         }
 
         Ok(Some(expr))
+    }
+
+    // A `use` expression
+    // use <- function
+    // use <- function()
+    // use <- function(a, b)
+    // use <- module.function(a, b)
+    // use a, b, c <- function(a, b)
+    // use a, b, c, <- function(a, b)
+    fn parse_use(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
+        // The values assigned, if any
+        let args = Parser::series_of(
+            self,
+            &|parser| parser.expect_name().map(Some),
+            Some(&Token::Comma),
+        )?;
+
+        _ = self.expect_one(&Token::LArrow)?;
+
+        let call = self.parse_expression_unit()?;
+
+        dbg!((args, call));
+
+        todo!("parse_use")
     }
 
     // An assignment, with `Let` or `Assert` already consumed
@@ -2951,6 +2980,7 @@ fn is_reserved_word(tok: Token) -> bool {
             | Token::Todo
             | Token::Try
             | Token::Type
+            | Token::Use
     ]
 }
 
