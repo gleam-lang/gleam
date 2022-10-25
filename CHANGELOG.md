@@ -1,5 +1,9 @@
 # Changelog
 
+# Unreleased
+
+- Generated HTML documentation now includes the `theme-color` HTML meta tag.
+
 ## 0.24.0 - 2022-10-25
 
 [Release blog post](https://gleam.run/news/gleam-v0.24-released/)
