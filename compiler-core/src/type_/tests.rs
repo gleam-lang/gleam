@@ -5,7 +5,9 @@ mod errors;
 mod imports;
 mod pretty;
 mod statement_if;
+mod use_;
 mod warnings;
+
 use std::path::PathBuf;
 
 #[macro_export]

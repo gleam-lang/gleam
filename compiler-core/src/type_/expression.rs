@@ -130,8 +130,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => self.infer_try(pattern, *value, *then, &annotation, location),
 
-            UntypedExpr::Use { .. } => todo!("infer use"),
-
             UntypedExpr::Case {
                 location,
                 subjects,
@@ -187,6 +185,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_record_update(*constructor, spread, args, location),
 
             UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
+
+            UntypedExpr::Use { .. } => unreachable!(
+                "Use should always be within a sequence, \
+and a sequence has as special case for use"
+            ),
         }
     }
 
@@ -263,16 +266,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let count = untyped.len();
         let mut expressions = Vec::with_capacity(count);
+
         for (i, expression) in untyped.into_iter().enumerate() {
-            let expression = self.infer(expression)?;
-            // This isn't the final expression in the sequence, so call the
-            // `expression_discarded` function to see if anything is being
-            // discarded that we think shouldn't be.
-            if i < count - 1 {
-                self.expression_discarded(&expression);
+            let is_final_expression = i == count - 1;
+
+            if let UntypedExpr::Use { .. } = expression {
+                if is_final_expression {
+                    todo!("use as final expression");
+                }
+            } else {
+                let expression = self.infer(expression)?;
+                // This isn't the final expression in the sequence, so call the
+                // `expression_discarded` function to see if anything is being
+                // discarded that we think shouldn't be.
+                if !is_final_expression {
+                    self.expression_discarded(&expression);
+                }
+                expressions.push(expression);
             }
-            expressions.push(expression);
         }
+
         Ok(TypedExpr::Sequence {
             location,
             expressions,
