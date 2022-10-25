@@ -5,17 +5,6 @@ use super::*;
 use im::vector;
 use pretty_assertions::assert_eq;
 
-//
-//
-//
-//
-// TODO: port Fits tests for Elixir to verify this implementation is correct
-//
-//
-//
-//
-//
-
 #[test]
 fn fits_test() {
     // Negative limits never fit
@@ -25,8 +14,10 @@ fn fits_test() {
     assert!(fits(0, 0, vector![]));
 
     // ForceBreak never fits
-    assert!(!fits(100, 0, vector![(0, Unbroken, &ForceBreak)]));
-    assert!(!fits(100, 0, vector![(0, Broken, &ForceBreak)]));
+    let doc = ForceBroken(Box::new(nil()));
+    assert!(!fits(100, 0, vector![(0, Unbroken, &doc)]));
+    let doc = ForceBroken(Box::new(nil()));
+    assert!(!fits(100, 0, vector![(0, Broken, &doc)]));
 
     // Break in Broken fits always
     assert!(fits(
@@ -145,18 +136,18 @@ fn format_test() {
     )));
     assert_eq!("111\n   2".to_string(), doc.to_pretty_string(1));
 
-    let doc = ForceBreak.append(Break {
+    let doc = ForceBroken(Box::new(Break {
         broken: "broken",
         unbroken: "unbroken",
         kind: BreakKind::Strict,
-    });
-    assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
+    }));
+    assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 
-    let doc = ForceBreak.append(Break {
+    let doc = ForceBroken(Box::new(Break {
         broken: "broken",
         unbroken: "unbroken",
         kind: BreakKind::Flex,
-    });
+    }));
     assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
 }
 
@@ -195,7 +186,8 @@ fn empty_documents() {
     assert!(!line().is_empty());
 
     // force break
-    assert!(force_break().is_empty());
+    assert!(nil().force_break().is_empty());
+    assert!(!"ok".to_doc().force_break().is_empty());
 
     // strings
     assert!("".to_doc().is_empty());

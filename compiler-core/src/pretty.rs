@@ -9,9 +9,8 @@
 //!
 //! ## Extensions
 //!
-//! - `ForceBreak` from Prettier.
+//! - `ForcedBreak` from Elixir.
 //! - `FlexBreak` from Elixir.
-//! - `Fits` (next_break_fits) from Elixir.
 #![allow(clippy::wrong_self_convention)]
 
 #[cfg(test)]
@@ -134,7 +133,7 @@ pub enum Document<'a> {
     Line(usize),
 
     /// Forces contained groups to break
-    ForceBreak,
+    ForceBroken(Box<Self>),
 
     /// May break contained document based on best fit, thus flex break
     FlexBreak(Box<Self>),
@@ -163,9 +162,6 @@ pub enum Document<'a> {
 
     /// A str to render
     Str(&'a str),
-
-    /// Specify whether the next break can fit or not.
-    Fits { document: Box<Self>, enabled: bool },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -178,14 +174,13 @@ enum Mode {
     // Inspect.Algebra's `fits` extension.
     //
     /// Broken and forced to remain broken
-    BrokenFixed,
-    /// Unbroken and forced to remain unbroken
-    UnbrokenFixed,
+    ForcedBroken,
+    // ForcedUnbroken, // Used for next_break_fits. Not yet implemented.
 }
 
 impl Mode {
-    fn is_fixed(&self) -> bool {
-        matches!(self, Mode::BrokenFixed | Mode::UnbrokenFixed)
+    fn is_forced(&self) -> bool {
+        matches!(self, Mode::ForcedBroken)
     }
 }
 
@@ -205,16 +200,18 @@ fn fits(
         };
 
         match document {
-            Document::Line(_) => return true,
+            Document::ForceBroken(_) => {
+                return false;
+            }
 
-            Document::ForceBreak => return false,
+            Document::Line(_) => return true,
 
             Document::Nest(i, doc) => docs.push_front((i + indent, mode, doc)),
 
             // TODO: Remove
             Document::NestCurrent(doc) => docs.push_front((indent, mode, doc)),
 
-            Document::Group(doc) if mode.is_fixed() => docs.push_front((indent, mode, doc)),
+            Document::Group(doc) if mode.is_forced() => docs.push_front((indent, mode, doc)),
 
             Document::Group(doc) => docs.push_front((indent, Mode::Unbroken, doc)),
 
@@ -222,29 +219,16 @@ fn fits(
             Document::String(s) => limit -= s.len() as isize,
 
             Document::Break { unbroken, .. } => match mode {
-                Mode::Broken | Mode::BrokenFixed => return true,
-                Mode::Unbroken | Mode::UnbrokenFixed => current_width += unbroken.len() as isize,
+                Mode::Broken | Mode::ForcedBroken => return true,
+                Mode::Unbroken => current_width += unbroken.len() as isize,
             },
 
             Document::FlexBreak(doc) => docs.push_front((indent, mode, doc)),
 
             Document::Vec(vec) => {
                 for doc in vec.iter().rev() {
-                    docs.push_front((indent, mode.clone(), doc));
+                    docs.push_front((indent, mode, doc));
                 }
-            }
-
-            Document::Fits { document, .. } if mode.is_fixed() => {
-                docs.push_front((indent, mode, document));
-            }
-
-            Document::Fits { document, enabled } => {
-                let mode = if *enabled {
-                    Mode::BrokenFixed
-                } else {
-                    Mode::UnbrokenFixed
-                };
-                docs.push_front((indent, mode, document));
             }
         }
     }
@@ -264,8 +248,6 @@ fn format(
 ) -> Result<()> {
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
-            Document::ForceBreak => (),
-
             Document::Line(i) => {
                 for _ in 0..*i {
                     writer.str_write("\n")?;
@@ -304,12 +286,12 @@ fn format(
                 kind: BreakKind::Strict,
             } => {
                 width = match mode {
-                    Mode::Unbroken | Mode::UnbrokenFixed => {
+                    Mode::Unbroken => {
                         writer.str_write(unbroken)?;
                         width + unbroken.len() as isize
                     }
 
-                    Mode::Broken | Mode::BrokenFixed => {
+                    Mode::Broken | Mode::ForcedBroken => {
                         writer.str_write(broken)?;
                         writer.str_write("\n")?;
                         for _ in 0..indent {
@@ -332,7 +314,7 @@ fn format(
 
             Document::Vec(vec) => {
                 for doc in vec.iter().rev() {
-                    docs.push_front((indent, mode.clone(), doc));
+                    docs.push_front((indent, mode, doc));
                 }
             }
 
@@ -345,7 +327,6 @@ fn format(
             }
 
             Document::Group(doc) | Document::FlexBreak(doc) => {
-                // TODO: don't clone the doc
                 let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
                 if fits(limit, width, group_docs) {
                     docs.push_front((indent, Mode::Unbroken, doc));
@@ -354,8 +335,8 @@ fn format(
                 }
             }
 
-            Document::Fits { document, .. } => {
-                docs.push_front((indent, mode, document));
+            Document::ForceBroken(document) => {
+                docs.push_front((indent, Mode::ForcedBroken, document));
             }
         }
     }
@@ -372,10 +353,6 @@ pub fn line<'a>() -> Document<'a> {
 
 pub fn lines<'a>(i: usize) -> Document<'a> {
     Document::Line(i)
-}
-
-pub fn force_break<'a>() -> Document<'a> {
-    Document::ForceBreak
 }
 
 pub fn break_<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
@@ -407,11 +384,8 @@ impl<'a> Document<'a> {
         Self::NestCurrent(Box::new(self))
     }
 
-    pub fn next_break_fits(self) -> Self {
-        Self::Fits {
-            document: Box::new(self),
-            enabled: true,
-        }
+    pub fn force_break(self) -> Self {
+        Self::ForceBroken(Box::new(self))
     }
 
     pub fn append(self, second: impl Documentable<'a>) -> Self {
@@ -447,14 +421,11 @@ impl<'a> Document<'a> {
         use Document::*;
         match self {
             Line(n) => *n == 0,
-            ForceBreak => true,
             String(s) => s.is_empty(),
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            Fits { document: d, .. } | FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => {
-                d.is_empty()
-            }
+            ForceBroken(d) | FlexBreak(d) | Nest(_, d) | NestCurrent(d) | Group(d) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }

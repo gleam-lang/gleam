@@ -373,7 +373,6 @@ impl<'module> Generator<'module> {
     fn sequence<'a>(&mut self, expressions: &'a [TypedExpr]) -> Output<'a> {
         let count = expressions.len();
         let mut documents = Vec::with_capacity(count * 3);
-        documents.push(force_break());
         for (i, expression) in expressions.iter().enumerate() {
             if i + 1 < count {
                 documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
@@ -388,7 +387,7 @@ impl<'module> Generator<'module> {
                 documents.push(self.expression(expression)?);
             }
         }
-        Ok(documents.to_doc())
+        Ok(documents.to_doc().force_break())
     }
 
     fn try_<'a>(
@@ -397,7 +396,7 @@ impl<'module> Generator<'module> {
         pattern: &'a TypedPattern,
         then: &'a TypedExpr,
     ) -> Output<'a> {
-        let mut docs = vec![force_break()];
+        let mut docs = vec![];
 
         // If the subject is not a variable then we will need to save it to a
         // variable to prevent any side effects from rendering the same
@@ -461,7 +460,7 @@ impl<'module> Generator<'module> {
         // Lastly, whatever comes next
         docs.push(self.expression(then)?);
 
-        Ok(docs.to_doc())
+        Ok(docs.to_doc().force_break())
     }
 
     fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
@@ -473,7 +472,6 @@ impl<'module> Generator<'module> {
             let name = self.next_local_var(name);
             return Ok(if self.tail_position {
                 docvec![
-                    force_break(),
                     "let ",
                     name.clone(),
                     " = ",
@@ -485,8 +483,9 @@ impl<'module> Generator<'module> {
                     ";"
                 ]
             } else {
-                docvec![force_break(), "let ", name, " = ", subject, ";"]
-            });
+                docvec!["let ", name, " = ", subject, ";"]
+            }
+            .force_break());
         }
 
         // Otherwise we need to compile the patterns
@@ -518,7 +517,7 @@ impl<'module> Generator<'module> {
             None => self.pattern_into_assignment_doc(compiled, subject, pattern.location())?,
         };
 
-        Ok(docvec!(force_break(), doc.append(afterwards)))
+        Ok(doc.append(afterwards).force_break())
     }
 
     fn case<'a>(
@@ -638,7 +637,7 @@ impl<'module> Generator<'module> {
             })
             .try_collect()?;
 
-        Ok(docvec![force_break(), subject_assignments, doc])
+        Ok(docvec![subject_assignments, doc].force_break())
     }
 
     fn case_no_match<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
@@ -1084,6 +1083,7 @@ impl<'module> Generator<'module> {
                 .map(|check| check.into_doc(match_desired)),
             operator,
         ))
+        .group()
     }
 }
 
