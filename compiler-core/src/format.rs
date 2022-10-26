@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::*,
+    ast::{Use, *},
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -700,9 +700,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.assignment(pattern, value, None, Some(*kind), annotation),
 
-            UntypedExpr::Use {
-                call, assignments, ..
-            } => self.use_(assignments, call),
+            UntypedExpr::Use(use_) => self.use_(use_),
 
             UntypedExpr::Try {
                 value,
@@ -1390,17 +1388,13 @@ impl<'comments> Formatter<'comments> {
         docvec!["!", self.wrap_expr(value)]
     }
 
-    fn use_<'a>(
-        &mut self,
-        assignments: &'a [(String, SrcSpan)],
-        call: &'a UntypedExpr,
-    ) -> Document<'a> {
-        let call = self.expr(call);
+    fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
+        let call = self.expr(&use_.call);
 
-        if assignments.is_empty() {
+        if use_.assignments.is_empty() {
             docvec!["use <- ", call]
         } else {
-            let assignments = assignments.iter().map(|(name, _)| name.to_doc());
+            let assignments = use_.assignments.iter().map(|(name, _)| name.to_doc());
             let assignments = Itertools::intersperse(assignments, break_(",", ", "));
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()

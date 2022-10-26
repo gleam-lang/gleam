@@ -7,7 +7,7 @@ use crate::ast::{
     ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst, TypedArg,
     TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, UntypedArg,
     UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
-    UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
+    UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern, Use,
 };
 
 use im::hashmap;
@@ -186,7 +186,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
 
-            UntypedExpr::Use { .. } => unreachable!(
+            UntypedExpr::Use(Use { .. }) => unreachable!(
                 "Use should always be within a sequence, \
 and a sequence has as special case for use"
             ),
@@ -265,31 +265,102 @@ and a sequence has as special case for use"
         untyped: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let count = untyped.len();
+        let untyped = untyped.into_iter();
+        self.infer_iter_seq(location, count, untyped)
+    }
+
+    fn infer_iter_seq<Exprs: Iterator<Item = UntypedExpr>>(
+        &mut self,
+        location: SrcSpan,
+        count: usize,
+        mut untyped: Exprs,
+    ) -> Result<TypedExpr, Error> {
+        let mut i = 0;
         let mut expressions = Vec::with_capacity(count);
 
-        for (i, expression) in untyped.into_iter().enumerate() {
-            let is_final_expression = i == count - 1;
+        while let Some(expression) = untyped.next() {
+            i += 1;
 
-            if let UntypedExpr::Use { .. } = expression {
-                if is_final_expression {
-                    todo!("use as final expression");
-                }
-            } else {
-                let expression = self.infer(expression)?;
-                // This isn't the final expression in the sequence, so call the
-                // `expression_discarded` function to see if anything is being
-                // discarded that we think shouldn't be.
-                if !is_final_expression {
-                    self.expression_discarded(&expression);
-                }
+            // Special case for `use` expressions, which need the remaining
+            // expressions in the sequence to be passed to them during as an
+            // implicit anonymous function.
+            if let UntypedExpr::Use(use_) = expression {
+                let expression = self.infer_use(use_, location, untyped.collect())?;
                 expressions.push(expression);
+                break; // Inferring the use has consumed the rest of the exprs
             }
+
+            let expression = self.infer(expression)?;
+            // This isn't the final expression in the sequence, so call the
+            // `expression_discarded` function to see if anything is being
+            // discarded that we think shouldn't be.
+            if i < count {
+                self.expression_discarded(&expression);
+            }
+            expressions.push(expression);
         }
 
         Ok(TypedExpr::Sequence {
             location,
             expressions,
         })
+    }
+
+    fn infer_use(
+        &mut self,
+        use_: Use,
+        sequence_location: SrcSpan,
+        following_expressions: Vec<UntypedExpr>,
+    ) -> Result<TypedExpr, Error> {
+        // Ensure that the use's call is of the right structure. i.e. it is a
+        // call to a function.
+        let (call_location, fun, mut arguments) = match *use_.call {
+            UntypedExpr::Call {
+                location,
+                fun,
+                arguments,
+            } => (location, fun, arguments),
+
+            _other => todo!("use other"),
+        };
+
+        let callback_arguments = use_
+            .assignments
+            .into_iter()
+            .map(|(name, location)| Arg {
+                names: ArgNames::Named { name },
+                location,
+                annotation: None,
+                type_: (),
+            })
+            .collect();
+
+        // Collect the following expressions into a function to be passed as a
+        // callback to the use's call function.
+        let callback = UntypedExpr::Fn {
+            arguments: callback_arguments,
+            location: sequence_location,
+            return_annotation: None,
+            is_capture: false,
+            body: Box::new(UntypedExpr::Sequence {
+                location: SrcSpan::new(use_.location.start, sequence_location.end),
+                expressions: following_expressions,
+            }),
+        };
+
+        arguments.push(CallArg {
+            label: None,
+            location: callback.location(),
+            value: callback,
+        });
+
+        let call = UntypedExpr::Call {
+            location: call_location,
+            fun,
+            arguments,
+        };
+
+        self.infer(call)
     }
 
     fn infer_negate(

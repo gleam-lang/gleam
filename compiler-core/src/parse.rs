@@ -60,7 +60,7 @@ use crate::ast::{
     RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
     TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, CAPTURE_VARIABLE,
+    UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -700,11 +700,11 @@ where
         _ = self.expect_one(&Token::LArrow)?;
         let call = self.expect_expression_unit()?;
 
-        Ok(UntypedExpr::Use {
+        Ok(UntypedExpr::Use(Use {
             location: SrcSpan::new(start, call.location().end),
             assignments,
             call: Box::new(call),
-        })
+        }))
     }
 
     fn parse_use_assignment(&mut self) -> Result<Option<(String, SrcSpan)>, ParseError> {

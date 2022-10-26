@@ -1,11 +1,11 @@
 use crate::assert_module_infer;
 
 #[test]
-fn zero_arity_no_parens() {
+fn zero_arity() {
     assert_module_infer!(
         r#"
 pub fn main() {
-  use <- pair
+  use <- pair()
   123
 }
 
@@ -14,6 +14,6 @@ fn pair(f) {
   #(x, x)
 }
 "#,
-        vec![("main", "#(Int, Int)")],
+        vec![("main", "fn() -> #(Int, Int)")],
     )
 }
