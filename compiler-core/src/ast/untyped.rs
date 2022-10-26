@@ -76,11 +76,7 @@ pub enum UntypedExpr {
         annotation: Option<TypeAst>,
     },
 
-    Use {
-        location: SrcSpan,
-        call: Box<Self>,
-        assignments: Vec<(String, SrcSpan)>,
-    },
+    Use(Use),
 
     Case {
         location: SrcSpan,
@@ -135,7 +131,7 @@ impl UntypedExpr {
             Self::Try { then, .. } => then.location(),
             Self::PipeLine { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
-            | Self::Use { location, .. }
+            | Self::Use(Use { location, .. })
             | Self::Var { location, .. }
             | Self::Int { location, .. }
             | Self::Todo { location, .. }
@@ -220,4 +216,11 @@ impl HasLocation for UntypedExpr {
     fn location(&self) -> SrcSpan {
         self.location()
     }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Use {
+    pub location: SrcSpan,
+    pub call: Box<UntypedExpr>,
+    pub assignments: Vec<(String, SrcSpan)>,
 }

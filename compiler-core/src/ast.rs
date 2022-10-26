@@ -6,7 +6,7 @@ mod untyped;
 mod tests;
 
 pub use self::typed::TypedExpr;
-pub use self::untyped::UntypedExpr;
+pub use self::untyped::{UntypedExpr, Use};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
