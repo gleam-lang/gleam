@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/javascript/tests/use_.rs
+assertion_line: 5
+expression: "\npub fn main() {\n  use <- pair()\n  123\n}\n\nfn pair(f) {\n  let x = f()\n  #(x, x)\n}\n"
+---
+export function main() {
+  return pair(
+    () => {
+      return 123;
+    },
+  );
+}
+
+function pair(f) {
+  let x = f();
+  return [x, x];
+}
+
