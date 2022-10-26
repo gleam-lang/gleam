@@ -5,14 +5,15 @@ fn zero_arity_no_parens() {
     assert_module_infer!(
         r#"
 pub fn main() {
-  use <- call
+  use <- pair
   123
 }
 
-fn call(f) {
-  f()
+fn pair(f) {
+  let x = f()
+  #(x, x)
 }
 "#,
-        vec![("main", "Int")],
+        vec![("main", "#(Int, Int)")],
     )
 }
