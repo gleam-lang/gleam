@@ -42,7 +42,7 @@ macro_rules! assert_erl {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             crate::build::Origin::Src,

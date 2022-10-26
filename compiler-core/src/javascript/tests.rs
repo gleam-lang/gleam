@@ -52,7 +52,7 @@ macro_rules! assert_js {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
             crate::build::Origin::Src,
@@ -194,7 +194,7 @@ macro_rules! assert_ts_def {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
             crate::build::Origin::Src,

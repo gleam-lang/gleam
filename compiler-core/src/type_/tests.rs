@@ -60,7 +60,7 @@ macro_rules! assert_infer_with_module {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let ast = infer_module(
             Target::Erlang,
@@ -155,7 +155,7 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
-        let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
@@ -208,7 +208,7 @@ macro_rules! assert_error {
 
     ($src:expr) => {
         use std::path::PathBuf;
-        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
         let ids = UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -261,7 +261,7 @@ macro_rules! assert_with_module_error {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let error = infer_module(
             Target::Erlang,
