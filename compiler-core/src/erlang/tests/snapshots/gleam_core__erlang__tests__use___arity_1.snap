@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/erlang/tests/use_.rs
+assertion_line: 5
+expression: "\npub fn main() {\n  use <- pair()\n  123\n}\n\nfn pair(f) {\n  let x = f()\n  #(x, x)\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> {integer(), integer()}.
+main() ->
+    pair(
+        fun() ->
+            123
+        end
+    ).
+
+-spec pair(fun(() -> integer())) -> {integer(), integer()}.
+pair(F) ->
+    X = F(),
+    {X, X}.
+
