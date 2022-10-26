@@ -20,6 +20,7 @@ mod todo;
 mod try_;
 mod tuples;
 mod type_alias;
+mod use_;
 
 pub static CURRENT_PACKAGE: &str = "thepackage";
 

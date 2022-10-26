@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/use_.rs
+assertion_line: 39
+expression: "\npub fn main() {\n  use <- trip(1.0, \"\")\n  123\n}\n\nfn trip(x, y, f) {\n  let z = f()\n  #(x, y, z)\n}\n"
+---
+export function main() {
+  return trip(
+    1.0,
+    "",
+    () => {
+      return 123;
+    },
+  );
+}
+
+function trip(x, y, f) {
+  let z = f();
+  return [x, y, z];
+}
+
