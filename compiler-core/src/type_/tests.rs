@@ -209,15 +209,15 @@ macro_rules! assert_error {
     ($src:expr) => {
         use std::path::PathBuf;
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::type_::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
-        let error = ExprTyper::new(&mut Environment::new(
+        let error = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
             &["somemod".to_string()],
             &modules,

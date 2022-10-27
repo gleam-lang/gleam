@@ -11,7 +11,7 @@ pub mod pretty;
 mod tests;
 
 pub use environment::*;
-pub use error::{Error, UnifyErrorSituation, Warning};
+pub use error::{Error, InvalidUseExpressionCallKind, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
