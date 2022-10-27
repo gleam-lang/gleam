@@ -312,28 +312,8 @@ and a sequence has as special case for use"
         sequence_location: SrcSpan,
         following_expressions: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
-        // Ensure that the use's call is of the right structure. i.e. it is a
-        // call to a function.
-        let (call_location, fun, mut arguments) = match *use_.call {
-            UntypedExpr::Call {
-                location,
-                fun,
-                arguments,
-            } => (location, fun, arguments),
-
-            _other => todo!("use other"),
-        };
-
-        let callback_arguments = use_
-            .assignments
-            .into_iter()
-            .map(|(name, location)| Arg {
-                names: ArgNames::Named { name },
-                location,
-                annotation: None,
-                type_: (),
-            })
-            .collect();
+        let (call_location, fun, mut arguments) = get_use_expression_call(*use_.call)?;
+        let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.
@@ -348,19 +328,18 @@ and a sequence has as special case for use"
             }),
         };
 
+        // Add this new callback function to the arguments to function call
         arguments.push(CallArg {
             label: None,
             location: callback.location(),
             value: callback,
         });
 
-        let call = UntypedExpr::Call {
+        self.infer(UntypedExpr::Call {
             location: call_location,
             fun,
             arguments,
-        };
-
-        self.infer(call)
+        })
     }
 
     fn infer_negate(
@@ -2117,4 +2096,32 @@ and a sequence has as special case for use"
         }
         self.environment.check_exhaustiveness(patterns, value_typ)
     }
+}
+
+fn get_use_expression_call(
+    call: UntypedExpr,
+) -> Result<(SrcSpan, Box<UntypedExpr>, Vec<CallArg<UntypedExpr>>), Error> {
+    // Ensure that the use's call is of the right structure. i.e. it is a
+    // call to a function.
+    match call {
+        UntypedExpr::Call {
+            location,
+            fun,
+            arguments,
+        } => Ok((location, fun, arguments)),
+
+        _other => todo!("use other"),
+    }
+}
+
+fn use_assignments_to_function_arguments(assignments: Vec<(String, SrcSpan)>) -> Vec<Arg<()>> {
+    assignments
+        .into_iter()
+        .map(|(name, location)| Arg {
+            names: ArgNames::Named { name },
+            location,
+            annotation: None,
+            type_: (),
+        })
+        .collect()
 }
