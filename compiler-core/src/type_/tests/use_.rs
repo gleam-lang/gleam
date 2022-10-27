@@ -1,4 +1,4 @@
-use crate::assert_module_infer;
+use crate::{assert_error, assert_module_infer};
 
 #[test]
 fn arity_1() {
@@ -52,4 +52,25 @@ fn trip(x, y, f) {
 "#,
         vec![("main", "fn() -> #(Float, String, Int)")],
     )
+}
+
+#[test]
+fn invalid_call_is_variable() {
+    assert_error!(
+        r#"
+let call = fn(f) { f() }
+use <- call
+123
+"#
+    );
+}
+
+#[test]
+fn invalid_call_is_number() {
+    assert_error!(
+        r#"
+use <- 123
+123
+"#
+    );
 }

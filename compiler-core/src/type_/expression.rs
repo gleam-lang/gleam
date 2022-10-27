@@ -2110,7 +2110,17 @@ fn get_use_expression_call(
             arguments,
         } => Ok((location, fun, arguments)),
 
-        _other => todo!("use other"),
+        UntypedExpr::Var { location, .. } | UntypedExpr::FieldAccess { location, .. } => {
+            Err(Error::InvalidUseExpressionCall {
+                location,
+                kind: InvalidUseExpressionCallKind::MissingParens,
+            })
+        }
+
+        other => Err(Error::InvalidUseExpressionCall {
+            location: other.location(),
+            kind: InvalidUseExpressionCallKind::Other,
+        }),
     }
 }
 

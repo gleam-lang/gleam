@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 59
+expression: "\nlet call = fn(f) { f() }\nuse <- call\n123\n"
+---
+error: Invalid use expression
+  ┌─ /src/one/two.gleam:3:8
+  │
+3 │ use <- call
+  │        ^^^^ This must be a function call
+
+Hint: try adding `()` to the end.
+
