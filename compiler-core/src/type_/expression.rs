@@ -312,7 +312,7 @@ and a sequence has as special case for use"
         sequence_location: SrcSpan,
         following_expressions: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
-        let (call_location, fun, mut arguments) = get_use_expression_call(*use_.call)?;
+        let mut call = get_use_expression_call(*use_.call)?;
         let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
 
         // Collect the following expressions into a function to be passed as a
@@ -329,16 +329,16 @@ and a sequence has as special case for use"
         };
 
         // Add this new callback function to the arguments to function call
-        arguments.push(CallArg {
+        call.arguments.push(CallArg {
             label: None,
             location: callback.location(),
             value: callback,
         });
 
         self.infer(UntypedExpr::Call {
-            location: call_location,
-            fun,
-            arguments,
+            location: call.location,
+            fun: call.function,
+            arguments: call.arguments,
         })
     }
 
@@ -2098,17 +2098,25 @@ and a sequence has as special case for use"
     }
 }
 
-fn get_use_expression_call(
-    call: UntypedExpr,
-) -> Result<(SrcSpan, Box<UntypedExpr>, Vec<CallArg<UntypedExpr>>), Error> {
+struct UseCall {
+    location: SrcSpan,
+    function: Box<UntypedExpr>,
+    arguments: Vec<CallArg<UntypedExpr>>,
+}
+
+fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
     // Ensure that the use's call is of the right structure. i.e. it is a
     // call to a function.
     match call {
         UntypedExpr::Call {
             location,
-            fun,
+            fun: function,
             arguments,
-        } => Ok((location, fun, arguments)),
+        } => Ok(UseCall {
+            location,
+            arguments,
+            function,
+        }),
 
         UntypedExpr::Var { location, .. } | UntypedExpr::FieldAccess { location, .. } => {
             Err(Error::InvalidUseExpressionCall {
