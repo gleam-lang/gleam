@@ -30,20 +30,28 @@ impl Warning {
                     let mut text = String::new();
                     text.push_str(
                         "\
-This code will crash if it is run. Be sure to finish this before
+This code will crash if it is run. Be sure to finish it before
 running your program.",
                     );
-                    if !typ.is_variable() {
-                        text.push_str(&format!(
-                            "\nHint: I think its type is `{}`.\n",
-                            type_::pretty::Printer::new().pretty_print(typ, 0)
-                        ));
-                    }
                     let title = match kind {
                         TodoKind::Keyword => "Todo found",
                         TodoKind::EmptyFunction => "Unimplemented function",
+                        TodoKind::IncompleteUse => {
+                            text.push_str(
+                                "
+A use expression must always be followed by at least one more
+expression.",
+                            );
+                            "Incomplete use expression"
+                        }
                     }
                     .into();
+                    if !typ.is_variable() {
+                        text.push_str(&format!(
+                            "\n\nHint: I think its type is `{}`.\n",
+                            type_::pretty::Printer::new().pretty_print(typ, 0)
+                        ));
+                    }
 
                     Diagnostic {
                         title,

@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 213
+assertion_line: 41
 expression: "pub fn main() -> String {\n  todo\n}"
 ---
 
@@ -10,8 +10,9 @@ warning: Todo found
 2 │   todo
   │   ^^^^ This code is incomplete
 
-This code will crash if it is run. Be sure to finish this before
+This code will crash if it is run. Be sure to finish it before
 running your program.
+
 Hint: I think its type is `String`.
 
 

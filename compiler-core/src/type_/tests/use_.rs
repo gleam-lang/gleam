@@ -1,4 +1,4 @@
-use crate::{assert_error, assert_module_infer};
+use crate::{assert_error, assert_module_infer, assert_warning};
 
 #[test]
 fn arity_1() {
@@ -71,6 +71,18 @@ fn invalid_call_is_number() {
         r#"
 use <- 123
 123
+"#
+    );
+}
+
+#[test]
+fn no_callback_body() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let thingy = fn(f) { f() }
+  use <- thingy()
+}
 "#
     );
 }
