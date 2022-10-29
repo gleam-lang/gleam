@@ -24,7 +24,7 @@
   --accent: var(--pink);
 
   /* Sizes */
-  --content-width: 680px;
+  --content-width: 50rem;
   --header-height: 60px;
   --hash-offset: calc(var(--header-height) * 1.67);
   --sidebar-width: 240px;
