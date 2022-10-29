@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/javascript/tests/use_.rs
+assertion_line: 56
+expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
+---
+import { throwError } from "../gleam.mjs";
+
+export function main() {
+  let thingy = (f) => { return f(); };
+  return thingy(
+    () => {
+      throwError(
+        "todo",
+        "my/mod",
+        3,
+        "",
+        "This has not yet been implemented",
+        {}
+      );
+    },
+  );
+}
+

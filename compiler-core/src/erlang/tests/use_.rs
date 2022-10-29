@@ -50,3 +50,15 @@ fn trip(x, y, f) {
 "#,
     )
 }
+
+#[test]
+fn no_callback_body() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let thingy = fn(f) { f() }
+  use <- thingy()
+}
+"#
+    );
+}
