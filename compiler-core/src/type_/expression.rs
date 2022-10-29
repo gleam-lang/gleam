@@ -315,6 +315,7 @@ and a sequence has as special case for use"
         let mut call = get_use_expression_call(*use_.call)?;
         let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
 
+        // TODO: Upgrade this to an error when we have partial type checking.
         // If there are no following expressions then this expressions is
         // incomplete. In this case we insert a `todo` so that the user can type
         // check this code even if it would fail when run.
