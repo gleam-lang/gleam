@@ -209,6 +209,15 @@ fn todo_warning_correct_location() {
 }
 
 #[test]
+fn todo_with_known_type() {
+    assert_warning!(
+        "pub fn main() -> String {
+  todo
+}"
+    );
+}
+
+#[test]
 fn empty_func_warning_test() {
     assert_warning!(
         "pub fn main() { foo() }

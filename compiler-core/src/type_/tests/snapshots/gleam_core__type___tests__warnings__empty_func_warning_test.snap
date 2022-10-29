@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 213
+assertion_line: 222
 expression: "pub fn main() { foo() }\n        pub fn foo() { }"
 ---
 
@@ -10,6 +10,6 @@ warning: Unimplemented function
 2 │         pub fn foo() { }
   │         ^^^^^^^^^^^^ This code is incomplete
 
-This code will crash if it is run. Be sure to finish this before running
-your program.
+This code will crash if it is run. Be sure to finish this before
+running your program.
 

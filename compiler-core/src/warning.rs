@@ -1,7 +1,6 @@
 use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
-    error::wrap,
     type_,
 };
 use std::io::Write;
@@ -23,10 +22,23 @@ impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
             Self::Type { path, warning, src } => match warning {
-                type_::Warning::Todo { kind, location, .. } => {
-                    let text = wrap(
-                        "This code will crash if it is run. \
-Be sure to finish this before running your program.",
+                type_::Warning::Todo {
+                    kind,
+                    location,
+                    typ,
+                } => {
+                    let mut text = String::new();
+
+                    if !typ.is_variable() {
+                        text.push_str(&format!(
+                            "Hint: I think its type is `{}`.\n\n",
+                            type_::pretty::Printer::new().pretty_print(typ, 0)
+                        ));
+                    }
+                    text.push_str(
+                        "\
+This code will crash if it is run. Be sure to finish this before
+running your program.",
                     );
                     let title = match kind {
                         TodoKind::Keyword => "Todo found",

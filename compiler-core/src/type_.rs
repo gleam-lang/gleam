@@ -96,6 +96,10 @@ impl Type {
         matches!(self, Self::Var { type_: typ } if typ.borrow().is_unbound())
     }
 
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Self::Var { type_: typ } if typ.borrow().is_variable())
+    }
+
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { retrn, .. } => Some(retrn.clone()),
@@ -458,6 +462,10 @@ pub enum TypeVar {
 impl TypeVar {
     pub fn is_unbound(&self) -> bool {
         matches!(self, Self::Unbound { .. })
+    }
+
+    pub fn is_variable(&self) -> bool {
+        matches!(self, Self::Unbound { .. } | Self::Generic { .. })
     }
 
     pub fn is_nil(&self) -> bool {

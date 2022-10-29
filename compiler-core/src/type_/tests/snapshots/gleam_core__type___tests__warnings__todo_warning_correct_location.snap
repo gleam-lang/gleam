@@ -10,6 +10,6 @@ warning: Todo found
 2 │         todo
   │         ^^^^ This code is incomplete
 
-This code will crash if it is run. Be sure to finish this before running
-your program.
+This code will crash if it is run. Be sure to finish this before
+running your program.
 
