@@ -28,18 +28,17 @@ impl Warning {
                     typ,
                 } => {
                     let mut text = String::new();
-
-                    if !typ.is_variable() {
-                        text.push_str(&format!(
-                            "Hint: I think its type is `{}`.\n\n",
-                            type_::pretty::Printer::new().pretty_print(typ, 0)
-                        ));
-                    }
                     text.push_str(
                         "\
 This code will crash if it is run. Be sure to finish this before
 running your program.",
                     );
+                    if !typ.is_variable() {
+                        text.push_str(&format!(
+                            "\nHint: I think its type is `{}`.\n",
+                            type_::pretty::Printer::new().pretty_print(typ, 0)
+                        ));
+                    }
                     let title = match kind {
                         TodoKind::Keyword => "Todo found",
                         TodoKind::EmptyFunction => "Unimplemented function",
