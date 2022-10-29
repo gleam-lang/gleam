@@ -140,7 +140,7 @@ pre {
 
 pre > code,
 code.hljs {
-  padding: var(--small-gap) var(--gap);
+  padding: var(--small-gap) var(--small-gap);
   background: transparent;
 }
 
@@ -714,6 +714,21 @@ body.theme-dark #project-version select {
 @media (min-width: 680px) {
   #prewrap-toggle {
     display: none;
+  }
+}
+
+/* Small displays */
+@media (max-width: 500px) {
+  .content {
+    padding-left: var(--small-gap);
+    padding-right: var(--small-gap);
+  }
+
+  .content pre {
+    margin-left: calc(-1 * var(--small-gap));
+    margin-right: calc(-1 * var(--small-gap));
+    border-left: 0;
+    border-right: 0;
   }
 }
 
