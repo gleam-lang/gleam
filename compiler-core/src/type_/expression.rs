@@ -310,10 +310,22 @@ and a sequence has as special case for use"
         &mut self,
         use_: Use,
         sequence_location: SrcSpan,
-        following_expressions: Vec<UntypedExpr>,
+        mut following_expressions: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let mut call = get_use_expression_call(*use_.call)?;
         let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
+
+        // If there are no following expressions then this expressions is
+        // incomplete. In this case we insert a `todo` so that the user can type
+        // check this code even if it would fail when run.
+        if following_expressions.is_empty() {
+            let todo = UntypedExpr::Todo {
+                location: sequence_location,
+                label: None,
+                kind: TodoKind::IncompleteUse,
+            };
+            following_expressions.push(todo);
+        }
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.

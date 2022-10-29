@@ -1243,4 +1243,5 @@ impl<A> BitStringSegmentOption<A> {
 pub enum TodoKind {
     Keyword,
     EmptyFunction,
+    IncompleteUse,
 }
