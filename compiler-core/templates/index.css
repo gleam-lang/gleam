@@ -834,7 +834,6 @@ body.theme-dark #project-version select {
   .search-input-wrap {
     position: absolute;
     width: 100%;
-    max-width: calc(var(--content-width) - var(--gap) - var(--gap));
     height: 100% !important;
     border-radius: 0;
     box-shadow: none;
@@ -913,7 +912,6 @@ body.theme-dark #project-version select {
 @media (min-width: 919px) {
   .search-results {
     top: 100%;
-    width: calc(var(--content-width) - var(--gap) - var(--gap));
     max-height: calc(100vh - 200%) !important;
   }
 }
