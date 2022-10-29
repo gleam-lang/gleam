@@ -239,8 +239,8 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("gleam.js"),
-        text: std::include_str!("../templates/gleam.js").to_string(),
+        path: PathBuf::from("gleam-docs.js"),
+        text: std::include_str!("../templates/gleam-docs.js").to_string(),
     });
 
     files.push(OutputFile {

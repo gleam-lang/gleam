@@ -113,7 +113,7 @@ jobs:
           ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
         # erlang-shipment does not support Windows
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }} 
+        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
 
       - name: test/project_javascript
         run: |
@@ -137,7 +137,7 @@ jobs:
           # Assert that HTML docs have been written
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/index.css
-          ls build/dev/docs/lib_project/gleam.js
+          ls build/dev/docs/lib_project/gleam-docs.js
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/lib_project.html
         if: ${{ matrix.run-integration-tests }}
@@ -305,4 +305,3 @@ jobs:
       - name: Test JavaScript prelude
         run: make
         working-directory: ./test/javascript_prelude
-
