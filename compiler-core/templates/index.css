@@ -33,7 +33,7 @@
   --tiny-gap: calc(var(--small-gap) / 2);
   --large-gap: calc(var(--gap) * 2);
   --sidebar-toggle-size: 33px;
-  --search-height: 4rem;
+  --search-height: var(--header-height);
 
   /* etc */
   --shadow: 0 0 0 1px rgba(50, 50, 93, 0.075), 0 0 1px #e9ecef,
@@ -176,13 +176,16 @@ p code {
   color: black;
   color: var(--hard-black);
   background-color: var(--pink);
-  display: flex;
-  padding: var(--small-gap) var(--gap);
   position: fixed;
   left: 0;
   right: 0;
   top: 0;
   z-index: 300;
+}
+
+.page-header-container {
+  max-width: calc(var(--sidebar-width) + var(--content-width));
+  padding: var(--small-gap) var(--gap);
   display: flex;
 }
 
@@ -219,13 +222,11 @@ p code {
 .page-header .sidebar-toggle {
   color: white;
   color: var(--white);
-  margin: 0 var(--small-gap) 0 0;
 }
 
 .page-header .search-nav-button {
   color: white;
   color: var(--white);
-  margin: 0 var(--small-gap) 0 0;
 }
 
 /* Version selector */
@@ -268,6 +269,12 @@ p code {
   margin-top: .3rem;
   margin-right: -1rem;
   margin-left: .2rem;
+}
+
+.search-box-container {
+  flex: 1;
+  display: flex;
+  width: auto;
 }
 
 /* Module doc */
@@ -429,6 +436,7 @@ body.drawer-open .label-closed {
 
 .member-name h2 a {
   color: var(--text);
+  flex: 2;
 }
 
 .member-source {
@@ -734,7 +742,7 @@ body.theme-dark #project-version select {
 
 /* Small displays */
 @media (max-width: 920px) {
-  .page-header {
+  .page-header-container {
     padding-left: var(--small-gap);
     padding-right: var(--small-gap);
   }
@@ -768,11 +776,15 @@ body.theme-dark #project-version select {
   .sidebar-toggle {
     display: block;
     opacity: 1;
+    padding-top: 0.3rem;
+    padding-right: 0.6rem;
   }
 
   .search-nav-button {
     display: block;
     opacity: 1;
+    padding-top: 0.3rem;
+    padding-left: 0.6rem;
   }
 
   .sidebar .sidebar-toggle {
@@ -1123,7 +1135,6 @@ body.theme-dark #project-version select {
 
 @media (min-width: 919px) {
   .search-active .search-input-wrap {
-    width: calc(var(--content-width) - var(--gap) - var(--gap));
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 3px 10px rgba(0, 0, 0, 0.08);
   }
 }
