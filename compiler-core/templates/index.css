@@ -183,13 +183,14 @@ p code {
   right: 0;
   top: 0;
   z-index: 300;
+	display: flex;
 }
 
 .page-header h2 {
-  align-items: baseline;
+  align-items: center;
   display: flex;
   margin: 0;
-  width: var(--sidebar-width);
+	gap: .5rem;
 }
 
 .page-header a,
@@ -230,12 +231,10 @@ p code {
 /* Version selector */
 
 #project-version {
-  --half-small-gap: calc(var(--small-gap) / 2);
   --icon-size: 0.75em;
   flex-shrink: 0;
   font-size: 0.9rem;
   font-weight: normal;
-  margin-left: var(--half-small-gap);
 }
 
 #project-version > span {
@@ -254,6 +253,10 @@ p code {
   padding: 0.6rem calc(1.3 * var(--icon-size)) 0.6rem var(--half-small-gap);
   position: relative;
   z-index: 1;
+	border-radius: 2.5px;
+	padding: .1rem .2rem;
+	padding-left: 1rem;
+	border: 1px solid rgba(0,0,0, 0.15);
 }
 
 #project-version option {
@@ -262,7 +265,9 @@ p code {
 
 #project-version .icon {
   font-size: var(--icon-size);
-  margin-left: calc(-1.65 * var(--icon-size));
+	margin-top: .3rem;
+	margin-right: -1rem;
+	margin-left: .2rem;
 }
 
 /* Module doc */
@@ -311,23 +316,45 @@ p code {
 }
 
 .sidebar h2 {
-  margin: 0;
+	margin-top: var(--small-gap);
+	margin-bottom: var(--tiny-gap);
+}
+
+.sidebar h2:first-of-type {
+	margin-top: 0;
 }
 
 .sidebar ul {
   list-style: none;
-  margin: var(--small-gap) 0;
+  margin: var(--tiny-gap) 0;
   padding: 0;
 }
 
 .sidebar li {
   line-height: 1.2;
-  margin-bottom: 4px;
+  margin-bottom: 1px;
 }
+
+.sidebar li a {
+	display: block;
+	padding-top: 2px;
+	padding-right: 2px;
+	padding-bottom: 3px;
+	padding-left: 3px;
+	margin-left: -2px;
+	border-radius: 1px;
+	text-decoration: none;
+}
+
+.sidebar li a:hover {
+	background: var(--code-background);
+}
+
 
 .sidebar .sidebar-toggle {
   color: var(--pink);
   font-size: calc(0.8 * var(--sidebar-toggle-size));
+	flex-shrink: 0;
 }
 
 body.drawer-closed .label-open,
@@ -677,6 +704,10 @@ body.theme-dark .pride .pink {
 
 body.theme-dark .pride .blue {
   background-color: var(--punctuation);
+}
+
+body.theme-dark #project-version select {
+	border-color: rgba(255,255,255,.15);
 }
 
 /* Medium and larger displays */
@@ -1119,4 +1150,17 @@ body.theme-dark .pride .blue {
   .search-active .main-header {
     padding-top: 0;
   }
+}
+
+h1, h2, h3, h4, h5, h6 {
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+}
+
+h1:first-of-type {
+	margin-top: 0;
+}
+
+main {
+	padding-bottom: 25vh !important;
 }

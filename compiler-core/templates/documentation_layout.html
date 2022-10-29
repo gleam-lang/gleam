@@ -143,7 +143,7 @@
       <h2>
         <a href="{{ unnest }}/">{{ project_name }}</a>
         <span id="project-version">
-          <span> - v{{ project_version }} </span>
+          <span>v{{ project_version }}</span>
         </span>
         <script>
           "use strict";
@@ -167,11 +167,13 @@
                 },
                 `
                 <form autocomplete="off">
-                  <select onchange="window.location.href = this.value">
+                  <label for="project-version-select">
+                    <svg class="icon icon-chevrons-down" alt="select-version-arrow"><use xlink:href="#icon-chevrons-down"></use></svg>
+                  </label>
+                  <select onchange="window.location.href = this.value" id="project-version-select">
                 `
               ) + `
                   </select>
-                  <svg class="icon icon-chevrons-down"><use xlink:href="#icon-chevrons-down"></use></svg>
                 </form>
               `;
           }
