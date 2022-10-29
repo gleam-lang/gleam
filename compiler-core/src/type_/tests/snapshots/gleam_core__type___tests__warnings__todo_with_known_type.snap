@@ -10,8 +10,8 @@ warning: Todo found
 2 │   todo
   │   ^^^^ This code is incomplete
 
-Hint: I think its type is `String`.
-
 This code will crash if it is run. Be sure to finish this before
 running your program.
+Hint: I think its type is `String`.
+
 
