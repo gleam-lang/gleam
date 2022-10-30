@@ -5,7 +5,7 @@
 <h2>Types</h2>
 <ul>
   {% for typ in types %}
-  <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
+  <li><a href="#{{ typ.name }}" class="para-anchor">{{ typ.name }}</a></li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -14,7 +14,7 @@
 <h2>Constants</h2>
 <ul>
   {% for constant in constants %}
-  <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
+  <li><a href="#{{ constant.name }}" class="para-anchor">{{ constant.name }}</a></li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -23,7 +23,7 @@
 <h2>Functions</h2>
 <ul>
   {% for function in functions %}
-  <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
+  <li><a href="#{{ function.name }}" class="para-anchor">{{ function.name }}</a></li>
   {% endfor %}
 </ul>
 {% endif %}
@@ -31,7 +31,7 @@
 
 {% block content %}
 <h1 id="module-name" class="module-name">
-  <a href="#module-name">{{ module_name }}</a>
+  <a href="#module-name" class="para-anchor">{{ module_name }}</a>
   <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
 </h1>
 {{ documentation|safe }}
@@ -39,7 +39,7 @@
 {% if !types.is_empty() %}
 <section class="module-members">
   <h1 id="module-types" class="module-member-kind">
-    <a href="#module-types">Types</a>
+    <a href="#module-types" class="para-anchor">Types</a>
     <svg class="icon icon-gleam-chasse-2"><use xlink:href="#icon-gleam-chasse-2"></use></svg>
   </h1>
 
@@ -47,7 +47,7 @@
   <div class="member">
     <div class="member-name">
       <h2 id="{{ typ.name }}">
-        <a href="#{{ typ.name }}">
+        <a href="#{{ typ.name }}" class="para-anchor">
           {{ typ.name }}
         </a>
       </h2>
@@ -109,7 +109,7 @@
 {% if !constants.is_empty() %}
 <section class="module-members">
   <h1 id="module-constants" class="module-member-kind">
-    <a href="#module-constants">Constants</a>
+    <a href="#module-constants" class="para-anchor">Constants</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
 
@@ -117,7 +117,7 @@
   <div class="member">
     <div class="member-name">
       <h2 id="{{ constant.name }}">
-        <a href="#{{ constant.name }}">
+        <a href="#{{ constant.name }}" class="para-anchor">
           {{ constant.name }}
         </a>
       </h2>
@@ -137,14 +137,14 @@
 {% if !functions.is_empty() %}
 <section class="module-members">
   <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
+    <a href="#module-functions" class="para-anchor">Functions</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   {% for function in functions %}
   <div class="member">
     <div class="member-name">
       <h2 id="{{ function.name }}">
-        <a href="#{{ function.name }}">
+        <a href="#{{ function.name }}" class="para-anchor">
           {{ function.name }}
         </a>
       </h2>

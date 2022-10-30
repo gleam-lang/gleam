@@ -285,7 +285,8 @@ p code {
 }
 
 .module-name > a:hover,
-.module-member-kind > a:hover {
+.module-member-kind > a:hover,
+.member-name a:hover {
   text-decoration: none;
 }
 
@@ -1193,4 +1194,14 @@ h1:first-of-type {
 
 main {
   padding-bottom: 25vh !important;
+}
+
+.para-anchor:after {
+  content: " ¶";
+  opacity: .1;
+  font-weight: 100;
+}
+
+.para-anchor:hover:after {
+  opacity: 1;
 }
