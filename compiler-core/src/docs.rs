@@ -222,17 +222,6 @@ pub fn generate_html(
         });
     }
 
-    // Render static assets
-
-    files.push(OutputFile {
-        path: PathBuf::from("search-data.js"),
-        text: format!(
-            "window.Gleam.initSearch({});",
-            serde_to_string(&escape_html_contents(search_indexes))
-                .expect("search index serialization")
-        ),
-    });
-
     files.push(OutputFile {
         path: PathBuf::from("docs-css/index.css"),
         text: std::include_str!("../templates/docs-css/index.css").to_string(),
@@ -281,6 +270,33 @@ pub fn generate_html(
     files.push(OutputFile {
         path: PathBuf::from("docs-js/gleam-docs.js"),
         text: std::include_str!("../templates/docs-js/gleam-docs.js").to_string(),
+    });
+
+    // TODO: Following are binaries, files.push(OutputFile {) expects a String
+
+    // files.push(OutputFile {
+    //     path: PathBuf::from("docs-fonts/karla-v23-latin-ext_latin-700.woff2"),
+    //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-700.woff2"),
+    // });
+
+    // files.push(OutputFile {
+    //     path: PathBuf::from("docs-fonts/karla-v23-latin-ext_latin-regular.woff2"),
+    //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-regular.woff2"),
+    // });
+
+    // files.push(OutputFile {
+    //   path: PathBuf::from("docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
+    //   text: std::include_str!("../templates/docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
+    // });
+
+    // Render static assets
+    files.push(OutputFile {
+        path: PathBuf::from("search-data.js"),
+        text: format!(
+            "window.Gleam.initSearch({});",
+            serde_to_string(&escape_html_contents(search_indexes))
+                .expect("search index serialization")
+        ),
     });
 
     files

@@ -1,5 +1,39 @@
 @import url("https://fonts.googleapis.com/css2?family=Karla:wght@400;700&family=Ubuntu+Mono&display=swap");
 
+/*
+// TODO:
+
+// ubuntu-mono-regular - latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic
+@font-face {
+  font-family: 'Ubuntu Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local(''),
+       url('../docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+
+}
+
+// karla-regular - latin-ext_latin
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local(''),
+       url('../docs-fonts/karla-v23-latin-ext_latin-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+
+}
+
+// karla-700 - latin-ext_latin
+@font-face {
+  font-family: 'Karla';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local(''),
+       url('../docs-fonts/karla-v23-latin-ext_latin-700.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+
+}
+*/
+
 :root {
   /* Colours */
   --black: #2a2020;
