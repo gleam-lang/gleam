@@ -6,11 +6,11 @@
     <title>{{ page_title }}</title>
     <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <link rel="stylesheet" href="{{ unnest }}/index.css?v={{ gleam_version }}" type="text/css"/>
+    <link rel="stylesheet" href="{{ unnest }}/docs-css/index.css?v={{ gleam_version }}" type="text/css"/>
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="{{ unnest }}/atom-one-light.min.css?v={{ gleam_version }}">
+    <link id="syntax-theme" rel="stylesheet" href="{{ unnest }}/docs-css/atom-one-light.min.css?v={{ gleam_version }}">
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -289,13 +289,13 @@
       </defs>
     </svg>
 
-    <script src="{{ unnest }}/highlight.min.js?v={{ gleam_version }}"></script>
-    <script src="{{ unnest }}/highlightjs-gleam.js?v={{ gleam_version }}"></script>
-    <script src="{{ unnest }}/erlang.min.js?v={{ gleam_version }}"></script>
-    <script src="{{ unnest }}/elixir.min.js?v={{ gleam_version }}"></script>
-    <script src="{{ unnest }}/javascript.min.js?v={{ gleam_version }}"></script>
-    <script src="{{ unnest }}/lunr.min.js?v={{ gleam_version }}"></script>    
-    <script src="{{ unnest }}/gleam-docs.js?v={{ rendering_timestamp }}"></script>
+    <script src="{{ unnest }}/docs-js/highlight.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/docs-js/highlightjs-gleam.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/docs-js/erlang.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/docs-js/elixir.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/docs-js/javascript.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/docs-js/lunr.min.js?v={{ gleam_version }}"></script>    
+    <script src="{{ unnest }}/docs-js/gleam-docs.js?v={{ rendering_timestamp }}"></script>
 
     <!-- Load the search index using JSONP to avoid CORS issues -->
     <script src="{{ unnest }}/search-data.js?v={{ rendering_timestamp }}"></script>
