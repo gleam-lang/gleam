@@ -140,13 +140,13 @@ jobs:
           ls build/dev/docs/lib_project/docs-css/index.css
           ls build/dev/docs/lib_project/docs-css/atom-one-light.min.css
           ls build/dev/docs/lib_project/docs-css/atom-one-dark.min.css
+          ls build/dev/docs/lib_project/docs-js/gleam-docs.js
           ls build/dev/docs/lib_project/docs-js/highlight.min.js
           ls build/dev/docs/lib_project/docs-js/highlightjs-gleam.js
           ls build/dev/docs/lib_project/docs-js/erlang.min.js
           ls build/dev/docs/lib_project/docs-js/elixir.min.js
           ls build/dev/docs/lib_project/docs-js/javascript.min.js
           ls build/dev/docs/lib_project/docs-js/lunr.min.js
-          ls build/dev/docs/lib_project/docs-js/gleam-docs.js
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
