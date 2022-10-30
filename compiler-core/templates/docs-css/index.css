@@ -393,7 +393,6 @@ p code {
   background: var(--code-background);
 }
 
-
 .sidebar .sidebar-toggle {
   color: var(--pink);
   font-size: calc(0.8 * var(--sidebar-toggle-size));
