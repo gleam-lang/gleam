@@ -240,6 +240,7 @@ p code {
 
 #project-version > span {
   padding-left: var(--half-small-gap);
+  cursor: default;
 }
 
 #project-version form {
@@ -1204,4 +1205,9 @@ main {
 
 .para-anchor:hover:after {
   opacity: 1;
+}
+
+header,
+.sidebar h2 {
+  user-select: none;
 }
