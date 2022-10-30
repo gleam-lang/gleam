@@ -239,13 +239,48 @@ pub fn generate_html(
     });
 
     files.push(OutputFile {
-        path: PathBuf::from("gleam-docs.js"),
-        text: std::include_str!("../templates/gleam-docs.js").to_string(),
+        path: PathBuf::from("atom-one-light.min.css"),
+        text: std::include_str!("../templates/atom-one-light.min.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("atom-one-dark.min.css"),
+        text: std::include_str!("../templates/atom-one-dark.min.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("highlight.min.js"),
+        text: std::include_str!("../templates/highlight.min.js").to_string(),
     });
 
     files.push(OutputFile {
         path: PathBuf::from("highlightjs-gleam.js"),
         text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("erlang.min.js"),
+        text: std::include_str!("../templates/erlang.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("elixir.min.js"),
+        text: std::include_str!("../templates/elixir.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("javascript.min.js"),
+        text: std::include_str!("../templates/javascript.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("lunr.min.js"),
+        text: std::include_str!("../templates/lunr.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("gleam-docs.js"),
+        text: std::include_str!("../templates/gleam-docs.js").to_string(),
     });
 
     files

@@ -137,6 +137,14 @@ jobs:
           # Assert that HTML docs have been written
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/index.css
+          ls build/dev/docs/lib_project/atom-one-light.min.css
+          ls build/dev/docs/lib_project/atom-one-dark.min.css
+          ls build/dev/docs/lib_project/highlight.min.js
+          ls build/dev/docs/lib_project/highlightjs-gleam.js
+          ls build/dev/docs/lib_project/erlang.min.js
+          ls build/dev/docs/lib_project/elixir.min.js
+          ls build/dev/docs/lib_project/javascript.min.js
+          ls build/dev/docs/lib_project/lunr.min.js
           ls build/dev/docs/lib_project/gleam-docs.js
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/lib_project.html
