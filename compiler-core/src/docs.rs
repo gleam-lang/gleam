@@ -222,6 +222,8 @@ pub fn generate_html(
         });
     }
 
+    // Render static assets - TODO: do not push these through the templater
+
     files.push(OutputFile {
         path: PathBuf::from("css/atom-one-light.min.css"),
         text: std::include_str!("../templates/docs-css/atom-one-light.min.css").to_string(),
@@ -292,7 +294,6 @@ pub fn generate_html(
     //   text: std::include_str!("../templates/docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
     // });
 
-    // Render static assets
     files.push(OutputFile {
         path: PathBuf::from("search-data.js"),
         text: format!(
