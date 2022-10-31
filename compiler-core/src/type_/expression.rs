@@ -187,10 +187,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
 
-            UntypedExpr::Use(Use { .. }) => unreachable!(
-                "Use should always be within a sequence, \
-and a sequence has as special case for use"
-            ),
+            UntypedExpr::Use(use_) => {
+                let location = use_.location;
+                self.infer_use(use_, location, vec![])
+            }
         }
     }
 

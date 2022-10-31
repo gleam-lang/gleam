@@ -121,3 +121,18 @@ Nil
         "Nil",
     );
 }
+
+#[test]
+fn just_use_in_fn_body() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  use <- wibble()
+}
+
+fn wibble(f) {
+  f()
+}
+"#
+    );
+}
