@@ -487,17 +487,11 @@ body.drawer-open .label-closed {
   margin-top: 0;
 }
 
-.custom-type-constructors h4 {
-  margin-top: 0;
-  margin-bottom: 1em;
-}
-
 .constructor-list {
   list-style: none;
   padding: 0;
   margin: 0;
 }
-
 
 pre.constructor-name {
   margin-top: 0;
@@ -562,9 +556,9 @@ pre.constructor-name {
   flex-shrink: 0;
   font-size: 0.9rem;
   padding-left: .5rem;
-  padding-right: .75rem;
-  width: calc(var(--large-gap) - 1px);
-  color: var(--links);
+	padding-right: .75rem;
+	width: calc(var(--large-gap) - 1px);
+	color: var(--links);
 }
 
 @media (max-width: 500px) {
