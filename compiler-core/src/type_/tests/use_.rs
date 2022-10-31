@@ -1,4 +1,4 @@
-use crate::{assert_error, assert_module_infer, assert_warning};
+use crate::{assert_error, assert_infer, assert_module_infer, assert_warning};
 
 #[test]
 fn arity_1() {
@@ -95,5 +95,29 @@ let x = fn(f) { f() + 1 }
 use <- x()
 Nil
 "#
+    );
+}
+
+#[test]
+fn discard() {
+    assert_infer!(
+        r#"
+let x = fn(f) { f(123) }
+use _ <- x()
+Nil
+"#,
+        "Nil",
+    );
+}
+
+#[test]
+fn discard_named() {
+    assert_infer!(
+        r#"
+let x = fn(f) { f(123) }
+use _wibble <- x()
+Nil
+"#,
+        "Nil",
     );
 }

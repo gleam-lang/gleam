@@ -1394,7 +1394,10 @@ impl<'comments> Formatter<'comments> {
         if use_.assignments.is_empty() {
             docvec!["use <- ", call]
         } else {
-            let assignments = use_.assignments.iter().map(|(name, _)| name.to_doc());
+            let assignments = use_
+                .assignments
+                .iter()
+                .map(|(name, _)| name.name().to_doc());
             let assignments = Itertools::intersperse(assignments, break_(",", ", "));
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()

@@ -17,15 +17,20 @@ macro_rules! assert_infer {
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
-        let result = ExprTyper::new(&mut Environment::new(ids, &[], &modules, &mut vec![]))
-            .infer(ast)
-            .expect("should successfully infer");
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let result = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
+            ids,
+            &[],
+            &modules,
+            &mut vec![],
+        ))
+        .infer(ast)
+        .expect("should successfully infer");
         assert_eq!(
             ($src, printer.pretty_print(result.type_().as_ref(), 0),),
             ($src, $typ.to_string()),
