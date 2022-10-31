@@ -10,7 +10,7 @@
   font-weight: 400;
   font-display: swap;
   src: local(''),
-       url('../fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+
+       url('../fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+, Edge 14+
 }
 
 // karla-regular - latin-ext_latin
@@ -20,7 +20,7 @@
   font-weight: 400;
   font-display: swap;
   src: local(''),
-       url('../fonts/karla-v23-latin-ext_latin-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+
+       url('../fonts/karla-v23-latin-ext_latin-regular.woff2') format('woff2'); // Chrome 26+, Opera 23+, Firefox 39+, Edge 14+
 }
 
 // karla-700 - latin-ext_latin
