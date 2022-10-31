@@ -84,7 +84,7 @@
             {% for argument in constructor.arguments %}
               <div class="constructor-argument-item">
                 <dt class="constructor-argument-label">
-                  <i>{{ argument.name }}</i>
+                  {{ argument.name }}
                 </dt>
                 <dl class="constructor-argument-doc">
                   {{ argument.doc|safe }}

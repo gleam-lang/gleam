@@ -483,9 +483,24 @@ body.drawer-open .label-closed {
 
 /* Custom type constructors */
 
+.custom-type-constructors h3,
+.custom-type-constructors h4 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.custom-type-constructors h4 {
+  margin-bottom: 1em;
+}
+
 .constructor-list {
   list-style: none;
   padding: 0;
+  margin: 0;
+}
+
+.constructor-item {
+  margin-bottom: var(--small-gap);
 }
 
 .constructor-row {
@@ -493,7 +508,7 @@ body.drawer-open .label-closed {
   display: flex;
 }
 
-.constructor-item {
+.constructor-argument-list {
   margin-bottom: var(--small-gap);
 }
 
@@ -502,15 +517,30 @@ body.drawer-open .label-closed {
 }
 
 .constructor-argument-label {
+  min-width: 10em;
   flex-shrink: 0;
+  font-family: "Ubuntu Mono", monospace;
 }
 
 .constructor-argument-doc {
-  margin-left: var(--gap);
+  margin-left: var(--small-gap);
 }
 
-.constructor-argument-list {
-  margin-bottom: var(--small-gap);
+.constructor-argument-doc :first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 500px) {
+  .constructor-argument-item,
+  .constructor-argument-label,
+  .constructor-argument-doc {
+    display: block;
+  }
+
+  .constructor-argument-label {
+    padding-bottom: .5em;
+  }
+
 }
 
 .constructor-item-docs {
@@ -524,13 +554,13 @@ body.drawer-open .label-closed {
   margin: 0 0.88rem;
 }
 
-.constructor-name {
-  box-shadow: unset;
-  margin: 0;
-}
-
-.constructor-name > code {
-  padding: var(--small-gap);
+@media (max-width: 500px) {
+  .constructor-item .icon {
+    display: none;
+  }
+  .constructor-item-docs {
+    margin-left: 0;
+  }
 }
 
 /* Tables */
@@ -767,7 +797,8 @@ body.theme-dark #project-version select {
     padding-right: var(--small-gap);
   }
 
-  .content pre {
+  .content pre,
+  pre.constructor-name {
     margin-left: calc(-1 * var(--small-gap));
     margin-right: calc(-1 * var(--small-gap));
     border-left: 0;
@@ -1218,8 +1249,8 @@ body.theme-dark #project-version select {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+  margin-bottom: .75rem;
 }
 
 h1:first-of-type {
