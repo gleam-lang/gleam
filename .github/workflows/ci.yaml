@@ -137,16 +137,16 @@ jobs:
           # Assert that HTML docs have been written
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/lib_project.html
-          ls build/dev/docs/lib_project/docs-css/atom-one-light.min.css
-          ls build/dev/docs/lib_project/docs-css/atom-one-dark.min.css
-          ls build/dev/docs/lib_project/docs-css/index.css
-          ls build/dev/docs/lib_project/docs-js/highlight.min.js
-          ls build/dev/docs/lib_project/docs-js/highlightjs-gleam.js
-          ls build/dev/docs/lib_project/docs-js/highlightjs-erlang.min.js
-          ls build/dev/docs/lib_project/docs-js/highlightjs-elixir.min.js
-          ls build/dev/docs/lib_project/docs-js/highlightjs-javascript.min.js
-          ls build/dev/docs/lib_project/docs-js/lunr.min.js
-          ls build/dev/docs/lib_project/docs-js/index.js
+          ls build/dev/docs/lib_project/css/atom-one-light.min.css
+          ls build/dev/docs/lib_project/css/atom-one-dark.min.css
+          ls build/dev/docs/lib_project/css/index.css
+          ls build/dev/docs/lib_project/js/highlight.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-gleam.js
+          ls build/dev/docs/lib_project/js/highlightjs-erlang.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-elixir.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-javascript.min.js
+          ls build/dev/docs/lib_project/js/lunr.min.js
+          ls build/dev/docs/lib_project/js/index.js
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
