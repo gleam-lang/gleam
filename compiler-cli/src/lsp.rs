@@ -18,7 +18,7 @@ use gleam_core::{
     io::{CommandExecutor, FileSystemIO},
     line_numbers::LineNumbers,
     paths,
-    type_::{pretty::Printer, HasType},
+    type_::pretty::Printer,
     Error, Result,
 };
 use itertools::Itertools;

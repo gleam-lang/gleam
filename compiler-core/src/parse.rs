@@ -707,8 +707,8 @@ where
         }))
     }
 
-    fn parse_use_assignment(&mut self) -> Result<Option<(String, SrcSpan)>, ParseError> {
-        let (start, name, end) = self.expect_name()?;
+    fn parse_use_assignment(&mut self) -> Result<Option<(AssignName, SrcSpan)>, ParseError> {
+        let (start, name, end) = self.expect_assign_name()?;
         Ok(Some((name, SrcSpan::new(start, end))))
     }
 

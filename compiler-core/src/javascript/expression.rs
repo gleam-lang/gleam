@@ -5,7 +5,7 @@ use crate::{
     ast::*,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{HasType, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
+    type_::{ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
 };
 
 #[derive(Debug)]

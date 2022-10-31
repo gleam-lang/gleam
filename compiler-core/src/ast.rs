@@ -1055,6 +1055,21 @@ pub enum AssignName {
     Discard(String),
 }
 
+impl AssignName {
+    pub fn name(&self) -> &str {
+        match self {
+            AssignName::Variable(name) | AssignName::Discard(name) => name,
+        }
+    }
+
+    pub fn to_arg_names(self) -> ArgNames {
+        match self {
+            AssignName::Variable(name) => ArgNames::Named { name },
+            AssignName::Discard(name) => ArgNames::Discard { name },
+        }
+    }
+}
+
 impl<A, B> Pattern<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {

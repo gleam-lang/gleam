@@ -3,11 +3,12 @@ use vec1::Vec1;
 
 use super::{pipe::PipeTyper, *};
 use crate::ast::{
-    Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
-    ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst, TypedArg,
-    TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, UntypedArg,
-    UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
-    UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern, Use,
+    Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
+    Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
+    TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern,
+    UntypedPattern, Use,
 };
 
 use im::hashmap;
@@ -2148,11 +2149,11 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
     }
 }
 
-fn use_assignments_to_function_arguments(assignments: Vec<(String, SrcSpan)>) -> Vec<Arg<()>> {
+fn use_assignments_to_function_arguments(assignments: Vec<(AssignName, SrcSpan)>) -> Vec<Arg<()>> {
     assignments
         .into_iter()
         .map(|(name, location)| Arg {
-            names: ArgNames::Named { name },
+            names: name.to_arg_names(),
             location,
             annotation: None,
             type_: (),
