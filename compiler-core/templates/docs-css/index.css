@@ -488,6 +488,7 @@ body.drawer-open .label-closed {
 }
 
 .custom-type-constructors h4 {
+  margin-top: 0;
   margin-bottom: 1em;
 }
 
@@ -554,7 +555,7 @@ pre.constructor-name {
 .constructor-item-docs {
   margin-left: var(--large-gap);
   margin-top: var(--small-gap);
-  margin-bottom: var(--small-gap);
+  margin-bottom: var(--gap);
 }
 
 .constructor-item .icon {
