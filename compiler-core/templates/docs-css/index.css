@@ -499,6 +499,12 @@ body.drawer-open .label-closed {
   margin: 0;
 }
 
+
+pre.constructor-name {
+  margin-top: 1em;
+  margin-bottom: 0;
+}
+
 .constructor-item {
   margin-bottom: var(--small-gap);
 }
@@ -531,6 +537,11 @@ body.drawer-open .label-closed {
 }
 
 @media (max-width: 500px) {
+
+pre.constructor-name {
+  min-width: 100vw;
+}
+
   .constructor-argument-item,
   .constructor-argument-label,
   .constructor-argument-doc {
@@ -540,11 +551,11 @@ body.drawer-open .label-closed {
   .constructor-argument-label {
     padding-bottom: .5em;
   }
-
 }
 
 .constructor-item-docs {
   margin-left: var(--large-gap);
+  margin-top: var(--gap);
   margin-bottom: var(--gap);
 }
 
@@ -797,8 +808,7 @@ body.theme-dark #project-version select {
     padding-right: var(--small-gap);
   }
 
-  .content pre,
-  pre.constructor-name {
+  .content pre {
     margin-left: calc(-1 * var(--small-gap));
     margin-right: calc(-1 * var(--small-gap));
     border-left: 0;
