@@ -483,8 +483,7 @@ body.drawer-open .label-closed {
 
 /* Custom type constructors */
 
-.custom-type-constructors h3,
-.custom-type-constructors h4 {
+.custom-type-constructors h3 {
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -555,8 +554,8 @@ pre.constructor-name {
 
 .constructor-item-docs {
   margin-left: var(--large-gap);
-  margin-top: var(--gap);
-  margin-bottom: var(--gap);
+  margin-top: var(--small-gap);
+  margin-bottom: var(--small-gap);
 }
 
 .constructor-item .icon {
