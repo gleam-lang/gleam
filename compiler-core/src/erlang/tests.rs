@@ -45,7 +45,7 @@ macro_rules! assert_erl {
             $crate::build::Target::Erlang,
             &ids,
             ast,
-            crate::build::Origin::Src,
+            $crate::build::Origin::Src,
             "thepackage",
             &modules,
             &mut vec![],

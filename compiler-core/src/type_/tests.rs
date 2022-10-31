@@ -178,7 +178,7 @@ macro_rules! assert_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: std::path::PathBuf::from("/src/one/two.gleam"),
             error,
@@ -230,7 +230,7 @@ macro_rules! assert_error {
         ))
         .infer(ast)
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
@@ -278,7 +278,7 @@ macro_rules! assert_with_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
@@ -350,7 +350,7 @@ macro_rules! assert_with_module_error {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings: Vec<$crate::type_::error::Warning> = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
@@ -454,7 +454,7 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];

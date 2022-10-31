@@ -331,12 +331,12 @@ and a sequence has as special case for use"
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.
+        let first = following_expressions
+            .get(0)
+            .expect("default todo set above");
         let callback = UntypedExpr::Fn {
             arguments: callback_arguments,
-            location: SrcSpan::new(
-                following_expressions[0].location().start,
-                sequence_location.end,
-            ),
+            location: SrcSpan::new(first.location().start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
             body: Box::new(UntypedExpr::Sequence {
