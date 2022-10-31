@@ -86,3 +86,14 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn invalid_callback_type() {
+    assert_error!(
+        r#"
+let x = fn(f) { f() + 1 }
+use <- x()
+Nil
+"#
+    );
+}

@@ -321,7 +321,7 @@ and a sequence has as special case for use"
         // check this code even if it would fail when run.
         if following_expressions.is_empty() {
             let todo = UntypedExpr::Todo {
-                location: sequence_location,
+                location: use_.location,
                 label: None,
                 kind: TodoKind::IncompleteUse,
             };
@@ -332,11 +332,14 @@ and a sequence has as special case for use"
         // callback to the use's call function.
         let callback = UntypedExpr::Fn {
             arguments: callback_arguments,
-            location: sequence_location,
+            location: SrcSpan::new(
+                following_expressions[0].location().start,
+                sequence_location.end,
+            ),
             return_annotation: None,
             is_capture: false,
             body: Box::new(UntypedExpr::Sequence {
-                location: SrcSpan::new(use_.location.start, sequence_location.end),
+                location: sequence_location,
                 expressions: following_expressions,
             }),
         };
