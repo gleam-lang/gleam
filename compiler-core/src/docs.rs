@@ -222,7 +222,7 @@ pub fn generate_html(
         });
     }
 
-    // Render static assets - TODO: do not push these through the templater
+    // Render static assets
 
     files.push(OutputFile {
         path: PathBuf::from("css/atom-one-light.min.css"),
@@ -273,26 +273,6 @@ pub fn generate_html(
         path: PathBuf::from("js/index.js"),
         text: std::include_str!("../templates/docs-js/index.js").to_string(),
     });
-
-    // TODO: Following are binaries, files.push(OutputFile {) expects a String
-    // ... also static files should not go through the template parser
-    // Idea: Change OutputFile.text to OutputFile.data and type from String to Vec<u8>
-    // After refactor add more files to the list after the templater passed
-
-    // files.push(OutputFile {
-    //     path: PathBuf::from("fonts/karla-v23-latin-ext_latin-700.woff2"),
-    //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-700.woff2"),
-    // });
-
-    // files.push(OutputFile {
-    //     path: PathBuf::from("fonts/karla-v23-latin-ext_latin-regular.woff2"),
-    //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-regular.woff2"),
-    // });
-
-    // files.push(OutputFile {
-    //   path: PathBuf::from("fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
-    //   text: std::include_str!("../templates/docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
-    // });
 
     files.push(OutputFile {
         path: PathBuf::from("search-data.js"),
