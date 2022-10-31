@@ -559,8 +559,11 @@ pre.constructor-name {
 
 .constructor-item .icon {
   flex-shrink: 0;
-  font-size: 0.7rem;
-  margin: 0 0.88rem;
+  font-size: 0.9rem;
+  padding-left: .5rem;
+  padding-right: .75rem;
+  width: calc(var(--large-gap) - 1px);
+  color: var(--links);
 }
 
 @media (max-width: 500px) {
