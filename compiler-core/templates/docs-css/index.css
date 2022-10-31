@@ -485,7 +485,6 @@ body.drawer-open .label-closed {
 
 .custom-type-constructors h3 {
   margin-top: 0;
-  margin-bottom: 0;
 }
 
 .custom-type-constructors h4 {
@@ -500,7 +499,7 @@ body.drawer-open .label-closed {
 
 
 pre.constructor-name {
-  margin-top: 1em;
+  margin-top: 0;
   margin-bottom: 0;
 }
 
