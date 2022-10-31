@@ -280,17 +280,17 @@ pub fn generate_html(
     // After refactor add more files to the list after the templater passed
 
     // files.push(OutputFile {
-    //     path: PathBuf::from("docs-fonts/karla-v23-latin-ext_latin-700.woff2"),
+    //     path: PathBuf::from("fonts/karla-v23-latin-ext_latin-700.woff2"),
     //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-700.woff2"),
     // });
 
     // files.push(OutputFile {
-    //     path: PathBuf::from("docs-fonts/karla-v23-latin-ext_latin-regular.woff2"),
+    //     path: PathBuf::from("fonts/karla-v23-latin-ext_latin-regular.woff2"),
     //     text: std::include_str!("../templates/docs-fonts/karla-v23-latin-ext_latin-regular.woff2"),
     // });
 
     // files.push(OutputFile {
-    //   path: PathBuf::from("docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
+    //   path: PathBuf::from("fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
     //   text: std::include_str!("../templates/docs-fonts/ubuntu-mono-v15-latin-ext_latin_greek-ext_greek_cyrillic-ext_cyrillic-regular.woff2"),
     // });
 
