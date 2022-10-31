@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>{{ page_title }}</title>
     <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
-    <title>{{ page_title }}</title>
-    <link rel="stylesheet" href="{{ unnest }}/index.css?v={{ gleam_version }}" type="text/css"/>
+    <link rel="stylesheet" href="{{ unnest }}/css/index.css?v={{ gleam_version }}" type="text/css"/>
     <!-- The docs_config.js file is provided by HexDocs and shared
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
-    <link id="syntax-theme" rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/styles/atom-one-light.min.css">
+    <link id="syntax-theme" rel="stylesheet" href="{{ unnest }}/css/atom-one-light.min.css?v={{ gleam_version }}">
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -286,17 +286,13 @@
       </defs>
     </svg>
 
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/highlight.min.js"></script>
-
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/erlang.min.js"></script>
-
-    <script src="https://unpkg.com/@highlightjs/cdn-assets@10.5.0/languages/elixir.min.js"></script>
-
-    <script src="https://unpkg.com/lunr@2.3.9/lunr.min.js"></script>
-    
-    <script src="{{ unnest }}/highlightjs-gleam.js?v={{ gleam_version }}"></script>
-
-    <script src="{{ unnest }}/gleam.js?v={{ rendering_timestamp }}"></script>
+    <script src="{{ unnest }}/js/highlight.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/js/highlightjs-gleam.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/js/highlightjs-erlang.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/js/highlightjs-elixir.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/js/highlightjs-javascript.min.js?v={{ gleam_version }}"></script>
+    <script src="{{ unnest }}/js/lunr.min.js?v={{ gleam_version }}"></script>    
+    <script src="{{ unnest }}/js/index.js?v={{ rendering_timestamp }}"></script>
 
     <!-- Load the search index using JSONP to avoid CORS issues -->
     <script src="{{ unnest }}/search-data.js?v={{ rendering_timestamp }}"></script>
