@@ -292,7 +292,7 @@ p code {
   border-radius: 2.5px;
   padding: .1rem .2rem;
   padding-left: 1rem;
-  border: 1px solid rgba(0,0,0, 0.15);
+  border: 1px solid rgba(0,0,0, 0.1);
 }
 
 #project-version option {
