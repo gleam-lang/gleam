@@ -113,7 +113,7 @@ jobs:
           ./build/erlang-shipment/entrypoint.sh run
         working-directory: ./test/project_erlang
         # erlang-shipment does not support Windows
-        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }} 
+        if: ${{ matrix.os != 'windows-latest' && matrix.run-integration-tests }}
 
       - name: test/project_javascript
         run: |
@@ -134,12 +134,19 @@ jobs:
           # Assert that module metadata has been written
           ls build/dev/erlang/lib_project/build/lib_project.gleam_module
 
-          # Assert that HTML docs have been written
-          ls build/dev/docs/lib_project/index.html
-          ls build/dev/docs/lib_project/index.css
-          ls build/dev/docs/lib_project/gleam.js
+          # Assert that HTML docs and their assets have been written
           ls build/dev/docs/lib_project/index.html
           ls build/dev/docs/lib_project/lib_project.html
+          ls build/dev/docs/lib_project/css/atom-one-light.min.css
+          ls build/dev/docs/lib_project/css/atom-one-dark.min.css
+          ls build/dev/docs/lib_project/css/index.css
+          ls build/dev/docs/lib_project/js/highlight.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-gleam.js
+          ls build/dev/docs/lib_project/js/highlightjs-erlang.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-elixir.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-javascript.min.js
+          ls build/dev/docs/lib_project/js/lunr.min.js
+          ls build/dev/docs/lib_project/js/index.js
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
@@ -305,4 +312,3 @@ jobs:
       - name: Test JavaScript prelude
         run: make
         working-directory: ./test/javascript_prelude
-
