@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 92
+expression: "\nlet x = fn(f) { f() + 1 }\nuse <- x()\nNil\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:1
+  │
+4 │ Nil
+  │ ^^^
+
+Expected type:
+
+    fn() -> Int
+
+Found type:
+
+    fn() -> Nil
+

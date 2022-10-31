@@ -5,11 +5,10 @@ expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\
 ---
 
 warning: Incomplete use expression
-  ┌─ /src/warning/wrn.gleam:3:3
-  │  
-3 │ ╭   let thingy = fn(f) { f() }
-4 │ │   use <- thingy()
-  │ ╰─────────────────^ This code is incomplete
+  ┌─ /src/warning/wrn.gleam:4:3
+  │
+4 │   use <- thingy()
+  │   ^^^^^^^^^^^^^^^ This code is incomplete
 
 This code will crash if it is run. Be sure to finish it before
 running your program.

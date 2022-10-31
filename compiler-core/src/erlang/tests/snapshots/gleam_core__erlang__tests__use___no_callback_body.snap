@@ -17,7 +17,7 @@ main() ->
                     message => <<"This has not yet been implemented"/utf8>>,
                     module => <<"the_app"/utf8>>,
                     function => <<"main"/utf8>>,
-                    line => 3})
+                    line => 4})
         end
     ).
 
