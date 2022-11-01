@@ -1,5 +1,6 @@
 #![allow(warnings)]
 
+mod build_manifest;
 mod dep_tree;
 pub mod package_compiler;
 mod project_compiler;
@@ -8,7 +9,9 @@ mod telemetry;
 #[cfg(test)]
 mod package_compilation_tests;
 
+pub use self::build_manifest::BuildManifest;
 pub use self::package_compiler::PackageCompiler;
+pub use self::package_compiler::Source;
 pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
@@ -115,6 +118,8 @@ pub struct Module {
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
+    pub source_hash: String,
+    pub deps: Vec<String>,
 }
 
 impl Module {
@@ -233,4 +238,11 @@ fn comments_before<'a>(
         }
     }
     comments
+}
+
+pub fn get_source_hash(source_code: &str) -> String {
+    //   let mut h0 = SeaHasher::default();
+    //   h0.write(&xs);
+    //   let h0 = h0.finish();
+    blake3::hash(source_code.as_bytes()).to_string()
 }
