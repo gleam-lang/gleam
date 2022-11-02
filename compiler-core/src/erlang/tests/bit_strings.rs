@@ -9,7 +9,8 @@ fn bit_strings() {
   let complex = <<4:int-big, 5.0:little-float, 6:native-int>>
   let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>
   let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>
-
+  let floats = <<1.0:16-float, 5.0:float-16, 6.0:float-64-little>>
+ 
   simple
 }
 "#
