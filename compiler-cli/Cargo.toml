@@ -77,6 +77,11 @@ lsp-types = "0.92"
 # File locking
 fslock = "0.2.1"
 
+tree-sitter = "~0.20.9"
+#tree-sitter = { git = "https://github.com/tree-sitter/tree-sitter", branch = "master" }
+tree-sitter-gleam = { git = "https://github.com/gleam-lang/tree-sitter-gleam", branch= "main" }
+
+
 [target.'cfg(target_os = "windows")'.dependencies]
 # File URl decoding
 urlencoding = "2.1.0"

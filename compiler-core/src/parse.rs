@@ -52,7 +52,7 @@
 pub mod error;
 pub mod extra;
 pub mod lexer;
-mod token;
+pub mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
@@ -86,7 +86,6 @@ pub fn parse_module(src: &str) -> Result<(UntypedModule, ModuleExtra), ParseErro
 //
 // Test Interface
 //
-#[cfg(test)]
 pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
@@ -127,7 +126,7 @@ where
         parser
     }
 
-    fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
+    pub fn parse_module(&mut self) -> Result<UntypedModule, ParseError> {
         let statements = Parser::series_of(self, &Parser::parse_target_group, None);
         let statements = self.ensure_no_errors_or_remaining_input(statements)?;
         Ok(Module {
@@ -143,7 +142,7 @@ where
     // place and instead we collect LexErrors in `self.lex_errors` and attempt to continue parsing.
     // Once parsing has returned we want to surface an error in the order:
     // 1) LexError, 2) ParseError, 3) More Tokens Left
-    fn ensure_no_errors_or_remaining_input<A>(
+    pub fn ensure_no_errors_or_remaining_input<A>(
         &mut self,
         parse_result: Result<A, ParseError>,
     ) -> Result<A, ParseError> {
@@ -211,7 +210,7 @@ where
         self.ensure_no_errors(statements)
     }
 
-    fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
+    pub fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
         match (self.tok0.take(), self.tok1.as_ref()) {
             // Imports
             (Some((_, Token::Import, _)), _) => {
@@ -763,7 +762,7 @@ where
     //
     //   In order to parse an expr sequence, you must try to parse an expr, if it is a `try`
     //   you MUST parse another expr, if it is some other expr, you MAY parse another expr
-    fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, u32)>, ParseError> {
+    pub fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, u32)>, ParseError> {
         // assignment
         if let Some(start) = self.maybe_try_start() {
             let pattern = if let Some(p) = self.parse_pattern()? {
@@ -1318,6 +1317,16 @@ where
     // Parse Functions
     //
 
+    pub fn parse_function_args(
+        &mut self,
+        is_anon: bool,
+    ) -> Result<Vec<crate::ast::Arg<()>>, ParseError> {
+        Parser::series_of(
+            self,
+            &|parser| Parser::parse_fn_param(parser, is_anon),
+            Some(&Token::Comma),
+        )
+    }
     // Starts after "fn"
     //
     // examples:
@@ -1334,13 +1343,11 @@ where
             let (_, n, _) = self.expect_name()?;
             name = n;
         }
+
         let _ = self.expect_one(&Token::LeftParen)?;
-        let args = Parser::series_of(
-            self,
-            &|parser| Parser::parse_fn_param(parser, is_anon),
-            Some(&Token::Comma),
-        )?;
+        let args = self.parse_function_args(is_anon)?;
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
+
         let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
         let some_body = self.parse_expression_seq()?;
@@ -2453,7 +2460,7 @@ where
     //
 
     // Expect a particular token, advances the token stream
-    fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
+    pub fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string()]),
