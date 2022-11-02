@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/bit_strings.rs
+assertion_line: 21
+expression: "pub fn main() {\n  let b = 16\n  let floats = <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>>\n}"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> bitstring().
+main() ->
+    B = 16,
+    Floats = <<1.0:16/float,
+        5.0:32/float,
+        6.0:64/float-little,
+        1.0:(lists:max([(B), 0]))/float>>.
+
