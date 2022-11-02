@@ -1,6 +1,6 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, Mode, Module, Origin, Package, Target},
+    build::{dep_tree, BuildManifest, Mode, Module, Origin, Package, Target},
     codegen::{Erlang, ErlangApp, JavaScript},
     config::PackageConfig,
     error,
@@ -18,6 +18,8 @@ use askama::Template;
 use std::{collections::HashMap, fmt::write};
 use std::{
     collections::HashSet,
+    io::BufReader,
+    io::Read,
     path::{Path, PathBuf},
 };
 
@@ -85,7 +87,7 @@ where
     }
 
     pub fn compile(
-        mut self,
+        &mut self,
         warnings: &mut Vec<Warning>,
         existing_modules: &mut im::HashMap<String, type_::Module>,
         already_defined_modules: &mut im::HashMap<String, PathBuf>,
@@ -126,6 +128,44 @@ where
         self.encode_and_write_metadata(&modules)?;
 
         Ok(modules)
+    }
+
+    pub fn load_previus_build_manifest(
+        &mut self,
+        importable_modules: &mut im::HashMap<String, type_::Module>,
+    ) -> BuildManifest {
+        let manifest_path = self.out.to_path_buf().join("build_manifest.toml");
+        let mut build_manifest = crate::build::BuildManifest::new();
+        let _ = self
+            .io
+            .read(manifest_path.as_path())
+            .and_then(|data| Ok(build_manifest.try_decode(&data)));
+
+        let valid_sources = build_manifest.check_sources(&self.sources);
+        let to_load_metadata = self.revalidate_last_build(valid_sources);
+
+        if let Ok(meta) = to_load_metadata {
+            for module in meta.into_iter() {
+                let _ = importable_modules.insert(module.name.join("/"), module);
+            }
+        } else {
+            build_manifest.clear();
+        }
+        build_manifest
+    }
+
+    pub fn update_build_manifeest(
+        &self,
+        build_manifest: &mut BuildManifest,
+        modules: &Vec<Module>,
+    ) -> Result<(), Error> {
+        let manifest_path = self.out.to_path_buf().join("build_manifest.toml");
+
+        build_manifest.insert_modules(&modules);
+
+        let mut writer = self.io.writer(manifest_path.as_path())?;
+        writer.write(build_manifest.serialize().as_bytes())?;
+        Ok(())
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
@@ -300,6 +340,48 @@ where
         Ok(())
     }
 
+    pub fn revalidate_last_build(
+        &mut self,
+        valid_sources: HashSet<String>,
+    ) -> Result<Vec<type_::Module>, ()> {
+        let to_keep: Vec<PathBuf> = self
+            .sources
+            .iter()
+            .filter(|source| valid_sources.contains(&source.name))
+            .map(|source| {
+                let name = format!("{}.gleam_module", &source.name.replace('/', "@"));
+                let path = self.out.join("build").join(name);
+
+                path
+            })
+            .collect();
+
+        //ensure all modules can be load
+        let to_keep_1: Result<Vec<type_::Module>> = to_keep
+            .iter()
+            .map(|path| {
+                let file = self.io.reader(&path)?;
+                let reader = BufReader::new(file);
+                let module = crate::metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
+                Ok(module)
+            })
+            .collect();
+
+        //exit if error BEFORE adding to paths journal
+        if to_keep_1.is_err() {
+            return Err(());
+        }
+
+        to_keep.iter().for_each(|path| {
+            self.add_build_journal(path.clone());
+        });
+
+        self.sources
+            .retain(|source| !valid_sources.contains(&source.name));
+
+        Ok(to_keep_1.unwrap())
+    }
+
     fn add_module(&mut self, path: PathBuf, dir: &Path, origin: Origin) -> Result<()> {
         let name = module_name(&dir, &path);
         let code = self.io.read(&path)?;
@@ -434,9 +516,15 @@ fn type_check(
             .remove(&name)
             .expect("Getting parsed module for name");
 
+        let deps: Vec<_> = ast
+            .dependencies(target)
+            .into_iter()
+            .map(|(dep, _span)| dep)
+            .collect();
+
         tracing::debug!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
-        let ast = type_::infer_module(
+        let typed_ast = type_::infer_module(
             target,
             ids,
             ast,
@@ -459,17 +547,21 @@ fn type_check(
 
         // Register the types from this module so they can be imported into
         // other modules.
-        let _ = module_types.insert(name.clone(), ast.type_info.clone());
+        let _ = module_types.insert(name.clone(), typed_ast.type_info.clone());
 
+        let hash = crate::build::get_source_hash(&code);
         // Register the successfully type checked module data so that it can be
         // used for code generation
+
         modules.push(Module {
             origin,
             extra,
             name,
             code,
-            ast,
+            ast: typed_ast,
             input_path: path,
+            source_hash: hash,
+            deps: deps,
         });
     }
 

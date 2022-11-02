@@ -487,12 +487,16 @@ where
         compiler.silence_subprocess_stdout = self.silence_subprocess_stdout;
         compiler.read_source_files(mode)?;
 
+        let mut build_manifest = compiler.load_previus_build_manifest(&mut self.importable_modules);
+
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
         )?;
+
+        compiler.update_build_manifeest(&mut build_manifest, &compiled);
 
         Ok(compiled)
     }
