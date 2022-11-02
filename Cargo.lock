@@ -689,6 +689,8 @@ dependencies = [
  "toml_edit",
  "tracing",
  "tracing-subscriber",
+ "tree-sitter",
+ "tree-sitter-gleam",
  "urlencoding",
  "walkdir",
 ]
@@ -2093,6 +2095,25 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "tree-sitter"
+version = "0.20.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4423c784fe11398ca91e505cdc71356b07b1a924fc8735cfab5333afe3e18bc"
+dependencies = [
+ "cc",
+ "regex",
+]
+
+[[package]]
+name = "tree-sitter-gleam"
+version = "0.24.0"
+source = "git+https://github.com/gleam-lang/tree-sitter-gleam?branch=main#daa89f67d1e6f53e2e8fa46875484c0f66555297"
+dependencies = [
+ "cc",
+ "tree-sitter",
 ]
 
 [[package]]
