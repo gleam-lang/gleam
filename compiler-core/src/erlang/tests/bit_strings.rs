@@ -22,6 +22,7 @@ fn bit_strings_float() {
         r#"pub fn main() {
   let b = 16
   let floats = <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>>
+  let <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>> = floats 
 }"#
     );
 }
