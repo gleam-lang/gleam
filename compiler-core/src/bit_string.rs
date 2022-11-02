@@ -234,15 +234,7 @@ fn type_options<T>(
         return err(ErrorType::UnitMustHaveSize, unit.location());
     }
 
-    // size cannot be used with float
-    match categories {
-        SegmentOptionCategories {
-            typ: Some(Float { .. }),
-            size: Some(opt),
-            ..
-        } => err(ErrorType::FloatWithSize, opt.location()),
-        _ => Ok(categories.segment_type()),
-    }
+    Ok(categories.segment_type())
 }
 
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
