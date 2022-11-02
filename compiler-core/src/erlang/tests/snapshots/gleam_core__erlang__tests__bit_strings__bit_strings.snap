@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
 assertion_line: 5
-expression: "pub fn main() {\n  let a = 1\n  let simple = <<1, a>>\n  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>\n  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>\n  let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>\n\n  simple\n}\n"
+expression: "pub fn main() {\n  let a = 1\n  let simple = <<1, a>>\n  let complex = <<4:int-big, 5.0:little-float, 6:native-int>>\n  let <<7:2, 8:size(3), b:binary-size(4)>> = <<1>>\n  let <<c:8-unit(1), d:binary-size(2)-unit(2)>> = <<1>>\n  let floats = <<1.0:16-float, 5.0:float-16, 6.0:float-64-little>>\n \n  simple\n}\n"
 ---
 -module(the_app).
 -compile(no_auto_import).
@@ -15,5 +15,6 @@ main() ->
     Complex = <<4/integer-big, 5.0/little-float, 6/native-integer>>,
     <<7:2, 8:3, B:4/binary>> = <<1>>,
     <<C:8/unit:1, D:2/binary-unit:2>> = <<1>>,
+    Floats = <<1.0:16/float, 5.0:16/float, 6.0:64/float-little>>,
     Simple.
 
