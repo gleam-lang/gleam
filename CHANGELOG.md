@@ -7,6 +7,7 @@
   permits callback using code to be written without indentation.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
+- Fixed float-size in bitstring
 
 ## 0.24.0 - 2022-10-25
 
