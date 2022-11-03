@@ -1,4 +1,4 @@
-mod environment;
+pub mod environment;
 mod error;
 mod expression;
 mod fields;
@@ -742,7 +742,7 @@ fn assert_unique_const_name<'a>(
     }
 }
 
-fn register_values<'a>(
+pub fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
@@ -1057,7 +1057,7 @@ fn generalise_statement(
     }
 }
 
-fn infer_statement(
+pub fn infer_statement(
     s: UntypedStatement,
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,

@@ -172,9 +172,6 @@ pub struct LanguageServer {
     config: Option<PackageConfig>,
 }
 
-
-use crate::lsp_tests::*;
-
 impl LanguageServer {
     pub fn new(initialise_params: InitializeParams, config: Option<PackageConfig>) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
@@ -673,46 +670,53 @@ impl LanguageServer {
         writeln!(file, "nm {:?}", nm1);
         file.flush();
 
-
         if let Some(name) = nm1 {
             let module = self.edited.get(name);
             if let Some(module) = module {
                 writeln!(file, "{:?}", "before line numbers");
                 file.flush();
- 
+
                 //let line_numbers = LineNumbers::new(&module);
                 //let byte_index =
                 //    line_numbers.byte_index(position.position.line, position.position.character);
                 //let node = module.find_node(byte_index);
-                let tree = crate::lsp_tests::new_tree(module);
+                let tree = new_tree(module);
 
                 writeln!(file, "this {:?}", tree);
                 file.flush();
- 
-                let res =
-                    crate::lsp_tests::dot_for_node(&tree, tree_sitter::Point::new(4, 6), crate::lsp_tests::LspEnv {});
 
-                writeln!(file, "{:?}", "should be module");
+                let res = dot_for_node(
+                    &tree,
+                    tree_sitter::Point::new(
+                        position.position.line as usize,
+                        (position.position.character - 1) as usize,
+                    ),
+                    LspEnv {},
+                );
+
+                writeln!(file, "should be {:?}", res);
                 file.flush();
-                //Some((line_numbers, node))
+
+                //  Option<Vec<lsp::CompletionItem>>
+                if let Some(WhatToDisplay::Names(x)) = res {
+                    return Some(
+                        x.into_iter()
+                            .map(|label| lsp::CompletionItem {
+                                label,
+                                kind: None,
+                                documentation: None,
+                                ..Default::default()
+                            })
+                            .collect(),
+                    );
+                }
             } else {
                 writeln!(file, "module not found");
                 file.flush();
             }
         }
 
-        let found = self
-            .node_at_position(&params.text_document_position)
-            .map(|(_, found)| found);
-
-        match found {
-            None => None,
-            Some(Located::Statement(Statement::Import { .. })) => self.completion_for_import(),
-
-            Some(Located::Statement(_expression)) => None,
-
-            Some(Located::Expression(_expression)) => None,
-        }
+        return None;
     }
 
     fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {
@@ -1130,4 +1134,901 @@ fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range
             character: end.column - 1,
         },
     }
+}
+
+use tree_sitter::{Parser, Tree, TreeCursor};
+
+use tree_sitter::Point;
+
+#[test]
+fn lsp_binds_in_scope() {
+    let contents: &str = r#"fn main(p,  p1 : Bool) {
+  let a = 1
+  let #(b, _) = #(1, 1)
+  let c : Int = 1
+  io.
+}
+const co = "lol";
+"#;
+    let lex = gleam_core::parse::lexer::make_tokenizer(contents);
+    let mut parser = gleam_core::parse::Parser::new(lex);
+    let expr = parser.parse_statement();
+    //let expr = parser.ensure_no_errors_or_remaining_input(expr);
+
+    println!("wtf");
+    println!("expression: {expr:#?}");
+
+    let tree = new_tree(contents);
+
+    tree.tree.root_node().print(0);
+
+    let res = binds_in_scope(&tree, tree_sitter::Point::new(4, 4));
+    assert_eq!(
+        res,
+        [
+            ("a".to_string(), "Int".to_string()),
+            ("b".to_string(), "Int".to_string()),
+            ("c".to_string(), "unknown".to_string()),
+            ("p".to_string(), "unknown".to_string()),
+            ("p1".to_string(), "Wow1".to_string())
+        ]
+        .to_vec()
+    );
+}
+
+//let mut statements : Vec<gleam_core::ast::Statement> = Vec::new();
+
+#[derive(Debug)]
+struct Bindings {
+    name: String,
+    type_notation: String,
+}
+
+use gleam_core::ast::{Arg, ArgNames};
+
+fn parse_function_args(text: &str) -> Vec<Bindings> {
+    let lex = gleam_core::parse::lexer::make_tokenizer(text);
+    let mut parser = gleam_core::parse::Parser::new(lex);
+
+    let _ = parser.expect_one(&gleam_core::parse::token::Token::LeftParen);
+    let expr = parser.parse_function_args(false);
+    // let expr = parser.ensure_no_errors_or_remaining_input(expr);
+
+    println!("{expr:#?}");
+
+    match expr {
+        Ok(args) => args
+            .iter()
+            .map(|arg| match arg {
+                Arg {
+                    names: ArgNames::Named { name: n },
+                    ..
+                } => Some(Bindings {
+                    name: n.clone(),
+                    type_notation: "".to_string(),
+                }),
+                _ => None,
+            })
+            .filter(|x| x.is_some())
+            .map(|x| x.expect("is some"))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+fn parse_function_body(text: &str) -> Vec<Bindings> {
+    let lex = gleam_core::parse::lexer::make_tokenizer(text);
+    let mut parser = gleam_core::parse::Parser::new(lex);
+
+    let expr = parser.parse_expression_seq();
+
+    println!("{text:#?}");
+    println!("{expr:#?}");
+
+    let mut outbindings = Vec::new();
+
+    if let Ok(expr) = expr {
+        if let Some(ast) = expr {
+            extract_bindings_from_ast(&ast.0, &mut outbindings)
+        }
+    }
+
+    outbindings
+}
+
+fn extract_binding_from_assign(pattern: &gleam_core::ast::Pattern<(), ()>, to: &mut Vec<Bindings>) {
+    match pattern {
+        gleam_core::ast::Pattern::Var { name: n, .. } => to.push(Bindings {
+            name: n.to_string(),
+            type_notation: "unknown".to_string(),
+        }),
+        gleam_core::ast::Pattern::Tuple { elems, .. } => elems
+            .iter()
+            .for_each(|x| extract_binding_from_assign(x, to)),
+        _ => (),
+    }
+}
+
+fn extract_bindings_from_ast(ast: &UntypedExpr, to: &mut Vec<Bindings>) {
+    match ast {
+        gleam_core::ast::UntypedExpr::Assignment { pattern: p, .. } => {
+            extract_binding_from_assign(p, to)
+        }
+        gleam_core::ast::UntypedExpr::Sequence {
+            expressions: exprs, ..
+        } => exprs.iter().for_each(|x| extract_bindings_from_ast(x, to)),
+        something => println!("unhandled: {something:?}"),
+    }
+}
+
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+
+fn binds_in_scope(module: &PartialParsedModule, point: Point) -> Vec<(String, String)> {
+    let prev_point = Point {
+        column: if point.column > 0 {
+            point.column - 1
+        } else {
+            point.column
+        },
+        ..point
+    };
+    let mut node = module
+        .tree
+        .root_node()
+        .named_descendant_for_point_range(prev_point, point);
+
+    let mut file: std::fs::File = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open("/tmp/lsp.log")
+        .unwrap();
+
+    if node.is_none() {
+        writeln!(file, "cursor was none");
+        file.flush();
+
+        return Vec::new();
+    }
+
+    writeln!(file, "cursor was {:?}", node);
+    file.flush();
+
+    //are we in a function ?
+    //let tc : TreeCursor = node.expect("has one").walk();
+    let mut collected: Vec<tree_sitter::Node<'_>> = Vec::new();
+    let mut bindings: Vec<Bindings> = Vec::new();
+
+    // get its parameters
+    // get the previous statements, parent by parent
+    loop {
+        if node == None {
+            break;
+        }
+        let parent = node.expect("already has").parent();
+        //reached top level
+        if parent.is_none() {
+            break;
+        }
+
+        let prev_sibling = node.expect("already has").prev_sibling();
+        //reached top level
+        if prev_sibling.is_none() {
+            node = parent;
+        } else {
+            match node.expect("already has").kind() {
+                "function_body" => bindings.append(&mut parse_function_body(
+                    node.expect("")
+                        .utf8_text(module.source_code.as_bytes())
+                        .expect("source should have code"),
+                )),
+                "function_parameters" => bindings.append(&mut parse_function_args(
+                    node.expect("")
+                        .utf8_text(module.source_code.as_bytes())
+                        .expect("source should have code"),
+                )),
+                "function" => collected.push(node.unwrap()),
+                _ => (),
+            }
+            node = prev_sibling;
+        }
+    }
+    println!("{collected:?}");
+    println!("bindings {bindings:?}");
+
+    Vec::new()
+}
+
+#[test]
+fn lsp_complete_fun_ret_type() {
+    let contents: &str = "import gleam/io as io 
+
+type Was{
+ Was( in_struct: Int )
+}
+
+fn main() {
+  ErrorOnPurpose
+  otherError
+}
+
+fn main() {
+  let io = fn(a) { Was( in_struct: a) };
+  io(1).
+}
+";
+
+    let tree = new_tree(contents);
+
+    tree.tree.root_node().print(0);
+
+    let res = dot_for_node(&tree, tree_sitter::Point::new(13, 8), LspEnv {});
+    assert!(res.is_some());
+    //todo should be ["in_struct"]
+}
+
+#[test]
+fn lsp_complete_as_import() {
+    let contents: &str = "import gleam/io as koto
+
+pub fn main() {
+  io.println(\"Hello from t1!\");
+  koto.
+}
+
+";
+
+    let tree = new_tree(contents);
+
+    tree.tree.root_node().print(0);
+
+    let res = dot_for_node(&tree, tree_sitter::Point::new(4, 6), LspEnv {});
+    assert!(res.is_some());
+}
+
+#[test]
+fn lsp_complete_bind() {
+    let contents: &str = "import gleam/io.{println}
+
+type Pub {
+  Pub(something: Int)
+}
+
+pub fn main() {
+  let io = Pub(1);
+  io.
+}
+";
+
+    let tree = new_tree(contents);
+    let res = dot_for_node(&tree, tree_sitter::Point::new(8, 4), LspEnv {});
+    println!("{res:?}");
+    assert_eq!(
+        res,
+        Some(WhatToDisplay::Names(["something".to_string()].to_vec()))
+    );
+}
+
+#[test]
+fn lsp_complete_import() {
+    let contents: &str = "import gleam/io.{println}
+
+pub fn main() {
+  io.println(\"Hello from t1!\");
+  io.
+}
+
+";
+
+    let tree = new_tree(contents);
+    let res = dot_for_node(&tree, tree_sitter::Point::new(4, 4), LspEnv {});
+
+    assert!(res.is_some());
+}
+
+#[derive(Clone, Debug)]
+pub struct PartialParsedModule {
+    tree: Tree,
+    imports: Vec<Import>,
+    source_code: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Import {
+    module: String,
+    module_import_name: String,
+    qualified_imports: Vec<String>,
+    //   as_alias: Option<String>
+}
+
+trait Seek {
+    fn seek_next(self: &mut Self, kind: &String) -> bool;
+}
+impl Seek for TreeCursor<'_> {
+    fn seek_next(self: &mut Self, kind: &String) -> bool {
+        loop {
+            if self.node().kind() == kind {
+                return true;
+            }
+            if !(self.goto_next_sibling()) {
+                return false;
+            }
+        }
+    }
+}
+
+trait Extractor {
+    fn print(&self, level: usize);
+    fn as_import(&self, source_code: &str) -> Option<Import>;
+    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node<'_>>;
+    fn as_string(&self, source_code: &str) -> String;
+}
+
+trait Navigator {
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>>;
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>>;
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>>;
+}
+
+impl Navigator for tree_sitter::Node<'_> {
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>> {
+        let mut cursor = self.walk();
+        if cursor.goto_next_sibling() {
+            return Some(cursor.node());
+        }
+        return None;
+    }
+
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
+        let mut cursor = self.walk();
+
+        if cursor.goto_first_child() && cursor.seek_next(&kind.to_string()) {
+            return Some(cursor.node());
+        }
+        return None;
+    }
+
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
+        if self.kind() == kind {
+            Some(*self)
+        } else {
+            None
+        }
+    }
+}
+
+impl Navigator for Option<tree_sitter::Node<'_>> {
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>> {
+        if let Some(node) = self {
+            return node.next_sibling();
+        }
+        return None;
+    }
+
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
+        if let Some(node) = self {
+            return node.first_child_of_kind(kind);
+        }
+        return None;
+    }
+
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
+        if let Some(node) = self {
+            return node.as_kind(kind);
+        }
+        return None;
+    }
+}
+
+impl Extractor for tree_sitter::Node<'_> {
+    fn as_string(&self, source_code: &str) -> String {
+        self.utf8_text(source_code.as_bytes())
+            .expect("should work")
+            .to_string()
+    }
+
+    fn print(&self, level: usize) {
+        print!(
+            "{}",
+            std::iter::repeat("    ").take(level).collect::<String>()
+        );
+        println!("{:?}", self);
+
+        for i in 0..self.child_count() {
+            let x = self.child(i).expect("should exists");
+            x.print(level + 1);
+        }
+    }
+
+    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node<'_>> {
+        let mut ret = Vec::new();
+
+        for i in 0..self.child_count() {
+            let x = self.child(i).expect("should exists");
+            if x.kind() == kind {
+                ret.push(x);
+            }
+        }
+
+        ret
+    }
+
+    fn as_import(&self, source_code: &str) -> Option<Import> {
+        match self.kind() {
+            "import" => {
+                let mut qa: Vec<String> = Vec::new();
+
+                let module = self.child_by_field_name("module").and_then(|x| {
+                    Some(
+                        x.utf8_text(source_code.as_bytes())
+                            .expect("should work")
+                            .to_string(),
+                    )
+                });
+
+                match self.all_childs_of("unqualified_imports").first() {
+                    Some(nx) => {
+                        qa = nx
+                            .all_childs_of("unqualified_import")
+                            .iter()
+                            .map(|x| {
+                                x.utf8_text(source_code.as_bytes())
+                                    .expect("should work")
+                                    .to_string()
+                            })
+                            .collect()
+                    }
+                    _ => (),
+                }
+
+                let mut cursor = self.walk();
+                let mut as_alias = None;
+
+                if cursor.goto_first_child()
+                    && cursor.seek_next(&"as".to_string())
+                    && cursor.goto_next_sibling()
+                {
+                    let as_node = cursor.node();
+                    if as_node.kind() == "identifier" {
+                        as_alias = Some(
+                            as_node
+                                .utf8_text(source_code.as_bytes())
+                                .expect("should work")
+                                .to_string(),
+                        );
+                    }
+                }
+
+                module.and_then(|m| {
+                    let import_name = m.split("/").last().expect("at least one").to_string();
+                    let module_import_name = as_alias.as_ref().unwrap_or(&import_name).clone();
+
+                    Some(Import {
+                        module: m.to_string(),
+                        qualified_imports: qa,
+                        module_import_name: module_import_name,
+                        //as_alias: as_alias.clone()
+                    })
+                })
+            }
+
+            _ => None,
+        }
+    }
+}
+
+pub fn collect_all_imports(tree: &Tree, source_code: &str) -> Vec<Import> {
+    let node = tree.root_node();
+
+    node.all_childs_of("import")
+        .iter()
+        .map(|x| x.as_import(source_code))
+        .filter(|x| x.is_some())
+        .map(|x| x.expect("after filter"))
+        .collect()
+}
+
+pub fn new_tree(source_code: &str) -> PartialParsedModule {
+    let mut parser = Parser::new();
+    parser
+        .set_language(tree_sitter_gleam::language())
+        .expect("Error loading gleam language");
+    let tree: Tree = parser.parse(source_code, None).unwrap();
+
+    let imports = collect_all_imports(&tree, source_code);
+    //println!("{:?}", imports);
+
+    //let mut cursor = Tree::walk(&tree);
+
+    PartialParsedModule {
+        tree: tree,
+        imports: imports,
+        source_code: source_code.to_string(),
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum WhatToDisplay {
+    Names(Vec<String>),
+}
+
+#[derive(Debug)]
+pub struct LspEnv {}
+
+macro_rules! hashmap {
+    ($( $key: expr => $val: expr ),*) => {{
+         let mut map = ::std::collections::HashMap::new();
+         $( let _ = map.insert($key, $val); )*
+         map
+    }}
+}
+
+impl LspEnv {
+    fn get_importable_module(self: Self, module_name: &str) -> Option<ModuleMook> {
+        if module_name == "gleam/io" {
+            let values = hashmap!["println".to_string() => "1".to_string()];
+            Some(ModuleMook { values: values })
+        } else {
+            None
+        }
+    }
+}
+//gleam_core::type_::
+
+#[derive(Debug)]
+pub struct ModuleMook {
+    values: HashMap<String, String>,
+}
+
+pub fn dot_for_node(
+    module: &PartialParsedModule,
+    point: Point,
+    environment: LspEnv,
+) -> Option<WhatToDisplay> {
+    let prev_point = Point {
+        column: point.column - 1,
+        ..point
+    };
+
+    let mut file: std::fs::File = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .append(true)
+        .open("/tmp/lsp.log")
+        .unwrap();
+
+    let node = module
+        .tree
+        .root_node()
+        .named_descendant_for_point_range(prev_point, point);
+
+    if node.is_none() {
+        writeln!(file, "cursor was none");
+        file.flush();
+    }
+
+    writeln!(file, "cursor was {:?}", node);
+    file.flush();
+
+    let res = node.and_then(|node| match node.kind() {
+        "identifier" => {
+            let text = node
+                .utf8_text(module.source_code.as_bytes())
+                .expect("should have text");
+            let imported = module
+                .imports
+                .iter()
+                .find(|x| x.module_import_name == *text);
+            let module_name = match imported {
+                Some(alias) => &alias.module,
+                _ => text,
+            };
+
+            //println!("identifier {text:?} {module_name:?}",);
+            if let Some(module) = environment.get_importable_module(module_name) {
+                Some(WhatToDisplay::Names(
+                    module.values.keys().map(|x| x.to_string()).collect(),
+                ))
+            } else {
+                None
+            }
+        }
+        _ => None,
+    });
+
+    //println!("{res:?}");
+    res
+}
+
+use gleam_core::ast::UntypedExpr;
+use gleam_core::parse::error::ParseError;
+
+type UntypedStatements = Vec<Result<Option<Statement<(), UntypedExpr, (), ()>>, ParseError>>;
+
+#[derive(Debug)]
+pub struct PartiallyInferedModule {
+    pub tree: Tree,
+    pub source_code: String,
+    //components
+    pub statements: UntypedStatements,
+    pub infer_state: Vec<usize>,
+    pub ts_nodes: Vec<usize>,
+    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
+
+    //indexes
+    pub name_to_statement: HashMap<String, usize>,
+}
+
+impl PartiallyInferedModule {
+    fn new(source_code: String) -> Self {
+        let mut statements: UntypedStatements = Vec::new();
+        let mut infer_state: Vec<usize> = Vec::new();
+        let mut ts_nodes: Vec<usize> = Vec::new();
+        let untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>> = Vec::new();
+
+        let mut name_to_statement: HashMap<String, usize> = HashMap::new();
+
+        let tree = new_tree(&source_code);
+
+        let root_node = tree.tree.root_node();
+
+        for i in 0..root_node.child_count() {
+            let node = root_node.child(i).unwrap();
+
+            ts_nodes.push(node.id());
+
+            let text = node.utf8_text(&source_code.as_bytes()).unwrap();
+            println!("{:#?}", text);
+            let lex = gleam_core::parse::lexer::make_tokenizer(text);
+            let mut parser = gleam_core::parse::Parser::new(lex);
+
+            let expr = parser.parse_statement();
+            //let expr = parser.ensure_no_errors_or_remaining_input(expr);
+
+            statements.push(expr);
+            infer_state.push(0);
+            //untyped.push();
+
+            let name = get_statement_name(&source_code, node);
+            if let Some(name) = name {
+                let _ = name_to_statement.insert(name, i);
+            }
+        }
+
+        //tree.tree.root_node().print(0);
+
+        PartiallyInferedModule {
+            tree: tree.tree,
+            source_code: source_code,
+            statements: statements,
+            infer_state: infer_state,
+            ts_nodes: ts_nodes,
+            untyped: untyped,
+
+            name_to_statement: name_to_statement,
+        }
+    }
+}
+
+pub fn get_statement_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
+    match node.kind() {
+        "function" => get_fn_name(source_code, node),
+        "external_function" => get_fn_name(source_code, node),
+        "constant" => get_const_name(source_code, node),
+        "type" => get_type_name(source_code, node),
+        "type_alias" => get_type_name(source_code, node),
+        "external_type" => get_type_name(source_code, node),
+        "import" => get_import_name(source_code, node),
+        "type_definition" => get_type_name(source_code, node),
+        _ => None,
+    }
+}
+
+fn get_fn_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
+    node.first_child_of_kind("fn")
+        .next_sibling()
+        .as_kind("identifier")
+        .map(|node| node.as_string(source_code))
+}
+
+fn get_const_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
+    node.first_child_of_kind("const")
+        .next_sibling()
+        .as_kind("identifier")
+        .map(|node| node.as_string(source_code))
+}
+fn get_type_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
+    let mut cursor = node.walk();
+
+    if cursor.goto_first_child()
+        && cursor.seek_next(&"type".to_string())
+        && cursor.goto_next_sibling()
+    {
+        let as_node = cursor.node();
+        let _name = as_node.as_string(source_code);
+        if as_node.kind() == "type_name" {
+            if let Some(n) = as_node.child(0) {
+                return Some(n.as_string(source_code));
+            }
+        }
+    }
+    return None;
+}
+
+fn get_import_name<'a>(source_code: &str, node: tree_sitter::Node<'a>) -> Option<String> {
+    let module_as = node
+        .first_child_of_kind("as")
+        .next_sibling()
+        .as_kind("identifier")
+        .map(|node| node.as_string(source_code));
+
+    if module_as.is_some() {
+        return module_as;
+    }
+
+    //default name
+    node.first_child_of_kind("import")
+        .next_sibling()
+        .as_kind("module")
+        .map(|node| {
+            node.as_string(source_code)
+                .split("/")
+                .last()
+                .expect("should have at least one")
+                .to_string()
+        })
+}
+
+#[test]
+fn partial_infer_statement_names() {
+    let data: &str = r#"
+pub type Headers =
+       List(#(String, String))
+
+pub type Cat {
+   Cat(name: String, cuteness: Int)
+}
+ 
+pub external fn random_float() -> Float = "rand" "uniform"
+ 
+pub fn random_cat() -> Int { 0 }
+ 
+pub external type Queue(a)
+ 
+import unix/cat
+// Import with alias
+import animal/cat as kitty
+ 
+pub const start_year = 2101
+const end_year = 2111
+ 
+"#;
+    let pi = PartiallyInferedModule::new(data.to_string());
+    assert!(pi.name_to_statement.get("Headers").is_some());
+    assert!(pi.name_to_statement.get("Cat").is_some());
+    assert!(pi.name_to_statement.get("random_float").is_some());
+    assert!(pi.name_to_statement.get("Queue").is_some());
+    assert!(pi.name_to_statement.get("Cat").is_some());
+    assert!(pi.name_to_statement.get("kitty").is_some());
+    assert!(pi.name_to_statement.get("start_year").is_some());
+    assert!(pi.name_to_statement.get("end_year").is_some());
+    assert!(pi.name_to_statement.get("random_cat").is_some());
+}
+
+#[test]
+fn partial_infer() {
+    let data: &str = r#"
+pub type Headers =
+       List(#(String, String))
+
+pub type Cat {
+   Cat(name: String, cuteness: Int)
+}
+ 
+pub external fn random_float() -> Float = "rand" "uniform"
+ 
+pub fn random_cat() -> Int { 0 }
+ 
+pub external type Queue(a)
+ 
+import unix/cat
+// Import with alias
+import animal/cat as kitty
+ 
+pub const start_year = 2101
+const end_year = 2111
+ 
+"#;
+    let pi = PartiallyInferedModule::new(data.to_string());
+    println!("{:#?}", pi.statements);
+    assert!(false);
+}
+
+use gleam_core::type_::environment::*;
+use gleam_core::type_::Warning;
+
+use gleam_core::uid::UniqueIdGenerator;
+
+pub fn infer_module(
+    statements: &UntypedStatements,
+    package: &str,
+    modules: &im::HashMap<String, gleam_core::type_::Module>,
+    warnings: &mut Vec<Warning>,
+) {
+    let name = ["random_name".to_string()];
+    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
+    let mut environment = Environment::new(ids.clone(), &name, modules, warnings);
+
+    let mut type_names = HashMap::with_capacity(statements.len());
+    let mut value_names = HashMap::with_capacity(statements.len());
+    let mut hydrators = HashMap::with_capacity(statements.len());
+
+    // Register any modules, types, and values being imported
+    // We process imports first so that anything imported can be referenced
+    // anywhere in the module.
+    for s in statements {
+        if let Ok(Some(s)) = s {
+            gleam_core::type_::register_import(s, &mut environment);
+        }
+    }
+
+    // Register types so they can be used in constructors and functions
+    // earlier in the module.
+    for s in statements {
+        if let Ok(Some(s)) = s {
+            gleam_core::type_::register_types(
+                s,
+                &name,
+                &mut hydrators,
+                &mut type_names,
+                &mut environment,
+            );
+        }
+    }
+
+    // Register values so they can be used in functions earlier in the module.
+    for s in statements {
+        if let Ok(Some(s)) = s {
+            gleam_core::type_::register_values(
+                s,
+                &name,
+                &mut hydrators,
+                &mut value_names,
+                &mut environment,
+            );
+        }
+    }
+
+    // Infer the types of each statement in the module
+    // We first infer all the constants so they can be used in functions defined
+    // anywhere in the module.
+    let mut new_statements = Vec::with_capacity(statements.len());
+    let mut consts = vec![];
+    let mut not_consts = vec![];
+    for statement in statements.clone().into_iter() {
+        if let Ok(Some(statement)) = statement {
+            match statement {
+                Statement::Fn { .. }
+                | Statement::TypeAlias { .. }
+                | Statement::CustomType { .. }
+                | Statement::ExternalFn { .. }
+                | Statement::ExternalType { .. }
+                | Statement::Import { .. } => not_consts.push(statement),
+
+                Statement::ModuleConstant { .. } => consts.push(statement),
+            }
+        }
+    }
+
+    for statement in consts.into_iter().chain(not_consts) {
+        let statement = gleam_core::type_::infer_statement(
+            statement.clone(),
+            &name,
+            &mut hydrators,
+            &mut environment,
+        );
+        new_statements.push(statement);
+    }
+
 }
