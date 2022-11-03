@@ -34,6 +34,23 @@ use lsp_types::{
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
 
+use gleam_core::type_::environment::*;
+use gleam_core::type_::Warning;
+
+use gleam_core::uid::UniqueIdGenerator;
+
+use tree_sitter::{Parser, Tree, TreeCursor};
+
+use tree_sitter::Point;
+
+use gleam_core::ast::{Arg, ArgNames};
+
+use std::fs::OpenOptions;
+use std::io::prelude::*;
+
+use gleam_core::ast::UntypedExpr;
+use gleam_core::parse::error::ParseError;
+
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 
@@ -649,7 +666,6 @@ impl LanguageServer {
     // TODO: imported module types
     // TODO: record accessors
     fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
-        use std::fs::OpenOptions;
         use std::io::prelude::*;
         let mut file = OpenOptions::new()
             .write(true)
@@ -658,44 +674,37 @@ impl LanguageServer {
             .open("/tmp/lsp.log")
             .unwrap();
 
-        writeln!(file, "{:?}", self.edited);
+        let _ = writeln!(file, "{:?}", self.edited);
 
-        writeln!(file, "completiong called (*)");
-        file.flush();
+        let _ = writeln!(file, "completiong called (*)");
+        let _ = file.flush();
 
         let position = &params.text_document_position;
         let nm = position.text_document.uri.to_string();
         let nm1 = nm.strip_prefix("file://");
 
-        writeln!(file, "nm {:?}", nm1);
-        file.flush();
+        let _ = writeln!(file, "nm {:?}", nm1);
+        let _ = file.flush();
 
         if let Some(name) = nm1 {
             let module = self.edited.get(name);
             if let Some(module) = module {
-                writeln!(file, "{:?}", "before line numbers");
-                file.flush();
+                let _ = writeln!(file, "{:?}", "before line numbers");
+                let _ = file.flush();
 
                 //let line_numbers = LineNumbers::new(&module);
                 //let byte_index =
                 //    line_numbers.byte_index(position.position.line, position.position.character);
                 //let node = module.find_node(byte_index);
-                let tree = new_tree(module);
 
-                writeln!(file, "this {:?}", tree);
-                file.flush();
-
-                let res = dot_for_node(
-                    &tree,
-                    tree_sitter::Point::new(
-                        position.position.line as usize,
-                        (position.position.character - 1) as usize,
-                    ),
-                    LspEnv {},
+                let res = dot_for_node2(
+                    module,
+                    position.position.line,
+                    position.position.character,
                 );
 
-                writeln!(file, "should be {:?}", res);
-                file.flush();
+                let _ = writeln!(file, "should be {:?}", res);
+                let _ = file.flush();
 
                 //  Option<Vec<lsp::CompletionItem>>
                 if let Some(WhatToDisplay::Names(x)) = res {
@@ -711,8 +720,8 @@ impl LanguageServer {
                     );
                 }
             } else {
-                writeln!(file, "module not found");
-                file.flush();
+                let _ = writeln!(file, "module not found");
+                let _ = file.flush();
             }
         }
 
@@ -1136,10 +1145,6 @@ fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range
     }
 }
 
-use tree_sitter::{Parser, Tree, TreeCursor};
-
-use tree_sitter::Point;
-
 #[test]
 fn lsp_binds_in_scope() {
     let contents: &str = r#"fn main(p,  p1 : Bool) {
@@ -1154,9 +1159,6 @@ const co = "lol";
     let mut parser = gleam_core::parse::Parser::new(lex);
     let expr = parser.parse_statement();
     //let expr = parser.ensure_no_errors_or_remaining_input(expr);
-
-    println!("wtf");
-    println!("expression: {expr:#?}");
 
     let tree = new_tree(contents);
 
@@ -1184,8 +1186,6 @@ struct Bindings {
     type_notation: String,
 }
 
-use gleam_core::ast::{Arg, ArgNames};
-
 fn parse_function_args(text: &str) -> Vec<Bindings> {
     let lex = gleam_core::parse::lexer::make_tokenizer(text);
     let mut parser = gleam_core::parse::Parser::new(lex);
@@ -1193,8 +1193,6 @@ fn parse_function_args(text: &str) -> Vec<Bindings> {
     let _ = parser.expect_one(&gleam_core::parse::token::Token::LeftParen);
     let expr = parser.parse_function_args(false);
     // let expr = parser.ensure_no_errors_or_remaining_input(expr);
-
-    println!("{expr:#?}");
 
     match expr {
         Ok(args) => args
@@ -1221,9 +1219,6 @@ fn parse_function_body(text: &str) -> Vec<Bindings> {
     let mut parser = gleam_core::parse::Parser::new(lex);
 
     let expr = parser.parse_expression_seq();
-
-    println!("{text:#?}");
-    println!("{expr:#?}");
 
     let mut outbindings = Vec::new();
 
@@ -1260,9 +1255,6 @@ fn extract_bindings_from_ast(ast: &UntypedExpr, to: &mut Vec<Bindings>) {
         something => println!("unhandled: {something:?}"),
     }
 }
-
-use std::fs::OpenOptions;
-use std::io::prelude::*;
 
 fn binds_in_scope(module: &PartialParsedModule, point: Point) -> Vec<(String, String)> {
     let prev_point = Point {
@@ -1741,9 +1733,6 @@ pub fn dot_for_node(
     res
 }
 
-use gleam_core::ast::UntypedExpr;
-use gleam_core::parse::error::ParseError;
-
 type UntypedStatements = Vec<Result<Option<Statement<(), UntypedExpr, (), ()>>, ParseError>>;
 
 #[derive(Debug)]
@@ -1753,18 +1742,19 @@ pub struct PartiallyInferedModule {
     //components
     pub statements: UntypedStatements,
     pub infer_state: Vec<usize>,
-    pub ts_nodes: Vec<usize>,
+    pub node_byte_range: Vec<std::ops::Range<usize>>,
     pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
+    pub statements_typed: Vec<Result<gleam_core::ast::TypedStatement, gleam_core::type_::Error>>,
 
     //indexes
     pub name_to_statement: HashMap<String, usize>,
 }
 
 impl PartiallyInferedModule {
-    fn new(source_code: String) -> Self {
+    fn new(source_code: String, environment: &mut Environment) -> Self {
         let mut statements: UntypedStatements = Vec::new();
         let mut infer_state: Vec<usize> = Vec::new();
-        let mut ts_nodes: Vec<usize> = Vec::new();
+        let mut node_byte_range: Vec<std::ops::Range<usize>> = Vec::new();
         let untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>> = Vec::new();
 
         let mut name_to_statement: HashMap<String, usize> = HashMap::new();
@@ -1776,10 +1766,10 @@ impl PartiallyInferedModule {
         for i in 0..root_node.child_count() {
             let node = root_node.child(i).unwrap();
 
-            ts_nodes.push(node.id());
+            node_byte_range.push(node.byte_range());
 
             let text = node.utf8_text(&source_code.as_bytes()).unwrap();
-            println!("{:#?}", text);
+            //println!("{:#?}", text);
             let lex = gleam_core::parse::lexer::make_tokenizer(text);
             let mut parser = gleam_core::parse::Parser::new(lex);
 
@@ -1796,15 +1786,87 @@ impl PartiallyInferedModule {
             }
         }
 
-        //tree.tree.root_node().print(0);
+        let name = ["random_name".to_string()];
+
+        let mut type_names = HashMap::with_capacity(statements.len());
+        let mut value_names = HashMap::with_capacity(statements.len());
+        let mut hydrators = HashMap::with_capacity(statements.len());
+
+        // Register any modules, types, and values being imported
+        // We process imports first so that anything imported can be referenced
+        // anywhere in the module.
+        for s in statements.iter() {
+            if let Ok(Some(s)) = s {
+                let _ = gleam_core::type_::register_import(s, environment);
+            }
+        }
+
+        // Register types so they can be used in constructors and functions
+        // earlier in the module.
+        for s in statements.iter() {
+            if let Ok(Some(s)) = s {
+                let _ = gleam_core::type_::register_types(
+                    s,
+                    &name,
+                    &mut hydrators,
+                    &mut type_names,
+                    environment,
+                );
+            }
+        }
+
+        // Register values so they can be used in functions earlier in the module.
+        for s in statements.iter() {
+            if let Ok(Some(s)) = s {
+                let _ = gleam_core::type_::register_values(
+                    s,
+                    &name,
+                    &mut hydrators,
+                    &mut value_names,
+                    environment,
+                );
+            }
+        }
+
+        // Infer the types of each statement in the module
+        // We first infer all the constants so they can be used in functions defined
+        // anywhere in the module.
+        let mut new_statements = Vec::with_capacity(statements.len());
+        let mut consts = vec![];
+        let mut not_consts = vec![];
+        for statement in statements.iter() {
+            if let Ok(Some(statement)) = statement {
+                match statement {
+                    Statement::Fn { .. }
+                    | Statement::TypeAlias { .. }
+                    | Statement::CustomType { .. }
+                    | Statement::ExternalFn { .. }
+                    | Statement::ExternalType { .. }
+                    | Statement::Import { .. } => not_consts.push(statement),
+
+                    Statement::ModuleConstant { .. } => consts.push(statement),
+                }
+            }
+        }
+
+        for statement in consts.into_iter().chain(not_consts) {
+            let statement = gleam_core::type_::infer_statement(
+                statement.clone(),
+                &name,
+                &mut hydrators,
+                environment,
+            );
+            new_statements.push(statement);
+        }
 
         PartiallyInferedModule {
             tree: tree.tree,
             source_code: source_code,
             statements: statements,
             infer_state: infer_state,
-            ts_nodes: ts_nodes,
+            node_byte_range: node_byte_range,
             untyped: untyped,
+            statements_typed: new_statements,
 
             name_to_statement: name_to_statement,
         }
@@ -1904,7 +1966,18 @@ pub const start_year = 2101
 const end_year = 2111
  
 "#;
-    let pi = PartiallyInferedModule::new(data.to_string());
+    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
+    let mut warnings: Vec<Warning> = Vec::new();
+
+    let name = ["random_name".to_string()];
+    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
+    let _ = modules.insert(
+        "gleam".to_string(),
+        gleam_core::type_::build_prelude(&mut ids),
+    );
+    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
+
+    let pi = PartiallyInferedModule::new(data.to_string(), &mut environment);
     assert!(pi.name_to_statement.get("Headers").is_some());
     assert!(pi.name_to_statement.get("Cat").is_some());
     assert!(pi.name_to_statement.get("random_float").is_some());
@@ -1940,95 +2013,102 @@ pub const start_year = 2101
 const end_year = 2111
  
 "#;
-    let pi = PartiallyInferedModule::new(data.to_string());
-    println!("{:#?}", pi.statements);
+    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
+    let mut warnings: Vec<Warning> = Vec::new();
+
+    let name = ["random_name".to_string()];
+    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
+    let _ = modules.insert(
+        "gleam".to_string(),
+        gleam_core::type_::build_prelude(&mut ids),
+    );
+    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
+
+    let pi = PartiallyInferedModule::new(data.to_string(), &mut environment);
+    println!("{:#?}", pi.statements_typed);
     assert!(false);
 }
 
-use gleam_core::type_::environment::*;
-use gleam_core::type_::Warning;
+#[test]
+fn partial_infer_2() {
+    let data: &str = r#"pub type Cat {
+   Cat(name: String, cuteness: Int)
+}
+ 
+fn random_cat() { 
+  let x = fn(a : Int) { Cat(name: "", cuteness: a) }
+  x(1). 
+}
+"#;
+    //line 6, char 7
+    let ret = dot_for_node2(data, 6, 7);
 
-use gleam_core::uid::UniqueIdGenerator;
+    assert_eq!(
+        ret,
+        Some(WhatToDisplay::Names(
+            ["name".to_string(), "cuteness".to_string()].to_vec()
+        ))
+    );
+}
 
-pub fn infer_module(
-    statements: &UntypedStatements,
-    package: &str,
-    modules: &im::HashMap<String, gleam_core::type_::Module>,
-    warnings: &mut Vec<Warning>,
-) {
+fn dot_for_node2(data: &str, line: u32, character: u32) -> Option<WhatToDisplay> {
+    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
+    let mut warnings: Vec<Warning> = Vec::new();
+
     let name = ["random_name".to_string()];
     let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
-    let mut environment = Environment::new(ids.clone(), &name, modules, warnings);
+    let _ = modules.insert(
+        "gleam".to_string(),
+        gleam_core::type_::build_prelude(&mut ids),
+    );
+    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
 
-    let mut type_names = HashMap::with_capacity(statements.len());
-    let mut value_names = HashMap::with_capacity(statements.len());
-    let mut hydrators = HashMap::with_capacity(statements.len());
+    let line_numbers = LineNumbers::new(data);
+    let byte_index = line_numbers.byte_index(line, character) as usize;
+    //println!("byte_index: {}", byte_index);
+    let mut nd = data.to_string();
+    nd.replace_range(byte_index - 1..byte_index, " ");
+    //println!("newdata {}", nd);
 
-    // Register any modules, types, and values being imported
-    // We process imports first so that anything imported can be referenced
-    // anywhere in the module.
-    for s in statements {
-        if let Ok(Some(s)) = s {
-            gleam_core::type_::register_import(s, &mut environment);
-        }
-    }
-
-    // Register types so they can be used in constructors and functions
-    // earlier in the module.
-    for s in statements {
-        if let Ok(Some(s)) = s {
-            gleam_core::type_::register_types(
-                s,
-                &name,
-                &mut hydrators,
-                &mut type_names,
-                &mut environment,
-            );
-        }
-    }
-
-    // Register values so they can be used in functions earlier in the module.
-    for s in statements {
-        if let Ok(Some(s)) = s {
-            gleam_core::type_::register_values(
-                s,
-                &name,
-                &mut hydrators,
-                &mut value_names,
-                &mut environment,
-            );
-        }
-    }
-
-    // Infer the types of each statement in the module
-    // We first infer all the constants so they can be used in functions defined
-    // anywhere in the module.
-    let mut new_statements = Vec::with_capacity(statements.len());
-    let mut consts = vec![];
-    let mut not_consts = vec![];
-    for statement in statements.clone().into_iter() {
-        if let Ok(Some(statement)) = statement {
-            match statement {
-                Statement::Fn { .. }
-                | Statement::TypeAlias { .. }
-                | Statement::CustomType { .. }
-                | Statement::ExternalFn { .. }
-                | Statement::ExternalType { .. }
-                | Statement::Import { .. } => not_consts.push(statement),
-
-                Statement::ModuleConstant { .. } => consts.push(statement),
+    let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
+    //println!("{:#?}", pi.statements_typed);
+    for r in 0..pi.node_byte_range.len() {
+        if byte_index >= pi.node_byte_range[r].start && byte_index <= pi.node_byte_range[r].end {
+            //println!("typed node found {}", r);
+            let rel = byte_index - pi.node_byte_range[r].start - 2;
+            if let Ok(ts) = &pi.statements_typed[r] {
+                let res = ts.find_node(rel as u32);
+                if let Some(Located::Expression(res)) = res {
+                    match res {
+                        gleam_core::ast::TypedExpr::Call { typ, .. } => {
+                            return nodes_for_type(typ, &environment);
+                        }
+                        _ => //println!("{} {:#?}", rel, res)
+                             (),
+                    }
+                }
             }
         }
     }
-
-    for statement in consts.into_iter().chain(not_consts) {
-        let statement = gleam_core::type_::infer_statement(
-            statement.clone(),
-            &name,
-            &mut hydrators,
-            &mut environment,
-        );
-        new_statements.push(statement);
+    return None;
+}
+fn nodes_for_type<'a>(
+    p: &std::sync::Arc<gleam_core::type_::Type>,
+    environment: &Environment<'a>,
+) -> Option<WhatToDisplay> {
+    match std::sync::Arc::as_ref(p) {
+        gleam_core::type_::Type::App {
+            module: m, name: n, ..
+        } => {
+            if let Some(gleam_core::type_::AccessorsMap { accessors, .. }) =
+                environment.accessors.get(n)
+            {
+                let ret = accessors.keys().map(|x| x.clone()).collect();
+                //println!("{:#?}", &ret);
+                return Some(WhatToDisplay::Names(ret));
+            }
+        }
+        _ => (),
     }
-
+    return None;
 }
