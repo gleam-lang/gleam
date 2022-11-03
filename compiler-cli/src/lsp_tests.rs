@@ -23,7 +23,7 @@ const co = "lol";
 
     let tree = new_tree(contents);
 
-    print_tree(&tree.tree.root_node(), 0);
+    tree.tree.root_node().print(0);
 
     let res = binds_in_scope(&tree, tree_sitter::Point::new(4, 4));
     assert_eq!(
@@ -65,7 +65,6 @@ fn parse_function_args(text: &str) -> Vec<Bindings> {
             .map(|arg| match arg {
                 Arg {
                     names: ArgNames::Named { name: n },
-                    annotation: ann,
                     ..
                 } => Some(Bindings {
                     name: n.clone(),
@@ -113,7 +112,7 @@ fn extract_binding_from_assign(pattern: &gleam_core::ast::Pattern<(), ()>, to: &
     }
 }
 
-fn extract_bindings_from_ast(ast: &gleam_core::ast::UntypedExpr, to: &mut Vec<Bindings>) {
+fn extract_bindings_from_ast(ast: &UntypedExpr, to: &mut Vec<Bindings>) {
     match ast {
         gleam_core::ast::UntypedExpr::Assignment { pattern: p, .. } => {
             extract_binding_from_assign(p, to)
@@ -142,7 +141,7 @@ fn binds_in_scope(module: &PartialParsedModule, point: Point) -> Vec<(String, St
 
     //are we in a function ?
     //let tc : TreeCursor = node.expect("has one").walk();
-    let mut collected: Vec<tree_sitter::Node> = Vec::new();
+    let mut collected: Vec<tree_sitter::Node<'_>> = Vec::new();
     let mut bindings: Vec<Bindings> = Vec::new();
 
     // get its parameters
@@ -186,6 +185,29 @@ fn binds_in_scope(module: &PartialParsedModule, point: Point) -> Vec<(String, St
 }
 
 #[test]
+fn lsp_complete_fun_ret_type() {
+    let contents: &str = "import gleam/io as io 
+
+type Was{
+ Was( in_struct: Int )
+}
+
+fn main() {
+  let io = fn(a) { Was( in_struct: a) };
+  io(1).
+}
+";
+
+    let tree = new_tree(contents);
+
+    tree.tree.root_node().print(0);
+
+    let res = dot_for_node(&tree, tree_sitter::Point::new(8, 8), LspEnv {});
+    assert!(res.is_some());
+    //todo should be ["in_struct"]
+}
+
+#[test]
 fn lsp_complete_as_import() {
     let contents: &str = "import gleam/io as koto
 
@@ -198,7 +220,8 @@ pub fn main() {
 
     let tree = new_tree(contents);
 
-    print_tree(&tree.tree.root_node(), 0);
+    tree.tree.root_node().print(0);
+
     let res = dot_for_node(&tree, tree_sitter::Point::new(4, 6), LspEnv {});
     assert!(res.is_some());
 }
@@ -243,14 +266,15 @@ pub fn main() {
     assert!(res.is_some());
 }
 
-struct PartialParsedModule {
+#[derive(Clone, Debug)]
+pub struct PartialParsedModule {
     tree: Tree,
     imports: Vec<Import>,
     source_code: String,
 }
 
 #[derive(Clone, Debug)]
-struct Import {
+pub struct Import {
     module: String,
     module_import_name: String,
     qualified_imports: Vec<String>,
@@ -276,18 +300,18 @@ impl Seek for TreeCursor<'_> {
 trait Extractor {
     fn print(&self, level: usize);
     fn as_import(&self, source_code: &str) -> Option<Import>;
-    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node>;
+    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node<'_>>;
     fn as_string(&self, source_code: &str) -> String;
 }
 
 trait Navigator {
-    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node>;
-    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node>;
-    fn next_sibling(&self) -> Option<tree_sitter::Node>;
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>>;
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>>;
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>>;
 }
 
 impl Navigator for tree_sitter::Node<'_> {
-    fn next_sibling(&self) -> Option<tree_sitter::Node> {
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>> {
         let mut cursor = self.walk();
         if cursor.goto_next_sibling() {
             return Some(cursor.node());
@@ -295,7 +319,7 @@ impl Navigator for tree_sitter::Node<'_> {
         return None;
     }
 
-    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node> {
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
         let mut cursor = self.walk();
 
         if cursor.goto_first_child() && cursor.seek_next(&kind.to_string()) {
@@ -304,7 +328,7 @@ impl Navigator for tree_sitter::Node<'_> {
         return None;
     }
 
-    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node> {
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
         if self.kind() == kind {
             Some(*self)
         } else {
@@ -314,21 +338,21 @@ impl Navigator for tree_sitter::Node<'_> {
 }
 
 impl Navigator for Option<tree_sitter::Node<'_>> {
-    fn next_sibling(&self) -> Option<tree_sitter::Node> {
+    fn next_sibling(&self) -> Option<tree_sitter::Node<'_>> {
         if let Some(node) = self {
             return node.next_sibling();
         }
         return None;
     }
 
-    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node> {
+    fn first_child_of_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
         if let Some(node) = self {
             return node.first_child_of_kind(kind);
         }
         return None;
     }
 
-    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node> {
+    fn as_kind(&self, kind: &str) -> Option<tree_sitter::Node<'_>> {
         if let Some(node) = self {
             return node.as_kind(kind);
         }
@@ -356,7 +380,7 @@ impl Extractor for tree_sitter::Node<'_> {
         }
     }
 
-    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node> {
+    fn all_childs_of(&self, kind: &str) -> Vec<tree_sitter::Node<'_>> {
         let mut ret = Vec::new();
 
         for i in 0..self.child_count() {
@@ -433,7 +457,7 @@ impl Extractor for tree_sitter::Node<'_> {
     }
 }
 
-fn collect_all_imports(tree: &Tree, source_code: &str) -> Vec<Import> {
+pub fn collect_all_imports(tree: &Tree, source_code: &str) -> Vec<Import> {
     let node = tree.root_node();
 
     node.all_childs_of("import")
@@ -444,7 +468,7 @@ fn collect_all_imports(tree: &Tree, source_code: &str) -> Vec<Import> {
         .collect()
 }
 
-fn new_tree(source_code: &str) -> PartialParsedModule {
+pub fn new_tree(source_code: &str) -> PartialParsedModule {
     let mut parser = Parser::new();
     parser
         .set_language(tree_sitter_gleam::language())
@@ -452,11 +476,9 @@ fn new_tree(source_code: &str) -> PartialParsedModule {
     let tree: Tree = parser.parse(source_code, None).unwrap();
 
     let imports = collect_all_imports(&tree, source_code);
-    println!("{:?}", imports);
+    //println!("{:?}", imports);
 
     //let mut cursor = Tree::walk(&tree);
-
-    //print_tree(&mut cursor, 0);
 
     PartialParsedModule {
         tree: tree,
@@ -466,12 +488,12 @@ fn new_tree(source_code: &str) -> PartialParsedModule {
 }
 
 #[derive(Debug, Eq, PartialEq)]
-enum WhatToDisplay {
+pub enum WhatToDisplay {
     Names(Vec<String>),
 }
 
 #[derive(Debug)]
-struct LspEnv {}
+pub struct LspEnv {}
 
 macro_rules! hashmap {
     ($( $key: expr => $val: expr ),*) => {{
@@ -483,7 +505,7 @@ macro_rules! hashmap {
 
 impl LspEnv {
     fn get_importable_module(self: Self, module_name: &str) -> Option<Module> {
-        if (module_name == "gleam/io") {
+        if module_name == "gleam/io" {
             let values = hashmap!["println".to_string() => "1".to_string()];
             Some(Module { values: values })
         } else {
@@ -494,13 +516,13 @@ impl LspEnv {
 //gleam_core::type_::
 
 #[derive(Debug)]
-struct Module {
+pub struct Module {
     values: HashMap<String, String>,
 }
 
-fn dot_for_node(
+pub fn dot_for_node(
     module: &PartialParsedModule,
-    point: tree_sitter::Point,
+    point: Point,
     environment: LspEnv,
 ) -> Option<WhatToDisplay> {
     let prev_point = Point {
@@ -512,7 +534,8 @@ fn dot_for_node(
         .root_node()
         .named_descendant_for_point_range(prev_point, point);
 
-    println!("node {node:?}");
+
+    //#println!("node {node:?}");
     let res = node.and_then(|node| match node.kind() {
         "identifier" => {
             let text = node
@@ -527,7 +550,7 @@ fn dot_for_node(
                 _ => text,
             };
 
-            println!("identifier {text:?} {module_name:?}",);
+            //println!("identifier {text:?} {module_name:?}",);
             if let Some(module) = environment.get_importable_module(module_name) {
                 Some(WhatToDisplay::Names(
                     module.values.keys().map(|x| x.to_string()).collect(),
@@ -539,15 +562,9 @@ fn dot_for_node(
         _ => None,
     });
 
-    println!("{res:?}");
+    //println!("{res:?}");
     res
 }
-
-fn print_tree<'a>(node: &tree_sitter::Node<'a>, level: usize) {
-    node.print(0);
-}
-
-use crate::fs::ProjectIO;
 
 pub fn main() -> Result<(), gleam_core::Error> {
     //    println!("hello world");
@@ -575,45 +592,63 @@ pub fn main() -> Result<(), gleam_core::Error> {
     Ok(())
 }
 
+use gleam_core::ast::Statement;
+use gleam_core::ast::UntypedExpr;
+use gleam_core::parse::error::ParseError;
+
+type UntypedStatements = Vec<Result<Option<Statement<(), UntypedExpr, (), ()>>, ParseError>>;
+
 #[derive(Debug)]
 pub struct PartiallyInferedModule {
-    tree: Tree,
-    source_code: String,
+    pub tree: Tree,
+    pub source_code: String,
     //components
-    statements: Vec<Option<gleam_core::ast::Statement<(), (), (), ()>>>,
-    infer_state: Vec<usize>,
-    ts_nodes: Vec<usize>,
+    pub statements: UntypedStatements,
+    pub infer_state: Vec<usize>,
+    pub ts_nodes: Vec<usize>,
+    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
 
     //indexes
-    name_to_statement: HashMap<String, usize>,
+    pub name_to_statement: HashMap<String, usize>,
 }
 
 impl PartiallyInferedModule {
     fn new(source_code: String) -> Self {
-        let mut statements: Vec<Option<gleam_core::ast::Statement<(), (), (), ()>>> = Vec::new();
+        let mut statements: UntypedStatements = Vec::new();
         let mut infer_state: Vec<usize> = Vec::new();
         let mut ts_nodes: Vec<usize> = Vec::new();
+        let untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>> = Vec::new();
 
         let mut name_to_statement: HashMap<String, usize> = HashMap::new();
 
         let tree = new_tree(&source_code);
 
-        let node = tree.tree.root_node();
+        let root_node = tree.tree.root_node();
 
-        for i in 0..node.child_count() {
-            let x = node.child(i).unwrap();
+        for i in 0..root_node.child_count() {
+            let node = root_node.child(i).unwrap();
 
             ts_nodes.push(node.id());
-            statements.push(None);
-            infer_state.push(0);
 
-            let name = get_statement_name(&source_code, x);
+            let text = node.utf8_text(&source_code.as_bytes()).unwrap();
+            println!("{:#?}", text);
+            let lex = gleam_core::parse::lexer::make_tokenizer(text);
+            let mut parser = gleam_core::parse::Parser::new(lex);
+
+            let expr = parser.parse_statement();
+            //let expr = parser.ensure_no_errors_or_remaining_input(expr);
+
+            statements.push(expr);
+            infer_state.push(0);
+            //untyped.push();
+
+            let name = get_statement_name(&source_code, node);
             if let Some(name) = name {
                 let _ = name_to_statement.insert(name, i);
             }
         }
 
-        tree.tree.root_node().print(0);
+        //tree.tree.root_node().print(0);
 
         PartiallyInferedModule {
             tree: tree.tree,
@@ -621,13 +656,14 @@ impl PartiallyInferedModule {
             statements: statements,
             infer_state: infer_state,
             ts_nodes: ts_nodes,
+            untyped: untyped,
 
             name_to_statement: name_to_statement,
         }
     }
 }
 
-pub fn get_statement_name(source_code: &str, node: tree_sitter::Node) -> Option<String> {
+pub fn get_statement_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
     match node.kind() {
         "function" => get_fn_name(source_code, node),
         "external_function" => get_fn_name(source_code, node),
@@ -641,20 +677,20 @@ pub fn get_statement_name(source_code: &str, node: tree_sitter::Node) -> Option<
     }
 }
 
-fn get_fn_name(source_code: &str, node: tree_sitter::Node) -> Option<String> {
+fn get_fn_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
     node.first_child_of_kind("fn")
         .next_sibling()
         .as_kind("identifier")
         .map(|node| node.as_string(source_code))
 }
 
-fn get_const_name(source_code: &str, node: tree_sitter::Node) -> Option<String> {
+fn get_const_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
     node.first_child_of_kind("const")
         .next_sibling()
         .as_kind("identifier")
         .map(|node| node.as_string(source_code))
 }
-fn get_type_name(source_code: &str, node: tree_sitter::Node) -> Option<String> {
+fn get_type_name(source_code: &str, node: tree_sitter::Node<'_>) -> Option<String> {
     let mut cursor = node.walk();
 
     if cursor.goto_first_child()
@@ -662,7 +698,7 @@ fn get_type_name(source_code: &str, node: tree_sitter::Node) -> Option<String> {
         && cursor.goto_next_sibling()
     {
         let as_node = cursor.node();
-        let name = as_node.as_string(source_code);
+        let _name = as_node.as_string(source_code);
         if as_node.kind() == "type_name" {
             if let Some(n) = as_node.child(0) {
                 return Some(n.as_string(source_code));
@@ -730,4 +766,33 @@ const end_year = 2111
     assert!(pi.name_to_statement.get("start_year").is_some());
     assert!(pi.name_to_statement.get("end_year").is_some());
     assert!(pi.name_to_statement.get("random_cat").is_some());
+}
+
+#[test]
+fn partial_infer() {
+    let data: &str = r#"
+pub type Headers =
+       List(#(String, String))
+
+pub type Cat {
+   Cat(name: String, cuteness: Int)
+}
+ 
+pub external fn random_float() -> Float = "rand" "uniform"
+ 
+pub fn random_cat() -> Int { 0 }
+ 
+pub external type Queue(a)
+ 
+import unix/cat
+// Import with alias
+import animal/cat as kitty
+ 
+pub const start_year = 2101
+const end_year = 2111
+ 
+"#;
+    let pi = PartiallyInferedModule::new(data.to_string());
+    println!("{:#?}", pi.statements);
+    assert!(false);
 }

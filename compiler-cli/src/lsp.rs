@@ -172,6 +172,9 @@ pub struct LanguageServer {
     config: Option<PackageConfig>,
 }
 
+
+use crate::lsp_tests::*;
+
 impl LanguageServer {
     pub fn new(initialise_params: InitializeParams, config: Option<PackageConfig>) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
@@ -303,8 +306,20 @@ impl LanguageServer {
         self.compile(&connection)?;
         self.publish_stored_diagnostics(&connection)?;
 
+        use std::fs::OpenOptions;
+        use std::io::prelude::*;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open("/tmp/lsp.log")
+            .unwrap();
+
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
+            writeln!(file, "got msg {:?}", message);
+            file.flush();
+
             match message {
                 lsp_server::Message::Request(request) => {
                     if connection.handle_shutdown(&request).expect("LSP shutdown") {
@@ -637,38 +652,79 @@ impl LanguageServer {
     // TODO: imported module types
     // TODO: record accessors
     fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
+        use std::fs::OpenOptions;
+        use std::io::prelude::*;
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .append(true)
+            .open("/tmp/lsp.log")
+            .unwrap();
+
+        writeln!(file, "{:?}", self.edited);
+
+        writeln!(file, "completiong called (*)");
+        file.flush();
+
+        let position = &params.text_document_position;
+        let nm = position.text_document.uri.to_string();
+        let nm1 = nm.strip_prefix("file://");
+
+        writeln!(file, "nm {:?}", nm1);
+        file.flush();
+
+
+        if let Some(name) = nm1 {
+            let module = self.edited.get(name);
+            if let Some(module) = module {
+                writeln!(file, "{:?}", "before line numbers");
+                file.flush();
+ 
+                //let line_numbers = LineNumbers::new(&module);
+                //let byte_index =
+                //    line_numbers.byte_index(position.position.line, position.position.character);
+                //let node = module.find_node(byte_index);
+                let tree = crate::lsp_tests::new_tree(module);
+
+                writeln!(file, "this {:?}", tree);
+                file.flush();
+ 
+                let res =
+                    crate::lsp_tests::dot_for_node(&tree, tree_sitter::Point::new(4, 6), crate::lsp_tests::LspEnv {});
+
+                writeln!(file, "{:?}", "should be module");
+                file.flush();
+                //Some((line_numbers, node))
+            } else {
+                writeln!(file, "module not found");
+                file.flush();
+            }
+        }
+
         let found = self
             .node_at_position(&params.text_document_position)
             .map(|(_, found)| found);
 
         match found {
-            // TODO: test
-            None | Some(Located::Statement(Statement::Import { .. })) => {
-                self.completion_for_import()
-            }
+            None => None,
+            Some(Located::Statement(Statement::Import { .. })) => self.completion_for_import(),
 
-            // TODO: autocompletion for other statements
             Some(Located::Statement(_expression)) => None,
 
-            // TODO: autocompletion for expressions
             Some(Located::Expression(_expression)) => None,
         }
     }
 
     fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {
         let compiler = self.compiler.as_ref()?;
-        // TODO: Test
         let dependencies_modules = compiler
             .project_compiler
             .get_importable_modules()
             .keys()
             .cloned();
-        // TODO: Test
         let project_modules = compiler
             .modules
             .iter()
-            // TODO: We should autocomplete test modules if we are in the test dir
-            // TODO: Test
             .filter(|(_name, module)| module.origin.is_src())
             .map(|(name, _module)| name)
             .cloned();
