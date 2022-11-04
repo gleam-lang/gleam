@@ -64,6 +64,7 @@ mod fs;
 mod hex;
 mod http;
 mod lsp;
+mod lsp_test;
 mod new;
 mod panic;
 mod publish;

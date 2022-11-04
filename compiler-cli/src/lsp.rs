@@ -701,6 +701,7 @@ impl LanguageServer {
                     module,
                     position.position.line,
                     position.position.character,
+                    false,
                 );
 
                 let _ = writeln!(file, "should be {:?}", res);
@@ -1145,45 +1146,26 @@ fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range
     }
 }
 
-#[test]
-fn lsp_binds_in_scope() {
-    let contents: &str = r#"fn main(p,  p1 : Bool) {
-  let a = 1
-  let #(b, _) = #(1, 1)
-  let c : Int = 1
-  io.
-}
-const co = "lol";
-"#;
-    let lex = gleam_core::parse::lexer::make_tokenizer(contents);
-    let mut parser = gleam_core::parse::Parser::new(lex);
-    let expr = parser.parse_statement();
-    //let expr = parser.ensure_no_errors_or_remaining_input(expr);
-
-    let tree = new_tree(contents);
-
-    tree.tree.root_node().print(0);
-
-    let res = binds_in_scope(&tree, tree_sitter::Point::new(4, 4));
-    assert_eq!(
-        res,
-        [
-            ("a".to_string(), "Int".to_string()),
-            ("b".to_string(), "Int".to_string()),
-            ("c".to_string(), "unknown".to_string()),
-            ("p".to_string(), "unknown".to_string()),
-            ("p1".to_string(), "Wow1".to_string())
-        ]
-        .to_vec()
-    );
-}
-
 //let mut statements : Vec<gleam_core::ast::Statement> = Vec::new();
 
 #[derive(Debug)]
 struct Bindings {
     name: String,
     type_notation: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct PartialParsedModule {
+    tree: Tree,
+    imports: Vec<Import>,
+    source_code: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct Import {
+    module: String,
+    module_import_name: String,
+    qualified_imports: Vec<String>,
 }
 
 fn parse_function_args(text: &str) -> Vec<Bindings> {
@@ -1330,108 +1312,6 @@ fn binds_in_scope(module: &PartialParsedModule, point: Point) -> Vec<(String, St
     println!("bindings {bindings:?}");
 
     Vec::new()
-}
-
-#[test]
-fn lsp_complete_fun_ret_type() {
-    let contents: &str = "import gleam/io as io 
-
-type Was{
- Was( in_struct: Int )
-}
-
-fn main() {
-  ErrorOnPurpose
-  otherError
-}
-
-fn main() {
-  let io = fn(a) { Was( in_struct: a) };
-  io(1).
-}
-";
-
-    let tree = new_tree(contents);
-
-    tree.tree.root_node().print(0);
-
-    let res = dot_for_node(&tree, tree_sitter::Point::new(13, 8), LspEnv {});
-    assert!(res.is_some());
-    //todo should be ["in_struct"]
-}
-
-#[test]
-fn lsp_complete_as_import() {
-    let contents: &str = "import gleam/io as koto
-
-pub fn main() {
-  io.println(\"Hello from t1!\");
-  koto.
-}
-
-";
-
-    let tree = new_tree(contents);
-
-    tree.tree.root_node().print(0);
-
-    let res = dot_for_node(&tree, tree_sitter::Point::new(4, 6), LspEnv {});
-    assert!(res.is_some());
-}
-
-#[test]
-fn lsp_complete_bind() {
-    let contents: &str = "import gleam/io.{println}
-
-type Pub {
-  Pub(something: Int)
-}
-
-pub fn main() {
-  let io = Pub(1);
-  io.
-}
-";
-
-    let tree = new_tree(contents);
-    let res = dot_for_node(&tree, tree_sitter::Point::new(8, 4), LspEnv {});
-    println!("{res:?}");
-    assert_eq!(
-        res,
-        Some(WhatToDisplay::Names(["something".to_string()].to_vec()))
-    );
-}
-
-#[test]
-fn lsp_complete_import() {
-    let contents: &str = "import gleam/io.{println}
-
-pub fn main() {
-  io.println(\"Hello from t1!\");
-  io.
-}
-
-";
-
-    let tree = new_tree(contents);
-    let res = dot_for_node(&tree, tree_sitter::Point::new(4, 4), LspEnv {});
-
-    assert!(res.is_some());
-}
-
-#[derive(Clone, Debug)]
-pub struct PartialParsedModule {
-    tree: Tree,
-    imports: Vec<Import>,
-    source_code: String,
-}
-
-#[derive(Clone, Debug)]
-pub struct Import {
-    module: String,
-    module_import_name: String,
-    qualified_imports: Vec<String>,
-    //   as_alias: Option<String>
 }
 
 trait Seek {
@@ -1751,7 +1631,7 @@ pub struct PartiallyInferedModule {
 }
 
 impl PartiallyInferedModule {
-    fn new(source_code: String, environment: &mut Environment) -> Self {
+    pub fn new<'a>(source_code: String, environment: &mut Environment<'a>) -> Self {
         let mut statements: UntypedStatements = Vec::new();
         let mut infer_state: Vec<usize> = Vec::new();
         let mut node_byte_range: Vec<std::ops::Range<usize>> = Vec::new();
@@ -1942,116 +1822,16 @@ fn get_import_name<'a>(source_code: &str, node: tree_sitter::Node<'a>) -> Option
         })
 }
 
-#[test]
-fn partial_infer_statement_names() {
-    let data: &str = r#"
-pub type Headers =
-       List(#(String, String))
-
-pub type Cat {
-   Cat(name: String, cuteness: Int)
-}
- 
-pub external fn random_float() -> Float = "rand" "uniform"
- 
-pub fn random_cat() -> Int { 0 }
- 
-pub external type Queue(a)
- 
-import unix/cat
-// Import with alias
-import animal/cat as kitty
- 
-pub const start_year = 2101
-const end_year = 2111
- 
-"#;
-    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
-    let mut warnings: Vec<Warning> = Vec::new();
-
-    let name = ["random_name".to_string()];
-    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
-    let _ = modules.insert(
-        "gleam".to_string(),
-        gleam_core::type_::build_prelude(&mut ids),
-    );
-    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
-
-    let pi = PartiallyInferedModule::new(data.to_string(), &mut environment);
-    assert!(pi.name_to_statement.get("Headers").is_some());
-    assert!(pi.name_to_statement.get("Cat").is_some());
-    assert!(pi.name_to_statement.get("random_float").is_some());
-    assert!(pi.name_to_statement.get("Queue").is_some());
-    assert!(pi.name_to_statement.get("Cat").is_some());
-    assert!(pi.name_to_statement.get("kitty").is_some());
-    assert!(pi.name_to_statement.get("start_year").is_some());
-    assert!(pi.name_to_statement.get("end_year").is_some());
-    assert!(pi.name_to_statement.get("random_cat").is_some());
+pub fn dot_for_node2(data: &str, line: u32, character: u32, debug: bool) -> Option<WhatToDisplay> {
+    dot_ask_compiler(data, line, character, debug) //.or(dot_from_typed(data, line, character, debug))
 }
 
-#[test]
-fn partial_infer() {
-    let data: &str = r#"
-pub type Headers =
-       List(#(String, String))
-
-pub type Cat {
-   Cat(name: String, cuteness: Int)
-}
- 
-pub external fn random_float() -> Float = "rand" "uniform"
- 
-pub fn random_cat() -> Int { 0 }
- 
-pub external type Queue(a)
- 
-import unix/cat
-// Import with alias
-import animal/cat as kitty
- 
-pub const start_year = 2101
-const end_year = 2111
- 
-"#;
-    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
-    let mut warnings: Vec<Warning> = Vec::new();
-
-    let name = ["random_name".to_string()];
-    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
-    let _ = modules.insert(
-        "gleam".to_string(),
-        gleam_core::type_::build_prelude(&mut ids),
-    );
-    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
-
-    let pi = PartiallyInferedModule::new(data.to_string(), &mut environment);
-    println!("{:#?}", pi.statements_typed);
-    assert!(false);
-}
-
-#[test]
-fn partial_infer_2() {
-    let data: &str = r#"pub type Cat {
-   Cat(name: String, cuteness: Int)
-}
- 
-fn random_cat() { 
-  let x = fn(a : Int) { Cat(name: "", cuteness: a) }
-  x(1). 
-}
-"#;
-    //line 6, char 7
-    let ret = dot_for_node2(data, 6, 7);
-
-    assert_eq!(
-        ret,
-        Some(WhatToDisplay::Names(
-            ["name".to_string(), "cuteness".to_string()].to_vec()
-        ))
-    );
-}
-
-fn dot_for_node2(data: &str, line: u32, character: u32) -> Option<WhatToDisplay> {
+pub fn dot_ask_compiler(
+    data: &str,
+    line: u32,
+    character: u32,
+    debug: bool,
+) -> Option<WhatToDisplay> {
     let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
     let mut warnings: Vec<Warning> = Vec::new();
 
@@ -2065,34 +1845,111 @@ fn dot_for_node2(data: &str, line: u32, character: u32) -> Option<WhatToDisplay>
 
     let line_numbers = LineNumbers::new(data);
     let byte_index = line_numbers.byte_index(line, character) as usize;
-    //println!("byte_index: {}", byte_index);
+    if debug {
+        println!("byte_index: {}", byte_index);
+    }
     let mut nd = data.to_string();
-    nd.replace_range(byte_index - 1..byte_index, " ");
-    //println!("newdata {}", nd);
+    nd.replace_range(byte_index - 1..byte_index, ".lsp_access_test_probe");
+    if debug {
+        println!("newdata {}", nd);
+    }
 
     let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
-    //println!("{:#?}", pi.statements_typed);
-    for r in 0..pi.node_byte_range.len() {
+    if debug {
+        println!("{:#?}", pi.statements_typed);
+    }
+    for r in 0..pi.statements_typed.len() {
+        println!("{:?}", &pi.statements_typed[r]);
+        match &pi.statements_typed[r] {
+            Err(gleam_core::type_::Error::UnknownRecordField { typ, label, .. }) => {
+                if label == "lsp_access_test_probe" {
+                    return nodes_from_unknownfield(typ, &environment);
+                }
+            }
+            Err(gleam_core::type_::Error::UnknownModuleValue {
+                name,
+                module_name: module,
+                value_constructors,
+                ..
+            }) => {
+                if name == "lsp_access_test_probe" {
+                    return nodes_from_module(module, &value_constructors, &environment);
+                }
+            }
+            _ => (),
+        }
+    }
+
+    return None;
+}
+
+pub fn dot_from_typed(data: &str, line: u32, character: u32, debug: bool) -> Option<WhatToDisplay> {
+    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
+    let mut warnings: Vec<Warning> = Vec::new();
+
+    let name = ["random_name".to_string()];
+    let mut ids: UniqueIdGenerator = UniqueIdGenerator::new();
+    let _ = modules.insert(
+        "gleam".to_string(),
+        gleam_core::type_::build_prelude(&mut ids),
+    );
+    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
+
+    let line_numbers = LineNumbers::new(data);
+    let byte_index = line_numbers.byte_index(line, character) as usize;
+    if debug {
+        println!("byte_index: {}", byte_index);
+    }
+    let mut nd = data.to_string();
+    nd.replace_range(byte_index - 1..byte_index, ".access ");
+    if debug {
+        println!("newdata {}", nd);
+    }
+
+    let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
+    if debug {
+        // println!("{:#?}", pi.statements_typed);
+    }
+    for r in 0..pi.node_byte_range.len() - 1 {
         if byte_index >= pi.node_byte_range[r].start && byte_index <= pi.node_byte_range[r].end {
-            //println!("typed node found {}", r);
+            if debug {
+                println!("typed node found {}", r);
+            }
             let rel = byte_index - pi.node_byte_range[r].start - 2;
             if let Ok(ts) = &pi.statements_typed[r] {
                 let res = ts.find_node(rel as u32);
                 if let Some(Located::Expression(res)) = res {
                     match res {
                         gleam_core::ast::TypedExpr::Call { typ, .. } => {
-                            return nodes_for_type(typ, &environment);
+                            return nodes_for_call(typ, &environment);
                         }
-                        _ => //println!("{} {:#?}", rel, res)
-                             (),
+                        gleam_core::ast::TypedExpr::Var {
+                            constructor: gleam_core::type_::ValueConstructor { type_, .. },
+                            ..
+                        } => {
+                            return nodes_for_value_constructor(type_, &environment);
+                        }
+                        _ => {
+                            if debug {
+                                println!("ignored case: {} {:#?}", rel, res)
+                            }
+                            ()
+                        }
                     }
                 }
             }
         }
     }
+
+    if debug {
+        println!("typed node not found");
+        println!("statements {:#?}", pi.statements_typed);
+    }
+
     return None;
 }
-fn nodes_for_type<'a>(
+
+fn nodes_for_call<'a>(
     p: &std::sync::Arc<gleam_core::type_::Type>,
     environment: &Environment<'a>,
 ) -> Option<WhatToDisplay> {
@@ -2111,4 +1968,59 @@ fn nodes_for_type<'a>(
         _ => (),
     }
     return None;
+}
+
+fn nodes_for_value_constructor<'a>(
+    p: &std::sync::Arc<gleam_core::type_::Type>,
+    environment: &Environment<'a>,
+) -> Option<WhatToDisplay> {
+    println!("value {:#?}", p);
+
+    match std::sync::Arc::as_ref(p) {
+        gleam_core::type_::Type::App {
+            module: m, name: n, ..
+        } => {
+            if let Some(gleam_core::type_::AccessorsMap { accessors, .. }) =
+                environment.accessors.get(n)
+            {
+                let ret = accessors.keys().map(|x| x.clone()).collect();
+                //println!("{:#?}", &ret);
+                return Some(WhatToDisplay::Names(ret));
+            }
+        }
+        _ => (),
+    }
+    return None;
+}
+
+fn nodes_from_unknownfield<'a>(
+    p: &std::sync::Arc<gleam_core::type_::Type>,
+    environment: &Environment<'a>,
+) -> Option<WhatToDisplay> {
+    match std::sync::Arc::as_ref(p) {
+        gleam_core::type_::Type::App {
+            module: m, name: n, ..
+        } => {
+            if let Some(gleam_core::type_::AccessorsMap { accessors, .. }) =
+                environment.accessors.get(n)
+            {
+                let ret = accessors.keys().map(|x| x.clone()).collect();
+                println!("{:#?}", &ret);
+                return Some(WhatToDisplay::Names(ret));
+            } else {
+                println!("not in accessors!");
+            }
+        }
+        _ => (),
+    }
+    return None;
+}
+
+fn nodes_from_module<'a>(
+    modulename: &Vec<String>,
+    value_constructors: &Vec<String>,
+    environment: &Environment<'a>,
+) -> Option<WhatToDisplay> {
+    let ret = value_constructors.iter().map(|x| x.to_string()).collect();
+    return Some(WhatToDisplay::Names(ret));
 }
