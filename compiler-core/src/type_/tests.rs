@@ -297,7 +297,7 @@ macro_rules! assert_with_module_error {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
@@ -383,7 +383,7 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
     ($src:expr, $warning:expr $(,)?) => {
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
@@ -490,7 +490,7 @@ macro_rules! assert_no_warnings {
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         $(
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
