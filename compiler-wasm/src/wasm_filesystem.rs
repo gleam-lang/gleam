@@ -1,7 +1,7 @@
 use gleam_core::{
     io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
-        FileSystemWriter, ReadDir, WrappedReader, WrappedWriter,
+        FileSystemWriter, ReadDir, Stdio, WrappedReader, WrappedWriter,
     },
     Error, Result,
 };
@@ -27,7 +27,7 @@ impl CommandExecutor for WasmFileSystem {
         _args: &[String],
         _env: &[(&str, String)],
         _cwd: Option<&Path>,
-        _silence: bool,
+        _stdio: Stdio,
     ) -> Result<i32, Error> {
         Ok(0) // Always succeed.
     }

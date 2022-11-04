@@ -15,7 +15,7 @@ use gleam_core::{
     build::{self, Located, Module, ProjectCompiler},
     config::PackageConfig,
     diagnostic::{self, Level},
-    io::{CommandExecutor, FileSystemIO},
+    io::{CommandExecutor, FileSystemIO, Stdio},
     line_numbers::LineNumbers,
     paths,
     type_::pretty::Printer,
@@ -1011,7 +1011,7 @@ where
             ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
-        project_compiler.silence_subprocess_stdout = true;
+        project_compiler.subprocess_stdio = Stdio::Null;
 
         Ok(Self {
             project_compiler,

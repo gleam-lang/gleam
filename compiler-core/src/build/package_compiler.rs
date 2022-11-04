@@ -6,7 +6,7 @@ use crate::{
     error,
     io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
-        FileSystemWriter,
+        FileSystemWriter, Stdio,
     },
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
@@ -45,7 +45,7 @@ pub struct PackageCompiler<'a, IO> {
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
-    pub silence_subprocess_stdout: bool,
+    pub subprocess_stdio: Stdio,
     pub build_journal: Option<&'a mut HashSet<PathBuf>>,
 }
 
@@ -81,7 +81,7 @@ where
             write_entrypoint: false,
             copy_native_files: true,
             compile_beam_bytecode: true,
-            silence_subprocess_stdout: false,
+            subprocess_stdio: Stdio::Inherit,
             build_journal,
         }
     }
@@ -198,7 +198,7 @@ where
         // Write a temporary journal of compiled Beam files
         let status = self
             .io
-            .exec("escript", &args, &[], None, self.silence_subprocess_stdout)?;
+            .exec("escript", &args, &[], None, self.subprocess_stdio)?;
 
         let tmp_journal = self.lib.join("gleam_build_journal.tmp");
         if self.io.is_file(&tmp_journal) {
@@ -281,7 +281,7 @@ where
                         maybe_link_elixir_libs(
                             &self.io,
                             &self.lib.to_path_buf(),
-                            self.silence_subprocess_stdout,
+                            self.subprocess_stdio,
                         )?;
                         // Check Elixir libs just once
                         check_elixir_libs = false;
@@ -571,7 +571,7 @@ fn type_check(
 pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
     io: &IO,
     build_dir: &PathBuf,
-    silence_subprocess_stdout: bool,
+    subprocess_stdio: Stdio,
 ) -> Result<(), Error> {
     // These Elixir core libs will be loaded with the current project
     // Each should be linked into build/{target}/erlang if:
@@ -609,7 +609,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
             &args,
             &env,
             Some(&build_dir),
-            silence_subprocess_stdout,
+            subprocess_stdio,
         )?;
         if status != 0 {
             return Err(Error::ShellCommand {

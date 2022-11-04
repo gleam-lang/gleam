@@ -6,7 +6,7 @@ use crate::{
     codegen::{self, ErlangApp},
     config::PackageConfig,
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemIO, FileSystemWriter},
+    io::{CommandExecutor, FileSystemIO, FileSystemWriter, Stdio},
     manifest::ManifestPackage,
     metadata, paths, type_,
     uid::UniqueIdGenerator,
@@ -62,7 +62,7 @@ pub struct ProjectCompiler<IO> {
     build_journal: HashSet<PathBuf>,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
-    pub silence_subprocess_stdout: bool,
+    pub subprocess_stdio: Stdio,
 }
 
 // TODO: test that tests cannot be imported into src
@@ -89,7 +89,7 @@ where
             defined_modules: im::HashMap::new(),
             ids: UniqueIdGenerator::new(),
             warnings: Vec::new(),
-            silence_subprocess_stdout: false,
+            subprocess_stdio: Stdio::Inherit,
             telemetry,
             packages,
             options,
@@ -321,7 +321,7 @@ where
             &args,
             &env,
             Some(&project_dir),
-            self.silence_subprocess_stdout,
+            self.subprocess_stdio,
         )?;
 
         if status == 0 {
@@ -362,11 +362,7 @@ where
         let dest = paths::build_package(mode, target, name);
 
         // Elixir core libs must be loaded
-        package_compiler::maybe_link_elixir_libs(
-            &self.io,
-            &build_dir,
-            self.silence_subprocess_stdout,
-        )?;
+        package_compiler::maybe_link_elixir_libs(&self.io, &build_dir, self.subprocess_stdio)?;
 
         // Prevent Mix.Compilers.ApplicationTracer warnings
         // mix would make this if it didn't exist, but we make it anyway as
@@ -404,7 +400,7 @@ where
             &args,
             &env,
             Some(&project_dir),
-            self.silence_subprocess_stdout,
+            self.subprocess_stdio,
         )?;
 
         if status == 0 {
@@ -484,7 +480,7 @@ where
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
-        compiler.silence_subprocess_stdout = self.silence_subprocess_stdout;
+        compiler.subprocess_stdio = self.subprocess_stdio;
         compiler.read_source_files(mode)?;
 
         let mut build_manifest = compiler.load_previus_build_manifest(&mut self.importable_modules);
