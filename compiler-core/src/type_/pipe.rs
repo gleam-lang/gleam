@@ -105,6 +105,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             label: None,
             location: self.argument_location,
             value: self.typed_left_hand_value_variable(),
+            // This argument is given implicitly by the pipe, not explicitly by
+            // the programmer.
+            implicit: true,
         }
     }
 
@@ -115,6 +118,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             label: None,
             location: self.argument_location,
             value: self.untyped_left_hand_value_variable(),
+            // This argument is given implicitly by the pipe, not explicitly by
+            // the programmer.
+            implicit: true,
         }
     }
 

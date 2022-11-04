@@ -453,6 +453,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     },
                                     location: spread_location,
                                     label: None,
+                                    implicit: false,
                                 };
 
                                 pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
@@ -494,12 +495,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     let CallArg {
                                         value,
                                         location,
+                                        implicit,
                                         label,
                                     } = arg;
                                     let value = self.unify(value, typ.clone())?;
                                     Ok(CallArg {
                                         value,
                                         location,
+                                        implicit,
                                         label,
                                     })
                                 })
