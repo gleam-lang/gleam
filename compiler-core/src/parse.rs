@@ -1255,6 +1255,7 @@ where
                 let _ = self.next_tok();
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
+                        implicit: false,
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -1278,6 +1279,7 @@ where
                 self.tok1 = t1;
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
+                        implicit: false,
                         location: value.location(),
                         label: None,
                         value,
@@ -1582,6 +1584,7 @@ where
                 location.start = start
             };
             Ok(Some(ParserArg::Arg(Box::new(CallArg {
+                implicit: false,
                 label,
                 location,
                 value,
@@ -2265,6 +2268,7 @@ where
         if let Some(value) = self.parse_const_value()? {
             if let Some((start, label, _)) = name {
                 Ok(Some(CallArg {
+                    implicit: false,
                     location: SrcSpan {
                         start,
                         end: value.location().end,
@@ -2274,6 +2278,7 @@ where
                 }))
             } else {
                 Ok(Some(CallArg {
+                    implicit: false,
                     location: value.location(),
                     value,
                     label: None,
@@ -3013,6 +3018,7 @@ pub fn make_call(
             ParserArg::Hole { location, label } => {
                 num_holes += 1;
                 CallArg {
+                    implicit: false,
                     label,
                     location,
                     value: UntypedExpr::Var {

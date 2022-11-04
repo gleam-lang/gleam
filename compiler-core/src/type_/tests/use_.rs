@@ -136,3 +136,20 @@ fn wibble(f) {
 "#
     );
 }
+
+#[test]
+fn labels() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  use x <- apply(arg: 1)
+  x
+}
+
+fn apply(fun fun, arg arg) {
+  fun(arg)
+}
+"#,
+        vec![("main", "fn() -> Int")],
+    );
+}

@@ -350,6 +350,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label: None,
             location: callback.location(),
             value: callback,
+            // This argument is implicitly given by Gleam's use syntax so we
+            // mark it as such.
+            implicit: true,
         });
 
         self.infer(UntypedExpr::Call {
@@ -1776,6 +1779,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             label,
                             value,
                             location,
+                            implicit,
                         } = arg;
                         let value = self.infer_const(&None, value)?;
                         self.unify(typ.clone(), value.type_())
@@ -1783,6 +1787,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         Ok(CallArg {
                             label,
                             value,
+                            implicit,
                             location,
                         })
                     })
@@ -1950,11 +1955,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     label,
                     value,
                     location,
+                    implicit,
                 } = arg;
                 let value = self.infer_call_argument(value, typ.clone())?;
                 Ok(CallArg {
                     label,
                     value,
+                    implicit,
                     location,
                 })
             })
