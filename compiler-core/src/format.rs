@@ -1105,7 +1105,8 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Sequence { .. }
+            UntypedExpr::Use(_)
+            | UntypedExpr::Sequence { .. }
             | UntypedExpr::Assignment { .. }
             | UntypedExpr::Try { .. } => "{"
                 .to_doc()
@@ -1389,7 +1390,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
-        let call = self.expr(&use_.call);
+        let call = self.expr(&use_.call).nest(INDENT);
 
         if use_.assignments.is_empty() {
             docvec!["use <- ", call]

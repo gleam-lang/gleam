@@ -3798,15 +3798,40 @@ fn use_6() {
     ten,
     eleven
   <- get_multiple_things_with_a_longer_function(
-    "one",
-    "two",
-    "three",
-    "four",
-    "five",
-    "six",
-    "seven",
-    "eight",
-  )
+      "one",
+      "two",
+      "three",
+      "four",
+      "five",
+      "six",
+      "seven",
+      "eight",
+    )
+}
+"#
+    );
+}
+
+#[test]
+fn use_pipe_call() {
+    assert_format!(
+        r#"pub fn main() {
+  use <- a
+    |> b
+  c
+}
+"#
+    );
+}
+#[test]
+fn use_pipe_everything() {
+    assert_format!(
+        r#"pub fn main() {
+  {
+    use <- a
+  }
+  |> b
+  c
 }
 "#
     );

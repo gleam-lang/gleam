@@ -698,7 +698,7 @@ where
         };
 
         _ = self.expect_one(&Token::LArrow)?;
-        let call = self.expect_expression_unit()?;
+        let call = self.expect_expression()?;
 
         Ok(UntypedExpr::Use(Use {
             location: SrcSpan::new(start, call.location().end),
@@ -2437,14 +2437,6 @@ where
 
     fn expect_expression(&mut self) -> Result<UntypedExpr, ParseError> {
         if let Some(e) = self.parse_expression()? {
-            Ok(e)
-        } else {
-            self.next_tok_unexpected(vec!["An expression".to_string()])
-        }
-    }
-
-    fn expect_expression_unit(&mut self) -> Result<UntypedExpr, ParseError> {
-        if let Some(e) = self.parse_expression_unit()? {
             Ok(e)
         } else {
             self.next_tok_unexpected(vec!["An expression".to_string()])
