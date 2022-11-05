@@ -533,3 +533,18 @@ fn guard_variable_rewriting() {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1816
+#[test]
+fn function_argument_shadowing() {
+    assert_erl!(
+        "pub fn main(a) {
+  Box
+}
+
+pub type Box {
+  Box(Int)
+}
+"
+    )
+}

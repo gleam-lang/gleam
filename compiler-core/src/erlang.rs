@@ -1595,13 +1595,8 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 }
 
 fn incrementing_args_list(arity: usize) -> String {
-    Itertools::intersperse(
-        (65..(65 + arity))
-            .map(|x| x as u8 as char)
-            .map(|c| c.to_string()),
-        ", ".to_string(),
-    )
-    .collect()
+    let arguments = (0..arity).map(|c| format!("Field@{c}"));
+    Itertools::intersperse(arguments, ", ".to_string()).collect()
 }
 
 fn external_fun<'a>(
