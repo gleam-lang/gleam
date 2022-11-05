@@ -9,8 +9,8 @@ expression: "pub external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\n          
 -export([go/2]).
 
 -spec go(integer(), integer()) -> integer().
-go(A, B) ->
-    m:f(A, B).
+go(Field@0, Field@1) ->
+    m:f(Field@0, Field@1).
 
 -spec x() -> integer().
 x() ->
