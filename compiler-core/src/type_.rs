@@ -1013,10 +1013,8 @@ fn generalise_statement(
             let typ = function.type_.clone();
 
             // Generalise the function if not already done so
-            let typ = if environment.ungeneralised_functions.remove(&name) {
-                generalise(typ)
-            } else {
-                typ
+            if environment.ungeneralised_functions.remove(&name) {
+                generalise(&typ)
             };
 
             // Insert the function into the module's interface
@@ -1075,6 +1073,7 @@ fn infer_statement(
             end_position: end_location,
             ..
         } => {
+            dbg!(("fn", &name));
             let preregistered_fn = environment
                 .get_variable(&name)
                 .expect("Could not find preregistered type for function");
@@ -1112,7 +1111,7 @@ fn infer_statement(
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
                 let _ = environment.ungeneralised_functions.remove(&name);
-                let typ = generalise(typ);
+                generalise(&typ);
                 environment.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
@@ -1569,35 +1568,29 @@ fn match_fun_type(
     Err(MatchFunTypeError::NotFn { typ })
 }
 
-fn generalise(t: Arc<Type>) -> Arc<Type> {
+fn generalise(t: &Type) {
     match t.deref() {
-        Type::Var { type_: typ } => match typ.borrow().deref() {
-            TypeVar::Unbound { id } => generic_var(*id),
-            TypeVar::Link { type_: typ } => generalise(typ.clone()),
-            TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
-        },
-
-        Type::App {
-            public,
-            module,
-            name,
-            args,
-        } => {
-            let args = args.iter().map(|t| generalise(t.clone())).collect();
-            Arc::new(Type::App {
-                public: *public,
-                module: module.clone(),
-                name: name.clone(),
-                args,
-            })
+        Type::Var { type_: typ } => {
+            let id = match typ.borrow().deref() {
+                TypeVar::Link { type_: typ } => return generalise(&typ),
+                TypeVar::Generic { .. } => return,
+                TypeVar::Unbound { id } => *id,
+            };
+            *typ.borrow_mut() = TypeVar::Generic { id }
         }
 
-        Type::Fn { args, retrn } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
-            generalise(retrn.clone()),
-        ),
+        Type::Tuple { elems: types } | Type::App { args: types, .. } => {
+            for t in types {
+                generalise(&t);
+            }
+        }
 
-        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Fn { args, retrn } => {
+            for t in args {
+                generalise(&t);
+            }
+            generalise(&retrn);
+        }
     }
 }
 
