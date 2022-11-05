@@ -7,6 +7,8 @@
   permits callback using code to be written without indentation.
 - Fixed a bug where the build tool would no hook up stdin to Gleam programs it
   starts.
+- Fixed a bug where using a record constructor as a value could generate a
+  warning in Erlang.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
 
