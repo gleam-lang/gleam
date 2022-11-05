@@ -6,7 +6,7 @@ mod untyped;
 mod tests;
 
 pub use self::typed::TypedExpr;
-pub use self::untyped::UntypedExpr;
+pub use self::untyped::{UntypedExpr, Use};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
@@ -698,6 +698,12 @@ pub struct CallArg<A> {
     pub label: Option<String>,
     pub location: SrcSpan,
     pub value: A,
+    // This is true if this argument is given as the callback in a `use`
+    // expression. In future it may also be true for pipes too. It is used to
+    // determine if we should error if an argument without a label is given or
+    // not, which is not permitted if the argument is given explicitly by the
+    // programmer rather than implicitly by Gleam's syntactic sugar.
+    pub implicit: bool,
 }
 
 impl CallArg<TypedExpr> {
@@ -1055,6 +1061,21 @@ pub enum AssignName {
     Discard(String),
 }
 
+impl AssignName {
+    pub fn name(&self) -> &str {
+        match self {
+            AssignName::Variable(name) | AssignName::Discard(name) => name,
+        }
+    }
+
+    pub fn to_arg_names(self) -> ArgNames {
+        match self {
+            AssignName::Variable(name) => ArgNames::Named { name },
+            AssignName::Discard(name) => ArgNames::Discard { name },
+        }
+    }
+}
+
 impl<A, B> Pattern<A, B> {
     pub fn location(&self) -> SrcSpan {
         match self {
@@ -1243,4 +1264,5 @@ impl<A> BitStringSegmentOption<A> {
 pub enum TodoKind {
     Keyword,
     EmptyFunction,
+    IncompleteUse,
 }

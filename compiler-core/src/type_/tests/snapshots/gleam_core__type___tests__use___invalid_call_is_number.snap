@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 71
+expression: "\nuse <- 123\n123\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:2:8
+  │
+2 │ use <- 123
+  │        ^^^
+
+This value is being called as a function but its type is:
+
+    Int
+

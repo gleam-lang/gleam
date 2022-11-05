@@ -555,6 +555,7 @@ fn constant_record() {
         name: "".to_string(),
         args: vec![
             CallArg {
+                implicit: false,
                 label: None,
                 location: Default::default(),
                 value: Constant::Float {
@@ -563,6 +564,7 @@ fn constant_record() {
                 },
             },
             CallArg {
+                implicit: false,
                 label: None,
                 location: Default::default(),
                 value: Constant::Int {

@@ -33,6 +33,7 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
         "todo" => Some(Token::Todo),
         "try" => Some(Token::Try),
         "type" => Some(Token::Type),
+        "use" => Some(Token::Use),
         _ => None,
     }
 }
@@ -340,6 +341,11 @@ where
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
                         self.emit((tok_start, Token::LessDot, tok_end));
+                    }
+                    Some('-') => {
+                        let _ = self.next_char();
+                        let tok_end = self.get_pos();
+                        self.emit((tok_start, Token::LArrow, tok_end));
                     }
                     Some('=') => {
                         let _ = self.next_char();
@@ -676,7 +682,7 @@ where
             _ => Token::CommentNormal,
         };
         let start_pos = self.get_pos();
-        while Some('\n') != self.chr0 && None != self.chr0 {
+        while Some('\n') != self.chr0 && self.chr0.is_some() {
             let _ = self.next_char();
         }
         let end_pos = self.get_pos();

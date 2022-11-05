@@ -3,11 +3,12 @@ use vec1::Vec1;
 
 use super::{pipe::PipeTyper, *};
 use crate::ast::{
-    Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
-    ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst, TypedArg,
-    TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, UntypedArg,
-    UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment,
-    UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern,
+    Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
+    Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
+    TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern,
+    UntypedPattern, Use,
 };
 
 use im::hashmap;
@@ -185,6 +186,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_record_update(*constructor, spread, args, location),
 
             UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
+
+            UntypedExpr::Use(use_) => {
+                let location = use_.location;
+                self.infer_use(use_, location, vec![])
+            }
         }
     }
 
@@ -260,20 +266,99 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         untyped: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let count = untyped.len();
+        let untyped = untyped.into_iter();
+        self.infer_iter_seq(location, count, untyped)
+    }
+
+    fn infer_iter_seq<Exprs: Iterator<Item = UntypedExpr>>(
+        &mut self,
+        location: SrcSpan,
+        count: usize,
+        mut untyped: Exprs,
+    ) -> Result<TypedExpr, Error> {
+        let mut i = 0;
         let mut expressions = Vec::with_capacity(count);
-        for (i, expression) in untyped.into_iter().enumerate() {
+
+        while let Some(expression) = untyped.next() {
+            i += 1;
+
+            // Special case for `use` expressions, which need the remaining
+            // expressions in the sequence to be passed to them during as an
+            // implicit anonymous function.
+            if let UntypedExpr::Use(use_) = expression {
+                let expression = self.infer_use(use_, location, untyped.collect())?;
+                expressions.push(expression);
+                break; // Inferring the use has consumed the rest of the exprs
+            }
+
             let expression = self.infer(expression)?;
             // This isn't the final expression in the sequence, so call the
             // `expression_discarded` function to see if anything is being
             // discarded that we think shouldn't be.
-            if i < count - 1 {
+            if i < count {
                 self.expression_discarded(&expression);
             }
             expressions.push(expression);
         }
+
         Ok(TypedExpr::Sequence {
             location,
             expressions,
+        })
+    }
+
+    fn infer_use(
+        &mut self,
+        use_: Use,
+        sequence_location: SrcSpan,
+        mut following_expressions: Vec<UntypedExpr>,
+    ) -> Result<TypedExpr, Error> {
+        let mut call = get_use_expression_call(*use_.call)?;
+        let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
+
+        // TODO: Upgrade this to an error when we have partial type checking.
+        // If there are no following expressions then this expressions is
+        // incomplete. In this case we insert a `todo` so that the user can type
+        // check this code even if it would fail when run.
+        if following_expressions.is_empty() {
+            let todo = UntypedExpr::Todo {
+                location: use_.location,
+                label: None,
+                kind: TodoKind::IncompleteUse,
+            };
+            following_expressions.push(todo);
+        }
+
+        // Collect the following expressions into a function to be passed as a
+        // callback to the use's call function.
+        let first = following_expressions
+            .get(0)
+            .expect("default todo set above");
+        let callback = UntypedExpr::Fn {
+            arguments: callback_arguments,
+            location: SrcSpan::new(first.location().start, sequence_location.end),
+            return_annotation: None,
+            is_capture: false,
+            body: Box::new(UntypedExpr::Sequence {
+                location: sequence_location,
+                expressions: following_expressions,
+            }),
+        };
+
+        // Add this new callback function to the arguments to function call
+        call.arguments.push(CallArg {
+            label: None,
+            location: callback.location(),
+            value: callback,
+            // This argument is implicitly given by Gleam's use syntax so we
+            // mark it as such.
+            implicit: true,
+        });
+
+        self.infer(UntypedExpr::Call {
+            location: call.location,
+            fun: call.function,
+            arguments: call.arguments,
         })
     }
 
@@ -1694,6 +1779,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             label,
                             value,
                             location,
+                            implicit,
                         } = arg;
                         let value = self.infer_const(&None, value)?;
                         self.unify(typ.clone(), value.type_())
@@ -1701,6 +1787,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         Ok(CallArg {
                             label,
                             value,
+                            implicit,
                             location,
                         })
                     })
@@ -1868,11 +1955,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     label,
                     value,
                     location,
+                    implicit,
                 } = arg;
                 let value = self.infer_call_argument(value, typ.clone())?;
                 Ok(CallArg {
                     label,
                     value,
+                    implicit,
                     location,
                 })
             })
@@ -2031,4 +2120,44 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
         self.environment.check_exhaustiveness(patterns, value_typ)
     }
+}
+
+struct UseCall {
+    location: SrcSpan,
+    function: Box<UntypedExpr>,
+    arguments: Vec<CallArg<UntypedExpr>>,
+}
+
+fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
+    // Ensure that the use's call is of the right structure. i.e. it is a
+    // call to a function.
+    match call {
+        UntypedExpr::Call {
+            location,
+            fun: function,
+            arguments,
+        } => Ok(UseCall {
+            location,
+            arguments,
+            function,
+        }),
+
+        other => Ok(UseCall {
+            location: other.location(),
+            function: Box::new(other),
+            arguments: vec![],
+        }),
+    }
+}
+
+fn use_assignments_to_function_arguments(assignments: Vec<(AssignName, SrcSpan)>) -> Vec<Arg<()>> {
+    assignments
+        .into_iter()
+        .map(|(name, location)| Arg {
+            names: name.to_arg_names(),
+            location,
+            annotation: None,
+            type_: (),
+        })
+        .collect()
 }

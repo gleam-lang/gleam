@@ -5,7 +5,9 @@ mod errors;
 mod imports;
 mod pretty;
 mod statement_if;
+mod use_;
 mod warnings;
+
 use std::path::PathBuf;
 
 #[macro_export]
@@ -15,15 +17,20 @@ macro_rules! assert_infer {
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
 
         let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
-        let result = ExprTyper::new(&mut Environment::new(ids, &[], &modules, &mut vec![]))
-            .infer(ast)
-            .expect("should successfully infer");
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let result = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
+            ids,
+            &[],
+            &modules,
+            &mut vec![],
+        ))
+        .infer(ast)
+        .expect("should successfully infer");
         assert_eq!(
             ($src, printer.pretty_print(result.type_().as_ref(), 0),),
             ($src, $typ.to_string()),
@@ -58,7 +65,7 @@ macro_rules! assert_infer_with_module {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let ast = infer_module(
             Target::Erlang,
@@ -153,7 +160,7 @@ macro_rules! assert_module_error {
     };
 
     ($src:expr) => {
-        let (ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
@@ -171,7 +178,7 @@ macro_rules! assert_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: std::path::PathBuf::from("/src/one/two.gleam"),
             error,
@@ -206,16 +213,16 @@ macro_rules! assert_error {
 
     ($src:expr) => {
         use std::path::PathBuf;
-        let ast = crate::parse::parse_expression_sequence($src).expect("syntax error");
-        let ids = UniqueIdGenerator::new();
+        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ids = $crate::type_::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
-        let error = ExprTyper::new(&mut Environment::new(
+        let error = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
             &["somemod".to_string()],
             &modules,
@@ -223,7 +230,7 @@ macro_rules! assert_error {
         ))
         .infer(ast)
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
@@ -259,7 +266,7 @@ macro_rules! assert_with_module_error {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let error = infer_module(
             Target::Erlang,
@@ -271,7 +278,7 @@ macro_rules! assert_with_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
@@ -290,7 +297,7 @@ macro_rules! assert_with_module_error {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
@@ -304,7 +311,7 @@ macro_rules! assert_with_module_error {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast2, _) = crate::parse::parse_module($module_src2).expect("syntax error");
+        let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2;
         let module = infer_module(
             Target::Erlang,
@@ -337,6 +344,181 @@ macro_rules! assert_with_module_error {
         };
         let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_warning {
+    ($src:expr) => {
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let mut warnings: Vec<$crate::type_::error::Warning> = vec![];
+        let ids = $crate::uid::UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let _ = $crate::type_::infer_module(
+            $crate::build::Target::Erlang,
+            &ids,
+            ast,
+            $crate::build::Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        let mut nocolor = termcolor::Buffer::no_color();
+        for w in warnings {
+            let warning = w.into_warning(std::path::PathBuf::from("/src/warning/wrn.gleam"), $src.to_string());
+            warning.pretty(&mut nocolor)
+        }
+
+        let output = String::from_utf8(nocolor.into_inner())
+            .expect("Error printing produced invalid utf8");
+
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+    ($src:expr, $warning:expr $(,)?) => {
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let mut warnings = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        assert!(!warnings.is_empty());
+        assert_eq!($warning, warnings[0]);
+    };
+    ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
+        let mut warnings = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        // Repeatedly create importable modules for each one given
+        $(
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
+        ast.name = $name;
+        let module = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert($name.join("/"), module.type_info);
+        )*
+
+        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let _ = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        assert!(!warnings.is_empty());
+        assert_eq!($warning, warnings[0]);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_no_warnings {
+    ($src:expr $(,)?) => {
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let expected: Vec<Warning> = vec![];
+        let mut warnings = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        assert_eq!(expected, warnings);
+    };
+    ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+        let expected: Vec<Warning> = vec![];
+        let mut warnings = vec![];
+        let ids = UniqueIdGenerator::new();
+        let mut modules = im::HashMap::new();
+        // DUPE: preludeinsertion
+        // TODO: Currently we do this here and also in the tests. It would be better
+        // to have one place where we create all this required state for use in each
+        // place.
+        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        // Repeatedly create importable modules for each one given
+        $(
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
+        ast.name = $name;
+        let module = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+        let _ = modules.insert($name.join("/"), module.type_info);
+        )*
+
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
+        ast.name = vec!["my_module".to_string()];
+        let _ = infer_module(
+            Target::Erlang,
+            &ids,
+            ast,
+            Origin::Src,
+            "thepackage",
+            &modules,
+            &mut warnings,
+        )
+        .expect("should successfully infer");
+
+        assert_eq!(expected, warnings);
     };
 }
 
@@ -382,16 +564,19 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -400,16 +585,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -423,16 +611,19 @@ fn field_map_reorder_test() {
         fields: [("last".to_string(), 2)].into(),
         args: vec![
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: Some("last".to_string()),
                 value: int("3"),
@@ -441,16 +632,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
+                implicit: false,
                 location: Default::default(),
                 label: Some("last".to_string()),
                 value: int("3"),

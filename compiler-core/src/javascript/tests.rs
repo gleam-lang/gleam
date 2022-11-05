@@ -20,6 +20,7 @@ mod todo;
 mod try_;
 mod tuples;
 mod type_alias;
+mod use_;
 
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
@@ -51,10 +52,10 @@ macro_rules! assert_js {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
-            crate::build::Origin::Src,
+            $crate::build::Origin::Src,
             CURRENT_PACKAGE,
             &modules,
             &mut vec![],
@@ -74,8 +75,8 @@ macro_rules! assert_js {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
-        let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = crate::type_::infer_module(
             crate::build::Target::JavaScript,
@@ -193,10 +194,10 @@ macro_rules! assert_ts_def {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::JavaScript,
+            $crate::build::Target::JavaScript,
             &ids,
             ast,
-            crate::build::Origin::Src,
+            $crate::build::Origin::Src,
             CURRENT_PACKAGE,
             &modules,
             &mut vec![],
@@ -215,8 +216,8 @@ macro_rules! assert_ts_def {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
-        let (mut ast, _) = crate::parse::parse_module($dep_src).expect("dep syntax error");
+        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name;
         let dep = crate::type_::infer_module(
             crate::build::Target::JavaScript,

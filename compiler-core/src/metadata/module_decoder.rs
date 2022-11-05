@@ -230,6 +230,7 @@ impl ModuleDecoder {
         reader: &constant::Reader<'_>,
     ) -> Result<CallArg<TypedConstant>> {
         Ok(CallArg {
+            implicit: false,
             label: Default::default(),
             location: Default::default(),
             value: self.constant(reader)?,

@@ -3,6 +3,12 @@
 ## Unreleased
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
+- The `use` expression has been introduced. This is a new syntactic sugar that
+  permits callback using code to be written without indentation.
+- Fixed a bug where the build tool would not hook up stdin for Gleam programs it
+  starts.
+- Fixed a bug where using a record constructor as a value could generate a
+  warning in Erlang.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
 - Generated HTML documentation now includes all static assets (but the web

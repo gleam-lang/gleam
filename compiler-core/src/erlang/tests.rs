@@ -12,6 +12,7 @@ mod statement_if;
 mod strings;
 mod todo;
 mod try_;
+mod use_;
 mod variables;
 
 #[macro_export]
@@ -41,10 +42,10 @@ macro_rules! assert_erl {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my".to_string(), "mod".to_string()];
         let ast = $crate::type_::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
-            crate::build::Origin::Src,
+            $crate::build::Origin::Src,
             "thepackage",
             &modules,
             &mut vec![],
@@ -528,6 +529,21 @@ fn guard_variable_rewriting() {
       a
     }
   }
+}
+"
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/1816
+#[test]
+fn function_argument_shadowing() {
+    assert_erl!(
+        "pub fn main(a) {
+  Box
+}
+
+pub type Box {
+  Box(Int)
 }
 "
     )

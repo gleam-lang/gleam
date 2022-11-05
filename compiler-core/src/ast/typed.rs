@@ -354,7 +354,7 @@ impl TypedExpr {
         }
     }
 
-    fn type_(&self) -> Arc<Type> {
+    pub fn type_(&self) -> Arc<Type> {
         match self {
             Self::Negate { .. } => bool(),
             Self::Var { constructor, .. } => constructor.type_.clone(),

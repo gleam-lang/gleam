@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 127
+expression: "\npub fn main() {\n  use <- wibble()\n}\n\nfn wibble(f) {\n  f()\n}\n"
+---
+
+warning: Incomplete use expression
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   use <- wibble()
+  │   ^^^^^^^^^^^^^^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+A use expression must always be followed by at least one more
+expression.
+

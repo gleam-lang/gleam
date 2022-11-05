@@ -52,6 +52,7 @@ pub enum Token {
     Pipe,       // '|>'
     Dot,        // '.'
     RArrow,     // '->'
+    LArrow,     // '<-'
     DotDot,     // '..'
     EndOfFile,
     // Extra
@@ -74,6 +75,7 @@ pub enum Token {
     Todo,
     Try,
     Type,
+    Use,
 }
 
 impl Token {
@@ -146,6 +148,7 @@ impl fmt::Display for Token {
             Token::Pipe => "|>",
             Token::Dot => ".",
             Token::RArrow => "->",
+            Token::LArrow => "<-",
             Token::DotDot => "..",
             Token::EndOfFile => "EOF",
             Token::CommentNormal => "//",
@@ -165,6 +168,7 @@ impl fmt::Display for Token {
             Token::Pub => "pub",
             Token::Todo => "todo",
             Token::Try => "try",
+            Token::Use => "use",
             Token::Type => "type",
             Token::LtGt => "<>",
         };
