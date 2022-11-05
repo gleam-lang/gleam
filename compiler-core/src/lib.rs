@@ -67,6 +67,7 @@ pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
 pub mod parse;
+pub mod partial_infer;
 pub mod paths;
 pub mod pretty;
 pub mod type_;

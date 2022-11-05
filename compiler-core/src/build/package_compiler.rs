@@ -563,7 +563,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
-fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String>) {
+pub fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String>) {
     let name = module.name.clone();
     let deps: Vec<_> = module
         .ast
@@ -624,7 +624,7 @@ fn parse_sources(
     Ok(parsed_modules)
 }
 
-fn module_name(package_path: &Path, full_module_path: &Path) -> String {
+pub fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -655,7 +655,7 @@ pub struct Source {
 }
 
 #[derive(Debug)]
-struct Parsed {
+pub struct Parsed {
     path: PathBuf,
     name: String,
     code: String,

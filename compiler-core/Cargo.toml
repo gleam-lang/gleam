@@ -67,6 +67,10 @@ toml = "0.5.8"
 # SPDX license parsing
 spdx = "0.8.0"
 
+tree-sitter = "~0.20.9"
+#tree-sitter = { git = "https://github.com/tree-sitter/tree-sitter", branch = "master" }
+tree-sitter-gleam = { git = "https://github.com/gleam-lang/tree-sitter-gleam", branch= "main" }
+
 [build-dependencies]
 # Data (de)serialisation
 serde_derive = "1.0.130"

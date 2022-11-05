@@ -734,6 +734,8 @@ dependencies = [
  "thiserror",
  "toml",
  "tracing",
+ "tree-sitter",
+ "tree-sitter-gleam",
  "vec1",
 ]
 

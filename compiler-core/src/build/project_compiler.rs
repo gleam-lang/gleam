@@ -52,12 +52,12 @@ pub struct Options {
 pub struct ProjectCompiler<IO> {
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<String, type_::Module>,
-    defined_modules: im::HashMap<String, PathBuf>,
+    pub importable_modules: im::HashMap<String, type_::Module>,
+    pub defined_modules: im::HashMap<String, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
     options: Options,
-    ids: UniqueIdGenerator,
+    pub ids: UniqueIdGenerator,
     io: IO,
     build_journal: HashSet<PathBuf>,
     /// We may want to silence subprocess stdout if we are running in LSP mode.

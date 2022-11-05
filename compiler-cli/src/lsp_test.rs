@@ -1,4 +1,5 @@
 use crate::lsp::*;
+use gleam_core::partial_infer::*;
 
 #[test]
 fn lsp_complete_fun_ret1() {
@@ -9,6 +10,26 @@ fn lsp_complete_fun_ret1() {
 fn random_cat() { 
   let x = fn(a : Int) { Cat(cuteness: a) }
   x(1). 
+}
+"#;
+    //line 6, char 7
+    let ret = dot_for_node2(data, 6, 7, true);
+
+    assert_eq!(
+        ret,
+        Some(WhatToDisplay::Names(["cuteness".to_string()].to_vec()))
+    );
+}
+
+#[test]
+fn lsp_complete_fun_ret3() {
+    let data: &str = r#"pub type Cat {
+   Cat(name: String, cuteness: Int)
+}
+
+fn random_cat() { 
+  let x = fn(a : Int) { Cat(name: "", cuteness: a) }
+  x(1).
 }
 "#;
     //line 6, char 7
