@@ -1,10 +1,13 @@
 # Changelog
 
-# Unreleased
+## Unreleased
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
+- Generated HTML documentation now includes all static assets (but the web
+  fonts), so that it can be accessed offline or in far future once CDNs would
+  404.
 
 ## 0.24.0 - 2022-10-25
 
