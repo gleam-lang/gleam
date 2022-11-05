@@ -1026,7 +1026,7 @@ where
         if let Some(lead) = &patterns.first() {
             let mut alternative_patterns = vec![];
             loop {
-                if None == self.maybe_one(&Token::Vbar) {
+                if self.maybe_one(&Token::Vbar).is_none() {
                     break;
                 }
                 alternative_patterns.push(self.parse_patterns()?);

@@ -1058,7 +1058,7 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
                 };
 
                 let guard = optional_clause_guard(guard.as_ref(), env);
-                if then_doc == None {
+                if then_doc.is_none() {
                     then_doc = Some(expr(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
                 }

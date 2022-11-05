@@ -744,7 +744,7 @@ impl LanguageServer {
 
             // Otherwise format the file from disc
             None => {
-                let src = crate::fs::read(&path)?;
+                let src = crate::fs::read(path)?;
                 gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
             }
         };
@@ -795,7 +795,7 @@ fn uri_to_module_name_test() {
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
     let path = PathBuf::from(uri.path());
     let components = path
-        .strip_prefix(&root)
+        .strip_prefix(root)
         .ok()?
         .components()
         .skip(1)

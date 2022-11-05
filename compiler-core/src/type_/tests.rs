@@ -311,7 +311,7 @@ macro_rules! assert_with_module_error {
         .expect("should successfully infer");
         let _ = modules.insert($name.join("/"), module.type_info);
 
-        let (mut ast2, _) = crate::parse::parse_module($module_src2).expect("syntax error");
+        let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2;
         let module = infer_module(
             Target::Erlang,
@@ -418,7 +418,7 @@ macro_rules! assert_warning {
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         $(
-        let (mut ast, _) = crate::parse::parse_module($module_src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name;
         let module = infer_module(
             Target::Erlang,
@@ -505,7 +505,7 @@ macro_rules! assert_no_warnings {
         let _ = modules.insert($name.join("/"), module.type_info);
         )*
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let _ = infer_module(
             Target::Erlang,
