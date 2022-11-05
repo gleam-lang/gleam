@@ -433,7 +433,7 @@ impl<'a> Environment<'a> {
     ///
     /// It two types are found to not be the same an error is returned.
     ///
-    pub fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
+    pub fn unify(&self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         if t1 == t2 {
             return Ok(());
         }
