@@ -164,7 +164,7 @@ impl FileSystemIO for ProjectIO {}
 pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::debug!(path=?dir, "deleting_directory");
     if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIo {
+        std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
             kind: FileKind::Directory,
             path: dir.to_path_buf(),
@@ -179,7 +179,7 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
 pub fn delete_file(file: &Path) -> Result<(), Error> {
     tracing::debug!("Deleting file {:?}", file);
     if file.exists() {
-        std::fs::remove_file(&file).map_err(|e| Error::FileIo {
+        std::fs::remove_file(file).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
             kind: FileKind::File,
             path: file.to_path_buf(),
@@ -247,7 +247,7 @@ pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
         path: dir_path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
-    let file = File::create(&path).map_err(|e| Error::FileIo {
+    let file = File::create(path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.to_path_buf(),
@@ -274,7 +274,7 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
         err: Some(e.to_string()),
     })?;
 
-    let mut f = File::create(&path).map_err(|e| Error::FileIo {
+    let mut f = File::create(path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.to_path_buf(),
