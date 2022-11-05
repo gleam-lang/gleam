@@ -55,13 +55,37 @@ fn trip(x, y, f) {
 }
 
 #[test]
-fn invalid_call_is_variable() {
-    assert_error!(
+fn call_is_variable() {
+    assert_infer!(
         r#"
 let call = fn(f) { f() }
 use <- call
 123
-"#
+"#,
+        "Int"
+    );
+}
+
+#[test]
+fn call_is_literal() {
+    assert_infer!(
+        r#"
+use <- fn(f) { f() }
+123.0
+"#,
+        "Float"
+    );
+}
+
+#[test]
+fn call_is_capture() {
+    assert_infer!(
+        r#"
+let f = fn(a, b) { a() + b }
+use <- f(_, 123)
+123
+"#,
+        "Int"
     );
 }
 
