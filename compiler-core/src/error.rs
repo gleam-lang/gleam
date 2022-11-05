@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::diagnostic::{Diagnostic, Label, Location};
-use crate::type_::{FieldAccessUsage, InvalidUseExpressionCallKind};
+use crate::type_::FieldAccessUsage;
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_string,
@@ -1967,30 +1967,6 @@ These values are not matched:
                         location: Some(Location {
                             label: Label {
                                 text: None,
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.into(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
-
-                TypeError::InvalidUseExpressionCall { location, kind } => {
-                    let text = match kind {
-                        InvalidUseExpressionCallKind::MissingParens => {
-                            wrap("Hint: try adding `()` to the end.")
-                        }
-                        InvalidUseExpressionCallKind::Other => wrap(""),
-                    };
-                    Diagnostic {
-                        title: "Invalid use expression".into(),
-                        text,
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: Some("This must be a function call".into()),
                                 span: *location,
                             },
                             path: path.clone(),

@@ -2142,16 +2142,10 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
             function,
         }),
 
-        UntypedExpr::Var { location, .. } | UntypedExpr::FieldAccess { location, .. } => {
-            Err(Error::InvalidUseExpressionCall {
-                location,
-                kind: InvalidUseExpressionCallKind::MissingParens,
-            })
-        }
-
-        other => Err(Error::InvalidUseExpressionCall {
+        other => Ok(UseCall {
             location: other.location(),
-            kind: InvalidUseExpressionCallKind::Other,
+            function: Box::new(other),
+            arguments: vec![],
         }),
     }
 }
