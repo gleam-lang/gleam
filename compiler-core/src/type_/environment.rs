@@ -428,135 +428,6 @@ impl<'a> Environment<'a> {
         }
     }
 
-    /// Unify two types that should be the same.
-    /// Any unbound type variables will be linked to the other type as they are the same.
-    ///
-    /// It two types are found to not be the same an error is returned.
-    ///
-    pub fn unify(&self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-        if t1 == t2 {
-            return Ok(());
-        }
-
-        // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-        if let Type::Var { type_: typ } = t2.deref() {
-            if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
-                return self.unify(t1, typ.clone());
-            }
-        }
-
-        if let Type::Var { type_: typ } = t1.deref() {
-            enum Action {
-                Unify(Arc<Type>),
-                CouldNotUnify,
-                Link,
-            }
-
-            let action = match typ.borrow().deref() {
-                TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
-
-                TypeVar::Unbound { id } => {
-                    unify_unbound_type(t2.clone(), *id)?;
-                    Action::Link
-                }
-
-                TypeVar::Generic { id } => {
-                    if let Type::Var { type_: typ } = t2.deref() {
-                        if typ.borrow().is_unbound() {
-                            *typ.borrow_mut() = TypeVar::Generic { id: *id };
-                            return Ok(());
-                        }
-                    }
-                    Action::CouldNotUnify
-                }
-            };
-
-            return match action {
-                Action::Link => {
-                    *typ.borrow_mut() = TypeVar::Link { type_: t2 };
-                    Ok(())
-                }
-
-                Action::Unify(t) => self.unify(t, t2),
-
-                Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
-                    expected: t1.clone(),
-                    given: t2,
-                    situation: None,
-                }),
-            };
-        }
-
-        if let Type::Var { .. } = t2.deref() {
-            return self.unify(t2, t1).map_err(flip_unify_error);
-        }
-
-        match (t1.deref(), t2.deref()) {
-            (
-                Type::App {
-                    module: m1,
-                    name: n1,
-                    args: args1,
-                    ..
-                },
-                Type::App {
-                    module: m2,
-                    name: n2,
-                    args: args2,
-                    ..
-                },
-            ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
-                for (a, b) in args1.iter().zip(args2) {
-                    unify_enclosed_type(t1.clone(), t2.clone(), self.unify(a.clone(), b.clone()))?;
-                }
-                Ok(())
-            }
-
-            (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. })
-                if elems1.len() == elems2.len() =>
-            {
-                for (a, b) in elems1.iter().zip(elems2) {
-                    unify_enclosed_type(t1.clone(), t2.clone(), self.unify(a.clone(), b.clone()))?;
-                }
-                Ok(())
-            }
-
-            (
-                Type::Fn {
-                    args: args1,
-                    retrn: retrn1,
-                    ..
-                },
-                Type::Fn {
-                    args: args2,
-                    retrn: retrn2,
-                    ..
-                },
-            ) if args1.len() == args2.len() => {
-                for (a, b) in args1.iter().zip(args2) {
-                    self.unify(a.clone(), b.clone())
-                        .map_err(|_| UnifyError::CouldNotUnify {
-                            expected: t1.clone(),
-                            given: t2.clone(),
-                            situation: None,
-                        })?;
-                }
-                self.unify(retrn1.clone(), retrn2.clone())
-                    .map_err(|_| UnifyError::CouldNotUnify {
-                        expected: t1.clone(),
-                        given: t2.clone(),
-                        situation: None,
-                    })
-            }
-
-            _ => Err(UnifyError::CouldNotUnify {
-                expected: t1.clone(),
-                given: t2.clone(),
-                situation: None,
-            }),
-        }
-    }
-
     /// Inserts an entity at the current scope for usage tracking.
     pub fn init_usage(&mut self, name: String, kind: EntityKind, location: SrcSpan) {
         use EntityKind::*;
@@ -724,5 +595,132 @@ impl<'a> Environment<'a> {
             }
             _ => Ok(()),
         }
+    }
+}
+
+/// Unify two types that should be the same.
+/// Any unbound type variables will be linked to the other type as they are the same.
+///
+/// It two types are found to not be the same an error is returned.
+///
+pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
+    if t1 == t2 {
+        return Ok(());
+    }
+
+    // Collapse right hand side type links. Left hand side will be collapsed in the next block.
+    if let Type::Var { type_: typ } = t2.deref() {
+        if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
+            return unify(t1, typ.clone());
+        }
+    }
+
+    if let Type::Var { type_: typ } = t1.deref() {
+        enum Action {
+            Unify(Arc<Type>),
+            CouldNotUnify,
+            Link,
+        }
+
+        let action = match typ.borrow().deref() {
+            TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
+
+            TypeVar::Unbound { id } => {
+                unify_unbound_type(t2.clone(), *id)?;
+                Action::Link
+            }
+
+            TypeVar::Generic { id } => {
+                if let Type::Var { type_: typ } = t2.deref() {
+                    if typ.borrow().is_unbound() {
+                        *typ.borrow_mut() = TypeVar::Generic { id: *id };
+                        return Ok(());
+                    }
+                }
+                Action::CouldNotUnify
+            }
+        };
+
+        return match action {
+            Action::Link => {
+                *typ.borrow_mut() = TypeVar::Link { type_: t2 };
+                Ok(())
+            }
+
+            Action::Unify(t) => unify(t, t2),
+
+            Action::CouldNotUnify => Err(UnifyError::CouldNotUnify {
+                expected: t1.clone(),
+                given: t2,
+                situation: None,
+            }),
+        };
+    }
+
+    if let Type::Var { .. } = t2.deref() {
+        return unify(t2, t1).map_err(flip_unify_error);
+    }
+
+    match (t1.deref(), t2.deref()) {
+        (
+            Type::App {
+                module: m1,
+                name: n1,
+                args: args1,
+                ..
+            },
+            Type::App {
+                module: m2,
+                name: n2,
+                args: args2,
+                ..
+            },
+        ) if m1 == m2 && n1 == n2 && args1.len() == args2.len() => {
+            for (a, b) in args1.iter().zip(args2) {
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone()))?;
+            }
+            Ok(())
+        }
+
+        (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. })
+            if elems1.len() == elems2.len() =>
+        {
+            for (a, b) in elems1.iter().zip(elems2) {
+                unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone()))?;
+            }
+            Ok(())
+        }
+
+        (
+            Type::Fn {
+                args: args1,
+                retrn: retrn1,
+                ..
+            },
+            Type::Fn {
+                args: args2,
+                retrn: retrn2,
+                ..
+            },
+        ) if args1.len() == args2.len() => {
+            for (a, b) in args1.iter().zip(args2) {
+                unify(a.clone(), b.clone()).map_err(|_| UnifyError::CouldNotUnify {
+                    expected: t1.clone(),
+                    given: t2.clone(),
+                    situation: None,
+                })?;
+            }
+            unify(retrn1.clone(), retrn2.clone()).map_err(|_| UnifyError::CouldNotUnify {
+                expected: t1.clone(),
+                given: t2.clone(),
+                situation: None,
+            })
+        }
+
+        _ => Err(UnifyError::CouldNotUnify {
+            expected: t1.clone(),
+            given: t2.clone(),
+            situation: None,
+        }),
     }
 }
