@@ -165,3 +165,62 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUB_VERBOSE: 1
+
+      - name: Upload x86_64-unknown-linux-musl artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: gleam
+          path: target/debug/gleam
+          if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+
+  build-nightly-container-images:
+    runs-on: ubuntu-latest
+    needs: [ build-nightly ]
+    if: ${{ needs.nightly-last-run.outputs.should_run != 'false' }}
+    strategy:
+      matrix:
+        base-image:
+          - erlang
+          - erlang-slim
+          - erlang-alpine
+          - elixir
+          - elixir-slim
+          - elixir-alpine
+          - node
+          - node-slim
+          - node-alpine
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Download Gleam binary from previous job
+        uses: actions/download-artifact@v2
+        with:
+          name: gleam
+          path: ./
+
+      - name: Authenticate with GitHub container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: lpil
+          password: ${{ secrets.CONTAINER_REGISTRY_PERSONAL_ACCESS_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: containers/${{ matrix.base-image }}.dockerfile
+          push: true
+          tags: ${{ steps.versions.outputs.container_tag }}
+                ghcr.io/${{ github.repository }}:nightly-${{ matrix.base-image }}
+          labels: |
+            org.opencontainers.image.title=gleam
+            org.opencontainers.image.url=https://gleam.run
+            org.opencontainers.image.source=https://github.com/gleam-lang/gleam
+            org.opencontainers.image.version=nightly-${{ matrix.base-image }}
+            org.opencontainers.image.licenses=Apache-2.0
