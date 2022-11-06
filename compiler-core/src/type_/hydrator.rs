@@ -157,9 +157,7 @@ impl Hydrator {
                 for (parameter, (location, argument)) in
                     parameter_types.into_iter().zip(argument_types)
                 {
-                    environment
-                        .unify(parameter, argument)
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    unify(parameter, argument).map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 Ok(return_type)

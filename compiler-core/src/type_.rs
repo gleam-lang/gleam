@@ -1105,9 +1105,7 @@ fn infer_statement(
                 })?;
 
             // Assert that the inferred type matches the type of any recursive call
-            environment
-                .unify(preregistered_type, typ.clone())
-                .map_err(|e| convert_unify_error(e, location))?;
+            unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
