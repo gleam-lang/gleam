@@ -6,16 +6,22 @@ use std::sync::Arc;
 //  Public Interface
 //
 
-pub fn type_options_for_value<T>(
-    input_options: &[BitStringSegmentOption<T>],
-) -> Result<Arc<Type>, Error> {
+pub fn type_options_for_value<TypedValue>(
+    input_options: &[BitStringSegmentOption<TypedValue>],
+) -> Result<Arc<Type>, Error>
+where
+    TypedValue: GetLitValue,
+{
     type_options(input_options, true, false)
 }
 
-pub fn type_options_for_pattern<T>(
-    input_options: &[BitStringSegmentOption<T>],
+pub fn type_options_for_pattern<TypedValue>(
+    input_options: &[BitStringSegmentOption<TypedValue>],
     must_have_size: bool,
-) -> Result<Arc<Type>, Error> {
+) -> Result<Arc<Type>, Error>
+where
+    TypedValue: GetLitValue,
+{
     type_options(input_options, false, must_have_size)
 }
 
@@ -58,11 +64,14 @@ impl<T> SegmentOptionCategories<'_, T> {
     }
 }
 
-fn type_options<T>(
-    input_options: &[BitStringSegmentOption<T>],
+fn type_options<TypedValue>(
+    input_options: &[BitStringSegmentOption<TypedValue>],
     value_mode: bool,
     must_have_size: bool,
-) -> Result<Arc<Type>, Error> {
+) -> Result<Arc<Type>, Error>
+where
+    TypedValue: GetLitValue,
+{
     use BitStringSegmentOption::*;
 
     let mut categories = SegmentOptionCategories::new();
@@ -234,7 +243,52 @@ fn type_options<T>(
         return err(ErrorType::UnitMustHaveSize, unit.location());
     }
 
+    // float only 16/32/64
+    if let SegmentOptionCategories {
+        typ: Some(Float { .. }),
+        size: Some(size),
+        ..
+    } = categories
+    {
+        match size.value() {
+            Some(abox) => {
+                //if let BitStringSegmentOption::Int{} = abox.fmt
+                match abox.as_int_literal() {
+                    None => (),
+                    Some(16) => (),
+                    Some(32) => (),
+                    Some(64) => (),
+                    _ => return err(ErrorType::FloatWithSize, size.location()),
+                }
+            }
+
+            _ => (),
+        }
+    }
+
     Ok(categories.segment_type())
+}
+
+pub trait GetLitValue {
+    fn as_int_literal(&self) -> Option<i64>;
+}
+
+impl<A> GetLitValue for crate::ast::Pattern<A, Arc<Type>>
+where
+    A: std::fmt::Debug,
+{
+    fn as_int_literal(&self) -> Option<i64> {
+        match self {
+            crate::ast::Pattern::Int { value, .. } => {
+                if let Ok(val) = value.parse::<i64>() {
+                    return Some(val);
+                }
+            }
+            crate::ast::Pattern::VarUsage { .. } => return None,
+            _ => (),
+        }
+        None
+    }
 }
 
 fn is_unicode<T>(opt: &BitStringSegmentOption<T>) -> bool {
