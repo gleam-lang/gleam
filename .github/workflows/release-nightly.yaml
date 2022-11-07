@@ -170,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: gleam
-          path: target/debug/gleam
+          path: target/${{ matrix.target }}/release/gleam
           if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
 
   build-nightly-container-images:
