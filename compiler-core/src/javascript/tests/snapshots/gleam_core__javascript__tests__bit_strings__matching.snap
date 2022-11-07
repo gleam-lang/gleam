@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_strings.rs
+assertion_line: 170
+expression: "\nfn go(x) {\n  assert <<1, y>> = x\n}\n"
+---
+import { throwError } from "../gleam.mjs";
+
+function go(x) {
+  if (x.byteAt(0) !== 1 || !(x.length == 2)) {
+    throwError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "Assignment pattern did not match",
+      { value: x }
+    );
+  }
+  let y = x.byteAt(1);
+  return x;
+}
+

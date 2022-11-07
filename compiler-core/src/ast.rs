@@ -1209,7 +1209,7 @@ pub enum BitStringSegmentOption<Value> {
 }
 
 impl<A> BitStringSegmentOption<A> {
-    pub fn value(&self) -> Option<&Box<A>> {
+    pub fn value(&self) -> Option<&A> {
         match self {
             BitStringSegmentOption::Size { value, .. } => Some(value),
             _ => None,
