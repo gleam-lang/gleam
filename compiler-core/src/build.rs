@@ -1,6 +1,6 @@
 #![allow(warnings)]
 
-mod dep_tree;
+pub mod dep_tree;
 pub mod package_compiler;
 mod project_compiler;
 mod telemetry;

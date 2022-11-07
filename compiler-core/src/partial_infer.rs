@@ -3,22 +3,26 @@ use crate::parse::error::ParseError;
 use std::collections::HashMap;
 use tree_sitter::Tree;
 //use crate::uid::UniqueIdGenerator;
-use crate::ast::Statement;
+use crate::ast::{Statement, TargetGroup};
 use crate::build::Origin;
 use crate::type_::environment::Environment;
 use tree_sitter::TreeCursor;
 
-type UntypedStatements = Vec<Result<Option<Statement<(), UntypedExpr, (), ()>>, ParseError>>;
+//Statement<(), UntypedExpr, (), ()>
+type UntypedStatement = Option<TargetGroup>;
+type UntypedStatements = Vec<UntypedStatement>;
 
 #[derive(Debug)]
 pub struct PartiallyParsedModule {
+    pub name: String,
     pub tree: Tree,
     pub source_code: String,
     //components
     pub statements: UntypedStatements,
+    pub parse_errors: Vec<Option<ParseError>>,
     pub infer_state: Vec<usize>,
     pub node_byte_range: Vec<std::ops::Range<usize>>,
-    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
+    //    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
 
     //indexes
     pub name_to_statement: HashMap<String, usize>,
@@ -26,13 +30,15 @@ pub struct PartiallyParsedModule {
 
 #[derive(Debug)]
 pub struct PartiallyInferedModule {
+    pub name: String,
     pub tree: Tree,
     pub source_code: String,
     //components
     pub statements: UntypedStatements,
+    pub parse_errors: Vec<Option<ParseError>>,
     pub infer_state: Vec<usize>,
     pub node_byte_range: Vec<std::ops::Range<usize>>,
-    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
+    //    pub untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>>,
     pub statements_typed: Vec<Result<crate::ast::TypedStatement, crate::type_::Error>>,
     pub partial_module: crate::ast::TypedModule,
 
@@ -41,11 +47,11 @@ pub struct PartiallyInferedModule {
 }
 
 impl PartiallyParsedModule {
-    pub fn new<'a>(source_code: String, environment: &mut Environment<'a>) -> Self {
+    pub fn new<'a>(source_code: &str, name: &str) -> Self {
         let mut statements: UntypedStatements = Vec::new();
+        let mut parse_errors: Vec<Option<ParseError>> = Vec::new();
         let mut infer_state: Vec<usize> = Vec::new();
         let mut node_byte_range: Vec<std::ops::Range<usize>> = Vec::new();
-        let untyped: Vec<Result<Option<(UntypedExpr, u32)>, ParseError>> = Vec::new();
 
         let mut name_to_statement: HashMap<String, usize> = HashMap::new();
 
@@ -63,12 +69,16 @@ impl PartiallyParsedModule {
             let lex = crate::parse::lexer::make_tokenizer(text);
             let mut parser = crate::parse::Parser::new(lex);
 
-            let expr = parser.parse_statement();
+            let expr = parser.parse_target_group();
             //let expr = parser.ensure_no_errors_or_remaining_input(expr);
 
-            statements.push(expr);
+            let (s, e) = match expr {
+                Ok(s) => (s, None),
+                Err(e) => (None, Some(e)),
+            };
+            statements.push(s);
+            parse_errors.push(e);
             infer_state.push(0);
-            //untyped.push();
 
             let name = get_statement_name(&source_code, node);
             if let Some(name) = name {
@@ -77,55 +87,109 @@ impl PartiallyParsedModule {
         }
 
         PartiallyParsedModule {
+            name: name.to_string(),
             tree,
-            source_code,
+            source_code: source_code.to_string(),
             statements,
+            parse_errors,
             infer_state,
             node_byte_range,
-            untyped,
 
             name_to_statement,
         }
     }
 
-    pub fn dependencies(&self, target: crate::build::Target) -> Vec<(String, crate::ast::SrcSpan)> {
-        self.iter_statements(target)
-            .flat_map(|s| match s {
-                Statement::Import {
-                    module, location, ..
-                } => Some((module.join("/"), *location)),
-                _ => None,
+    pub fn dependencies(&self, target: Target) -> Vec<String> {
+        let p: Vec<String> = self
+            .statements
+            .iter()
+            .filter(move |group| {
+                if let Some(group) = group {
+                    group.is_for(target)
+                } else {
+                    false
+                }
             })
-            .collect()
+            .map(|group| {
+                if let Some(group) = group {
+                    let res: Vec<String> = group
+                        .statements_ref()
+                        .iter()
+                        .map(|s| match s {
+                            Statement::Import { module, .. } => Some(module.join("/")),
+                            _ => None,
+                        })
+                        .filter(|x| x.is_some())
+                        .map(|x| x.expect("checked"))
+                        .collect();
+                    Some(res)
+                } else {
+                    None
+                }
+            })
+            .filter(|x| x.is_some())
+            .flat_map(|x| x.unwrap())
+            .collect();
+
+        p
     }
 
-    pub fn iter_statements(&self, target: crate::build::Target) -> impl Iterator<Item = &crate::ast::UntypedStatement> {
+    pub fn iter_statements(
+        &self,
+        target: Target,
+    ) -> impl Iterator<Item = &Statement<(), UntypedExpr, (), ()>> {
         self.statements
             .iter()
-            .filter(move |st| match st {
-                Ok(Some(st)) =>
-                  st.for_target(target),
-               _ =>
-                 false
-            }
-                    )
-            .collect()
+            .filter(move |group| {
+                if let Some(group) = group {
+                    group.is_for(target)
+                } else {
+                    false
+                }
+            })
+            .flat_map(|group| group.as_ref().unwrap().statements_ref())
+    }
+
+    pub fn into_iter_statements(
+        self,
+        target: Target,
+    ) -> impl Iterator<Item = Statement<(), UntypedExpr, (), ()>> {
+        self.statements
+            .into_iter()
+            .filter(move |group| {
+                if let Some(group) = group {
+                    group.is_for(target)
+                } else {
+                    false
+                }
+            })
+            .flat_map(|group| group.unwrap().statements())
     }
 }
+
+use crate::build::Target;
+
+//impl Statement<(), UntypedExpr, (), ()> {
+//    fn for_target(&self, target: crate::build::Target) -> impl Iterator<Item = &Statement<(), UntypedExpr, (), ()>> {
+//       self.statements.iter()
+//    }
+//}
+
 impl PartiallyInferedModule {
     pub fn new<'a>(parsed: PartiallyParsedModule, environment: &mut Environment<'a>) -> Self {
         let PartiallyParsedModule {
+            name: wname,
             tree,
             source_code,
             statements,
+            parse_errors,
             infer_state,
             node_byte_range,
-            untyped,
 
             name_to_statement,
         } = parsed;
 
-        let name = ["random_name".to_string()].to_vec();
+        let name: Vec<String> = wname.split("/").map(|x| x.to_string()).collect();
 
         let mut type_names = HashMap::with_capacity(statements.len());
         let mut value_names = HashMap::with_capacity(statements.len());
@@ -135,38 +199,45 @@ impl PartiallyInferedModule {
         // We process imports first so that anything imported can be referenced
         // anywhere in the module.
         for s in statements.iter() {
-            if let Ok(Some(s)) = s {
-                let _ = crate::type_::register_import(s, environment);
+            if let Some(s) = s {
+                for s in s.statements_ref().iter() {
+                    let _ = crate::type_::register_import(s, environment);
+                }
             }
         }
 
         // Register types so they can be used in constructors and functions
         // earlier in the module.
         for s in statements.iter() {
-            if let Ok(Some(s)) = s {
-                let _ = crate::type_::register_types(
-                    s,
-                    &name,
-                    &mut hydrators,
-                    &mut type_names,
-                    environment,
-                );
+            if let Some(s) = s {
+                for s in s.statements_ref().iter() {
+                    let _ = crate::type_::register_types(
+                        s,
+                        &name,
+                        &mut hydrators,
+                        &mut type_names,
+                        environment,
+                    );
+                }
             }
         }
 
         // Register values so they can be used in functions earlier in the module.
         for s in statements.iter() {
-            if let Ok(Some(s)) = s {
-                let _ = crate::type_::register_values(
-                    s,
-                    &name,
-                    &mut hydrators,
-                    &mut value_names,
-                    environment,
-                );
+            if let Some(s) = s {
+                for s in s.statements_ref().iter() {
+                    let _ = crate::type_::register_values(
+                        s,
+                        &name,
+                        &mut hydrators,
+                        &mut value_names,
+                        environment,
+                    );
+                }
             }
         }
 
+        println!("environment values: {:#?}", environment.module_values);
         // Infer the types of each statement in the module
         // We first infer all the constants so they can be used in functions defined
         // anywhere in the module.
@@ -174,16 +245,18 @@ impl PartiallyInferedModule {
         let mut consts = vec![];
         let mut not_consts = vec![];
         for statement in statements.iter() {
-            if let Ok(Some(statement)) = statement {
-                match statement {
-                    Statement::Fn { .. }
-                    | Statement::TypeAlias { .. }
-                    | Statement::CustomType { .. }
-                    | Statement::ExternalFn { .. }
-                    | Statement::ExternalType { .. }
-                    | Statement::Import { .. } => not_consts.push(statement),
+            if let Some(statement) = statement {
+                for statement in statement.statements_ref().iter() {
+                    match statement {
+                        Statement::Fn { .. }
+                        | Statement::TypeAlias { .. }
+                        | Statement::CustomType { .. }
+                        | Statement::ExternalFn { .. }
+                        | Statement::ExternalType { .. }
+                        | Statement::Import { .. } => not_consts.push(statement),
 
-                    Statement::ModuleConstant { .. } => consts.push(statement),
+                        Statement::ModuleConstant { .. } => consts.push(statement),
+                    }
                 }
             }
         }
@@ -235,12 +308,13 @@ impl PartiallyInferedModule {
         };
 
         PartiallyInferedModule {
+            name: wname,
             tree,
             source_code,
             statements,
+            parse_errors,
             infer_state,
             node_byte_range,
-            untyped,
             statements_typed: new_statements,
             partial_module,
 
@@ -520,52 +594,93 @@ impl Extractor for tree_sitter::Node<'_> {
 //    qualified_imports: Vec<String>,
 //}
 
+#[derive(Debug)]
 pub struct Package {
     pub sources: Vec<crate::build::package_compiler::Source>,
     pub root: std::path::PathBuf,
+    pub target: Target,
+    pub modules: Vec<PartiallyInferedModule>,
 }
 
 pub fn module_deps_for_graph(
-    target: crate::build::Target,
+    target: Target,
     module: &PartiallyParsedModule,
 ) -> (String, Vec<String>) {
     let name = module.name.clone();
-    let deps: Vec<_> = module
-        .ast
-        .dependencies(target)
-        .into_iter()
-        .map(|(dep, _span)| dep)
-        .collect();
+    let deps: Vec<String> = module.dependencies(target);
     (name, deps)
 }
 
+use crate::type_::environment::*;
+use crate::type_::Warning;
+
+use crate::uid::UniqueIdGenerator;
 
 impl Package {
-    pub fn new() {}
-    pub fn read_package<'a, IO>(&mut self, io: &mut IO)
-    where
-        IO: crate::io::FileSystemIO + Clone,
-    {
-        self.read_source_files(io);
-        //        let parsed_modules = self.parse_sources(
-        //            &self.config.name,
-        //            std::mem::take(&mut self.sources)
-        //        );
-        //
-        //        // Determine order in which modules are to be processed
-        let parsed_modules: Vec<PartiallyParsedModule> = Vec::new();
+    pub fn new() -> Package {
+        Package {
+            target: crate::build::Target::JavaScript,
+            sources: Vec::new(),
+            root: std::path::PathBuf::from("./".to_string()),
+            modules: Vec::new(),
+        }
+    }
+    pub fn read_package(
+        &mut self,
+        environment: &mut Environment,
+        //        importable_modules: &mut im::HashMap<String, crate::type_::Module>,
+    ) -> Result<(), ()> {
+        // Determine order in which modules are to be processed
+        let mut parsed_modules: Vec<PartiallyParsedModule> = self
+            .sources
+            .iter()
+            .map(|source| PartiallyParsedModule::new(&source.code, &source.name))
+            .collect();
 
         let dep_tree = parsed_modules
-                .iter()
-                .map(|m| {
-            //        module_deps_for_graph(self.target.target(), m)
-            ("".to_string(), Vec::new())
-                })
-                .collect();
- 
-        let sequence = toposort_deps(
-dep_tree
-       );
+            .iter()
+            .map(|m| module_deps_for_graph(self.target, m))
+            .collect();
+
+        let sequence = toposort_deps(dep_tree);
+
+        //    let mut hm : HashMap<String, PartiallyParsedModule> = parsed_modules.into_iter().map(|m| (m.name, m)).collect();
+        let sequence = sequence.map_err(|x| ())?;
+
+        parsed_modules.sort_by(|a, b| {
+            let a = sequence.iter().position(|r| r.eq(&a.name));
+            let b = sequence.iter().position(|r| r.eq(&b.name));
+
+            if a.is_none() {
+                return std::cmp::Ordering::Greater;
+            }
+            if b.is_none() {
+                return std::cmp::Ordering::Less;
+            }
+            a.unwrap().cmp(&b.unwrap())
+        });
+
+        let mut module_types = environment.importable_modules.clone();
+        let mut ids: crate::uid::UniqueIdGenerator = crate::uid::UniqueIdGenerator::new();
+        let _ = module_types.insert("gleam".to_string(), crate::type_::build_prelude(&mut ids));
+
+        self.modules = parsed_modules
+            .into_iter()
+            .map(|m| {
+                let split_name: Vec<String> = m.name.split("/").map(|x| x.to_string()).collect();
+                let mut warnings: Vec<Warning> = Vec::new();
+
+                let mut environment =
+                    Environment::new(ids.clone(), &split_name, &mut module_types, &mut warnings);
+
+                let p = PartiallyInferedModule::new(m, &mut environment);
+                let _ = module_types.insert(p.name.clone(), p.partial_module.type_info.clone());
+
+                p
+            })
+            .collect();
+
+        Ok(())
     }
 
     pub fn read_source_files<'a, IO>(&mut self, io: &mut IO) -> crate::error::Result<()>
@@ -578,6 +693,11 @@ dep_tree
         let src = self.root.join("src");
         let test = self.root.join("test");
 
+        //println!(
+        //    "sources: {:?}",
+        //    io.gleam_source_files(&std::path::PathBuf::from("./src/"))
+        //        .collect::<Vec<std::path::PathBuf>>()
+        //);
         // Src
         for path in io.gleam_source_files(&src) {
             self.add_module(io, path, &src, Origin::Src)?;
@@ -598,7 +718,7 @@ dep_tree
     {
         let name = crate::build::package_compiler::module_name(&dir, &path);
         let code = io.read(&path)?;
-        self.sources.push(crate::build::package_compiler::Source {
+        self.sources.push(Source {
             name,
             path,
             code,
@@ -606,6 +726,56 @@ dep_tree
         });
         Ok(())
     }
+}
+
+//use crate::type_::environment::*;
+use crate::build::package_compiler::Source;
+use std::path::PathBuf;
+#[test]
+fn partial_inference() {
+    let mut sources : Vec<Source> = vec![
+        Source {
+            path: PathBuf::from("./src/t/t4.gleam"),
+            name: "t/t4".to_string(),
+            code: "".to_string(),
+            origin: crate::build::Origin::Src,
+        },
+        Source {
+            path: PathBuf::from("./src/t/t3.gleam"),
+            name: "t/t3".to_string(),
+            code: "import t/t4\n".to_string(),
+            origin: crate::build::Origin::Src,
+        },
+        Source {
+            path: PathBuf::from("./src/t1.gleam"),
+            name: "t1".to_string(),
+            code: "import gleam/io\nimport t2\n\npub fn main() {\n  io.println(\"Hello from t1!\")\n  t2.something();\n}\n\n".to_string(),
+            origin: crate::build::Origin::Src,
+        },
+        Source {
+            path: PathBuf::from("./src/t2.gleam"),
+            name: "t2".to_string(),
+            code: "pub type Something {\n  Something(a: Int)\n}\npub fn nothing() {\n Something(1)\n  \n}\n".to_string(),
+            origin: crate::build::Origin::Src,
+        },
+    ];
+
+    let mut pkg = Package::new();
+    pkg.sources = sources;
+
+    let mut warnings: Vec<Warning> = Vec::new();
+
+    let name = ["random_name".to_string()];
+    let mut modules: im::HashMap<String, crate::type_::Module> = im::HashMap::new();
+    let mut ids: crate::uid::UniqueIdGenerator = crate::uid::UniqueIdGenerator::new();
+    let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&mut ids));
+
+    let mut environment = Environment::new(ids.clone(), &name, &mut modules, &mut warnings);
+
+    pkg.read_package(&mut environment);
+
+    println!("{:#?}", pkg);
+    assert!(false);
 }
 
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
@@ -622,7 +792,9 @@ pub struct DependencyTree<T> {
     values: HashMap<NodeIndex, T>,
 }
 
-pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, Error> {
+pub fn toposort_deps(
+    inputs: Vec<(String, Vec<String>)>,
+) -> Result<Vec<String>, crate::build::dep_tree::Error> {
     let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
@@ -641,7 +813,9 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
     }
 
     match petgraph::algo::toposort(&graph, None) {
-        Err(e) => Err(Error::Cycle(import_cycle(e, &graph, values))),
+        Err(e) => Err(crate::build::dep_tree::Error::Cycle(import_cycle(
+            e, &graph, values,
+        ))),
 
         Ok(seq) => Ok(seq
             .into_iter()

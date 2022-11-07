@@ -1230,7 +1230,7 @@ pub fn dot_ask_compiler(
     //let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
     let mut warnings: Vec<Warning> = Vec::new();
 
-    let name = ["random_name".to_string()];
+    let name = ["_".to_string()];
     let mut ids = UniqueIdGenerator::new();
     let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
 
@@ -1248,7 +1248,15 @@ pub fn dot_ask_compiler(
     let _ = writeln!(LogFile.lock().unwrap(), "newdata {}", nd);
     let _ = LogFile.lock().unwrap().flush();
 
-    let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
+    let mut p = gleam_core::partial_infer::Package::new();
+
+    let mut io = ProjectIO::new();
+    p.read_source_files(&mut io);
+    p.read_package(&mut environment);
+
+   
+    let pp = PartiallyParsedModule::new("_", &nd.to_string());
+    let pi = PartiallyInferedModule::new(pp, &mut environment);
     if debug {
         println!("{:#?}", pi.statements_typed);
     }
@@ -1305,6 +1313,7 @@ pub fn dot_from_typed(data: &str, line: u32, character: u32, debug: bool) -> Opt
         println!("newdata {}", nd);
     }
 
+    /*
     let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
     if debug {
         // println!("{:#?}", pi.statements_typed);
@@ -1344,7 +1353,7 @@ pub fn dot_from_typed(data: &str, line: u32, character: u32, debug: bool) -> Opt
         println!("typed node not found");
         println!("statements {:#?}", pi.statements_typed);
     }
-
+*/
     return None;
 }
 

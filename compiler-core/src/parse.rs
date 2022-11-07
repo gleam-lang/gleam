@@ -183,7 +183,7 @@ where
         }
     }
 
-    fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
+    pub fn parse_target_group(&mut self) -> Result<Option<TargetGroup>, ParseError> {
         match &self.tok0 {
             Some((_, Token::If, _)) => {
                 let _ = self.next_tok();
