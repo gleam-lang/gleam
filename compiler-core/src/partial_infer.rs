@@ -104,7 +104,7 @@ impl PartiallyParsedModule {
             .iter()
             .filter(move |st| match st {
                 Ok(Some(st)) =>
-                  st.is_for(target) ,
+                  st.for_target(target),
                _ =>
                  false
             }
@@ -112,7 +112,6 @@ impl PartiallyParsedModule {
             .collect()
     }
 }
-
 impl PartiallyInferedModule {
     pub fn new<'a>(parsed: PartiallyParsedModule, environment: &mut Environment<'a>) -> Self {
         let PartiallyParsedModule {
