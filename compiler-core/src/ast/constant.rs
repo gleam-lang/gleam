@@ -106,3 +106,18 @@ impl<A, B> HasLocation for Constant<A, B> {
         self.location()
     }
 }
+
+impl<A, B> crate::bit_string::GetLitValue for Constant<A, B> {
+    fn as_int_literal(&self) -> Option<i64> {
+        match self {
+            Constant::Int { value, .. } => {
+                if let Ok(val) = value.parse::<i64>() {
+                    return Some(val);
+                }
+            }
+            _ => (),
+        }
+
+        None
+    }
+}
