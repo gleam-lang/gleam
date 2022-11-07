@@ -20,6 +20,7 @@ pub fn main() -> Int {
       suite("strings", strings_tests()),
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
+      suite("bit strings erlang", bit_string_float_erlang()),
       suite("bit strings", bit_string_tests()),
       suite("sized bit strings", sized_bit_string_tests()),
       suite("list spread", list_spread_tests()),
@@ -1029,12 +1030,34 @@ fn bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<<<1>>:bit_string, 2>> == <<1, 2>>) }),
     "<<1>> == <<1:int>>"
     |> example(fn() { assert_equal(True, <<1>> == <<1:int>>) }),
-    "<<1>> == <<1.0:float>>"
+    "<<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>"
     |> example(fn() {
       assert_equal(True, <<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>)
-    }),
+    })
   ]
 }
+
+if erlang {
+  fn bit_string_float_erlang() -> List(Test) {
+    [
+       "<<60,0>> == <<1.0:float-size(16)>>"
+        |> example(fn() {
+          assert_equal(True, <<60,0>> == <<1.0:float-16>>)
+        }),
+         "<<63,128,0,0>> == <<1.0:float-32>>"
+        |> example(fn() {
+          assert_equal(True, <<63,128,0,0>> == <<1.0:float-32>>)
+        })
+    ]
+  }
+}
+if javascript {
+  fn bit_string_float_erlang() -> List(Test) {
+    [
+     ]
+  }
+}
+
 
 fn sized_bit_string_tests() -> List(Test) {
   [

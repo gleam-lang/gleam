@@ -250,19 +250,14 @@ where
         ..
     } = categories
     {
-        match size.value() {
-            Some(abox) => {
-                //if let BitStringSegmentOption::Int{} = abox.fmt
-                match abox.as_int_literal() {
-                    None => (),
-                    Some(16) => (),
-                    Some(32) => (),
-                    Some(64) => (),
-                    _ => return err(ErrorType::FloatWithSize, size.location()),
-                }
+        if let Some(abox) = size.value() {
+            match abox.as_int_literal() {
+                None => (),
+                Some(16) => (),
+                Some(32) => (),
+                Some(64) => (),
+                _ => return err(ErrorType::FloatWithSize, size.location()),
             }
-
-            _ => (),
         }
     }
 
