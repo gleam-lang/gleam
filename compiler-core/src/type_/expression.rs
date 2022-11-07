@@ -621,7 +621,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<BitStringSegment<TypedValue, Arc<Type>>, Error>
     where
         InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
-        TypedValue: HasType + HasLocation + Clone,
+        TypedValue: HasType + HasLocation + Clone + bit_string::GetLitValue,
     {
         let value = infer(self, value)?;
 
