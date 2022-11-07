@@ -1823,8 +1823,8 @@ function and try again."
                         ),
 
                         bit_string::ErrorType::FloatWithSize => (
-                            "Size cannot be used with float.",
-                            vec!["Hint: floats have an exact size of 64 bits.".into()],
+                            "Invalid float size.",
+                            vec!["Hint: floats have an exact size of 16/32/64 bits.".into()],
                         ),
 
                         bit_string::ErrorType::InvalidEndianness => (

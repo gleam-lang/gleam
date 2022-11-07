@@ -184,6 +184,12 @@ fn bit_string_size_not_int_variable() {
 }
 
 #[test]
+fn bit_string_float_size() {
+    // float given invalid size
+    assert_error!("let x = <<1:8-float>> x");
+}
+
+#[test]
 fn bit_string_binary_option_in_value() {
     // using binary in value
     assert_error!("let x = <<<<1:1>>:binary>> x");
