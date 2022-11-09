@@ -398,7 +398,7 @@ must start with a lowercase letter and may only contain lowercase letters, \
 numbers and underscores.",
                         InvalidProjectNameReason::GleamPrefix =>
                             "has the reserved prefix `gleam_`. \
-This prefix is indended for official Gleam packages only.",
+This prefix is intended for official Gleam packages only.",
                     }
                 );
 
