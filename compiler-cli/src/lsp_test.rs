@@ -1,5 +1,25 @@
+#[cfg(test)]
 use crate::lsp::*;
+#[cfg(test)]
 use gleam_core::partial_infer::*;
+
+#[cfg(test)]
+use gleam_core::type_::environment::*;
+#[cfg(test)]
+use gleam_core::type_::Warning;
+
+#[cfg(test)]
+fn default_modules() -> im::HashMap<String, gleam_core::type_::Module> {
+    let mut modules: im::HashMap<String, gleam_core::type_::Module> = im::HashMap::new();
+
+    let mut ids = gleam_core::uid::UniqueIdGenerator::new();
+    let _ = modules.insert(
+        "gleam".to_string(),
+        gleam_core::type_::build_prelude(&mut ids),
+    );
+
+    modules
+}
 
 #[test]
 fn lsp_complete_fun_ret1() {
@@ -13,7 +33,7 @@ fn random_cat() {
 }
 "#;
     //line 6, char 7
-    let ret = dot_for_node2(data, 6, 7, im::HashMap::new(),true);
+    let ret = dot_for_node2(data, 6, 7, default_modules(), true);
 
     assert_eq!(
         ret,
@@ -24,16 +44,16 @@ fn random_cat() {
 #[test]
 fn lsp_complete_fun_ret3() {
     let data: &str = r#"pub type Cat {
-   Cat(name: String, cuteness: Int)
+   Cat(cuteness: Int)
 }
 
 fn random_cat() { 
-  let x = fn(a : Int) { Cat(name: "", cuteness: a) }
+  let x = fn(a : Int) { Cat(cuteness: a) }
   x(1).
 }
 "#;
     //line 6, char 7
-    let ret = dot_for_node2(data, 6, 7, im::HashMap::new(),true);
+    let ret = dot_for_node2(data, 6, 7, default_modules(), true);
 
     assert_eq!(
         ret,
@@ -60,7 +80,7 @@ fn main() {
 }
 ";
 
-    let res = dot_for_node2(contents, 13, 8, im::HashMap::new(),true);
+    let res = dot_for_node2(contents, 13, 8, default_modules(), true);
     assert!(res.is_some());
     //todo should be ["in_struct"]
 }
@@ -74,7 +94,7 @@ pub fn main() {
 }
 ";
 
-    let res = dot_for_node2(contents, 3, 8, im::HashMap::new(),true);
+    let res = dot_for_node2(contents, 3, 8, default_modules(), true);
 
     assert!(res.is_some());
 }
@@ -88,13 +108,13 @@ pub fn main() {
 }
 ";
 
-    let res = dot_for_node2(contents, 3, 7, im::HashMap::new(),true);
+    let res = dot_for_node2(contents, 3, 7, default_modules(), true);
     assert!(res.is_some());
 }
 
 #[test]
 fn lsp_complete_bind() {
-    let contents: &str = "import gleam/io.{println}
+    let contents: &str = "
 
 type Pub {
   Pub(something: Int)
@@ -106,7 +126,7 @@ pub fn main() {
 }
 ";
 
-    let res = dot_for_node2(contents, 8, 5, im::HashMap::new(),true);
+    let res = dot_for_node2(contents, 8, 5, default_modules(), true);
     assert_eq!(
         res,
         Some(WhatToDisplay::Names(["something".to_string()].to_vec()))
@@ -123,17 +143,17 @@ pub type Headers =
 pub type Cat {
    Cat(name: String, cuteness: Int)
 }
- 
+
 pub external fn random_float() -> Float = "rand" "uniform"
- 
+
 pub fn random_cat() -> Int { 0 }
- 
+
 pub external type Queue(a)
- 
+
 import unix/cat
 // Import with alias
 import animal/cat as kitty
- 
+
 pub const start_year = 2101
 const end_year = 2111
 "#;
@@ -170,17 +190,17 @@ pub type Headers =
 pub type Cat {
    Cat(name: String, cuteness: Int)
 }
- 
+
 pub external fn random_float() -> Float = "rand" "uniform"
- 
+
 pub fn random_cat() -> Int { 0 }
- 
+
 pub external type Queue(a)
- 
+
 import unix/cat
 // Import with alias
 import animal/cat as kitty
- 
+
 pub const start_year = 2101
 const end_year = 2111
 "#;
@@ -237,9 +257,6 @@ const co = "lol";
 }
 */
 
-use gleam_core::type_::environment::*;
-use gleam_core::type_::Warning;
-
 #[test]
 fn lsp_something() {
     let contents: &str = "import gleam/io.{println}
@@ -263,31 +280,29 @@ pub fn main() {
         "gleam".to_string(),
         gleam_core::type_::build_prelude(&mut ids),
     );
- 
+
     let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
 
-//    let line_numbers = LineNumbers::new(data);
-//    let byte_index = line_numbers.byte_index(line, character) as usize;
-//    if debug {
-//        println!("byte_index: {}", byte_index);
-//    }
-//    let mut nd = data.to_string();
-//    nd.replace_range(byte_index - 1..byte_index, ".lsp_access_test_probe");
-//    if debug {
-//        println!("newdata {}", nd);
-//    }
-//
-//    let _ = writeln!(LogFile.lock().unwrap(), "newdata {}", nd);
-//    let _ = LogFile.lock().unwrap().flush();
+    //    let line_numbers = LineNumbers::new(data);
+    //    let byte_index = line_numbers.byte_index(line, character) as usize;
+    //    if debug {
+    //        println!("byte_index: {}", byte_index);
+    //    }
+    //    let mut nd = data.to_string();
+    //    nd.replace_range(byte_index - 1..byte_index, ".lsp_access_test_probe");
+    //    if debug {
+    //        println!("newdata {}", nd);
+    //    }
+    //
+    //    let _ = writeln!(LogFile.lock().unwrap(), "newdata {}", nd);
+    //    let _ = LogFile.lock().unwrap().flush();
 
     let mut p = gleam_core::partial_infer::Package::new();
 
     let mut io = crate::fs::ProjectIO::new();
-    p.read_package(&mut io, &mut environment);
+    let _ = p.read_source_files(&mut io);
+    let _ = p.read_package(&mut environment);
 
     println!("{:#?}", p);
     assert!(false);
 }
-
-
-

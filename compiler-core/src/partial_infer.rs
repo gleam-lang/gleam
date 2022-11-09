@@ -12,7 +12,7 @@ use tree_sitter::TreeCursor;
 type UntypedStatement = Option<TargetGroup>;
 type UntypedStatements = Vec<UntypedStatement>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PartiallyParsedModule {
     pub name: String,
     pub tree: Tree,
@@ -28,7 +28,7 @@ pub struct PartiallyParsedModule {
     pub name_to_statement: HashMap<String, usize>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PartiallyInferedModule {
     pub name: String,
     pub tree: Tree,
@@ -237,7 +237,6 @@ impl PartiallyInferedModule {
             }
         }
 
-        println!("environment values: {:#?}", environment.module_values);
         // Infer the types of each statement in the module
         // We first infer all the constants so they can be used in functions defined
         // anywhere in the module.
@@ -272,24 +271,36 @@ impl PartiallyInferedModule {
         }
 
         // Generalise functions now that the entire module has been inferred
-        //let statements = statements
-        //    .into_iter()
-        //    .map(|s| generalise_statement(s, &name, &mut environment))
-        //    .collect();
+        let new_statements = new_statements
+            .into_iter()
+            .map(|s| match s {
+                Ok(s) => Ok(generalise_statement(s, &name, environment)),
+                x => x,
+            })
+            .collect();
 
         // Remove private and imported types and values to create the public interface
-        environment
+        let types = environment
             .module_types
-            .retain(|_, info| info.public && info.module == name);
-        environment.module_values.retain(|_, info| info.public);
-        environment
-            .accessors
-            .retain(|_, accessors| accessors.public);
+            .iter()
+            .filter(|(_, info)| info.public && info.module == name)
+            .map(|(n, t)| (n.clone(), t.clone()))
+            .collect();
 
-        let types = environment.module_types.clone();
         let types_constructors = environment.module_types_constructors.clone();
-        let values = environment.module_values.clone();
-        let accessors = environment.accessors.clone();
+        let accessors = environment
+            .accessors
+            .iter()
+            .filter(|(_, info)| info.public)
+            .map(|(n, t)| (n.clone(), t.clone()))
+            .collect();
+
+        let values = environment
+            .module_values
+            .iter()
+            .filter(|(_, info)| info.public)
+            .map(|(n, t)| (n.clone(), t.clone()))
+            .collect();
 
         let fs: Vec<String> = Vec::new();
         let partial_module = crate::ast::TypedModule {
@@ -865,4 +876,73 @@ fn find_cycle(
         }
     }
     false
+}
+
+fn generalise_statement(
+    s: crate::ast::TypedStatement,
+    module_name: &[String],
+    environment: &mut Environment<'_>,
+) -> crate::ast::TypedStatement {
+    match s {
+        Statement::Fn {
+            doc,
+            location,
+            name,
+            public,
+            arguments: args,
+            body,
+            return_annotation,
+            end_position: end_location,
+            return_type,
+        } => {
+            // Lookup the inferred function information
+            let function = environment
+                .get_variable(&name)
+                .expect("Could not find preregistered type for function");
+            let field_map = function.field_map().cloned();
+            let typ = function.type_.clone();
+
+            // Generalise the function if not already done so
+            let typ = if environment.ungeneralised_functions.remove(&name) {
+                crate::type_::generalise(typ, 0)
+            } else {
+                typ
+            };
+
+            // Insert the function into the module's interface
+            environment.insert_module_value(
+                &name,
+                crate::type_::ValueConstructor {
+                    public,
+                    type_: typ,
+                    variant: crate::type_::ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
+                        field_map,
+                        module: module_name.to_vec(),
+                        arity: args.len(),
+                        location,
+                    },
+                },
+            );
+
+            Statement::Fn {
+                doc,
+                location,
+                name,
+                public,
+                arguments: args,
+                end_position: end_location,
+                return_annotation,
+                return_type,
+                body,
+            }
+        }
+
+        statement @ (Statement::TypeAlias { .. }
+        | Statement::CustomType { .. }
+        | Statement::ExternalFn { .. }
+        | Statement::ExternalType { .. }
+        | Statement::Import { .. }
+        | Statement::ModuleConstant { .. }) => statement,
+    }
 }

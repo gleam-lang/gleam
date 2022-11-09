@@ -11,7 +11,7 @@ pub mod pretty;
 mod tests;
 
 pub use environment::*;
-pub use error::{Error, UnifyErrorSituation, Warning};
+pub use error::{Error, InvalidUseExpressionCallKind, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
@@ -555,7 +555,7 @@ pub struct TypeAliasConstructor {
 }
 
 impl ValueConstructor {
-    fn field_map(&self) -> Option<&FieldMap> {
+    pub fn field_map(&self) -> Option<&FieldMap> {
         match &self.variant {
             ValueConstructorVariant::ModuleFn { field_map, .. }
             | ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
@@ -1567,11 +1567,14 @@ fn match_fun_type(
     Err(MatchFunTypeError::NotFn { typ })
 }
 
-fn generalise(t: Arc<Type>) -> Arc<Type> {
+/// Takes a level and a type and turns all type variables within the type that have
+/// level higher than the input level into generalized (polymorphic) type variables.
+///
+pub fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
     match t.deref() {
         Type::Var { type_: typ } => match typ.borrow().deref() {
             TypeVar::Unbound { id } => generic_var(*id),
-            TypeVar::Link { type_: typ } => generalise(typ.clone()),
+            TypeVar::Link { type_: typ } => generalise(typ.clone(), ctx_level),
             TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
         },
 
@@ -1581,7 +1584,10 @@ fn generalise(t: Arc<Type>) -> Arc<Type> {
             name,
             args,
         } => {
-            let args = args.iter().map(|t| generalise(t.clone())).collect();
+            let args = args
+                .iter()
+                .map(|t| generalise(t.clone(), ctx_level))
+                .collect();
             Arc::new(Type::App {
                 public: *public,
                 module: module.clone(),
@@ -1591,11 +1597,18 @@ fn generalise(t: Arc<Type>) -> Arc<Type> {
         }
 
         Type::Fn { args, retrn } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
-            generalise(retrn.clone()),
+            args.iter()
+                .map(|t| generalise(t.clone(), ctx_level))
+                .collect(),
+            generalise(retrn.clone(), ctx_level),
         ),
 
-        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Tuple { elems } => tuple(
+            elems
+                .iter()
+                .map(|t| generalise(t.clone(), ctx_level))
+                .collect(),
+        ),
     }
 }
 

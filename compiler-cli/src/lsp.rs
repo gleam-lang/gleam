@@ -321,19 +321,9 @@ impl LanguageServer {
         self.compile(&connection)?;
         self.publish_stored_diagnostics(&connection)?;
 
-        use std::fs::OpenOptions;
-        use std::io::prelude::*;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(true)
-            .open("/tmp/lsp.log")
-            .unwrap();
-
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
-            writeln!(file, "got msg {:?}", message);
-            file.flush();
+            log(format!("[lsp] got msg {:?}", message));
 
             match message {
                 lsp_server::Message::Request(request) => {
@@ -455,6 +445,7 @@ impl LanguageServer {
             })
             .expect("client/registerCapability to json"),
         };
+
         connection
             .sender
             .send(lsp_server::Message::Request(request))
@@ -667,43 +658,26 @@ impl LanguageServer {
     // TODO: imported module types
     // TODO: record accessors
     fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
-        use std::io::prelude::*;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .append(true)
-            .open("/tmp/lsp.log")
-            .unwrap();
-
-        let _ = writeln!(file, "{:?}", self.edited);
-
-        let _ = writeln!(file, "completiong called (*)");
-        let _ = file.flush();
+        log(format!("[completion] edited: {:?}", self.edited));
 
         let position = &params.text_document_position;
         let nm = position.text_document.uri.to_string();
         let nm1 = nm.strip_prefix("file://");
 
-        let _ = writeln!(file, "nm {:?}", nm1);
-        let _ = file.flush();
+        log(format!("[completion] file contents: {:?}", nm1));
 
         if let Some(name) = nm1 {
             let module = self.edited.get(name);
             if let Some(module) = module {
-                let _ = writeln!(file, "{:?}", "before line numbers");
-                let _ = file.flush();
-
                 //let line_numbers = LineNumbers::new(&module);
                 //let byte_index =
                 //    line_numbers.byte_index(position.position.line, position.position.character);
                 //let node = module.find_node(byte_index);
 
-                let _ = writeln!(
-                    file,
+                log(format!(
                     "({}, {}) module {:?}",
                     position.position.line, position.position.character, module
-                );
-                let _ = file.flush();
+                ));
 
                 let mut modules: im::HashMap<String, gleam_core::type_::Module> =
                     im::HashMap::new();
@@ -715,18 +689,16 @@ impl LanguageServer {
                         gleam_core::type_::build_prelude(&compiler.project_compiler.ids),
                     );
 
+                    //add all modules from other packages
                     compiler
                         .project_compiler
                         .importable_modules
                         .as_ref()
                         .iter()
                         .for_each(|(k, v)| {
-                            let _ = writeln!(file, "importable module {:?}", k);
-                            let _ = file.flush();
+                            log(format!("importable module {:?}", k));
                             let _ = modules.insert(k.to_string(), v.clone());
                         });
-
-                    //add other modules in this package
                 } else {
                     let mut ids = UniqueIdGenerator::new();
                     let _ = modules.insert(
@@ -743,25 +715,29 @@ impl LanguageServer {
                     false,
                 );
 
-                let _ = writeln!(file, "should be {:?}", res);
-                let _ = file.flush();
+                log(format!(
+                    "[completion] response {:?}",
+                   res 
+                ));
 
                 //  Option<Vec<lsp::CompletionItem>>
-                if let Some(WhatToDisplay::Names(x)) = res {
+                if let Some(WhatToDisplay::Lines(x)) = res {
                     return Some(
                         x.into_iter()
-                            .map(|label| lsp::CompletionItem {
-                                label,
-                                kind: Some(lsp::CompletionItemKind::FIELD),
-                                documentation: None,
+                            .map(|line| lsp::CompletionItem {
+                                label: line.text,
+                                kind: line.kind,
+                                detail: line.details,
+                                documentation: line.documentation,
                                 ..Default::default()
                             })
                             .collect(),
                     );
                 }
             } else {
-                let _ = writeln!(file, "module not found");
-                let _ = file.flush();
+                log(format!(
+                    "[completion] module not found in memory",
+                ));
             }
         }
 
@@ -1195,7 +1171,15 @@ struct Bindings {
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum WhatToDisplay {
-    Names(Vec<String>),
+    Lines(Vec<Line>),
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct Line {
+    text: String,
+    details: Option<String>,
+    kind: Option<lsp_types::CompletionItemKind>,
+    documentation: Option<lsp_types::Documentation> 
 }
 
 use std::sync::Mutex;
@@ -1254,25 +1238,56 @@ pub fn dot_ask_compiler(
     p.read_source_files(&mut io);
     p.read_package(&mut environment);
 
-   
-    let pp = PartiallyParsedModule::new("_", &nd.to_string());
-    let pi = PartiallyInferedModule::new(pp, &mut environment);
+    let mut module_types = modules.clone();
+    //        let mut ids: crate::uid::UniqueIdGenerator = crate::uid::UniqueIdGenerator::new();
+    //        let _ = module_types.insert("gleam".to_string(), crate::type_::build_prelude(&mut ids));
+
+    p.modules.iter().for_each(|m| {
+        // let split_name: Vec<String> = m.name.split("/").map(|x| x.to_string()).collect();
+
+        let _ = module_types.insert(m.name.clone(), m.partial_module.type_info.clone());
+    });
+
+    let mut environment = Environment::new(ids.clone(), &name, &module_types, &mut warnings);
+
+    let pp = PartiallyParsedModule::new(&nd.to_string(), "_");
+    let pi: PartiallyInferedModule = PartiallyInferedModule::new(pp, &mut environment);
     if debug {
         println!("{:#?}", pi.statements_typed);
     }
-    let _ = writeln!(LogFile.lock().unwrap(), "{:?}", &pi.statements_typed);
+    let _ = writeln!(LogFile.lock().unwrap(), "statements {:?}", &pi.tree);
     let _ = LogFile.lock().unwrap().flush();
 
-    for r in 0..pi.statements_typed.len() {
-        let _ = writeln!(LogFile.lock().unwrap(), "{:?}", &pi.statements_typed[r]);
-        let _ = LogFile.lock().unwrap().flush();
+    let _ = writeln!(
+        LogFile.lock().unwrap(),
+        "statements_typed {:?}",
+        &pi.statements_typed
+    );
+    let _ = LogFile.lock().unwrap().flush();
 
+    //first scan for UnknownRecordField .lsp_access_test_probe
+    //then scan for UnknownModuleValue
+    for r in 0..pi.statements_typed.len() {
         match &pi.statements_typed[r] {
             Err(gleam_core::type_::Error::UnknownRecordField { typ, label, .. }) => {
+                let _ = writeln!(LogFile.lock().unwrap(), "has unknown! {:?}", label);
+                let _ = LogFile.lock().unwrap().flush();
+
                 if label == "lsp_access_test_probe" {
-                    return nodes_from_unknownfield(typ, &environment);
+                    let ret = nodes_from_unknownfield(typ, &environment);
+
+                    let _ = writeln!(LogFile.lock().unwrap(), "result {:?}", ret);
+                    let _ = LogFile.lock().unwrap().flush();
+
+                    return ret;
                 }
             }
+            _ => (),
+        }
+    }
+
+    for r in 0..pi.statements_typed.len() {
+        match &pi.statements_typed[r] {
             Err(gleam_core::type_::Error::UnknownModuleValue {
                 name,
                 module_name: module,
@@ -1300,63 +1315,61 @@ pub fn dot_from_typed(data: &str, line: u32, character: u32, debug: bool) -> Opt
         "gleam".to_string(),
         gleam_core::type_::build_prelude(&mut ids),
     );
-    let mut environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
+    let environment = Environment::new(ids.clone(), &name, &modules, &mut warnings);
 
     let line_numbers = LineNumbers::new(data);
     let byte_index = line_numbers.byte_index(line, character) as usize;
-    if debug {
-        println!("byte_index: {}", byte_index);
-    }
+    log(format!("byte_index: {}", byte_index));
+
     let mut nd = data.to_string();
     nd.replace_range(byte_index - 1..byte_index, ".access ");
-    if debug {
-        println!("newdata {}", nd);
-    }
+    log(format!("newdata {}", nd));
 
     /*
-    let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
-    if debug {
-        // println!("{:#?}", pi.statements_typed);
-    }
-    for r in 0..pi.node_byte_range.len() - 1 {
-        if byte_index >= pi.node_byte_range[r].start && byte_index <= pi.node_byte_range[r].end {
-            if debug {
-                println!("typed node found {}", r);
-            }
-            let rel = byte_index - pi.node_byte_range[r].start - 2;
-            if let Ok(ts) = &pi.statements_typed[r] {
-                let res = ts.find_node(rel as u32);
-                if let Some(Located::Expression(res)) = res {
-                    match res {
-                        gleam_core::ast::TypedExpr::Call { typ, .. } => {
-                            return nodes_for_call(typ, &environment);
-                        }
-                        gleam_core::ast::TypedExpr::Var {
-                            constructor: gleam_core::type_::ValueConstructor { type_, .. },
-                            ..
-                        } => {
-                            return nodes_for_value_constructor(type_, &environment);
-                        }
-                        _ => {
-                            if debug {
-                                println!("ignored case: {} {:#?}", rel, res)
+        let pi = PartiallyInferedModule::new(nd.to_string(), &mut environment);
+        if debug {
+            // println!("{:#?}", pi.statements_typed);
+        }
+        for r in 0..pi.node_byte_range.len() - 1 {
+            if byte_index >= pi.node_byte_range[r].start && byte_index <= pi.node_byte_range[r].end {
+                if debug {
+                    println!("typed node found {}", r);
+                }
+                let rel = byte_index - pi.node_byte_range[r].start - 2;
+                if let Ok(ts) = &pi.statements_typed[r] {
+                    let res = ts.find_node(rel as u32);
+                    if let Some(Located::Expression(res)) = res {
+                        match res {
+                            gleam_core::ast::TypedExpr::Call { typ, .. } => {
+                                return nodes_for_call(typ, &environment);
                             }
-                            ()
+                            gleam_core::ast::TypedExpr::Var {
+                                constructor: gleam_core::type_::ValueConstructor { type_, .. },
+                                ..
+                            } => {
+                                return nodes_for_value_constructor(type_, &environment);
+                            }
+                            _ => {
+                                if debug {
+                                    println!("ignored case: {} {:#?}", rel, res)
+                                }
+                                ()
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
-    if debug {
-        println!("typed node not found");
-        println!("statements {:#?}", pi.statements_typed);
-    }
-*/
+        if debug {
+            println!("typed node not found");
+            println!("statements {:#?}", pi.statements_typed);
+        }
+    */
     return None;
 }
 
+/*
 fn nodes_for_call<'a>(
     p: &std::sync::Arc<gleam_core::type_::Type>,
     environment: &Environment<'a>,
@@ -1370,7 +1383,7 @@ fn nodes_for_call<'a>(
             {
                 let ret = accessors.keys().map(|x| x.clone()).collect();
                 //println!("{:#?}", &ret);
-                return Some(WhatToDisplay::Names(ret));
+                return Some(WhatToDisplay::Lines(ret));
             }
         }
         _ => (),
@@ -1382,8 +1395,6 @@ fn nodes_for_value_constructor<'a>(
     p: &std::sync::Arc<gleam_core::type_::Type>,
     environment: &Environment<'a>,
 ) -> Option<WhatToDisplay> {
-    //println!("value {:#?}", p);
-
     match std::sync::Arc::as_ref(p) {
         gleam_core::type_::Type::App {
             module: m, name: n, ..
@@ -1393,12 +1404,39 @@ fn nodes_for_value_constructor<'a>(
             {
                 let ret = accessors.keys().map(|x| x.clone()).collect();
                 //println!("{:#?}", &ret);
-                return Some(WhatToDisplay::Names(ret));
+                return Some(WhatToDisplay::Lines(ret));
             }
         }
         _ => (),
     }
     return None;
+}
+*/
+
+trait ToCompletion {
+    fn to_completion_line(&self) -> Line;
+}
+
+impl ToCompletion for gleam_core::type_::RecordAccessor {
+    fn to_completion_line(&self) -> Line {
+        let (details, kind) = match self.type_.as_ref() {
+            gleam_core::type_::Type::App {
+                module: module,
+                name: name,
+                ..
+            } if module.len() == 0 => (Some(name.to_string()), Some(CompletionItemKind::FIELD)),
+            _ => (None, None),
+        };
+
+        let documentation = None;
+
+        Line {
+            text: self.label.to_string(),
+            details,
+            kind,
+            documentation,
+        }
+    }
 }
 
 fn nodes_from_unknownfield<'a>(
@@ -1409,26 +1447,64 @@ fn nodes_from_unknownfield<'a>(
         gleam_core::type_::Type::App {
             module: m, name: n, ..
         } => {
-            if let Some(gleam_core::type_::AccessorsMap { accessors, .. }) =
+            let accessors = if m.len() == 1 && m[0] == "_" {
                 environment.accessors.get(n)
-            {
-                let ret = accessors.keys().map(|x| x.clone()).collect();
-                //println!("{:#?}", &ret);
-                return Some(WhatToDisplay::Names(ret));
             } else {
-                //println!("not in accessors!");
+                let module = environment.importable_modules.get(&m.join("/"));
+                if let Some(module) = module {
+                    module.accessors.get(n)
+                } else {
+                    None
+                }
+            };
+
+            log(format!("accessors: {:#?}", accessors));
+
+            if let Some(gleam_core::type_::AccessorsMap { accessors, .. }) = accessors {
+                let ret = accessors
+                    .iter()
+                    .map(|(_n, x)| x.to_completion_line())
+                    .collect();
+
+                return Some(WhatToDisplay::Lines(ret));
+            } else {
+                log(format!("not in accessors! {:#?}", environment));
             }
         }
         _ => (),
     }
+    //log(format!("{:#?}", p));
+
     return None;
 }
+
+#[cfg(test)]
+fn log(s: String) {
+    println!("{}", s);
+}
+
+#[cfg(not(test))]
+fn log(s: String) {
+    let _ = writeln!(LogFile.lock().unwrap(), "{s}");
+    let _ = LogFile.lock().unwrap().flush();
+}
+
+use lsp_types::CompletionItemKind;
 
 fn nodes_from_module<'a>(
     modulename: &Vec<String>,
     value_constructors: &Vec<String>,
     environment: &Environment<'a>,
 ) -> Option<WhatToDisplay> {
-    let ret = value_constructors.iter().map(|x| x.to_string()).collect();
-    return Some(WhatToDisplay::Names(ret));
+    log(format!("nodes from module {:#?}", modulename));
+    let ret = value_constructors
+        .iter()
+        .map(|x| Line {
+            text: x.to_string(),
+            details: Some("".to_string()),
+            kind: Some(CompletionItemKind::METHOD),
+            documentation: None, 
+        })
+        .collect();
+    return Some(WhatToDisplay::Lines(ret));
 }

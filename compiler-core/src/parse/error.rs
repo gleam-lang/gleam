@@ -21,7 +21,7 @@ pub enum LexicalErrorType {
     BadUpname { name: String },
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ParseError {
     pub error: ParseErrorType,
     pub location: SrcSpan,
@@ -205,7 +205,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ParseErrorType {
     ExpectedEqual,           // expect "="
     ExpectedExpr,            // after "->" in a case clause
