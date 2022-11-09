@@ -52,6 +52,8 @@ use gleam_core::ast::UntypedExpr;
 use gleam_core::parse::error::ParseError;
 use gleam_core::partial_infer::*;
 
+use lsp_types::CompletionItemKind;
+
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 
@@ -715,10 +717,7 @@ impl LanguageServer {
                     false,
                 );
 
-                log(format!(
-                    "[completion] response {:?}",
-                   res 
-                ));
+                log(format!("[completion] response {:?}", res));
 
                 //  Option<Vec<lsp::CompletionItem>>
                 if let Some(WhatToDisplay::Lines(x)) = res {
@@ -735,9 +734,7 @@ impl LanguageServer {
                     );
                 }
             } else {
-                log(format!(
-                    "[completion] module not found in memory",
-                ));
+                log(format!("[completion] module not found in memory",));
             }
         }
 
@@ -1178,8 +1175,8 @@ pub enum WhatToDisplay {
 pub struct Line {
     text: String,
     details: Option<String>,
-    kind: Option<lsp_types::CompletionItemKind>,
-    documentation: Option<lsp_types::Documentation> 
+    kind: Option<CompletionItemKind>,
+    documentation: Option<lsp_types::Documentation>,
 }
 
 use std::sync::Mutex;
@@ -1235,8 +1232,9 @@ pub fn dot_ask_compiler(
     let mut p = gleam_core::partial_infer::Package::new();
 
     let mut io = ProjectIO::new();
-    p.read_source_files(&mut io);
-    p.read_package(&mut environment);
+    //best effort, if fail to read a project ignore and proceed with the data in the buffer
+    let _ = p.read_source_files(&mut io);
+    let _ = p.read_package(&mut environment);
 
     let mut module_types = modules.clone();
     //        let mut ids: crate::uid::UniqueIdGenerator = crate::uid::UniqueIdGenerator::new();
@@ -1489,13 +1487,13 @@ fn log(s: String) {
     let _ = LogFile.lock().unwrap().flush();
 }
 
-use lsp_types::CompletionItemKind;
-
 fn nodes_from_module<'a>(
     modulename: &Vec<String>,
     value_constructors: &Vec<String>,
     environment: &Environment<'a>,
 ) -> Option<WhatToDisplay> {
+    log(format!("environment {:#?}", environment.importable_modules));
+ 
     log(format!("nodes from module {:#?}", modulename));
     let ret = value_constructors
         .iter()
@@ -1503,7 +1501,7 @@ fn nodes_from_module<'a>(
             text: x.to_string(),
             details: Some("".to_string()),
             kind: Some(CompletionItemKind::METHOD),
-            documentation: None, 
+            documentation: None,
         })
         .collect();
     return Some(WhatToDisplay::Lines(ret));
