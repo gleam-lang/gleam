@@ -2167,14 +2167,28 @@ where
                         self.parse_const_record_finish(start, Some(name), upname, end)
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
-                        let _ = self.next_tok(); // upname
-                        Ok(Some(Constant::Var {
-                            location: SrcSpan { start, end },
-                            module: Some(name),
-                            name: end_name,
-                            constructor: None,
-                            typ: (),
-                        }))
+                        
+                        if self.peek_tok1() == Some(&Token::LeftParen) {
+                            let _ = self.next_tok(); // name
+
+                            parse_error(
+                                ParseErrorType::UnexpectedToken {
+                                    expected: vec!["A constant definition".to_string()],
+                                    hint: Some("Functions cannot be called in constant declarations. You can use let instead (and make sure it is inside a scope)".to_string())
+                                },
+                                SrcSpan { start, end: end + 1},
+                            )
+                        } else {
+                            let _ = self.next_tok(); // name
+
+                            Ok(Some(Constant::Var {
+                                location: SrcSpan { start, end },
+                                module: Some(name),
+                                name: end_name,
+                                constructor: None,
+                                typ: (),
+                            }))
+                        }
                     }
                     Some((start, _, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
