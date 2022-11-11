@@ -2167,7 +2167,6 @@ where
                         self.parse_const_record_finish(start, Some(name), upname, end)
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
-                        
                         if self.peek_tok1() == Some(&Token::LeftParen) {
                             let _ = self.next_tok(); // name
 
