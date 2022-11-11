@@ -2171,10 +2171,7 @@ where
                             let _ = self.next_tok(); // name
 
                             parse_error(
-                                ParseErrorType::UnexpectedToken {
-                                    expected: vec!["A constant definition".to_string()],
-                                    hint: Some("Functions cannot be called in constant declarations. You can use let instead (and make sure it is inside a scope)".to_string())
-                                },
+                                ParseErrorType::UnexpectedFunction,
                                 SrcSpan { start, end: end + 1},
                             )
                         } else {
