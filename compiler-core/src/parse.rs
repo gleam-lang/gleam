@@ -2172,7 +2172,10 @@ where
 
                             parse_error(
                                 ParseErrorType::UnexpectedFunction,
-                                SrcSpan { start, end: end + 1},
+                                SrcSpan {
+                                    start,
+                                    end: end + 1,
+                                },
                             )
                         } else {
                             let _ = self.next_tok(); // name
