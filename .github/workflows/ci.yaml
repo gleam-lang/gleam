@@ -60,7 +60,8 @@ jobs:
       - name: Install musl-tools incl. musl-gcc
         uses: awalsh128/cache-apt-pkgs-action@v1
         with:
-          packages: musl-tools # Provides musl-gcc
+          # musl-tools provide `musl-gcc` which is required for `ring` which is required for `rustls` et al.
+          packages: musl-tools
           version: 1.0
         if: ${{ matrix.target == 'x86_64-unknown-linux-musl'}}
 
