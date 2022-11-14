@@ -11,6 +11,9 @@
   starts.
 - Fixed a bug where using a record constructor as a value could generate a
   warning in Erlang.
+- Fixed a bug where the build tool would use precompiled code from Hex packages
+  rather than the latest version, which could result in incorrect external
+  function usage in some cases.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
 - Generated HTML documentation now includes all static assets (but the web
