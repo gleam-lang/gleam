@@ -698,6 +698,12 @@ pub struct CallArg<A> {
     pub label: Option<String>,
     pub location: SrcSpan,
     pub value: A,
+    // This is true if this argument is given as the callback in a `use`
+    // expression. In future it may also be true for pipes too. It is used to
+    // determine if we should error if an argument without a label is given or
+    // not, which is not permitted if the argument is given explicitly by the
+    // programmer rather than implicitly by Gleam's syntactic sugar.
+    pub implicit: bool,
 }
 
 impl CallArg<TypedExpr> {

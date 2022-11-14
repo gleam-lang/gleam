@@ -682,7 +682,7 @@ where
             _ => Token::CommentNormal,
         };
         let start_pos = self.get_pos();
-        while Some('\n') != self.chr0 && None != self.chr0 {
+        while Some('\n') != self.chr0 && self.chr0.is_some() {
             let _ = self.next_char();
         }
         let end_pos = self.get_pos();

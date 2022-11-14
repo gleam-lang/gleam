@@ -698,7 +698,7 @@ where
         };
 
         _ = self.expect_one(&Token::LArrow)?;
-        let call = self.expect_expression_unit()?;
+        let call = self.expect_expression()?;
 
         Ok(UntypedExpr::Use(Use {
             location: SrcSpan::new(start, call.location().end),
@@ -1026,7 +1026,7 @@ where
         if let Some(lead) = &patterns.first() {
             let mut alternative_patterns = vec![];
             loop {
-                if None == self.maybe_one(&Token::Vbar) {
+                if self.maybe_one(&Token::Vbar).is_none() {
                     break;
                 }
                 alternative_patterns.push(self.parse_patterns()?);
@@ -1255,6 +1255,7 @@ where
                 let _ = self.next_tok();
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
+                        implicit: false,
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -1278,6 +1279,7 @@ where
                 self.tok1 = t1;
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
+                        implicit: false,
                         location: value.location(),
                         label: None,
                         value,
@@ -1582,6 +1584,7 @@ where
                 location.start = start
             };
             Ok(Some(ParserArg::Arg(Box::new(CallArg {
+                implicit: false,
                 label,
                 location,
                 value,
@@ -2265,6 +2268,7 @@ where
         if let Some(value) = self.parse_const_value()? {
             if let Some((start, label, _)) = name {
                 Ok(Some(CallArg {
+                    implicit: false,
                     location: SrcSpan {
                         start,
                         end: value.location().end,
@@ -2274,6 +2278,7 @@ where
                 }))
             } else {
                 Ok(Some(CallArg {
+                    implicit: false,
                     location: value.location(),
                     value,
                     label: None,
@@ -2437,14 +2442,6 @@ where
 
     fn expect_expression(&mut self) -> Result<UntypedExpr, ParseError> {
         if let Some(e) = self.parse_expression()? {
-            Ok(e)
-        } else {
-            self.next_tok_unexpected(vec!["An expression".to_string()])
-        }
-    }
-
-    fn expect_expression_unit(&mut self) -> Result<UntypedExpr, ParseError> {
-        if let Some(e) = self.parse_expression_unit()? {
             Ok(e)
         } else {
             self.next_tok_unexpected(vec!["An expression".to_string()])
@@ -3021,6 +3018,7 @@ pub fn make_call(
             ParserArg::Hole { location, label } => {
                 num_holes += 1;
                 CallArg {
+                    implicit: false,
                     label,
                     location,
                     value: UntypedExpr::Var {

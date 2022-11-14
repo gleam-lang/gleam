@@ -137,9 +137,23 @@ pub trait CommandExecutor {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
-        // Whether to silence stdout
-        quiet: bool,
+        stdio: Stdio,
     ) -> Result<i32, Error>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Stdio {
+    Inherit,
+    Null,
+}
+
+impl Stdio {
+    pub fn get_process_stdio(&self) -> std::process::Stdio {
+        match self {
+            Stdio::Inherit => std::process::Stdio::inherit(),
+            Stdio::Null => std::process::Stdio::null(),
+        }
+    }
 }
 
 /// A trait used to write files.
@@ -289,7 +303,7 @@ pub mod test {
             _args: &[String],
             _env: &[(&str, String)],
             _cwd: Option<&Path>,
-            _quiet: bool,
+            _stdio: Stdio,
         ) -> Result<i32, Error> {
             Ok(0)
         }

@@ -64,7 +64,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.to_string());
                         let initial_typ = initial.type_.clone();
-                        self.environment.unify(initial_typ, typ)
+                        unify(initial_typ, typ)
                     }
 
                     // This variable was not defined in the Initial multi-pattern
@@ -230,9 +230,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let typ = self
                     .environment
                     .instantiate(typ, &mut hashmap![], self.hydrator);
-                self.environment
-                    .unify(int(), typ.clone())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::VarUsage {
                     name,
@@ -249,9 +247,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 right_side_assignment,
             } => {
                 // The entire concatenate pattern must be a string
-                self.environment
-                    .unify(type_, string())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
 
                 // The right hand side may assign a variable, which is the suffix of the string
                 if let AssignName::Variable(right) = &right_side_assignment {
@@ -284,23 +280,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             Pattern::Int { location, value } => {
-                self.environment
-                    .unify(type_, int())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Int { location, value })
             }
 
             Pattern::Float { location, value } => {
-                self.environment
-                    .unify(type_, float())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, float()).map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::Float { location, value })
             }
 
             Pattern::String { location, value } => {
-                self.environment
-                    .unify(type_, string())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
                 Ok(Pattern::String { location, value })
             }
 
@@ -363,8 +353,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems_types: Vec<_> = (0..(elems.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
-                    self.environment
-                        .unify(tuple(elems_types.clone()), type_)
+                    unify(tuple(elems_types.clone()), type_)
                         .map_err(|e| convert_unify_error(e, location))?;
                     let elems = elems
                         .into_iter()
@@ -390,9 +379,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             },
 
             Pattern::BitString { location, segments } => {
-                self.environment
-                    .unify(type_, bit_string())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(type_, bit_string()).map_err(|e| convert_unify_error(e, location))?;
                 self.infer_pattern_bit_string(segments, location)
             }
 
@@ -453,6 +440,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     },
                                     location: spread_location,
                                     label: None,
+                                    implicit: false,
                                 };
 
                                 pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
@@ -494,18 +482,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     let CallArg {
                                         value,
                                         location,
+                                        implicit,
                                         label,
                                     } = arg;
                                     let value = self.unify(value, typ.clone())?;
                                     Ok(CallArg {
                                         value,
                                         location,
+                                        implicit,
                                         label,
                                     })
                                 })
                                 .try_collect()?;
-                            self.environment
-                                .unify(type_, retrn.clone())
+                            unify(type_, retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
                             Ok(Pattern::Constructor {
                                 location,
@@ -528,8 +517,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                     Type::App { .. } => {
                         if pattern_args.is_empty() {
-                            self.environment
-                                .unify(type_, instantiated_constructor_type.clone())
+                            unify(type_, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
                             Ok(Pattern::Constructor {
                                 location,

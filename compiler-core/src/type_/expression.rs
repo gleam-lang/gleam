@@ -63,10 +63,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.new_unbound_var()
     }
 
-    fn unify(&mut self, t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
-        self.environment.unify(t1, t2)
-    }
-
     /// Crawl the AST, annotating each node with the inferred type or
     /// returning an error.
     ///
@@ -350,6 +346,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label: None,
             location: callback.location(),
             value: callback,
+            // This argument is implicitly given by Gleam's use syntax so we
+            // mark it as such.
+            implicit: true,
         });
 
         self.infer(UntypedExpr::Call {
@@ -366,8 +365,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let value = self.infer(*value)?;
 
-        self.unify(bool(), value.type_())
-            .map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
         Ok(TypedExpr::Negate {
             location,
@@ -419,8 +417,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // function being type checked, resulting in better type errors and the
         // record field access syntax working.
         if let Some(expected) = expected {
-            self.unify(expected, typ.clone())
-                .map_err(|e| convert_unify_error(e, location))?;
+            unify(expected, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
         }
 
         Ok(Arg {
@@ -459,7 +456,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|element| {
                 let element = self.infer(element)?;
                 // Ensure they all have the same type
-                self.unify(typ.clone(), element.type_())
+                unify(typ.clone(), element.type_())
                     .map_err(|e| convert_unify_error(e, location))?;
                 Ok(element)
             })
@@ -470,8 +467,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Some(tail) => {
                 let tail = self.infer(*tail)?;
                 // Ensure the tail has the same type as the preceeding elements
-                self.unify(typ.clone(), tail.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(typ.clone(), tail.type_()).map_err(|e| convert_unify_error(e, location))?;
                 Some(Box::new(tail))
             }
             None => None,
@@ -628,7 +624,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let infer_option = |segment_option: BitStringSegmentOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
                 let typed_value = infer(self, value)?;
-                self.unify(typ, typed_value.type_())
+                unify(typ, typed_value.type_())
                     .map_err(|e| convert_unify_error(e, typed_value.location()))?;
                 Ok(typed_value)
             })
@@ -643,8 +639,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         })?;
 
-        self.unify(typ.clone(), value.type_())
-            .map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(typ.clone(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
         Ok(BitStringSegment {
             location,
@@ -665,7 +660,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             BinOp::Eq | BinOp::NotEq => {
                 let left = self.infer(left)?;
                 let right = self.infer(right)?;
-                self.unify(left.type_(), right.type_())
+                unify(left.type_(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
 
                 return Ok(TypedExpr::BinOp {
@@ -699,12 +694,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let left = self.infer(left)?;
-        self.unify(input_type.clone(), left.type_()).map_err(|e| {
+        unify(input_type.clone(), left.type_()).map_err(|e| {
             e.operator_situation(name)
                 .into_error(left.type_defining_location())
         })?;
         let right = self.infer(right)?;
-        self.unify(input_type, right.type_()).map_err(|e| {
+        unify(input_type, right.type_()).map_err(|e| {
             e.operator_situation(name)
                 .into_error(right.type_defining_location())
         })?;
@@ -738,7 +733,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let ann_typ = self
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            self.unify(ann_typ, value_typ.clone())
+            unify(ann_typ, value_typ.clone())
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
@@ -783,7 +778,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         {
             let v = value_type.clone();
             let e = try_error_type.clone();
-            self.unify(result(v, e), value.type_())
+            unify(result(v, e), value.type_())
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         };
 
@@ -798,11 +793,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Ensure that a Result with the right error type is returned for `try`
         {
             let t = self.new_unbound_var();
-            self.unify(result(t, try_error_type), typ.clone())
-                .map_err(|e| {
-                    e.inconsistent_try(typ.is_result())
-                        .into_error(then.type_defining_location())
-                })?;
+            unify(result(t, try_error_type), typ.clone()).map_err(|e| {
+                e.inconsistent_try(typ.is_result())
+                    .into_error(then.type_defining_location())
+            })?;
         }
 
         // Check that any type annotation is accurate.
@@ -810,7 +804,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let ann_typ = self
                 .type_from_ast(ann)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            self.unify(ann_typ, value_type)
+            unify(ann_typ, value_type)
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
         }
 
@@ -849,7 +843,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         for clause in clauses {
             let typed_clause = self.infer_clause(clause, &subject_types)?;
-            self.unify(return_type.clone(), typed_clause.then.type_())
+            unify(return_type.clone(), typed_clause.then.type_())
                 .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
             typed_clauses.push(typed_clause);
         }
@@ -941,7 +935,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If there is a guard we assert that it is of type Bool
             Some(guard) => {
                 let guard = self.infer_clause_guard(guard)?;
-                self.unify(bool(), guard.type_())
+                unify(bool(), guard.type_())
                     .map_err(|e| convert_unify_error(e, guard.location()))?;
                 Ok(Some(guard))
             }
@@ -1016,10 +1010,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(bool(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(bool(), right.type_())
+                unify(bool(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::And {
                     location,
@@ -1035,10 +1028,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(bool(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(bool(), right.type_())
+                unify(bool(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::Or {
                     location,
@@ -1055,8 +1047,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 let left = self.infer_clause_guard(*left)?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(left.type_(), right.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
                 Ok(ClauseGuard::Equals {
                     location,
                     left: Box::new(left),
@@ -1072,8 +1063,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 let left = self.infer_clause_guard(*left)?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(left.type_(), right.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
+                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
                 Ok(ClauseGuard::NotEquals {
                     location,
                     left: Box::new(left),
@@ -1088,10 +1078,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(int(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(int(), right.type_())
+                unify(int(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::GtInt {
                     location,
@@ -1107,10 +1096,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(int(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(int(), right.type_())
+                unify(int(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::GtEqInt {
                     location,
@@ -1126,10 +1114,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(int(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(int(), right.type_())
+                unify(int(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::LtInt {
                     location,
@@ -1145,10 +1132,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(int(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(int(), right.type_())
+                unify(int(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::LtEqInt {
                     location,
@@ -1164,10 +1150,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(float(), left.type_())
+                unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(float(), right.type_())
+                unify(float(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::GtFloat {
                     location,
@@ -1183,10 +1169,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(float(), left.type_())
+                unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(float(), right.type_())
+                unify(float(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::GtEqFloat {
                     location,
@@ -1202,10 +1188,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(float(), left.type_())
+                unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(float(), right.type_())
+                unify(float(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::LtFloat {
                     location,
@@ -1221,10 +1207,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 let left = self.infer_clause_guard(*left)?;
-                self.unify(float(), left.type_())
+                unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
-                self.unify(float(), right.type_())
+                unify(float(), right.type_())
                     .map_err(|e| convert_unify_error(e, right.location()))?;
                 Ok(ClauseGuard::LtEqFloat {
                     location,
@@ -1383,7 +1369,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut type_vars = hashmap![];
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let typ = self.instantiate(typ, &mut type_vars);
-        self.unify(accessor_record_type, record.type_())
+        unify(accessor_record_type, record.type_())
             .map_err(|e| convert_unify_error(e, record.location()))?;
 
         Ok(TypedExpr::RecordAccess {
@@ -1461,7 +1447,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
 
         // Check that the spread variable unifies with the return type of the constructor
-        self.unify(return_type, spread.type_())
+        unify(return_type, spread.type_())
             .map_err(|e| convert_unify_error(e, spread.location()))?;
 
         let args: Vec<TypedRecordUpdateArg> = args
@@ -1484,7 +1470,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // field in the record contained within the spread variable. We
                     // need to check the spread, and not the constructor, in order
                     // to handle polymorphic types.
-                    self.unify(spread_field.type_(), value.type_())
+                    unify(spread_field.type_(), value.type_())
                         .map_err(|e| convert_unify_error(e, value.location()))?;
 
                     match field_map.fields.get(label) {
@@ -1776,13 +1762,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             label,
                             value,
                             location,
+                            implicit,
                         } = arg;
                         let value = self.infer_const(&None, value)?;
-                        self.unify(typ.clone(), value.type_())
+                        unify(typ.clone(), value.type_())
                             .map_err(|e| convert_unify_error(e, value.location()))?;
                         Ok(CallArg {
                             label,
                             value,
+                            implicit,
                             location,
                         })
                     })
@@ -1832,7 +1820,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Check type annotation is accurate.
         if let Some(ann) = annotation {
             let const_ann = self.type_from_ast(ann)?;
-            self.unify(const_ann, inferred.type_())
+            unify(const_ann, inferred.type_())
                 .map_err(|e| convert_unify_error(e, inferred.location()))?;
         };
 
@@ -1864,7 +1852,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         for element in untyped_elements {
             let element = self.infer_const(&None, element)?;
-            self.unify(typ.clone(), element.type_())
+            unify(typ.clone(), element.type_())
                 .map_err(|e| convert_unify_error(e, element.location()))?;
             elements.push(element);
         }
@@ -1950,11 +1938,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     label,
                     value,
                     location,
+                    implicit,
                 } = arg;
                 let value = self.infer_call_argument(value, typ.clone())?;
                 Ok(CallArg {
                     label,
                     value,
+                    implicit,
                     location,
                 })
             })
@@ -2003,8 +1993,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, value) => self.infer(value),
         }?;
 
-        self.unify(typ, value.type_())
-            .map_err(|e| convert_unify_error(e, value.location()))?;
+        unify(typ, value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
         Ok(value)
     }
 
@@ -2063,7 +2052,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Check that any return type is accurate.
         if let Some(return_type) = return_type {
-            self.unify(return_type, body.type_()).map_err(|e| {
+            unify(return_type, body.type_()).map_err(|e| {
                 e.return_annotation_mismatch()
                     .into_error(body.type_defining_location())
                     .with_unify_error_rigid_names(&body_rigid_names)
@@ -2135,16 +2124,10 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
             function,
         }),
 
-        UntypedExpr::Var { location, .. } | UntypedExpr::FieldAccess { location, .. } => {
-            Err(Error::InvalidUseExpressionCall {
-                location,
-                kind: InvalidUseExpressionCallKind::MissingParens,
-            })
-        }
-
-        other => Err(Error::InvalidUseExpressionCall {
+        other => Ok(UseCall {
             location: other.location(),
-            kind: InvalidUseExpressionCallKind::Other,
+            function: Box::new(other),
+            arguments: vec![],
         }),
     }
 }

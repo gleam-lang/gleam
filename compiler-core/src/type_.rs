@@ -11,7 +11,7 @@ pub mod pretty;
 mod tests;
 
 pub use environment::*;
-pub use error::{Error, InvalidUseExpressionCallKind, UnifyErrorSituation, Warning};
+pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
@@ -1014,7 +1014,7 @@ fn generalise_statement(
 
             // Generalise the function if not already done so
             let typ = if environment.ungeneralised_functions.remove(&name) {
-                generalise(typ, 0)
+                generalise(typ)
             } else {
                 typ
             };
@@ -1105,14 +1105,12 @@ fn infer_statement(
                 })?;
 
             // Assert that the inferred type matches the type of any recursive call
-            environment
-                .unify(preregistered_type, typ.clone())
-                .map_err(|e| convert_unify_error(e, location))?;
+            unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
                 let _ = environment.ungeneralised_functions.remove(&name);
-                let typ = generalise(typ, 0);
+                let typ = generalise(typ);
                 environment.insert_variable(
                     name.clone(),
                     ValueConstructorVariant::ModuleFn {
@@ -1569,14 +1567,11 @@ fn match_fun_type(
     Err(MatchFunTypeError::NotFn { typ })
 }
 
-/// Takes a level and a type and turns all type variables within the type that have
-/// level higher than the input level into generalized (polymorphic) type variables.
-///
-fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
+fn generalise(t: Arc<Type>) -> Arc<Type> {
     match t.deref() {
         Type::Var { type_: typ } => match typ.borrow().deref() {
             TypeVar::Unbound { id } => generic_var(*id),
-            TypeVar::Link { type_: typ } => generalise(typ.clone(), ctx_level),
+            TypeVar::Link { type_: typ } => generalise(typ.clone()),
             TypeVar::Generic { .. } => Arc::new(Type::Var { type_: typ.clone() }),
         },
 
@@ -1586,10 +1581,7 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
             name,
             args,
         } => {
-            let args = args
-                .iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect();
+            let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::App {
                 public: *public,
                 module: module.clone(),
@@ -1599,18 +1591,11 @@ fn generalise(t: Arc<Type>, ctx_level: usize) -> Arc<Type> {
         }
 
         Type::Fn { args, retrn } => fn_(
-            args.iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect(),
-            generalise(retrn.clone(), ctx_level),
+            args.iter().map(|t| generalise(t.clone())).collect(),
+            generalise(retrn.clone()),
         ),
 
-        Type::Tuple { elems } => tuple(
-            elems
-                .iter()
-                .map(|t| generalise(t.clone(), ctx_level))
-                .collect(),
-        ),
+        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
     }
 }
 

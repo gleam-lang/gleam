@@ -1,7 +1,7 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir,
+        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir, Stdio,
         WrappedReader, WrappedWriter,
     },
     Result,
@@ -13,7 +13,6 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    process::Stdio,
 };
 
 /// A `FileWriter` implementation that writes to the file system.
@@ -132,18 +131,13 @@ impl CommandExecutor for ProjectIO {
         args: &[String],
         env: &[(&str, String)],
         cwd: Option<&Path>,
-        quiet: bool,
+        stdio: Stdio,
     ) -> Result<i32, Error> {
         tracing::debug!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
-        let stdout = if quiet {
-            Stdio::null()
-        } else {
-            Stdio::inherit()
-        };
         let result = std::process::Command::new(program)
             .args(args)
-            .stdin(Stdio::null())
-            .stdout(stdout)
+            .stdin(stdio.get_process_stdio())
+            .stdout(stdio.get_process_stdio())
             .envs(env.iter().map(|(a, b)| (a, b)))
             .current_dir(cwd.unwrap_or_else(|| Path::new("./")))
             .status();
@@ -170,7 +164,7 @@ impl FileSystemIO for ProjectIO {}
 pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::debug!(path=?dir, "deleting_directory");
     if dir.exists() {
-        std::fs::remove_dir_all(&dir).map_err(|e| Error::FileIo {
+        std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
             kind: FileKind::Directory,
             path: dir.to_path_buf(),
@@ -185,7 +179,7 @@ pub fn delete_dir(dir: &Path) -> Result<(), Error> {
 pub fn delete_file(file: &Path) -> Result<(), Error> {
     tracing::debug!("Deleting file {:?}", file);
     if file.exists() {
-        std::fs::remove_file(&file).map_err(|e| Error::FileIo {
+        std::fs::remove_file(file).map_err(|e| Error::FileIo {
             action: FileIoAction::Delete,
             kind: FileKind::File,
             path: file.to_path_buf(),
@@ -253,7 +247,7 @@ pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
         path: dir_path.to_path_buf(),
         err: Some(e.to_string()),
     })?;
-    let file = File::create(&path).map_err(|e| Error::FileIo {
+    let file = File::create(path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.to_path_buf(),
@@ -280,7 +274,7 @@ pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
         err: Some(e.to_string()),
     })?;
 
-    let mut f = File::create(&path).map_err(|e| Error::FileIo {
+    let mut f = File::create(path).map_err(|e| Error::FileIo {
         action: FileIoAction::Create,
         kind: FileKind::File,
         path: path.to_path_buf(),
@@ -560,7 +554,7 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
-    match ProjectIO::new().exec("git", &args, &[], None, false) {
+    match ProjectIO::new().exec("git", &args, &[], None, Stdio::Inherit) {
         Ok(_) => Ok(()),
         Err(err) => match err {
             Error::ShellProgramNotFound { .. } => Ok(()),

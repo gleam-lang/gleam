@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 540
+expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/1]).
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+-spec main(any()) -> fun((integer()) -> box()).
+main(A) ->
+    fun(Field@0) -> {box, Field@0} end.
+

@@ -105,6 +105,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             label: None,
             location: self.argument_location,
             value: self.typed_left_hand_value_variable(),
+            // This argument is given implicitly by the pipe, not explicitly by
+            // the programmer.
+            implicit: true,
         }
     }
 
@@ -115,6 +118,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             label: None,
             location: self.argument_location,
             value: self.untyped_left_hand_value_variable(),
+            // This argument is given implicitly by the pipe, not explicitly by
+            // the programmer.
+            implicit: true,
         }
     }
 
@@ -234,21 +240,19 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let function = Box::new(self.expr_typer.infer(function)?);
         let return_type = self.expr_typer.new_unbound_var();
         // Ensure that the function accepts one argument of the correct type
-        self.expr_typer
-            .environment
-            .unify(
-                function.type_(),
-                fn_(vec![self.argument_type.clone()], return_type.clone()),
-            )
-            .map_err(|e| {
-                let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
-                let error = convert_unify_error(e, function.location());
-                if is_pipe_mismatch {
-                    error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
-                } else {
-                    error
-                }
-            })?;
+        unify(
+            function.type_(),
+            fn_(vec![self.argument_type.clone()], return_type.clone()),
+        )
+        .map_err(|e| {
+            let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
+            let error = convert_unify_error(e, function.location());
+            if is_pipe_mismatch {
+                error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+            } else {
+                error
+            }
+        })?;
 
         Ok(TypedExpr::Call {
             location: function.location(),
@@ -269,11 +273,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         match types {
             (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
                 match (a.get(0), b.get(0)) {
-                    (Some(a), Some(b)) => self
-                        .expr_typer
-                        .environment
-                        .unify(a.clone(), b.clone())
-                        .is_err(),
+                    (Some(a), Some(b)) => unify(a.clone(), b.clone()).is_err(),
                     _ => false,
                 }
             }

@@ -225,27 +225,62 @@ pub fn generate_html(
     // Render static assets
 
     files.push(OutputFile {
+        path: PathBuf::from("css/atom-one-light.min.css"),
+        text: std::include_str!("../templates/docs-css/atom-one-light.min.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("css/atom-one-dark.min.css"),
+        text: std::include_str!("../templates/docs-css/atom-one-dark.min.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("css/index.css"),
+        text: std::include_str!("../templates/docs-css/index.css").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/highlight.min.js"),
+        text: std::include_str!("../templates/docs-js/highlight.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/highlightjs-gleam.js"),
+        text: std::include_str!("../templates/docs-js/highlightjs-gleam.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/highlightjs-erlang.min.js"),
+        text: std::include_str!("../templates/docs-js/highlightjs-erlang.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/highlightjs-elixir.min.js"),
+        text: std::include_str!("../templates/docs-js/highlightjs-elixir.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/highlightjs-javascript.min.js"),
+        text: std::include_str!("../templates/docs-js/highlightjs-javascript.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/lunr.min.js"),
+        text: std::include_str!("../templates/docs-js/lunr.min.js").to_string(),
+    });
+
+    files.push(OutputFile {
+        path: PathBuf::from("js/index.js"),
+        text: std::include_str!("../templates/docs-js/index.js").to_string(),
+    });
+
+    files.push(OutputFile {
         path: PathBuf::from("search-data.js"),
         text: format!(
             "window.Gleam.initSearch({});",
             serde_to_string(&escape_html_contents(search_indexes))
                 .expect("search index serialization")
         ),
-    });
-
-    files.push(OutputFile {
-        path: PathBuf::from("index.css"),
-        text: std::include_str!("../templates/index.css").to_string(),
-    });
-
-    files.push(OutputFile {
-        path: PathBuf::from("gleam.js"),
-        text: std::include_str!("../templates/gleam.js").to_string(),
-    });
-
-    files.push(OutputFile {
-        path: PathBuf::from("highlightjs-gleam.js"),
-        text: std::include_str!("../templates/highlightjs-gleam.js").to_string(),
     });
 
     files

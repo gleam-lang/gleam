@@ -272,7 +272,7 @@ fn generated_files(package: &Package) -> Result<Vec<(PathBuf, String)>> {
     if include.is_dir() {
         for file in fs::erlang_files(&include)? {
             let name = file.file_name().expect("generated_files include file name");
-            files.push((tar_include.join(&name), fs::read(file)?));
+            files.push((tar_include.join(name), fs::read(file)?));
         }
     }
 
@@ -366,7 +366,7 @@ impl<'a> ReleaseMetadata<'a> {
                 .join(","),
             links = self.links.iter().map(link).join(","),
             licenses = self.licenses.iter().map(|l| quotes(l.as_ref())).join(", "),
-            build_tools = self.build_tools.iter().map(|l| quotes(*l)).join(", "),
+            build_tools = self.build_tools.iter().map(|l| quotes(l)).join(", "),
             requirements = self
                 .requirements
                 .iter()

@@ -224,11 +224,6 @@ pub enum Error {
         location: SrcSpan,
         unmatched: Vec<String>,
     },
-
-    InvalidUseExpressionCall {
-        location: SrcSpan,
-        kind: InvalidUseExpressionCallKind,
-    },
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -672,10 +667,4 @@ impl UnifyError {
 
 pub fn convert_unify_error(e: UnifyError, location: SrcSpan) -> Error {
     e.into_error(location)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InvalidUseExpressionCallKind {
-    MissingParens,
-    Other,
 }
