@@ -251,7 +251,15 @@ where
                 _ => continue,
             };
 
-            self.io.copy(&path, &out.join(&relative_path))?;
+            let destination = out.join(&relative_path);
+
+            // We should never overwrite a file in the build directory with a
+            // native file being copied.
+            assert!(
+                !self.io.is_file(&destination),
+                "copy_native_files file already exists"
+            );
+            self.io.copy(&path, &destination)?;
             self.add_build_journal(out.join(&relative_path));
 
             // TODO: test
