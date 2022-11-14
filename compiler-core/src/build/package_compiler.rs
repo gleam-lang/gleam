@@ -425,15 +425,6 @@ where
         let include_dir = self.out.join("include");
         let io = self.io.clone();
 
-        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
-        if let Some(config) = app_file {
-            ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps).render(
-                io,
-                &self.config,
-                modules,
-            )?;
-        }
-
         if self.write_entrypoint {
             self.render_entrypoint_module(&build_dir, &mut written)?;
         } else {
@@ -445,6 +436,20 @@ where
         } else {
             tracing::info!("skipping_native_file_copying");
         }
+
+        if let Some(config) = app_file {
+            ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps).render(
+                io.clone(),
+                &self.config,
+                modules,
+            )?;
+        }
+
+        // NOTE: This must come after `copy_project_native_files` to ensure that
+        // we overwrite any precompiled Erlang that was included in the Hex
+        // package. Otherwise we will build the potentially outdated precompiled
+        // version and not the newly compiled version.
+        Erlang::new(&build_dir, &include_dir).render(io, modules)?;
 
         if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
