@@ -16,6 +16,8 @@
   function usage in some cases.
 - Fixed a bug where the warning for `todo` would not print the type of the code
   to complete.
+- Fixed a bug where `try` expressions inside blocks could generate incorrect
+  JavaScript.
 - Generated HTML documentation now includes all static assets (but the web
   fonts), so that it can be accessed offline or in far future once CDNs would
   404.
