@@ -256,6 +256,8 @@ where
             // We should never overwrite a file in the build directory with a
             // native file being copied.
             if self.io.is_file(&destination) {
+                let contents = self.io.read(&destination).unwrap();
+                println!("{}", contents);
                 panic!("Native file would overwrite {:?}", destination);
             }
 
