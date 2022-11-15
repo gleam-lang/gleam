@@ -248,6 +248,17 @@ impl<'module> Generator<'module> {
     }
 
     /// Wrap an expression in an immediately involked function expression if
+    /// required due to using early returns.
+    pub fn top_of_sequence_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+        match expression {
+            TypedExpr::Sequence { .. } | TypedExpr::Try { .. } => {
+                self.immediately_involked_function_expression(expression)
+            }
+            _ => self.expression(expression),
+        }
+    }
+
+    /// Wrap an expression in an immediately involked function expression if
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
@@ -375,7 +386,9 @@ impl<'module> Generator<'module> {
         let mut documents = Vec::with_capacity(count * 3);
         for (i, expression) in expressions.iter().enumerate() {
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
+                documents.push(
+                    self.not_in_tail_position(|gen| gen.top_of_sequence_expression(expression))?,
+                );
                 if !matches!(
                     expression,
                     TypedExpr::Assignment { .. } | TypedExpr::Case { .. }

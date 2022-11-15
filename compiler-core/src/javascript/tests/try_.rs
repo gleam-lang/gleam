@@ -70,3 +70,17 @@ fn assert_in_block() {
 }"#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1834
+#[test]
+fn in_block_not_assigned() {
+    assert_js!(
+        "pub fn main() {
+  {
+    try b = Error(Nil);
+    b
+  }
+  Ok(1)
+}"
+    );
+}
