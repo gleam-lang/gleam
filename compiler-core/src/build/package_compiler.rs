@@ -253,12 +253,6 @@ where
 
             let destination = out.join(&relative_path);
 
-            // We should never overwrite a file in the build directory with a
-            // native file being copied.
-            if self.io.is_file(&destination) {
-                panic!("Native file would overwrite {:?}", destination);
-            }
-
             self.io.copy(&path, &destination)?;
             self.add_build_journal(out.join(&relative_path));
 
