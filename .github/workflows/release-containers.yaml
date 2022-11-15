@@ -50,10 +50,10 @@ jobs:
           # Build container tag
           TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
 
-          echo "::set-output name=v_version::$V_VERSION"
-          echo "::set-output name=bare_version::$BARE_VERSION"
-          echo "::set-output name=platform_version::$PLATFORM_VERSION"
-          echo "::set-output name=container_tag::$TAG"
+          echo "v_version=$V_VERSION" >> $GITHUB_OUTPUT
+          echo "bare_version=$BARE_VERSION" >> $GITHUB_OUTPUT
+          echo "platform_version=$PLATFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "container_tag=$TAG" >> $GITHUB_OUTPUT
 
       - name: Download Gleam archive from GitHub release
         run: |
