@@ -1063,6 +1063,17 @@ fn expr_int() {
 
 #[test]
 fn expr_float() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  1.
+}
+"#,
+        r#"fn main() {
+  1.0
+}
+"#
+    );
+
     assert_format!(
         r#"fn main() {
   1.0
