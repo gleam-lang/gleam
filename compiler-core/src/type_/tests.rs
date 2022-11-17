@@ -189,6 +189,15 @@ macro_rules! assert_module_error {
 }
 
 #[macro_export]
+macro_rules! assert_module_syntax_error {
+    ($src:expr, $error:expr $(,)?) => {
+        let result =
+            $crate::parse::parse_module($src).expect_err("should trigger an error when parsing");
+        assert_eq!(($src, $error), ($src, result));
+    };
+}
+
+#[macro_export]
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
