@@ -251,9 +251,7 @@ impl<'module> Generator<'module> {
     /// required due to using early returns.
     pub fn top_of_sequence_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Sequence { .. } | TypedExpr::Try { .. } => {
-                self.immediately_involked_function_expression(expression)
-            }
+            TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
             _ => self.expression(expression),
         }
     }
