@@ -1,5 +1,7 @@
 use super::*;
-use crate::{assert_error, assert_module_error, assert_with_module_error};
+use crate::{
+    assert_error, assert_module_error, assert_module_syntax_error, assert_with_module_error,
+};
 
 #[test]
 fn bit_string_invalid_type() {
@@ -344,6 +346,18 @@ fn function_return_annotation_mismatch_with_pipe() {
          fn add_two(i: Int) -> Int {
             i + 2
          }"
+    );
+}
+
+#[test]
+fn functions_called_outside_module() {
+    use crate::parse::error::{ParseError, ParseErrorType};
+    assert_module_syntax_error!(
+        "const first = list.at([1], 0)",
+        ParseError {
+            location: SrcSpan { start: 14, end: 22 },
+            error: ParseErrorType::UnexpectedFunction
+        }
     );
 }
 

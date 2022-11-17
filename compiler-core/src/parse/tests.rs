@@ -361,8 +361,3 @@ fn assign_left_hand_side_of_concat_pattern() {
         "#
     );
 }
-
-#[test]
-fn function_called_outside_function() {
-    assert_error!("const first = list.at([1], 0)");
-}
