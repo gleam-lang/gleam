@@ -351,9 +351,7 @@ fn function_return_annotation_mismatch_with_pipe() {
 
 #[test]
 fn functions_called_outside_module() {
-    assert_module_syntax_error!(
-        "const first = list.at([1], 0)"
-    );
+    assert_module_syntax_error!("const first = list.at([1], 0)");
 }
 
 #[test]
