@@ -2170,24 +2170,20 @@ where
                         let _ = self.next_tok(); // name
 
                         match self.tok0 {
-                            Some((_, Token::LeftParen, _)) => {
-                                parse_error(
-                                    ParseErrorType::UnexpectedFunction,
-                                    SrcSpan {
-                                        start,
-                                        end: end + 1,
-                                    },
-                                )
-                            }
-                            _ => {
-                                Ok(Some(Constant::Var {
-                                    location: SrcSpan { start, end },
-                                    module: Some(name),
-                                    name: end_name,
-                                    constructor: None,
-                                    typ: (),
-                                }))
-                            }
+                            Some((_, Token::LeftParen, _)) => parse_error(
+                                ParseErrorType::UnexpectedFunction,
+                                SrcSpan {
+                                    start,
+                                    end: end + 1,
+                                },
+                            ),
+                            _ => Ok(Some(Constant::Var {
+                                location: SrcSpan { start, end },
+                                module: Some(name),
+                                name: end_name,
+                                constructor: None,
+                                typ: (),
+                            })),
                         }
                     }
                     Some((start, _, end)) => parse_error(
