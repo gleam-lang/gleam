@@ -1,6 +1,6 @@
 use crate::{
     build::Module,
-    config::{JavaScriptConfig, PackageConfig},
+    config::PackageConfig,
     erlang,
     io::{FileSystemWriter, Utf8Writer},
     javascript,
@@ -147,24 +147,30 @@ impl<'a> ErlangApp<'a> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TypeScriptDeclarations {
+    None,
+    Emit,
+}
+
 #[derive(Debug)]
 pub struct JavaScript<'a> {
     output_directory: &'a Path,
-    config: &'a JavaScriptConfig,
+    typescript: TypeScriptDeclarations,
 }
 
 impl<'a> JavaScript<'a> {
-    pub fn new(output_directory: &'a Path, config: &'a JavaScriptConfig) -> Self {
+    pub fn new(output_directory: &'a Path, typescript: TypeScriptDeclarations) -> Self {
         Self {
             output_directory,
-            config,
+            typescript,
         }
     }
 
     pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
-            if self.config.typescript_declarations {
+            if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
             self.js_module(writer, module, &js_name)?
@@ -178,7 +184,7 @@ impl<'a> JavaScript<'a> {
             .writer(&self.output_directory.join("gleam.mjs"))?
             .str_write(javascript::PRELUDE)?;
         tracing::debug!("Generated JS prelude");
-        if self.config.typescript_declarations {
+        if self.typescript == TypeScriptDeclarations::Emit {
             writer
                 .writer(&self.output_directory.join("gleam.d.ts"))?
                 .str_write(javascript::PRELUDE_TS_DEF)?;
