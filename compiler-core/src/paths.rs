@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 
 use crate::build::{Mode, Target};
 
+pub const ARTEFACT_DIRECTORY_NAME: &str = "_gleam_artefacts";
+
 pub fn root_config() -> PathBuf {
     PathBuf::from("gleam.toml")
 }

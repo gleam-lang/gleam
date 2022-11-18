@@ -454,7 +454,6 @@ where
     ) -> Result<Vec<Module>, Error> {
         let out_path = paths::build_package(self.mode(), self.target(), &config.name);
         let lib_path = paths::build_packages(self.mode(), self.target());
-        let artifact_path = out_path.join("build");
         let mode = self.mode();
         let target = match self.target() {
             Target::Erlang => super::TargetCodegenConfiguration::Erlang {

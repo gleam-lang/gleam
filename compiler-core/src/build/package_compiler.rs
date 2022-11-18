@@ -10,7 +10,7 @@ use crate::{
     },
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
-    type_,
+    paths, type_,
     uid::UniqueIdGenerator,
     Error, Result, Warning,
 };
@@ -171,7 +171,10 @@ where
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
-        let escript_path = self.out.join("build").join("gleam@@compile.erl");
+        let escript_path = self
+            .out
+            .join(paths::ARTEFACT_DIRECTORY_NAME)
+            .join("gleam@@compile.erl");
         if !escript_path.exists() {
             let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
             self.io
@@ -190,7 +193,7 @@ where
         ];
         // Add the list of modules to compile
         for module in modules {
-            let path = self.out.join("build").join(module);
+            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
             args.push(path.to_string_lossy().to_string());
             self.add_build_journal(path);
         }
@@ -314,7 +317,7 @@ where
         tracing::info!("Writing package metadata to disc");
         for module in modules {
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
-            let path = self.out.join("build").join(name);
+            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
             ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
             self.add_build_journal(path);
         }
@@ -425,7 +428,7 @@ where
         app_file: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
-        let build_dir = self.out.join("build");
+        let build_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let include_dir = self.out.join("include");
         let io = self.io.clone();
 
@@ -470,17 +473,16 @@ where
         typescript: bool,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
-        let artifact_dir = self.out.join("dist");
         let typescript = if typescript {
             TypeScriptDeclarations::Emit
         } else {
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&artifact_dir, typescript).render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
 
         if self.copy_native_files {
-            self.copy_project_native_files(&artifact_dir, &mut written)?;
+            self.copy_project_native_files(&self.out, &mut written)?;
         }
         Ok(())
     }
