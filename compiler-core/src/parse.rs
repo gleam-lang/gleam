@@ -2167,26 +2167,27 @@ where
                         self.parse_const_record_finish(start, Some(name), upname, end)
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
-                        if self.peek_tok1() == Some(&Token::LeftParen) {
-                            let _ = self.next_tok(); // name
+                        let _ = self.next_tok(); // name
 
-                            parse_error(
-                                ParseErrorType::UnexpectedFunction,
-                                SrcSpan {
-                                    start,
-                                    end: end + 1,
-                                },
-                            )
-                        } else {
-                            let _ = self.next_tok(); // name
-
-                            Ok(Some(Constant::Var {
-                                location: SrcSpan { start, end },
-                                module: Some(name),
-                                name: end_name,
-                                constructor: None,
-                                typ: (),
-                            }))
+                        match self.tok0 {
+                            Some((_, Token::LeftParen, _)) => {
+                                parse_error(
+                                    ParseErrorType::UnexpectedFunction,
+                                    SrcSpan {
+                                        start,
+                                        end: end + 1,
+                                    },
+                                )
+                            }
+                            _ => {
+                                Ok(Some(Constant::Var {
+                                    location: SrcSpan { start, end },
+                                    module: Some(name),
+                                    name: end_name,
+                                    constructor: None,
+                                    typ: (),
+                                }))
+                            }
                         }
                     }
                     Some((start, _, end)) => parse_error(

@@ -351,13 +351,8 @@ fn function_return_annotation_mismatch_with_pipe() {
 
 #[test]
 fn functions_called_outside_module() {
-    use crate::parse::error::{ParseError, ParseErrorType};
     assert_module_syntax_error!(
-        "const first = list.at([1], 0)",
-        ParseError {
-            location: SrcSpan { start: 14, end: 22 },
-            error: ParseErrorType::UnexpectedFunction
-        }
+        "const first = list.at([1], 0)"
     );
 }
 
