@@ -140,7 +140,7 @@ jobs:
           gleam docs build
 
           # Assert that module metadata has been written
-          ls build/dev/erlang/lib_project/build/lib_project.gleam_module
+          ls build/dev/erlang/lib_project/_gleam_artefacts/lib_project.gleam_module
 
           # Assert that HTML docs and their assets have been written
           ls build/dev/docs/lib_project/index.html
