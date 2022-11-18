@@ -77,9 +77,7 @@ fn run_javascript(
 ) -> Result<i32, Error> {
     let mut args = vec![];
 
-    let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name)
-        .join("dist")
-        .join(module);
+    let module = paths::build_package(Mode::Dev, Target::JavaScript, &config.name).join(module);
 
     // Run the main function.
     args.push("-e".into());
