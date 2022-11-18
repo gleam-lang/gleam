@@ -20,7 +20,9 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let config = config::read(options.package_directory.join("gleam.toml"))?;
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
-        Target::JavaScript => TargetCodegenConfiguration::JavaScript,
+        Target::JavaScript => TargetCodegenConfiguration::JavaScript {
+            emit_typescript_definitions: false,
+        },
     };
 
     tracing::info!("Compiling package");
