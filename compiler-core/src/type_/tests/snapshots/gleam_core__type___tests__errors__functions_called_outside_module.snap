@@ -1,0 +1,6 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 354
+expression: "const first = list.at([1], 0)"
+---
+ParseError { error: UnexpectedFunction, location: SrcSpan { start: 14, end: 22 } }

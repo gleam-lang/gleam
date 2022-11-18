@@ -190,10 +190,12 @@ macro_rules! assert_module_error {
 
 #[macro_export]
 macro_rules! assert_module_syntax_error {
-    ($src:expr, $error:expr $(,)?) => {
-        let result =
+    ($src:expr) => {
+        let error =
             $crate::parse::parse_module($src).expect_err("should trigger an error when parsing");
-        assert_eq!(($src, $error), ($src, result));
+
+        let output = format!("{error:?}");
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
