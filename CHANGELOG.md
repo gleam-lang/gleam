@@ -22,6 +22,8 @@
   fonts), so that it can be accessed offline or in far future once CDNs would
   404.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.14.0
+- The `javascript.typescript_declarations` field in `gleam.toml` now applies to
+  the entire project rather than just the top level package.
 - The formatter now adds a 0 to floats ending with `.` (ie 1. => 1.0).
 
 ## 0.24.0 - 2022-10-25
