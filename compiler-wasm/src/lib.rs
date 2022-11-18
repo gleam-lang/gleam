@@ -264,7 +264,7 @@ mod test {
         .unwrap();
 
         assert_eq!(
-            result.get("build/dev/erlang/gleam-wasm/build/main.erl"),
+            result.get("build/dev/erlang/gleam-wasm/_gleam_artefacts/main.erl"),
             Some(&String::from("-module(main).\n-compile(no_auto_import).\n\n-export([main/0]).\n\n-spec main() -> nil.\nmain() ->\n    some_library:function(<<\"Hello, world!\"/utf8>>).\n"))
         );
     }
