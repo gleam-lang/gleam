@@ -5,7 +5,7 @@ use crate::{
 };
 use gleam_core::{
     build::{Mode, PackageCompiler, Target, TargetCodegenConfiguration},
-    metadata,
+    metadata, paths,
     type_::Module,
     uid::UniqueIdGenerator,
     Result,
@@ -58,7 +58,7 @@ fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<Str
     tracing::info!("Reading precompiled module metadata files");
     let mut manifests = im::HashMap::new();
     for lib in fs::read_dir(lib)?.filter_map(Result::ok) {
-        let path = lib.path().join("build");
+        let path = lib.path().join(paths::ARTEFACT_DIRECTORY_NAME);
         if !path.is_dir() {
             continue;
         }
