@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.0-rc1 - 2022-11-19
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
 - The `use` expression has been introduced. This is a new syntactic sugar that
