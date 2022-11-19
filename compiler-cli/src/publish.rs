@@ -253,7 +253,7 @@ fn generated_files(package: &Package) -> Result<Vec<(PathBuf, String)>> {
 
     let dir = paths::build_package(Mode::Prod, Target::Erlang, &package.config.name);
     let ebin = dir.join("ebin");
-    let build = dir.join("build");
+    let build = dir.join(paths::ARTEFACT_DIRECTORY_NAME);
     let include = dir.join("include");
 
     let tar_src = Path::new("src");

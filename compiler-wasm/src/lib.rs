@@ -5,7 +5,7 @@ use gleam_core::{
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
-    Error,
+    paths, Error,
 };
 
 use hexpm::version::Version;
@@ -126,7 +126,7 @@ fn gather_compiled_files(
         Target::JavaScript => OsStr::new("mjs"),
     };
 
-    wfs.read_dir(Path::new("build"))
+    wfs.read_dir(&paths::build())
         .expect("expect the build directory to exist")
         .into_iter()
         .filter_map(|result| result.ok())
