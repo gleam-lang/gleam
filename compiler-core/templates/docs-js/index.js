@@ -607,5 +607,3 @@ window.Gleam = (function () {
 
   return self;
 })();
-
-hljs.highlightAll();
