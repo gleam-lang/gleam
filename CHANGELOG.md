@@ -2,6 +2,7 @@
 
 ## v0.25.0-rc2 - Unreleased
 
+- New projects require `gleam_stdlib` v0.25.
 - Fixed a bug where package publishing would fail.
 
 ## v0.25.0-rc1 - 2022-11-19
