@@ -224,7 +224,7 @@ mod test {
 
         assert_eq!(
             result.get("build/dev/javascript/gleam-wasm/main.mjs"),
-            Some(&String::from("import * as $some_library from \"../../some_library/some_library.mjs\";\n\nexport function main() {\n  return $some_library.function$(\"Hello, world!\");\n}\n"))
+            Some(&String::from("import * as $some_library from \"../some_library/some_library.mjs\";\n\nexport function main() {\n  return $some_library.function$(\"Hello, world!\");\n}\n"))
         );
     }
 
