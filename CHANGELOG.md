@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.0-rc2 - Unreleased
+
+- Fixed a bug where package publishing would fail.
+
 ## v0.25.0-rc1 - 2022-11-19
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
