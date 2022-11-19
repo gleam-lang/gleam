@@ -1,10 +1,5 @@
 # Changelog
 
-## v0.25.0-rc2 - Unreleased
-
-- New projects require `gleam_stdlib` v0.25.
-- Fixed a bug where package publishing would fail.
-
 ## v0.25.0-rc1 - 2022-11-19
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
@@ -30,6 +25,7 @@
 - The `javascript.typescript_declarations` field in `gleam.toml` now applies to
   the entire project rather than just the top level package.
 - The formatter now adds a 0 to floats ending with `.` (ie 1. => 1.0).
+- New projects require `gleam_stdlib` v0.25.
 
 ## 0.24.0 - 2022-10-25
 
