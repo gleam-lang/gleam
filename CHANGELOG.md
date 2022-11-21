@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.25.0-rc2 - unreleased
+
+- Fixed a regression where Elixir and Erlang Markdown code blocks in generated
+  documentation would not be highlighted.
+
 ## v0.25.0-rc1 - 2022-11-19
 
 - Generated HTML documentation now includes the `theme-color` HTML meta tag.
@@ -26,8 +31,6 @@
   the entire project rather than just the top level package.
 - The formatter now adds a 0 to floats ending with `.` (ie 1. => 1.0).
 - New projects require `gleam_stdlib` v0.25.
-- Fixed a regression where Elixir and Erlang Markdown code blocks in generated
-  documentation would not be highlighted.
 
 ## 0.24.0 - 2022-10-25
 
