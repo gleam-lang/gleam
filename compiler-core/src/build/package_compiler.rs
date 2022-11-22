@@ -350,6 +350,8 @@ where
         let include_dir = self.out.join("include");
         let io = self.io.clone();
 
+        io.mkdir(&build_dir)?;
+
         if self.write_entrypoint {
             self.render_entrypoint_module(&build_dir, &mut written)?;
         } else {
