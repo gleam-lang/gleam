@@ -2,6 +2,8 @@
 
 ## v0.25.0-rc2 - unreleased
 
+- Fixed a bug where Gleam dependency packages with a `priv` directory could fail
+  to build.
 - Fixed a regression where Elixir and Erlang Markdown code blocks in generated
   documentation would not be highlighted.
 
