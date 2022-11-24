@@ -96,3 +96,19 @@ pub fn main() {
 }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1863
+#[test]
+fn call_pipeline_result() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  { 1 |> add }(1)
+}
+
+pub fn add(x) {
+  fn(y) { x + y }
+}
+"#
+    );
+}

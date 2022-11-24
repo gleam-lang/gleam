@@ -1350,6 +1350,11 @@ fn docs_args_call<'a>(
             expr(fun, env).surround("(", ")").append(args)
         }
 
+        TypedExpr::Pipeline { .. } => {
+            let args = wrap_args(args);
+            begin_end(expr(fun, env)).append(args)
+        }
+
         other => {
             let args = wrap_args(args);
             expr(other, env).append(args)

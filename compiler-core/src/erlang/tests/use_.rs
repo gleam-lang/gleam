@@ -62,3 +62,21 @@ pub fn main() {
 "#
     );
 }
+
+
+// https://github.com/gleam-lang/gleam/issues/1863
+#[test]
+fn pipeline_that_returns_fn() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  use <- 1 |> add
+  1
+}
+
+pub fn add(x) {
+  fn(f) { f() + x }
+}
+"#
+    );
+}
