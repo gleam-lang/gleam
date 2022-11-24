@@ -9,7 +9,7 @@ unmaintained = "deny"
 yanked = "deny"
 notice = "deny"
 ignore = [
-    "RUSTSEC-2021-0139",
+    "RUSTSEC-2021-0145"
 ]
 
 # https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html
