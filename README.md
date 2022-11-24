@@ -128,6 +128,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Mike Lapping](https://github.com/mlapping)
  - [Mike Roach](https://github.com/mroach)
  - [Milton Mazzarri](https://github.com/milmazz)
+ - [mklifo](https://github.com/mklifo)
  - [Nathaniel Knight](https://github.com/nathanielknight)
  - [Nick Reynolds](https://github.com/ndreynolds)
  - [Nicklas Sindlev Andersen](https://github.com/NicklasXYZ)
