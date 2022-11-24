@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where returning an anonymous function from a pipeline and calling
+  it immediately without assigning it to a variable would produce invalid Erlang
+  code.
+
 ## v0.25.0 - 2022-11-24
 
 ## v0.25.0-rc2 - 2022-11-23
