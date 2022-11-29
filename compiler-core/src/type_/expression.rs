@@ -512,9 +512,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typ,
         })
     }
-    fn infer_var(&mut self, name: String, location: SrcSpan) -> Result<TypedExpr, Error> {
-        let constructor = self.infer_value_constructor(&None, &name, &location)?;
-        Ok(TypedExpr::Var {
+    fn infer_var(&mut self, name: String, location: SrcSpan) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let constructor = ctx
+            .slurp_result(self.infer_value_constructor(&None, &name, &location))
+            .unwrap_or_else(|| ValueConstructor {
+                public: true,
+                variant: ValueConstructorVariant::LocalVariable { location },
+                type_: self.environment.new_unbound_var(),
+            });
+
+        ctx.finish(TypedExpr::Var {
             constructor,
             location,
             name,
