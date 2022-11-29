@@ -1533,7 +1533,8 @@ fn match_fun_type(
     typ: Arc<Type>,
     arity: usize,
     environment: &mut Environment<'_>,
-) -> Result<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
+) -> FilledResult<(Vec<Arc<Type>>, Arc<Type>), MatchFunTypeError> {
+    let mut ctx = FilledResultContext::new();
     if let Type::Var { type_: typ } = typ.deref() {
         let new_value = match typ.borrow().deref() {
             TypeVar::Link { type_: typ, .. } => {
@@ -1553,22 +1554,22 @@ fn match_fun_type(
             *typ.borrow_mut() = TypeVar::Link {
                 type_: fn_(args.clone(), retrn.clone()),
             };
-            return Ok((args, retrn));
+            return ctx.finish((args, retrn));
         }
     }
 
     if let Type::Fn { args, retrn } = typ.deref() {
-        return if args.len() != arity {
-            Err(MatchFunTypeError::IncorrectArity {
+        if args.len() != arity {
+            ctx.register_error(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
-            })
-        } else {
-            Ok((args.clone(), retrn.clone()))
-        };
+            });
+        }
+        return ctx.finish((args.clone(), retrn.clone()));
     }
 
-    Err(MatchFunTypeError::NotFn { typ })
+    ctx.register_error(MatchFunTypeError::NotFn { typ });
+    ctx.finish((Vec::new(), environment.new_unbound_var()))
 }
 
 fn generalise(t: Arc<Type>) -> Arc<Type> {
