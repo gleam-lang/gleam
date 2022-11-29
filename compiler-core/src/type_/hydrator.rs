@@ -87,10 +87,10 @@ impl Hydrator {
         &mut self,
         ast: &Option<TypeAst>,
         environment: &mut Environment<'a>,
-    ) -> Result<Arc<Type>, Error> {
+    ) -> FilledResult<Arc<Type>, Error> {
         match ast {
             Some(ast) => self.type_from_ast(ast, environment),
-            None => Ok(environment.new_unbound_var()),
+            None => FilledResult::ok(environment.new_unbound_var()),
         }
     }
 
@@ -100,7 +100,7 @@ impl Hydrator {
         &mut self,
         ast: &TypeAst,
         environment: &mut Environment<'a>,
-    ) -> Result<Arc<Type>, Error> {
+    ) -> FilledResult<Arc<Type>, Error> {
         match ast {
             TypeAst::Constructor {
                 location,
@@ -108,22 +108,33 @@ impl Hydrator {
                 name,
                 arguments: args,
             } => {
+                let mut ctx = FilledResultContext::new();
+
                 // Hydrate the type argument AST into types
-                let mut argument_types = Vec::with_capacity(args.len());
-                for t in args {
-                    let typ = self.type_from_ast(t, environment)?;
-                    argument_types.push((t.location(), typ));
-                }
+                let argument_types: Vec<_> = args
+                    .into_iter()
+                    .map(|t| {
+                        (
+                            t.location(),
+                            ctx.slurp_filled(self.type_from_ast(t, environment)),
+                        )
+                    })
+                    .collect();
 
                 // Look up the constructor
                 let TypeConstructor {
                     parameters,
                     typ: return_type,
                     ..
-                } = environment
-                    .get_type_constructor(module, name)
-                    .map_err(|e| convert_get_type_constructor_error(e, location))?
-                    .clone();
+                } = match environment.get_type_constructor(module, name) {
+                    Err(e) => {
+                        ctx.register_error(convert_get_type_constructor_error(e, location));
+                        // we don't know anything about this type, so we'll have to return another
+                        // 'unknown' type.
+                        return ctx.finish(environment.new_unbound_var());
+                    }
+                    Ok(c) => c.clone(),
+                };
 
                 // Register the type constructor as being used if it is unqualifed.
                 // We do not track use of qualified type constructors as they may be
@@ -134,7 +145,7 @@ impl Hydrator {
 
                 // Ensure that the correct number of arguments have been given to the constructor
                 if args.len() != parameters.len() {
-                    return Err(Error::IncorrectTypeArity {
+                    ctx.register_error(Error::IncorrectTypeArity {
                         location: *location,
                         name: name.to_string(),
                         expected: parameters.len(),
@@ -157,34 +168,37 @@ impl Hydrator {
                 for (parameter, (location, argument)) in
                     parameter_types.into_iter().zip(argument_types)
                 {
-                    unify(parameter, argument).map_err(|e| convert_unify_error(e, location))?;
+                    ctx.just_slurp_result(
+                        unify(parameter, argument).map_err(|e| convert_unify_error(e, location)),
+                    );
                 }
 
-                Ok(return_type)
+                ctx.finish(return_type)
             }
 
-            TypeAst::Tuple { elems, .. } => Ok(tuple(
-                elems
-                    .iter()
-                    .map(|t| self.type_from_ast(t, environment))
-                    .try_collect()?,
-            )),
+            TypeAst::Tuple { elems, .. } => {
+                let mut ctx = FilledResultContext::new();
+
+                let t = tuple(ctx.slurp_filled_collect(
+                    elems.iter().map(|t| self.type_from_ast(t, environment)),
+                ));
+                ctx.finish(t)
+            }
 
             TypeAst::Fn {
                 arguments: args,
                 return_: retrn,
                 ..
             } => {
-                let args = args
-                    .iter()
-                    .map(|t| self.type_from_ast(t, environment))
-                    .try_collect()?;
-                let retrn = self.type_from_ast(retrn, environment)?;
-                Ok(fn_(args, retrn))
+                let mut ctx = FilledResultContext::new();
+                let args = ctx
+                    .slurp_filled_collect(args.iter().map(|t| self.type_from_ast(t, environment)));
+                let retrn = ctx.slurp_filled(self.type_from_ast(retrn, environment));
+                ctx.finish(fn_(args, retrn))
             }
 
             TypeAst::Var { name, location, .. } => match self.created_type_variables.get(name) {
-                Some(var) => Ok(var.clone()),
+                Some(var) => FilledResult::ok(var.clone()),
 
                 None if self.permit_new_type_variables => {
                     let var = environment.new_generic_var();
@@ -194,25 +208,33 @@ impl Hydrator {
                     let _ = self
                         .created_type_variables
                         .insert(name.clone(), var.clone());
-                    Ok(var)
+                    FilledResult::ok(var)
                 }
 
-                None => Err(Error::UnknownType {
-                    name: name.to_string(),
-                    location: *location,
-                    types: environment
-                        .module_types
-                        .keys()
-                        .map(|t| t.to_string())
-                        .collect(),
-                }),
+                None => FilledResult::err(
+                    Error::UnknownType {
+                        name: name.to_string(),
+                        location: *location,
+                        types: environment
+                            .module_types
+                            .keys()
+                            .map(|t| t.to_string())
+                            .collect(),
+                    },
+                    environment.new_unbound_var(),
+                ),
             },
 
-            TypeAst::Hole { .. } if self.permit_holes => Ok(environment.new_unbound_var()),
+            TypeAst::Hole { .. } if self.permit_holes => {
+                FilledResult::ok(environment.new_unbound_var())
+            }
 
-            TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
-                location: *location,
-            }),
+            TypeAst::Hole { location, .. } => FilledResult::err(
+                Error::UnexpectedTypeHole {
+                    location: *location,
+                },
+                environment.new_unbound_var(),
+            ),
         }
     }
 }
