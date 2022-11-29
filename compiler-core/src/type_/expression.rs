@@ -313,8 +313,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         use_: Use,
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
-        let mut call = get_use_expression_call(*use_.call)?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut call = get_use_expression_call(*use_.call);
         let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
 
         // TODO: Upgrade this to an error when we have partial type checking.
@@ -404,17 +404,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         arg: UntypedArg,
         expected: Option<Arc<Type>>,
-    ) -> Result<TypedArg, Error> {
+    ) -> FilledResult<TypedArg, Error> {
+        let mut ctx = FilledResultContext::new();
         let Arg {
             names,
             annotation,
             location,
             ..
         } = arg;
-        let typ = annotation
-            .clone()
-            .map(|t| self.type_from_ast(&t))
-            .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
+        let typ = ctx
+            .slurp_result(
+                annotation
+                    .clone()
+                    .map(|t| self.type_from_ast(&t))
+                    .transpose(),
+            )
+            .flatten()
+            .unwrap_or_else(|| self.new_unbound_var());
 
         // If we know the expected type of the argument from its contextual
         // usage then unify the newly constructed type with the expected type.
