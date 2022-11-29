@@ -833,8 +833,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         then: UntypedExpr,
         annotation: &Option<TypeAst>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let value = ctx.slurp_filled(self.in_new_scope(|value_typer| value_typer.infer(value)));
 
         let value_type = self.new_unbound_var();
         let try_error_type = self.new_unbound_var();
@@ -843,37 +844,44 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         {
             let v = value_type.clone();
             let e = try_error_type.clone();
-            unify(result(v, e), value.type_())
-                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
+            ctx.just_slurp_result(
+                unify(result(v, e), value.type_())
+                    .map_err(|e| convert_unify_error(e, value.type_defining_location())),
+            );
         };
 
         // Ensure the pattern matches the type of the value
-        let pattern = pattern::PatternTyper::new(self.environment, &self.hydrator)
-            .unify(pattern, value_type.clone())?;
+        let pattern = ctx.slurp_filled(
+            pattern::PatternTyper::new(self.environment, &self.hydrator)
+                .unify(pattern, value_type.clone()),
+        );
 
         // Check the type of the following code
-        let then = self.infer(then)?;
+        let then = ctx.slurp_filled(self.infer(then));
         let typ = then.type_();
 
         // Ensure that a Result with the right error type is returned for `try`
         {
             let t = self.new_unbound_var();
-            unify(result(t, try_error_type), typ.clone()).map_err(|e| {
+            ctx.just_slurp_result(unify(result(t, try_error_type), typ.clone()).map_err(|e| {
                 e.inconsistent_try(typ.is_result())
                     .into_error(then.type_defining_location())
-            })?;
+            }));
         }
 
         // Check that any type annotation is accurate.
         if let Some(ann) = annotation {
-            let ann_typ = self
-                .type_from_ast(ann)
-                .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            unify(ann_typ, value_type)
-                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
+            let ann_typ = ctx.slurp_filled(
+                self.type_from_ast(ann)
+                    .map(|t| self.instantiate(t, &mut hashmap![])),
+            );
+            ctx.just_slurp_result(
+                unify(ann_typ, value_type)
+                    .map_err(|e| convert_unify_error(e, value.type_defining_location())),
+            );
         }
 
-        Ok(TypedExpr::Try {
+        ctx.finish(TypedExpr::Try {
             location,
             typ,
             pattern,
@@ -887,8 +895,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: Vec<UntypedExpr>,
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
         let subjects_count = subjects.len();
+
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
         let mut typed_clauses = Vec::with_capacity(clauses.len());
