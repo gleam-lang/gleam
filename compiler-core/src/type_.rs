@@ -27,6 +27,7 @@ use crate::{
     },
     bit_string,
     build::{Origin, Target},
+    filled_result::{FilledResult, FilledResultContext},
     uid::UniqueIdGenerator,
 };
 
@@ -1392,9 +1393,9 @@ fn infer_statement(
 fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
     segment_option: BitStringSegmentOption<UntypedValue>,
     mut type_check: Typer,
-) -> Result<BitStringSegmentOption<TypedValue>, Error>
+) -> FilledResult<BitStringSegmentOption<TypedValue>, Error>
 where
-    Typer: FnMut(UntypedValue, Arc<Type>) -> Result<TypedValue, Error>,
+    Typer: FnMut(UntypedValue, Arc<Type>) -> FilledResult<TypedValue, Error>,
 {
     match segment_option {
         BitStringSegmentOption::Size {
@@ -1402,57 +1403,60 @@ where
             location,
             short_form,
             ..
-        } => {
-            let value = type_check(*value, int())?;
-            Ok(BitStringSegmentOption::Size {
-                location,
-                short_form,
-                value: Box::new(value),
-            })
-        }
+        } => type_check(*value, int()).map(|value| BitStringSegmentOption::Size {
+            location,
+            short_form,
+            value: Box::new(value),
+        }),
 
         BitStringSegmentOption::Unit { location, value } => {
-            Ok(BitStringSegmentOption::Unit { location, value })
+            FilledResult::ok(BitStringSegmentOption::Unit { location, value })
         }
 
         BitStringSegmentOption::Binary { location } => {
-            Ok(BitStringSegmentOption::Binary { location })
+            FilledResult::ok(BitStringSegmentOption::Binary { location })
         }
-        BitStringSegmentOption::Int { location } => Ok(BitStringSegmentOption::Int { location }),
+        BitStringSegmentOption::Int { location } => {
+            FilledResult::ok(BitStringSegmentOption::Int { location })
+        }
         BitStringSegmentOption::Float { location } => {
-            Ok(BitStringSegmentOption::Float { location })
+            FilledResult::ok(BitStringSegmentOption::Float { location })
         }
         BitStringSegmentOption::BitString { location } => {
-            Ok(BitStringSegmentOption::BitString { location })
+            FilledResult::ok(BitStringSegmentOption::BitString { location })
         }
-        BitStringSegmentOption::Utf8 { location } => Ok(BitStringSegmentOption::Utf8 { location }),
+        BitStringSegmentOption::Utf8 { location } => {
+            FilledResult::ok(BitStringSegmentOption::Utf8 { location })
+        }
         BitStringSegmentOption::Utf16 { location } => {
-            Ok(BitStringSegmentOption::Utf16 { location })
+            FilledResult::ok(BitStringSegmentOption::Utf16 { location })
         }
         BitStringSegmentOption::Utf32 { location } => {
-            Ok(BitStringSegmentOption::Utf32 { location })
+            FilledResult::ok(BitStringSegmentOption::Utf32 { location })
         }
         BitStringSegmentOption::Utf8Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf8Codepoint { location })
+            FilledResult::ok(BitStringSegmentOption::Utf8Codepoint { location })
         }
         BitStringSegmentOption::Utf16Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf16Codepoint { location })
+            FilledResult::ok(BitStringSegmentOption::Utf16Codepoint { location })
         }
         BitStringSegmentOption::Utf32Codepoint { location } => {
-            Ok(BitStringSegmentOption::Utf32Codepoint { location })
+            FilledResult::ok(BitStringSegmentOption::Utf32Codepoint { location })
         }
         BitStringSegmentOption::Signed { location } => {
-            Ok(BitStringSegmentOption::Signed { location })
+            FilledResult::ok(BitStringSegmentOption::Signed { location })
         }
         BitStringSegmentOption::Unsigned { location } => {
-            Ok(BitStringSegmentOption::Unsigned { location })
+            FilledResult::ok(BitStringSegmentOption::Unsigned { location })
         }
-        BitStringSegmentOption::Big { location } => Ok(BitStringSegmentOption::Big { location }),
+        BitStringSegmentOption::Big { location } => {
+            FilledResult::ok(BitStringSegmentOption::Big { location })
+        }
         BitStringSegmentOption::Little { location } => {
-            Ok(BitStringSegmentOption::Little { location })
+            FilledResult::ok(BitStringSegmentOption::Little { location })
         }
         BitStringSegmentOption::Native { location } => {
-            Ok(BitStringSegmentOption::Native { location })
+            FilledResult::ok(BitStringSegmentOption::Native { location })
         }
     }
 }
