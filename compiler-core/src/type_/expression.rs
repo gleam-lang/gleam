@@ -1670,30 +1670,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         annotation: &Option<TypeAst>,
         value: UntypedConstant,
-    ) -> Result<TypedConstant, Error> {
+    ) -> FilledResult<TypedConstant, Error> {
+        let mut ctx = FilledResultContext::new();
         let inferred = match value {
             Constant::Int {
                 location, value, ..
-            } => Ok(Constant::Int { location, value }),
+            } => Constant::Int { location, value },
 
             Constant::Float {
                 location, value, ..
-            } => Ok(Constant::Float { location, value }),
+            } => Constant::Float { location, value },
 
             Constant::String {
                 location, value, ..
-            } => Ok(Constant::String { location, value }),
+            } => Constant::String { location, value },
 
             Constant::Tuple {
                 elements, location, ..
-            } => self.infer_const_tuple(elements, location),
+            } => ctx.slurp_filled(self.infer_const_tuple(elements, location)),
 
             Constant::List {
                 elements, location, ..
-            } => self.infer_const_list(elements, location),
+            } => ctx.slurp_filled(self.infer_const_list(elements, location)),
 
             Constant::BitString { location, segments } => {
-                self.infer_constant_bit_string(segments, location)
+                ctx.slurp_filled(self.infer_constant_bit_string(segments, location))
             }
 
             Constant::Record {
@@ -1710,33 +1711,46 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
 
                 // Type check the record constructor
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let constructor = ctx
+                    .slurp_result(self.infer_value_constructor(&module, &name, &location))
+                    .unwrap_or_else(|| ValueConstructor {
+                        public: true,
+                        variant: ValueConstructorVariant::Record {
+                            name,
+                            arity: 0,
+                            field_map: None,
+                            location,
+                            module: module.unwrap_or_else(|| "".to_string()),
+                            constructors_count: 1,
+                        },
+                        type_: self.environment.new_unbound_var(),
+                    });
 
-                let (tag, field_map) = match &constructor.variant {
+                match &constructor.variant {
                     ValueConstructorVariant::Record {
                         name, field_map, ..
-                    } => (name.clone(), field_map.clone()),
-
+                    } => Constant::Record {
+                        module,
+                        location,
+                        name: name.clone(),
+                        args: vec![],
+                        typ: constructor.type_,
+                        tag: name.clone(),
+                        field_map: field_map.clone(),
+                    },
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                        ctx.register_error(Error::NonLocalClauseGuardVariable { location, name });
+                        Constant::Var {
+                            location,
+                            module,
+                            typ: self.environment.new_unbound_var(),
+                            name,
+                            constructor: Some(Box::new(constructor)),
+                        }
                     }
-
-                    // TODO: remove this clone. Could use an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return Ok(literal.clone())
-                    }
-                };
-
-                Ok(Constant::Record {
-                    module,
-                    location,
-                    name,
-                    args: vec![],
-                    typ: constructor.type_,
-                    tag,
-                    field_map,
-                })
+                    ValueConstructorVariant::ModuleConstant { literal, .. } => literal.clone(),
+                }
             }
 
             Constant::Record {
@@ -1752,23 +1766,55 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     _ = self.environment.unused_modules.remove(module);
                 }
 
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
+                let ctor =
+                    ctx.slurp_result(self.infer_value_constructor(&module, &name, &location));
 
-                let (tag, field_map) = match &constructor.variant {
-                    ValueConstructorVariant::Record {
-                        name, field_map, ..
-                    } => (name.clone(), field_map.clone()),
+                if let Some(ValueConstructorVariant::ModuleConstant { literal, .. }) =
+                    ctor.as_ref().map(|c| c.variant)
+                {
+                    return ctx.finish(literal);
+                }
 
-                    ValueConstructorVariant::ModuleFn { .. }
-                    | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
-                    }
+                let (field_map, tag) = ctor
+                    .as_ref()
+                    .and_then(|ctor| {
+                        if let ValueConstructorVariant::Record {
+                            field_map, name, ..
+                        } = ctor.variant
+                        {
+                            Some((field_map, name.clone()))
+                        } else {
+                            ctx.register_error(Error::NonLocalClauseGuardVariable {
+                                location,
+                                name,
+                            });
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| {
+                        // create a custom field map based on the passed arguments.
+                        // This is made to ensure that further checks on arguments pass.
+                        let mut field_map = FieldMap::new(args.len() as u32);
 
-                    // TODO: remove this clone. Could be an rc instead
-                    ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return Ok(literal.clone())
-                    }
-                };
+                        for (index, label, location) in
+                            args.iter().enumerate().filter_map(|(i, arg)| {
+                                Some((i as u32, arg.label?.clone(), arg.location))
+                            })
+                        {
+                            ctx.just_slurp_result(
+                                field_map
+                                    .insert(label.clone(), index)
+                                    .map_err(|_| Error::DuplicateField { location, label }),
+                            );
+                        }
+
+                        (field_map.into_option(), name)
+                    });
+
+                let typ = ctor
+                    .as_ref()
+                    .map(|ctor| ctor.type_.clone())
+                    .unwrap_or_else(|| self.environment.new_unbound_var());
 
                 // Pretty much all the other infer functions operate on UntypedExpr
                 // or TypedExpr rather than ClauseGuard. To make things easier we
@@ -1777,7 +1823,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // have to convert to this other data structure.
                 let fun = match &module {
                     Some(module_alias) => {
-                        let typ = Arc::clone(&constructor.type_);
                         let module_name = self
                             .environment
                             .imported_modules
@@ -1791,7 +1836,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             field_map: field_map.clone(),
                             arity: args.len() as u16,
                             type_: Arc::clone(&typ),
-                            location: constructor.variant.definition_location(),
+                            location: ctor
+                                .as_ref()
+                                .map(|ctor| ctor.variant.definition_location())
+                                .unwrap_or(location),
                         };
 
                         TypedExpr::ModuleSelect {
@@ -1805,7 +1853,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
 
                     None => TypedExpr::Var {
-                        constructor,
+                        constructor: ctor.unwrap_or_else(|| ValueConstructor {
+                            public: true,
+                            variant: ValueConstructorVariant::Record {
+                                name,
+                                arity: args.len() as u16,
+                                field_map,
+                                location,
+                                module: module.unwrap_or_else(|| "".to_string()),
+                                constructors_count: 1,
+                            },
+                            type_: typ,
+                        }),
                         location,
                         name: name.clone(),
                     },
@@ -1815,20 +1874,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // except the args are typed with infer_clause_guard() here.
                 // This duplication is a bit awkward but it works!
                 // Potentially this could be improved later
-                match self
-                    .get_field_map(&fun)
-                    .map_err(|e| convert_get_value_constructor_error(e, location))?
+                match ctx
+                    .slurp_result(
+                        self.get_field_map(&fun)
+                            .map_err(|e| convert_get_value_constructor_error(e, location)),
+                    )
+                    .flatten()
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => field_map.reorder(&mut args, location)?,
+                    Some(field_map) => {
+                        ctx.just_slurp_result(field_map.reorder(&mut args, location))
+                    }
 
                     // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&args)?,
+                    None => ctx.just_slurp_result(assert_no_labelled_arguments(&args)),
                 }
 
-                let (mut args_types, return_type) =
-                    match_fun_type(fun.type_(), args.len(), self.environment)
-                        .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+                let (mut args_types, return_type) = ctx.slurp_filled_with(
+                    match_fun_type(fun.type_(), args.len(), self.environment),
+                    |errs| errs.map(|e| convert_not_fun_error(e, fun.location(), location)),
+                );
                 let args = args_types
                     .iter_mut()
                     .zip(args)
@@ -1839,19 +1904,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             location,
                             implicit,
                         } = arg;
-                        let value = self.infer_const(&None, value)?;
-                        unify(typ.clone(), value.type_())
-                            .map_err(|e| convert_unify_error(e, value.location()))?;
-                        Ok(CallArg {
+                        let value = ctx.slurp_filled(self.infer_const(&None, value));
+                        ctx.just_slurp_result(
+                            unify(typ.clone(), value.type_())
+                                .map_err(|e| convert_unify_error(e, value.location())),
+                        );
+                        CallArg {
                             label,
                             value,
                             implicit,
                             location,
-                        })
+                        }
                     })
-                    .try_collect()?;
+                    .collect();
 
-                Ok(Constant::Record {
+                Constant::Record {
                     module,
                     location,
                     name,
@@ -1859,7 +1926,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     typ: return_type,
                     tag,
                     field_map,
-                })
+                }
             }
             Constant::Var {
                 location,
@@ -1872,17 +1939,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     _ = self.environment.unused_modules.remove(module);
                 }
 
+                let ctor = ctx
+                    .slurp_result(self.infer_value_constructor(&module, &name, &location))
+                    .unwrap_or_else(|| {
+                        let typ = self.environment.new_unbound_var();
+                        ValueConstructor {
+                            public: true,
+                            variant: ValueConstructorVariant::ModuleConstant {
+                                location,
+                                module: module.unwrap_or_else(|| "".to_string()),
+                                literal: Constant::Var {
+                                    location,
+                                    module,
+                                    name,
+                                    typ,
+                                    constructor: None,
+                                },
+                            },
+                            type_: typ,
+                        }
+                    });
                 // Infer the type of this constant
-                let constructor = self.infer_value_constructor(&module, &name, &location)?;
-                match constructor.variant {
+                match ctor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::ModuleFn { .. } => Ok(Constant::Var {
+                    | ValueConstructorVariant::ModuleFn { .. } => Constant::Var {
                         location,
                         module,
                         name,
-                        typ: Arc::clone(&constructor.type_),
-                        constructor: Some(Box::from(constructor)),
-                    }),
+                        typ: ctor.type_.clone(),
+                        constructor: Some(Box::from(ctor)),
+                    },
                     // constructor.variant cannot be a LocalVariable because module constants can
                     // only be defined at module scope. It also cannot be a Record because then
                     // this constant would have been parsed as a Constant::Record. Therefore this
@@ -1890,16 +1976,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     _ => unreachable!(),
                 }
             }
-        }?;
+        };
 
         // Check type annotation is accurate.
         if let Some(ann) = annotation {
-            let const_ann = self.type_from_ast(ann)?;
-            unify(const_ann, inferred.type_())
-                .map_err(|e| convert_unify_error(e, inferred.location()))?;
+            let const_ann = ctx.slurp_filled(self.type_from_ast(ann));
+            ctx.just_slurp_result(
+                unify(const_ann, inferred.type_())
+                    .map_err(|e| convert_unify_error(e, inferred.location())),
+            );
         };
 
-        Ok(inferred)
+        ctx.finish(inferred)
     }
 
     fn infer_const_tuple(
