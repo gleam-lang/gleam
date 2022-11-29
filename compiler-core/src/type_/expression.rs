@@ -499,10 +499,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         elems: Vec<UntypedExpr>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let elems: Vec<_> = elems.into_iter().map(|e| self.infer(e)).try_collect()?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let elems: Vec<_> = elems
+            .into_iter()
+            .map(|e| ctx.slurp_filled(self.infer(e)))
+            .collect();
         let typ = tuple(elems.iter().map(HasType::type_).collect());
-        Ok(TypedExpr::Tuple {
+        ctx.finish(TypedExpr::Tuple {
             location,
             elems,
             typ,
