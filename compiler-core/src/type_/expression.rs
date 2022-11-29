@@ -367,12 +367,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         value: Box<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.infer(*value)?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let value = ctx.slurp_filled(self.infer(*value));
 
-        unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        ctx.just_slurp_result(
+            unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location())),
+        );
 
-        Ok(TypedExpr::Negate {
+        ctx.finish(TypedExpr::Negate {
             location,
             value: Box::new(value),
         })
