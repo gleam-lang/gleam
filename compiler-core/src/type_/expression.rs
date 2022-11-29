@@ -389,18 +389,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         is_capture: bool,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let (args, body) = self.do_infer_fn(args, expected_args, body, &return_annotation)?;
-        let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let typ = fn_(args_types, body.type_());
-        Ok(TypedExpr::Fn {
-            location,
-            typ,
-            is_capture,
-            args,
-            body: Box::new(body),
-            return_annotation,
-        })
+    ) -> FilledResult<TypedExpr, Error> {
+        self.do_infer_fn(args, expected_args, body, &return_annotation)
+            .map(|(args, body)| {
+                let arg_types = args.iter().map(|a| a.type_.clone()).collect();
+                let typ = fn_(arg_types, body.type_());
+                TypedExpr::Fn {
+                    location,
+                    typ,
+                    is_capture,
+                    args,
+                    body: Box::new(body),
+                    return_annotation,
+                }
+            })
     }
 
     fn infer_arg(
