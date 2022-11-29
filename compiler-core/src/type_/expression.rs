@@ -565,22 +565,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         tuple: UntypedExpr,
         index: u64,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let tuple = self.infer(tuple)?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let tuple = ctx.slurp_filled(self.infer(tuple));
         match collapse_links(tuple.type_()).as_ref() {
             Type::Tuple { elems } => {
-                let typ = elems
-                    .get(index as usize)
-                    .ok_or_else(|| Error::OutOfBoundsTupleIndex {
-                        location: SrcSpan {
-                            start: tuple.location().end,
-                            end: location.end,
-                        },
-                        index,
-                        size: elems.len(),
-                    })?
-                    .clone();
-                Ok(TypedExpr::TupleIndex {
+                let typ = ctx
+                    .slurp_result(elems.get(index as usize).cloned().ok_or_else(|| {
+                        Error::OutOfBoundsTupleIndex {
+                            location: SrcSpan {
+                                start: tuple.location().end,
+                                end: location.end,
+                            },
+                            index,
+                            size: elems.len(),
+                        }
+                    }))
+                    .unwrap_or_else(|| self.environment.new_unbound_var());
+                ctx.finish(TypedExpr::TupleIndex {
                     location,
                     index,
                     tuple: Box::new(tuple),
@@ -588,14 +590,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
-                location: tuple.location(),
-            }),
+            typ if typ.is_unbound() => {
+                ctx.register_error(Error::NotATupleUnbound {
+                    location: tuple.location(),
+                });
+                ctx.finish(TypedExpr::TupleIndex {
+                    location,
+                    index,
+                    tuple: Box::new(tuple),
+                    typ: self.environment.new_unbound_var(),
+                })
+            }
 
-            _ => Err(Error::NotATuple {
-                location: tuple.location(),
-                given: tuple.type_(),
-            }),
+            _ => {
+                ctx.register_error(Error::NotATuple {
+                    location: tuple.location(),
+                    given: tuple.type_(),
+                });
+                ctx.finish(TypedExpr::TupleIndex {
+                    location,
+                    index,
+                    tuple: Box::new(tuple),
+                    typ: self.environment.new_unbound_var(),
+                })
+            }
         }
     }
 
