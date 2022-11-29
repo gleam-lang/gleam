@@ -2,13 +2,16 @@ use itertools::Itertools;
 use vec1::Vec1;
 
 use super::{pipe::PipeTyper, *};
-use crate::ast::{
-    Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
-    Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
-    TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-    UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment, UntypedMultiPattern,
-    UntypedPattern, Use,
+use crate::{
+    ast::{
+        Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
+        Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
+        TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
+        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
+        UntypedMultiPattern, UntypedPattern, Use,
+    },
+    filled_result::{FilledResult, FilledResultContext},
 };
 
 use im::hashmap;
@@ -66,20 +69,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// Crawl the AST, annotating each node with the inferred type or
     /// returning an error.
     ///
-    pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
+    pub fn infer(&mut self, expr: UntypedExpr) -> FilledResult<TypedExpr, Error> {
         match expr {
             UntypedExpr::Todo {
                 location,
                 label,
                 kind,
                 ..
-            } => Ok(self.infer_todo(location, kind, label)),
+            } => FilledResult::ok(self.infer_todo(location, kind, label)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
                 location, value, ..
-            } => Ok(self.infer_int(value, location)),
+            } => FilledResult::ok(self.infer_int(value, location)),
 
             UntypedExpr::Sequence {
                 expressions,
@@ -92,11 +95,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Float {
                 location, value, ..
-            } => Ok(self.infer_float(value, location)),
+            } => FilledResult::ok(self.infer_float(value, location)),
 
             UntypedExpr::String {
                 location, value, ..
-            } => Ok(self.infer_string(value, location)),
+            } => FilledResult::ok(self.infer_string(value, location)),
 
             UntypedExpr::PipeLine { expressions } => self.infer_pipeline(expressions),
 
