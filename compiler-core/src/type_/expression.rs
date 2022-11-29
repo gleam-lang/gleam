@@ -461,31 +461,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         elements: Vec<UntypedExpr>,
         tail: Option<Box<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
         let typ = self.new_unbound_var();
         // Type check each elements
         let elements = elements
             .into_iter()
             .map(|element| {
-                let element = self.infer(element)?;
+                let element = ctx.slurp_filled(self.infer(element));
                 // Ensure they all have the same type
-                unify(typ.clone(), element.type_())
-                    .map_err(|e| convert_unify_error(e, location))?;
-                Ok(element)
+                let _ = ctx.slurp_result(
+                    unify(typ.clone(), element.type_())
+                        .map_err(|e| convert_unify_error(e, location)),
+                );
+                element
             })
-            .try_collect()?;
+            .collect();
         // Type check the ..tail, if there is one
         let typ = list(typ);
-        let tail = match tail {
-            Some(tail) => {
-                let tail = self.infer(*tail)?;
-                // Ensure the tail has the same type as the preceeding elements
-                unify(typ.clone(), tail.type_()).map_err(|e| convert_unify_error(e, location))?;
-                Some(Box::new(tail))
-            }
-            None => None,
-        };
-        Ok(TypedExpr::List {
+        let tail = tail.map(|tail| {
+            let tail = ctx.slurp_filled(self.infer(*tail));
+            // Ensure the tail has the same type as the preceeding elements
+            let _ = ctx.slurp_result(
+                unify(typ.clone(), tail.type_()).map_err(|e| convert_unify_error(e, location)),
+            );
+            Box::new(tail)
+        });
+        ctx.finish(TypedExpr::List {
             location,
             typ,
             elements,
