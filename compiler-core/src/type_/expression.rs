@@ -54,7 +54,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         result
     }
 
-    pub fn type_from_ast(&mut self, ast: &TypeAst) -> Result<Arc<Type>, Error> {
+    pub fn type_from_ast(&mut self, ast: &TypeAst) -> FilledResult<Arc<Type>, Error> {
         self.hydrator.type_from_ast(ast, self.environment)
     }
 
@@ -193,7 +193,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> Result<TypedExpr, Error> {
+    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> FilledResult<TypedExpr, Error> {
         PipeTyper::infer(self, expressions)
     }
 
@@ -710,15 +710,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         left: UntypedExpr,
         right: UntypedExpr,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
         let (input_type, output_type) = match &name {
             BinOp::Eq | BinOp::NotEq => {
-                let left = self.infer(left)?;
-                let right = self.infer(right)?;
-                unify(left.type_(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                let left = ctx.slurp_filled(self.infer(left));
+                let right = ctx.slurp_filled(self.infer(right));
+                ctx.just_slurp_result(
+                    unify(left.type_(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
 
-                return Ok(TypedExpr::BinOp {
+                return ctx.finish(TypedExpr::BinOp {
                     location,
                     name,
                     typ: bool(),
@@ -748,18 +751,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             BinOp::Concatenate => (string(), string()),
         };
 
-        let left = self.infer(left)?;
-        unify(input_type.clone(), left.type_()).map_err(|e| {
+        let left = ctx.slurp_filled(self.infer(left));
+        ctx.just_slurp_result(unify(input_type.clone(), left.type_()).map_err(|e| {
             e.operator_situation(name)
                 .into_error(left.type_defining_location())
-        })?;
-        let right = self.infer(right)?;
-        unify(input_type, right.type_()).map_err(|e| {
+        }));
+        let right = ctx.slurp_filled(self.infer(right));
+        ctx.just_slurp_result(unify(input_type, right.type_()).map_err(|e| {
             e.operator_situation(name)
                 .into_error(right.type_defining_location())
-        })?;
+        }));
 
-        Ok(TypedExpr::BinOp {
+        ctx.finish(TypedExpr::BinOp {
             location,
             name,
             typ: output_type,
@@ -775,21 +778,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: AssignmentKind,
         annotation: &Option<TypeAst>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let (mut ctx, value) = self
+            .in_new_scope(|value_typer| value_typer.infer(value))
+            .into_context();
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
-        let pattern = pattern::PatternTyper::new(self.environment, &self.hydrator)
-            .unify(pattern, value_typ.clone())?;
+        let pattern = ctx.slurp_filled(
+            pattern::PatternTyper::new(self.environment, &self.hydrator)
+                .unify(pattern, value_typ.clone()),
+        );
 
         // Check that any type annotation is accurate.
         if let Some(ann) = annotation {
-            let ann_typ = self
-                .type_from_ast(ann)
-                .map(|t| self.instantiate(t, &mut hashmap![]))?;
-            unify(ann_typ, value_typ.clone())
-                .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
+            let ann_typ = ctx.slurp_filled(
+                self.type_from_ast(ann)
+                    .map(|t| self.instantiate(t, &mut hashmap![])),
+            );
+            ctx.just_slurp_result(
+                unify(ann_typ, value_typ.clone())
+                    .map_err(|e| convert_unify_error(e, value.type_defining_location())),
+            );
         }
 
         // We currently only do only limited exhaustiveness checking of custom types
@@ -800,14 +810,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ.clone()))
             {
-                return Err(Error::NotExhaustivePatternMatch {
+                ctx.register_error(Error::NotExhaustivePatternMatch {
                     location,
                     unmatched,
                 });
             }
         }
 
-        Ok(TypedExpr::Assignment {
+        ctx.finish(TypedExpr::Assignment {
             location,
             typ: value_typ,
             kind,
