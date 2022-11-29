@@ -655,34 +655,48 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         options: Vec<BitStringSegmentOption<UntypedValue>>,
         location: SrcSpan,
         mut infer: InferFn,
-    ) -> Result<BitStringSegment<TypedValue, Arc<Type>>, Error>
+    ) -> FilledResult<BitStringSegment<TypedValue, Arc<Type>>, Error>
     where
-        InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
+        InferFn: FnMut(&mut Self, UntypedValue) -> FilledResult<TypedValue, Error>,
         TypedValue: HasType + HasLocation + Clone + bit_string::GetLitValue,
     {
-        let value = infer(self, value)?;
+        let mut ctx = FilledResultContext::new();
+        let value = ctx.slurp_filled(infer(self, value));
 
         let infer_option = |segment_option: BitStringSegmentOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
-                let typed_value = infer(self, value)?;
-                unify(typ, typed_value.type_())
-                    .map_err(|e| convert_unify_error(e, typed_value.location()))?;
-                Ok(typed_value)
+                let typed_value = ctx.slurp_filled(infer(self, value));
+                ctx.slurp_result(
+                    unify(typ, typed_value.type_())
+                        .map_err(|e| convert_unify_error(e, typed_value.location())),
+                );
+                FilledResult::ok(typed_value)
             })
         };
 
-        let options: Vec<_> = options.into_iter().map(infer_option).try_collect()?;
+        // SAFE: we can unwrap the FilledResult's because the closure inside
+        // `infer_bit_string_segment_option` always returns `FilledResult::ok` and the called
+        // function has `ok`s in the rest of the branches where it doesn't call our callback.
+        let options: Vec<_> = options
+            .into_iter()
+            .map(infer_option)
+            .map(FilledResult::no_errors)
+            .collect();
 
-        let typ = crate::bit_string::type_options_for_value(&options).map_err(|error| {
-            Error::BitStringSegmentError {
-                error: error.error,
-                location: error.location,
-            }
-        })?;
+        let typ =
+            ctx.slurp_result(crate::bit_string::type_options_for_value(&options).map_err(
+                |error| Error::BitStringSegmentError {
+                    error: error.error,
+                    location: error.location,
+                },
+            ))
+            .unwrap_or_else(|| self.environment.new_unbound_var());
 
-        unify(typ.clone(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+        ctx.just_slurp_result(
+            unify(typ.clone(), value.type_()).map_err(|e| convert_unify_error(e, value.location())),
+        );
 
-        Ok(BitStringSegment {
+        ctx.finish(BitStringSegment {
             location,
             type_: typ,
             value: Box::new(value),
