@@ -263,7 +263,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         untyped: Vec<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
         let count = untyped.len();
         let untyped = untyped.into_iter();
         self.infer_iter_seq(location, count, untyped)
@@ -274,7 +274,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         count: usize,
         mut untyped: Exprs,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
         let mut i = 0;
         let mut expressions = Vec::with_capacity(count);
 
@@ -285,12 +286,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // expressions in the sequence to be passed to them during as an
             // implicit anonymous function.
             if let UntypedExpr::Use(use_) = expression {
-                let expression = self.infer_use(use_, location, untyped.collect())?;
+                let expression =
+                    ctx.slurp_filled(self.infer_use(use_, location, untyped.collect()));
                 expressions.push(expression);
                 break; // Inferring the use has consumed the rest of the exprs
             }
 
-            let expression = self.infer(expression)?;
+            let expression = ctx.slurp_filled(self.infer(expression));
             // This isn't the final expression in the sequence, so call the
             // `expression_discarded` function to see if anything is being
             // discarded that we think shouldn't be.
@@ -300,7 +302,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             expressions.push(expression);
         }
 
-        Ok(TypedExpr::Sequence {
+        ctx.finish(TypedExpr::Sequence {
             location,
             expressions,
         })
