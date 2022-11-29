@@ -428,10 +428,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // function being type checked, resulting in better type errors and the
         // record field access syntax working.
         if let Some(expected) = expected {
-            unify(expected, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+            let _ = ctx.slurp_result(
+                unify(expected, typ.clone()).map_err(|e| convert_unify_error(e, location)),
+            );
         }
 
-        Ok(Arg {
+        ctx.finish(Arg {
             names,
             location,
             annotation,
