@@ -1,5 +1,4 @@
 use im::hashmap;
-use itertools::Itertools;
 
 ///! Type inference and checking of patterns used in case expressions
 ///! and variables bindings.
@@ -81,9 +80,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         multi_pattern: UntypedMultiPattern,
         subjects: &[Arc<Type>],
         location: &SrcSpan,
-    ) -> Result<Vec<TypedPattern>, Error> {
+    ) -> FilledResult<Vec<TypedPattern>, Error> {
+        let mut ctx = FilledResultContext::new();
         self.mode = PatternMode::Alternative(vec![]);
-        let typed_multi = self.infer_multi_pattern(multi_pattern, subjects, location)?;
+        let typed_multi =
+            ctx.slurp_filled(self.infer_multi_pattern(multi_pattern, subjects, location));
         match &self.mode {
             PatternMode::Initial => panic!("Pattern mode switched from Alternative to Initial"),
             PatternMode::Alternative(assigned)
@@ -92,7 +93,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 for name in assigned {
                     let _ = self.initial_pattern_vars.remove(name);
                 }
-                Err(Error::MissingVarInAlternativePattern {
+                ctx.register_error(Error::MissingVarInAlternativePattern {
                     location: *location,
                     // It is safe to use expect here as we checked the length above
                     name: self
@@ -101,10 +102,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .next()
                         .expect("Getting undefined pattern variable")
                         .clone(),
-                })
+                });
             }
-            PatternMode::Alternative(_) => Ok(typed_multi),
+            PatternMode::Alternative(_) => (),
         }
+        ctx.finish(typed_multi)
     }
 
     pub fn infer_multi_pattern(
@@ -112,43 +114,47 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         multi_pattern: UntypedMultiPattern,
         subjects: &[Arc<Type>],
         location: &SrcSpan,
-    ) -> Result<Vec<TypedPattern>, Error> {
+    ) -> FilledResult<Vec<TypedPattern>, Error> {
+        let mut ctx = FilledResultContext::new();
         // If there are N subjects the multi-pattern is expected to be N patterns
         if subjects.len() != multi_pattern.len() {
-            return Err(Error::IncorrectNumClausePatterns {
+            ctx.register_error(Error::IncorrectNumClausePatterns {
                 location: *location,
                 expected: subjects.len(),
                 given: multi_pattern.len(),
             });
         }
 
+        let min_len = subjects.len().min(multi_pattern.len());
+
         // Unify each pattern in the multi-pattern with the corresponding subject
-        let mut typed_multi = Vec::with_capacity(multi_pattern.len());
-        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects) {
-            let pattern = self.unify(pattern, subject_type.clone())?;
+        let mut typed_multi = Vec::with_capacity(min_len);
+        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects).take(min_len) {
+            let pattern = ctx.slurp_filled(self.unify(pattern, subject_type.clone()));
             typed_multi.push(pattern);
         }
-        Ok(typed_multi)
+        ctx.finish(typed_multi)
     }
 
     fn infer_pattern_bit_string(
         &mut self,
         mut segments: Vec<UntypedPatternBitStringSegment>,
         location: SrcSpan,
-    ) -> Result<TypedPattern, Error> {
+    ) -> FilledResult<TypedPattern, Error> {
+        let mut ctx = FilledResultContext::new();
         let last_segment = segments.pop();
 
         let mut typed_segments: Vec<_> = segments
             .into_iter()
-            .map(|s| self.infer_pattern_segment(s, false))
-            .try_collect()?;
+            .map(|s| ctx.slurp_filled(self.infer_pattern_segment(s, false)))
+            .collect();
 
         if let Some(s) = last_segment {
-            let typed_last_segment = self.infer_pattern_segment(s, true)?;
+            let typed_last_segment = ctx.slurp_filled(self.infer_pattern_segment(s, true));
             typed_segments.push(typed_last_segment)
         }
 
-        Ok(TypedPattern::BitString {
+        ctx.finish(TypedPattern::BitString {
             location,
             segments: typed_segments,
         })
@@ -158,7 +164,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         segment: UntypedPatternBitStringSegment,
         is_last_segment: bool,
-    ) -> Result<TypedPatternBitStringSegment, Error> {
+    ) -> FilledResult<TypedPatternBitStringSegment, Error> {
+        let mut ctx = FilledResultContext::new();
         let UntypedPatternBitStringSegment {
             location,
             options,
@@ -168,29 +175,34 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options: Vec<_> = options
             .into_iter()
-            .map(|o| infer_bit_string_segment_option(o, |value, typ| self.unify(value, typ)))
-            .try_collect()?;
+            .map(|o| {
+                ctx.slurp_filled(infer_bit_string_segment_option(o, |value, typ| {
+                    self.unify(value, typ)
+                }))
+            })
+            .collect();
 
-        let segment_type = bit_string::type_options_for_pattern(&options, !is_last_segment)
-            .map_err(|error| Error::BitStringSegmentError {
-                error: error.error,
-                location: error.location,
-            })?;
+        let segment_type = ctx
+            .slurp_result(
+                bit_string::type_options_for_pattern(&options, !is_last_segment).map_err(|error| {
+                    Error::BitStringSegmentError {
+                        error: error.error,
+                        location: error.location,
+                    }
+                }),
+            )
+            .unwrap_or_else(|| self.environment.new_unbound_var());
 
-        let typ = {
-            match value.deref() {
-                Pattern::Var { .. } if segment_type == string() => {
-                    Err(Error::BitStringSegmentError {
-                        error: bit_string::ErrorType::VariableUtfSegmentInPattern,
-                        location,
-                    })
-                }
-                _ => Ok(segment_type),
-            }
-        }?;
-        let typed_value = self.unify(*value, typ.clone())?;
+        let typ = segment_type;
+        if matches!(value.deref(), Pattern::Var { .. } if segment_type == string()) {
+            ctx.register_error(Error::BitStringSegmentError {
+                error: bit_string::ErrorType::VariableUtfSegmentInPattern,
+                location,
+            });
+        }
+        let typed_value = ctx.slurp_filled(self.unify(*value, typ.clone()));
 
-        Ok(BitStringSegment {
+        ctx.finish(BitStringSegment {
             location,
             value: Box::new(typed_value),
             options,
@@ -206,33 +218,44 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern: UntypedPattern,
         type_: Arc<Type>,
-    ) -> Result<TypedPattern, Error> {
+    ) -> FilledResult<TypedPattern, Error> {
         match pattern {
-            Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
+            Pattern::Discard { name, location } => {
+                FilledResult::ok(Pattern::Discard { name, location })
+            }
 
             Pattern::Var { name, location, .. } => {
-                self.insert_variable(&name, type_, location)
-                    .map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Var { name, location })
+                FilledResult::ok(Pattern::Var { name, location }).with_check(
+                    self.insert_variable(&name, type_, location)
+                        .map_err(|e| convert_unify_error(e, location)),
+                )
             }
 
             Pattern::VarUsage { name, location, .. } => {
-                let ValueConstructor { type_: typ, .. } = self
+                let mut ctx = FilledResultContext::new();
+                let typ = if let Some(typ) = self
                     .environment
                     .get_variable(&name)
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownVariable {
+                    .map(|v| v.type_.clone())
+                {
+                    typ
+                } else {
+                    ctx.register_error(Error::UnknownVariable {
                         location,
                         name: name.to_string(),
                         variables: self.environment.local_value_names(),
-                    })?;
+                    });
+                    self.environment.new_unbound_var()
+                };
                 self.environment.increment_usage(&name);
                 let typ = self
                     .environment
                     .instantiate(typ, &mut hashmap![], self.hydrator);
-                unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+                let _ = ctx.slurp_result(
+                    unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location)),
+                );
 
-                Ok(Pattern::VarUsage {
+                ctx.finish(Pattern::VarUsage {
                     name,
                     location,
                     type_: typ,
@@ -246,16 +269,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 left_side_string,
                 right_side_assignment,
             } => {
+                let mut ctx = FilledResultContext::new();
                 // The entire concatenate pattern must be a string
-                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
+                ctx.just_slurp_result(
+                    unify(type_, string()).map_err(|e| convert_unify_error(e, location)),
+                );
 
                 // The right hand side may assign a variable, which is the suffix of the string
                 if let AssignName::Variable(right) = &right_side_assignment {
-                    self.insert_variable(right.as_ref(), string(), right_location)
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    ctx.just_slurp_result(
+                        self.insert_variable(right.as_ref(), string(), right_location)
+                            .map_err(|e| convert_unify_error(e, location)),
+                    );
                 };
 
-                Ok(Pattern::Concatenate {
+                ctx.finish(Pattern::Concatenate {
                     location,
                     left_location,
                     right_location,
@@ -269,118 +297,132 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                self.insert_variable(&name, type_.clone(), location)
-                    .map_err(|e| convert_unify_error(e, pattern.location()))?;
-                let pattern = self.unify(*pattern, type_)?;
-                Ok(Pattern::Assign {
+                let mut ctx = FilledResultContext::new();
+                ctx.just_slurp_result(
+                    self.insert_variable(&name, type_.clone(), location)
+                        .map_err(|e| convert_unify_error(e, pattern.location())),
+                );
+                let pattern = ctx.slurp_filled(self.unify(*pattern, type_));
+                ctx.finish(Pattern::Assign {
                     name,
                     pattern: Box::new(pattern),
                     location,
                 })
             }
 
-            Pattern::Int { location, value } => {
-                unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Int { location, value })
-            }
+            Pattern::Int { location, value } => FilledResult::ok(Pattern::Int { location, value })
+                .with_check(unify(type_, int()).map_err(|e| convert_unify_error(e, location))),
 
             Pattern::Float { location, value } => {
-                unify(type_, float()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Float { location, value })
+                FilledResult::ok(Pattern::Float { location, value })
+                    .with_check(unify(type_, float()).map_err(|e| convert_unify_error(e, location)))
             }
 
             Pattern::String { location, value } => {
-                unify(type_, string()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::String { location, value })
+                FilledResult::ok(Pattern::String { location, value }).with_check(
+                    unify(type_, string()).map_err(|e| convert_unify_error(e, location)),
+                )
             }
 
             Pattern::List {
                 location,
                 elements,
                 tail,
-            } => match type_.get_app_args(true, &[], "List", 1, self.environment) {
-                Some(args) => {
-                    let typ = args
-                        .get(0)
+            } => {
+                let mut ctx = FilledResultContext::new();
+
+                let typ = if let Some(args) =
+                    type_.get_app_args(true, &[], "List", 1, self.environment)
+                {
+                    args.get(0)
                         .expect("Failed to get type argument of List")
-                        .clone();
-                    let elements = elements
-                        .into_iter()
-                        .map(|element| self.unify(element, typ.clone()))
-                        .try_collect()?;
-
-                    let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, list(typ))?)),
-                        None => None,
-                    };
-
-                    Ok(Pattern::List {
+                        .clone()
+                } else {
+                    let list_contents = self.environment.new_unbound_var();
+                    ctx.register_error(Error::CouldNotUnify {
                         location,
-                        elements,
-                        tail,
-                    })
-                }
+                        situation: None,
+                        expected: type_.clone(),
+                        given: list(list_contents),
+                        rigid_type_names: hashmap![],
+                    });
+                    list_contents
+                };
 
-                None => Err(Error::CouldNotUnify {
-                    given: list(self.environment.new_unbound_var()),
-                    expected: type_.clone(),
-                    situation: None,
+                let elements = elements
+                    .into_iter()
+                    .map(|element| ctx.slurp_filled(self.unify(element, typ.clone())))
+                    .collect();
+
+                let tail =
+                    tail.map(|tail| Box::new(ctx.slurp_filled(self.unify(*tail, list(typ)))));
+
+                ctx.finish(Pattern::List {
                     location,
-                    rigid_type_names: hashmap![],
-                }),
-            },
+                    elements,
+                    tail,
+                })
+            }
 
-            Pattern::Tuple { elems, location } => match collapse_links(type_.clone()).deref() {
-                Type::Tuple { elems: type_elems } => {
-                    if elems.len() != type_elems.len() {
-                        return Err(Error::IncorrectArity {
-                            labels: vec![],
-                            location,
-                            expected: type_elems.len(),
-                            given: elems.len(),
-                        });
+            Pattern::Tuple { elems, location } => {
+                let mut ctx = FilledResultContext::new();
+
+                let type_elems: Vec<Arc<Type>> = match collapse_links(type_.clone()).deref() {
+                    Type::Tuple { elems: type_elems } => {
+                        if elems.len() != type_elems.len() {
+                            ctx.register_error(Error::IncorrectArity {
+                                labels: vec![],
+                                location,
+                                expected: type_elems.len(),
+                                given: elems.len(),
+                            });
+                        }
+                        type_elems.clone()
                     }
 
-                    let elems = elems
-                        .into_iter()
-                        .zip(type_elems)
-                        .map(|(pattern, typ)| self.unify(pattern, typ.clone()))
-                        .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
-                }
+                    Type::Var { .. } => {
+                        let elems_types: Vec<_> = (0..elems.len())
+                            .map(|_| self.environment.new_unbound_var())
+                            .collect();
+                        ctx.just_slurp_result(
+                            unify(tuple(elems_types.clone()), type_)
+                                .map_err(|e| convert_unify_error(e, location)),
+                        );
+                        elems_types
+                    }
 
-                Type::Var { .. } => {
-                    let elems_types: Vec<_> = (0..(elems.len()))
-                        .map(|_| self.environment.new_unbound_var())
-                        .collect();
-                    unify(tuple(elems_types.clone()), type_)
-                        .map_err(|e| convert_unify_error(e, location))?;
-                    let elems = elems
-                        .into_iter()
-                        .zip(elems_types)
-                        .map(|(pattern, type_)| self.unify(pattern, type_))
-                        .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
-                }
+                    _ => {
+                        let elems_types = (0..(elems.len()))
+                            .map(|_| self.environment.new_unbound_var())
+                            .collect();
 
-                _ => {
-                    let elems_types = (0..(elems.len()))
-                        .map(|_| self.environment.new_unbound_var())
-                        .collect();
+                        ctx.register_error(Error::CouldNotUnify {
+                            given: tuple(elems_types),
+                            expected: type_,
+                            situation: None,
+                            location,
+                            rigid_type_names: hashmap![],
+                        });
+                        elems_types
+                    }
+                };
 
-                    Err(Error::CouldNotUnify {
-                        given: tuple(elems_types),
-                        expected: type_,
-                        situation: None,
-                        location,
-                        rigid_type_names: hashmap![],
-                    })
-                }
-            },
+                let elems = elems
+                    .into_iter()
+                    .zip(type_elems)
+                    .map(|(pattern, type_)| ctx.slurp_filled(self.unify(pattern, type_)))
+                    .collect();
+
+                ctx.finish(Pattern::Tuple { elems, location })
+            }
 
             Pattern::BitString { location, segments } => {
-                unify(type_, bit_string()).map_err(|e| convert_unify_error(e, location))?;
-                self.infer_pattern_bit_string(segments, location)
+                let mut ctx = FilledResultContext::new();
+                ctx.just_slurp_result(
+                    unify(type_, bit_string()).map_err(|e| convert_unify_error(e, location)),
+                );
+                let res = ctx.slurp_filled(self.infer_pattern_bit_string(segments, location));
+                ctx.finish(res)
             }
 
             Pattern::Constructor {
@@ -391,90 +433,100 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 with_spread,
                 ..
             } => {
+                let mut ctx = FilledResultContext::new();
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(&name);
 
-                let cons = self
-                    .environment
-                    .get_value_constructor(module.as_ref(), &name)
-                    .map_err(|e| convert_get_value_constructor_error(e, location))?;
+                if let Some(cons) = ctx.slurp_result(
+                    self.environment
+                        .get_value_constructor(module.as_ref(), &name)
+                        .map_err(|e| convert_get_value_constructor_error(e, location)),
+                ) {
+                    match cons.field_map() {
+                        // The fun has a field map so labelled arguments may be present and need to be reordered.
+                        Some(field_map) => {
+                            if with_spread {
+                                // Using the spread operator when you have already provided variables for all of the
+                                // record's fields throws an error
+                                if pattern_args.len() == field_map.arity as usize {
+                                    ctx.register_error(Error::UnnecessarySpreadOperator {
+                                        location: SrcSpan {
+                                            start: location.end - 3,
+                                            end: location.end - 1,
+                                        },
+                                        arity: field_map.arity as usize,
+                                    });
+                                }
 
-                match cons.field_map() {
-                    // The fun has a field map so labelled arguments may be present and need to be reordered.
-                    Some(field_map) => {
-                        if with_spread {
-                            // Using the spread operator when you have already provided variables for all of the
-                            // record's fields throws an error
-                            if pattern_args.len() == field_map.arity as usize {
-                                return Err(Error::UnnecessarySpreadOperator {
-                                    location: SrcSpan {
-                                        start: location.end - 3,
-                                        end: location.end - 1,
-                                    },
-                                    arity: field_map.arity as usize,
-                                });
-                            }
-
-                            // The location of the spread operator itself
-                            let spread_location = SrcSpan {
-                                start: location.end - 3,
-                                end: location.end - 1,
-                            };
-
-                            // Insert discard variables to match the unspecified fields
-                            // In order to support both positional and labelled arguments we have to insert
-                            // them after all positional variables and before the labelled ones. This means
-                            // we have calculate that index and then insert() the discards. It would be faster
-                            // if we could put the discards anywhere which would let us use push().
-                            // Potential future optimisation.
-                            let index_of_first_labelled_arg = pattern_args
-                                .iter()
-                                .position(|a| a.label.is_some())
-                                .unwrap_or(pattern_args.len());
-
-                            while pattern_args.len() < field_map.arity as usize {
-                                let new_call_arg = CallArg {
-                                    value: Pattern::Discard {
-                                        name: "_".to_string(),
-                                        location: spread_location,
-                                    },
-                                    location: spread_location,
-                                    label: None,
-                                    implicit: false,
+                                // The location of the spread operator itself
+                                let spread_location = SrcSpan {
+                                    start: location.end - 3,
+                                    end: location.end - 1,
                                 };
 
-                                pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
+                                // Insert discard variables to match the unspecified fields
+                                // In order to support both positional and labelled arguments we have to insert
+                                // them after all positional variables and before the labelled ones. This means
+                                // we have calculate that index and then insert() the discards. It would be faster
+                                // if we could put the discards anywhere which would let us use push().
+                                // Potential future optimisation.
+                                let index_of_first_labelled_arg = pattern_args
+                                    .iter()
+                                    .position(|a| a.label.is_some())
+                                    .unwrap_or(pattern_args.len());
+
+                                while pattern_args.len() < field_map.arity as usize {
+                                    let new_call_arg = CallArg {
+                                        value: Pattern::Discard {
+                                            name: "_".to_string(),
+                                            location: spread_location,
+                                        },
+                                        location: spread_location,
+                                        label: None,
+                                        implicit: false,
+                                    };
+
+                                    pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
+                                }
+                            }
+
+                            ctx.just_slurp_result(field_map.reorder(&mut pattern_args, location))
+                        }
+
+                        // The fun has no field map and so we error if arguments have been labelled
+                        None => ctx.just_slurp_result(assert_no_labelled_arguments(&pattern_args)),
+                    }
+
+                    let constructor_typ = cons.type_.clone();
+                    let constructor = match cons.variant {
+                        ValueConstructorVariant::Record { ref name, .. } => {
+                            PatternConstructor::Record {
+                                name: name.clone(),
+                                field_map: cons.field_map().cloned(),
                             }
                         }
-
-                        field_map.reorder(&mut pattern_args, location)?
-                    }
-
-                    // The fun has no field map and so we error if arguments have been labelled
-                    None => assert_no_labelled_arguments(&pattern_args)?,
-                }
-
-                let constructor_typ = cons.type_.clone();
-                let constructor = match cons.variant {
-                    ValueConstructorVariant::Record { ref name, .. } => {
-                        PatternConstructor::Record {
-                            name: name.clone(),
-                            field_map: cons.field_map().cloned(),
+                        ValueConstructorVariant::LocalVariable { .. }
+                        | ValueConstructorVariant::ModuleConstant { .. }
+                        | ValueConstructorVariant::ModuleFn { .. } => {
+                            panic!("Unexpected value constructor type for a constructor pattern.",)
                         }
-                    }
-                    ValueConstructorVariant::LocalVariable { .. }
-                    | ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::ModuleFn { .. } => {
-                        panic!("Unexpected value constructor type for a constructor pattern.",)
-                    }
-                };
+                    };
 
-                let instantiated_constructor_type =
-                    self.environment
-                        .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
-                match instantiated_constructor_type.deref() {
-                    Type::Fn { args, retrn } => {
-                        if args.len() == pattern_args.len() {
+                    let instantiated_constructor_type = self.environment.instantiate(
+                        constructor_typ,
+                        &mut hashmap![],
+                        self.hydrator,
+                    );
+                    match instantiated_constructor_type.deref() {
+                        Type::Fn { args, retrn } => {
+                            if args.len() != pattern_args.len() {
+                                ctx.register_error(Error::IncorrectArity {
+                                    labels: vec![],
+                                    location,
+                                    expected: args.len(),
+                                    given: pattern_args.len(),
+                                });
+                            }
                             let pattern_args = pattern_args
                                 .into_iter()
                                 .zip(args)
@@ -485,18 +537,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         implicit,
                                         label,
                                     } = arg;
-                                    let value = self.unify(value, typ.clone())?;
-                                    Ok(CallArg {
+                                    let value = ctx.slurp_filled(self.unify(value, typ.clone()));
+                                    CallArg {
                                         value,
                                         location,
                                         implicit,
                                         label,
-                                    })
+                                    }
                                 })
-                                .try_collect()?;
-                            unify(type_, retrn.clone())
-                                .map_err(|e| convert_unify_error(e, location))?;
-                            Ok(Pattern::Constructor {
+                                .collect();
+                            ctx.just_slurp_result(
+                                unify(type_, retrn.clone())
+                                    .map_err(|e| convert_unify_error(e, location)),
+                            );
+                            ctx.finish(Pattern::Constructor {
                                 location,
                                 module,
                                 name,
@@ -505,21 +559,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 with_spread,
                                 type_: instantiated_constructor_type,
                             })
-                        } else {
-                            Err(Error::IncorrectArity {
-                                labels: vec![],
-                                location,
-                                expected: args.len(),
-                                given: pattern_args.len(),
-                            })
                         }
-                    }
 
-                    Type::App { .. } => {
-                        if pattern_args.is_empty() {
-                            unify(type_, instantiated_constructor_type.clone())
-                                .map_err(|e| convert_unify_error(e, location))?;
-                            Ok(Pattern::Constructor {
+                        Type::App { .. } => {
+                            if !pattern_args.is_empty() {
+                                ctx.register_error(Error::IncorrectArity {
+                                    labels: vec![],
+                                    location,
+                                    expected: 0,
+                                    given: pattern_args.len(),
+                                });
+                            }
+                            ctx.just_slurp_result(
+                                unify(type_, instantiated_constructor_type.clone())
+                                    .map_err(|e| convert_unify_error(e, location)),
+                            );
+                            ctx.finish(Pattern::Constructor {
                                 location,
                                 module,
                                 name,
@@ -528,17 +583,39 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 with_spread,
                                 type_: instantiated_constructor_type,
                             })
-                        } else {
-                            Err(Error::IncorrectArity {
-                                labels: vec![],
-                                location,
-                                expected: 0,
-                                given: pattern_args.len(),
-                            })
                         }
-                    }
 
-                    _ => panic!("Unexpected constructor type for a constructor pattern.",),
+                        _ => panic!("Unexpected constructor type for a constructor pattern.",),
+                    }
+                } else {
+                    let field_map = if pattern_args.is_empty() {
+                        None
+                    } else {
+                        let mut field_map = FieldMap::new(pattern_args.len() as u32);
+
+                        for (i, location, label) in pattern_args
+                            .iter()
+                            .enumerate()
+                            .filter_map(|(i, arg)| arg.label.map(|l| (i, arg.location, l.clone())))
+                        {
+                            ctx.slurp_result(
+                                field_map
+                                    .insert(label.clone(), i as u32)
+                                    .map_err(|e| Error::DuplicateField { location, label }),
+                            );
+                        }
+                        Some(field_map)
+                    };
+
+                    ctx.finish(Pattern::Constructor {
+                        location,
+                        module,
+                        name,
+                        arguments: vec![],
+                        constructor: PatternConstructor::Record { name, field_map },
+                        with_spread,
+                        type_,
+                    })
                 }
             }
         }
