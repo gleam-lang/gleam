@@ -621,15 +621,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         segments: Vec<UntypedExprBitStringSegment>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let segments = segments
-            .into_iter()
-            .map(|s| {
-                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
-            })
-            .try_collect()?;
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
+        let segments = ctx.slurp_filled_collect(segments.into_iter().map(|s| {
+            self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
+        }));
 
-        Ok(TypedExpr::BitString {
+        ctx.finish(TypedExpr::BitString {
             location,
             segments,
             typ: bit_string(),
@@ -640,17 +638,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         segments: Vec<UntypedConstantBitStringSegment>,
         location: SrcSpan,
-    ) -> Result<TypedConstant, Error> {
-        let segments = segments
-            .into_iter()
-            .map(|s| {
-                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
-                    env.infer_const(&None, expr)
-                })
+    ) -> FilledResult<TypedConstant, Error> {
+        let mut ctx = FilledResultContext::new();
+        let segments = ctx.slurp_filled_collect(segments.into_iter().map(|s| {
+            self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
+                env.infer_const(&None, expr)
             })
-            .try_collect()?;
+        }));
 
-        Ok(Constant::BitString { location, segments })
+        ctx.finish(Constant::BitString { location, segments })
     }
 
     fn infer_bit_segment<UntypedValue, TypedValue, InferFn>(

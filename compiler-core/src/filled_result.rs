@@ -17,6 +17,11 @@ impl<T, E> FilledResult<T, E> {
         }
     }
 
+    pub fn no_errors(self) -> T {
+        debug_assert!(self.errors.is_empty(), "Error list should have been empty!");
+        self.data
+    }
+
     pub fn err(error: E, data: T) -> Self {
         Self {
             data,
@@ -119,6 +124,16 @@ impl<E> FilledResultContext<E> {
 
     pub fn register_error(&mut self, error: E) {
         self.errors.push(error);
+    }
+
+    pub fn slurp_filled_collect<T, C>(
+        &mut self,
+        results: impl IntoIterator<Item = FilledResult<T, E>>,
+    ) -> C
+    where
+        C: FromIterator<T>,
+    {
+        results.into_iter().map(|r| self.slurp_filled(r)).collect()
     }
 
     pub fn finish<T>(self, data: T) -> FilledResult<T, E> {
