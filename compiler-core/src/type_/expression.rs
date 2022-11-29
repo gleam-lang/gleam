@@ -415,15 +415,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             ..
         } = arg;
-        let typ = ctx
-            .slurp_result(
-                annotation
-                    .clone()
-                    .map(|t| self.type_from_ast(&t))
-                    .transpose(),
-            )
-            .flatten()
-            .unwrap_or_else(|| self.new_unbound_var());
+        let typ = annotation
+            .map(|t| ctx.slurp_filled(self.type_from_ast(&t)))
+            .unwrap_or_else(|| self.environment.new_unbound_var());
 
         // If we know the expected type of the argument from its contextual
         // usage then unify the newly constructed type with the expected type.
