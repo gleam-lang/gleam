@@ -2272,7 +2272,7 @@ struct UseCall {
     arguments: Vec<CallArg<UntypedExpr>>,
 }
 
-fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
+fn get_use_expression_call(call: UntypedExpr) -> UseCall {
     // Ensure that the use's call is of the right structure. i.e. it is a
     // call to a function.
     match call {
@@ -2280,17 +2280,17 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
             location,
             fun: function,
             arguments,
-        } => Ok(UseCall {
+        } => UseCall {
             location,
             arguments,
             function,
-        }),
+        },
 
-        other => Ok(UseCall {
+        other => UseCall {
             location: other.location(),
             function: Box::new(other),
             arguments: vec![],
-        }),
+        },
     }
 }
 
