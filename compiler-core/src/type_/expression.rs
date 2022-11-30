@@ -2136,15 +2136,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstant, Error> {
-        let mut elements = Vec::with_capacity(untyped_elements.len());
+    ) -> FilledResult<TypedConstant, Error> {
+        let mut ctx = FilledResultContext::new();
 
-        for element in untyped_elements {
-            let element = self.infer_const(&None, element)?;
-            elements.push(element);
-        }
+        let elements = ctx.slurp_filled_collect(
+            untyped_elements
+                .into_iter()
+                .map(|elem| self.infer_const(&None, elem)),
+        );
 
-        Ok(Constant::Tuple { elements, location })
+        ctx.finish(Constant::Tuple { elements, location })
     }
 
     fn infer_const_list(
