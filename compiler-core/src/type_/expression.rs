@@ -2224,23 +2224,32 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: TypedExpr,
         mut args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+    ) -> FilledResult<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        let mut ctx = FilledResultContext::new();
         // Check to see if the function accepts labelled arguments
-        match self
-            .get_field_map(&fun)
-            .map_err(|e| convert_get_value_constructor_error(e, location))?
+        match ctx
+            .slurp_result(
+                self.get_field_map(&fun)
+                    .map_err(|e| convert_get_value_constructor_error(e, location)),
+            )
+            .flatten()
         {
             // The fun has a field map so labelled arguments may be present and need to be reordered.
-            Some(field_map) => field_map.reorder(&mut args, location)?,
+            Some(field_map) => {
+                let _ = ctx.slurp_result(field_map.reorder(&mut args, location));
+            }
 
             // The fun has no field map and so we error if arguments have been labelled
-            None => assert_no_labelled_arguments(&args)?,
+            None => {
+                let _ = ctx.slurp_result(assert_no_labelled_arguments(&args));
+            }
         }
 
         // Extract the type of the fun, ensuring it actually is a function
-        let (mut args_types, return_type) =
-            match_fun_type(fun.type_(), args.len(), self.environment)
-                .map_err(|e| convert_not_fun_error(e, fun.location(), location))?;
+        let (mut args_types, return_type) = ctx.slurp_filled_with(
+            match_fun_type(fun.type_(), args.len(), self.environment),
+            |i| i.map(|e| convert_not_fun_error(e, fun.location(), location)),
+        );
 
         // Ensure that the given args have the correct types
         let args = args_types
@@ -2253,16 +2262,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     implicit,
                 } = arg;
-                let value = self.infer_call_argument(value, typ.clone())?;
-                Ok(CallArg {
+                let value = ctx.slurp_filled(self.infer_call_argument(value, typ.clone()));
+                CallArg {
                     label,
                     value,
                     implicit,
                     location,
-                })
+                }
             })
-            .try_collect()?;
-        Ok((fun, args, return_type))
+            .collect();
+        ctx.finish((fun, args, return_type))
     }
 
     fn infer_call_argument(
