@@ -2152,18 +2152,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         untyped_elements: Vec<UntypedConstant>,
         location: SrcSpan,
-    ) -> Result<TypedConstant, Error> {
+    ) -> FilledResult<TypedConstant, Error> {
+        let mut ctx = FilledResultContext::new();
         let typ = self.new_unbound_var();
-        let mut elements = Vec::with_capacity(untyped_elements.len());
 
-        for element in untyped_elements {
-            let element = self.infer_const(&None, element)?;
-            unify(typ.clone(), element.type_())
-                .map_err(|e| convert_unify_error(e, element.location()))?;
-            elements.push(element);
-        }
+        let elements = untyped_elements
+            .into_iter()
+            .map(|element| {
+                let element = ctx.slurp_filled(self.infer_const(&None, element));
+                ctx.just_slurp_result(
+                    unify(typ.clone(), element.type_())
+                        .map_err(|e| convert_unify_error(e, element.location())),
+                );
+                element
+            })
+            .collect();
 
-        Ok(Constant::List {
+        ctx.finish(Constant::List {
             elements,
             location,
             typ: list(typ),
