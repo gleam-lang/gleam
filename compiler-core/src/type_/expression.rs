@@ -1457,11 +1457,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label: String,
         location: SrcSpan,
         usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
         // Infer the type of the (presumed) record
-        let record = self.infer(record)?;
-
-        self.infer_known_record_access(record, label, location, usage)
+        self.infer(record)
+            .join_with(|record| self.infer_known_record_access(record, label, location, usage))
     }
 
     fn infer_known_record_access(
@@ -1470,12 +1469,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label: String,
         location: SrcSpan,
         usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
+        let mut ctx = FilledResultContext::new();
         let record = Box::new(record);
 
         // If we don't yet know the type of the record then we cannot use any accessors
         if record.type_().is_unbound() {
-            return Err(Error::RecordAccessUnknownType {
+            ctx.register_error(Error::RecordAccessUnknownType {
                 location: record.location(),
             });
         }
@@ -1503,34 +1503,49 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .get(&module.join("/"))
                 .and_then(|module| module.accessors.get(name)),
 
-            _something_without_fields => return Err(unknown_field(vec![])),
+            _something_without_fields => None,
+        };
+
+        if accessors.is_none() {
+            ctx.register_error(unknown_field(vec![]));
         }
-        .ok_or_else(|| unknown_field(vec![]))?;
 
         // Find the accessor, if the type has one with the same label
         let RecordAccessor {
             index,
             label,
             type_: typ,
-        } = accessors
-            .accessors
-            .get(&label)
-            .ok_or_else(|| {
-                unknown_field(accessors.accessors.keys().map(|t| t.to_string()).collect())
-            })?
-            .clone();
+        } = ctx
+            .slurp_result(
+                accessors
+                    .ok_or_else(|| unknown_field(vec![]))
+                    .and_then(|accessors| {
+                        accessors.accessors.get(&label).cloned().ok_or_else(|| {
+                            unknown_field(accessors.accessors.keys().cloned().collect())
+                        })
+                    }),
+            )
+            .unwrap_or_else(|| RecordAccessor {
+                index: 0,
+                label,
+                type_: self.environment.new_unbound_var(),
+            });
 
         // Unify the record type with the accessor's stored copy of the record type.
         // This ensure that the type parameters of the retrieved value have the correct
         // types for this instance of the record.
-        let accessor_record_type = accessors.type_.clone();
+        let accessor_record_type = accessors
+            .map(|acc| acc.type_)
+            .unwrap_or_else(|| self.environment.new_unbound_var());
         let mut type_vars = hashmap![];
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let typ = self.instantiate(typ, &mut type_vars);
-        unify(accessor_record_type, record.type_())
-            .map_err(|e| convert_unify_error(e, record.location()))?;
+        ctx.just_slurp_result(
+            unify(accessor_record_type, record.type_())
+                .map_err(|e| convert_unify_error(e, record.location())),
+        );
 
-        Ok(TypedExpr::RecordAccess {
+        ctx.finish(TypedExpr::RecordAccess {
             record,
             label,
             index,
