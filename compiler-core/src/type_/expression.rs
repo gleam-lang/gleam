@@ -905,33 +905,32 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let return_type = self.new_unbound_var();
 
         for subject in subjects {
-            let subject = self.in_new_scope(|subject_typer| {
-                let subject = subject_typer.infer(subject)?;
-
-                Ok(subject)
-            })?;
+            let subject =
+                self.in_new_scope(|subject_typer| ctx.slurp_filled(subject_typer.infer(subject)));
 
             subject_types.push(subject.type_());
             typed_subjects.push(subject);
         }
 
         for clause in clauses {
-            let typed_clause = self.infer_clause(clause, &subject_types)?;
-            unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
+            let typed_clause = ctx.slurp_filled(self.infer_clause(clause, &subject_types));
+            ctx.just_slurp_result(
+                unify(return_type.clone(), typed_clause.then.type_())
+                    .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location())),
+            );
             typed_clauses.push(typed_clause);
         }
 
         if let Err(unmatched) =
             self.check_case_exhaustiveness(subjects_count, &subject_types, &typed_clauses)
         {
-            return Err(Error::NotExhaustivePatternMatch {
+            ctx.register_error(Error::NotExhaustivePatternMatch {
                 location,
                 unmatched,
             });
         }
 
-        Ok(TypedExpr::Case {
+        ctx.finish(TypedExpr::Case {
             location,
             typ: return_type,
             subjects: typed_subjects,
@@ -943,7 +942,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         clause: UntypedClause,
         subjects: &[Arc<Type>],
-    ) -> Result<TypedClause, Error> {
+    ) -> FilledResult<TypedClause, Error> {
+        let mut ctx = FilledResultContext::new();
         let Clause {
             pattern,
             alternative_patterns,
@@ -952,22 +952,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
         } = clause;
 
-        let (guard, then, typed_pattern, typed_alternatives) =
-            self.in_new_scope(|clause_typer| {
-                // Check the types
-                let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
+        let (guard, then, typed_pattern, typed_alternatives) = self.in_new_scope(|clause_typer| {
+            // Check the types
+            let (typed_pattern, typed_alternatives) =
+                ctx.slurp_filled(clause_typer.infer_clause_pattern(
                     pattern,
                     alternative_patterns,
                     subjects,
                     &location,
-                )?;
-                let guard = clause_typer.infer_optional_clause_guard(guard)?;
-                let then = clause_typer.infer(then)?;
+                ));
+            let guard = ctx.slurp_filled(clause_typer.infer_optional_clause_guard(guard));
+            let then = ctx.slurp_filled(clause_typer.infer(then));
 
-                Ok((guard, then, typed_pattern, typed_alternatives))
-            })?;
+            (guard, then, typed_pattern, typed_alternatives)
+        });
 
-        Ok(Clause {
+        ctx.finish(Clause {
             location,
             pattern: typed_pattern,
             alternative_patterns: typed_alternatives,
@@ -982,62 +982,93 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         alternatives: Vec<UntypedMultiPattern>,
         subjects: &[Arc<Type>],
         location: &SrcSpan,
-    ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
+    ) -> FilledResult<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
         let mut pattern_typer = pattern::PatternTyper::new(self.environment, &self.hydrator);
-        let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
+        let (mut ctx, typed_pattern) = pattern_typer
+            .infer_multi_pattern(pattern, subjects, location)
+            .into_context();
 
         // Each case clause has one or more patterns that may match the
         // subject in order for the clause to be selected, so we must type
         // check every pattern.
-        let mut typed_alternatives = Vec::with_capacity(alternatives.len());
-        for m in alternatives {
-            typed_alternatives
-                .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
-        }
+        let typed_alternatives = ctx.slurp_filled_collect(
+            alternatives
+                .into_iter()
+                .map(|alt| pattern_typer.infer_alternative_multi_pattern(alt, subjects, location)),
+        );
 
-        Ok((typed_pattern, typed_alternatives))
+        ctx.finish((typed_pattern, typed_alternatives))
     }
 
     fn infer_optional_clause_guard(
         &mut self,
         guard: Option<UntypedClauseGuard>,
-    ) -> Result<Option<TypedClauseGuard>, Error> {
+    ) -> FilledResult<Option<TypedClauseGuard>, Error> {
+        let mut ctx = FilledResultContext::new();
         match guard {
             // If there is no guard we do nothing
-            None => Ok(None),
+            None => ctx.finish(None),
 
             // If there is a guard we assert that it is of type Bool
             Some(guard) => {
-                let guard = self.infer_clause_guard(guard)?;
-                unify(bool(), guard.type_())
-                    .map_err(|e| convert_unify_error(e, guard.location()))?;
-                Ok(Some(guard))
+                let guard = ctx.slurp_filled(self.infer_clause_guard(guard));
+                ctx.just_slurp_result(
+                    unify(bool(), guard.type_())
+                        .map_err(|e| convert_unify_error(e, guard.location())),
+                );
+                ctx.finish(Some(guard))
             }
         }
     }
 
-    fn infer_clause_guard(&mut self, guard: UntypedClauseGuard) -> Result<TypedClauseGuard, Error> {
+    fn infer_clause_guard(
+        &mut self,
+        guard: UntypedClauseGuard,
+    ) -> FilledResult<TypedClauseGuard, Error> {
         match guard {
             ClauseGuard::Var { location, name, .. } => {
-                let constructor = self.infer_value_constructor(&None, &name, &location)?;
+                let mut ctx = FilledResultContext::new();
+
+                let (typ, variant) = ctx
+                    .slurp_result(
+                        self.infer_value_constructor(&None, &name, &location)
+                            .map(|x| (x.type_, x.variant)),
+                    )
+                    .unwrap_or_else(|| {
+                        let typ = self.environment.new_unbound_var();
+                        (
+                            typ.clone(),
+                            ValueConstructorVariant::ModuleConstant {
+                                literal: Constant::Var {
+                                    location,
+                                    name,
+                                    module: None,
+                                    constructor: None,
+                                    typ,
+                                },
+                                location,
+                                module: "".to_string(),
+                            },
+                        )
+                    });
 
                 // We cannot support all values in guard expressions as the BEAM does not
-                match &constructor.variant {
+                match variant {
                     ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name });
+                        ctx.register_error(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
                     ValueConstructorVariant::ModuleConstant { literal, .. } => {
-                        return Ok(ClauseGuard::Constant(literal.clone()))
+                        return ctx.finish(ClauseGuard::Constant(literal))
                     }
                 };
 
-                Ok(ClauseGuard::Var {
+                ctx.finish(ClauseGuard::Var {
                     location,
                     name,
-                    type_: constructor.type_,
+                    type_: typ,
                 })
             }
 
@@ -1047,34 +1078,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 index,
                 ..
             } => {
-                let tuple = self.infer_clause_guard(*tuple)?;
-                match tuple.type_().as_ref() {
+                let (mut ctx, tuple) = self.infer_clause_guard(*tuple).into_context();
+                let res = match tuple.type_().as_ref() {
                     Type::Tuple { elems } => {
-                        let type_ = elems
+                        elems
                             .get(index as usize)
+                            .cloned()
                             .ok_or(Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,
                                 size: elems.len(),
-                            })?
-                            .clone();
-                        Ok(ClauseGuard::TupleIndex {
-                            location,
-                            index,
-                            type_,
-                            tuple: Box::new(tuple),
-                        })
+                            })
                     }
-
-                    typ if typ.is_unbound() => Err(Error::NotATupleUnbound {
-                        location: tuple.location(),
+                    other => Err(if other.is_unbound() {
+                        Error::NotATupleUnbound {
+                            location: tuple.location(),
+                        }
+                    } else {
+                        Error::NotATuple {
+                            location: tuple.location(),
+                            given: tuple.type_(),
+                        }
                     }),
+                };
 
-                    _ => Err(Error::NotATuple {
-                        location: tuple.location(),
-                        given: tuple.type_(),
-                    }),
-                }
+                let type_ = ctx
+                    .slurp_result(res)
+                    .unwrap_or_else(|| self.environment.new_unbound_var());
+                ctx.finish(ClauseGuard::TupleIndex {
+                    location,
+                    index,
+                    type_,
+                    tuple: Box::new(tuple),
+                })
             }
 
             ClauseGuard::And {
@@ -1083,12 +1119,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(bool(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::And {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(bool(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(bool(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::And {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1101,12 +1142,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(bool(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(bool(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::Or {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(bool(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(bool(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::Or {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1119,10 +1165,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(ClauseGuard::Equals {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(left.type_(), right.type_())
+                        .map_err(|e| convert_unify_error(e, location)),
+                );
+                ctx.finish(ClauseGuard::Equals {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1135,10 +1184,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(left.type_(), right.type_()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(ClauseGuard::NotEquals {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(left.type_(), right.type_())
+                        .map_err(|e| convert_unify_error(e, location)),
+                );
+                ctx.finish(ClauseGuard::NotEquals {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1151,12 +1203,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::GtInt {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(int(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::GtInt {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1169,12 +1225,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::GtEqInt {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(int(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::GtEqInt {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1187,12 +1247,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::LtInt {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(int(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::LtInt {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1205,12 +1269,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(int(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::LtEqInt {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(int(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::LtEqInt {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1223,13 +1291,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::GtFloat {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(float(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(float(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::GtFloat {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1242,13 +1314,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::GtEqFloat {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(float(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(float(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::GtEqFloat {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1261,13 +1337,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::LtFloat {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(float(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(float(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::LtFloat {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
@@ -1280,13 +1360,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                let left = self.infer_clause_guard(*left)?;
-                unify(float(), left.type_())
-                    .map_err(|e| convert_unify_error(e, left.location()))?;
-                let right = self.infer_clause_guard(*right)?;
-                unify(float(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-                Ok(ClauseGuard::LtEqFloat {
+                let (mut ctx, left) = self.infer_clause_guard(*left).into_context();
+                ctx.just_slurp_result(
+                    unify(float(), left.type_())
+                        .map_err(|e| convert_unify_error(e, left.location())),
+                );
+                let right = ctx.slurp_filled(self.infer_clause_guard(*right));
+                ctx.just_slurp_result(
+                    unify(float(), right.type_())
+                        .map_err(|e| convert_unify_error(e, right.location())),
+                );
+                ctx.finish(ClauseGuard::LtEqFloat {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
