@@ -2202,8 +2202,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-        let fun = match fun {
+    ) -> FilledResult<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+        let mut ctx = FilledResultContext::new();
+        let fun = ctx.slurp_filled(match fun {
             UntypedExpr::FieldAccess {
                 location,
                 label,
@@ -2211,10 +2212,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_field_access(*container, label, location, FieldAccessUsage::MethodCall),
 
             fun => self.infer(fun),
-        }?;
+        });
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location)?;
-        Ok((fun, args, typ))
+        let (fun, args, typ) =
+            ctx.slurp_filled(self.do_infer_call_with_known_fun(fun, args, location));
+        ctx.finish((fun, args, typ))
     }
 
     pub fn do_infer_call_with_known_fun(
