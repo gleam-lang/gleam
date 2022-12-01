@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- A better error message is now shown when attempting to use a function within a
+  constant expression.
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
   code.
