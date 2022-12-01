@@ -194,7 +194,13 @@ macro_rules! assert_module_syntax_error {
         let error =
             $crate::parse::parse_module($src).expect_err("should trigger an error when parsing");
 
-        let output = format!("{error:?}");
+        let error = $crate::error::Error::Parse {
+            src: $src.to_string(),
+            path: std::path::PathBuf::from("/src/one/two.gleam"),
+            error,
+        };
+
+        let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
