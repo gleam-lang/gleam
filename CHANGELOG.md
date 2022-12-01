@@ -4,6 +4,7 @@
 
 - A better error message is now shown when attempting to use a function within a
   constant expression.
+- New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.0.
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
   code.
