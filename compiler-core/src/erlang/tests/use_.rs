@@ -63,7 +63,6 @@ pub fn main() {
     );
 }
 
-
 // https://github.com/gleam-lang/gleam/issues/1863
 #[test]
 fn pipeline_that_returns_fn() {
