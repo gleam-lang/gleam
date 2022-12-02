@@ -854,19 +854,19 @@ fn register_values<'a>(
                     let t = ctx.slurp_filled(hydrator.type_from_ast(&arg.annotation, environment));
                     args_types.push(t);
                     if let Some(label) = &arg.label {
-                        field_map.insert(label.clone(), i as u32).map_err(|_| {
-                            Error::DuplicateField {
+                        ctx.just_slurp_result(field_map.insert(label.clone(), i as u32).map_err(
+                            |_| Error::DuplicateField {
                                 label: label.to_string(),
                                 location: *location,
-                            }
-                        })?;
+                            },
+                        ));
                     }
                 }
                 let field_map = field_map.into_option();
                 let typ = fn_(args_types, return_type);
 
-                Ok((typ, field_map))
-            })?;
+                (typ, field_map)
+            });
 
             // Insert function into module
             environment.insert_module_value(
@@ -924,14 +924,11 @@ fn register_values<'a>(
 
             // If the custom type only has a single constructor then we can access the
             // fields using the record.field syntax, so store any fields accessors.
-            if let Some(accessors) = ctx
-                .slurp_result(custom_type_accessors(
-                    constructors,
-                    &mut hydrator,
-                    environment,
-                ))
-                .flatten()
-            {
+            if let Some(accessors) = ctx.slurp_filled(custom_type_accessors(
+                constructors,
+                &mut hydrator,
+                environment,
+            )) {
                 let map = AccessorsMap {
                     public: (*public && !*opaque),
                     accessors,
@@ -1668,13 +1665,14 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
-) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+) -> FilledResult<Option<HashMap<String, RecordAccessor>>, Error> {
+    let mut ctx = FilledResultContext::new();
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
     for (index, label, ast) in args {
-        let typ = hydrator.type_from_ast(ast, environment)?;
+        let typ = ctx.slurp_filled(hydrator.type_from_ast(ast, environment));
         let _ = fields.insert(
             label.to_string(),
             RecordAccessor {
@@ -1684,7 +1682,7 @@ fn custom_type_accessors<A>(
             },
         );
     }
-    Ok(Some(fields))
+    ctx.finish(Some(fields))
 }
 
 /// Returns the fields that have the same label and type across all variants of
@@ -1742,7 +1740,8 @@ pub fn register_types<'a>(
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
-) -> Result<(), Error> {
+) -> FilledResult<(), Error> {
+    let mut ctx = FilledResultContext::new();
     match statement {
         Statement::ExternalType {
             name,
@@ -1751,11 +1750,12 @@ pub fn register_types<'a>(
             location,
             ..
         } => {
-            assert_unique_type_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_type_name(names, name, location));
 
             // Build a type from the type AST
             let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+            let parameters =
+                ctx.slurp_filled(make_type_vars(args, location, &mut hydrator, environment));
             let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.to_owned(),
@@ -1764,7 +1764,7 @@ pub fn register_types<'a>(
             });
 
             // Insert into the module scope
-            environment.insert_type_constructor(
+            ctx.just_slurp_result(environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
@@ -1773,7 +1773,7 @@ pub fn register_types<'a>(
                     parameters,
                     typ,
                 },
-            )?;
+            ));
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
@@ -1789,11 +1789,16 @@ pub fn register_types<'a>(
             constructors,
             ..
         } => {
-            assert_unique_type_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_type_name(names, name, location));
 
             // Build a type from the type AST
             let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
+            let parameters = ctx.slurp_filled(make_type_vars(
+                parameters,
+                location,
+                &mut hydrator,
+                environment,
+            ));
             let typ = Arc::new(Type::App {
                 public: *public,
                 module: module.to_owned(),
@@ -1802,7 +1807,7 @@ pub fn register_types<'a>(
             });
             let _ = hydrators.insert(name.to_string(), hydrator);
 
-            environment.insert_type_constructor(
+            ctx.just_slurp_result(environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
@@ -1811,7 +1816,7 @@ pub fn register_types<'a>(
                     parameters,
                     typ,
                 },
-            )?;
+            ));
 
             let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
             environment.insert_type_to_constructors(name.clone(), constructor_names);
@@ -1830,18 +1835,19 @@ pub fn register_types<'a>(
             type_ast: resolved_type,
             ..
         } => {
-            assert_unique_type_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_type_name(names, name, location));
 
             // Register the paramerterised types
             let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+            let parameters =
+                ctx.slurp_filled(make_type_vars(args, location, &mut hydrator, environment));
 
             // Disallow creation of new types outside the paramerterised types
             hydrator.disallow_new_type_variables();
 
             // Create the type that the alias resolves to
-            let typ = hydrator.type_from_ast(resolved_type, environment)?;
-            environment.insert_type_constructor(
+            let typ = ctx.slurp_filled(hydrator.type_from_ast(resolved_type, environment));
+            ctx.just_slurp_result(environment.insert_type_constructor(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
@@ -1850,7 +1856,7 @@ pub fn register_types<'a>(
                     parameters,
                     typ,
                 },
-            )?;
+            ));
 
             // Keep track of private types so we can tell if they are later unused
             if !public {
@@ -1864,7 +1870,7 @@ pub fn register_types<'a>(
         | Statement::ModuleConstant { .. } => (),
     }
 
-    Ok(())
+    ctx.finish(())
 }
 
 pub fn register_import(
