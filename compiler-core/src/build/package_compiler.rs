@@ -89,7 +89,7 @@ where
         warnings: &mut Vec<Warning>,
         existing_modules: &mut im::HashMap<String, type_::Module>,
         already_defined_modules: &mut im::HashMap<String, PathBuf>,
-    ) -> Result<Vec<Module>, Error> {
+    ) -> Result<Vec<Module>, Vec<Error>> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -98,7 +98,8 @@ where
             &self.config.name,
             std::mem::take(&mut self.sources),
             already_defined_modules,
-        )?;
+        )
+        .map_err(|e| vec![e])?;
 
         // Determine order in which modules are to be processed
         let sequence = dep_tree::toposort_deps(
@@ -107,7 +108,8 @@ where
                 .map(|m| module_deps_for_graph(self.target.target(), m))
                 .collect(),
         )
-        .map_err(convert_deps_tree_error)?;
+        .map_err(convert_deps_tree_error)
+        .map_err(|e| vec![e])?;
 
         tracing::info!("Type checking modules");
         let mut modules = type_check(
@@ -121,9 +123,10 @@ where
         )?;
 
         tracing::info!("Performing code generation");
-        self.perform_codegen(&modules)?;
+        self.perform_codegen(&modules).map_err(|e| vec![e])?;
 
-        self.encode_and_write_metadata(&modules)?;
+        self.encode_and_write_metadata(&modules)
+            .map_err(|e| vec![e])?;
 
         Ok(modules)
     }
@@ -433,7 +436,7 @@ fn type_check(
     mut parsed_modules: HashMap<String, Parsed>,
     module_types: &mut im::HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
-) -> Result<Vec<Module>, Error> {
+) -> Result<Vec<Module>, Vec<Error>> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
 
     // Insert the prelude
@@ -467,10 +470,15 @@ fn type_check(
             module_types,
             &mut type_warnings,
         )
-        .map_err(|error| Error::Type {
-            path: path.clone(),
-            src: code.clone(),
-            error,
+        .map_err(|errors| {
+            errors
+                .into_iter()
+                .map(|error| Error::Type {
+                    path: path.clone(),
+                    src: code.clone(),
+                    error,
+                })
+                .collect::<Vec<_>>()
         })?;
 
         // Register any warnings emitted as type warnings

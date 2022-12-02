@@ -133,8 +133,8 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(&mut self) -> Result<Package> {
-        self.check_gleam_version()?;
+    pub fn compile(&mut self) -> Result<Package, Vec<Error>> {
+        self.check_gleam_version().map_err(|e| vec![e])?;
         self.compile_dependencies()?;
 
         if self.options.perform_codegen {
@@ -144,7 +144,7 @@ where
         }
         let result = self.compile_root_package();
 
-        self.check_build_journal()?;
+        self.check_build_journal().map_err(|e| vec![e])?;
 
         // Print warnings
         for warning in &self.warnings {
@@ -154,7 +154,7 @@ where
         result
     }
 
-    pub fn compile_root_package(&mut self) -> Result<Package, Error> {
+    pub fn compile_root_package(&mut self) -> Result<Package, Vec<Error>> {
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
 
@@ -224,8 +224,8 @@ where
             })
     }
 
-    pub fn compile_dependencies(&mut self) -> Result<(), Error> {
-        let sequence = order_packages(&self.packages)?;
+    pub fn compile_dependencies(&mut self) -> Result<(), Vec<Error>> {
+        let sequence = order_packages(&self.packages).map_err(|e| vec![e])?;
 
         for name in sequence {
             let package = self.packages.remove(&name).expect("Missing package config");
@@ -235,25 +235,32 @@ where
         Ok(())
     }
 
-    fn load_cache_or_compile_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+    fn load_cache_or_compile_package(
+        &mut self,
+        package: &ManifestPackage,
+    ) -> Result<(), Vec<Error>> {
         let build_path = paths::build_package(self.mode(), self.target(), &package.name);
         if self.io.is_directory(&build_path) {
             tracing::info!(package=%package.name, "loading_precompiled_package");
-            return self.load_cached_package(build_path, package);
+            return self
+                .load_cached_package(build_path, package)
+                .map_err(|e| vec![e]);
         }
 
         self.telemetry.compiling_package(&package.name);
-        let result = match usable_build_tool(package)? {
+        let result = match usable_build_tool(package).map_err(|e| vec![e])? {
             BuildTool::Gleam => self.compile_gleam_dep_package(package),
-            BuildTool::Rebar3 => self.compile_rebar3_dep_package(package),
-            BuildTool::Mix => self.compile_mix_dep_package(package),
+            BuildTool::Rebar3 => self
+                .compile_rebar3_dep_package(package)
+                .map_err(|e| vec![e]),
+            BuildTool::Mix => self.compile_mix_dep_package(package).map_err(|e| vec![e]),
         };
 
         // TODO: test. This one is not covered by the integration tests.
         if result.is_err() {
             tracing::debug!(package=%package.name, "removing_failed_build");
             let dir = paths::build_package(self.mode(), self.target(), &package.name);
-            self.io.delete(&dir)?;
+            self.io.delete(&dir).map_err(|e| vec![e])?;
         }
 
         result
@@ -420,9 +427,9 @@ where
         }
     }
 
-    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
+    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Vec<Error>> {
         let config_path = paths::build_deps_package_config(&package.name);
-        let config = PackageConfig::read(config_path, &self.io)?;
+        let config = PackageConfig::read(config_path, &self.io).map_err(|e| vec![e])?;
         let root = paths::build_deps_package(&package.name);
         self.compile_gleam_package(&config, false, root)
             .map(|_| ())?;
@@ -451,7 +458,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: PathBuf,
-    ) -> Result<Vec<Module>, Error> {
+    ) -> Result<Vec<Module>, Vec<Error>> {
         let out_path = paths::build_package(self.mode(), self.target(), &config.name);
         let lib_path = paths::build_packages(self.mode(), self.target());
         let mode = self.mode();
@@ -483,7 +490,7 @@ where
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.subprocess_stdio = self.subprocess_stdio;
-        compiler.read_source_files(mode)?;
+        compiler.read_source_files(mode).map_err(|e| vec![e])?;
 
         // Compile project to Erlang or JavaScript source code
         let compiled = compiler.compile(
