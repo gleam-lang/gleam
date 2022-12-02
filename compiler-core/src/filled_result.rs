@@ -160,3 +160,14 @@ impl<E> FilledResultContext<E> {
         }
     }
 }
+
+impl<U, A, E> FromIterator<FilledResult<U, E>> for FilledResult<A, E>
+where
+    A: FromIterator<U>,
+{
+    fn from_iter<T: IntoIterator<Item = FilledResult<U, E>>>(iter: T) -> Self {
+        let mut ctx = FilledResultContext::new();
+        let collected = ctx.slurp_filled_collect(iter);
+        ctx.finish(collected)
+    }
+}

@@ -1648,14 +1648,14 @@ fn make_type_vars(
     location: &SrcSpan,
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
-) -> Result<Vec<Arc<Type>>, Error> {
+) -> FilledResult<Vec<Arc<Type>>, Error> {
     args.iter()
         .map(|arg| TypeAst::Var {
             location: *location,
             name: arg.to_string(),
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
-        .try_collect()
+        .collect()
 }
 
 fn custom_type_accessors<A>(
