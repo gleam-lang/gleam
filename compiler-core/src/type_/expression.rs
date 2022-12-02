@@ -2288,10 +2288,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         value: UntypedExpr,
         typ: Arc<Type>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
         let typ = collapse_links(typ);
 
-        let value = match (&*typ, value) {
+        let (mut ctx, value) = match (&*typ, value) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -2323,10 +2323,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Otherwise just perform normal type inference.
             (_, value) => self.infer(value),
-        }?;
+        }
+        .into_context();
 
-        unify(typ, value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
-        Ok(value)
+        ctx.just_slurp_result(
+            unify(typ, value.type_()).map_err(|e| convert_unify_error(e, value.location())),
+        );
+        ctx.finish(value)
     }
 
     pub fn do_infer_fn(
@@ -2335,29 +2338,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         expected_args: &[Arc<Type>],
         body: UntypedExpr,
         return_annotation: &Option<TypeAst>,
-    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+    ) -> FilledResult<(Vec<TypedArg>, TypedExpr), Error> {
+        let mut ctx = FilledResultContext::new();
         // Construct an initial type for each argument of the function- either an unbound
         // type variable or a type provided by an annotation.
-        let args: Vec<_> = args
-            .into_iter()
-            .enumerate()
-            .map(|(i, arg)| self.infer_arg(arg, expected_args.get(i).cloned()))
-            .try_collect()?;
+        let args: Vec<_> = ctx.slurp_filled_collect(
+            args.into_iter()
+                .enumerate()
+                .map(|(i, arg)| self.infer_arg(arg, expected_args.get(i).cloned())),
+        );
 
-        let return_type = match return_annotation {
-            Some(ann) => Some(self.type_from_ast(ann)?),
-            None => None,
-        };
+        let return_type = return_annotation.map(|ann| ctx.slurp_filled(self.type_from_ast(&ann)));
 
-        self.infer_fn_with_known_types(args, body, return_type)
+        self.infer_fn_with_known_types(ctx, args, body, return_type)
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
+        ctx: FilledResultContext<Error>,
         args: Vec<TypedArg>,
         body: UntypedExpr,
         return_type: Option<Arc<Type>>,
-    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+    ) -> FilledResult<(Vec<TypedArg>, TypedExpr), Error> {
         let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
@@ -2380,18 +2382,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (body_typer.hydrator.rigid_names(), body_typer.infer(body))
         });
 
-        let body = body_infer.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
+        let body = ctx.slurp_filled_with(body_infer, |errs| {
+            errs.map(|e| e.with_unify_error_rigid_names(&body_rigid_names))
+        });
 
         // Check that any return type is accurate.
         if let Some(return_type) = return_type {
-            unify(return_type, body.type_()).map_err(|e| {
+            ctx.just_slurp_result(unify(return_type, body.type_()).map_err(|e| {
                 e.return_annotation_mismatch()
                     .into_error(body.type_defining_location())
                     .with_unify_error_rigid_names(&body_rigid_names)
-            })?;
+            }));
         }
 
-        Ok((args, body))
+        ctx.finish((args, body))
     }
 
     fn check_case_exhaustiveness(
