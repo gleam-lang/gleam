@@ -749,7 +749,8 @@ fn register_values<'a>(
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
-) -> Result<(), Error> {
+) -> Result<(), Vec<Error>> {
+    let mut ctx = FilledResultContext::new();
     match s {
         Statement::Fn {
             name,
@@ -759,7 +760,7 @@ fn register_values<'a>(
             public,
             ..
         } => {
-            assert_unique_value_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_value_name(names, name, location));
             let _ = environment.ungeneralised_functions.insert(name.to_string());
 
             // Create the field map so we can reorder labels for usage of this function
@@ -768,12 +769,12 @@ fn register_values<'a>(
                 if let ArgNames::NamedLabelled { label, .. }
                 | ArgNames::LabelledDiscard { label, .. } = &arg.names
                 {
-                    field_map.insert(label.clone(), i as u32).map_err(|_| {
-                        Error::DuplicateField {
+                    ctx.just_slurp_result(field_map.insert(label.clone(), i as u32).map_err(
+                        |_| Error::DuplicateField {
                             label: label.to_string(),
                             location: *location,
-                        }
-                    })?;
+                        },
+                    ));
                 }
             }
             let field_map = field_map.into_option();
@@ -781,11 +782,12 @@ fn register_values<'a>(
             // Construct type from annotations
             let mut hydrator = Hydrator::new();
             hydrator.permit_holes(true);
-            let arg_types = args
-                .iter()
-                .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
-                .try_collect()?;
-            let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+            let arg_types = ctx.slurp_filled_collect(
+                args.iter()
+                    .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment)),
+            );
+            let return_type =
+                ctx.slurp_filled(hydrator.type_from_option_ast(return_annotation, environment));
             let typ = fn_(arg_types, return_type);
 
             // Keep track of which types we create from annotations so we can know
@@ -821,16 +823,16 @@ fn register_values<'a>(
             fun,
             ..
         } => {
-            assert_unique_value_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_value_name(names, name, location));
 
             // Construct type of function from AST
             let mut hydrator = Hydrator::new();
             let (typ, field_map) = environment.in_new_scope(|environment| {
-                let return_type = hydrator.type_from_ast(retrn, environment)?;
+                let return_type = ctx.slurp_filled(hydrator.type_from_ast(retrn, environment));
                 let mut args_types = Vec::with_capacity(args.len());
                 let mut field_map = FieldMap::new(args.len() as u32);
                 for (i, arg) in args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(&arg.annotation, environment)?;
+                    let t = ctx.slurp_filled(hydrator.type_from_ast(&arg.annotation, environment));
                     args_types.push(t);
                     if let Some(label) = &arg.label {
                         field_map.insert(label.clone(), i as u32).map_err(|_| {
@@ -903,8 +905,13 @@ fn register_values<'a>(
 
             // If the custom type only has a single constructor then we can access the
             // fields using the record.field syntax, so store any fields accessors.
-            if let Some(accessors) =
-                custom_type_accessors(constructors, &mut hydrator, environment)?
+            if let Some(accessors) = ctx
+                .slurp_result(custom_type_accessors(
+                    constructors,
+                    &mut hydrator,
+                    environment,
+                ))
+                .flatten()
             {
                 let map = AccessorsMap {
                     public: (*public && !*opaque),
@@ -918,22 +925,26 @@ fn register_values<'a>(
 
             // Check and register constructors
             for constructor in constructors {
-                assert_unique_value_name(names, &constructor.name, &constructor.location)?;
+                ctx.just_slurp_result(assert_unique_value_name(
+                    names,
+                    &constructor.name,
+                    &constructor.location,
+                ));
 
                 let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
                 let mut args_types = Vec::with_capacity(constructor.arguments.len());
                 for (i, RecordConstructorArg { label, ast, .. }) in
                     constructor.arguments.iter().enumerate()
                 {
-                    let t = hydrator.type_from_ast(ast, environment)?;
+                    let t = ctx.slurp_filled(hydrator.type_from_ast(ast, environment));
                     args_types.push(t);
                     if let Some(label) = label {
-                        field_map.insert(label.clone(), i as u32).map_err(|_| {
-                            Error::DuplicateField {
+                        ctx.just_slurp_result(field_map.insert(label.clone(), i as u32).map_err(
+                            |_| Error::DuplicateField {
                                 label: label.to_string(),
                                 location: *location,
-                            }
-                        })?;
+                            },
+                        ));
                     }
                 }
                 let field_map = field_map.into_option();
@@ -980,13 +991,13 @@ fn register_values<'a>(
         }
 
         Statement::ModuleConstant { name, location, .. } => {
-            assert_unique_const_name(names, name, location)?;
+            ctx.just_slurp_result(assert_unique_const_name(names, name, location));
         }
 
         Statement::Import { .. } | Statement::TypeAlias { .. } | Statement::ExternalType { .. } => {
         }
     }
-    Ok(())
+    ctx.finish(()).collapse_into_result()
 }
 
 fn generalise_statement(
