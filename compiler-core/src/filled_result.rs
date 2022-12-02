@@ -17,6 +17,10 @@ impl<T, E> FilledResult<T, E> {
         }
     }
 
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
     pub fn no_errors(self) -> T {
         debug_assert!(self.errors.is_empty(), "Error list should have been empty!");
         self.data
@@ -85,6 +89,19 @@ pub struct FilledResultContext<E> {
 impl<E> FilledResultContext<E> {
     pub const fn new() -> Self {
         Self { errors: Vec::new() }
+    }
+
+    pub const fn from_errors(errors: Vec<E>) -> Self {
+        Self { errors }
+    }
+
+    pub fn has_errors(&self) -> bool {
+        !self.errors.is_empty()
+    }
+
+    /// Clears the errors collected up until now.
+    pub fn clear(&mut self) {
+        self.errors.clear()
     }
 
     /// Absorbs the errors from another `FilledResult`.

@@ -534,29 +534,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label: String,
         access_location: SrcSpan,
         usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
+    ) -> FilledResult<TypedExpr, Error> {
         // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
         // of an imported module, so attempt to infer the container as a module access.
         // TODO: Remove this cloning
-        match self.infer_record_access(container.clone(), label.clone(), access_location, usage) {
-            Ok(record_access) => Ok(record_access),
-            Err(err) => match container {
-                UntypedExpr::Var { name, location, .. } => {
-                    let module_access =
-                        self.infer_module_access(&name, label, &location, access_location);
 
-                    // If the name is in the environment, use the original error from
-                    // inferring the record access, so that we can suggest possible
-                    // misspellings of field names
-                    if self.environment.scope.contains_key(&name) {
-                        module_access.map_err(|_| err)
-                    } else {
-                        module_access
+        let (ctx, access) = self
+            .infer_record_access(container.clone(), label.clone(), access_location, usage)
+            .into_context();
+
+        let final_access = 'try_module_access: {
+            if ctx.has_errors() {
+                if let UntypedExpr::Var { name, location, .. } = container {
+                    match self.infer_module_access(&name, label, &location, access_location) {
+                        Err(e) => {
+                            // If the name is in the environment, use the original error from
+                            // inferring the record access, so that we can suggest possible
+                            // misspellings of field names
+                            if !self.environment.scope.contains_key(&name) {
+                                ctx.clear();
+                                ctx.register_error(e);
+                            }
+                        }
+                        Ok(v) => {
+                            ctx.clear();
+                            break 'try_module_access v;
+                        }
                     }
                 }
-                _ => Err(err),
-            },
-        }
+            }
+            access
+        };
+
+        ctx.finish(final_access)
     }
 
     fn infer_tuple_index(
