@@ -2350,16 +2350,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let return_type = return_annotation.map(|ann| ctx.slurp_filled(self.type_from_ast(&ann)));
 
-        self.infer_fn_with_known_types(ctx, args, body, return_type)
+        ctx.finish(())
+            .join_with(|_| self.infer_fn_with_known_types(args, body, return_type))
     }
 
     pub fn infer_fn_with_known_types(
         &mut self,
-        ctx: FilledResultContext<Error>,
         args: Vec<TypedArg>,
         body: UntypedExpr,
         return_type: Option<Arc<Type>>,
     ) -> FilledResult<(Vec<TypedArg>, TypedExpr), Error> {
+        let mut ctx = FilledResultContext::new();
         let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
