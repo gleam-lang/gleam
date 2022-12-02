@@ -445,14 +445,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         fun: UntypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, location)?;
-        Ok(TypedExpr::Call {
-            location,
-            typ,
-            args,
-            fun: Box::new(fun),
-        })
+    ) -> FilledResult<TypedExpr, Error> {
+        self.do_infer_call(fun, args, location)
+            .map(|(fun, args, typ)| TypedExpr::Call {
+                location,
+                typ,
+                args,
+                fun: Box::new(fun),
+            })
     }
 
     fn infer_list(
