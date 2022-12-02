@@ -577,11 +577,12 @@ pub fn infer_module(
     package: &str,
     modules: &im::HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
-) -> Result<TypedModule, Error> {
+) -> FilledResult<TypedModule, Vec<Error>> {
+    let mut ctx = FilledResultContext::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
     let mut environment = Environment::new(ids.clone(), &name, modules, warnings);
-    validate_module_name(&name)?;
+    ctx.just_slurp_result(validate_module_name(&name));
 
     let mut type_names = HashMap::with_capacity(module.statements.len());
     let mut value_names = HashMap::with_capacity(module.statements.len());
@@ -591,18 +592,30 @@ pub fn infer_module(
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     for s in module.iter_statements(target) {
-        register_import(s, &mut environment)?;
+        ctx.just_slurp_result(register_import(s, &mut environment));
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.iter_statements(target) {
-        register_types(s, &name, &mut hydrators, &mut type_names, &mut environment)?;
+        ctx.just_slurp_result(register_types(
+            s,
+            &name,
+            &mut hydrators,
+            &mut type_names,
+            &mut environment,
+        ));
     }
 
     // Register values so they can be used in functions earlier in the module.
     for s in module.iter_statements(target) {
-        register_values(s, &name, &mut hydrators, &mut value_names, &mut environment)?;
+        ctx.slurp_filled(register_values(
+            s,
+            &name,
+            &mut hydrators,
+            &mut value_names,
+            &mut environment,
+        ));
     }
 
     // Infer the types of each statement in the module
@@ -749,7 +762,7 @@ fn register_values<'a>(
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
-) -> Result<(), Vec<Error>> {
+) -> FilledResult<(), Error> {
     let mut ctx = FilledResultContext::new();
     match s {
         Statement::Fn {
@@ -997,7 +1010,7 @@ fn register_values<'a>(
         Statement::Import { .. } | Statement::TypeAlias { .. } | Statement::ExternalType { .. } => {
         }
     }
-    ctx.finish(()).collapse_into_result()
+    ctx.finish(())
 }
 
 fn generalise_statement(
@@ -1074,7 +1087,8 @@ fn infer_statement(
     module_name: &[String],
     hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment<'_>,
-) -> Result<TypedStatement, Error> {
+) -> FilledResult<TypedStatement, Error> {
+    let mut ctx = FilledResultContext::new();
     match s {
         Statement::Fn {
             doc,
@@ -1097,27 +1111,32 @@ fn infer_statement(
                 .expect("Preregistered type for fn was not a fn");
 
             // Infer the type using the preregistered args + return types as a starting point
-            let (typ, args, body, safe_to_generalise) =
-                environment.in_new_scope(|environment| {
-                    let args = args
-                        .into_iter()
-                        .zip(&args_types)
-                        .map(|(a, t)| a.set_type(t.clone()))
-                        .collect();
-                    let mut expr_typer = ExprTyper::new(environment);
-                    expr_typer.hydrator = hydrators
-                        .remove(&name)
-                        .expect("Could not find hydrator for fn");
-                    let (args, body) =
-                        expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
-                    let args_types = args.iter().map(|a| a.type_.clone()).collect();
-                    let typ = fn_(args_types, body.type_());
-                    let safe_to_generalise = !expr_typer.ungeneralised_function_used;
-                    Ok((typ, args, body, safe_to_generalise))
-                })?;
+            let (typ, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
+                let args = args
+                    .into_iter()
+                    .zip(&args_types)
+                    .map(|(a, t)| a.set_type(t.clone()))
+                    .collect();
+                let mut expr_typer = ExprTyper::new(environment);
+                expr_typer.hydrator = hydrators
+                    .remove(&name)
+                    .expect("Could not find hydrator for fn");
+                let (args, body) = ctx.slurp_filled(expr_typer.infer_fn_with_known_types(
+                    args,
+                    body,
+                    Some(return_type),
+                ));
+                let args_types = args.iter().map(|a| a.type_.clone()).collect();
+                let typ = fn_(args_types, body.type_());
+                let safe_to_generalise = !expr_typer.ungeneralised_function_used;
+                (typ, args, body, safe_to_generalise)
+            });
 
             // Assert that the inferred type matches the type of any recursive call
-            unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+            ctx.just_slurp_result(
+                unify(preregistered_type, typ.clone())
+                    .map_err(|e| convert_unify_error(e, location)),
+            );
 
             // Generalise the function if safe to do so
             let typ = if safe_to_generalise {
@@ -1140,7 +1159,7 @@ fn infer_statement(
                 typ
             };
 
-            Ok(Statement::Fn {
+            ctx.finish(Statement::Fn {
                 doc,
                 location,
                 name,
@@ -1178,7 +1197,7 @@ fn infer_statement(
                 .zip(&args_types)
                 .map(|(a, t)| a.set_type(t.clone()))
                 .collect();
-            Ok(Statement::ExternalFn {
+            ctx.finish(Statement::ExternalFn {
                 return_type,
                 doc,
                 location,
@@ -1205,7 +1224,7 @@ fn infer_statement(
                 .expect("Could not find existing type for type alias")
                 .typ
                 .clone();
-            Ok(Statement::TypeAlias {
+            ctx.finish(Statement::TypeAlias {
                 doc,
                 location,
                 public,
@@ -1284,7 +1303,7 @@ fn infer_statement(
                 .parameters
                 .clone();
 
-            Ok(Statement::CustomType {
+            ctx.finish(Statement::CustomType {
                 doc,
                 location,
                 public,
@@ -1310,9 +1329,9 @@ fn infer_statement(
                     location,
                     name: arg.to_string(),
                 };
-                let _ = hydrator.type_from_ast(&var, environment)?;
+                let _ = ctx.slurp_filled(hydrator.type_from_ast(&var, environment));
             }
-            Ok(Statement::ExternalType {
+            ctx.finish(Statement::ExternalType {
                 doc,
                 location,
                 public,
@@ -1330,15 +1349,23 @@ fn infer_statement(
         } => {
             let name = module.join("/");
             // Find imported module
-            let module_info =
-                environment
-                    .importable_modules
-                    .get(&name)
-                    .ok_or_else(|| Error::UnknownModule {
-                        location,
-                        name,
-                        imported_modules: environment.imported_modules.keys().cloned().collect(),
-                    })?;
+            let package = ctx
+                .slurp_result(
+                    environment
+                        .importable_modules
+                        .get(&name)
+                        .map(|x| x.package.clone())
+                        .ok_or_else(|| Error::UnknownModule {
+                            location,
+                            name,
+                            imported_modules: environment
+                                .imported_modules
+                                .keys()
+                                .cloned()
+                                .collect(),
+                        }),
+                )
+                .unwrap_or_else(|| "(unknown module)".to_string());
             // Record any imports that are types only as this information is
             // needed to prevent types being imported in generated JavaScript
             for import in unqualified.iter_mut() {
@@ -1346,12 +1373,12 @@ fn infer_statement(
                     import.layer = Layer::Type;
                 }
             }
-            Ok(Statement::Import {
+            ctx.finish(Statement::Import {
                 location,
                 module,
                 as_name,
                 unqualified,
-                package: module_info.package.clone(),
+                package,
             })
         }
 
@@ -1364,7 +1391,8 @@ fn infer_statement(
             value,
             ..
         } => {
-            let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
+            let typed_expr =
+                ctx.slurp_filled(ExprTyper::new(environment).infer_const(&annotation, *value));
             let type_ = typed_expr.type_();
             let variant = ValueConstructor {
                 public,
@@ -1388,7 +1416,7 @@ fn infer_statement(
                 environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
             }
 
-            Ok(Statement::ModuleConstant {
+            ctx.finish(Statement::ModuleConstant {
                 doc,
                 location,
                 name,
