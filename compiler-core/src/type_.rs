@@ -577,7 +577,7 @@ pub fn infer_module(
     package: &str,
     modules: &im::HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
-) -> FilledResult<TypedModule, Vec<Error>> {
+) -> Result<TypedModule, Vec<Error>> {
     let mut ctx = FilledResultContext::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
@@ -598,7 +598,7 @@ pub fn infer_module(
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.iter_statements(target) {
-        ctx.just_slurp_result(register_types(
+        ctx.slurp_filled(register_types(
             s,
             &name,
             &mut hydrators,
@@ -638,7 +638,12 @@ pub fn infer_module(
     }
 
     for statement in consts.into_iter().chain(not_consts) {
-        let statement = infer_statement(statement, &name, &mut hydrators, &mut environment)?;
+        let statement = ctx.slurp_filled(infer_statement(
+            statement,
+            &name,
+            &mut hydrators,
+            &mut environment,
+        ));
         statements.push(statement);
     }
 
@@ -663,7 +668,7 @@ pub fn infer_module(
     // Ensure no exported values have private types in their type signature
     for value in environment.module_values.values() {
         if let Some(leaked) = value.type_.find_private_type() {
-            return Err(Error::PrivateTypeLeak {
+            ctx.register_error(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
                 leaked,
             });
@@ -678,7 +683,7 @@ pub fn infer_module(
         ..
     } = environment;
 
-    Ok(ast::Module {
+    ctx.finish(ast::Module {
         documentation,
         name: name.clone(),
         statements,
@@ -692,6 +697,7 @@ pub fn infer_module(
             package: package.to_string(),
         },
     })
+    .collapse_into_result()
 }
 
 fn validate_module_name(name: &[String]) -> Result<(), Error> {
