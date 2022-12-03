@@ -1,3 +1,5 @@
+use vec1::Vec1;
+
 /// A wrapper structure that contains an error with some form of data.
 /// This will be useful to transmit errors through the pipeline while also providing
 /// with some data, e.g for LSP implementations.
@@ -50,11 +52,11 @@ impl<T, E> FilledResult<T, E> {
         }
     }
 
-    pub fn collapse_into_result(self) -> Result<T, Vec<E>> {
+    pub fn collapse_into_result(self) -> Result<T, Vec1<E>> {
         if self.errors.is_empty() {
             Ok(self.data)
         } else {
-            Err(self.errors)
+            Err(Vec1::try_from_vec(self.errors).unwrap())
         }
     }
 

@@ -15,6 +15,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
+use vec1::Vec1;
 
 use crate::{
     ast::{
@@ -577,7 +578,7 @@ pub fn infer_module(
     package: &str,
     modules: &im::HashMap<String, Module>,
     warnings: &mut Vec<Warning>,
-) -> Result<TypedModule, Vec<Error>> {
+) -> Result<TypedModule, Vec1<Error>> {
     let mut ctx = FilledResultContext::new();
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
