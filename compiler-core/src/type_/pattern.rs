@@ -193,7 +193,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             )
             .unwrap_or_else(|| self.environment.new_unbound_var());
 
-        let typ = segment_type;
+        let typ = segment_type.clone();
         if matches!(value.deref(), Pattern::Var { .. } if segment_type == string()) {
             ctx.register_error(Error::BitStringSegmentError {
                 error: bit_string::ErrorType::VariableUtfSegmentInPattern,
@@ -225,10 +225,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             Pattern::Var { name, location, .. } => {
-                FilledResult::ok(Pattern::Var { name, location }).with_check(
-                    self.insert_variable(&name, type_, location)
-                        .map_err(|e| convert_unify_error(e, location)),
-                )
+                let errors = self
+                    .insert_variable(&name, type_, location)
+                    .err()
+                    .map(|e| convert_unify_error(e, location))
+                    .into_iter()
+                    .collect();
+
+                FilledResult::new(Pattern::Var { name, location }, errors)
             }
 
             Pattern::VarUsage { name, location, .. } => {
@@ -343,7 +347,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         situation: None,
                         expected: type_.clone(),
-                        given: list(list_contents),
+                        given: list(list_contents.clone()),
                         rigid_type_names: hashmap![],
                     });
                     list_contents
@@ -392,12 +396,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
 
                     _ => {
-                        let elems_types = (0..(elems.len()))
+                        let elems_types: Vec<_> = (0..(elems.len()))
                             .map(|_| self.environment.new_unbound_var())
                             .collect();
 
                         ctx.register_error(Error::CouldNotUnify {
-                            given: tuple(elems_types),
+                            given: tuple(elems_types.clone()),
                             expected: type_,
                             situation: None,
                             location,
@@ -593,15 +597,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     } else {
                         let mut field_map = FieldMap::new(pattern_args.len() as u32);
 
-                        for (i, location, label) in pattern_args
-                            .iter()
-                            .enumerate()
-                            .filter_map(|(i, arg)| arg.label.map(|l| (i, arg.location, l.clone())))
+                        for (i, location, label) in
+                            pattern_args.iter().enumerate().filter_map(|(i, arg)| {
+                                arg.label.as_ref().map(|l| (i, arg.location, l.clone()))
+                            })
                         {
-                            ctx.slurp_result(
+                            ctx.just_slurp_result(
                                 field_map
                                     .insert(label.clone(), i as u32)
-                                    .map_err(|e| Error::DuplicateField { location, label }),
+                                    .map_err(|_| Error::DuplicateField { location, label }),
                             );
                         }
                         Some(field_map)
@@ -610,7 +614,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     ctx.finish(Pattern::Constructor {
                         location,
                         module,
-                        name,
+                        name: name.clone(),
                         arguments: vec![],
                         constructor: PatternConstructor::Record { name, field_map },
                         with_spread,

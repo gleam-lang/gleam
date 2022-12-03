@@ -418,7 +418,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ..
         } = arg;
         let typ = annotation
-            .map(|t| ctx.slurp_filled(self.type_from_ast(&t)))
+            .as_ref()
+            .map(|t| ctx.slurp_filled(self.type_from_ast(t)))
             .unwrap_or_else(|| self.environment.new_unbound_var());
 
         // If we know the expected type of the argument from its contextual
@@ -539,7 +540,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // of an imported module, so attempt to infer the container as a module access.
         // TODO: Remove this cloning
 
-        let (ctx, access) = self
+        let (mut ctx, access) = self
             .infer_record_access(container.clone(), label.clone(), access_location, usage)
             .into_context();
 
@@ -675,7 +676,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let infer_option = |segment_option: BitStringSegmentOption<UntypedValue>| {
             infer_bit_string_segment_option(segment_option, |value, typ| {
                 let typed_value = ctx.slurp_filled(infer(self, value));
-                ctx.slurp_result(
+                ctx.just_slurp_result(
                     unify(typ, typed_value.type_())
                         .map_err(|e| convert_unify_error(e, typed_value.location())),
                 );
@@ -1051,7 +1052,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             ValueConstructorVariant::ModuleConstant {
                                 literal: Constant::Var {
                                     location,
-                                    name,
+                                    name: name.clone(),
                                     module: None,
                                     constructor: None,
                                     typ,
@@ -1067,7 +1068,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ValueConstructorVariant::LocalVariable { .. } => (),
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
-                        ctx.register_error(Error::NonLocalClauseGuardVariable { location, name });
+                        ctx.register_error(Error::NonLocalClauseGuardVariable {
+                            location,
+                            name: name.clone(),
+                        });
                     }
 
                     ValueConstructorVariant::ModuleConstant { literal, .. } => {
@@ -1503,7 +1507,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let accessors = match collapse_links(record.type_()).as_ref() {
             // A type in the current module which may have fields
             Type::App { module, name, .. } if module == self.environment.current_module => {
-                self.environment.accessors.get(name)
+                self.environment.accessors.get(name).cloned()
             }
 
             // A type in another module which may have fields
@@ -1511,7 +1515,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .importable_modules
                 .get(&module.join("/"))
-                .and_then(|module| module.accessors.get(name)),
+                .and_then(|module| module.accessors.get(name))
+                .cloned(),
 
             _something_without_fields => None,
         };
@@ -1528,6 +1533,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = ctx
             .slurp_result(
                 accessors
+                    .as_ref()
                     .ok_or_else(|| unknown_field(vec![]))
                     .and_then(|accessors| {
                         accessors.accessors.get(&label).cloned().ok_or_else(|| {
@@ -1595,7 +1601,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ctx.slurp_result(
                     self.environment
                         .get_value_constructor(module.as_ref(), &name)
-                        .map(|ctor| (ctor.type_, Some((ctor.variant, module, name))))
+                        .map(|ctor| {
+                            (
+                                ctor.type_.clone(),
+                                Some((ctor.variant.clone(), module, name)),
+                            )
+                        })
                         .map_err(|e| convert_get_value_constructor_error(e, location)),
                 )
             })
@@ -1604,46 +1615,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // this whole part does need the 'break on first error' mechanism, so a labelled block
         // is used here to be able to `break` from it with Err, and then the error is passed to the
         // context.
-        let opt_field_map = ctx
-            .slurp_result('check_ctor: {
-                if let Some((ctor_variant, module, name)) = opt_ctor_variant {
-                    let value_constructor = match self
-                        .environment
-                        .get_value_constructor(module.as_ref(), &name)
-                        .map_err(|e| convert_get_value_constructor_error(e, location))
-                    {
-                        Ok(v) => v.clone(),
-                        Err(e) => break 'check_ctor Err(e),
-                    };
-
-                    // It must be a record with a field map for us to be able to update it
-                    let (field_map, constructors_count) = match &value_constructor.variant {
-                        ValueConstructorVariant::Record {
-                            field_map: Some(field_map),
-                            constructors_count,
-                            ..
-                        } => (field_map, *constructors_count),
-                        _ => {
-                            break 'check_ctor Err(Error::RecordUpdateInvalidConstructor {
-                                location: constructor.location(),
-                            });
-                        }
-                    };
-
-                    // We can only update a record if it is the only variant of its type.
-                    // If a record has multiple variants it cannot be safely updated as it
-                    // could be one of the other variants.
-                    if constructors_count != 1 {
-                        ctx.register_error(Error::UpdateMultiConstructorType {
+        let result = 'check_ctor: {
+            if let Some((ctor_variant, _module, _name)) = opt_ctor_variant.as_ref() {
+                // It must be a record with a field map for us to be able to update it
+                let (field_map, constructors_count) = match ctor_variant {
+                    ValueConstructorVariant::Record {
+                        field_map: Some(field_map),
+                        constructors_count,
+                        ..
+                    } => (field_map, *constructors_count),
+                    _ => {
+                        break 'check_ctor Err(Error::RecordUpdateInvalidConstructor {
                             location: constructor.location(),
                         });
                     }
-                    Ok(Some(field_map))
-                } else {
-                    Ok(None)
+                };
+
+                // We can only update a record if it is the only variant of its type.
+                // If a record has multiple variants it cannot be safely updated as it
+                // could be one of the other variants.
+                if constructors_count != 1 {
+                    ctx.register_error(Error::UpdateMultiConstructorType {
+                        location: constructor.location(),
+                    });
                 }
-            })
-            .flatten();
+                Ok(Some(field_map))
+            } else {
+                Ok(None)
+            }
+        };
+        let opt_field_map = ctx.slurp_result(result).flatten();
 
         let arg_indices: Vec<_> = if let Some(field_map) = opt_field_map {
             if args.len() == field_map.arity as usize {
@@ -1868,11 +1869,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .unwrap_or_else(|| ValueConstructor {
                         public: true,
                         variant: ValueConstructorVariant::Record {
-                            name,
+                            name: name.clone(),
                             arity: 0,
                             field_map: None,
                             location,
-                            module: module.unwrap_or_else(|| "".to_string()),
+                            module: module.clone().unwrap_or_else(|| "".to_string()),
                             constructors_count: 1,
                         },
                         type_: self.environment.new_unbound_var(),
@@ -1892,7 +1893,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     },
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        ctx.register_error(Error::NonLocalClauseGuardVariable { location, name });
+                        ctx.register_error(Error::NonLocalClauseGuardVariable {
+                            location,
+                            name: name.clone(),
+                        });
                         Constant::Var {
                             location,
                             module,
@@ -1922,9 +1926,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     ctx.slurp_result(self.infer_value_constructor(&module, &name, &location));
 
                 if let Some(ValueConstructorVariant::ModuleConstant { literal, .. }) =
-                    ctor.as_ref().map(|c| c.variant)
+                    ctor.as_ref().map(|c| &c.variant)
                 {
-                    return ctx.finish(literal);
+                    return ctx.finish(literal.clone());
                 }
 
                 let (field_map, tag) = ctor
@@ -1932,13 +1936,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .and_then(|ctor| {
                         if let ValueConstructorVariant::Record {
                             field_map, name, ..
-                        } = ctor.variant
+                        } = &ctor.variant
                         {
-                            Some((field_map, name.clone()))
+                            Some((field_map.clone(), name.clone()))
                         } else {
                             ctx.register_error(Error::NonLocalClauseGuardVariable {
                                 location,
-                                name,
+                                name: name.clone(),
                             });
                             None
                         }
@@ -1950,7 +1954,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         for (index, label, location) in
                             args.iter().enumerate().filter_map(|(i, arg)| {
-                                Some((i as u32, arg.label?.clone(), arg.location))
+                                Some((i as u32, arg.label.as_ref()?.clone(), arg.location))
                             })
                         {
                             ctx.just_slurp_result(
@@ -1960,7 +1964,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             );
                         }
 
-                        (field_map.into_option(), name)
+                        (field_map.into_option(), name.clone())
                     });
 
                 let typ = ctor
@@ -2008,11 +2012,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         constructor: ctor.unwrap_or_else(|| ValueConstructor {
                             public: true,
                             variant: ValueConstructorVariant::Record {
-                                name,
+                                name: name.clone(),
                                 arity: args.len() as u16,
-                                field_map,
+                                field_map: field_map.clone(),
                                 location,
-                                module: module.unwrap_or_else(|| "".to_string()),
+                                module: module.clone().unwrap_or_else(|| "".to_string()),
                                 constructors_count: 1,
                             },
                             type_: typ,
@@ -2099,12 +2103,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             public: true,
                             variant: ValueConstructorVariant::ModuleConstant {
                                 location,
-                                module: module.unwrap_or_else(|| "".to_string()),
+                                module: module.clone().unwrap_or_else(|| "".to_string()),
                                 literal: Constant::Var {
                                     location,
-                                    module,
-                                    name,
-                                    typ,
+                                    module: module.clone(),
+                                    name: name.clone(),
+                                    typ: typ.clone(),
                                     constructor: None,
                                 },
                             },
@@ -2348,7 +2352,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .map(|(i, arg)| self.infer_arg(arg, expected_args.get(i).cloned())),
         );
 
-        let return_type = return_annotation.map(|ann| ctx.slurp_filled(self.type_from_ast(&ann)));
+        let return_type = return_annotation
+            .as_ref()
+            .map(|ann| ctx.slurp_filled(self.type_from_ast(&ann)));
 
         ctx.finish(())
             .join_with(|_| self.infer_fn_with_known_types(args, body, return_type))

@@ -10,6 +10,9 @@ pub struct FilledResult<T, E> {
     errors: Vec<E>,
 }
 impl<T, E> FilledResult<T, E> {
+    pub const fn new(data: T, errors: Vec<E>) -> Self {
+        Self { data, errors }
+    }
     pub const fn ok(data: T) -> Self {
         Self {
             data,
