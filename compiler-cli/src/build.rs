@@ -2,12 +2,12 @@ use std::time::Instant;
 
 use gleam_core::{
     build::{Options, Package, ProjectCompiler},
-    Result,
+    WResult,
 };
 
 use crate::{build_lock::BuildLock, cli, dependencies::UseManifest, fs};
 
-pub fn main(options: Options) -> Result<Package> {
+pub fn main(options: Options) -> WResult<Package> {
     let lock = BuildLock::new()?;
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 

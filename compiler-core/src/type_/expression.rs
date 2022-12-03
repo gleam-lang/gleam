@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use vec1::Vec1;
 
 use super::{pipe::PipeTyper, *};

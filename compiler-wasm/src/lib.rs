@@ -5,7 +5,7 @@ use gleam_core::{
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
-    paths, Error,
+    paths, WResult,
 };
 
 use hexpm::version::Version;
@@ -44,15 +44,15 @@ impl Default for CompileOptions {
 
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
-pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, Vec<String>> {
     let mut wfs = WasmFileSystem::new();
 
     for (path, source) in options.source_files.iter() {
         write_source_file(source, path, &mut wfs);
     }
 
-    let _package =
-        compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
+    let _package = compile_project(&mut wfs, options.target, &options)
+        .map_err(|e| e.into_iter().map(|e| e.pretty_string()).collect::<Vec<_>>())?;
 
     Ok(gather_compiled_files(&wfs, options.target).unwrap())
 }
@@ -87,7 +87,7 @@ fn compile_project(
     wfs: &mut WasmFileSystem,
     target: Target,
     compile_options: &CompileOptions,
-) -> Result<Package, Error> {
+) -> WResult<Package> {
     let packages: Vec<ManifestPackage> = compile_options
         .dependencies
         .iter()

@@ -7,7 +7,7 @@ use gleam_core::{
     error::Error,
     hex,
     io::HttpClient as _,
-    paths, Result,
+    paths, Result, WResult,
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {
@@ -49,7 +49,7 @@ impl ApiKeyCommand for RemoveCommand {
     }
 }
 
-pub fn build() -> Result<()> {
+pub fn build() -> WResult<()> {
     let config = crate::config::root_config()?;
     let out = paths::build_docs(&config.name);
     let mut compiled = crate::build::main(Options {
@@ -94,12 +94,12 @@ struct PublishCommand {
     archive: Vec<u8>,
 }
 
-pub fn publish() -> Result<()> {
-    PublishCommand::new()?.run()
+pub fn publish() -> WResult<()> {
+    PublishCommand::new()?.run().map_err(Into::into)
 }
 
 impl PublishCommand {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> WResult<Self> {
         let config = crate::config::root_config()?;
         let mut compiled = crate::build::main(Options {
             perform_codegen: true,

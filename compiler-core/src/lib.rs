@@ -75,7 +75,7 @@ pub mod version;
 pub mod warning;
 pub mod filled_result;
 
-pub use error::{Error, Result};
+pub use error::{Error, Result, WResult};
 pub use warning::Warning;
 
 mod schema_capnp {

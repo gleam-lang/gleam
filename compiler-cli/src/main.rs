@@ -81,6 +81,7 @@ pub use gleam_core::{
 use gleam_core::{
     build::{Mode, Options, Target},
     hex::RetirementReason,
+    WResult,
 };
 use hex::ApiKeyCommand as _;
 
@@ -339,85 +340,94 @@ fn main() {
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
 
-    let result = match Command::parse() {
-        Command::Build {
-            target,
-            warnings_as_errors: _,
-        } => command_build(target),
-
-        Command::Check => command_check(),
-
-        Command::Docs(Docs::Build) => docs::build(),
-
-        Command::Docs(Docs::Publish) => docs::publish(),
-
-        Command::Docs(Docs::Remove { package, version }) => docs::remove(package, version),
-
-        Command::Format {
-            stdin,
-            files,
-            check,
-        } => format::run(stdin, check, files),
-
-        Command::Deps(Dependencies::List) => dependencies::list(),
-
-        Command::Deps(Dependencies::Download) => {
-            dependencies::download(cli::Reporter::new(), None, UseManifest::Yes).map(|_| ())
-        }
-
-        Command::Deps(Dependencies::Update) => dependencies::update(),
-
-        Command::New(options) => new::create(options, VERSION),
-
-        Command::Shell => shell::command(),
-
-        Command::Run { target, arguments } => run::command(arguments, target, run::Which::Src),
-
-        Command::Test { target, arguments } => run::command(arguments, target, run::Which::Test),
-
-        Command::CompilePackage(opts) => compile_package::command(opts),
-
-        Command::Publish { replace, yes } => publish::command(replace, yes),
-
-        Command::PrintConfig => print_config(),
-
-        Command::Hex(Hex::Retire {
-            package,
-            version,
-            reason,
-            message,
-        }) => hex::RetireCommand::new(package, version, reason, message).run(),
-
-        Command::Hex(Hex::Unretire { package, version }) => {
-            hex::UnretireCommand::new(package, version).run()
-        }
-
-        Command::Add { packages, dev } => add::command(packages, dev),
-
-        Command::Update => dependencies::update(),
-
-        Command::Clean => clean(),
-
-        Command::LanguageServer => lsp::main(),
-
-        Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
-    };
-
-    match result {
+    match run_command(Command::parse()) {
         Ok(_) => {
             tracing::info!("Successfully completed");
         }
-        Err(error) => {
-            tracing::error!(error = ?error, "Failed");
+        Err(errors) => {
             let mut buffer = stderr.buffer();
-            error.pretty(&mut buffer);
+            for error in errors {
+                tracing::error!(error = ?error, "Failed");
+                error.pretty(&mut buffer);
+                use std::io::Write;
+                let _ = buffer.write(b"\n\n");
+            }
             stderr.print(&buffer).expect("Final result error writing");
             std::process::exit(1);
         }
     }
 }
 
-fn command_check() -> Result<(), Error> {
+fn run_command(command: Command) -> WResult<()> {
+    match command {
+        Command::Build {
+            target,
+            warnings_as_errors: _,
+        } => command_build(target)?,
+
+        Command::Check => command_check()?,
+
+        Command::Docs(Docs::Build) => docs::build()?,
+
+        Command::Docs(Docs::Publish) => docs::publish()?,
+
+        Command::Docs(Docs::Remove { package, version }) => {
+            docs::remove(package, version)?;
+        }
+
+        Command::Format {
+            stdin,
+            files,
+            check,
+        } => format::run(stdin, check, files)?,
+
+        Command::Deps(Dependencies::List) => dependencies::list()?,
+
+        Command::Deps(Dependencies::Download) => {
+            let _ = dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
+        }
+
+        Command::Deps(Dependencies::Update) => dependencies::update()?,
+
+        Command::New(options) => new::create(options, VERSION)?,
+
+        Command::Shell => shell::command()?,
+
+        Command::Run { target, arguments } => run::command(arguments, target, run::Which::Src)?,
+
+        Command::Test { target, arguments } => run::command(arguments, target, run::Which::Test)?,
+
+        Command::CompilePackage(opts) => compile_package::command(opts)?,
+
+        Command::Publish { replace, yes } => publish::command(replace, yes)?,
+
+        Command::PrintConfig => print_config()?,
+
+        Command::Hex(Hex::Retire {
+            package,
+            version,
+            reason,
+            message,
+        }) => hex::RetireCommand::new(package, version, reason, message).run()?,
+
+        Command::Hex(Hex::Unretire { package, version }) => {
+            hex::UnretireCommand::new(package, version).run()?;
+        }
+
+        Command::Add { packages, dev } => add::command(packages, dev)?,
+
+        Command::Update => dependencies::update()?,
+
+        Command::Clean => clean()?,
+
+        Command::LanguageServer => lsp::main()?,
+
+        Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment()?,
+    }
+    Ok(())
+}
+
+fn command_check() -> WResult<()> {
     let _ = build::main(Options {
         perform_codegen: false,
         mode: Mode::Dev,
@@ -426,7 +436,7 @@ fn command_check() -> Result<(), Error> {
     Ok(())
 }
 
-fn command_build(target: Option<Target>) -> Result<(), Error> {
+fn command_build(target: Option<Target>) -> WResult<()> {
     let _ = build::main(Options {
         perform_codegen: true,
         mode: Mode::Dev,

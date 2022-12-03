@@ -43,7 +43,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_types_constructors(&mut module);
 
         let result = capnp::serialize_packed::write_message(&mut writer, &message);
-        result.map_err(|e| writer.convert_err(e))
+        result.map_err(|e| writer.convert_err(e).into())
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {

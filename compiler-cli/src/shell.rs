@@ -1,11 +1,11 @@
 use gleam_core::{
     build::{Mode, Options, Target},
     error::Error,
-    paths,
+    paths, WResult,
 };
 use std::process::Command;
 
-pub fn command() -> Result<(), Error> {
+pub fn command() -> WResult<()> {
     // Build project
     let _ = crate::build::main(Options {
         perform_codegen: true,

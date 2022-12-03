@@ -8,11 +8,11 @@ use gleam_core::{
     metadata, paths,
     type_::Module,
     uid::UniqueIdGenerator,
-    Result,
+    Result, WResult,
 };
 use std::path::Path;
 
-pub fn command(options: CompilePackage) -> Result<()> {
+pub fn command(options: CompilePackage) -> WResult<()> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();

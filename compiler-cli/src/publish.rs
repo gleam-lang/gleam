@@ -8,7 +8,7 @@ use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     build::{Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
-    hex, paths, Error, Result,
+    hex, paths, Error, Result, WResult,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
@@ -16,8 +16,9 @@ use sha2::Digest;
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
-pub fn command(replace: bool, yes: bool) -> Result<()> {
-    PublishCommand::setup(replace, yes)?.run()
+pub fn command(replace: bool, yes: bool) -> WResult<()> {
+    PublishCommand::setup(replace, yes)?.run()?;
+    Ok(())
 }
 
 pub struct PublishCommand {
@@ -28,7 +29,7 @@ pub struct PublishCommand {
 }
 
 impl PublishCommand {
-    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
+    pub fn setup(replace: bool, i_am_sure: bool) -> WResult<Self> {
         // Reset the build directory so we know the state of the project
         fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
@@ -46,7 +47,7 @@ impl PublishCommand {
             return Err(Error::MissingHexPublishFields {
                 description_missing: config.description.is_empty(),
                 licence_missing: config.licences.is_empty(),
-            });
+            }.into());
         }
 
         // Build the package release tarball

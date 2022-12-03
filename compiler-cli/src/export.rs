@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{Mode, Options, Target},
-    paths, Result,
+    paths, Result, WResult,
 };
 
 // TODO: start in embedded mode
@@ -14,7 +14,7 @@ use gleam_core::{
 /// - ebin
 /// - include
 /// - priv
-pub(crate) fn erlang_shipment() -> Result<()> {
+pub(crate) fn erlang_shipment() -> WResult<()> {
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths::build_packages(mode, target);

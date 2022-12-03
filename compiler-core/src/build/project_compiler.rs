@@ -11,7 +11,7 @@ use crate::{
     metadata, paths, type_,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
-    warning, Error, Result, Warning,
+    warning, Error, Result, Warning, WResult,
 };
 use itertools::Itertools;
 use std::{
@@ -133,8 +133,8 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(&mut self) -> Result<Package, Vec<Error>> {
-        self.check_gleam_version().map_err(|e| vec![e])?;
+    pub fn compile(&mut self) -> WResult<Package> {
+        self.check_gleam_version()?;
         self.compile_dependencies()?;
 
         if self.options.perform_codegen {
@@ -144,7 +144,7 @@ where
         }
         let result = self.compile_root_package();
 
-        self.check_build_journal().map_err(|e| vec![e])?;
+        self.check_build_journal()?;
 
         // Print warnings
         for warning in &self.warnings {
@@ -154,7 +154,7 @@ where
         result
     }
 
-    pub fn compile_root_package(&mut self) -> Result<Package, Vec<Error>> {
+    pub fn compile_root_package(&mut self) -> WResult<Package> {
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
 

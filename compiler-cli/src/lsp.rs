@@ -15,6 +15,7 @@ use gleam_core::{
     build::{self, Located, Module, ProjectCompiler},
     config::PackageConfig,
     diagnostic::{self, Level},
+    error::WResult,
     io::{CommandExecutor, FileSystemIO, Stdio},
     line_numbers::LineNumbers,
     paths,
@@ -454,7 +455,7 @@ impl LanguageServer {
 
     fn publish_result_diagnostics<T>(
         &mut self,
-        result: Result<T>,
+        result: WResult<T>,
         connection: &lsp_server::Connection,
     ) -> Result<()> {
         self.store_result_diagnostics(result)?;
@@ -462,13 +463,15 @@ impl LanguageServer {
         Ok(())
     }
 
-    fn store_result_diagnostics<T>(&mut self, result: Result<T>) -> Result<()> {
+    fn store_result_diagnostics<T>(&mut self, result: WResult<T>) -> Result<()> {
         // Store warning diagnostics
         self.take_and_store_warning_diagnostics();
 
         // Store error diagnostics, if there are any
-        if let Err(error) = result {
-            self.process_gleam_diagnostic(error.to_diagnostic());
+        if let Err(errors) = result {
+            for error in errors {
+                self.process_gleam_diagnostic(error.to_diagnostic());
+            }
         }
 
         Ok(())
@@ -484,7 +487,7 @@ impl LanguageServer {
                 let params = cast_notification::<DidSaveTextDocument>(notification)
                     .expect("cast DidSaveTextDocument");
                 let result = self.text_document_did_save(params, connection);
-                self.publish_result_diagnostics(result, connection)
+                self.publish_result_diagnostics(result.map_err(Into::into), connection)
             }
 
             "textDocument/didClose" => {
@@ -1022,7 +1025,7 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Result<(), Error> {
+    pub fn compile(&mut self) -> WResult<()> {
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock = self.build_lock.lock(&NullTelemetry);
 

@@ -3,7 +3,7 @@ use gleam_core::{
     config::PackageConfig,
     error::Error,
     io::{CommandExecutor, Stdio},
-    paths,
+    paths, WResult,
 };
 
 use crate::fs::ProjectIO;
@@ -14,7 +14,7 @@ pub enum Which {
     Test,
 }
 
-pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> Result<(), Error> {
+pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> WResult<()> {
     let config = crate::config::root_config()?;
 
     // Determine which module to run

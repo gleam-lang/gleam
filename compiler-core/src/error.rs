@@ -21,10 +21,61 @@ pub type Src = String;
 pub type Name = String;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
+pub type WResult<Ok> = std::result::Result<Ok, WrappedError>;
 
 macro_rules! wrap_format {
     ($($tts:tt)*) => {
         wrap(&format!($($tts)*))
+    }
+}
+
+/// A wrapper API to handle Results with single and multiple errors seamlessly.
+/// It has a recursive structure that is unfolded with `flatten`.
+#[derive(Debug)]
+pub enum WrappedError {
+    Single(Error),
+    Multiple(Vec<WrappedError>),
+}
+
+impl From<Vec<Error>> for WrappedError {
+    fn from(v: Vec<Error>) -> Self {
+        Self::Multiple(v.into_iter().map(Self::Single).collect())
+    }
+}
+
+impl From<Error> for WrappedError {
+    fn from(e: Error) -> Self {
+        Self::Single(e)
+    }
+}
+
+#[derive(Debug)]
+pub struct WrappedErrorOutIterator {
+    queue: Vec<WrappedError>,
+}
+
+impl Iterator for WrappedErrorOutIterator {
+    type Item = Error;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(next) = self.queue.pop() {
+            match next {
+                WrappedError::Single(s) => return Some(s),
+                // we put them reversed so that they are popped 'in order'.
+                WrappedError::Multiple(m) => self.queue.extend(m.into_iter().rev()),
+            }
+        }
+        None
+    }
+}
+
+impl IntoIterator for WrappedError {
+    type Item = Error;
+
+    type IntoIter = WrappedErrorOutIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        WrappedErrorOutIterator { queue: vec![self] }
     }
 }
 
