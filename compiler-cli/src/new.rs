@@ -266,6 +266,16 @@ fn write(path: PathBuf, contents: &str) -> Result<()> {
 }
 
 fn validate_root_folder(name: &str) -> Result<(), Error> {
+    if name == "." {
+        if Path::new("gleam.toml").exists() {
+            return Err(Error::ProjectRootAlreadyExist {
+                path: name.to_string(),
+            })
+        }
+
+        return Ok(())
+    }
+
     if Path::new(name).exists() {
         Err(Error::ProjectRootAlreadyExist {
             path: name.to_string(),
