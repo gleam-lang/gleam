@@ -99,6 +99,7 @@ fn compile_expression(src: &str) -> TypedExpr {
     );
     ExprTyper::new(&mut environment)
         .infer(ast)
+        .collapse_into_result()
         .expect("should successfully infer")
 }
 

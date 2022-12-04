@@ -30,6 +30,7 @@ macro_rules! assert_infer {
             &mut vec![],
         ))
         .infer(ast)
+        .collapse_into_result()
         .expect("should successfully infer");
         assert_eq!(
             ($src, printer.pretty_print(result.type_().as_ref(), 0),),
@@ -178,12 +179,16 @@ macro_rules! assert_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = $crate::error::Error::Type {
-            src: $src.to_string(),
-            path: std::path::PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+        let error = error
+            .into_iter()
+            .map(|error| $crate::error::Error::Type {
+                src: $src.to_string(),
+                path: std::path::PathBuf::from("/src/one/two.gleam"),
+                error,
+            })
+            .collect::<Vec<_>>();
+        let output = error.into_iter().map(|e| e.pretty_string()).join("\n");
+
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -246,13 +251,21 @@ macro_rules! assert_error {
             &mut vec![],
         ))
         .infer(ast)
+        .collapse_into_result()
         .expect_err("should infer an error");
-        let error = $crate::error::Error::Type {
-            src: $src.to_string(),
-            path: PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+        let error = error
+            .into_iter()
+            .map(|error| $crate::error::Error::Type {
+                src: $src.to_string(),
+                path: PathBuf::from("/src/one/two.gleam"),
+                error,
+            })
+            .collect::<Vec<_>>();
+        use itertools::Itertools;
+        let output = error
+            .into_iter()
+            .map(|error| error.pretty_string())
+            .join("\n");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -295,12 +308,18 @@ macro_rules! assert_with_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = $crate::error::Error::Type {
-            src: $src.to_string(),
-            path: PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+        let error = error
+            .into_iter()
+            .map(|error| $crate::error::Error::Type {
+                src: $src.to_string(),
+                path: PathBuf::from("/src/one/two.gleam"),
+                error,
+            })
+            .collect::<Vec<_>>();
+        let output = error
+            .into_iter()
+            .map(|error| error.pretty_string())
+            .join("\n");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -354,12 +373,18 @@ macro_rules! assert_with_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
-            src: $src.to_string(),
-            path: PathBuf::from("/src/one/two.gleam"),
-            error,
-        };
-        let output = error.pretty_string();
+        let error = error
+            .into_iter()
+            .map(|error| crate::error::Error::Type {
+                src: $src.to_string(),
+                path: PathBuf::from("/src/one/two.gleam"),
+                error,
+            })
+            .collect::<Vec<_>>();
+        let output = error
+            .into_iter()
+            .map(|error| error.pretty_string())
+            .join("\n");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

@@ -67,11 +67,13 @@ macro_rules! assert_erlang_compile {
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
                 outputs
             })
-            .map_err(|e| normalise_error(e));
-        let expected = $expected_output.map(|mut outputs: Vec<OutputFile>| {
-            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-            outputs
-        });
+            .map_err(|e| e.into_iter().map(normalise_error).collect::<Vec<_>>());
+        let expected = $expected_output
+            .map(|mut outputs: Vec<OutputFile>| {
+                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+                outputs
+            })
+            .map_err(|e| vec![e]);
         assert_eq!(expected, outputs);
     };
 }
@@ -128,11 +130,13 @@ macro_rules! assert_javascript_compile {
                 outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
                 outputs
             })
-            .map_err(|e| normalise_error(e));
-        let expected = $expected_output.map(|mut outputs: Vec<OutputFile>| {
-            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-            outputs
-        });
+            .map_err(|e| e.into_iter().map(normalise_error).collect::<Vec<_>>());
+        let expected = $expected_output
+            .map(|mut outputs: Vec<OutputFile>| {
+                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
+                outputs
+            })
+            .map_err(|e| vec![e]);
         assert_eq!(expected, outputs);
     };
 }
