@@ -84,6 +84,8 @@ pub struct PackageConfig {
     pub javascript: JavaScriptConfig,
     #[serde(default = "erlang_target")]
     pub target: Target,
+    #[serde(default, rename = "javascript-deno")]
+    pub deno: DenoConfig,
 }
 
 impl PackageConfig {
@@ -417,6 +419,7 @@ impl Default for PackageConfig {
             licences: Default::default(),
             links: Default::default(),
             target: Target::Erlang,
+            deno: Default::default(),
         }
     }
 }
@@ -429,10 +432,34 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
+    #[serde(default)]
+    pub runtime: Option<String>,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+pub struct DenoConfig {
+    #[serde(default)]
+    pub allow_env: Vec<String>,
+    #[serde(default)]
+    pub allow_sys: bool,
+    #[serde(default)]
+    pub allow_hrtime: bool,
+    #[serde(default)]
+    pub allow_net: Vec<String>,
+    #[serde(default)]
+    pub allow_ffi: bool,
+    #[serde(default)]
+    pub allow_read: Vec<String>,
+    #[serde(default)]
+    pub allow_run: Vec<String>,
+    #[serde(default)]
+    pub allow_write: Vec<String>,
+    #[serde(default)]
+    pub allow_all: bool,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]

@@ -353,7 +353,7 @@ where
         io.mkdir(&build_dir)?;
 
         if self.write_entrypoint {
-            self.render_entrypoint_module(&build_dir, &mut written)?;
+            self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
             tracing::info!("skipping_entrypoint_generation");
         }
@@ -401,13 +401,22 @@ where
 
         JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
 
+        if self.write_entrypoint {
+            self.render_javascript_entrypoint_module(&self.out, &mut written)?;
+        } else {
+            tracing::info!("skipping_entrypoint_generation");
+        }
+
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
+        } else {
+            tracing::info!("skipping_native_file_copying");
         }
+        
         Ok(())
     }
 
-    fn render_entrypoint_module(
+    fn render_erlang_entrypoint_module(
         &mut self,
         out: &Path,
         modules_to_compile: &mut HashSet<PathBuf>,
@@ -418,6 +427,23 @@ where
         }
         .render()
         .expect("Erlang entrypoint rendering");
+        self.io.writer(&out.join(name))?.write(module.as_bytes())?;
+        let _ = modules_to_compile.insert(name.into());
+        self.add_build_journal(out.join(name));
+        Ok(())
+    }
+
+    fn render_javascript_entrypoint_module(
+        &mut self,
+        out: &Path,
+        modules_to_compile: &mut HashSet<PathBuf>,
+    ) -> Result<(), Error> {
+        let name = "gleam.main.mjs";
+        let module = JavaScriptEntrypointModule {
+            application: &self.config.name,
+        }
+        .render()
+        .expect("Javascript entrypoint rendering");
         self.io.writer(&out.join(name))?.write(module.as_bytes())?;
         let _ = modules_to_compile.insert(name.into());
         self.add_build_journal(out.join(name));
@@ -690,5 +716,11 @@ struct Parsed {
 #[derive(Template)]
 #[template(path = "gleam@@main.erl", escape = "none")]
 struct ErlangEntrypointModule<'a> {
+    application: &'a str,
+}
+
+#[derive(Template)]
+#[template(path = "gleam.main.js", escape = "none")]
+struct JavaScriptEntrypointModule<'a> {
     application: &'a str,
 }
