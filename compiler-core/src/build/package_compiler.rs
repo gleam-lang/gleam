@@ -275,7 +275,7 @@ where
                 .to_path_buf();
 
             match extension {
-                "mjs" | "js" | "hrl" => (),
+                "mjs" | "js" | "ts" | "hrl" => (),
                 "erl" => {
                     let _ = to_compile_modules.insert(relative_path.clone());
                 }
