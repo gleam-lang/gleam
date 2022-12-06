@@ -10,6 +10,9 @@ if javascript {
 
   pub external fn ansi_green(String) -> String =
     "./ffi_javascript.mjs" "ansi_green"
+
+  pub external fn file_exists(String) -> Bool =
+    "./ffi_javascript.mjs" "fileExists"
 }
 
 if erlang {
@@ -24,4 +27,7 @@ if erlang {
 
   pub external fn ansi_green(String) -> String =
     "ffi_erlang" "ansi_green"
+
+  pub external fn file_exists(String) -> Bool =
+    "ffi_erlang" "file_exists"
 }
