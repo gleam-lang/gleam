@@ -5,7 +5,11 @@ export function append(a, b) {
 }
 
 export function print(string) {
-  process.stdout.write(string);
+  if (Deno) {
+    Deno.stdout.writeSync(new TextEncoder().encode(string));
+  } else {
+    process.stdout.write(string);
+  }
   return string;
 }
 

@@ -17,3 +17,10 @@ javascript:
 	@cargo run --quiet -- compile-package --package . --out target-javascript --target javascript --lib .
 	@cp src/*.mjs target-javascript/dist
 	@node main_javascript.js
+
+.phony: deno
+deno:
+	@echo test/language on JavaScript
+	@cargo run --quiet -- compile-package --package . --out target-javascript --target deno --lib .
+	@cp src/*.mjs target-javascript/dist
+	@deno run --allow-read main_javascript.js
