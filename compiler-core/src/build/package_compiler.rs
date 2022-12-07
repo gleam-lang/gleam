@@ -412,7 +412,7 @@ where
         } else {
             tracing::info!("skipping_native_file_copying");
         }
-        
+
         Ok(())
     }
 

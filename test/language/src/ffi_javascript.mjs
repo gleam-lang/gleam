@@ -3,8 +3,8 @@ export function append(a, b) {
 }
 
 export function print(string) {
-  if (Deno) {
-    Deno.stdout.writeSync(new TextEncoder().encode(string));
+  if (globalThis.Deno) {
+    globalThis.Deno.stdout.writeSync(new TextEncoder().encode(string));
   } else {
     process.stdout.write(string);
   }
