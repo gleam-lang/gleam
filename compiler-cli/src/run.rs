@@ -48,7 +48,11 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
             match runtime.as_str() {
                 "deno" => run_javascript_deno(&config, arguments),
                 "node" => run_javascript_node(&config, arguments),
-                _ => std::process::exit(1),
+                runtime => Err(Error::InvalidRuntime {
+                    target: "JavaScript".into(),
+                    invalid_runtime: runtime.to_owned(),
+                    valid_runtimes: vec!["node".into(), "deno".into()],
+                }),
             }
         }
     }?;

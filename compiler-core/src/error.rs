@@ -145,6 +145,13 @@ pub enum Error {
         error: crate::javascript::Error,
     },
 
+    #[error("Invalid runtime for {target} target: {invalid_runtime}")]
+    InvalidRuntime {
+        target: String,
+        invalid_runtime: String,
+        valid_runtimes: Vec<String>,
+    },
+
     #[error("package downloading failed: {error}")]
     DownloadPackageError {
         package_name: String,
@@ -2275,6 +2282,24 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                     title: "Unsupported build tool".into(),
                     text,
                     hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+            Error::InvalidRuntime {
+                target,
+                invalid_runtime,
+                valid_runtimes,
+            } => {
+                let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
+                let valid_runtimes_text = valid_runtimes.join(", ");
+                Diagnostic {
+                    title: format!("Invalid runtime for {}", target),
+                    text,
+                    hint: Some(format!(
+                        "available runtimes for {} are: {}",
+                        target, valid_runtimes_text
+                    )),
                     location: None,
                     level: Level::Error,
                 }
