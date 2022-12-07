@@ -15,6 +15,7 @@ use itertools::Itertools;
 use std::env;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
+use strum::VariantNames;
 use termcolor::Buffer;
 use thiserror::Error;
 
@@ -159,7 +160,6 @@ pub enum Error {
     InvalidRuntime {
         target: Target,
         invalid_runtime: Runtime,
-        valid_runtimes: Vec<Runtime>,
     },
 
     #[error("package downloading failed: {error}")]
@@ -2299,7 +2299,6 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
             Error::InvalidRuntime {
                 target,
                 invalid_runtime,
-                valid_runtimes,
             } => {
                 let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
 
@@ -2309,7 +2308,8 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
 
                         Some(format!(
                             "available runtimes for {} are: {:?}",
-                            target, valid_runtimes
+                            target,
+                            Runtime::VARIANTS
                         ))
                     }
                     Target::Erlang => Some(
