@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Options, Target},
+    build::{Mode, Options, Runtime, Target},
     config::PackageConfig,
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -17,7 +17,7 @@ pub enum Which {
 pub fn command(
     arguments: Vec<String>,
     target: Option<Target>,
-    runtime: Option<String>,
+    runtime: Option<Runtime>,
     which: Which,
 ) -> Result<(), Error> {
     let config = crate::config::root_config()?;
@@ -51,26 +51,17 @@ pub fn command(
             _ => run_erlang(&module, arguments),
         },
         Target::JavaScript => {
-            let js_runtime: String = {
+            let js_runtime: Runtime = {
                 if let Some(r) = runtime {
                     r
                 } else {
-                    config
-                        .javascript
-                        .runtime
-                        .clone()
-                        .unwrap_or_else(|| "node".into())
+                    config.javascript.runtime.unwrap_or(Runtime::Node)
                 }
             };
 
-            match js_runtime.as_str() {
-                "deno" => run_javascript_deno(&config, arguments),
-                "node" => run_javascript_node(&config, arguments),
-                runtime => Err(Error::InvalidRuntime {
-                    target: Target::JavaScript,
-                    invalid_runtime: runtime.to_owned(),
-                    valid_runtimes: vec!["node".into(), "deno".into()],
-                }),
+            match js_runtime {
+                Runtime::Deno => run_javascript_deno(&config, arguments),
+                Runtime::Node => run_javascript_node(&config, arguments),
             }
         }
     }?;
