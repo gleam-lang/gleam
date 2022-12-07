@@ -53,14 +53,13 @@ pub fn command(
         Target::JavaScript => {
             let js_runtime: String = {
                 if let Some(r) = runtime {
-                    r.to_owned()
+                    r
                 } else {
                     config
                         .javascript
                         .runtime
                         .clone()
                         .unwrap_or_else(|| "node".into())
-                        .to_owned()
                 }
             };
 

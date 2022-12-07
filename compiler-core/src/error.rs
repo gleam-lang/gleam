@@ -2295,7 +2295,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
 
                 let hint = match target {
-                    &Target::JavaScript => {
+                    Target::JavaScript => {
                         let valid_runtimes_text = valid_runtimes.join(", ");
 
                         Some(format!(
@@ -2303,7 +2303,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                             target, valid_runtimes_text
                         ))
                     }
-                    &Target::Erlang => Some(
+                    Target::Erlang => Some(
                         "You can not set a runtime for erlang. Did you mean to target javascript?"
                             .into(),
                     ),
