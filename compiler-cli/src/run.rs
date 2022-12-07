@@ -46,7 +46,6 @@ pub fn command(
             Some(r) => Err(Error::InvalidRuntime {
                 target: Target::Erlang,
                 invalid_runtime: r,
-                valid_runtimes: vec![],
             }),
             _ => run_erlang(&config.name, &module, arguments),
         },
