@@ -169,7 +169,7 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &Vec<String>) {
         if flags.starts_with(&["*".to_owned()]) {
             args.push(flag.to_owned())
         } else {
-            args.push(format!("{}=[{}]", flag.to_owned(), flags.join(" ")))
+            args.push(format!("{}={}", flag.to_owned(), flags.join(",")))
         }
     }
 }
