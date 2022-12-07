@@ -4,6 +4,7 @@ target = "javascript"
 
 [javascript]
 typescript_declarations = true
+runtime = "node"
 
 [dependencies]
 gleam_stdlib = "~> 0.18"

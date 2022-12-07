@@ -14,7 +14,12 @@ pub enum Which {
     Test,
 }
 
-pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> Result<(), Error> {
+pub fn command(
+    arguments: Vec<String>,
+    target: Option<Target>,
+    runtime: Option<String>,
+    which: Which,
+) -> Result<(), Error> {
     let config = crate::config::root_config()?;
 
     // Determine which module to run
@@ -37,19 +42,33 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
 
     // Run the command
     let status = match target.unwrap_or(config.target) {
-        Target::Erlang => run_erlang(&module, arguments),
+        Target::Erlang => match runtime {
+            Some(r) => Err(Error::InvalidRuntime {
+                target: Target::Erlang,
+                invalid_runtime: r,
+                valid_runtimes: vec![],
+            }),
+            _ => run_erlang(&module, arguments),
+        },
         Target::JavaScript => {
-            let runtime: &String = &config
-                .javascript
-                .runtime
-                .clone()
-                .unwrap_or_else(|| "node".into());
+            let js_runtime: String = {
+                if let Some(r) = runtime {
+                    r.to_owned()
+                } else {
+                    config
+                        .javascript
+                        .runtime
+                        .clone()
+                        .unwrap_or_else(|| "node".into())
+                        .to_owned()
+                }
+            };
 
-            match runtime.as_str() {
+            match js_runtime.as_str() {
                 "deno" => run_javascript_deno(&config, arguments),
                 "node" => run_javascript_node(&config, arguments),
                 runtime => Err(Error::InvalidRuntime {
-                    target: "JavaScript".into(),
+                    target: Target::JavaScript,
                     invalid_runtime: runtime.to_owned(),
                     valid_runtimes: vec!["node".into(), "deno".into()],
                 }),

@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::build::Target;
 use crate::diagnostic::{Diagnostic, Label, Location};
 use crate::type_::FieldAccessUsage;
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
@@ -156,7 +157,7 @@ pub enum Error {
 
     #[error("Invalid runtime for {target} target: {invalid_runtime}")]
     InvalidRuntime {
-        target: String,
+        target: Target,
         invalid_runtime: String,
         valid_runtimes: Vec<String>,
     },
@@ -2301,14 +2302,26 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 valid_runtimes,
             } => {
                 let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
-                let valid_runtimes_text = valid_runtimes.join(", ");
+
+                let hint = match target {
+                    &Target::JavaScript => {
+                        let valid_runtimes_text = valid_runtimes.join(", ");
+
+                        Some(format!(
+                            "available runtimes for {} are: {}",
+                            target, valid_runtimes_text
+                        ))
+                    }
+                    &Target::Erlang => Some(
+                        "You can not set a runtime for erlang. Did you mean to target javascript?"
+                            .into(),
+                    ),
+                };
+
                 Diagnostic {
                     title: format!("Invalid runtime for {}", target),
                     text,
-                    hint: Some(format!(
-                        "available runtimes for {} are: {}",
-                        target, valid_runtimes_text
-                    )),
+                    hint,
                     location: None,
                     level: Level::Error,
                 }
