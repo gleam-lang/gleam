@@ -1,5 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
-use crate::build::Target;
+use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
 use crate::type_::FieldAccessUsage;
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
@@ -149,8 +149,8 @@ pub enum Error {
     #[error("Invalid runtime for {target} target: {invalid_runtime}")]
     InvalidRuntime {
         target: Target,
-        invalid_runtime: String,
-        valid_runtimes: Vec<String>,
+        invalid_runtime: Runtime,
+        valid_runtimes: Vec<Runtime>,
     },
 
     #[error("package downloading failed: {error}")]
@@ -2296,11 +2296,11 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
 
                 let hint = match target {
                     Target::JavaScript => {
-                        let valid_runtimes_text = valid_runtimes.join(", ");
+                        // let valid_runtimes_text = valid_runtimes.join(", ");
 
                         Some(format!(
-                            "available runtimes for {} are: {}",
-                            target, valid_runtimes_text
+                            "available runtimes for {} are: {:?}",
+                            target, valid_runtimes
                         ))
                     }
                     Target::Erlang => Some(

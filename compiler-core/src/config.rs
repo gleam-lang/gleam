@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
 
-use crate::build::{Mode, Target};
+use crate::build::{Mode, Runtime, Target};
 
 fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
@@ -432,12 +432,12 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Debug, PartialEq, Default, Clone, Copy)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
     #[serde(default)]
-    pub runtime: Option<String>,
+    pub runtime: Option<Runtime>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
