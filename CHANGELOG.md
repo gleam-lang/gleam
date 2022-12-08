@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- New Gleam projects are now configured to explicitly install rebar3 using
+  GitHub actions erlef/setup-beam.
 - A better error message is now shown when attempting to use a function within a
   constant expression.
 - Changed float size limit in bitstring expressions to 16, 32 or 64, when static.
