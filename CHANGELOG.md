@@ -10,6 +10,7 @@
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
   code.
+- Added support for top level TypeScript file inclusion in builds.
 
 ## v0.25.0 - 2022-11-24
 
