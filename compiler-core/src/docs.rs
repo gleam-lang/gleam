@@ -370,13 +370,22 @@ fn function<'a>(
             return_type: ret,
             location,
             ..
-        } => Some(Function {
-            name,
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
-            source_url: source_links.url(location),
-        }),
+        } => {
+            println!(
+                "n: {:?} - l: {:?} - sl: {:?} ;end",
+                name,
+                location,
+                source_links.url(location)
+            );
+
+            Some(Function {
+                name,
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                signature: print(formatter.docs_fn_signature(true, name, args, ret.clone())),
+                source_url: source_links.url(location),
+            })
+        }
 
         _ => None,
     }
