@@ -651,7 +651,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 
-            UntypedExpr::Int { value, .. } => value.to_doc(),
+            UntypedExpr::Int { value, .. } => self.int(value),
 
             UntypedExpr::Float { value, .. } => self.float(value),
 
@@ -762,6 +762,24 @@ impl<'comments> Formatter<'comments> {
         } else {
             doc
         }
+    }
+
+    fn int<'a>(&self, value: &'a String) -> Document<'a> {
+        let value2 = value
+            .chars()
+            .rev()
+            .collect::<Vec<char>>()
+            .chunks(3)
+            .map(|c| c.iter().collect::<String>())
+            .join("_")
+            .chars()
+            .rev()
+            .collect::<String>();
+
+        dbg!(value2);
+
+        let doc = value.to_doc();
+        doc
     }
 
     fn pattern_constructor<'a>(
