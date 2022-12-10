@@ -765,7 +765,13 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn int<'a>(&self, value: &'a String) -> Document<'a> {
-        let value2 = value
+        dbg!(self.underscore_int_string(value.clone()).to_doc());
+        return value.to_doc();
+    }
+
+    fn underscore_int_string(&self, value: String) -> String {
+        return value
+            .replace("_", "")
             .chars()
             .rev()
             .collect::<Vec<char>>()
@@ -775,11 +781,6 @@ impl<'comments> Formatter<'comments> {
             .chars()
             .rev()
             .collect::<String>();
-
-        dbg!(value2);
-
-        let doc = value.to_doc();
-        doc
     }
 
     fn pattern_constructor<'a>(
