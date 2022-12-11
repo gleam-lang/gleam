@@ -12,6 +12,8 @@
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
   code.
+- Fixed a bug where the formatter would remove the braces from negating boolean
+  expressions.
 
 ## v0.25.0 - 2022-11-24
 
