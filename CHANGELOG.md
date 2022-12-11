@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.25.1 - 2022-12-11
 
 - New Gleam projects are now configured to explicitly install rebar3 using
   GitHub actions erlef/setup-beam.
