@@ -789,16 +789,19 @@ impl<'comments> Formatter<'comments> {
         let mut new_value: String = String::new();
         let mut j = 0;
         for (i, ch) in value.chars().rev().enumerate() {
-            if ch != '_' {
-                if i != 0 && ch != '-' && i < len && j % 3 == 0 {
-                    new_value.push('_')
-                }
-                new_value.push(ch);
-                j += 1
+            if ch == '_' {
+                continue;
             }
+
+            if i != 0 && ch != '-' && i < len && j % 3 == 0 {
+                new_value.push('_');
+            }
+            new_value.push(ch);
+
+            j += 1;
         }
 
-        return new_value.chars().rev().collect::<String>();
+        new_value.chars().rev().collect::<String>()
     }
 
     fn pattern_constructor<'a>(
