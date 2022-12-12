@@ -1395,8 +1395,11 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn negate<'a>(&mut self, value: &'a UntypedExpr) -> Document<'a> {
-        docvec!["!", self.wrap_expr(value)]
+    fn negate<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+        match expr {
+            UntypedExpr::BinOp { .. } => docvec!["!{ ", self.expr(expr), " }"],
+            _ => docvec!["!", self.wrap_expr(expr)],
+        }
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
