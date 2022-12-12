@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- The formatter automatically inserts underscores for large `Int`s and `Float`.
+- The formatter now inserts underscores for `Int`s and the integer part of
+  `Float`s.
 
 ## v0.25.1 - 2022-12-11
 
