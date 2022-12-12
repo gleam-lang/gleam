@@ -771,12 +771,14 @@ impl<'comments> Formatter<'comments> {
     fn underscore_int_string(&self, value: &String) -> String {
         let len = value.len();
         let mut new_value: String = String::new();
-        for (i, char) in value.chars().rev().enumerate() {
-            if char != '_' {
-                if i != 0 && char != '-' && i < len && i % 3 == 0 {
+        let mut j = 0;
+        for (i, ch) in value.chars().rev().enumerate() {
+            if ch != '_' {
+                if i != 0 && ch != '-' && i < len && j % 3 == 0 {
                     new_value.push('_')
                 }
-                new_value.push(char);
+                new_value.push(ch);
+                j = j + 1
             }
         }
 
