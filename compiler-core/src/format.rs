@@ -755,13 +755,25 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn float<'a>(&self, value: &'a String) -> Document<'a> {
-        let doc = value.to_doc();
-        if value.ends_with('.') {
-            let suffix = "0".to_doc();
-            doc.append(suffix)
+        let mut parts = value.as_str().split('.');
+        let integer_part = match parts.next() {
+            None => "",
+            Some(str) => str,
+        };
+        let fp_part = match parts.next() {
+            None => "",
+            Some(str) => str,
+        };
+
+        let integer_doc = Document::String(self.underscore_integer_string(integer_part));
+        let dot_doc = ".".to_doc();
+        let fp_doc = if value.ends_with('.') {
+            "0".to_doc()
         } else {
-            doc
-        }
+            fp_part.to_doc()
+        };
+
+        integer_doc.append(dot_doc).append(fp_doc)
     }
 
     fn int<'a>(&self, value: &'a String) -> Document<'a> {
@@ -769,10 +781,10 @@ impl<'comments> Formatter<'comments> {
             return value.to_doc();
         }
 
-        Document::String(self.underscore_integer_string(value))
+        Document::String(self.underscore_integer_string(value.as_str()))
     }
 
-    fn underscore_integer_string(&self, value: &String) -> String {
+    fn underscore_integer_string(&self, value: &str) -> String {
         let len = value.len();
         let mut new_value: String = String::new();
         let mut j = 0;
