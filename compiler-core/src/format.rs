@@ -765,12 +765,12 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn int<'a>(&self, value: &'a String) -> Document<'a> {
-        dbg!(self.underscore_int_string(value.clone()).to_doc());
-        return value.to_doc();
+        return Document::String(self.underscore_int_string(value));
     }
 
-    fn underscore_int_string(&self, value: String) -> String {
+    fn underscore_int_string(&self, value: &String) -> String {
         return value
+            .to_string()
             .replace("_", "")
             .chars()
             .rev()
@@ -780,7 +780,8 @@ impl<'comments> Formatter<'comments> {
             .join("_")
             .chars()
             .rev()
-            .collect::<String>();
+            .collect::<String>()
+            .replace("-_", "-");
     }
 
     fn pattern_constructor<'a>(
