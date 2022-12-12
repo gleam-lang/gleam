@@ -84,18 +84,18 @@ fn float_tests() -> List(Test) {
   let basic_subtraction = operator_test("-.", fn(a, b) { a -. b })
   let basic_multiplication = operator_test("*.", fn(a, b) { a *. b })
   [
-    basic_addition(0.0, 0.0, 0.0),
-    basic_addition(1.0, 1.0, 2.0),
-    basic_addition(5.0, 1.0, 6.0),
-    basic_addition(1.0, 3.0, 4.0),
-    basic_addition(1.0, -3.0, -2.0),
-    basic_subtraction(0.0, 0.0, 0.0),
-    basic_subtraction(1.0, 1.0, 0.0),
-    basic_subtraction(5.0, 1.0, 4.0),
-    basic_subtraction(1.0, 3.0, -2.0),
-    basic_subtraction(1.0, -3.0, 4.0),
-    basic_subtraction(0.5, 0.0, 0.5),
-    basic_subtraction(1.0, 4.5, -3.5),
+    basic_addition(0., 0., 0.),
+    basic_addition(1., 1., 2.),
+    basic_addition(5., 1., 6.),
+    basic_addition(1., 3., 4.),
+    basic_addition(1., -3., -2.),
+    basic_subtraction(0., 0., 0.),
+    basic_subtraction(1., 1., 0.),
+    basic_subtraction(5., 1., 4.),
+    basic_subtraction(1., 3., -2.),
+    basic_subtraction(1., -3., 4.),
+    basic_subtraction(0.5, 0., 0.5),
+    basic_subtraction(1., 4.5, -3.5),
     basic_multiplication(0.0, 0.0, 0.0),
     basic_multiplication(1.0, 1.0, 1.0),
     basic_multiplication(2.0, 2.0, 4.0),
@@ -207,7 +207,7 @@ fn assert_tests() -> List(Test) {
 fn tail_call_optimisation_tests() -> List(Test) {
   [
     "10 million recursions doesn't overflow the stack"
-    |> example(fn() { assert_equal(Nil, count_down(from: 1_00_00000)) }),
+    |> example(fn() { assert_equal(Nil, count_down(from: 10_000_000)) }),
     // https://github.com/gleam-lang/gleam/issues/1214
     // https://github.com/gleam-lang/gleam/issues/1380
     "Arguments correctly reassigned"
@@ -1033,28 +1033,31 @@ fn bit_string_tests() -> List(Test) {
     "<<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>"
     |> example(fn() {
       assert_equal(True, <<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>)
-    }),
+    })
   ]
 }
 
 if erlang {
   fn bit_string_float_erlang() -> List(Test) {
     [
-      "<<60,0>> == <<1.0:float-size(16)>>"
-      |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
-      "<<63,128,0,0>> == <<1.0:float-32>>"
-      |> example(fn() {
-        assert_equal(True, <<63, 128, 0, 0>> == <<1.0:float-32>>)
-      }),
+       "<<60,0>> == <<1.0:float-size(16)>>"
+        |> example(fn() {
+          assert_equal(True, <<60,0>> == <<1.0:float-16>>)
+        }),
+         "<<63,128,0,0>> == <<1.0:float-32>>"
+        |> example(fn() {
+          assert_equal(True, <<63,128,0,0>> == <<1.0:float-32>>)
+        })
     ]
   }
 }
-
 if javascript {
   fn bit_string_float_erlang() -> List(Test) {
-    []
+    [
+     ]
   }
 }
+
 
 fn sized_bit_string_tests() -> List(Test) {
   [
@@ -1066,7 +1069,7 @@ fn sized_bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<0, 1, 1>> == <<257:size(24)>>) }),
     "<<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>"
     |> example(fn() {
-      assert_equal(True, <<1, 0, 0, 0, 1>> == <<4_294_967_297:size(40)>>)
+      assert_equal(True, <<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>)
     }),
     "<<>> == <<256:size(-1)>>"
     |> example(fn() { assert_equal(True, <<>> == <<256:size(-1)>>) }),
@@ -1075,9 +1078,7 @@ fn sized_bit_string_tests() -> List(Test) {
     |> example(fn() {
       assert_equal(
         True,
-        <<0,
-          31,
-          255, 255, 255, 255, 255, 255>> == <<9_007_199_254_740_991:size(64)>>,
+        <<0, 31, 255, 255, 255, 255, 255, 255>> == <<9007199254740991:size(64)>>,
       )
     }),
   ]
@@ -1150,9 +1151,9 @@ fn ints_tests() -> List(Test) {
     "hex int"
     |> example(fn() { assert_equal(15, 0xF) }),
     "octal int"
-    |> example(fn() { assert_equal(15, 0_o17) }),
+    |> example(fn() { assert_equal(15, 0o17) }),
     "binary int"
-    |> example(fn() { assert_equal(15, 0_b00_001_111) }),
+    |> example(fn() { assert_equal(15, 0b00001111) }),
     "1-1 should lex as 1 - 1"
     |> example(fn() { assert_equal(0, 1 - 1) }),
     "a-1 should lex as a - 1"

@@ -69,7 +69,7 @@ pub fn codepoint_conversion_test() {
   let <<snake:utf8_codepoint>> = <<"🐍":utf8>>
   let <<snake_int:32>> = <<snake:utf32_codepoint>>
 
-  should.equal(snake_int, 128_013)
+  should.equal(snake_int, 128013)
 }
 
 type StringHaver {
@@ -94,8 +94,8 @@ pub fn non_literal_strings_test() {
   should.equal(var_out, 120)
   should.equal(tuple_out, 121)
   should.equal(custom_type_out, 122)
-  should.equal(function_out, 50_079)
+  should.equal(function_out, 50079)
   // "ß" is encoded as C3 9F in utf8
-  should.equal(literal_out, 14_845_585)
+  should.equal(literal_out, 14845585)
   // "↑" is encoded as E2 86 91 in utf8
 }
