@@ -3,8 +3,8 @@ import should
 const hex_int = 0xF
 
 pub fn bases_test() {
-  let octal_int = 0o17
-  let binary_int = 0b00001111
+  let octal_int = 0_o17
+  let binary_int = 0_b00_001_111
 
   let #(x, y) = #(octal_int, binary_int)
 
@@ -15,12 +15,12 @@ pub fn bases_test() {
 
 pub fn minus_lexing_test() {
   // 1-1 should lex as 1 - 1
-  should.equal({1-1}, 0)
+  should.equal(1 - 1, 0)
   // a-1 should lex as a - 1
   let a = 1
-  should.equal({a-1}, 0)
+  should.equal(a - 1, 0)
   // 1- 1 should lex as 1 - 1
-  should.equal({1- 1}, 0)
+  should.equal(1 - 1, 0)
 }
 
 pub fn division_by_zero_test() {
