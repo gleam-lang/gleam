@@ -13,5 +13,5 @@ pub fn unicode_overflow_test() {
 
   "🤷‍♂️"
   |> to_graphemes
-  |> should.equal([[129_335, 8_205, 9_794, 65_039]])
+  |> should.equal([[129335, 8205, 9794, 65039]])
 }
