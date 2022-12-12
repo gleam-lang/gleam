@@ -3943,6 +3943,7 @@ fn use_pipe_call() {
 "#
     );
 }
+
 #[test]
 fn use_pipe_everything() {
     assert_format!(
@@ -3952,6 +3953,36 @@ fn use_pipe_everything() {
   }
   |> b
   c
+}
+"#
+    );
+}
+
+#[test]
+fn not_and() {
+    assert_format!(
+        r#"pub fn main() {
+  !{ True && False }
+}
+"#
+    );
+}
+
+#[test]
+fn not_or() {
+    assert_format!(
+        r#"pub fn main() {
+  !{ True || False }
+}
+"#
+    );
+}
+
+#[test]
+fn not_add() {
+    assert_format!(
+        r#"pub fn main() {
+  !{ 1 + 3 }
 }
 "#
     );
