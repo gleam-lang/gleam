@@ -769,19 +769,18 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn underscore_int_string(&self, value: &String) -> String {
-        return value
-            .to_string()
-            .replace("_", "")
-            .chars()
-            .rev()
-            .collect::<Vec<char>>()
-            .chunks(3)
-            .map(|c| c.iter().collect::<String>())
-            .join("_")
-            .chars()
-            .rev()
-            .collect::<String>()
-            .replace("-_", "-");
+        let len = value.len();
+        let mut new_value: String = String::new();
+        for (i, char) in value.chars().rev().enumerate() {
+            if char != '_' {
+                if i != 0 && char != '-' && i < len && i % 3 == 0 {
+                    new_value.push('_')
+                }
+                new_value.push(char);
+            }
+        }
+
+        return new_value.chars().rev().collect::<String>();
     }
 
     fn pattern_constructor<'a>(
