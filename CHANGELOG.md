@@ -17,6 +17,8 @@
 
 ## v0.25.0 - 2022-11-24
 
+[Release blog post](https://gleam.run/news/v0.25-introducing-use-expressions/)
+
 ## v0.25.0-rc2 - 2022-11-23
 
 - Fixed a bug where Gleam dependency packages with a `priv` directory could fail
