@@ -160,9 +160,9 @@
 
 ## v0.22.0 - 2022-06-12
 
-- New projects are created with `gleam_stdlib` v0.22.
-
 [Release Blog Post](https://gleam.run/news/gleam-v0.22-released/)
+
+- New projects are created with `gleam_stdlib` v0.22.
 
 ## v0.22.0-rc1 - 2022-06-12
 
@@ -225,9 +225,9 @@
 
 ## v0.21.0 - 2022-04-24
 
-- New projects are created with `gleam_stdlib` v0.21.
-
 [Release Blog Post](https://gleam.run/news/v0.21-introducing-the-gleam-language-server/)
+
+- New projects are created with `gleam_stdlib` v0.21.
 
 ## v0.21.0-rc2 - 2022-04-20
 
@@ -283,9 +283,9 @@
 
 ## v0.20.0 - 2022-02-23
 
-- New projects are created with `gleam_stdlib` v0.20.
-
 [Release Blog Post](https://gleam.run/news/gleam-v0.20-released/)
+
+- New projects are created with `gleam_stdlib` v0.20.
 
 ## v0.20.0-rc1 - 2022-02-20
 
