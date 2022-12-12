@@ -765,10 +765,14 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn int<'a>(&self, value: &'a String) -> Document<'a> {
-        return Document::String(self.underscore_int_string(value));
+        if value.starts_with("0x") || value.starts_with("0b") || value.starts_with("0o") {
+            return value.to_doc();
+        }
+
+        Document::String(self.underscore_integer_string(value))
     }
 
-    fn underscore_int_string(&self, value: &String) -> String {
+    fn underscore_integer_string(&self, value: &String) -> String {
         let len = value.len();
         let mut new_value: String = String::new();
         let mut j = 0;
@@ -778,7 +782,7 @@ impl<'comments> Formatter<'comments> {
                     new_value.push('_')
                 }
                 new_value.push(ch);
-                j = j + 1
+                j += 1
             }
         }
 
