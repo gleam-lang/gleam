@@ -651,9 +651,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 
-            UntypedExpr::Int { value, .. } => self.int(value),
+            UntypedExpr::Int { value, .. } => self.int(value.as_str()),
 
-            UntypedExpr::Float { value, .. } => self.float(value),
+            UntypedExpr::Float { value, .. } => self.float(value.as_str()),
 
             UntypedExpr::String { value, .. } => self.string(value),
 
@@ -754,8 +754,8 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn float<'a>(&self, value: &'a String) -> Document<'a> {
-        let mut parts = value.as_str().split('.');
+    fn float<'a>(&self, value: &'a str) -> Document<'a> {
+        let mut parts = value.split('.');
         let integer_part = match parts.next() {
             None => "",
             Some(str) => str,
@@ -776,12 +776,12 @@ impl<'comments> Formatter<'comments> {
         integer_doc.append(dot_doc).append(fp_doc)
     }
 
-    fn int<'a>(&self, value: &'a String) -> Document<'a> {
+    fn int<'a>(&self, value: &'a str) -> Document<'a> {
         if value.starts_with("0x") || value.starts_with("0b") || value.starts_with("0o") {
             return value.to_doc();
         }
 
-        Document::String(self.underscore_integer_string(value.as_str()))
+        Document::String(self.underscore_integer_string(value))
     }
 
     fn underscore_integer_string(&self, value: &str) -> String {
