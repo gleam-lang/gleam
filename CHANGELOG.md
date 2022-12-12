@@ -162,6 +162,8 @@
 
 - New projects are created with `gleam_stdlib` v0.22.
 
+[Release Blog Post](https://gleam.run/news/gleam-v0.22-released/)
+
 ## v0.22.0-rc1 - 2022-06-12
 
 - Fixed a bug where doc comments would dissociate from their statements when
@@ -225,6 +227,8 @@
 
 - New projects are created with `gleam_stdlib` v0.21.
 
+[Release Blog Post](https://gleam.run/news/v0.21-introducing-the-gleam-language-server/)
+
 ## v0.21.0-rc2 - 2022-04-20
 
 - Added the ability to replace a release up to one hour after it is published
@@ -280,6 +284,8 @@
 ## v0.20.0 - 2022-02-23
 
 - New projects are created with `gleam_stdlib` v0.20.
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.20-released/)
 
 ## v0.20.0-rc1 - 2022-02-20
 
