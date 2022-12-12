@@ -767,10 +767,9 @@ impl<'comments> Formatter<'comments> {
 
         let integer_doc = Document::String(self.underscore_integer_string(integer_part));
         let dot_doc = ".".to_doc();
-        let fp_doc = if value.ends_with('.') {
-            "0".to_doc()
-        } else {
-            fp_part.to_doc()
+        let fp_doc = match value.ends_with('.') {
+            true => "0".to_doc(),
+            false => fp_part.to_doc(),
         };
 
         integer_doc.append(dot_doc).append(fp_doc)
