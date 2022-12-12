@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The formatter automatically inserts underscores for large `Int`s and `Float`.
+
 ## v0.25.1 - 2022-12-11
 
 - New Gleam projects are now configured to explicitly install rebar3 using
