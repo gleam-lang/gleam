@@ -784,6 +784,8 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn underscore_integer_string(&self, value: &str) -> String {
+        let minus_ch = '-';
+        let underscore_ch = '_';
         let len = value.len();
         let mut new_value: String = String::new();
         let mut j = 0;
@@ -792,8 +794,8 @@ impl<'comments> Formatter<'comments> {
                 continue;
             }
 
-            if i != 0 && ch != '-' && i < len && j % 3 == 0 {
-                new_value.push('_');
+            if i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
+                new_value.push(underscore_ch);
             }
             new_value.push(ch);
 
