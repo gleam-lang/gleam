@@ -787,7 +787,7 @@ impl<'comments> Formatter<'comments> {
         let minus_ch = '-';
         let underscore_ch = '_';
         let len = value.len();
-        let mut new_value: String = String::new();
+        let mut new_value = String::new();
         let mut j = 0;
         for (i, ch) in value.chars().rev().enumerate() {
             if ch == '_' {
