@@ -1081,10 +1081,10 @@ fn expr_int() {
 "#
     );
 
-    assert_format!("fn a() {\n  1_234_567\n}\n");
-    assert_format!("fn a() {\n  0xCAB005E\n}\n");
-    assert_format!("fn a() {\n  0b10100001\n}\n");
-    assert_format!("fn a() {\n  0o1234567\n}\n");
+    assert_format!("fn n() {\n  1_234_567\n}\n");
+    assert_format!("fn h() {\n  0xCAB005E\n}\n");
+    assert_format!("fn b() {\n  0b10100001\n}\n");
+    assert_format!("fn o() {\n  0o1234567\n}\n");
 }
 
 #[test]
