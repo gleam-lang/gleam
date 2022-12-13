@@ -50,15 +50,7 @@ pub fn command(
             _ => run_erlang(&config.name, &module, arguments),
         },
         Target::JavaScript => {
-            let js_runtime: Runtime = {
-                if let Some(r) = runtime {
-                    r
-                } else {
-                    config.javascript.runtime.unwrap_or(Runtime::Node)
-                }
-            };
-
-            match js_runtime {
+            match config.javascript.runtime {
                 Runtime::Deno => run_javascript_deno(&config, arguments),
                 Runtime::Node => run_javascript_node(&config, arguments),
             }
