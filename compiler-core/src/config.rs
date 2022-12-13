@@ -467,7 +467,7 @@ where
         type Value = DenoFlag;
 
         fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("string or list of strings")
+            formatter.write_str("bool or list of strings")
         }
 
         fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
