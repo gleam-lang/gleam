@@ -3899,6 +3899,8 @@ fn multiple_line_custom_type_field_doc_comments() {
     assert_format!(
         r#"fn main() {
   Thingy(
+    // Def?
+    // Def!
     ..thingy.defaults,
     // One?
     // One!
