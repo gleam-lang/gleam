@@ -6,6 +6,8 @@ use hexpm::version::{Range, Version};
 use http::Uri;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
 #[cfg(test)]
@@ -443,24 +445,75 @@ pub struct JavaScriptConfig {
     pub deno: DenoConfig,
 }
 
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum DenoFlag {
+    AllowAll,
+    Allow(Vec<String>),
+}
+
+impl Default for DenoFlag {
+    fn default() -> Self {
+        Self::Allow(Vec::new())
+    }
+}
+
+fn bool_or_seq_string_to_deno_flag<'de, D>(deserializer: D) -> Result<DenoFlag, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct StringOrVec(PhantomData<Vec<String>>);
+
+    impl<'de> serde::de::Visitor<'de> for StringOrVec {
+        type Value = DenoFlag;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("string or list of strings")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if value {
+                Ok(DenoFlag::AllowAll)
+            } else {
+                Ok(DenoFlag::default())
+            }
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: serde::de::SeqAccess<'de>,
+        {
+            let allow: Vec<String> =
+                Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
+                    .unwrap_or_default();
+
+            Ok(DenoFlag::Allow(allow))
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec(PhantomData))
+}
+
 #[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct DenoConfig {
-    #[serde(default)]
-    pub allow_env: Vec<String>,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_env: DenoFlag,
     #[serde(default)]
     pub allow_sys: bool,
     #[serde(default)]
     pub allow_hrtime: bool,
-    #[serde(default)]
-    pub allow_net: Vec<String>,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_net: DenoFlag,
     #[serde(default)]
     pub allow_ffi: bool,
-    #[serde(default)]
-    pub allow_read: Vec<String>,
-    #[serde(default)]
-    pub allow_run: Vec<String>,
-    #[serde(default)]
-    pub allow_write: Vec<String>,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_read: DenoFlag,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_run: DenoFlag,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_write: DenoFlag,
     #[serde(default)]
     pub allow_all: bool,
 }

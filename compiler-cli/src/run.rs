@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{Mode, Options, Runtime, Target},
-    config::PackageConfig,
+    config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
     paths,
@@ -49,12 +49,10 @@ pub fn command(
             }),
             _ => run_erlang(&module, arguments),
         },
-        Target::JavaScript => {
-            match config.javascript.runtime {
-                Runtime::Deno => run_javascript_deno(&config, arguments),
-                Runtime::Node => run_javascript_node(&config, arguments),
-            }
-        }
+        Target::JavaScript => match config.javascript.runtime {
+            Runtime::Deno => run_javascript_deno(&config, arguments),
+            Runtime::Node => run_javascript_node(&config, arguments),
+        },
     }?;
 
     std::process::exit(status);
@@ -163,12 +161,13 @@ fn run_javascript_deno(config: &PackageConfig, arguments: Vec<String>) -> Result
     ProjectIO::new().exec("deno", &args, &[], None, Stdio::Inherit)
 }
 
-fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &Vec<String>) {
-    if !flags.is_empty() {
-        if flags.starts_with(&["*".to_owned()]) {
-            args.push(flag.to_owned())
-        } else {
-            args.push(format!("{}={}", flag.to_owned(), flags.join(",")))
+fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
+    match flags {
+        DenoFlag::AllowAll => args.push(flag.to_owned()),
+        DenoFlag::Allow(allow) => {
+            if !allow.is_empty() {
+                args.push(format!("{}={}", flag.to_owned(), allow.join(",")));
+            }
         }
     }
 }
