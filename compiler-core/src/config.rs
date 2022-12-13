@@ -21,6 +21,10 @@ fn erlang_target() -> Target {
     Target::Erlang
 }
 
+fn default_javascript_runtime() -> Runtime {
+    Runtime::Node
+}
+
 pub type Dependencies = HashMap<String, Range>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -433,8 +437,8 @@ pub struct ErlangConfig {
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
-    #[serde(default)]
-    pub runtime: Option<Runtime>,
+    #[serde(default = "default_javascript_runtime")]
+    pub runtime: Runtime,
     #[serde(default, rename = "deno")]
     pub deno: DenoConfig,
 }

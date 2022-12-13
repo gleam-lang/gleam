@@ -36,7 +36,7 @@ macro_rules! assert_erlang_compile {
                 extra_applications: vec![],
             },
             javascript: JavaScriptConfig {
-                runtime: None,
+                runtime: Runtime::Node,
                 typescript_declarations: false,
                 deno: Default::default(),
             },
@@ -97,7 +97,7 @@ macro_rules! assert_javascript_compile {
                 extra_applications: vec![],
             },
             javascript: JavaScriptConfig {
-                runtime: None,
+                runtime: Runtime::Node,
                 typescript_declarations: true,
                 deno: Default::default(),
             },
@@ -160,7 +160,7 @@ macro_rules! assert_no_warnings {
                 extra_applications: vec![],
             },
             javascript: JavaScriptConfig {
-                runtime: None,
+                runtime: Runtime::Node,
                 typescript_declarations: false,
                 deno: Default::default(),
             },
