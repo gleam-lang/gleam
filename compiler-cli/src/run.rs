@@ -119,39 +119,47 @@ fn run_javascript_deno(config: &PackageConfig, arguments: Vec<String>) -> Result
     args.push("run".into());
 
     // Set deno permissions
-    if config.deno.allow_all {
+    if config.javascript.deno.allow_all {
         // Allow all
         args.push("--allow-all".into())
     } else {
         // Allow env
-        add_deno_flag(&mut args, "--allow-env", &config.deno.allow_env);
+        add_deno_flag(&mut args, "--allow-env", &config.javascript.deno.allow_env);
 
         // Allow sys
-        if config.deno.allow_sys {
+        if config.javascript.deno.allow_sys {
             args.push("--allow-sys".into())
         }
 
         // Allow hrtime
-        if config.deno.allow_sys {
+        if config.javascript.deno.allow_sys {
             args.push("--allow-sys".into())
         }
 
         // Allow net
-        add_deno_flag(&mut args, "--allow-net", &config.deno.allow_net);
+        add_deno_flag(&mut args, "--allow-net", &config.javascript.deno.allow_net);
 
         // Allow ffi
-        if config.deno.allow_ffi {
+        if config.javascript.deno.allow_ffi {
             args.push("--allow-ffi".into())
         }
 
         // Allow read
-        add_deno_flag(&mut args, "--allow-read", &config.deno.allow_read);
+        add_deno_flag(
+            &mut args,
+            "--allow-read",
+            &config.javascript.deno.allow_read,
+        );
 
         // Allow run
-        add_deno_flag(&mut args, "--allow-run", &config.deno.allow_run);
+        add_deno_flag(&mut args, "--allow-run", &config.javascript.deno.allow_run);
 
         // Allow write
-        add_deno_flag(&mut args, "--allow-write", &config.deno.allow_write);
+        add_deno_flag(
+            &mut args,
+            "--allow-write",
+            &config.javascript.deno.allow_write,
+        );
     }
 
     for argument in arguments.into_iter() {

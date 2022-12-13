@@ -38,8 +38,8 @@ macro_rules! assert_erlang_compile {
             javascript: JavaScriptConfig {
                 runtime: None,
                 typescript_declarations: false,
+                deno: Default::default(),
             },
-            deno: Default::default(),
             target: Target::Erlang,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
@@ -99,8 +99,8 @@ macro_rules! assert_javascript_compile {
             javascript: JavaScriptConfig {
                 runtime: None,
                 typescript_declarations: true,
+                deno: Default::default(),
             },
-            deno: Default::default(),
             target: Target::JavaScript,
         };
         let (file_writer, file_receiver) = FilesChannel::new();
@@ -162,8 +162,8 @@ macro_rules! assert_no_warnings {
             javascript: JavaScriptConfig {
                 runtime: None,
                 typescript_declarations: false,
+                deno: Default::default(),
             },
-            deno: Default::default(),
             target: Target::Erlang,
         };
         let mut warnings = vec![];
@@ -1946,7 +1946,6 @@ fn config_compilation_test() {
             licences: Default::default(),
             erlang: Default::default(),
             javascript: Default::default(),
-            deno: Default::default(),
             links: vec![],
             target: Target::Erlang,
         }
