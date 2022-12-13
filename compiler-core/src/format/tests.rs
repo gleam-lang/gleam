@@ -3895,7 +3895,7 @@ fn multiple_line_custom_type_constructor_field_doc_comments() {
 
 // https://github.com/gleam-lang/gleam/issues/1872
 #[test]
-fn multiple_line_custom_type_field_doc_comments() {
+fn multiple_line_custom_type_field_comments() {
     assert_format!(
         r#"fn main() {
   Thingy(
@@ -3909,6 +3909,24 @@ fn multiple_line_custom_type_field_doc_comments() {
     // Two!
     two: Two,
   )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn multiple_line_spread_list_comments() {
+    assert_format!(
+        r#"fn main() {
+  [
+    // First!
+    // First?
+    1,
+    // Spread!
+    // Spread?
+    ..[2, 3]
+  ]
 }
 "#
     );
