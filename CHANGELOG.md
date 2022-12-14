@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where `gleam new` would set a rebar3 version to `25.1`
+  instead of the latest stable `3.20.0` and updated various library and
+  runtime versions set via `gleam new` to `Gleeunit 0.7.2`, `Erlang/OTP 25.2`,
+  and `Elixir 1.14.2`.
+- Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
+  projects created via `gleam new`.
+
 ## v0.25.1 - 2022-12-11
 
 - New Gleam projects are now configured to explicitly install rebar3 using
