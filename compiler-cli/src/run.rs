@@ -122,8 +122,8 @@ fn run_javascript_deno(config: &PackageConfig, arguments: Vec<String>) -> Result
         }
 
         // Allow hrtime
-        if config.javascript.deno.allow_sys {
-            args.push("--allow-sys".into())
+        if config.javascript.deno.allow_hrtime {
+            args.push("--allow-hrtime".into())
         }
 
         // Allow net
