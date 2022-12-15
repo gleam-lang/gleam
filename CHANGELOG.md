@@ -7,7 +7,7 @@
 - Fixed a bug where `gleam new` would set a `Rebar3` version to `25.1`
   instead of the latest stable `3`.
 - Updated following runtime versions set via `gleam new`: `Erlang/OTP`
-  to `25.2`, and `Elixir` to  `1.14.2`.
+  to `25.2`, and `Elixir` to `1.14.2`.
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
 - Added support for top level TypeScript file inclusion in builds.
