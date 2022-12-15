@@ -6,7 +6,7 @@
   projects created via `gleam new`.
 - Fixed a bug where `gleam new` would set a rebar3 version to `25.1`
   instead of the latest stable `3` and updated various library and
-  runtime versions set via `gleam new` to `Gleeunit 0.7.2`, `Erlang/OTP 25.2`,
+  runtime versions set via `gleam new` to `Gleeunit 0.7`, `Erlang/OTP 25.2`,
   and `Elixir 1.14.2`.
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
