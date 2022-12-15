@@ -1,4 +1,8 @@
-import fs from "fs";
+let fs;
+
+if (!globalThis.Deno) {
+  fs = await import("fs");
+}
 
 export function append(a, b) {
   return a + b;
@@ -27,5 +31,14 @@ export function ansi_green(string) {
 }
 
 export function fileExists(path) {
-  return fs.existsSync(path);
+  if (globalThis.Deno) {
+    try {
+      Deno.statSync(path);
+      return true;
+    } catch {
+      return false;
+    }
+  } else {
+    return fs.existsSync(path);
+  }
 }
