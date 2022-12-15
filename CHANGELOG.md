@@ -4,10 +4,10 @@
 
 - Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
   projects created via `gleam new`.
-- Fixed a bug where `gleam new` would set a rebar3 version to `25.1`
-  instead of the latest stable `3` and updated various library and
-  runtime versions set via `gleam new` to `Gleeunit 0.7`, `Erlang/OTP 25.2`,
-  and `Elixir 1.14.2`.
+- Fixed a bug where `gleam new` would set a `Rebar3` version to `25.1`
+  instead of the latest stable `3`.
+- Updated following runtime versions set via `gleam new`: `Erlang/OTP`
+  to `25.2`, and `Elixir` to  `1.14.2`.
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
 - Added support for top level TypeScript file inclusion in builds.
