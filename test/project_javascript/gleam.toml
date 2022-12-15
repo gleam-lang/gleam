@@ -4,12 +4,7 @@ target = "javascript"
 
 [javascript]
 typescript_declarations = true
-runtime = "deno"
-
-[javascript.deno]
-allow_env = false
-allow_net = true
-allow_write = ["./foo.txt", "./bar.txt"]
+runtime = "node"
 
 [dependencies]
 gleam_stdlib = "~> 0.18"
