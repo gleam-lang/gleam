@@ -14,7 +14,7 @@ use crate::NewOptions;
 const GLEAM_STDLIB_VERSION: &str = "0.25";
 const GLEEUNIT_VERSION: &str = "0.7.2";
 const ERLANG_OTP_VERSION: &str = "25.2";
-const REBAR3_VERSION: &str = "3.0.0";
+const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.14.2";
 
 #[derive(Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy)]
