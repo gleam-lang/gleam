@@ -756,14 +756,8 @@ impl<'comments> Formatter<'comments> {
 
     fn float<'a>(&self, value: &'a str) -> Document<'a> {
         let mut parts = value.split('.');
-        let integer_part = match parts.next() {
-            None => "",
-            Some(str) => str,
-        };
-        let fp_part = match parts.next() {
-            None => "",
-            Some(str) => str,
-        };
+        let integer_part = parts.next().unwrap_or_default();
+        let fp_part = parts.next().unwrap_or_default();
 
         let integer_doc = Document::String(self.underscore_integer_string(integer_part));
         let dot_doc = ".".to_doc();
