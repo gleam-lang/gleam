@@ -526,7 +526,7 @@ pub fn symlink_dir(
     dest: impl AsRef<Path> + Debug,
 ) -> Result<(), Error> {
     tracing::debug!(src=?src, dest=?dest, "symlinking");
-    symlink::symlink_dir(&canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
+    symlink::symlink_dir(canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
         Error::FileIo {
             action: FileIoAction::Link,
             kind: FileKind::File,
