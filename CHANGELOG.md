@@ -2,12 +2,15 @@
 
 ## Unreleased
 
-- Fixed a bug where `gleam new` would set a rebar3 version to `25.1`
-  instead of the latest stable `3.20.0` and updated various library and
-  runtime versions set via `gleam new` to `Gleeunit 0.7.2`, `Erlang/OTP 25.2`,
-  and `Elixir 1.14.2`.
 - Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
   projects created via `gleam new`.
+- Fixed a bug where `gleam new` would set a rebar3 version to `25.1`
+  instead of the latest stable `3` and updated various library and
+  runtime versions set via `gleam new` to `Gleeunit 0.7.2`, `Erlang/OTP 25.2`,
+  and `Elixir 1.14.2`.
+- The formatter now inserts underscores into larger `Int`s and the larger
+  integer parts of `Float`s.
+- Added support for top level TypeScript file inclusion in builds.
 
 ## v0.25.1 - 2022-12-11
 
@@ -25,6 +28,8 @@
   expressions.
 
 ## v0.25.0 - 2022-11-24
+
+[Release blog post](https://gleam.run/news/v0.25-introducing-use-expressions/)
 
 ## v0.25.0-rc2 - 2022-11-23
 
@@ -167,6 +172,8 @@
 
 ## v0.22.0 - 2022-06-12
 
+[Release Blog Post](https://gleam.run/news/gleam-v0.22-released/)
+
 - New projects are created with `gleam_stdlib` v0.22.
 
 ## v0.22.0-rc1 - 2022-06-12
@@ -230,6 +237,8 @@
 
 ## v0.21.0 - 2022-04-24
 
+[Release Blog Post](https://gleam.run/news/v0.21-introducing-the-gleam-language-server/)
+
 - New projects are created with `gleam_stdlib` v0.21.
 
 ## v0.21.0-rc2 - 2022-04-20
@@ -285,6 +294,8 @@
   without additional annotations.
 
 ## v0.20.0 - 2022-02-23
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.20-released/)
 
 - New projects are created with `gleam_stdlib` v0.20.
 

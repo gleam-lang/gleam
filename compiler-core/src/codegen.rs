@@ -200,7 +200,7 @@ impl<'a> JavaScript<'a> {
         js_name: &str,
     ) -> Result<()> {
         let name = format!("{}.d.ts", js_name);
-        let path = self.output_directory.join(&name);
+        let path = self.output_directory.join(name);
         let mut file = writer.writer(&path)?;
         let res =
             javascript::ts_declaration(&module.ast, &module.input_path, &module.code, &mut file);
@@ -215,7 +215,7 @@ impl<'a> JavaScript<'a> {
         js_name: &str,
     ) -> Result<()> {
         let name = format!("{}.mjs", js_name);
-        let path = self.output_directory.join(&name);
+        let path = self.output_directory.join(name);
         let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
         let res = javascript::module(

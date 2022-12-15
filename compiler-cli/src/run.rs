@@ -50,7 +50,7 @@ fn run_erlang(module: &str, arguments: Vec<String>) -> Result<i32, Error> {
     // Specify locations of .beam files
     let packages = paths::build_packages(Mode::Dev, Target::Erlang);
 
-    for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
+    for entry in crate::fs::read_dir(packages)?.filter_map(Result::ok) {
         args.push("-pa".into());
         args.push(entry.path().join("ebin").to_string_lossy().into());
     }

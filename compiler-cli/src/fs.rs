@@ -354,7 +354,7 @@ pub fn native_files(dir: &Path) -> Result<impl Iterator<Item = PathBuf> + '_> {
                 .unwrap_or_default()
                 .to_str()
                 .unwrap_or_default();
-            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs")
+            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
         }))
 }
 
@@ -526,7 +526,7 @@ pub fn symlink_dir(
     dest: impl AsRef<Path> + Debug,
 ) -> Result<(), Error> {
     tracing::debug!(src=?src, dest=?dest, "symlinking");
-    symlink::symlink_dir(&canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
+    symlink::symlink_dir(canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
         Error::FileIo {
             action: FileIoAction::Link,
             kind: FileKind::File,

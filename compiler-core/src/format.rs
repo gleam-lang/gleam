@@ -651,9 +651,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 
-            UntypedExpr::Int { value, .. } => value.to_doc(),
+            UntypedExpr::Int { value, .. } => self.int(value.as_str()),
 
-            UntypedExpr::Float { value, .. } => self.float(value),
+            UntypedExpr::Float { value, .. } => self.float(value.as_str()),
 
             UntypedExpr::String { value, .. } => self.string(value),
 
@@ -754,14 +754,55 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn float<'a>(&self, value: &'a String) -> Document<'a> {
-        let doc = value.to_doc();
-        if value.ends_with('.') {
-            let suffix = "0".to_doc();
-            doc.append(suffix)
-        } else {
-            doc
+    fn float<'a>(&self, value: &'a str) -> Document<'a> {
+        let mut parts = value.split('.');
+        let integer_part = match parts.next() {
+            None => "",
+            Some(str) => str,
+        };
+        let fp_part = match parts.next() {
+            None => "",
+            Some(str) => str,
+        };
+
+        let integer_doc = Document::String(self.underscore_integer_string(integer_part));
+        let dot_doc = ".".to_doc();
+        let fp_doc = match value.ends_with('.') {
+            true => "0".to_doc(),
+            false => fp_part.to_doc(),
+        };
+
+        integer_doc.append(dot_doc).append(fp_doc)
+    }
+
+    fn int<'a>(&self, value: &'a str) -> Document<'a> {
+        if value.starts_with("0x") || value.starts_with("0b") || value.starts_with("0o") {
+            return value.to_doc();
         }
+
+        Document::String(self.underscore_integer_string(value))
+    }
+
+    fn underscore_integer_string(&self, value: &str) -> String {
+        let minus_ch = '-';
+        let underscore_ch = '_';
+        let len = value.len();
+        let mut new_value = String::new();
+        let mut j = 0;
+        for (i, ch) in value.chars().rev().enumerate() {
+            if ch == '_' {
+                continue;
+            }
+
+            if i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
+                new_value.push(underscore_ch);
+            }
+            new_value.push(ch);
+
+            j += 1;
+        }
+
+        new_value.chars().rev().collect::<String>()
     }
 
     fn pattern_constructor<'a>(

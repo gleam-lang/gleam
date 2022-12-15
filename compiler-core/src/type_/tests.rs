@@ -342,7 +342,7 @@ macro_rules! assert_with_module_error {
         .expect("should successfully infer");
         let _ = modules.insert($name2.join("/"), module.type_info);
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let error = infer_module(
             Target::Erlang,
@@ -354,7 +354,7 @@ macro_rules! assert_with_module_error {
             &mut vec![],
         )
         .expect_err("should infer an error");
-        let error = crate::error::Error::Type {
+        let error = $crate::error::Error::Type {
             src: $src.to_string(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
@@ -450,7 +450,7 @@ macro_rules! assert_warning {
         let _ = modules.insert($name.join("/"), module.type_info);
         )*
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = vec!["my_module".to_string()];
         let _ = infer_module(
             Target::Erlang,
