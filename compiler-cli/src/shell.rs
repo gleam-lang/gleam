@@ -24,7 +24,7 @@ pub fn command() -> Result<(), Error> {
 
     // Specify locations of .beam files
     let packages = paths::build_packages(Mode::Dev, Target::Erlang);
-    for entry in crate::fs::read_dir(&packages)?.filter_map(Result::ok) {
+    for entry in crate::fs::read_dir(packages)?.filter_map(Result::ok) {
         let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }
 
