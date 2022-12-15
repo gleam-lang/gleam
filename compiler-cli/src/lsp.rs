@@ -57,7 +57,7 @@ pub fn main() -> Result<()> {
     let server_capabilities = server_capabilities();
 
     let server_capabilities_json =
-        serde_json::to_value(&server_capabilities).expect("server_capabilities_serde");
+        serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
 
     let initialization_params: InitializeParams = serde_json::from_value(
         connection

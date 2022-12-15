@@ -53,9 +53,7 @@ fn name_with_generics<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> Document<'a> {
     let generic_usages = collect_generic_usages(HashMap::new(), types);
-    let generic_names: Vec<Document<'_>> = generic_usages
-        .iter()
-        .map(|(id, _use_count)| id_to_type_var(*id))
+    let generic_names: Vec<Document<'_>> = generic_usages.keys().map(|id| id_to_type_var(*id))
         .collect();
 
     docvec![

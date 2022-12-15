@@ -1,3 +1,5 @@
+import fs from "fs";
+
 export function append(a, b) {
   return a + b;
 }
@@ -22,4 +24,8 @@ export function toString(a) {
 
 export function ansi_green(string) {
   return `\u001b[32m${string}\u001b[0m`;
+}
+
+export function fileExists(path) {
+  return fs.existsSync(path);
 }

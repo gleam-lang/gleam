@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The formatter now inserts underscores into larger `Int`s and the larger
+  integer parts of `Float`s.
+- Added support for top level TypeScript file inclusion in builds.
+
+## v0.25.1 - 2022-12-11
+
+- New Gleam projects are now configured to explicitly install rebar3 using
+  GitHub actions erlef/setup-beam.
 - A better error message is now shown when attempting to use a function within a
   constant expression.
 - Changed float size limit in bitstring expressions to 16, 32 or 64, when static.
@@ -10,8 +18,12 @@
 - Fixed a bug where returning an anonymous function from a pipeline and calling
   it immediately without assigning it to a variable would produce invalid Erlang
   code.
+- Fixed a bug where the formatter would remove the braces from negating boolean
+  expressions.
 
 ## v0.25.0 - 2022-11-24
+
+[Release blog post](https://gleam.run/news/v0.25-introducing-use-expressions/)
 
 ## v0.25.0-rc2 - 2022-11-23
 
@@ -154,6 +166,8 @@
 
 ## v0.22.0 - 2022-06-12
 
+[Release Blog Post](https://gleam.run/news/gleam-v0.22-released/)
+
 - New projects are created with `gleam_stdlib` v0.22.
 
 ## v0.22.0-rc1 - 2022-06-12
@@ -217,6 +231,8 @@
 
 ## v0.21.0 - 2022-04-24
 
+[Release Blog Post](https://gleam.run/news/v0.21-introducing-the-gleam-language-server/)
+
 - New projects are created with `gleam_stdlib` v0.21.
 
 ## v0.21.0-rc2 - 2022-04-20
@@ -272,6 +288,8 @@
   without additional annotations.
 
 ## v0.20.0 - 2022-02-23
+
+[Release Blog Post](https://gleam.run/news/gleam-v0.20-released/)
 
 - New projects are created with `gleam_stdlib` v0.20.
 
