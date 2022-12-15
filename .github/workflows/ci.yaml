@@ -305,8 +305,12 @@ jobs:
         run: make clean erlang
         working-directory: ./test/language
 
-      - name: test/language JavaScript
+      - name: test/language JavaScript with Node
         run: make clean javascript
+        working-directory: ./test/language
+
+      - name: test/language Javascript with Deno
+        run: make clean deno
         working-directory: ./test/language
 
       - name: test/compile_package0
