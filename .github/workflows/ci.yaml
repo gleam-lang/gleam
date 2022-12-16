@@ -176,11 +176,6 @@ jobs:
         with:
           node-version: "16"
 
-      - name: Install Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-
       - name: Install wasm-pack
         run: |
           curl -L --output wasm-pack-init https://rustwasm.github.io/wasm-pack/installer/init.sh \
@@ -286,6 +281,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3.0.0
+
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
 
       - name: Install Erlang
         uses: erlef/setup-beam@v1.15.0
