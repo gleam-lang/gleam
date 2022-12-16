@@ -7,6 +7,8 @@ mod telemetry;
 
 #[cfg(test)]
 mod package_compilation_tests;
+#[cfg(test)]
+mod tests;
 
 pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Options, ProjectCompiler};

@@ -512,22 +512,28 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
-#[derive(Debug)]
-enum BuildTool {
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) enum BuildTool {
     Gleam,
     Rebar3,
     Mix,
 }
 
 /// Determine the build tool we should use to build this package
-fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
+pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, Error> {
+    let mut mix_present = false;
+
     for tool in &package.build_tools {
         match tool.as_str() {
             "gleam" => return Ok(BuildTool::Gleam),
             "rebar3" => return Ok(BuildTool::Rebar3),
-            "mix" => return Ok(BuildTool::Mix),
+            "mix" => mix_present = true,
             _ => (),
         }
+    }
+
+    if mix_present {
+        return Ok(BuildTool::Mix);
     }
 
     Err(Error::UnsupportedBuildTool {
