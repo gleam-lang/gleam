@@ -759,7 +759,7 @@ impl<'comments> Formatter<'comments> {
         let integer_part = parts.next().unwrap_or_default();
         let fp_part = parts.next().unwrap_or_default();
 
-        let integer_doc = Document::String(self.underscore_integer_string(integer_part));
+        let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
         let fp_doc = match value.ends_with('.') {
             true => "0".to_doc(),
@@ -774,10 +774,15 @@ impl<'comments> Formatter<'comments> {
             return value.to_doc();
         }
 
-        Document::String(self.underscore_integer_string(value))
+        self.underscore_integer_string(value)
     }
 
-    fn underscore_integer_string(&self, value: &str) -> String {
+    fn underscore_integer_string<'a>(&self, value: &'a str) -> Document<'a> {
+        let reformat_watershed = if value.starts_with('-') { 6 } else { 5 };
+        if value.len() < reformat_watershed {
+            return value.to_doc();
+        }
+
         let minus_ch = '-';
         let underscore_ch = '_';
         let len = value.len();
@@ -796,7 +801,7 @@ impl<'comments> Formatter<'comments> {
             j += 1;
         }
 
-        new_value.chars().rev().collect::<String>()
+        Document::String(new_value.chars().rev().collect())
     }
 
     fn pattern_constructor<'a>(
