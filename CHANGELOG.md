@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
+  projects created via `gleam new`.
+- Fixed a bug where `gleam new` would set a `Rebar3` version to `25.1`
+  instead of the latest stable `3`.
+- Updated following runtime versions set via `gleam new`: `Erlang/OTP`
+  to `25.2`, and `Elixir` to `1.14.2`.
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
 - Added support for top level TypeScript file inclusion in builds.
@@ -112,7 +118,7 @@
 ## v0.23.0-rc2 - 2022-09-15
 
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.13.0
-  and actions/checkout@3.0.0.
+  and actions/checkout@v3.0.0.
 - New Gleam projects are created using version v0.23.0 of the stdlib.
 - Fixed a bug where LSP hovering would fail to locate the expression.
 
