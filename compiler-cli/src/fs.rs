@@ -1,8 +1,8 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir, Stdio,
-        WrappedReader, WrappedWriter,
+        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputContent, OutputFile,
+        ReadDir, Stdio, WrappedReader, WrappedWriter,
     },
     Result,
 };
@@ -199,13 +199,17 @@ pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Er
 }
 
 pub fn write_output_under(file: &OutputFile, base: &Path) -> Result<(), Error> {
-    let OutputFile { path, text } = file;
-    write(&base.join(path), text)
+    let OutputFile { path, content } = file;
+    write_content(&base.join(path), content)
 }
 
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
-    let OutputFile { path, text } = file;
-    write(path, text)
+    let OutputFile { path, content } = file;
+    write_content(path, content)
+}
+
+pub fn write_content(path: &Path, data: &OutputContent) -> Result<(), Error> {
+    write_bytes(path, data.as_bytes())
 }
 
 pub fn write(path: &Path, text: &str) -> Result<(), Error> {
@@ -395,10 +399,10 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
             path: file.path.clone(),
             err: e.to_string(),
         })?;
-        header.set_size(file.text.as_bytes().len() as u64);
+        header.set_size(file.content.as_bytes().len() as u64);
         header.set_cksum();
         builder
-            .append(&header, file.text.as_bytes())
+            .append(&header, file.content.as_bytes())
             .map_err(|e| Error::AddTar {
                 path: file.path.clone(),
                 err: e.to_string(),

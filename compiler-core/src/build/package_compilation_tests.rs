@@ -9,6 +9,7 @@ use crate::{
     config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
     erlang,
     io::test::FilesChannel,
+    io::OutputContent,
     javascript,
     type_::{self, FieldAccessUsage},
 };
@@ -204,7 +205,7 @@ fn package_compiler_test() {
             origin: Origin::Src,
         }],
         Ok(vec![OutputFile {
-            text: "-module(one).\n".to_string(),
+            content: OutputContent::Text("-module(one).\n".to_string()),
             path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
         },])
     );
@@ -226,11 +227,11 @@ fn package_compiler_test() {
         ],
         Ok(vec![
             OutputFile {
-                text: "-module(one).\n".to_string(),
+                content: OutputContent::Text("-module(one).\n".to_string()),
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
             },
             OutputFile {
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
             },
         ])
@@ -245,7 +246,7 @@ fn package_compiler_test() {
         }],
         Ok(vec![OutputFile {
             path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-            text: "-module(one).\n".to_string(),
+            content: OutputContent::Text("-module(one).\n".to_string()),
         },]),
     );
 
@@ -293,11 +294,11 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).\n".to_string(),
+                content: OutputContent::Text("-module(one).\n".to_string()),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             },
         ]),
     );
@@ -320,11 +321,11 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).\n".to_string(),
+                content: OutputContent::Text("-module(one).\n".to_string()),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             },
         ]),
     );
@@ -347,7 +348,8 @@ fn package_compiler_test() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -356,11 +358,13 @@ fn package_compiler_test() {
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([unbox/1]).
@@ -370,7 +374,8 @@ unbox(X) ->
     {box, I} = X,
     I.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -393,7 +398,8 @@ unbox(X) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -402,11 +408,13 @@ unbox(X) ->
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([box/1]).
@@ -415,7 +423,8 @@ unbox(X) ->
 box(X) ->
     {box, X}.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -429,7 +438,8 @@ box(X) ->
         }],
         Ok(vec![OutputFile {
             path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one@two.erl"),
-            text: "-module(one@two).
+            content: OutputContent::Text(
+                "-module(one@two).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -438,7 +448,8 @@ box(X) ->
 
 
 "
-            .to_string(),
+                .to_string()
+            ),
         }]),
     );
 
@@ -460,7 +471,8 @@ box(X) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -469,11 +481,13 @@ box(X) ->
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([box/0]).
@@ -482,7 +496,8 @@ box(X) ->
 box() ->
     box.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -505,7 +520,8 @@ box() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -514,11 +530,13 @@ box() ->
 go() ->
     1.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([call/0]).
@@ -527,7 +545,8 @@ go() ->
 call() ->
     one:go().
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -554,7 +573,8 @@ pub fn go(x) { let one.Box(y) = x y }"
                 path: PathBuf::from(
                     "_build/default/lib/the_package/_gleam_artefacts/nested@one.erl"
                 ),
-                text: "-module(nested@one).
+                content: OutputContent::Text(
+                    "-module(nested@one).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -563,11 +583,13 @@ pub fn go(x) { let one.Box(y) = x y }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([go/1]).
@@ -577,7 +599,8 @@ go(X) ->
     {box, Y} = X,
     Y.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -604,7 +627,8 @@ pub fn go(x) { let thingy.Box(y) = x y }"
                 path: PathBuf::from(
                     "_build/default/lib/the_package/_gleam_artefacts/nested@one.erl"
                 ),
-                text: "-module(nested@one).
+                content: OutputContent::Text(
+                    "-module(nested@one).
 -compile(no_auto_import).
 
 -export_type([box/0]).
@@ -613,11 +637,13 @@ pub fn go(x) { let thingy.Box(y) = x y }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([go/1]).
@@ -627,7 +653,8 @@ go(X) ->
     {box, Y} = X,
     Y.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -657,7 +684,8 @@ go(X) ->
                 path: PathBuf::from(
                     "_build/default/lib/the_package/_gleam_artefacts/nested@one.erl"
                 ),
-                text: "-module(nested@one).
+                content: OutputContent::Text(
+                    "-module(nested@one).
 -compile(no_auto_import).
 
 -export([go/0]).
@@ -669,11 +697,13 @@ go(X) ->
 go() ->
     1.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([go/0, thing/0, call_thing/0]).
@@ -690,7 +720,8 @@ thing() ->
 call_thing() ->
     thing:new().
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -738,7 +769,8 @@ pub fn x(p) { let one.Point(x, _) = p x }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([point/0]).
@@ -747,17 +779,21 @@ pub fn x(p) { let one.Point(x, _) = p x }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_Point.hrl"),
-                text: "-record(point, {x :: integer(), y :: integer()}).
+                content: OutputContent::Text(
+                    "-record(point, {x :: integer(), y :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([make/0, x/1]).
@@ -771,7 +807,8 @@ x(P) ->
     {point, X, _@1} = P,
     X.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -797,7 +834,8 @@ x(P) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export([\'div\'/2]).
@@ -809,11 +847,13 @@ x(P) ->
         Gleam@denominator -> X rem Gleam@denominator
     end.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([run/0]).
@@ -824,7 +864,8 @@ run() ->
     _pipe@1 = one:'div'(_pipe, 4),
     one:'div'(2, _pipe@1).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -849,7 +890,8 @@ pub fn make() { one.Empty }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([empty/0]).
@@ -858,11 +900,13 @@ pub fn make() { one.Empty }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([make/0]).
@@ -871,7 +915,8 @@ pub fn make() { one.Empty }"
 make() ->
     empty.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -894,7 +939,8 @@ make() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export([id/1]).
@@ -906,11 +952,13 @@ make() ->
 id(X) ->
     X.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([make/0]).
@@ -919,7 +967,8 @@ id(X) ->
 make() ->
     one:id(empty).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -943,7 +992,8 @@ make() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export([id/1]).
@@ -955,11 +1005,13 @@ make() ->
 id(X) ->
     X.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([make/0]).
@@ -968,7 +1020,8 @@ id(X) ->
 make() ->
     one:id(empty).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -991,7 +1044,8 @@ make() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export(['receive'/0]).
@@ -1000,11 +1054,13 @@ make() ->
 'receive'() ->
     1.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([funky/0]).
@@ -1013,7 +1069,8 @@ make() ->
 funky() ->
     fun one:'receive'/0.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1036,7 +1093,8 @@ funky() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export(['receive'/0]).
@@ -1045,11 +1103,13 @@ funky() ->
 'receive'() ->
     1.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([funky/0]).
@@ -1058,7 +1118,8 @@ funky() ->
 funky() ->
     fun one:'receive'/0.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1082,7 +1143,8 @@ funky() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export(['receive'/1]).
@@ -1091,11 +1153,13 @@ funky() ->
 'receive'(X) ->
     X.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([funky/0]).
@@ -1104,7 +1168,8 @@ funky() ->
 funky() ->
     one:'receive'(1).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1132,7 +1197,8 @@ funky() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([person/0]).
@@ -1141,17 +1207,21 @@ funky() ->
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                content: OutputContent::Text(
+                    "-record(person, {name :: binary(), age :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([get_age/1, get_name/1]).
@@ -1164,7 +1234,8 @@ get_age(Person) ->
 get_name(Person) ->
     erlang:element(2, Person).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1188,7 +1259,8 @@ get_name(Person) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([person/0]).
@@ -1197,17 +1269,20 @@ get_name(Person) ->
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                content: OutputContent::Text(
+                    "-record(person, {name :: binary(), age :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             },
         ]),
     );
@@ -1231,24 +1306,28 @@ get_name(Person) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([person/0]).\n\n-type person() :: {person, binary(), integer()}.
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_Person.hrl"),
-                text: "-record(person, {name :: binary(), age :: integer()}).
+                content: OutputContent::Text(
+                    "-record(person, {name :: binary(), age :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             },
         ]),
     );
@@ -1272,24 +1351,29 @@ get_name(Person) ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([t/1]).\n\n-type t(I) :: {c, integer(), integer()} | {gleam_phantom, I}.
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_C.hrl"),
-                text: "-record(c, {a :: integer(), b :: integer()}).
+                content: OutputContent::Text(
+                    "-record(c, {a :: integer(), b :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([main/0]).
@@ -1298,7 +1382,8 @@ get_name(Person) ->
 main() ->
     fun(Field@0, Field@1) -> {c, Field@0, Field@1} end.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1322,7 +1407,8 @@ main() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export([id/1]).
@@ -1334,17 +1420,21 @@ main() ->
 id(X) ->
     X.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_X.hrl"),
-                text: "-record(x, {x :: integer()}).
+                content: OutputContent::Text(
+                    "-record(x, {x :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([make/0]).
@@ -1353,7 +1443,8 @@ id(X) ->
 make() ->
     one:id(fun(Field@0) -> {x, Field@0} end).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1377,12 +1468,11 @@ make() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).\n"
-                .to_string(),
+                content: OutputContent::Text("-module(one).\n".to_string()),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: r#"-module(two).
+                content: OutputContent::Text(r#"-module(two).
 -compile(no_auto_import).
 
 -export([make_list/0]).
@@ -1391,7 +1481,7 @@ make() ->
 make_list() ->
     [<<"aliased"/utf8>>, <<"type"/utf8>>, <<"constructor"/utf8>>].
 "#
-                .to_string(),
+                                .to_string()),
             },
         ]),
     );
@@ -1415,7 +1505,8 @@ make_list() ->
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([t/1]).
@@ -1424,17 +1515,21 @@ make_list() ->
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/one_C.hrl"),
-                text: "-record(c, {a :: integer(), b :: integer()}).
+                content: OutputContent::Text(
+                    "-record(c, {a :: integer(), b :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([main/0]).
@@ -1443,7 +1538,8 @@ make_list() ->
 main() ->
     fun(Field@0, Field@1) -> {c, Field@0, Field@1} end.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1561,7 +1657,8 @@ fn bug_752() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl",),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([one/1]).
@@ -1570,11 +1667,13 @@ fn bug_752() {
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl",),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export_type([two/1]).
@@ -1583,13 +1682,16 @@ fn bug_752() {
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/two_Two.hrl",),
-                text: "-record(two, {thing :: one:one(integer())}).
+                content: OutputContent::Text(
+                    "-record(two, {thing :: one:one(integer())}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1621,7 +1723,8 @@ pub fn main(power: Power) { power.to_int(power) }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/main.erl",),
-                text: "-module(main).
+                content: OutputContent::Text(
+                    "-module(main).
 -compile(no_auto_import).
 
 -export([main/1]).
@@ -1630,11 +1733,13 @@ pub fn main(power: Power) { power.to_int(power) }"
 main(Power) ->
     power:to_int(Power).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/power.erl",),
-                text: "-module(power).
+                content: OutputContent::Text(
+                    "-module(power).
 -compile(no_auto_import).
 
 -export([to_int/1]).
@@ -1646,13 +1751,16 @@ main(Power) ->
 to_int(P) ->
     erlang:element(2, P) * 9000.
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/include/power_Power.hrl",),
-                text: "-record(power, {value :: integer()}).
+                content: OutputContent::Text(
+                    "-record(power, {value :: integer()}).
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
         ]),
     );
@@ -1681,7 +1789,8 @@ pub fn x() { test }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([test/0]).
@@ -1690,11 +1799,13 @@ pub fn x() { test }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([x/0]).
@@ -1703,7 +1814,8 @@ pub fn x() { test }"
 x() ->
     a.
 "
-                .to_string(),
+                    .to_string()
+                ),
             }
         ]),
     );
@@ -1729,7 +1841,8 @@ pub fn x() { test }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([a/0, b/0]).
@@ -1740,11 +1853,13 @@ pub fn x() { test }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([x/0]).
@@ -1753,7 +1868,8 @@ pub fn x() { test }"
 x() ->
     {b, a}.
 "
-                .to_string(),
+                    .to_string()
+                ),
             }
         ]),
     );
@@ -1814,7 +1930,8 @@ pub fn x() { one.A }"
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([a/0]).
@@ -1823,11 +1940,13 @@ pub fn x() { one.A }"
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).
+                content: OutputContent::Text(
+                    "-module(two).
 -compile(no_auto_import).
 
 -export([x/0]).
@@ -1836,7 +1955,8 @@ pub fn x() { one.A }"
 x() ->
     fun(Field@0) -> {a, Field@0} end.
 "
-                .to_string(),
+                    .to_string()
+                ),
             }
         ]),
     );
@@ -1953,7 +2073,8 @@ fn config_compilation_test() {
         },
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {mod, 'myapp@mymod'},
     {vsn, "1.0.0"},
     {applications, []},
@@ -1962,7 +2083,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -1971,7 +2093,8 @@ fn config_compilation_test() {
         make_config(),
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.0.0"},
     {applications, []},
     {description, ""},
@@ -1979,7 +2102,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -1991,7 +2115,8 @@ fn config_compilation_test() {
         config,
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.3.5"},
     {applications, []},
     {description, ""},
@@ -1999,7 +2124,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -2011,7 +2137,8 @@ fn config_compilation_test() {
         config,
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.0.0"},
     {applications, []},
     {description, "Very exciting"},
@@ -2019,7 +2146,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -2039,7 +2167,8 @@ fn config_compilation_test() {
         config,
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.0.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,
@@ -2050,7 +2179,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -2069,7 +2199,8 @@ fn config_compilation_test() {
         config,
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.0.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,
@@ -2080,7 +2211,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -2100,7 +2232,8 @@ fn config_compilation_test() {
         config,
         vec![],
         vec![OutputFile {
-            text: r#"{application, the_package, [
+            content: OutputContent::Text(
+                r#"{application, the_package, [
     {vsn, "1.0.0"},
     {applications, [gleam_otp,
                     gleam_stdlib,
@@ -2113,7 +2246,8 @@ fn config_compilation_test() {
     {registered, []}
 ]}.
 "#
-            .to_string(),
+                .to_string()
+            ),
             path: PathBuf::from("_build/default/lib/the_package/ebin/the_package.app"),
         }]
     );
@@ -2152,7 +2286,8 @@ const x = two.A"#
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one@two.erl"),
-                text: "-module(one@two).
+                content: OutputContent::Text(
+                    "-module(one@two).
 -compile(no_auto_import).
 
 -export_type([a/0]).
@@ -2161,11 +2296,12 @@ const x = two.A"#
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             }
         ]),
     );
@@ -2193,40 +2329,48 @@ const x = two.A"#
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/gleam.mjs"),
-                text: javascript::PRELUDE.to_string(),
+                content: OutputContent::Text(javascript::PRELUDE.to_string()),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/gleam.d.ts"),
-                text: javascript::PRELUDE_TS_DEF.to_string(),
+                content: OutputContent::Text(javascript::PRELUDE_TS_DEF.to_string()),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/one/two.mjs"),
-                text: "import { CustomType as $CustomType } from \"../gleam.mjs\";
+                content: OutputContent::Text(
+                    "import { CustomType as $CustomType } from \"../gleam.mjs\";
 
 export class A extends $CustomType {}\n"
-                    .to_string(),
+                        .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/one/two.d.ts"),
-                text: r#"import * as _ from "../gleam.d.ts";
+                content: OutputContent::Text(
+                    r#"import * as _ from "../gleam.d.ts";
 
 export class A extends _.CustomType {}
 
 export type A$ = A;
 "#
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/two.mjs"),
-                text: r#"import * as $two from "./one/two.mjs";
+                content: OutputContent::Text(
+                    r#"import * as $two from "./one/two.mjs";
 
 const x = new $two.A();
 "#
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/two.d.ts"),
-                text: "import * as two from \"./one/two.d.ts\";\n".to_string(),
+                content: OutputContent::Text(
+                    "import * as two from \"./one/two.d.ts\";\n".to_string()
+                ),
             },
         ]),
     );
@@ -2253,7 +2397,8 @@ fn import_error() {
         Ok(vec![
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                text: "-module(one).
+                content: OutputContent::Text(
+                    "-module(one).
 -compile(no_auto_import).
 
 -export_type([error/0]).
@@ -2262,11 +2407,12 @@ fn import_error() {
 
 
 "
-                .to_string(),
+                    .to_string()
+                ),
             },
             OutputFile {
                 path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                text: "-module(two).\n".to_string(),
+                content: OutputContent::Text("-module(two).\n".to_string()),
             }
         ]),
     );

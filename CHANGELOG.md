@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Generated HTML documentation now includes all static assets, including web
+  fonts, so that it can be accessed offline and in future once CDNs would 404.
+- Generated HTML documentation now supports TypeScript syntax highlighting.
+
 ## v0.25.2 - 2022-12-16
 
 - Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
