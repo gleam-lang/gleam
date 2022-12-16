@@ -8,6 +8,8 @@ mod telemetry;
 
 #[cfg(test)]
 mod package_compilation_tests;
+#[cfg(test)]
+mod tests;
 
 pub use self::build_manifest::BuildManifest;
 pub use self::package_compiler::PackageCompiler;

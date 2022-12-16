@@ -214,6 +214,29 @@ pub struct ManifestPackage {
     pub source: ManifestPackageSource,
 }
 
+impl ManifestPackage {
+    pub fn with_build_tools(mut self, build_tools: &'static [&'static str]) -> Self {
+        self.build_tools = build_tools.iter().map(|s| (*s).to_string()).collect();
+        self
+    }
+}
+
+#[cfg(test)]
+impl Default for ManifestPackage {
+    fn default() -> Self {
+        Self {
+            name: Default::default(),
+            build_tools: Default::default(),
+            otp_app: Default::default(),
+            requirements: Default::default(),
+            version: Version::new(1, 0, 0),
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "source")]
 pub enum ManifestPackageSource {
