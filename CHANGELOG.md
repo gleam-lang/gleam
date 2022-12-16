@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.3 - 2022-12-16
+
+- 4 digit integers are no longer automatically formatted with underscores.
+
 ## v0.25.2 - 2022-12-16
 
 - Updated `actions/checkout` from `actions/checkout@v3.0.0` to `@v3.2.0` for
