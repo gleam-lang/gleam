@@ -5,6 +5,9 @@
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
 - Added support for top level TypeScript file inclusion in builds.
+- The build tool will now favour using rebar3 over Mix for packages that support
+  both. This fixes an issue where some packages could not be compiled without
+  Elixir installed even though it is not strictly required.
 
 ## v0.25.1 - 2022-12-11
 
