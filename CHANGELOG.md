@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- The formatter now consistently handles 4 digit underscores in numbers.
 - Generated HTML documentation now includes all static assets, including web
   fonts, so that it can be accessed offline and in future once CDNs would 404.
 - Generated HTML documentation now supports TypeScript syntax highlighting.
