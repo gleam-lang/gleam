@@ -549,8 +549,63 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
         .map(|_| ())
 }
 
+pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
+    tracing::debug!(path=?path, "check if we're inside a git work tree");
+
+    let args: Vec<&str> = vec![
+        "rev-parse".into(),
+        "--is-inside-work-tree".into(),
+        "--quiet".into(),
+    ];
+
+    // Ignore all output, rely on the exit code instead.
+    // git will display a fatal error on stderr if rev-parse isn't run inside of a git work tree,
+    // so send stderr to /dev/null
+    let result = std::process::Command::new("git")
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .current_dir(path)
+        .status();
+
+    match result {
+        Ok(status) => {
+            let code = status.code().unwrap_or_default();
+            match code {
+                0 => Ok(true),
+                _ => Ok(false),
+            }
+        }
+
+        Err(error) => Err(match error.kind() {
+            io::ErrorKind::NotFound => Error::ShellProgramNotFound {
+                program: "git".to_string(),
+            },
+
+            other => Error::ShellCommand {
+                program: "git".to_string(),
+                err: Some(other),
+            },
+        }),
+    }
+}
+
+#[test]
+fn is_inside_git_work_tree_test() {
+    assert!(is_inside_git_work_tree(Path::new(".")).unwrap());
+    assert!(!is_inside_git_work_tree(Path::new("/")).unwrap())
+}
+
 pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
+
+    if is_inside_git_work_tree(&path)? {
+        tracing::debug!(path=?path, "already inside a git work tree");
+        return Err(Error::GitInitialization {
+            error: "new Gleam root is already in a Git work tree".to_string(),
+        });
+    }
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
