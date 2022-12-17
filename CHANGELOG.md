@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The formatter now consistently handles 4 digit underscores in numbers.
+- Running `gleam new` will skip `git init` if the new project directory is
+  already part of a git work tree.
 
 ## v0.25.3 - 2022-12-16
 

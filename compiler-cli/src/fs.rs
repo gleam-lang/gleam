@@ -550,7 +550,7 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
 }
 
 pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
-    tracing::debug!(path=?path, "check if we're inside a git work tree");
+    tracing::debug!(path=?path, "checking_for_git_repo");
 
     let args: Vec<&str> = vec![
         "rev-parse".into(),
