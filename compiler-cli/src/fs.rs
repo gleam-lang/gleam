@@ -601,10 +601,8 @@ pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
 
     if is_inside_git_work_tree(&path)? {
-        tracing::debug!(path=?path, "already inside a git work tree");
-        return Err(Error::GitInitialization {
-            error: "new Gleam root is already in a Git work tree".to_string(),
-        });
+        tracing::debug!(path=?path, "git_repo_already_exists");
+        return Ok(())
     }
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
