@@ -778,14 +778,14 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn underscore_integer_string<'a>(&self, value: &'a str) -> Document<'a> {
-        let reformat_watershed = if value.starts_with('-') { 6 } else { 5 };
-        if value.len() < reformat_watershed {
-            return value.to_doc();
-        }
-
-        let minus_ch = '-';
         let underscore_ch = '_';
+        let minus_ch = '-';
+
         let len = value.len();
+        let underscore_ch_cnt = value.matches(underscore_ch).count();
+        let reformat_watershed = if value.starts_with(minus_ch) { 6 } else { 5 };
+        let insert_underscores = (len - underscore_ch_cnt) >= reformat_watershed;
+
         let mut new_value = String::new();
         let mut j = 0;
         for (i, ch) in value.chars().rev().enumerate() {
@@ -793,7 +793,7 @@ impl<'comments> Formatter<'comments> {
                 continue;
             }
 
-            if i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
+            if insert_underscores && i != 0 && ch != minus_ch && i < len && j % 3 == 0 {
                 new_value.push(underscore_ch);
             }
             new_value.push(ch);
