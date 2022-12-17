@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The formatter now consistently handles 4 digit underscores in numbers.
+
 ## v0.25.3 - 2022-12-16
 
 - 4 digit integers are no longer automatically formatted with underscores.
