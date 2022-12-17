@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The formatter now consistently handles 4 digit underscores in numbers.
+- 4 digit integers are now always formatted without underscores.
 - Running `gleam new` will skip `git init` if the new project directory is
   already part of a git work tree.
 
