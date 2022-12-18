@@ -108,6 +108,45 @@ fn float_tests() -> List(Test) {
     equality_test("Precedence 1", 8.0, 2.0 +. 2.0 *. 3.0),
     equality_test("Precedence 2", 10.0, 2.0 *. { 2.0 +. 3.0 }),
     equality_test("Precedence 3", 12.0, { 2.0 +. 2.0 } *. 3.0),
+
+
+    // scientific notation
+    basic_addition(0.0e0, 0.0, 0.0),
+    basic_addition(0.0, 0.0e0, 0.0),
+    basic_addition(0.0e-0, 0.0, 0.0),
+    basic_addition(0.0, 0.0e-0, 0.0),
+    basic_addition(1.0e3, 1.0, 1001.0),
+    basic_addition(5.0, 1.0e3, 1005.0),
+    basic_addition(1.0e5, -3.0e5, -200000.0),
+    basic_addition(1.0e50, -1.0e50, 0.0),
+    basic_addition(1.0e-3, 1.0, 1.001),
+    basic_addition(5.0, 1.0e-3, 5.001),
+    basic_addition(10.0e-2, -3.0e-2, 0.07),
+
+    basic_subtraction(0.0e0, 0.0, 0.0),
+    basic_subtraction(0.0, 0.0e0, 0.0),
+    basic_subtraction(0.0e-0, 0.0, 0.0),
+    basic_subtraction(0.0, 0.0e-0, 0.0),
+    basic_subtraction(1.0e3, 1.0, 999.0),
+    basic_subtraction(5.0, 1.0e3, -995.0),
+    basic_subtraction(1.0e5, 1.0e5, 0.0),
+    basic_subtraction(1.0e-3, 1.0, -0.999),
+    basic_subtraction(5.0, 1.0e-3, 4.999),
+    basic_subtraction(10.0e-2, -3.0e-2, 0.13),
+
+    basic_multiplication(0.0e0, 0.0, 0.0),
+    basic_multiplication(0.0, 0.0e0, 0.0),
+    basic_multiplication(0.0e-0, 0.0, 0.0),
+    basic_multiplication(0.0, 0.0e-0, 0.0),
+    basic_multiplication(2.0e1, 2.0e1, 400.0),
+    basic_multiplication(1.0e-5, 1.0e5, 1.0),
+    basic_multiplication(2.0e5, 2.0e-5, 4.0),
+    basic_multiplication(2.0e5, 4.0e-4, 80.0),
+    basic_multiplication(2.0e-5, 2.0e5, 4.0),
+    basic_multiplication(2.0e5, 4.0e-5, 8.0),
+    basic_multiplication(-2.0e-5, 2.0e5, -4.0),
+    basic_multiplication(-2.0e5, -4.0e-5, 8.0),
+
   ]
 }
 

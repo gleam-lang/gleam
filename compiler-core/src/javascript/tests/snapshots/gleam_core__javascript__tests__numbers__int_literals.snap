@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 5
-expression: "\nfn go() {\n    1\n    2\n    -3\n    4001\n    0b00001111\n    0o17\n    0xF\n    1_000\n}\n"
+expression: "\nfn go() {\n    1\n    2\n    -3\n    4001\n    0b00001111\n    0o17\n    0xF\n    0.01e-1\n    0.01e-0\n    -10.01e-1\n    -10.01e-0\n    100.001e523\n    -100.001e-523\n    100.001e123_456_789\n    -100.001e-123_456_789\n    1_000\n}\n"
 ---
 function go() {
   1;
@@ -11,6 +10,14 @@ function go() {
   0b00001111;
   0o17;
   0xF;
+  0.01e-1;
+  0.01e-0;
+  -10.01e-1;
+  -10.01e-0;
+  100.001e523;
+  -100.001e-523;
+  100.001e123_456_789;
+  -100.001e-123_456_789;
   return 1_000;
 }
 
