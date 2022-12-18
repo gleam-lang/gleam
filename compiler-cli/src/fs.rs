@@ -549,6 +549,11 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
         .map(|_| ())
 }
 
+/// Check if the given path is inside a git work tree.
+/// This is done by running `git rev-parse --is-inside-work-tree --quiet` in the
+/// given path. If git is not installed then we assume we're not in a git work
+/// tree.
+///
 pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
     tracing::debug!(path=?path, "checking_for_git_repo");
 
@@ -566,24 +571,15 @@ pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
         .status();
 
     match result {
-        Ok(status) => {
-            let code = status.code().unwrap_or_default();
-            match code {
-                0 => Ok(true),
-                _ => Ok(false),
-            }
-        }
+        Ok(status) => Ok(status.success()),
+        Err(error) => match error.kind() {
+            io::ErrorKind::NotFound => Ok(false),
 
-        Err(error) => Err(match error.kind() {
-            io::ErrorKind::NotFound => Error::ShellProgramNotFound {
-                program: "git".to_string(),
-            },
-
-            other => Error::ShellCommand {
+            other => Err(Error::ShellCommand {
                 program: "git".to_string(),
                 err: Some(other),
-            },
-        }),
+            }),
+        },
     }
 }
 
@@ -593,6 +589,8 @@ fn is_inside_git_work_tree_test() {
     assert!(!is_inside_git_work_tree(Path::new("/")).unwrap())
 }
 
+/// Run `git init` in the given path.
+/// If git is not installed then we do nothing.
 pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
 
