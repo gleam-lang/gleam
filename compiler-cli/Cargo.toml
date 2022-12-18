@@ -85,4 +85,4 @@ urlencoding = "2.1.0"
 # Test assertion errors with diffs
 pretty_assertions = "1.0.0"
 # Creation of temporary directories
-tempdir = "0.3.7"
+tempfile = "3.2.0"

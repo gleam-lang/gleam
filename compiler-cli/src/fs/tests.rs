@@ -1,10 +1,8 @@
 use std::path::Path;
 
-use tempdir::TempDir;
-
 #[test]
 fn is_inside_git_work_tree_ok() {
-    let tmp_dir = TempDir::new("gleam_git_check").unwrap();
+    let tmp_dir = tempfile::tempdir().unwrap();
     let path = tmp_dir.path();
 
     assert!(!super::is_inside_git_work_tree(path).unwrap());
@@ -14,7 +12,7 @@ fn is_inside_git_work_tree_ok() {
 
 #[test]
 fn git_init_success() {
-    let tmp_dir = TempDir::new("gleam_git_init").unwrap();
+    let tmp_dir = tempfile::tempdir().unwrap();
     let path = tmp_dir.path();
     let git = path.join(".git");
 
@@ -25,7 +23,7 @@ fn git_init_success() {
 
 #[test]
 fn git_init_already_in_git() {
-    let tmp_dir = TempDir::new("gleam_git_init").unwrap();
+    let tmp_dir = tempfile::tempdir().unwrap();
     let git = tmp_dir.path().join(".git");
     assert!(!git.exists());
     assert_eq!(super::git_init(tmp_dir.path()), Ok(()));

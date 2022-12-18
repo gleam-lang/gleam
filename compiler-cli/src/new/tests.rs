@@ -1,6 +1,6 @@
 #[test]
 fn new() {
-    let tmp = tempdir::TempDir::new("gleam_new").unwrap();
+    let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("my_project");
 
     let creator = super::Creator::new(
@@ -30,7 +30,7 @@ fn new() {
 
 #[test]
 fn invalid_path() {
-    let tmp = tempdir::TempDir::new("gleam_new").unwrap();
+    let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("-------");
 
     assert!(super::Creator::new(
@@ -47,7 +47,7 @@ fn invalid_path() {
 
 #[test]
 fn invalid_name() {
-    let tmp = tempdir::TempDir::new("gleam_new").unwrap();
+    let tmp = tempfile::tempdir().unwrap();
     let path = tmp.path().join("projec");
 
     assert!(super::Creator::new(
