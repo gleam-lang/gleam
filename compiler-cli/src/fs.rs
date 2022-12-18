@@ -15,6 +15,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(test)]
+mod tests;
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectIO;

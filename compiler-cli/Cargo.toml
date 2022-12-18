@@ -84,3 +84,5 @@ urlencoding = "2.1.0"
 [dev-dependencies]
 # Test assertion errors with diffs
 pretty_assertions = "1.0.0"
+# Creation of temporary directories
+tempdir = "0.3.7"
