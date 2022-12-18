@@ -552,11 +552,7 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
 pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
     tracing::debug!(path=?path, "checking_for_git_repo");
 
-    let args: Vec<&str> = vec![
-        "rev-parse".into(),
-        "--is-inside-work-tree".into(),
-        "--quiet".into(),
-    ];
+    let args: Vec<&str> = vec!["rev-parse", "--is-inside-work-tree", "--quiet"];
 
     // Ignore all output, rely on the exit code instead.
     // git will display a fatal error on stderr if rev-parse isn't run inside of a git work tree,
@@ -600,9 +596,9 @@ fn is_inside_git_work_tree_test() {
 pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
 
-    if is_inside_git_work_tree(&path)? {
+    if is_inside_git_work_tree(path)? {
         tracing::debug!(path=?path, "git_repo_already_exists");
-        return Ok(())
+        return Ok(());
     }
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
