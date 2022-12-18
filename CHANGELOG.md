@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Scientific notation support for float literals.
 - Fixed a bug where comments in list prepending expressions could be formatted
   incorrectly.
 - Fixed a bug where comments in record update expressions could be formatted

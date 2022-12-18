@@ -758,6 +758,10 @@ fn simple_exprs() {
     assert_infer!("0xF", "Int");
     assert_infer!("0o11", "Int");
     assert_infer!("0b1010", "Int");
+
+    // scientific notation
+    assert_infer!("6.02e23", "Float");
+    assert_infer!("6.02e-23", "Float");
 }
 
 #[test]

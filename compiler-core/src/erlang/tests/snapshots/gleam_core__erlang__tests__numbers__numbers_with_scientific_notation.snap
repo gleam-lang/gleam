@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/erlang/tests/numbers.rs
+expression: "\nconst i = 100.001e523\nconst j = -100.001e-523\n\nconst k = 100.001e1_230\nconst l = -100.001e-1_230\n\nconst m = 100.001e123_456_789\nconst n = -100.001e-123_456_789\n\npub fn main() {\n    i\n    j\n    k\n    l\n    m\n    n\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> float().
+main() ->
+    100.001e523,
+    -100.001e-523,
+    100.001e1230,
+    -100.001e-1230,
+    100.001e123456789,
+    -100.001e-123456789.
+

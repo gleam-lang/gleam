@@ -617,6 +617,18 @@ where
         if self.chr0 == Some('.') {
             value.push(self.next_char().expect("lex_normal_number float"));
             value.push_str(&self.radix_run(10));
+
+            // If scientific:
+            if self.chr0 == Some('e') {
+                value.push(self.next_char().expect("lex_normal_number scientific"));
+                if self.chr0 == Some('-') {
+                    value.push(
+                        self.next_char()
+                            .expect("lex_normal_number scientific negative"),
+                    );
+                }
+                value.push_str(&self.radix_run(10));
+            }
             let end_pos = self.get_pos();
             (start_pos, Token::Float { value }, end_pos)
         } else {
