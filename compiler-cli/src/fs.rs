@@ -312,29 +312,6 @@ fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     )
 }
 
-#[test]
-fn is_gleam_path_test() {
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/a.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_two/a.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_two/a123.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_2/a123.gleam"),
-        Path::new("/some-prefix/")
-    ));
-}
-
 pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
@@ -584,12 +561,6 @@ pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
             }),
         },
     }
-}
-
-#[test]
-fn is_inside_git_work_tree_test() {
-    assert!(is_inside_git_work_tree(Path::new(".")).unwrap());
-    assert!(!is_inside_git_work_tree(Path::new("/")).unwrap())
 }
 
 /// Run `git init` in the given path.
