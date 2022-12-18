@@ -235,6 +235,14 @@ pub struct NewOptions {
         default_value = "lib"
     )]
     pub template: new::Template,
+
+    /// Run `git init` in new project directory
+    #[clap(long)]
+    pub git_init: bool,
+
+    /// Create .github in new project directory
+    #[clap(long)]
+    pub github_init: bool,
 }
 
 #[derive(Args, Debug)]

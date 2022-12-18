@@ -12,6 +12,10 @@
 - 4 digit integers are now always formatted without underscores.
 - Running `gleam new` will skip `git init` if the new project directory is
   already part of a git work tree.
+- The `gleam new` command gains the `--git-init` and `--github-init` flags
+  to initialize git and .github (respectively). Unless these flags are
+  specified, new projects default to skipping initialization of both git
+  and .github content.
 
 ## v0.25.3 - 2022-12-16
 
