@@ -9,6 +9,9 @@ use std::path::{Path, PathBuf};
 use std::{env, io::Write};
 use strum::{Display, EnumString, EnumVariantNames};
 
+#[cfg(test)]
+mod tests;
+
 use crate::NewOptions;
 
 const GLEAM_STDLIB_VERSION: &str = "0.25";
@@ -36,13 +39,24 @@ pub struct Creator {
 }
 
 impl Creator {
-    fn new(options: NewOptions, project_name: String, gleam_version: &'static str) -> Self {
+    fn new(options: NewOptions, gleam_version: &'static str) -> Result<Self, Error> {
+        let project_name = if let Some(name) = options.name.clone() {
+            name
+        } else {
+            get_foldername(&options.project_root)?
+        }
+        .trim()
+        .to_string();
+
+        validate_name(&project_name)?;
+        validate_root_folder(&options.project_root)?;
+
         let root = PathBuf::from(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
         let github = root.join(".github");
         let workflows = github.join("workflows");
-        Self {
+        Ok(Self {
             root,
             src,
             test,
@@ -51,7 +65,7 @@ impl Creator {
             gleam_version,
             options,
             project_name,
-        }
+        })
     }
 
     fn run(&self) -> Result<()> {
@@ -219,16 +233,7 @@ pub fn hello_world_test() {
 }
 
 pub fn create(options: NewOptions, version: &'static str) -> Result<()> {
-    let name = if let Some(name) = options.name.clone() {
-        name
-    } else {
-        get_foldername(&options.project_root)?
-    }
-    .trim()
-    .to_string();
-    validate_name(&name)?;
-    validate_root_folder(&options.project_root)?;
-    let creator = Creator::new(options.clone(), name, version);
+    let creator = Creator::new(options.clone(), version)?;
 
     creator.run()?;
 
