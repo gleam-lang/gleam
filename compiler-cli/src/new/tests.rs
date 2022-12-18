@@ -25,5 +25,5 @@ fn new() {
 
     let toml = crate::fs::read(&path.join("gleam.toml")).unwrap();
     assert!(toml.contains("name = \"my_project\""));
-    // assert!(toml.contains("description = \"Wibble wobble\""));
+    assert!(toml.contains("description = \"Wibble wobble\""));
 }

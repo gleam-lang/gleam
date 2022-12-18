@@ -190,12 +190,12 @@ jobs:
             &format!(
                 r#"name = "{name}"
 version = "0.1.0"
+description = "{description}"
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
 #
 # licences = ["Apache-2.0"]
-# description = "A Gleam library..."
 # repository = {{ type = "github", user = "username", repo = "project" }}
 # links = [{{ title = "Website", href = "https://gleam.run" }}]
 
@@ -206,6 +206,7 @@ gleam_stdlib = "~> {gleam_stdlib}"
 gleeunit = "~> {gleeunit}"
 "#,
                 name = self.project_name,
+                description = self.options.description,
                 gleam_stdlib = GLEAM_STDLIB_VERSION,
                 gleeunit = GLEEUNIT_VERSION,
             ),
