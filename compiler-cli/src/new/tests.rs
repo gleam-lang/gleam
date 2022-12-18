@@ -27,3 +27,37 @@ fn new() {
     assert!(toml.contains("name = \"my_project\""));
     assert!(toml.contains("description = \"Wibble wobble\""));
 }
+
+#[test]
+fn invalid_path() {
+    let tmp = tempdir::TempDir::new("gleam_new").unwrap();
+    let path = tmp.path().join("-------");
+
+    assert!(super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_str().unwrap().to_string(),
+            template: super::Template::Lib,
+            name: None,
+            description: "Wibble wobble".into(),
+        },
+        "1.0.0-gleam",
+    )
+    .is_err());
+}
+
+#[test]
+fn invalid_name() {
+    let tmp = tempdir::TempDir::new("gleam_new").unwrap();
+    let path = tmp.path().join("projec");
+
+    assert!(super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_str().unwrap().to_string(),
+            template: super::Template::Lib,
+            name: Some("-".into()),
+            description: "Wibble wobble".into(),
+        },
+        "1.0.0-gleam",
+    )
+    .is_err());
+}
