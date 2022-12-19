@@ -15,6 +15,9 @@ use std::{
     path::{Path, PathBuf},
 };
 
+#[cfg(test)]
+mod tests;
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectIO;
@@ -313,29 +316,6 @@ fn is_gleam_path(path: &Path, dir: impl AsRef<Path>) -> bool {
     )
 }
 
-#[test]
-fn is_gleam_path_test() {
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/a.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_two/a.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_two/a123.gleam"),
-        Path::new("/some-prefix/")
-    ));
-
-    assert!(is_gleam_path(
-        Path::new("/some-prefix/one_2/a123.gleam"),
-        Path::new("/some-prefix/")
-    ));
-}
-
 pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
@@ -553,8 +533,49 @@ pub fn hardlink(from: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) ->
         .map(|_| ())
 }
 
+/// Check if the given path is inside a git work tree.
+/// This is done by running `git rev-parse --is-inside-work-tree --quiet` in the
+/// given path. If git is not installed then we assume we're not in a git work
+/// tree.
+///
+pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
+    tracing::debug!(path=?path, "checking_for_git_repo");
+
+    let args: Vec<&str> = vec!["rev-parse", "--is-inside-work-tree", "--quiet"];
+
+    // Ignore all output, rely on the exit code instead.
+    // git will display a fatal error on stderr if rev-parse isn't run inside of a git work tree,
+    // so send stderr to /dev/null
+    let result = std::process::Command::new("git")
+        .args(args)
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .current_dir(path)
+        .status();
+
+    match result {
+        Ok(status) => Ok(status.success()),
+        Err(error) => match error.kind() {
+            io::ErrorKind::NotFound => Ok(false),
+
+            other => Err(Error::ShellCommand {
+                program: "git".to_string(),
+                err: Some(other),
+            }),
+        },
+    }
+}
+
+/// Run `git init` in the given path.
+/// If git is not installed then we do nothing.
 pub fn git_init(path: &Path) -> Result<(), Error> {
     tracing::debug!(path=?path, "initializing git");
+
+    if is_inside_git_work_tree(path)? {
+        tracing::debug!(path=?path, "git_repo_already_exists");
+        return Ok(());
+    }
 
     let args = vec!["init".into(), "--quiet".into(), path.display().to_string()];
 
