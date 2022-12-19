@@ -49,7 +49,7 @@ pub fn command(
             }),
             _ => run_erlang(&module, arguments),
         },
-        Target::JavaScript => match config.javascript.runtime {
+        Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno(&config, arguments),
             Runtime::Node => run_javascript_node(&config, arguments),
         },
