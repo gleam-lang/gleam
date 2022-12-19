@@ -236,13 +236,13 @@ pub struct NewOptions {
     )]
     pub template: new::Template,
 
-    /// Run `git init` in new project directory
+    /// Skip git initialization and creation of .github content
     #[clap(long)]
-    pub git_init: bool,
+    pub skip_git: bool,
 
-    /// Create .github in new project directory
+    /// Skip creation of .github content
     #[clap(long)]
-    pub github_init: bool,
+    pub skip_github: bool,
 }
 
 #[derive(Args, Debug)]

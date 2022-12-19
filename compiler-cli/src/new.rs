@@ -72,20 +72,23 @@ impl Creator {
         crate::fs::mkdir(&self.root)?;
         crate::fs::mkdir(&self.src)?;
         crate::fs::mkdir(&self.test)?;
-        if self.options.github_init {
+
+        if !self.options.skip_git && !self.options.skip_github {
             crate::fs::mkdir(&self.github)?;
             crate::fs::mkdir(&self.workflows)?;
         }
-        if self.options.git_init {
+
+        if !self.options.skip_git {
             crate::fs::git_init(&self.root)?;
         }
 
         match self.options.template {
             Template::Lib => {
-                if self.options.git_init {
+                if !self.options.skip_git {
                     self.gitignore()?;
                 }
-                if self.options.github_init {
+
+                if !self.options.skip_git && !self.options.skip_github {
                     self.github_ci()?;
                 }
                 self.readme()?;
