@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Fixed a bug where long `use` expressions could be formatted incorrectly.
+- Fixed a bug integer multiplication would overflow large integers when
+  compiling to JavaScript.
 - 4 digit integers are now always formatted without underscores.
 - Running `gleam new` will skip `git init` if the new project directory is
   already part of a git work tree.
