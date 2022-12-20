@@ -1182,10 +1182,13 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
-        arg.label
+        let comments = self.pop_comments(arg.location.start);
+        let doc = arg
+            .label
             .to_doc()
             .append(": ")
-            .append(self.wrap_expr(&arg.value))
+            .append(self.wrap_expr(&arg.value));
+        commented(doc, comments)
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {

@@ -3909,6 +3909,22 @@ fn comment_before_spread() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn comment_before_update_label() {
+    assert_format!(
+        r#"fn main() {
+  Thingy(
+    ..thingy.defaults,
+    // Def?
+    // Def!
+    one: One,
+  )
+}
+"#
+    );
+}
+
 // // https://github.com/gleam-lang/gleam/issues/1872
 // #[test]
 // fn multiple_line_custom_type_field_comments() {
