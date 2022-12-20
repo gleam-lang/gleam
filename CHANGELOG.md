@@ -5,10 +5,11 @@
 - 4 digit integers are now always formatted without underscores.
 - Running `gleam new` will skip `git init` if the new project directory is
   already part of a git work tree.
-- The `gleam new` command gains the `--skip-git` flag to skip initialization
-  of both git and .github content.
-- The `gleam new` command gains the `--skip-github` flag to skip initialization
-  of .github content.
+- The `gleam new` command gains the `--skip-git` flag to skip creation of
+  `.git/*`, `.gitignore` and `.github/*` files.
+- The `gleam new` command gains the `--skip-github` flag to skip creation of
+  `.github/*` files.
+
 
 ## v0.25.3 - 2022-12-16
 

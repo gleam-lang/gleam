@@ -236,11 +236,11 @@ pub struct NewOptions {
     )]
     pub template: new::Template,
 
-    /// Skip git initialization and creation of .github content
+    /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
     #[clap(long)]
     pub skip_git: bool,
 
-    /// Skip creation of .github content
+    /// Skip creation of .github/* files
     #[clap(long)]
     pub skip_github: bool,
 }
