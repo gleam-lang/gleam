@@ -863,18 +863,11 @@ impl<'module> Generator<'module> {
                 self.print_bin_op(left, right, "+")
             }
             BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
-            BinOp::MultInt => self.mult_int(left, right),
-            BinOp::MultFloat => self.print_bin_op(left, right, "*"),
+            BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
             BinOp::RemainderInt => self.remainder_int(left, right),
             BinOp::DivInt => self.div_int(left, right),
             BinOp::DivFloat => self.div_float(left, right),
         }
-    }
-
-    fn mult_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
-        Ok(docvec!("Math.imul", wrap_args([left, right])))
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
