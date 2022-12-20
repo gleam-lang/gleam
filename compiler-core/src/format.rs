@@ -311,7 +311,7 @@ impl<'comments> Formatter<'comments> {
 
             Constant::String { value, .. } => self.string(value),
 
-            Constant::List { elements, .. } => self.const_list(&elements),
+            Constant::List { elements, .. } => self.const_list(elements),
 
             Constant::Tuple { elements, .. } => "#"
                 .to_doc()
