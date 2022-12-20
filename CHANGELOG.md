@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Fixed a bug where long `use` expressions could be formatted incorrectly.
 - 4 digit integers are now always formatted without underscores.
 - Running `gleam new` will skip `git init` if the new project directory is
   already part of a git work tree.
