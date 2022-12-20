@@ -3925,44 +3925,76 @@ fn comment_before_update_label() {
     );
 }
 
-// // https://github.com/gleam-lang/gleam/issues/1872
-// #[test]
-// fn multiple_line_custom_type_field_comments() {
-//     assert_format!(
-//         r#"fn main() {
-//   Thingy(
-//     // Def?
-//     // Def!
-//     ..thingy.defaults,
-//     // One?
-//     // One!
-//     one: One,
-//     // Two?
-//     // Two!
-//     two: Two,
-//   )
-// }
-// "#
-//     );
-// }
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn multiple_line_custom_type_field_comments() {
+    assert_format!(
+        r#"fn main() {
+  Thingy(
+    // Def?
+    // Def!
+    ..thingy.defaults,
+    // One?
+    // One!
+    one: One,
+    // Two?
+    // Two!
+    two: Two,
+  )
+}
+"#
+    );
+}
 
-// // https://github.com/gleam-lang/gleam/issues/1872
-// #[test]
-// fn multiple_line_spread_list_comments() {
-//     assert_format!(
-//         r#"fn main() {
-//   [
-//     // First!
-//     // First?
-//     1,
-//     // Spread!
-//     // Spread?
-//     ..[2, 3]
-//   ]
-// }
-// "#
-//     );
-// }
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn multiple_line_spread_list_comments() {
+    assert_format!(
+        r#"fn main() {
+  [
+    // First!
+    // First?
+    1,
+    // Spread!
+    // Spread?
+    ..[2, 3]
+  ]
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn list_spread_comment_pattern() {
+    assert_format!(
+        r#"fn main() {
+  assert [
+    1,
+    // Spread!
+    // Spread?
+    ..rest
+  ] = x
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn list_spread_discard_comment_pattern() {
+    assert_format!(
+        r#"fn main() {
+  assert [
+    1,
+    // Spread!
+    // Spread?
+    ..
+  ] = x
+}
+"#
+    );
+}
 
 // https://github.com/gleam-lang/gleam/issues/1786
 #[test]
