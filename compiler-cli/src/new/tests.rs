@@ -23,7 +23,7 @@ fn new() {
     assert!(path.join("test/my_project_test.gleam").exists());
     assert!(path.join(".github/workflows/test.yml").exists());
 
-    let toml = crate::fs::read(&path.join("gleam.toml")).unwrap();
+    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
     assert!(toml.contains("name = \"my_project\""));
     assert!(toml.contains("description = \"Wibble wobble\""));
 }
