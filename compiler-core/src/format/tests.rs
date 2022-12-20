@@ -2,14 +2,18 @@ use super::*;
 
 use pretty_assertions::assert_eq;
 
+mod use_;
+
+#[macro_export]
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         let mut writer = String::new();
-        pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
+        $crate::format::pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
         assert_eq!($src, writer);
     };
 }
 
+#[macro_export]
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
         let mut writer = String::new();
@@ -3897,137 +3901,6 @@ fn multiple_line_documentation_comment_statement_grouping() {
 /// This is the second line of the documenation comment.
 /// This is the third line of the documenation comment.
 pub external type Map(key, value)
-"#
-    );
-}
-
-#[test]
-fn use_1() {
-    assert_format!(
-        r#"pub fn main() {
-  use <- benchmark("thingy")
-}
-"#
-    );
-}
-
-#[test]
-fn use_2() {
-    assert_format!(
-        r#"pub fn main() {
-  use user <- login()
-}
-"#
-    );
-}
-
-#[test]
-fn use_3() {
-    assert_format!(
-        r#"pub fn main() {
-  use one, two, three, four <- get_multiple_things()
-}
-"#
-    );
-}
-
-#[test]
-fn use_4() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function
-}
-"#
-    );
-}
-
-#[test]
-fn use_5() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function(a, b, c, d)
-}
-"#
-    );
-}
-
-#[test]
-fn use_6() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
-}
-"#
-    );
-}
-
-#[test]
-fn use_pipe_call() {
-    assert_format!(
-        r#"pub fn main() {
-  use <- a
-    |> b
-  c
-}
-"#
-    );
-}
-
-#[test]
-fn use_pipe_everything() {
-    assert_format!(
-        r#"pub fn main() {
-  {
-    use <- a
-  }
-  |> b
-  c
-}
 "#
     );
 }

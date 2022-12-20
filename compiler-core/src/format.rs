@@ -1443,10 +1443,12 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
-        let call = self.expr(&use_.call).nest(INDENT);
+        let call = docvec![break_("", " "), self.expr(&use_.call)]
+            .nest(INDENT)
+            .group();
 
         if use_.assignments.is_empty() {
-            docvec!["use <- ", call]
+            docvec!["use <-", call]
         } else {
             let assignments = use_
                 .assignments
@@ -1456,8 +1458,8 @@ impl<'comments> Formatter<'comments> {
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()
                 .chain(assignments);
-            let left = concat(left).nest(INDENT).append(break_("", " "));
-            docvec![left, "<- ", call].group()
+            let left = concat(left).nest(INDENT).append(break_("", " ")).group();
+            docvec![left, "<-", call].group()
         }
     }
 }
