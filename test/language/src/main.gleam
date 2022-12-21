@@ -117,7 +117,7 @@ fn float_tests() -> List(Test) {
     basic_addition(0.0, 0.0e-0, 0.0),
     basic_addition(1.0e3, 1.0, 1001.0),
     basic_addition(5.0, 1.0e3, 1005.0),
-    basic_addition(1.0e5, -3.0e5, -200000.0),
+    basic_addition(1.0e5, -3.0e5, -200_000.0),
     basic_addition(1.0e50, -1.0e50, 0.0),
     basic_addition(1.0e-3, 1.0, 1.001),
     basic_addition(5.0, 1.0e-3, 5.001),
