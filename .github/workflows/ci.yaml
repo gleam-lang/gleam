@@ -154,8 +154,19 @@ jobs:
           ls build/dev/docs/lib_project/js/highlightjs-erlang.min.js
           ls build/dev/docs/lib_project/js/highlightjs-elixir.min.js
           ls build/dev/docs/lib_project/js/highlightjs-javascript.min.js
+          ls build/dev/docs/lib_project/js/highlightjs-typescript.min.js
           ls build/dev/docs/lib_project/js/lunr.min.js
           ls build/dev/docs/lib_project/js/index.js
+          ls build/dev/docs/lib_project/fonts/karla-v23-bold-latin-ext.woff2
+          ls build/dev/docs/lib_project/fonts/karla-v23-bold-latin.woff2
+          ls build/dev/docs/lib_project/fonts/karla-v23-regular-latin-ext.woff2
+          ls build/dev/docs/lib_project/fonts/karla-v23-regular-latin.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-cyrillic-ext.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-cyrillic.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-greek-ext.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-greek.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-latin-ext.woff2
+          ls build/dev/docs/lib_project/fonts/ubuntu-mono-v15-regular-latin.woff2
         if: ${{ matrix.run-integration-tests }}
 
   test-wasm:
