@@ -311,15 +311,7 @@ impl<'comments> Formatter<'comments> {
 
             Constant::String { value, .. } => self.string(value),
 
-            Constant::List { elements, .. } => {
-                let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
-                    || flex_break(",", ", ")
-                } else {
-                    || break_(",", ", ")
-                };
-                let elements_document = join(elements.iter().map(|e| self.const_expr(e)), comma());
-                list(elements_document, elements.len(), None)
-            }
+            Constant::List { elements, .. } => self.const_list(elements),
 
             Constant::Tuple { elements, .. } => "#"
                 .to_doc()
@@ -379,6 +371,26 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => docvec![module, ".", name],
         }
+    }
+
+    fn const_list<'a, A, B>(&mut self, elements: &'a [Constant<A, B>]) -> Document<'a> {
+        if elements.is_empty() {
+            return "[]".to_doc();
+        }
+
+        let comma: fn() -> Document<'a> = if elements.iter().all(Constant::is_simple) {
+            || flex_break(",", ", ")
+        } else {
+            || break_(",", ", ")
+        };
+        docvec![
+            break_("[", "["),
+            join(elements.iter().map(|e| self.const_expr(e)), comma())
+        ]
+        .nest(INDENT)
+        .append(break_(",", ""))
+        .append("]")
+        .group()
     }
 
     pub fn docs_const_expr<'a>(
@@ -902,7 +914,8 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         use std::iter::once;
         let constructor_doc = self.expr(constructor);
-        let spread_doc = "..".to_doc().append(self.expr(&spread.base));
+        let comments = self.pop_comments(spread.base.location().start);
+        let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
         let arg_docs = args.iter().map(|a| self.record_update_arg(a));
         let all_arg_docs = once(spread_doc).chain(arg_docs);
         constructor_doc.append(wrap_args(all_arg_docs)).group()
@@ -1181,10 +1194,13 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
-        arg.label
+        let comments = self.pop_comments(arg.location.start);
+        let doc = arg
+            .label
             .to_doc()
             .append(": ")
-            .append(self.wrap_expr(&arg.value))
+            .append(self.wrap_expr(&arg.value));
+        commented(doc, comments)
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
@@ -1274,15 +1290,36 @@ impl<'comments> Formatter<'comments> {
         elements: &'a [UntypedExpr],
         tail: Option<&'a UntypedExpr>,
     ) -> Document<'a> {
-        let comma: fn() -> Document<'a> =
-            if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
-                || flex_break(",", ", ")
-            } else {
-                || break_(",", ", ")
+        if elements.is_empty() {
+            return match tail {
+                Some(tail) => self.expr(tail),
+                None => "[]".to_doc(),
             };
-        let elements_document = join(elements.iter().map(|e| self.wrap_expr(e)), comma());
-        let tail = tail.map(|e| self.expr(e));
-        list(elements_document, elements.len(), tail)
+        }
+
+        let comma = if tail.is_none() && elements.iter().all(UntypedExpr::is_simple_constant) {
+            flex_break(",", ", ")
+        } else {
+            break_(",", ", ")
+        };
+        let elements = join(elements.iter().map(|e| self.wrap_expr(e)), comma);
+
+        let doc = break_("[", "[").append(elements);
+
+        match tail {
+            None => doc.nest(INDENT).append(break_(",", "")),
+
+            Some(tail) => {
+                let comments = self.pop_comments(tail.location().start);
+                let tail = commented(docvec!["..", self.expr(tail)], comments);
+                doc.append(break_(",", ", "))
+                    .append(tail)
+                    .nest(INDENT)
+                    .append(break_("", ""))
+            }
+        }
+        .append("]")
+        .group()
     }
 
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
@@ -1304,18 +1341,7 @@ impl<'comments> Formatter<'comments> {
 
             Pattern::Discard { name, .. } => name.to_doc(),
 
-            Pattern::List { elements, tail, .. } => {
-                let elements_document =
-                    join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
-                let tail = tail.as_ref().map(|e| {
-                    if e.is_discard() {
-                        nil()
-                    } else {
-                        self.pattern(e)
-                    }
-                });
-                list(elements_document, elements.len(), tail)
-            }
+            Pattern::List { elements, tail, .. } => self.list_pattern(elements, tail),
 
             Pattern::Constructor {
                 name,
@@ -1350,6 +1376,40 @@ impl<'comments> Formatter<'comments> {
             }
         };
         commented(doc, comments)
+    }
+
+    fn list_pattern<'a>(
+        &mut self,
+        elements: &'a [Pattern<(), ()>],
+        tail: &'a Option<Box<Pattern<(), ()>>>,
+    ) -> Document<'a> {
+        if elements.is_empty() {
+            return match tail {
+                Some(tail) => self.pattern(tail),
+                None => "[]".to_doc(),
+            };
+        }
+        let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
+        let doc = break_("[", "[").append(elements);
+        match tail {
+            None => doc.nest(INDENT).append(break_(",", "")),
+
+            Some(tail) => {
+                let comments = self.pop_comments(tail.location().start);
+                let tail = if tail.is_discard() {
+                    "..".to_doc()
+                } else {
+                    docvec!["..", self.pattern(tail)]
+                };
+                let tail = commented(tail, comments);
+                doc.append(break_(",", ", "))
+                    .append(tail)
+                    .nest(INDENT)
+                    .append(break_("", ""))
+            }
+        }
+        .append("]")
+        .group()
     }
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
@@ -1443,10 +1503,12 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
-        let call = self.expr(&use_.call).nest(INDENT);
+        let call = docvec![break_("", " "), self.expr(&use_.call)]
+            .nest(INDENT)
+            .group();
 
         if use_.assignments.is_empty() {
-            docvec!["use <- ", call]
+            docvec!["use <-", call]
         } else {
             let assignments = use_
                 .assignments
@@ -1456,8 +1518,8 @@ impl<'comments> Formatter<'comments> {
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()
                 .chain(assignments);
-            let left = concat(left).nest(INDENT).append(break_("", " "));
-            docvec![left, "<- ", call].group()
+            let left = concat(left).nest(INDENT).append(break_("", " ")).group();
+            docvec![left, "<-", call].group()
         }
     }
 }
@@ -1576,37 +1638,6 @@ fn bit_string<'a>(
         .append(break_(",", ""))
         .append(">>")
         .group()
-}
-
-fn list<'a>(elements: Document<'a>, length: usize, tail: Option<Document<'a>>) -> Document<'a> {
-    if length == 0 {
-        return match tail {
-            Some(tail) => tail,
-            None => "[]".to_doc(),
-        };
-    }
-
-    let doc = break_("[", "[").append(elements);
-
-    match tail {
-        None => doc.nest(INDENT).append(break_(",", "")),
-
-        // Don't print tail if it is a discard
-        Some(Document::String(t)) if t == *"_" => doc
-            .append(break_(",", ", "))
-            .append("..")
-            .nest(INDENT)
-            .append(break_("", "")),
-
-        Some(final_tail) => doc
-            .append(break_(",", ", "))
-            .append("..")
-            .append(final_tail)
-            .nest(INDENT)
-            .append(break_("", "")),
-    }
-    .append("]")
-    .group()
 }
 
 fn printed_comments<'a, 'comments>(

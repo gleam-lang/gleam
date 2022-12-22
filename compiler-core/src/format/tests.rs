@@ -2,14 +2,19 @@ use super::*;
 
 use pretty_assertions::assert_eq;
 
+mod record_update;
+mod use_;
+
+#[macro_export]
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         let mut writer = String::new();
-        pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
+        $crate::format::pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
         assert_eq!($src, writer);
     };
 }
 
+#[macro_export]
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
         let mut writer = String::new();
@@ -2991,40 +2996,6 @@ pub const float = 3.14
 }
 
 #[test]
-fn record_update() {
-    assert_format!(
-        "pub type Counter {
-  Counter(a: Int, b: Int)
-}
-
-fn main() {
-  let c = Counter(0, 0)
-  let c = Counter(..c, a: c.a + 1, b: c.a + c.b)
-  c
-}
-"
-    );
-
-    // Long record updates are split onto multiple lines
-    assert_format!(
-        "pub type Counter {
-  Counter(loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: Int)
-}
-
-fn main() {
-  let c = Counter(0)
-  let c =
-    Counter(
-      ..c,
-      loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong: 1,
-    )
-  c
-}
-"
-    );
-}
-
-#[test]
 fn concise_wrapping_of_simple_lists() {
     assert_format!(
         "pub fn main() {
@@ -3889,6 +3860,56 @@ fn multiple_line_custom_type_constructor_field_doc_comments() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn multiple_line_spread_list_comments() {
+    assert_format!(
+        r#"fn main() {
+  [
+    // First!
+    // First?
+    1,
+    // Spread!
+    // Spread?
+    ..[2, 3]
+  ]
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn list_spread_comment_pattern() {
+    assert_format!(
+        r#"fn main() {
+  assert [
+    1,
+    // Spread!
+    // Spread?
+    ..rest
+  ] = x
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1872
+#[test]
+fn list_spread_discard_comment_pattern() {
+    assert_format!(
+        r#"fn main() {
+  assert [
+    1,
+    // Spread!
+    // Spread?
+    ..
+  ] = x
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1786
 #[test]
 fn multiple_line_documentation_comment_statement_grouping() {
@@ -3897,137 +3918,6 @@ fn multiple_line_documentation_comment_statement_grouping() {
 /// This is the second line of the documenation comment.
 /// This is the third line of the documenation comment.
 pub external type Map(key, value)
-"#
-    );
-}
-
-#[test]
-fn use_1() {
-    assert_format!(
-        r#"pub fn main() {
-  use <- benchmark("thingy")
-}
-"#
-    );
-}
-
-#[test]
-fn use_2() {
-    assert_format!(
-        r#"pub fn main() {
-  use user <- login()
-}
-"#
-    );
-}
-
-#[test]
-fn use_3() {
-    assert_format!(
-        r#"pub fn main() {
-  use one, two, three, four <- get_multiple_things()
-}
-"#
-    );
-}
-
-#[test]
-fn use_4() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function
-}
-"#
-    );
-}
-
-#[test]
-fn use_5() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function(a, b, c, d)
-}
-"#
-    );
-}
-
-#[test]
-fn use_6() {
-    assert_format!(
-        r#"pub fn main() {
-  use
-    one,
-    two,
-    three,
-    four,
-    five,
-    six,
-    seven,
-    eight,
-    nine,
-    ten,
-    eleven
-  <- get_multiple_things_with_a_longer_function(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
-}
-"#
-    );
-}
-
-#[test]
-fn use_pipe_call() {
-    assert_format!(
-        r#"pub fn main() {
-  use <- a
-    |> b
-  c
-}
-"#
-    );
-}
-
-#[test]
-fn use_pipe_everything() {
-    assert_format!(
-        r#"pub fn main() {
-  {
-    use <- a
-  }
-  |> b
-  c
-}
 "#
     );
 }

@@ -235,6 +235,14 @@ pub struct NewOptions {
         default_value = "lib"
     )]
     pub template: new::Template,
+
+    /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
+    #[clap(long)]
+    pub skip_git: bool,
+
+    /// Skip creation of .github/* files
+    #[clap(long)]
+    pub skip_github: bool,
 }
 
 #[derive(Args, Debug)]
