@@ -28,15 +28,6 @@ impl InMemoryFileSystem {
 impl FileSystemIO for InMemoryFileSystem {}
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        let mut files = (*self.files).borrow_mut();
-        let writer = files.entry(path.to_path_buf()).or_default();
-        Ok(WrappedWriter {
-            path: path.to_path_buf(),
-            inner: DebugIgnore(Box::new(writer.clone())),
-        })
-    }
-
     fn delete(&self, path: &Path) -> Result<(), Error> {
         let mut files = (*self.files).borrow_mut();
         let _ = files.remove(path);
@@ -64,6 +55,14 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn delete_file(&self, _: &Path) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
+    fn write(&self, _path: &Path, _content: &str) -> Result<(), Error> {
+        panic!("unimplemented") // TODO
+    }
+
+    fn write_bytes(&self, _path: &Path, _content: &[u8]) -> Result<(), Error> {
         panic!("unimplemented") // TODO
     }
 }

@@ -10,7 +10,7 @@ use gleam_core::{
     config::PackageConfig,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
-    io::{HttpClient as _, TarUnpacker, Utf8Writer, WrappedReader},
+    io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths, Error, Result,
 };
@@ -231,10 +231,7 @@ fn read_manifest_from_disc() -> Result<Manifest> {
 
 fn write_manifest_to_disc(manifest: &Manifest) -> Result<()> {
     let path = paths::manifest();
-    let mut file = fs::writer(&path)?;
-    let result = manifest.write_to(&mut file);
-    result.map_err(|e| file.convert_err(e))?;
-    Ok(())
+    fs::write(&path, &manifest.to_toml())
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]

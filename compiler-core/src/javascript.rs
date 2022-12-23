@@ -7,7 +7,7 @@ mod typescript;
 
 use std::path::Path;
 
-use crate::{ast::*, docvec, io::Utf8Writer, line_numbers::LineNumbers, pretty::*};
+use crate::{ast::*, docvec, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
 
 use self::import::{Imports, Member};
@@ -501,32 +501,30 @@ pub fn module(
     line_numbers: &LineNumbers,
     path: &Path,
     src: &str,
-    writer: &mut impl Utf8Writer,
-) -> Result<(), crate::Error> {
-    Generator::new(line_numbers, module)
+) -> Result<String, crate::Error> {
+    let document = Generator::new(line_numbers, module)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
             src: src.to_string(),
             error,
-        })?
-        .pretty_print(80, writer)
+        })?;
+    Ok(document.to_pretty_string(80))
 }
 
 pub fn ts_declaration(
     module: &TypedModule,
     path: &Path,
     src: &str,
-    writer: &mut impl Utf8Writer,
-) -> Result<(), crate::Error> {
-    typescript::TypeScriptGenerator::new(module)
+) -> Result<String, crate::Error> {
+    let document = typescript::TypeScriptGenerator::new(module)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
             src: src.to_string(),
             error,
-        })?
-        .pretty_print(80, writer)
+        })?;
+    Ok(document.to_pretty_string(80))
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

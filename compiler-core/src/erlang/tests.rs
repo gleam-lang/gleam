@@ -51,9 +51,8 @@ macro_rules! assert_erl {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, &mut output).unwrap();
+        let output = module(&ast, &line_numbers).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -84,9 +83,8 @@ macro_rules! assert_erl {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, &mut output).unwrap();
+        let output = module(&ast, &line_numbers).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }

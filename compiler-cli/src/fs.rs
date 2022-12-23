@@ -2,7 +2,7 @@ use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
         CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputContent, OutputFile,
-        ReadDir, Stdio, WrappedReader, WrappedWriter,
+        ReadDir, Stdio, WrappedReader,
     },
     Result,
 };
@@ -94,10 +94,6 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
 }
 
 impl FileSystemWriter for ProjectIO {
-    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        writer(path)
-    }
-
     fn delete(&self, path: &Path) -> Result<()> {
         delete_dir(path)
     }
@@ -124,6 +120,14 @@ impl FileSystemWriter for ProjectIO {
 
     fn delete_file(&self, path: &Path) -> Result<()> {
         delete_file(path)
+    }
+
+    fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
+        write(path, content)
+    }
+
+    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
+        write_bytes(path, content)
     }
 }
 
@@ -238,30 +242,6 @@ pub fn make_executable(path: impl AsRef<Path>) -> Result<(), Error> {
 #[cfg(not(target_family = "unix"))]
 pub fn make_executable(_path: impl AsRef<Path>) -> Result<(), Error> {
     Ok(())
-}
-
-pub fn writer(path: &Path) -> Result<WrappedWriter, Error> {
-    tracing::debug!(path = ?path, "opening_file_writer");
-    let dir_path = path.parent().ok_or_else(|| Error::FileIo {
-        action: FileIoAction::FindParent,
-        kind: FileKind::Directory,
-        path: path.to_path_buf(),
-        err: None,
-    })?;
-    std::fs::create_dir_all(dir_path).map_err(|e| Error::FileIo {
-        action: FileIoAction::Create,
-        kind: FileKind::Directory,
-        path: dir_path.to_path_buf(),
-        err: Some(e.to_string()),
-    })?;
-    let file = File::create(path).map_err(|e| Error::FileIo {
-        action: FileIoAction::Create,
-        kind: FileKind::File,
-        path: path.to_path_buf(),
-        err: Some(e.to_string()),
-    })?;
-    let buffered_writer = io::BufWriter::new(file);
-    Ok(WrappedWriter::new(path, Box::new(buffered_writer)))
 }
 
 pub fn write_bytes(path: &Path, bytes: &[u8]) -> Result<(), Error> {
