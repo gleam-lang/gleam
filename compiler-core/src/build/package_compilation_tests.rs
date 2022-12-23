@@ -186,30 +186,6 @@ fn package_compiler_test() {
     // );
 
     assert_erlang_compile!(
-        vec![Source {
-            origin: Origin::Src,
-            path: PathBuf::from("/src/one/two.gleam"),
-            name: "one/two".to_string(),
-            code: "pub type Box { Box }".to_string(),
-        }],
-        Ok(vec![OutputFile {
-            path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one@two.erl"),
-            content: Content::Text(
-                "-module(one@two).
--compile(no_auto_import).
-
--export_type([box/0]).
-
--type box() :: box.
-
-
-"
-                .to_string()
-            ),
-        }]),
-    );
-
-    assert_erlang_compile!(
         vec![
             Source {
                 origin: Origin::Src,
@@ -2109,48 +2085,6 @@ const x = new $two.A();
                 path: PathBuf::from("_build/default/lib/the_package/two.d.ts"),
                 content: Content::Text("import * as two from \"./one/two.d.ts\";\n".to_string()),
             },
-        ]),
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/1495
-#[test]
-fn import_error() {
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "pub type Error { MyError }".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: r#"import one.{Error}"#.to_string(),
-            },
-        ],
-        Ok(vec![
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                content: Content::Text(
-                    "-module(one).
--compile(no_auto_import).
-
--export_type([error/0]).
-
--type error() :: my_error.
-
-
-"
-                    .to_string()
-                ),
-            },
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                content: Content::Text("-module(two).\n".to_string()),
-            }
         ]),
     );
 }
