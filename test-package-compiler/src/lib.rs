@@ -1,5 +1,8 @@
 // TODO: move TestCompileOutput to a test helper crate
 
+#[cfg(test)]
+mod generated_tests;
+
 use gleam_core::{
     build::{
         package_compiler::Source, ErlangAppCodegenConfiguration, Target, TargetCodegenConfiguration,
@@ -46,7 +49,7 @@ pub fn prepare(path: &str) -> String {
             }),
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
-            emit_typescript_definitions: false,
+            emit_typescript_definitions: true,
         },
     };
 
@@ -111,9 +114,4 @@ impl TestCompileOutput {
 
         buffer
     }
-}
-
-#[cfg(test)]
-mod tests {
-    include!(concat!(env!("OUT_DIR"), "/tests.rs"));
 }
