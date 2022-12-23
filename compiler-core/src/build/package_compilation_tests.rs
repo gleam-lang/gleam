@@ -13,7 +13,7 @@ use crate::{
     type_::{self, FieldAccessUsage},
     Result,
 };
-use std::{collections::HashSet, path::PathBuf, sync::Arc};
+use std::{collections::HashSet, fmt::Write, path::PathBuf, sync::Arc};
 
 use hexpm::version::{Range, Version};
 use pretty_assertions::assert_eq;
@@ -74,6 +74,32 @@ macro_rules! assert_no_warnings {
 struct TestCompileOutput {
     files: HashMap<PathBuf, Content>,
     warnings: Vec<crate::Warning>,
+}
+
+impl TestCompileOutput {
+    pub fn as_overview_text(&self) -> String {
+        let mut buffer = String::new();
+        for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(&b.0)) {
+            buffer.push_str("//// ");
+            buffer.push_str(path.to_str().unwrap());
+            buffer.push('\n');
+
+            match content {
+                Content::Text(text) => buffer.push_str(&text),
+                Content::Binary(data) => write!(buffer, "{:#?}", data).unwrap(),
+            };
+            buffer.push('\n');
+            buffer.push('\n');
+        }
+
+        for warning in self.warnings.iter() {
+            write!(buffer, "{:#?}", warning).unwrap();
+            buffer.push('\n');
+            buffer.push('\n');
+        }
+
+        buffer
+    }
 }
 
 fn compile_test_project(
