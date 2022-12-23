@@ -8,7 +8,6 @@ use crate::{
     codegen,
     config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
     erlang,
-    io::test::FilesChannel,
     io::Content,
     javascript,
     type_::{self, FieldAccessUsage},
