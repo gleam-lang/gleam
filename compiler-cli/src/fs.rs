@@ -202,8 +202,8 @@ pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Er
     for file in outputs {
         let path = base.join(&file.path);
         match &file.content {
-            OutputContent::Binary(buffer) => write_bytes(&path, &buffer),
-            OutputContent::Text(buffer) => write(&path, &buffer),
+            OutputContent::Binary(buffer) => write_bytes(&path, buffer),
+            OutputContent::Text(buffer) => write(&path, buffer),
         }?;
     }
     Ok(())
