@@ -24,6 +24,7 @@ macro_rules! assert_erlang_compile {
         let outputs = compile_test_project(
             $sources,
             &TargetCodegenConfiguration::Erlang { app_file: None },
+            None,
         );
         let expected: Result<Vec<OutputFile>, Error> = $expected_output;
         let expected = expected.map(|out| {
@@ -42,6 +43,7 @@ macro_rules! assert_javascript_compile {
             &TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions: true,
             },
+            None,
         );
         let expected: Result<Vec<OutputFile>, Error> = $expected_output;
         let expected = expected.map(|out| {
@@ -62,6 +64,7 @@ macro_rules! assert_no_warnings {
                     include_dev_deps: true,
                 }),
             },
+            None,
         )
         .unwrap();
         assert_eq!(vec![] as Vec<crate::Warning>, outputs.warnings);
@@ -77,11 +80,12 @@ struct TestCompileOutput {
 fn compile_test_project(
     sources: Vec<Source>,
     target: &TargetCodegenConfiguration,
+    config: Option<PackageConfig>,
 ) -> Result<TestCompileOutput> {
     let ids = crate::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let mut warnings = Vec::new();
-    let config = PackageConfig {
+    let config = config.unwrap_or_else(|| PackageConfig {
         name: "the_package".to_string(),
         version: Version::new(1, 0, 0),
         licences: vec![],
@@ -99,7 +103,7 @@ fn compile_test_project(
             typescript_declarations: false,
         },
         target: Target::Erlang,
-    };
+    });
     let filesystem = crate::io::memory::InMemoryFileSystem::new();
     let root = PathBuf::from("some/build/path/root");
     let out = PathBuf::from("_build/default/lib/the_package");
@@ -1946,39 +1950,22 @@ pub external fn use_type(Port) -> Nil =
 fn config_compilation_test() {
     macro_rules! assert_config_compile {
         ($config:expr, $sources:expr, $expected_output:expr $(,)?) => {
-            let ids = crate::uid::UniqueIdGenerator::new();
-            let config = $config;
-            let mut modules = im::HashMap::new();
-            let (file_writer, file_receiver) = FilesChannel::new();
-            let root = PathBuf::from("some/build/path/root");
-            let out = PathBuf::from("_build/default/lib/the_package");
-            let lib = PathBuf::from("_build/default/lib");
-            let mut build_journal = HashSet::new();
-            let mut compiler = PackageCompiler::new(
-                &config,
-                &root,
-                &out,
-                &lib,
+            let outputs = compile_test_project(
+                $sources,
                 &TargetCodegenConfiguration::Erlang {
                     app_file: Some(ErlangAppCodegenConfiguration {
                         include_dev_deps: true,
                     }),
                 },
-                ids,
-                file_writer,
-                Some(&mut build_journal),
-            );
-            compiler.write_entrypoint = false;
-            compiler.write_metadata = false;
-            compiler.compile_beam_bytecode = false;
-            compiler.copy_native_files = false;
-            compiler.sources = $sources;
-            let compiled = compiler
-                .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
-                .expect("Should compile OK");
-            let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
-            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-            assert_eq!($expected_output, outputs);
+                Some($config),
+            )
+            .unwrap();
+            let expected: Vec<OutputFile> = $expected_output;
+            let expected = expected
+                .into_iter()
+                .map(|output| (output.path, output.content))
+                .collect::<HashMap<_, _>>();
+            assert_eq!(expected, outputs.files);
         };
     };
 
