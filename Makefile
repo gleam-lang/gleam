@@ -41,7 +41,7 @@ javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when fil
 
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
-	watchexec --changes-only -e rs,gleam,html,capnp "cargo test --quiet"
+	watchexec --changes-only -e rs,toml,gleam,html,capnp "cargo test --quiet"
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
