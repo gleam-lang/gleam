@@ -12,6 +12,7 @@ use crate::{
     io::Content,
     javascript,
     type_::{self, FieldAccessUsage},
+    Result,
 };
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
 
@@ -20,175 +21,110 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_erlang_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
-        let ids = $crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        let config = PackageConfig {
-            name: "the_package".to_string(),
-            version: Version::new(1, 0, 0),
-            licences: vec![],
-            description: "The description".into(),
-            documentation: Docs { pages: vec![] },
-            dependencies: [].into(),
-            dev_dependencies: [].into(),
-            repository: Repository::None,
-            links: vec![],
-            erlang: ErlangConfig {
-                application_start_module: None,
-                extra_applications: vec![],
-            },
-            javascript: JavaScriptConfig {
-                typescript_declarations: false,
-            },
-            target: Target::Erlang,
-        };
-        let filesystem = $crate::io::memory::InMemoryFileSystem::new();
-        let root = PathBuf::from("some/build/path/root");
-        let out = PathBuf::from("_build/default/lib/the_package");
-        let lib = PathBuf::from("_build/default/lib");
-        let mut build_journal = HashSet::new();
-        let mut compiler = PackageCompiler::new(
-            &config,
-            &root,
-            &out,
-            &lib,
+        let outputs = compile_test_project(
+            $sources,
             &TargetCodegenConfiguration::Erlang { app_file: None },
-            ids,
-            filesystem.clone(),
-            Some(&mut build_journal),
         );
-        compiler.write_entrypoint = false;
-        compiler.write_metadata = false;
-        compiler.compile_beam_bytecode = false;
-        compiler.copy_native_files = false;
-        compiler.sources = $sources;
-        let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
-            .map(|_| filesystem.into_contents())
-            .map_err(|e| normalise_error(e));
         let expected: Result<Vec<OutputFile>, Error> = $expected_output;
         let expected = expected.map(|out| {
             out.into_iter()
                 .map(|output| (output.path, output.content))
                 .collect::<HashMap<_, _>>()
         });
-        assert_eq!(expected, outputs);
+        assert_eq!(expected, outputs.map(|o| o.files));
     };
 }
 
 macro_rules! assert_javascript_compile {
     ($sources:expr, $expected_output:expr  $(,)?) => {
-        let ids = crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        let config = PackageConfig {
-            name: "the_package".to_string(),
-            version: Version::new(1, 0, 0),
-            licences: vec![],
-            description: "The description".into(),
-            documentation: Docs { pages: vec![] },
-            dependencies: [].into(),
-            dev_dependencies: [].into(),
-            repository: Repository::None,
-            links: vec![],
-            erlang: ErlangConfig {
-                application_start_module: None,
-                extra_applications: vec![],
-            },
-            javascript: JavaScriptConfig {
-                typescript_declarations: true,
-            },
-            target: Target::JavaScript,
-        };
-        let (file_writer, file_receiver) = FilesChannel::new();
-        let root = PathBuf::from("some/build/path/root");
-        let out = PathBuf::from("_build/default/lib/the_package");
-        let lib = PathBuf::from("_build/default/lib");
-        let mut build_journal = HashSet::new();
-        let mut compiler = PackageCompiler::new(
-            &config,
-            &root,
-            &out,
-            &lib,
+        let outputs = compile_test_project(
+            $sources,
             &TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions: true,
             },
-            ids,
-            file_writer,
-            Some(&mut build_journal),
         );
-        compiler.write_entrypoint = false;
-        compiler.write_metadata = false;
-        compiler.compile_beam_bytecode = false;
-        compiler.copy_native_files = false;
-        compiler.sources = $sources;
-        let outputs = compiler
-            .compile(&mut vec![], &mut modules, &mut im::HashMap::new())
-            .map(|_| {
-                let mut outputs = FilesChannel::recv_utf8_files(&file_receiver).unwrap();
-                outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-                outputs
-            })
-            .map_err(|e| normalise_error(e));
-        let expected = $expected_output.map(|mut outputs: Vec<OutputFile>| {
-            outputs.sort_by(|a, b| a.path.partial_cmp(&b.path).unwrap());
-            outputs
+        let expected: Result<Vec<OutputFile>, Error> = $expected_output;
+        let expected = expected.map(|out| {
+            out.into_iter()
+                .map(|output| (output.path, output.content))
+                .collect::<HashMap<_, _>>()
         });
-        assert_eq!(expected, outputs);
+        assert_eq!(expected, outputs.map(|o| o.files));
     };
 }
 
 macro_rules! assert_no_warnings {
     ($sources:expr $(,)?) => {
-        let ids = crate::uid::UniqueIdGenerator::new();
-        let mut modules = im::HashMap::new();
-        let config = PackageConfig {
-            name: "the_package".to_string(),
-            version: Version::new(1, 0, 0),
-            licences: vec![],
-            description: "The description".into(),
-            documentation: Docs { pages: vec![] },
-            dependencies: [].into(),
-            dev_dependencies: [].into(),
-            repository: Repository::None,
-            links: vec![],
-            erlang: ErlangConfig {
-                application_start_module: None,
-                extra_applications: vec![],
-            },
-            javascript: JavaScriptConfig {
-                typescript_declarations: false,
-            },
-            target: Target::Erlang,
-        };
-        let mut warnings = vec![];
-        let (file_writer, file_receiver) = FilesChannel::new();
-        let root = PathBuf::from("some/build/path/root");
-        let out = PathBuf::from("_build/default/lib/the_package");
-        let lib = PathBuf::from("_build/default/lib");
-        let mut build_journal = HashSet::new();
-        let mut compiler = PackageCompiler::new(
-            &config,
-            &root,
-            &out,
-            &lib,
+        let outputs = compile_test_project(
+            $sources,
             &TargetCodegenConfiguration::Erlang {
                 app_file: Some(ErlangAppCodegenConfiguration {
                     include_dev_deps: true,
                 }),
             },
-            ids,
-            file_writer,
-            Some(&mut build_journal),
-        );
-        compiler.write_entrypoint = false;
-        compiler.write_metadata = false;
-        compiler.compile_beam_bytecode = false;
-        compiler.copy_native_files = false;
-        compiler.sources = $sources;
-        let outputs = compiler
-            .compile(&mut warnings, &mut modules, &mut im::HashMap::new())
-            .unwrap();
-        assert_eq!(vec![] as Vec<crate::Warning>, warnings);
+        )
+        .unwrap();
+        assert_eq!(vec![] as Vec<crate::Warning>, outputs.warnings);
     };
+}
+
+#[derive(Debug)]
+struct TestCompileOutput {
+    files: HashMap<PathBuf, Content>,
+    warnings: Vec<crate::Warning>,
+}
+
+fn compile_test_project(
+    sources: Vec<Source>,
+    target: &TargetCodegenConfiguration,
+) -> Result<TestCompileOutput> {
+    let ids = crate::uid::UniqueIdGenerator::new();
+    let mut modules = im::HashMap::new();
+    let mut warnings = Vec::new();
+    let config = PackageConfig {
+        name: "the_package".to_string(),
+        version: Version::new(1, 0, 0),
+        licences: vec![],
+        description: "The description".into(),
+        documentation: Docs { pages: vec![] },
+        dependencies: [].into(),
+        dev_dependencies: [].into(),
+        repository: Repository::None,
+        links: vec![],
+        erlang: ErlangConfig {
+            application_start_module: None,
+            extra_applications: vec![],
+        },
+        javascript: JavaScriptConfig {
+            typescript_declarations: false,
+        },
+        target: Target::Erlang,
+    };
+    let filesystem = crate::io::memory::InMemoryFileSystem::new();
+    let root = PathBuf::from("some/build/path/root");
+    let out = PathBuf::from("_build/default/lib/the_package");
+    let lib = PathBuf::from("_build/default/lib");
+    let mut build_journal = HashSet::new();
+    let mut compiler = PackageCompiler::new(
+        &config,
+        &root,
+        &out,
+        &lib,
+        target,
+        ids,
+        filesystem.clone(),
+        Some(&mut build_journal),
+    );
+    compiler.write_entrypoint = false;
+    compiler.write_metadata = false;
+    compiler.compile_beam_bytecode = false;
+    compiler.copy_native_files = false;
+    compiler.sources = sources;
+    let files = compiler
+        .compile(&mut warnings, &mut modules, &mut im::HashMap::new())
+        .map(|_| filesystem.into_contents())
+        .map_err(|e| normalise_error(e))?;
+    Ok(TestCompileOutput { files, warnings })
 }
 
 #[test]
