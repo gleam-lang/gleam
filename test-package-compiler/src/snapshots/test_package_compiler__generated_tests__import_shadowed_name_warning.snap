@@ -1,0 +1,42 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 41
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export_type([port_/0]).
+
+-type port_() :: any().
+
+
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export([use_type/1]).
+-export_type([shadowing/0]).
+
+-type shadowing() :: port.
+
+-spec use_type(one:port_()) -> nil.
+use_type(Field@0) ->
+    wibble:wobble(Field@0).
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+

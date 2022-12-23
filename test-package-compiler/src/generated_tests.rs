@@ -35,6 +35,17 @@ fn erlang_nested_qualified_constant() {
 }
 
 #[test]
+fn import_shadowed_name_warning() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning");
+    insta::assert_snapshot!(
+        "import_shadowed_name_warning",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning"
+    );
+}
+
+#[test]
 fn javascript_d_ts() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_d_ts");
@@ -42,6 +53,17 @@ fn javascript_d_ts() {
         "javascript_d_ts",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_d_ts"
+    );
+}
+
+#[test]
+fn erlang_bug_752() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752");
+    insta::assert_snapshot!(
+        "erlang_bug_752",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752"
     );
 }
 

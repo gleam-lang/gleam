@@ -1,0 +1,43 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 63
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export_type([one/1]).
+
+-type one(I) :: {one, I}.
+
+
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export_type([two/1]).
+
+-type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
+
+
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+//// /out/lib/the_package/include/two_Two.hrl
+-record(two, {thing :: one:one(integer())}).
+
+
+
