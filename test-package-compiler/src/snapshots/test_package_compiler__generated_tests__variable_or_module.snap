@@ -1,0 +1,50 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 129
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/variable_or_module
+---
+//// /out/lib/the_package/_gleam_artefacts/main.erl
+-module(main).
+-compile(no_auto_import).
+
+-export([module_function/1, record_field/1]).
+
+-spec module_function(power:power()) -> integer().
+module_function(Power) ->
+    power:to_int(Power).
+
+-spec record_field(power:power()) -> integer().
+record_field(Power) ->
+    erlang:element(2, Power).
+
+
+//// /out/lib/the_package/_gleam_artefacts/power.erl
+-module(power).
+-compile(no_auto_import).
+
+-export([to_int/1]).
+-export_type([power/0]).
+
+-type power() :: {power, integer()}.
+
+-spec to_int(power()) -> integer().
+to_int(P) ->
+    erlang:element(2, P) * 9000.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [main,
+               power]},
+    {registered, []}
+]}.
+
+
+//// /out/lib/the_package/include/power_Power.hrl
+-record(power, {value :: integer()}).
+
+
+

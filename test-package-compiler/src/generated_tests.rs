@@ -123,6 +123,17 @@ fn javascript_import() {
 }
 
 #[test]
+fn variable_or_module() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/variable_or_module");
+    insta::assert_snapshot!(
+        "variable_or_module",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/variable_or_module"
+    );
+}
+
+#[test]
 fn erlang_import_shadowing_prelude() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude");
