@@ -38,6 +38,7 @@ pub struct PackageCompiler<'a, IO> {
     pub root: &'a Path,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
+    // TODO: remove this. Tests can use the in memory filesystem instead
     pub sources: Vec<Source>,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
@@ -49,10 +50,6 @@ pub struct PackageCompiler<'a, IO> {
     pub build_journal: Option<&'a mut HashSet<PathBuf>>,
 }
 
-// TODO: ensure this is not a duplicate module
-// TODO: tests
-// Including cases for:
-// - modules that don't import anything
 impl<'a, IO> PackageCompiler<'a, IO>
 where
     IO: FileSystemIO + CommandExecutor + Clone,
