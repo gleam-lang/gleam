@@ -58,12 +58,15 @@ impl FileSystemWriter for InMemoryFileSystem {
         panic!("unimplemented") // TODO
     }
 
-    fn write(&self, _path: &Path, _content: &str) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
+        self.write_bytes(path, content.as_bytes())
     }
 
-    fn write_bytes(&self, _path: &Path, _content: &[u8]) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
+        let mut file = InMemoryFile::default();
+        _ = io::Write::write(&mut file, content).expect("channel buffer write");
+        _ = (*self.files).borrow_mut().insert(path.to_path_buf(), file);
+        Ok(())
     }
 }
 
