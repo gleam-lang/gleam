@@ -24,6 +24,17 @@ fn erlang_nested() {
 }
 
 #[test]
+fn erlang_nested_qualified_constant() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant");
+    insta::assert_snapshot!(
+        "erlang_nested_qualified_constant",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant"
+    );
+}
+
+#[test]
 fn javascript_d_ts() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_d_ts");
@@ -57,10 +68,20 @@ fn hello_joe() {
 }
 
 #[test]
-fn erlang_import_shadowing_prelude() {
-    let output = crate::prepare(
-        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude",
+fn javascript_import() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import");
+    insta::assert_snapshot!(
+        "javascript_import",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import"
     );
+}
+
+#[test]
+fn erlang_import_shadowing_prelude() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude");
     insta::assert_snapshot!(
         "erlang_import_shadowing_prelude",
         output,
@@ -78,3 +99,4 @@ fn javascript_empty() {
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_empty"
     );
 }
+

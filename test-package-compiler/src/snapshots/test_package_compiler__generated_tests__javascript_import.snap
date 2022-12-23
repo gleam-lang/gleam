@@ -1,0 +1,38 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 74
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import
+---
+//// /out/lib/the_package/gleam.d.ts
+<prelude>
+
+//// /out/lib/the_package/gleam.mjs
+<prelude>
+
+//// /out/lib/the_package/one/two.d.ts
+import * as _ from "../gleam.d.ts";
+
+export class A extends _.CustomType {}
+
+export type A$ = A;
+
+
+//// /out/lib/the_package/one/two.mjs
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class A extends $CustomType {}
+
+
+//// /out/lib/the_package/two.d.ts
+import * as two from "./one/two.d.ts";
+
+export const x: two.A$;
+
+
+//// /out/lib/the_package/two.mjs
+import * as $two from "./one/two.mjs";
+
+export const x = new $two.A();
+
+
+
