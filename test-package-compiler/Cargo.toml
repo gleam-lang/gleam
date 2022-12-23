@@ -13,6 +13,8 @@ toml = "0.5.8"
 im = "15.1.0"
 # Extra iter methods
 itertools = "0.10.1"
+# Recursively finding files
+walkdir = "2.3.2"
 
 [dev-dependencies]
 # Snapshot testing to make test maintenance easier

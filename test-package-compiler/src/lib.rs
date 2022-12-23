@@ -18,27 +18,37 @@ use std::{
 };
 
 pub fn prepare(path: &str) -> String {
-    let path = PathBuf::from(path);
+    let root = PathBuf::from(path).canonicalize().unwrap();
 
-    let toml = std::fs::read_to_string(path.join("gleam.toml")).unwrap();
+    let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
     let config: PackageConfig = toml::from_str(&toml).unwrap();
 
-    let sources = path
-        .join("src")
-        .read_dir()
-        .unwrap()
-        .map(|entry| {
+    let sources = walkdir::WalkDir::new(root.join("src"))
+        .into_iter()
+        .filter_map(|entry| {
             let entry = entry.unwrap();
-            let localpath = entry.path();
-            let filename = localpath.file_name().unwrap();
-            let path = PathBuf::from("src").join(filename);
-            let name = localpath.file_stem().unwrap().to_string_lossy().to_string();
-            Source {
+            let path = entry.path();
+
+            if path.is_dir() {
+                return None;
+            }
+            if path.extension().unwrap() != "gleam" {
+                return None;
+            }
+
+            let path = path.strip_prefix(&root).unwrap().to_path_buf();
+            let name = path
+                .strip_prefix("src")
+                .unwrap()
+                .with_extension("")
+                .to_string_lossy()
+                .to_string();
+            Some(Source {
                 code: std::fs::read_to_string(entry.path()).unwrap(),
                 origin: gleam_core::build::Origin::Src,
                 path,
                 name,
-            }
+            })
         })
         .collect();
 
