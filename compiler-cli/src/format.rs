@@ -1,6 +1,6 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
-    io::OutputContent,
+    io::Content,
     io::OutputFile,
 };
 use std::{
@@ -63,7 +63,7 @@ fn format_files(files: Vec<String>) -> Result<()> {
     for file in unformatted_files(files)? {
         crate::fs::write_output(&OutputFile {
             path: file.destination,
-            content: OutputContent::Text(file.output),
+            content: Content::Text(file.output),
         })?;
     }
     Ok(())

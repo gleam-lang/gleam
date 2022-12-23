@@ -51,23 +51,23 @@ pub trait Writer: std::io::Write + Utf8Writer {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum OutputContent {
+pub enum Content {
     Binary(Vec<u8>),
     Text(String),
 }
 
-impl OutputContent {
+impl Content {
     pub fn as_bytes(&self) -> &[u8] {
         match self {
-            OutputContent::Binary(data) => data,
-            OutputContent::Text(data) => data.as_bytes(),
+            Content::Binary(data) => data,
+            Content::Text(data) => data.as_bytes(),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OutputFile {
-    pub content: OutputContent,
+    pub content: Content,
     pub path: PathBuf,
 }
 
@@ -250,7 +250,7 @@ pub mod test {
                 .map(|(path, file)| {
                     Ok(OutputFile {
                         path,
-                        content: OutputContent::Text(
+                        content: Content::Text(
                             String::from_utf8(file.into_contents()?).map_err(|_| ())?,
                         ),
                     })
