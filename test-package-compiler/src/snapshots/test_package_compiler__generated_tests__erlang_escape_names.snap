@@ -1,0 +1,51 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 41
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export(['receive'/1]).
+
+-spec 'receive'(I) -> I.
+'receive'(X) ->
+    X.
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export([qualified_call/0, qualified_value/0, unqualified_call/0, unqualified_value/0]).
+
+-spec qualified_call() -> integer().
+qualified_call() ->
+    one:'receive'(1).
+
+-spec qualified_value() -> fun((Q) -> Q).
+qualified_value() ->
+    fun one:'receive'/1.
+
+-spec unqualified_call() -> integer().
+unqualified_call() ->
+    one:'receive'(1).
+
+-spec unqualified_value() -> fun((S) -> S).
+unqualified_value() ->
+    fun one:'receive'/1.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+
