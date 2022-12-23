@@ -1,11 +1,6 @@
 use crate::{
-    build::Module,
-    config::PackageConfig,
-    erlang,
-    io::{FileSystemWriter, Utf8Writer},
-    javascript,
-    line_numbers::LineNumbers,
-    Result,
+    build::Module, config::PackageConfig, erlang, io::FileSystemWriter, javascript,
+    line_numbers::LineNumbers, Result,
 };
 use itertools::Itertools;
 use std::{fmt::Debug, path::Path};
@@ -47,11 +42,10 @@ impl<'a> Erlang<'a> {
     ) -> Result<()> {
         let name = format!("{}.erl", erl_name);
         let path = self.build_directory.join(&name);
-        let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
-        let res = erlang::module(&module.ast, &line_numbers, &mut file);
+        let output = erlang::module(&module.ast, &line_numbers);
         tracing::debug!(name = ?name, "Generated Erlang module");
-        res
+        writer.write(&path, &output?)
     }
 
     fn erlang_record_headers<Writer: FileSystemWriter>(
@@ -63,9 +57,7 @@ impl<'a> Erlang<'a> {
         for (name, text) in erlang::records(&module.ast) {
             let name = format!("{}_{}.hrl", erl_name, name);
             tracing::debug!(name = ?name, "Generated Erlang header");
-            writer
-                .writer(&self.include_directory.join(name))?
-                .write(text.as_bytes())?;
+            writer.write(&self.include_directory.join(name), &text)?;
         }
         Ok(())
     }
@@ -143,7 +135,7 @@ impl<'a> ErlangApp<'a> {
             version = config.version,
         );
 
-        writer.writer(&path)?.write(text.as_bytes())
+        writer.write(&path, &text)
     }
 }
 
@@ -180,14 +172,16 @@ impl<'a> JavaScript<'a> {
     }
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
-        writer
-            .writer(&self.output_directory.join("gleam.mjs"))?
-            .str_write(javascript::PRELUDE)?;
+        writer.write(
+            &self.output_directory.join("gleam.mjs"),
+            javascript::PRELUDE,
+        )?;
         tracing::debug!("Generated JS prelude");
         if self.typescript == TypeScriptDeclarations::Emit {
-            writer
-                .writer(&self.output_directory.join("gleam.d.ts"))?
-                .str_write(javascript::PRELUDE_TS_DEF)?;
+            writer.write(
+                &self.output_directory.join("gleam.d.ts"),
+                javascript::PRELUDE_TS_DEF,
+            )?;
             tracing::debug!("Generated TS prelude");
         }
         Ok(())
@@ -201,11 +195,9 @@ impl<'a> JavaScript<'a> {
     ) -> Result<()> {
         let name = format!("{}.d.ts", js_name);
         let path = self.output_directory.join(name);
-        let mut file = writer.writer(&path)?;
-        let res =
-            javascript::ts_declaration(&module.ast, &module.input_path, &module.code, &mut file);
+        let output = javascript::ts_declaration(&module.ast, &module.input_path, &module.code);
         tracing::debug!(name = ?js_name, "Generated TS declaration");
-        res
+        writer.write(&path, &output?)
     }
 
     fn js_module(
@@ -216,16 +208,10 @@ impl<'a> JavaScript<'a> {
     ) -> Result<()> {
         let name = format!("{}.mjs", js_name);
         let path = self.output_directory.join(name);
-        let mut file = writer.writer(&path)?;
         let line_numbers = LineNumbers::new(&module.code);
-        let res = javascript::module(
-            &module.ast,
-            &line_numbers,
-            &module.input_path,
-            &module.code,
-            &mut file,
-        );
+        let output =
+            javascript::module(&module.ast, &line_numbers, &module.input_path, &module.code);
         tracing::debug!(name = ?js_name, "Generated js module");
-        res
+        writer.write(&path, &output?)
     }
 }

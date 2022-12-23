@@ -3,7 +3,6 @@ use crate::{
         Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
         TypedConstantBitStringSegmentOption,
     },
-    io::Writer,
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
@@ -28,9 +27,10 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    pub fn write(mut self, mut writer: impl Writer) -> crate::Result<()> {
+    pub fn encode(mut self) -> crate::Result<Vec<u8>> {
         let span = tracing::info_span!("metadata");
         let _enter = span.enter();
+        let mut buffer = Vec::new();
 
         let mut message = capnp::message::Builder::new_default();
 
@@ -42,8 +42,8 @@ impl<'a> ModuleEncoder<'a> {
         module.set_package(&self.data.package);
         self.set_module_types_constructors(&mut module);
 
-        let result = capnp::serialize_packed::write_message(&mut writer, &message);
-        result.map_err(|e| writer.convert_err(e))
+        capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
+        Ok(buffer)
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {

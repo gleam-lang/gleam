@@ -181,9 +181,8 @@ where
 
         // Recreate build directory with new updated version file
         self.io.mkdir(&build_path)?;
-        let mut writer = self.io.writer(&version_path)?;
-        writer
-            .write_str(COMPILER_VERSION)
+        self.io
+            .write(&version_path, COMPILER_VERSION)
             .map_err(|e| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
@@ -207,15 +206,13 @@ where
             }
         }
 
-        let mut writer = self.io.writer(&journal_path)?;
-        writer
-            .write_str(
-                &self
-                    .build_journal
-                    .iter()
-                    .map(|b| b.to_string_lossy().to_string())
-                    .join("\n"),
-            )
+        let contents = self
+            .build_journal
+            .iter()
+            .map(|b| b.to_string_lossy().to_string())
+            .join("\n");
+        self.io
+            .write(&journal_path, &contents)
             .map_err(|e| Error::FileIo {
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,

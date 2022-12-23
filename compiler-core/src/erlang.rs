@@ -9,7 +9,6 @@ mod tests;
 use crate::{
     ast::*,
     docvec,
-    io::Utf8Writer,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
@@ -151,12 +150,8 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module<'a>(
-    module: &'a TypedModule,
-    line_numbers: &'a LineNumbers,
-    writer: &mut impl Utf8Writer,
-) -> Result<()> {
-    module_document(module, line_numbers)?.pretty_print(MAX_COLUMNS, writer)
+pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Result<String> {
+    Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
 }
 
 fn module_document<'a>(

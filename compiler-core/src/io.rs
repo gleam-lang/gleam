@@ -176,7 +176,8 @@ impl Stdio {
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemWriter {
     fn mkdir(&self, path: &Path) -> Result<(), Error>;
-    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error>;
+    fn write(&self, path: &Path, content: &str) -> Result<(), Error>;
+    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error>;
     fn delete(&self, path: &Path) -> Result<(), Error>;
     fn copy(&self, from: &Path, to: &Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Path, to: &Path) -> Result<(), Error>;
@@ -219,61 +220,6 @@ impl Reader for WrappedReader {
             path: self.path.clone(),
             err: Some(err.to_string()),
         }
-    }
-}
-
-#[derive(Debug)]
-/// A wrapper around a Write implementing object that has Gleam's error handling.
-pub struct WrappedWriter {
-    pub path: PathBuf,
-    pub inner: DebugIgnore<Box<dyn std::io::Write>>,
-}
-
-impl Writer for WrappedWriter {}
-
-impl Utf8Writer for WrappedWriter {
-    fn convert_err<E: std::error::Error>(&self, error: E) -> Error {
-        Error::FileIo {
-            action: FileIoAction::WriteTo,
-            kind: FileKind::File,
-            path: self.path.to_path_buf(),
-            err: Some(error.to_string()),
-        }
-    }
-}
-
-impl WrappedWriter {
-    pub fn new(path: &Path, inner: Box<dyn std::io::Write>) -> Self {
-        Self {
-            path: path.to_path_buf(),
-            inner: DebugIgnore(inner),
-        }
-    }
-
-    pub fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        self.inner
-            .write(bytes)
-            .map(|_| ())
-            .map_err(|e| self.convert_err(e))
-    }
-}
-
-impl std::io::Write for WrappedWriter {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.inner.write(buf)
-    }
-
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.flush()
-    }
-}
-
-impl std::fmt::Write for WrappedWriter {
-    fn write_str(&mut self, s: &str) -> std::fmt::Result {
-        self.inner
-            .write(s.as_bytes())
-            .map(|_| ())
-            .map_err(|_| std::fmt::Error)
     }
 }
 
@@ -327,12 +273,6 @@ pub mod test {
     }
 
     impl FileSystemWriter for FilesChannel {
-        fn writer<'a>(&self, path: &'a Path) -> Result<WrappedWriter, Error> {
-            let file = InMemoryFile::new();
-            let _ = self.0.send((path.to_path_buf(), file.clone()));
-            Ok(WrappedWriter::new(path, Box::new(file)))
-        }
-
         fn delete(&self, _path: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support deletion")
         }
@@ -359,6 +299,21 @@ pub mod test {
 
         fn delete_file(&self, _path: &Path) -> Result<(), Error> {
             panic!("FilesChannel does not support deletion")
+        }
+
+        fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
+            self.write_bytes(path, content.as_bytes())
+        }
+
+        fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
+            let file = InMemoryFile::new();
+            _ = file
+                .contents
+                .borrow_mut()
+                .write(content)
+                .expect("channel buffer write");
+            let _ = self.0.send((path.to_path_buf(), file.clone()));
+            Ok(())
         }
     }
 

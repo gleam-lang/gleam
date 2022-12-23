@@ -61,9 +61,8 @@ macro_rules! assert_js {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -130,9 +129,8 @@ macro_rules! assert_js {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -159,9 +157,8 @@ macro_rules! assert_js {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
         let line_numbers = LineNumbers::new($src);
-        module(&ast, &line_numbers, Path::new(""), "", &mut output).unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
@@ -203,8 +200,7 @@ macro_rules! assert_ts_def {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
-        ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
+        let output = ts_declaration(&ast, Path::new(""), "").unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -270,8 +266,7 @@ macro_rules! assert_ts_def {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let mut output = String::new();
-        ts_declaration(&ast, Path::new(""), "", &mut output).unwrap();
+        let output = ts_declaration(&ast, Path::new(""), "").unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 

@@ -58,9 +58,7 @@ pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, Stri
 }
 
 fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
-    wfs.writer(path.as_ref())
-        .expect("should always succeed with the virtual file system")
-        .write(source.as_bytes())
+    wfs.write(path.as_ref(), &source)
         .expect("should always succeed with the virtual file system");
 }
 

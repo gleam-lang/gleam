@@ -177,9 +177,7 @@ where
             .join("gleam@@compile.erl");
         if !escript_path.exists() {
             let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
-            self.io
-                .writer(&escript_path)?
-                .write(escript_source.as_bytes())?;
+            self.io.write(&escript_path, escript_source)?;
         }
 
         let mut args = vec![
@@ -318,7 +316,8 @@ where
         for module in modules {
             let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
-            ModuleEncoder::new(&module.ast.type_info).write(self.io.writer(&path)?)?;
+            let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
+            self.io.write_bytes(&path, &bytes)?;
             self.add_build_journal(path);
         }
         Ok(())
@@ -500,7 +499,7 @@ where
         }
         .render()
         .expect("Erlang entrypoint rendering");
-        self.io.writer(&out.join(name))?.write(module.as_bytes())?;
+        self.io.write(&out.join(name), &module)?;
         let _ = modules_to_compile.insert(name.into());
         self.add_build_journal(out.join(name));
         Ok(())
