@@ -200,23 +200,21 @@ pub fn delete_file(file: &Path) -> Result<(), Error> {
 
 pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Error> {
     for file in outputs {
-        write_output_under(file, base)?;
+        let path = base.join(&file.path);
+        match &file.content {
+            OutputContent::Binary(buffer) => write_bytes(&path, &buffer),
+            OutputContent::Text(buffer) => write(&path, &buffer),
+        }?;
     }
     Ok(())
 }
 
-pub fn write_output_under(file: &OutputFile, base: &Path) -> Result<(), Error> {
-    let OutputFile { path, content } = file;
-    write_content(&base.join(path), content)
-}
-
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, content } = file;
-    write_content(path, content)
-}
-
-pub fn write_content(path: &Path, data: &OutputContent) -> Result<(), Error> {
-    write_bytes(path, data.as_bytes())
+    match content {
+        OutputContent::Binary(buffer) => write_bytes(path, buffer),
+        OutputContent::Text(buffer) => write(path, buffer),
+    }
 }
 
 pub fn write(path: &Path, text: &str) -> Result<(), Error> {
