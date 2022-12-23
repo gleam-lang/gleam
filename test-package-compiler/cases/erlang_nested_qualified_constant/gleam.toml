@@ -1,0 +1,4 @@
+# https://github.com/gleam-lang/gleam/issues/922#issuecomment-803272624
+name = "importy"
+version = "0.1.0"
+target = "erlang"

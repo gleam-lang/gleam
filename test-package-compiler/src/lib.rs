@@ -93,7 +93,6 @@ pub fn prepare(path: &str) -> String {
     TestCompileOutput { files, warnings }.as_overview_text()
 }
 
-// TODO: move this to a test helper crate
 #[derive(Debug)]
 pub struct TestCompileOutput {
     files: HashMap<PathBuf, Content>,
@@ -120,7 +119,7 @@ impl TestCompileOutput {
         }
 
         for warning in self.warnings.iter() {
-            write!(buffer, "{:#?}", warning).unwrap();
+            write!(buffer, "//// Warning\n{:#?}", warning).unwrap();
             buffer.push('\n');
             buffer.push('\n');
         }

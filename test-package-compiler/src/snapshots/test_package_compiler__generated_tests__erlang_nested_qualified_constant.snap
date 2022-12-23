@@ -1,0 +1,32 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 30
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant
+---
+//// /out/lib/the_package/_gleam_artefacts/one@two.erl
+-module(one@two).
+-compile(no_auto_import).
+
+-export_type([a/0]).
+
+-type a() :: a.
+
+
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one@two,
+               two]},
+    {registered, []}
+]}.
+
+
+
