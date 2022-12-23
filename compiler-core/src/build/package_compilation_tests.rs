@@ -35,41 +35,6 @@ macro_rules! assert_erlang_compile {
     };
 }
 
-macro_rules! assert_javascript_compile {
-    ($sources:expr, $expected_output:expr  $(,)?) => {
-        let outputs = compile_test_project(
-            $sources,
-            &TargetCodegenConfiguration::JavaScript {
-                emit_typescript_definitions: true,
-            },
-            None,
-        );
-        let expected: Result<Vec<OutputFile>, Error> = $expected_output;
-        let expected = expected.map(|out| {
-            out.into_iter()
-                .map(|output| (output.path, output.content))
-                .collect::<HashMap<_, _>>()
-        });
-        assert_eq!(expected, outputs.map(|o| o.files));
-    };
-}
-
-macro_rules! assert_no_warnings {
-    ($sources:expr $(,)?) => {
-        let outputs = compile_test_project(
-            $sources,
-            &TargetCodegenConfiguration::Erlang {
-                app_file: Some(ErlangAppCodegenConfiguration {
-                    include_dev_deps: true,
-                }),
-            },
-            None,
-        )
-        .unwrap();
-        assert_eq!(vec![] as Vec<crate::Warning>, outputs.warnings);
-    };
-}
-
 // TODO: move this to a test helper crate
 #[derive(Debug)]
 pub struct TestCompileOutput {
