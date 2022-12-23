@@ -312,7 +312,7 @@ pub mod test {
                 .borrow_mut()
                 .write(content)
                 .expect("channel buffer write");
-            let _ = self.0.send((path.to_path_buf(), file.clone()));
+            let _ = self.0.send((path.to_path_buf(), file));
             Ok(())
         }
     }
