@@ -32,6 +32,6 @@ fn {name}() {{
         ));
     }
 
-    let out = PathBuf::from(PathBuf::from("./src/generated_tests.rs"));
+    let out = PathBuf::from("./src/generated_tests.rs");
     std::fs::write(out, module).unwrap();
 }
