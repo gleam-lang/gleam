@@ -1,0 +1,27 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 13
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested
+---
+//// /out/lib/the_package/_gleam_artefacts/one@two.erl
+-module(one@two).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> binary().
+main() ->
+    <<"Hi there"/utf8>>.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one@two]},
+    {registered, []}
+]}.
+
+
+
