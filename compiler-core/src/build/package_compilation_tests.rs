@@ -159,8 +159,6 @@ fn compile_test_project(
 
 #[test]
 fn package_compiler_test() {
-    assert_erlang_compile!(vec![], Ok(vec![]));
-
     assert_erlang_compile!(
         vec![Source {
             path: PathBuf::from("src/one.gleam"),

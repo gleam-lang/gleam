@@ -49,7 +49,7 @@ pub fn prepare(path: &str) -> String {
             }),
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
-            emit_typescript_definitions: true,
+            emit_typescript_definitions: config.javascript.typescript_declarations,
         },
     };
 
@@ -99,6 +99,9 @@ impl TestCompileOutput {
             buffer.push('\n');
 
             match content {
+                _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
+                    buffer.push_str("<prelude>")
+                }
                 Content::Text(text) => buffer.push_str(text),
                 Content::Binary(data) => write!(buffer, "{:#?}", data).unwrap(),
             };
