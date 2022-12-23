@@ -90,13 +90,13 @@ pub struct TestCompileOutput {
 impl TestCompileOutput {
     pub fn as_overview_text(&self) -> String {
         let mut buffer = String::new();
-        for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(&b.0)) {
+        for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str("//// ");
             buffer.push_str(path.to_str().unwrap());
             buffer.push('\n');
 
             match content {
-                Content::Text(text) => buffer.push_str(&text),
+                Content::Text(text) => buffer.push_str(text),
                 Content::Binary(data) => write!(buffer, "{:#?}", data).unwrap(),
             };
             buffer.push('\n');
