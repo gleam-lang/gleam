@@ -1,0 +1,5 @@
+# This should emit no warnings.
+# https://github.com/gleam-lang/otp/pull/22
+name = "importy"
+version = "0.1.0"
+target = "erlang"

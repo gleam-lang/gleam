@@ -1369,67 +1369,6 @@ main() ->
 }
 
 #[test]
-fn bug_752() {
-    // Bug: https://github.com/gleam-lang/gleam/issues/752
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "pub type One(a) { One(a) }".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: "import one.{One} pub type Two(b) { Two(thing: One(Int)) }".to_string(),
-            },
-        ],
-        Ok(vec![
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl",),
-                content: Content::Text(
-                    "-module(one).
--compile(no_auto_import).
-
--export_type([one/1]).
-
--type one(I) :: {one, I}.
-
-
-"
-                    .to_string()
-                ),
-            },
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl",),
-                content: Content::Text(
-                    "-module(two).
--compile(no_auto_import).
-
--export_type([two/1]).
-
--type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
-
-
-"
-                    .to_string()
-                ),
-            },
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/include/two_Two.hrl",),
-                content: Content::Text(
-                    "-record(two, {thing :: one:one(integer())}).
-"
-                    .to_string()
-                ),
-            },
-        ]),
-    );
-}
-
-#[test]
 // Discriminate between imported functions, and fields, when shadowing a name:
 // https://github.com/gleam-lang/gleam/issues/807
 fn variable_module_name_collide() {
@@ -1692,52 +1631,6 @@ x() ->
             }
         ]),
     );
-}
-
-// https://github.com/gleam-lang/otp/pull/22
-#[test]
-fn import_shadowed_name_warnings() {
-    assert_no_warnings!(vec![
-        Source {
-            origin: Origin::Src,
-            path: PathBuf::from("/src/one.gleam"),
-            name: "one".to_string(),
-            code: "pub external type Port".to_string(),
-        },
-        Source {
-            origin: Origin::Src,
-            path: PathBuf::from("/src/two.gleam"),
-            name: "two".to_string(),
-            code: r#"import one.{Port}
-type Shadowing { Port }
-
-pub external fn use_type(Port) -> Nil =
-  "" ""
-"#
-            .to_string(),
-        },
-    ]);
-
-    assert_no_warnings!(vec![
-        Source {
-            origin: Origin::Src,
-            path: PathBuf::from("/src/one.gleam"),
-            name: "one".to_string(),
-            code: "pub type Port { Port }".to_string(),
-        },
-        Source {
-            origin: Origin::Src,
-            path: PathBuf::from("/src/two.gleam"),
-            name: "two".to_string(),
-            code: r#"import one.{Port}
-type Shadowing { Port }
-
-pub external fn use_type(Port) -> Nil =
-  "" ""
-"#
-            .to_string(),
-        },
-    ]);
 }
 
 #[test]
