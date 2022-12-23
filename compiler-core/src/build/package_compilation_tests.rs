@@ -70,8 +70,9 @@ macro_rules! assert_no_warnings {
     };
 }
 
+// TODO: move this to a test helper crate
 #[derive(Debug)]
-struct TestCompileOutput {
+pub struct TestCompileOutput {
     files: HashMap<PathBuf, Content>,
     warnings: Vec<crate::Warning>,
 }

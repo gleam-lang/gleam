@@ -1,3 +1,5 @@
+use itertools::Itertools;
+
 use super::*;
 use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc};
 
@@ -34,6 +36,7 @@ impl InMemoryFileSystem {
             .into_inner()
             .into_iter()
             .map(|(path, file)| (path, file.into_content()))
+            .sorted_by(|a, b| a.0.cmp(&b.0))
             .collect()
     }
 }
@@ -200,8 +203,6 @@ impl std::io::Write for InMemoryFile {
     }
 }
 
-// In tests the in memory file system can also be used as a command executor.
-#[cfg(test)]
 impl CommandExecutor for InMemoryFileSystem {
     fn exec(
         &self,

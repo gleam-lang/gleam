@@ -1945,6 +1945,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-package-compiler"
+version = "0.25.3"
+dependencies = [
+ "gleam-core",
+ "im",
+ "insta",
+ "itertools",
+ "toml",
+]
+
+[[package]]
 name = "textwrap"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

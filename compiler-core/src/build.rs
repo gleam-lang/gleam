@@ -69,7 +69,7 @@ impl TargetCodegenConfiguration {
 
 #[derive(Debug)]
 pub struct ErlangAppCodegenConfiguration {
-    include_dev_deps: bool,
+    pub include_dev_deps: bool,
 }
 
 #[derive(
