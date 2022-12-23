@@ -23,6 +23,19 @@ impl InMemoryFileSystem {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// # Panics
+    ///
+    /// Panics if this is not the only reference to the underlying files.
+    ///
+    pub fn into_contents(self) -> HashMap<PathBuf, Content> {
+        Rc::try_unwrap(self.files)
+            .expect("InMemoryFileSystem::into_files called on a clone")
+            .into_inner()
+            .into_iter()
+            .map(|(path, file)| (path, file.into_content()))
+            .collect()
+    }
 }
 
 impl FileSystemIO for InMemoryFileSystem {}
@@ -43,7 +56,7 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn mkdir(&self, _: &Path) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+        Ok(())
     }
 
     fn hardlink(&self, _: &Path, _: &Path) -> Result<(), Error> {
@@ -159,6 +172,22 @@ pub struct InMemoryFile {
     buffer: Rc<RefCell<Vec<u8>>>,
 }
 
+impl InMemoryFile {
+    /// # Panics
+    ///
+    /// Panics if this is not the only reference to the underlying files.
+    ///
+    pub fn into_content(self) -> Content {
+        let contents = Rc::try_unwrap(self.buffer)
+            .expect("InMemoryFile::into_content called with multiple references")
+            .into_inner();
+        match String::from_utf8(contents) {
+            Ok(s) => Content::Text(s),
+            Err(e) => Content::Binary(e.into_bytes()),
+        }
+    }
+}
+
 impl std::io::Write for InMemoryFile {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut reference = (*self.buffer).borrow_mut();
@@ -168,5 +197,20 @@ impl std::io::Write for InMemoryFile {
     fn flush(&mut self) -> std::io::Result<()> {
         let mut reference = (*self.buffer).borrow_mut();
         reference.flush()
+    }
+}
+
+// In tests the in memory file system can also be used as a command executor.
+#[cfg(test)]
+impl CommandExecutor for InMemoryFileSystem {
+    fn exec(
+        &self,
+        _program: &str,
+        _args: &[String],
+        _env: &[(&str, String)],
+        _cwd: Option<&Path>,
+        _stdio: Stdio,
+    ) -> Result<i32, Error> {
+        Ok(0) // Always succeed.
     }
 }

@@ -1,8 +1,8 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, DirEntry, FileSystemIO, FileSystemWriter, OutputContent, OutputFile,
-        ReadDir, Stdio, WrappedReader,
+        CommandExecutor, Content, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir,
+        Stdio, WrappedReader,
     },
     Result,
 };
@@ -202,8 +202,8 @@ pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Er
     for file in outputs {
         let path = base.join(&file.path);
         match &file.content {
-            OutputContent::Binary(buffer) => write_bytes(&path, buffer),
-            OutputContent::Text(buffer) => write(&path, buffer),
+            Content::Binary(buffer) => write_bytes(&path, buffer),
+            Content::Text(buffer) => write(&path, buffer),
         }?;
     }
     Ok(())
@@ -212,8 +212,8 @@ pub fn write_outputs_under(outputs: &[OutputFile], base: &Path) -> Result<(), Er
 pub fn write_output(file: &OutputFile) -> Result<(), Error> {
     let OutputFile { path, content } = file;
     match content {
-        OutputContent::Binary(buffer) => write_bytes(path, buffer),
-        OutputContent::Text(buffer) => write(path, buffer),
+        Content::Binary(buffer) => write_bytes(path, buffer),
+        Content::Text(buffer) => write(path, buffer),
     }
 }
 
