@@ -35,6 +35,17 @@ fn erlang_nested_qualified_constant() {
 }
 
 #[test]
+fn erlang_escape_names() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names");
+    insta::assert_snapshot!(
+        "erlang_escape_names",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names"
+    );
+}
+
+#[test]
 fn import_shadowed_name_warning() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning");
@@ -75,6 +86,17 @@ fn erlang_empty() {
         "erlang_empty",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_empty"
+    );
+}
+
+#[test]
+fn alias_unqualified_import() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/alias_unqualified_import");
+    insta::assert_snapshot!(
+        "alias_unqualified_import",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/alias_unqualified_import"
     );
 }
 
