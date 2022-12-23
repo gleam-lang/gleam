@@ -1,0 +1,40 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 7
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export([unbox/1]).
+
+-spec unbox(two:box()) -> integer().
+unbox(X) ->
+    {box, I} = X,
+    I.
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export_type([box/0]).
+
+-type box() :: {box, integer()}.
+
+
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+
