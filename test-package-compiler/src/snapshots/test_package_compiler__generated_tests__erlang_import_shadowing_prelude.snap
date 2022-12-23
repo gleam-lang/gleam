@@ -1,0 +1,39 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 37
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export_type([error/0]).
+
+-type error() :: error.
+
+
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> one:error().
+main() ->
+    error.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+
