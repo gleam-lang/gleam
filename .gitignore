@@ -7,4 +7,3 @@
 erl_crash.dump
 *.lock
 node_modules/
-test-package-compiler/src/generated_tests.rs

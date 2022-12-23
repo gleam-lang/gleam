@@ -14,7 +14,6 @@ pub fn main() {
         .unwrap()
         .parent()
         .unwrap()
-        .to_path_buf()
         .join("cases");
 
     for entry in std::fs::read_dir(&cases).unwrap() {
@@ -24,8 +23,13 @@ pub fn main() {
         module.push_str(&format!(
             r#"#[test]
 fn {name}() {{
-  let output = crate::prepare("{path}");
-  insta::assert_snapshot!("{name}", output, "{path}");
+    let output =
+        crate::prepare("{path}");
+    insta::assert_snapshot!(
+        "{name}",
+        output,
+        "{path}"
+    );
 }}
 
 "#
