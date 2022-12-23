@@ -1,7 +1,7 @@
 use gleam_core::{
     io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
-        FileSystemWriter, ReadDir, Stdio, WrappedReader, WrappedWriter,
+        FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Error, Result,
 };
@@ -36,11 +36,6 @@ impl CommandExecutor for WasmFileSystem {
 impl FileSystemIO for WasmFileSystem {}
 
 impl FileSystemWriter for WasmFileSystem {
-    fn writer(&self, path: &Path) -> Result<WrappedWriter, Error> {
-        tracing::trace!("write {:?}", path);
-        self.imfs.writer(path)
-    }
-
     fn delete(&self, path: &Path) -> Result<(), Error> {
         tracing::trace!("delete {:?}", path);
         self.imfs.delete(path)
@@ -68,6 +63,16 @@ impl FileSystemWriter for WasmFileSystem {
     fn delete_file(&self, path: &Path) -> Result<(), Error> {
         tracing::trace!("delete file {:?}", path);
         self.imfs.delete_file(path)
+    }
+
+    fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
+        tracing::trace!("write {:?}", path);
+        self.imfs.write(path, content)
+    }
+
+    fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
+        tracing::trace!("write_bytes {:?}", path);
+        self.imfs.write_bytes(path, content)
     }
 }
 

@@ -201,8 +201,7 @@ impl Downloader {
                     error: error.to_string(),
                 }
             })?;
-        let mut file = self.fs.writer(&tarball_path)?;
-        file.write(&tarball)?;
+        self.fs.write_bytes(&tarball_path, &tarball)?;
         Ok(true)
     }
 
