@@ -107,7 +107,7 @@ macro_rules! assert_js {
     }};
 
     ($src:expr $(,)?) => {{
-        use crate::{javascript::*, uid::UniqueIdGenerator};
+        use $crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
@@ -244,7 +244,7 @@ macro_rules! assert_ts_def {
     }};
 
     ($src:expr $(,)?) => {{
-        use crate::{javascript::*, uid::UniqueIdGenerator};
+        use $crate::{javascript::*, uid::UniqueIdGenerator};
         use std::path::Path;
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
