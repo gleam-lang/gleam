@@ -14,8 +14,9 @@ fn erlang_import() {
 
 #[test]
 fn opaque_type_destructure() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_destructure");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_destructure",
+    );
     insta::assert_snapshot!(
         "opaque_type_destructure",
         output,
@@ -36,8 +37,9 @@ fn erlang_nested() {
 
 #[test]
 fn erlang_nested_qualified_constant() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant",
+    );
     insta::assert_snapshot!(
         "erlang_nested_qualified_constant",
         output,
@@ -47,8 +49,9 @@ fn erlang_nested_qualified_constant() {
 
 #[test]
 fn erlang_escape_names() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names",
+    );
     insta::assert_snapshot!(
         "erlang_escape_names",
         output,
@@ -58,8 +61,9 @@ fn erlang_escape_names() {
 
 #[test]
 fn opaque_type_accessor() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_accessor");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_accessor",
+    );
     insta::assert_snapshot!(
         "opaque_type_accessor",
         output,
@@ -69,8 +73,9 @@ fn opaque_type_accessor() {
 
 #[test]
 fn src_importing_test() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test",
+    );
     insta::assert_snapshot!(
         "src_importing_test",
         output,
@@ -80,8 +85,9 @@ fn src_importing_test() {
 
 #[test]
 fn erlang_app_generation() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_app_generation");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_app_generation",
+    );
     insta::assert_snapshot!(
         "erlang_app_generation",
         output,
@@ -91,8 +97,9 @@ fn erlang_app_generation() {
 
 #[test]
 fn import_shadowed_name_warning() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning",
+    );
     insta::assert_snapshot!(
         "import_shadowed_name_warning",
         output,
@@ -113,8 +120,9 @@ fn javascript_d_ts() {
 
 #[test]
 fn unknown_module_field_in_import() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_import");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_import",
+    );
     insta::assert_snapshot!(
         "unknown_module_field_in_import",
         output,
@@ -135,8 +143,9 @@ fn erlang_bug_752() {
 
 #[test]
 fn unknown_module_field_in_constant() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_constant");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_constant",
+    );
     insta::assert_snapshot!(
         "unknown_module_field_in_constant",
         output,
@@ -157,8 +166,9 @@ fn duplicate_module() {
 
 #[test]
 fn imported_external_fns() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns",
+    );
     insta::assert_snapshot!(
         "imported_external_fns",
         output,
@@ -190,8 +200,9 @@ fn import_cycle() {
 
 #[test]
 fn alias_unqualified_import() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/alias_unqualified_import");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/alias_unqualified_import",
+    );
     insta::assert_snapshot!(
         "alias_unqualified_import",
         output,
@@ -212,8 +223,9 @@ fn hello_joe() {
 
 #[test]
 fn imported_record_constructors() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors",
+    );
     insta::assert_snapshot!(
         "imported_record_constructors",
         output,
@@ -224,7 +236,9 @@ fn imported_record_constructors() {
 #[test]
 fn unknown_module_field_in_expression() {
     let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_expression");
+        crate::prepare(
+            "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_expression",
+        );
     insta::assert_snapshot!(
         "unknown_module_field_in_expression",
         output,
@@ -234,8 +248,9 @@ fn unknown_module_field_in_expression() {
 
 #[test]
 fn javascript_import() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import",
+    );
     insta::assert_snapshot!(
         "javascript_import",
         output,
@@ -245,8 +260,9 @@ fn javascript_import() {
 
 #[test]
 fn variable_or_module() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/variable_or_module");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/variable_or_module",
+    );
     insta::assert_snapshot!(
         "variable_or_module",
         output,
@@ -256,8 +272,9 @@ fn variable_or_module() {
 
 #[test]
 fn imported_constants() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants",
+    );
     insta::assert_snapshot!(
         "imported_constants",
         output,
@@ -267,8 +284,9 @@ fn imported_constants() {
 
 #[test]
 fn erlang_import_shadowing_prelude() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude",
+    );
     insta::assert_snapshot!(
         "erlang_import_shadowing_prelude",
         output,
@@ -289,12 +307,12 @@ fn javascript_empty() {
 
 #[test]
 fn opaque_type_construct() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct");
+    let output = crate::prepare(
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct",
+    );
     insta::assert_snapshot!(
         "opaque_type_construct",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct"
     );
 }
-
