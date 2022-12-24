@@ -27,6 +27,7 @@ use crate::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::time::SystemTime;
 use std::{
     collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, path::PathBuf, process,
 };
@@ -116,6 +117,7 @@ impl Package {
 pub struct Module {
     pub name: String,
     pub code: String,
+    pub mtime: SystemTime,
     pub input_path: PathBuf,
     pub origin: Origin,
     pub ast: TypedModule,

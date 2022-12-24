@@ -15,7 +15,7 @@ use crate::{
     Error, Result, Warning,
 };
 use askama::Template;
-use std::{collections::HashMap, fmt::write};
+use std::{collections::HashMap, fmt::write, time::SystemTime};
 use std::{
     collections::HashSet,
     io::BufReader,
@@ -391,10 +391,12 @@ where
     fn add_module(&mut self, path: PathBuf, dir: &Path, origin: Origin) -> Result<()> {
         let name = module_name(&dir, &path);
         let code = self.io.read(&path)?;
+        let mtime = self.io.modification_time(&path)?;
         self.sources.push(Source {
             name,
             path,
             code,
+            mtime,
             origin,
         });
         Ok(())
@@ -532,6 +534,7 @@ fn type_check(
             code,
             ast,
             path,
+            mtime,
             origin,
             package,
             extra,
@@ -579,6 +582,7 @@ fn type_check(
         modules.push(Module {
             origin,
             extra,
+            mtime,
             name,
             code,
             ast: typed_ast,
@@ -700,6 +704,7 @@ fn parse_sources(
         code,
         path,
         origin,
+        mtime,
     } in sources
     {
         let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
@@ -716,6 +721,7 @@ fn parse_sources(
             package: package_name.to_string(),
             origin,
             extra,
+            mtime,
             path,
             name,
             code,
@@ -767,6 +773,7 @@ pub struct Source {
     pub name: String,
     pub code: String,
     pub origin: Origin, // TODO: is this used?
+    pub mtime: SystemTime,
 }
 
 #[derive(Debug)]
@@ -774,6 +781,7 @@ struct Parsed {
     path: PathBuf,
     name: String,
     code: String,
+    mtime: SystemTime,
     origin: Origin,
     package: String,
     ast: UntypedModule,
