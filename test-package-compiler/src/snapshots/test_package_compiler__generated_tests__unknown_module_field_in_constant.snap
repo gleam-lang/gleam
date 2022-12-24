@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 107
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_constant
+assertion_line: 140
+expression: "./cases/unknown_module_field_in_constant"
 ---
 error: Unknown module field
   ┌─ src/two.gleam:3:16
