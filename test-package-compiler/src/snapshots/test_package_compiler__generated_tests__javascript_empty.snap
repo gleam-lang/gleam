@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 19
+assertion_line: 228
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_empty
 ---
 //// /out/lib/the_package/empty.mjs

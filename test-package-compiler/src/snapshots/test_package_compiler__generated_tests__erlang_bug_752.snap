@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 63
+assertion_line: 96
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.erl
