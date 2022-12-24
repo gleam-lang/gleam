@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 118
+assertion_line: 162
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.erl
@@ -13,6 +13,12 @@ expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_ex
 thing() ->
     thing:new().
 
+
+//// /out/lib/the_package/_gleam_artefacts/one.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.timestamp
+663112800
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -63,6 +69,12 @@ fn_call_unqualified() ->
 fn_call_unqualified_aliased() ->
     thing:new().
 
+
+//// /out/lib/the_package/_gleam_artefacts/two.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.timestamp
+663112800
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
