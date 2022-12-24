@@ -12,6 +12,12 @@ use super::FieldAccessUsage;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Error {
+    SrcImportingTest {
+        location: SrcSpan,
+        src_module: crate::error::Name,
+        test_module: crate::error::Name,
+    },
+
     BitStringSegmentError {
         error: crate::bit_string::ErrorType,
         location: SrcSpan,

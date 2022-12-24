@@ -590,7 +590,7 @@ pub fn infer_module(
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     for s in module.iter_statements(target) {
-        register_import(s, &mut environment)?;
+        register_import(s, &name, origin, &mut environment)?;
     }
 
     // Register types so they can be used in constructors and functions
@@ -1819,6 +1819,8 @@ pub fn register_types<'a>(
 
 pub fn register_import(
     s: &UntypedStatement,
+    current_module: &[String],
+    origin: Origin,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
@@ -1837,9 +1839,17 @@ pub fn register_import(
                     .get(&name)
                     .ok_or_else(|| Error::UnknownModule {
                         location: *location,
-                        name,
+                        name: name.clone(),
                         imported_modules: environment.imported_modules.keys().cloned().collect(),
                     })?;
+
+            if origin.is_src() && !module_info.origin.is_src() {
+                return Err(Error::SrcImportingTest {
+                    location: *location,
+                    src_module: current_module.join("/"),
+                    test_module: name,
+                });
+            }
 
             // Determine local alias of imported module
             let module_name = as_name

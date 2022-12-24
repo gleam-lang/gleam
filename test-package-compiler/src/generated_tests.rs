@@ -68,6 +68,17 @@ fn opaque_type_accessor() {
 }
 
 #[test]
+fn src_importing_test() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test");
+    insta::assert_snapshot!(
+        "src_importing_test",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test"
+    );
+}
+
+#[test]
 fn erlang_app_generation() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_app_generation");

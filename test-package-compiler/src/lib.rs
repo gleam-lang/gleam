@@ -5,7 +5,8 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        package_compiler::Source, ErlangAppCodegenConfiguration, Target, TargetCodegenConfiguration,
+        package_compiler::Source, ErlangAppCodegenConfiguration, Origin, Target,
+        TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::Content,
@@ -14,7 +15,7 @@ use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
 pub fn prepare(path: &str) -> String {
@@ -23,34 +24,8 @@ pub fn prepare(path: &str) -> String {
     let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
     let config: PackageConfig = toml::from_str(&toml).unwrap();
 
-    let sources = walkdir::WalkDir::new(root.join("src"))
-        .into_iter()
-        .filter_map(|entry| {
-            let entry = entry.unwrap();
-            let path = entry.path();
-
-            if path.is_dir() {
-                return None;
-            }
-            if path.extension().unwrap() != "gleam" {
-                return None;
-            }
-
-            let path = path.strip_prefix(&root).unwrap().to_path_buf();
-            let name = path
-                .strip_prefix("src")
-                .unwrap()
-                .with_extension("")
-                .to_string_lossy()
-                .to_string();
-            Some(Source {
-                code: std::fs::read_to_string(entry.path()).unwrap(),
-                origin: gleam_core::build::Origin::Src,
-                path,
-                name,
-            })
-        })
-        .collect();
+    let mut sources = read_files(&root, Origin::Src);
+    sources.extend(read_files(&root, Origin::Test).into_iter());
 
     let target = match config.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
@@ -129,4 +104,45 @@ impl TestCompileOutput {
 
         buffer
     }
+}
+
+fn read_files(root: &Path, origin: Origin) -> Vec<Source> {
+    let prefix = &match origin {
+        Origin::Src => "src",
+        Origin::Test => "test",
+    };
+    let path = root.join(prefix);
+
+    if !path.exists() {
+        return vec![];
+    }
+
+    walkdir::WalkDir::new(path)
+        .into_iter()
+        .filter_map(|entry| {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            if path.is_dir() {
+                return None;
+            }
+            if path.extension().unwrap() != "gleam" {
+                return None;
+            }
+
+            let path = path.strip_prefix(&root).unwrap().to_path_buf();
+            let name = path
+                .strip_prefix(prefix)
+                .unwrap()
+                .with_extension("")
+                .to_string_lossy()
+                .to_string();
+            Some(Source {
+                code: std::fs::read_to_string(entry.path()).unwrap(),
+                origin,
+                path,
+                name,
+            })
+        })
+        .collect()
 }

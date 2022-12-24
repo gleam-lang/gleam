@@ -64,15 +64,6 @@ pub enum Error {
     #[error("duplicate source file {file}")]
     DuplicateSourceFile { file: String },
 
-    #[error("test module {test_module} imported into application module {src_module}")]
-    SrcImportingTest {
-        path: PathBuf,
-        src: Src,
-        location: crate::ast::SrcSpan,
-        src_module: Name,
-        test_module: Name,
-    },
-
     #[error("cyclical module imports")]
     ImportCycle { modules: Vec<String> },
 
@@ -611,37 +602,6 @@ This was error from the Hex client library:
                 }
             }
 
-            Error::SrcImportingTest {
-                path,
-                src,
-                location,
-                src_module,
-                test_module,
-            } => {
-                let text = wrap_format!(
-                    "The application module `{}` is importing the test module `{}`.
-
-Test modules are not included in production builds so test modules cannot import them. Perhaps move the `{}` module to the src directory.",
-                    src_module, test_module, test_module,
-                );
-
-                Diagnostic {
-                    title: "App importing test module".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: Some("Imported here".into()),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.into(),
-                        extra_labels: vec![],
-                    }),
-                }
-            }
-
             Error::DuplicateModule {
                 module,
                 first,
@@ -723,6 +683,35 @@ Second: {}",
             }
 
             Error::Type { path, src, error } => match error {
+                TypeError::SrcImportingTest {
+                    location,
+                    src_module,
+                    test_module,
+                } => {
+                    let text = wrap_format!(
+                    "The application module `{}` is importing the test module `{}`.
+
+Test modules are not included in production builds so test modules cannot import them. Perhaps move the `{}` module to the src directory.",
+                    src_module, test_module, test_module,
+                );
+
+                    Diagnostic {
+                        title: "App importing test module".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: Some("Imported here".into()),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 TypeError::UnknownLabels {
                     unknown,
                     valid,
