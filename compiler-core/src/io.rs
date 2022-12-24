@@ -8,6 +8,7 @@ use std::{
     fmt::Debug,
     io,
     path::{Path, PathBuf},
+    time::SystemTime,
     vec::IntoIter,
 };
 use tar::{Archive, Entry};
@@ -140,6 +141,7 @@ pub trait FileSystemReader {
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
     fn current_dir(&self) -> Result<PathBuf, Error>;
+    fn modified_time(&self, path: &Path) -> Result<SystemTime, Error>;
 }
 
 pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}

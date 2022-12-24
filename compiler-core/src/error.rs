@@ -290,6 +290,7 @@ pub enum FileIoAction {
     Canonicalise,
     UpdatePermissions,
     FindParent,
+    ReadMetadata,
 }
 
 impl FileIoAction {
@@ -307,6 +308,7 @@ impl FileIoAction {
             FileIoAction::FindParent => "find the parent of",
             FileIoAction::Canonicalise => "canonicalise",
             FileIoAction::UpdatePermissions => "update permissions of",
+            FileIoAction::ReadMetadata => "read metadata of",
         }
     }
 }
