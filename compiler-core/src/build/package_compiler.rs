@@ -34,6 +34,7 @@ pub struct PackageCompiler<'a, IO> {
     pub out: &'a Path,
     pub lib: &'a Path,
     pub root: &'a Path,
+    pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
     // TODO: remove this. Tests can use the in memory filesystem instead
@@ -54,6 +55,7 @@ where
 {
     pub fn new(
         config: &'a PackageConfig,
+        mode: Mode,
         root: &'a Path,
         out: &'a Path,
         lib: &'a Path,
@@ -68,6 +70,7 @@ where
             out,
             lib,
             root,
+            mode,
             config,
             target,
             sources: vec![],
@@ -89,6 +92,8 @@ where
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
+
+        self.read_source_files()?;
 
         tracing::info!("Parsing source code");
         let parsed_modules = parse_sources(
@@ -280,7 +285,7 @@ where
         Ok(())
     }
 
-    pub fn read_source_files(&mut self, mode: Mode) -> Result<()> {
+    fn read_source_files(&mut self) -> Result<()> {
         let span = tracing::info_span!("load", package = %self.config.name.as_str());
         let _enter = span.enter();
         tracing::info!("Reading source files");
@@ -293,7 +298,7 @@ where
         }
 
         // Test
-        if mode.is_dev() && self.io.is_directory(&test) {
+        if self.mode.is_dev() {
             for path in self.io.gleam_source_files(&test) {
                 self.add_module(path, &test, Origin::Test)?;
             }
