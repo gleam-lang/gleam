@@ -464,6 +464,7 @@ where
         };
         let mut compiler = PackageCompiler::new(
             config,
+            mode,
             &root_path,
             &out_path,
             &lib_path,
@@ -480,7 +481,6 @@ where
         compiler.write_entrypoint = is_root;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.subprocess_stdio = self.subprocess_stdio;
-        compiler.read_source_files(mode)?;
 
         let mut build_manifest = compiler.load_previus_build_manifest(&mut self.importable_modules);
 

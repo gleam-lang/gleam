@@ -34,6 +34,9 @@ impl ProjectIO {
 
 impl gleam_core::io::FileSystemReader for ProjectIO {
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+        if !dir.is_dir() {
+            return vec![];
+        }
         let dir = dir.to_path_buf();
         walkdir::WalkDir::new(dir.clone())
             .follow_links(true)
@@ -46,6 +49,9 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
+        if !dir.is_dir() {
+            return vec![];
+        }
         let dir = dir.to_path_buf();
         walkdir::WalkDir::new(dir)
             .follow_links(true)

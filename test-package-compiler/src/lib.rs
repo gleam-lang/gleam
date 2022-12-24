@@ -5,7 +5,7 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        package_compiler::Source, ErlangAppCodegenConfiguration, Origin, Target,
+        package_compiler::Source, ErlangAppCodegenConfiguration, Mode, Origin, Target,
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
@@ -48,6 +48,7 @@ pub fn prepare(path: &str) -> String {
     let mut build_journal = HashSet::new();
     let mut compiler = gleam_core::build::PackageCompiler::new(
         &config,
+        Mode::Dev,
         &root,
         &out,
         &lib,
