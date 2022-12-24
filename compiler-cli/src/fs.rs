@@ -33,30 +33,28 @@ impl ProjectIO {
 }
 
 impl gleam_core::io::FileSystemReader for ProjectIO {
-    fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        Box::new({
-            let dir = dir.to_path_buf();
-            walkdir::WalkDir::new(dir.clone())
-                .follow_links(true)
-                .into_iter()
-                .filter_map(Result::ok)
-                .filter(|e| e.file_type().is_file())
-                .map(|d| d.into_path())
-                .filter(move |d| is_gleam_path(d, dir.clone()))
-        })
+    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
+        let dir = dir.to_path_buf();
+        walkdir::WalkDir::new(dir.clone())
+            .follow_links(true)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+            .map(|d| d.into_path())
+            .filter(move |d| is_gleam_path(d, dir.clone()))
+            .collect()
     }
 
-    fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
-        Box::new({
-            let dir = dir.to_path_buf();
-            walkdir::WalkDir::new(dir)
-                .follow_links(true)
-                .into_iter()
-                .filter_map(Result::ok)
-                .filter(|e| e.file_type().is_file())
-                .map(|d| d.into_path())
-                .filter(|p| p.extension().and_then(OsStr::to_str) == Some("gleam_module"))
-        })
+    fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
+        let dir = dir.to_path_buf();
+        walkdir::WalkDir::new(dir)
+            .follow_links(true)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+            .map(|d| d.into_path())
+            .filter(|p| p.extension().and_then(OsStr::to_str) == Some("gleam_module"))
+            .collect()
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
