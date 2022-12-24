@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use lazy_static::__Deref;
 
 use super::*;
 use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc};
@@ -39,13 +40,17 @@ impl InMemoryFileSystem {
             .sorted_by(|a, b| a.0.cmp(&b.0))
             .collect()
     }
+
+    pub fn paths(&self) -> Vec<PathBuf> {
+        self.files.borrow().keys().cloned().collect()
+    }
 }
 
 impl FileSystemIO for InMemoryFileSystem {}
 
 impl FileSystemWriter for InMemoryFileSystem {
     fn delete(&self, path: &Path) -> Result<(), Error> {
-        let mut files = (*self.files).borrow_mut();
+        let mut files = self.files.deref().borrow_mut();
         let _ = files.remove(path);
         Ok(())
     }
@@ -70,8 +75,9 @@ impl FileSystemWriter for InMemoryFileSystem {
         panic!("unimplemented") // TODO
     }
 
-    fn delete_file(&self, _: &Path) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn delete_file(&self, path: &Path) -> Result<(), Error> {
+        let _ = self.files.deref().borrow_mut().remove(path);
+        Ok(())
     }
 
     fn write(&self, path: &Path, content: &str) -> Result<(), Error> {
@@ -81,7 +87,11 @@ impl FileSystemWriter for InMemoryFileSystem {
     fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
         let mut file = InMemoryFile::default();
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
-        _ = (*self.files).borrow_mut().insert(path.to_path_buf(), file);
+        _ = self
+            .files
+            .deref()
+            .borrow_mut()
+            .insert(path.to_path_buf(), file);
         Ok(())
     }
 }

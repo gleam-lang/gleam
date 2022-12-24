@@ -4,12 +4,9 @@
 mod generated_tests;
 
 use gleam_core::{
-    build::{
-        package_compiler::Source, ErlangAppCodegenConfiguration, Mode, Origin, Target,
-        TargetCodegenConfiguration,
-    },
+    build::{ErlangAppCodegenConfiguration, Mode, Target, TargetCodegenConfiguration},
     config::PackageConfig,
-    io::Content,
+    io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
 };
 use itertools::Itertools;
 use std::{
@@ -23,9 +20,6 @@ pub fn prepare(path: &str) -> String {
 
     let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
     let config: PackageConfig = toml::from_str(&toml).unwrap();
-
-    let mut sources = read_files(&root, Origin::Src);
-    sources.extend(read_files(&root, Origin::Test).into_iter());
 
     let target = match config.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
@@ -41,8 +35,9 @@ pub fn prepare(path: &str) -> String {
     let ids = gleam_core::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let mut warnings = Vec::new();
-    let filesystem = gleam_core::io::memory::InMemoryFileSystem::new();
-    let root = PathBuf::from("/");
+    let filesystem = to_in_memory_filesystem(&root);
+    let initial_files = filesystem.paths();
+    let root = PathBuf::from("");
     let out = PathBuf::from("/out/lib/the_package");
     let lib = PathBuf::from("/out/lib");
     let mut build_journal = HashSet::new();
@@ -61,10 +56,12 @@ pub fn prepare(path: &str) -> String {
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = false;
     compiler.copy_native_files = false;
-    compiler.sources = sources;
     let result = compiler.compile(&mut warnings, &mut modules, &mut im::HashMap::new());
     match result {
         Ok(_) => {
+            for path in initial_files {
+                filesystem.delete_file(&path).unwrap();
+            }
             let files = filesystem.into_contents();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
@@ -107,43 +104,21 @@ impl TestCompileOutput {
     }
 }
 
-fn read_files(root: &Path, origin: Origin) -> Vec<Source> {
-    let prefix = &match origin {
-        Origin::Src => "src",
-        Origin::Test => "test",
-    };
-    let path = root.join(prefix);
+fn to_in_memory_filesystem(path: &Path) -> InMemoryFileSystem {
+    let fs = InMemoryFileSystem::new();
 
-    if !path.exists() {
-        return vec![];
+    let files = walkdir::WalkDir::new(path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(|d| d.into_path());
+
+    for fullpath in files {
+        let content = std::fs::read_to_string(&fullpath).unwrap();
+        let path = fullpath.strip_prefix(path).unwrap();
+        fs.write(path, &content).unwrap();
     }
 
-    walkdir::WalkDir::new(path)
-        .into_iter()
-        .filter_map(|entry| {
-            let entry = entry.unwrap();
-            let path = entry.path();
-
-            if path.is_dir() {
-                return None;
-            }
-            if path.extension().unwrap() != "gleam" {
-                return None;
-            }
-
-            let path = path.strip_prefix(root).unwrap().to_path_buf();
-            let name = path
-                .strip_prefix(prefix)
-                .unwrap()
-                .with_extension("")
-                .to_string_lossy()
-                .to_string();
-            Some(Source {
-                code: std::fs::read_to_string(entry.path()).unwrap(),
-                origin,
-                path,
-                name,
-            })
-        })
-        .collect()
+    fs
 }
