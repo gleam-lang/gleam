@@ -13,6 +13,17 @@ fn erlang_import() {
 }
 
 #[test]
+fn opaque_type_destructure() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_destructure");
+    insta::assert_snapshot!(
+        "opaque_type_destructure",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_destructure"
+    );
+}
+
+#[test]
 fn erlang_nested() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested");
@@ -42,6 +53,17 @@ fn erlang_escape_names() {
         "erlang_escape_names",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_escape_names"
+    );
+}
+
+#[test]
+fn opaque_type_accessor() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_accessor");
+    insta::assert_snapshot!(
+        "opaque_type_accessor",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_accessor"
     );
 }
 
@@ -240,6 +262,17 @@ fn javascript_empty() {
         "javascript_empty",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_empty"
+    );
+}
+
+#[test]
+fn opaque_type_construct() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct");
+    insta::assert_snapshot!(
+        "opaque_type_construct",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct"
     );
 }
 
