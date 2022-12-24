@@ -180,69 +180,6 @@ fn package_compiler_test() {
             }
         }),
     );
-
-    // Import cycles between modules are not allowed
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "import two".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: "import three".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/three.gleam"),
-                name: "three".to_string(),
-                code: "import one".to_string(),
-            },
-        ],
-        Err(Error::ImportCycle {
-            modules: vec!["one".to_string(), "three".to_string(), "two".to_string()],
-        }),
-    );
-}
-
-#[test]
-fn imported_module_consts() {
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: "import one
-pub const test = one.A
-fn x() { test }"
-                    .to_string(),
-            },
-        ],
-        Err(Error::Type {
-            path: PathBuf::from("/src/two.gleam"),
-            src: "import one
-pub const test = one.A
-fn x() { test }"
-                .to_string(),
-            error: type_::Error::UnknownModuleValue {
-                location: SrcSpan { start: 28, end: 33 },
-                module_name: vec!["one".to_string()],
-                name: "A".to_string(),
-                value_constructors: vec![]
-            }
-        })
-    );
 }
 
 fn normalise_error(e: Error) -> Error {

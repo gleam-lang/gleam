@@ -1,0 +1,19 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 140
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/import_cycle
+---
+error: Import cycle
+
+The import statements for these modules form a cycle:
+
+    ┌─────┐
+    │    three
+    │     ↓
+    │    two
+    │     ↓
+    │    one
+    └─────┘
+Gleam doesn't support dependency cycles like these, please break the
+cycle to continue.
+
