@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Scientific notation support for float literals.
+- Scientific notation is now available for float literals.
+- Fixed a bug where no error would be emitted if a `src` module imported a
+  `test` module.
 - Fixed a bug where comments in list prepending expressions could be formatted
   incorrectly.
 - Fixed a bug where comments in record update expressions could be formatted
