@@ -1,5 +1,3 @@
-# Distinguish between a module and a value with the same local name.
-# https://github.com/gleam-lang/gleam/issues/807
 name = "importy"
 version = "0.1.0"
 target = "erlang"
