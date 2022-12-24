@@ -1,4 +1,4 @@
-import one.{A, A as C, B, B as D}
+import one.{A, A as C, B, B as D, User, User as XUser}
 
 /// For these statements we use the records in a qualified fashion
 pub const qualified_const_a = one.A
@@ -45,5 +45,21 @@ pub fn aliased_fn_b() {
 pub fn accessors(user: one.User) {
   let name = user.name
   let score = user.score
+  #(name, score)
+}
+
+/// For these statements we use destructure the record
+pub fn destructure_qualified(user) {
+  let one.User(name: name, score: score) = user
+  #(name, score)
+}
+
+pub fn destructure_unqualified(user) {
+  let User(name: name, score: score) = user
+  #(name, score)
+}
+
+pub fn destructure_aliased(user) {
+  let XUser(name: name, score: score) = user
   #(name, score)
 }
