@@ -9,12 +9,7 @@ pub fn main() {
 "
     .to_string();
 
-    let cases = PathBuf::from("./cases")
-        .canonicalize()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("cases");
+    let cases = PathBuf::from("./cases");
 
     for entry in std::fs::read_dir(&cases).unwrap() {
         let name = entry.unwrap().file_name().into_string().unwrap();
@@ -24,9 +19,7 @@ pub fn main() {
             r#"#[test]
 fn {name}() {{
     let output =
-        crate::prepare(
-            "{path}",
-        );
+        crate::prepare("{path}");
     insta::assert_snapshot!(
         "{name}",
         output,
