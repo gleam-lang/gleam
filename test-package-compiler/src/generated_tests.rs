@@ -79,6 +79,17 @@ fn javascript_d_ts() {
 }
 
 #[test]
+fn unknown_module_field_in_import() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_import");
+    insta::assert_snapshot!(
+        "unknown_module_field_in_import",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_import"
+    );
+}
+
+#[test]
 fn erlang_bug_752() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752");
@@ -86,6 +97,17 @@ fn erlang_bug_752() {
         "erlang_bug_752",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752"
+    );
+}
+
+#[test]
+fn unknown_module_field_in_constant() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_constant");
+    insta::assert_snapshot!(
+        "unknown_module_field_in_constant",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_constant"
     );
 }
 
@@ -141,6 +163,17 @@ fn imported_record_constructors() {
         "imported_record_constructors",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors"
+    );
+}
+
+#[test]
+fn unknown_module_field_in_expression() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_expression");
+    insta::assert_snapshot!(
+        "unknown_module_field_in_expression",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_expression"
     );
 }
 
