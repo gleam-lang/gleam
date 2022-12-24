@@ -1,8 +1,20 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 184
+assertion_line: 239
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_import
 ---
+//// /out/lib/the_package/_gleam_artefacts/one@two.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@two.timestamp
+663112800
+
+//// /out/lib/the_package/_gleam_artefacts/two.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.timestamp
+663112800
+
 //// /out/lib/the_package/gleam.d.ts
 <prelude>
 

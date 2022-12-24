@@ -11,6 +11,7 @@ use gleam_core::{
 use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
+    ffi::OsStr,
     fmt::Write,
     path::{Path, PathBuf},
 };
@@ -53,7 +54,7 @@ pub fn prepare(path: &str) -> String {
         Some(&mut build_journal),
     );
     compiler.write_entrypoint = false;
-    compiler.write_metadata = false;
+    compiler.write_metadata = true;
     compiler.compile_beam_bytecode = false;
     compiler.copy_native_files = false;
     let result = compiler.compile(&mut warnings, &mut modules, &mut im::HashMap::new());
@@ -84,11 +85,16 @@ impl TestCompileOutput {
             buffer.push('\n');
 
             match content {
+                _ if path.extension().and_then(OsStr::to_str) == Some("gleam_module") => {
+                    buffer.push_str("<.gleam_module binary>")
+                }
+
                 _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
                     buffer.push_str("<prelude>")
                 }
+
                 Content::Text(text) => buffer.push_str(text),
-                Content::Binary(data) => write!(buffer, "{:#?}", data).unwrap(),
+                Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
             };
             buffer.push('\n');
             buffer.push('\n');

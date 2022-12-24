@@ -2,7 +2,7 @@ use itertools::Itertools;
 use lazy_static::__Deref;
 
 use super::*;
-use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc, time::Duration};
 
 // An in memory sharable collection of pretend files that can be used in place
 // of a real file system. It is a shared reference to a set of buffer than can
@@ -216,7 +216,9 @@ impl Default for InMemoryFile {
     fn default() -> Self {
         Self {
             buffer: Default::default(),
-            modification_time: SystemTime::now(),
+            // We use a fixed time here so that the tests are deterministic. In
+            // future we may want to inject this in some fashion.
+            modification_time: SystemTime::UNIX_EPOCH + Duration::from_secs(663112800),
         }
     }
 }

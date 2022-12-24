@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 151
+assertion_line: 206
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/hello_joe
 ---
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.erl
@@ -13,6 +13,12 @@ expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/hello_joe
 main() ->
     <<"Hello, Joe!"/utf8>>.
 
+
+//// /out/lib/the_package/_gleam_artefacts/hello_joe.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/hello_joe.timestamp
+663112800
 
 //// /out/lib/the_package/ebin/hello_joe.app
 {application, hello_joe, [
