@@ -68,6 +68,17 @@ fn import_shadowed_name_warning() {
 }
 
 #[test]
+fn record_constructors() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/record_constructors");
+    insta::assert_snapshot!(
+        "record_constructors",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/record_constructors"
+    );
+}
+
+#[test]
 fn javascript_d_ts() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_d_ts");
