@@ -1,4 +1,4 @@
-import one.{A, A as C, B, B as D, User, User as XUser}
+import one/one.{A, A as C, B, B as D, User, User as XUser}
 
 /// For these statements we use the records in a qualified fashion
 pub const qualified_const_a = one.A
@@ -62,4 +62,17 @@ pub fn destructure_unqualified(user) {
 pub fn destructure_aliased(user) {
   let XUser(name: name, score: score) = user
   #(name, score)
+}
+
+/// For these statements we use update the record
+pub fn update_qualified(user) {
+  one.User(..user, name: "wibble")
+}
+
+pub fn update_unqualified(user) {
+  User(..user, name: "wibble")
+}
+
+pub fn update_aliased(user) {
+  XUser(..user, name: "wibble")
 }
