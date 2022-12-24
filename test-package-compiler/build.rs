@@ -24,7 +24,9 @@ pub fn main() {
             r#"#[test]
 fn {name}() {{
     let output =
-        crate::prepare("{path}");
+        crate::prepare(
+            "{path}",
+        );
     insta::assert_snapshot!(
         "{name}",
         output,
