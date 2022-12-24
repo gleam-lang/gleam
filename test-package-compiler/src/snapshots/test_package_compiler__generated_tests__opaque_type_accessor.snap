@@ -1,0 +1,17 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 63
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_accessor
+---
+error: Unknown record field
+  ┌─ src/two.gleam:7:14
+  │
+7 │   let name = user.name
+  │              ^^^^^^^^^ This field does not exist
+
+The value being accessed has this type:
+
+    User
+
+It does not have any fields.
+
