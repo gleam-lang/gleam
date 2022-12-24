@@ -115,4 +115,8 @@ impl FileSystemReader for WasmFileSystem {
     fn current_dir(&self) -> Result<PathBuf, Error> {
         self.imfs.current_dir()
     }
+
+    fn modified_time(&self, path: &Path) -> Result<std::time::SystemTime, Error> {
+        self.imfs.modified_time(path)
+    }
 }
