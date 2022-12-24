@@ -22,7 +22,7 @@ expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_co
 -module(two).
 -compile(no_auto_import).
 
--export([qualified_fn_a/0, qualified_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0, accessors/1]).
+-export([qualified_fn_a/0, qualified_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0, accessors/1, destructure_qualified/1, destructure_unqualified/1, destructure_aliased/1]).
 
 -spec qualified_fn_a() -> one:a().
 qualified_fn_a() ->
@@ -52,6 +52,21 @@ aliased_fn_b() ->
 accessors(User) ->
     Name = erlang:element(2, User),
     Score = erlang:element(3, User),
+    {Name, Score}.
+
+-spec destructure_qualified(one:user()) -> {binary(), integer()}.
+destructure_qualified(User) ->
+    {user, Name, Score} = User,
+    {Name, Score}.
+
+-spec destructure_unqualified(one:user()) -> {binary(), integer()}.
+destructure_unqualified(User) ->
+    {user, Name, Score} = User,
+    {Name, Score}.
+
+-spec destructure_aliased(one:user()) -> {binary(), integer()}.
+destructure_aliased(User) ->
+    {user, Name, Score} = User,
     {Name, Score}.
 
 
