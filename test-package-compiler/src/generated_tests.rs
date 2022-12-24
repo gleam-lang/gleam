@@ -145,6 +145,17 @@ fn unknown_module_field_in_constant() {
 }
 
 #[test]
+fn duplicate_module() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/duplicate_module");
+    insta::assert_snapshot!(
+        "duplicate_module",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/duplicate_module"
+    );
+}
+
+#[test]
 fn imported_external_fns() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns");
