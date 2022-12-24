@@ -3,5 +3,9 @@ pub type A {
 }
 
 pub type B {
-  B(A)
+  B(A, A)
+}
+
+pub type User {
+  User(name: String, score: Int)
 }
