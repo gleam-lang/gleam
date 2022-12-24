@@ -1248,60 +1248,6 @@ fn x() { test }"
     );
 }
 
-#[test]
-fn imported_type_constructor_used_as_function() {
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "pub type A { A(String) }".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: "import one
-pub fn x() { one.A }"
-                    .to_string(),
-            },
-        ],
-        Ok(vec![
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/one.erl"),
-                content: Content::Text(
-                    "-module(one).
--compile(no_auto_import).
-
--export_type([a/0]).
-
--type a() :: {a, binary()}.
-
-
-"
-                    .to_string()
-                ),
-            },
-            OutputFile {
-                path: PathBuf::from("_build/default/lib/the_package/_gleam_artefacts/two.erl"),
-                content: Content::Text(
-                    "-module(two).
--compile(no_auto_import).
-
--export([x/0]).
-
--spec x() -> fun((binary()) -> one:a()).
-x() ->
-    fun(Field@0) -> {a, Field@0} end.
-"
-                    .to_string()
-                ),
-            }
-        ]),
-    );
-}
-
 fn normalise_error(e: Error) -> Error {
     match e {
         Error::ImportCycle { mut modules } => {
