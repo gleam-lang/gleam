@@ -134,6 +134,17 @@ fn erlang_empty() {
 }
 
 #[test]
+fn import_cycle() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_cycle");
+    insta::assert_snapshot!(
+        "import_cycle",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_cycle"
+    );
+}
+
+#[test]
 fn alias_unqualified_import() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/alias_unqualified_import");
