@@ -13,6 +13,7 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
     path::{Path, PathBuf},
+    time::SystemTime,
 };
 
 #[cfg(test)]
@@ -94,6 +95,17 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
             path: PathBuf::from("."),
             err: Some(e.to_string()),
         })
+    }
+
+    fn modified_time(&self, path: &Path) -> Result<SystemTime, Error> {
+        path.metadata()
+            .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
+            .map_err(|e| Error::FileIo {
+                action: FileIoAction::ReadMetadata,
+                kind: FileKind::File,
+                path: path.to_path_buf(),
+                err: Some(e.to_string()),
+            })
     }
 }
 

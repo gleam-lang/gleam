@@ -98,7 +98,8 @@ impl FileSystemWriter for InMemoryFileSystem {
 
 impl FileSystemReader for InMemoryFileSystem {
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
-        (*self.files)
+        self.files
+            .deref()
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
@@ -108,7 +109,8 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
-        (*self.files)
+        self.files
+            .deref()
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
@@ -119,7 +121,7 @@ impl FileSystemReader for InMemoryFileSystem {
 
     fn read(&self, path: &Path) -> Result<String, Error> {
         let path = path.to_path_buf();
-        let files = (*self.files).borrow();
+        let files = self.files.deref().borrow();
         let file = files.get(&path).ok_or_else(|| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Open,
@@ -137,7 +139,7 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn is_file(&self, path: &Path) -> bool {
-        (*self.files).borrow().contains_key(path)
+        self.files.deref().borrow().contains_key(path)
     }
 
     fn is_directory(&self, _path: &Path) -> bool {
@@ -150,7 +152,8 @@ impl FileSystemReader for InMemoryFileSystem {
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
         let read_dir = ReadDir::from_iter(
-            (*self.files)
+            self.files
+                .deref()
                 .borrow()
                 .iter()
                 .map(|(file_path, _)| file_path.to_path_buf())
@@ -165,6 +168,17 @@ impl FileSystemReader for InMemoryFileSystem {
     fn current_dir(&self) -> Result<PathBuf, Error> {
         Ok(PathBuf::from("/"))
     }
+
+    fn modified_time(&self, path: &Path) -> Result<SystemTime, Error> {
+        let files = self.files.deref().borrow();
+        let file = files.get(path).ok_or_else(|| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::ReadMetadata,
+            path: path.to_path_buf(),
+            err: None,
+        })?;
+        Ok(file.modification_time)
+    }
 }
 
 // An in memory sharable that can be used in place of a real file. It is a
@@ -176,9 +190,10 @@ impl FileSystemReader for InMemoryFileSystem {
 //
 // Not thread safe. The compiler is single threaded, so that's OK.
 //
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InMemoryFile {
     buffer: Rc<RefCell<Vec<u8>>>,
+    modification_time: SystemTime,
 }
 
 impl InMemoryFile {
@@ -193,6 +208,15 @@ impl InMemoryFile {
         match String::from_utf8(contents) {
             Ok(s) => Content::Text(s),
             Err(e) => Content::Binary(e.into_bytes()),
+        }
+    }
+}
+
+impl Default for InMemoryFile {
+    fn default() -> Self {
+        Self {
+            buffer: Default::default(),
+            modification_time: SystemTime::now(),
         }
     }
 }
