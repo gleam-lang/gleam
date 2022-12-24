@@ -55,7 +55,7 @@ pub fn prepare(path: &str) -> String {
     let target = match config.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
             app_file: Some(ErlangAppCodegenConfiguration {
-                include_dev_deps: false,
+                include_dev_deps: true,
             }),
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {

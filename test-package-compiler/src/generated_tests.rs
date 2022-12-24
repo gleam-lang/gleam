@@ -46,6 +46,17 @@ fn erlang_escape_names() {
 }
 
 #[test]
+fn erlang_app_generation() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_app_generation");
+    insta::assert_snapshot!(
+        "erlang_app_generation",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_app_generation"
+    );
+}
+
+#[test]
 fn import_shadowed_name_warning() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/import_shadowed_name_warning");
