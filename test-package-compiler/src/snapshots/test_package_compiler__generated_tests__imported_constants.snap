@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 206
+assertion_line: 261
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.erl
@@ -17,6 +17,12 @@ expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_co
 
 
 
+
+//// /out/lib/the_package/_gleam_artefacts/one.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one.timestamp
+663112800
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -69,6 +75,12 @@ destructure_aliased(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
+
+//// /out/lib/the_package/_gleam_artefacts/two.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.timestamp
+663112800
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

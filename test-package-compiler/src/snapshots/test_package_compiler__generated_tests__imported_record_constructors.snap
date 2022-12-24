@@ -1,6 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 162
+assertion_line: 217
 expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
@@ -17,6 +17,12 @@ expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_re
 
 
 
+
+//// /out/lib/the_package/_gleam_artefacts/one@one.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/one@one.timestamp
+663112800
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -98,6 +104,12 @@ update_unqualified(User) ->
 update_aliased(User) ->
     erlang:setelement(2, User, <<"wibble"/utf8>>).
 
+
+//// /out/lib/the_package/_gleam_artefacts/two.gleam_module
+<.gleam_module binary>
+
+//// /out/lib/the_package/_gleam_artefacts/two.timestamp
+663112800
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
