@@ -316,10 +316,19 @@ where
         }
         tracing::info!("Writing package metadata to disc");
         for module in modules {
-            let name = format!("{}.gleam_module", &module.name.replace('/', "@"));
+            let module_name = module.name.replace('/', "@");
+
+            // Write metadata file
+            let name = format!("{}.gleam_module", &module_name);
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
             self.io.write_bytes(&path, &bytes)?;
+            self.add_build_journal(path);
+
+            // Write timestamp
+            let name = format!("{}.timestamp", &module_name);
+            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
+            self.io.write(&path, &module.mtime_unix().to_string())?;
             self.add_build_journal(path);
         }
         Ok(())
