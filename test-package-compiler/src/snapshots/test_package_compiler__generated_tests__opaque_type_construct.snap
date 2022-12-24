@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 272
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_construct
+assertion_line: 294
+expression: "./cases/opaque_type_construct"
 ---
 error: Unknown variable
   ┌─ src/two.gleam:7:3

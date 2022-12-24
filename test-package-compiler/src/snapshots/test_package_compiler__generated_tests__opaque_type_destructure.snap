@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 assertion_line: 19
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/opaque_type_destructure
+expression: "./cases/opaque_type_destructure"
 ---
 error: Unknown variable
   ┌─ src/two.gleam:7:7

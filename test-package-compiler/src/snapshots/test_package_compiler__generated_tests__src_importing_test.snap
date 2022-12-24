@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 assertion_line: 74
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test
+expression: "./cases/src_importing_test"
 ---
 error: App importing test module
   ┌─ src/one.gleam:3:8

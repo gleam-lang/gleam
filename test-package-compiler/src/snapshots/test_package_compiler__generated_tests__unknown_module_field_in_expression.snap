@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 173
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/unknown_module_field_in_expression
+assertion_line: 228
+expression: "./cases/unknown_module_field_in_expression"
 ---
 error: Unknown module field
   ┌─ src/two.gleam:4:6
