@@ -5,6 +5,7 @@
 - The formatter now inserts underscores into larger `Int`s and the larger
   integer parts of `Float`s.
 - Added support for top level TypeScript file inclusion in builds.
+- Added support for deno runtime for JavaScript target.
 
 ## v0.25.1 - 2022-12-11
 
