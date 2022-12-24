@@ -98,32 +98,6 @@ fn compile_test_project(
 
 #[test]
 fn package_compiler_test() {
-    // TODO: src modules cannot be allowed to import test modules
-    // TODO: Does this get handled at this level? I forget
-    // assert_erlang_compile!(
-    //     vec![
-    //         Source {
-    //             origin: Origin::Test,
-    //             name: "two".to_string(),
-    //             path: PathBuf::from("/test/two.gleam"),
-    //             code: "".to_string(),
-    //         },
-    //         Source {
-    //             origin: Origin::Src,
-    //             name: "one".to_string(),
-    //             path: PathBuf::from("/src/one.gleam"),
-    //             code: "import two".to_string(),
-    //         },
-    //     ],
-    //     Err(Error::SrcImportingTest {
-    //         path: PathBuf::from("/src/one.gleam"),
-    //         src: "import two".to_string(),
-    //         location: crate::ast::SrcSpan { start: 7, end: 10 },
-    //         src_module: "one".to_string(),
-    //         test_module: "two".to_string(),
-    //     }),
-    // );
-
     assert_erlang_compile!(
         vec![
             Source {
@@ -143,41 +117,6 @@ fn package_compiler_test() {
             module: "one".to_string(),
             first: PathBuf::from("/src/one.gleam"),
             second: PathBuf::from("/test/one.gleam"),
-        }),
-    );
-
-    // A custom type marked as opaque cannot have its fields accessed
-    // from a different module
-    assert_erlang_compile!(
-        vec![
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/one.gleam"),
-                name: "one".to_string(),
-                code: "pub opaque type T { C(a: Int, b: Int) }".to_string(),
-            },
-            Source {
-                origin: Origin::Src,
-                path: PathBuf::from("/src/two.gleam"),
-                name: "two".to_string(),
-                code: "import one fn test(t: one.T) { t.a }".to_string(),
-            },
-        ],
-        Err(Error::Type {
-            path: PathBuf::from("/src/two.gleam"),
-            src: "import one fn test(t: one.T) { t.a }".to_string(),
-            error: crate::type_::Error::UnknownRecordField {
-                usage: FieldAccessUsage::Other,
-                location: crate::ast::SrcSpan { start: 31, end: 34 },
-                typ: Arc::new(crate::type_::Type::App {
-                    public: true,
-                    module: vec!["one".to_string(),],
-                    name: "T".to_string(),
-                    args: vec![],
-                }),
-                label: "a".to_string(),
-                fields: vec![],
-            }
         }),
     );
 }

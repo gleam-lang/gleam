@@ -1,0 +1,16 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 74
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/src_importing_test
+---
+error: App importing test module
+  ┌─ src/one.gleam:3:8
+  │
+3 │ import two
+  │        ^^^ Imported here
+
+The application module `one` is importing the test module `two`.
+
+Test modules are not included in production builds so test modules cannot
+import them. Perhaps move the `two` module to the src directory.
+
