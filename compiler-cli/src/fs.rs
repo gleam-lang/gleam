@@ -97,7 +97,7 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
         })
     }
 
-    fn modified_time(&self, path: &Path) -> Result<SystemTime, Error> {
+    fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
         path.metadata()
             .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))
             .map_err(|e| Error::FileIo {
