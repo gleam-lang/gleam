@@ -1,0 +1,53 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 162
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export_type([a/0, b/0]).
+
+-type a() :: a.
+
+-type b() :: {b, a()}.
+
+
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export([qualified_fn_a/0, qualified_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0]).
+
+-spec qualified_fn_a() -> one:a().
+qualified_fn_a() ->
+    a.
+
+-spec qualified_fn_b() -> one:b().
+qualified_fn_b() ->
+    {b, a}.
+
+-spec unqualified_fn_a() -> one:a().
+unqualified_fn_a() ->
+    a.
+
+-spec unqualified_fn_b() -> one:b().
+unqualified_fn_b() ->
+    {b, a}.
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+
