@@ -77,12 +77,12 @@ impl FileSystemWriter for WasmFileSystem {
 }
 
 impl FileSystemReader for WasmFileSystem {
-    fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         tracing::trace!("gleam_source_files   {:?}", dir);
         self.imfs.gleam_source_files(dir)
     }
 
-    fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>> {
+    fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
         tracing::trace!("gleam_metadata_files {:?}", dir);
         self.imfs.gleam_metadata_files(dir)
     }

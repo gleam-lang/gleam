@@ -132,8 +132,8 @@ impl DirEntry {
 /// Typically we use an implementation that reads from the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemReader {
-    fn gleam_source_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
-    fn gleam_metadata_files(&self, dir: &Path) -> Box<dyn Iterator<Item = PathBuf>>;
+    fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf>;
+    fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf>;
     fn read_dir(&self, path: &Path) -> Result<ReadDir>;
     fn read(&self, path: &Path) -> Result<String, Error>;
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
