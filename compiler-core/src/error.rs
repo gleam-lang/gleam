@@ -15,7 +15,6 @@ use itertools::Itertools;
 use std::env;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
-use strum::VariantNames;
 use termcolor::Buffer;
 use thiserror::Error;
 
@@ -2294,13 +2293,11 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
 
                 let hint = match target {
-                    Target::JavaScript => Some(format!(
-                        "available runtimes for {} are: {:?}",
-                        target,
-                        Runtime::VARIANTS
-                    )),
+                    Target::JavaScript => {
+                        Some("available runtimes for JavaScript are: node, deno".to_string())
+                    }
                     Target::Erlang => Some(
-                        "You can not set a runtime for erlang. Did you mean to target javascript?"
+                        "You can not set a runtime for Erlang. Did you mean to target JavaScript?"
                             .into(),
                     ),
                 };
