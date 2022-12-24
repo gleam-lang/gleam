@@ -68,17 +68,6 @@ fn import_shadowed_name_warning() {
 }
 
 #[test]
-fn record_constructors() {
-    let output =
-        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/record_constructors");
-    insta::assert_snapshot!(
-        "record_constructors",
-        output,
-        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/record_constructors"
-    );
-}
-
-#[test]
 fn javascript_d_ts() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/javascript_d_ts");
@@ -97,6 +86,17 @@ fn erlang_bug_752() {
         "erlang_bug_752",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_bug_752"
+    );
+}
+
+#[test]
+fn imported_external_fns() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns");
+    insta::assert_snapshot!(
+        "imported_external_fns",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns"
     );
 }
 
@@ -130,6 +130,17 @@ fn hello_joe() {
         "hello_joe",
         output,
         "/Users/louis/src/gleam/gleam/test-package-compiler/cases/hello_joe"
+    );
+}
+
+#[test]
+fn imported_record_constructors() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors");
+    insta::assert_snapshot!(
+        "imported_record_constructors",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_record_constructors"
     );
 }
 

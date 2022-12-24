@@ -1,0 +1,78 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+assertion_line: 96
+expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_external_fns
+---
+//// /out/lib/the_package/_gleam_artefacts/one.erl
+-module(one).
+-compile(no_auto_import).
+
+-export([thing/0]).
+
+-spec thing() -> nil.
+thing() ->
+    thing:new().
+
+
+//// /out/lib/the_package/_gleam_artefacts/two.erl
+-module(two).
+-compile(no_auto_import).
+
+-export([the_consts/0, fn_reference_qualified/0, fn_reference_qualified_aliased/0, fn_reference_unqualified/0, fn_reference_unqualified_aliased/0, fn_call_qualified/0, fn_call_qualified_aliased/0, fn_call_unqualified/0, fn_call_unqualified_aliased/0]).
+
+-spec the_consts() -> nil.
+the_consts() ->
+    fun thing:new/0,
+    fun thing:new/0,
+    fun thing:new/0,
+    fun thing:new/0,
+    thing:new(),
+    thing:new(),
+    thing:new(),
+    thing:new().
+
+-spec fn_reference_qualified() -> fun(() -> nil).
+fn_reference_qualified() ->
+    fun one:thing/0.
+
+-spec fn_reference_qualified_aliased() -> fun(() -> nil).
+fn_reference_qualified_aliased() ->
+    fun one:thing/0.
+
+-spec fn_reference_unqualified() -> fun(() -> nil).
+fn_reference_unqualified() ->
+    fun thing:new/0.
+
+-spec fn_reference_unqualified_aliased() -> fun(() -> nil).
+fn_reference_unqualified_aliased() ->
+    fun thing:new/0.
+
+-spec fn_call_qualified() -> nil.
+fn_call_qualified() ->
+    thing:new().
+
+-spec fn_call_qualified_aliased() -> nil.
+fn_call_qualified_aliased() ->
+    thing:new().
+
+-spec fn_call_unqualified() -> nil.
+fn_call_unqualified() ->
+    thing:new().
+
+-spec fn_call_unqualified_aliased() -> nil.
+fn_call_unqualified_aliased() ->
+    thing:new().
+
+
+//// /out/lib/the_package/ebin/importy.app
+{application, importy, [
+    {vsn, "0.1.0"},
+    {applications, []},
+    {description, ""},
+    {modules, [one,
+               two]},
+    {registered, []}
+]}.
+
+
+

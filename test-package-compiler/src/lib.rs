@@ -86,11 +86,14 @@ pub fn prepare(path: &str) -> String {
     compiler.compile_beam_bytecode = false;
     compiler.copy_native_files = false;
     compiler.sources = sources;
-    compiler
-        .compile(&mut warnings, &mut modules, &mut im::HashMap::new())
-        .unwrap();
-    let files = filesystem.into_contents();
-    TestCompileOutput { files, warnings }.as_overview_text()
+    let result = compiler.compile(&mut warnings, &mut modules, &mut im::HashMap::new());
+    match result {
+        Ok(_) => {
+            let files = filesystem.into_contents();
+            TestCompileOutput { files, warnings }.as_overview_text()
+        }
+        Err(error) => error.pretty_string(),
+    }
 }
 
 #[derive(Debug)]
