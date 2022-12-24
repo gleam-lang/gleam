@@ -156,6 +156,17 @@ fn variable_or_module() {
 }
 
 #[test]
+fn imported_constants() {
+    let output =
+        crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants");
+    insta::assert_snapshot!(
+        "imported_constants",
+        output,
+        "/Users/louis/src/gleam/gleam/test-package-compiler/cases/imported_constants"
+    );
+}
+
+#[test]
 fn erlang_import_shadowing_prelude() {
     let output =
         crate::prepare("/Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_import_shadowing_prelude");
