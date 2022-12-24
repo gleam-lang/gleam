@@ -130,7 +130,7 @@ fn read_files(root: &Path, origin: Origin) -> Vec<Source> {
                 return None;
             }
 
-            let path = path.strip_prefix(&root).unwrap().to_path_buf();
+            let path = path.strip_prefix(root).unwrap().to_path_buf();
             let name = path
                 .strip_prefix(prefix)
                 .unwrap()
