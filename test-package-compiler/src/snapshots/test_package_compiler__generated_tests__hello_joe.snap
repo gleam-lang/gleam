@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 assertion_line: 206
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/hello_joe
+expression: "./cases/hello_joe"
 ---
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.erl
 -module(hello_joe).

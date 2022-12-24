@@ -1,7 +1,7 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
 assertion_line: 41
-expression: /Users/louis/src/gleam/gleam/test-package-compiler/cases/erlang_nested_qualified_constant
+expression: "./cases/erlang_nested_qualified_constant"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
