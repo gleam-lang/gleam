@@ -1,10 +1,11 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    time::{Duration, SystemTime},
 };
 
 use crate::{
-    build::{dep_tree, package_compiler::module_name, Module, Origin},
+    build::{dep_tree, package_compiler::module_name, seconds_since_unix_epoch, Module, Origin},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemIO},
     Error, Result,
@@ -20,6 +21,7 @@ pub struct PackageLoader<'a, IO> {
     io: IO,
     mode: Mode,
     root: &'a Path,
+    artefact_directory: &'a Path,
     package_name: &'a str,
     target: Target,
     already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
@@ -33,6 +35,7 @@ where
         io: IO,
         mode: Mode,
         root: &'a Path,
+        artefact_directory: &'a Path,
         target: Target,
         package_name: &'a str,
         already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
@@ -43,6 +46,7 @@ where
             root,
             target,
             package_name,
+            artefact_directory,
             already_defined_modules,
         }
     }
@@ -83,6 +87,7 @@ where
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             mode: self.mode,
+            artefact_directory: self.artefact_directory,
             source_directory: &src,
             origin: Origin::Src,
         };
@@ -178,6 +183,7 @@ struct ModuleLoader<'a, IO> {
     io: IO,
     mode: Mode,
     source_directory: &'a Path,
+    artefact_directory: &'a Path,
     origin: Origin,
 }
 
@@ -185,20 +191,48 @@ impl<'a, IO> ModuleLoader<'a, IO>
 where
     IO: FileSystemIO + CommandExecutor + Clone,
 {
-    fn new(io: IO, mode: Mode, source_directory: &'a Path, origin: Origin) -> Self {
-        Self {
-            io,
-            mode,
-            source_directory,
-            origin,
+    /// Load a module from the given path.
+    ///
+    /// If the module has been compiled before and the source file has not been
+    /// changed since then, load the precompiled data instead.
+    ///
+    /// Whether the module has changed or not is determined by comparing the
+    /// modification time of the source file with the value recorded in the
+    /// `.timestamp` file in the artefact directory.
+    fn load(&self, path: PathBuf) -> Result<Source> {
+        let name = module_name(self.source_directory, &path);
+        let artefact = name.replace("/", "@");
+        let source_mtime = self.io.modification_time(&path)?;
+
+        match self.read_timestamp(&artefact)? {
+            Some(timestamp) if timestamp <= source_mtime => todo!("Load cache plz"),
+            _ => self.read_source(path, name, source_mtime),
         }
     }
 
-    fn load(&self, path: PathBuf) -> Result<Source> {
-        dbg!(&path);
-        let name = module_name(self.source_directory, &path);
+    fn read_timestamp(&self, artefact: &str) -> Result<Option<SystemTime>> {
+        let timestamp_path = self
+            .artefact_directory
+            .join(artefact)
+            .with_extension("timestamp");
+
+        if !self.io.is_file(&timestamp_path) {
+            return Ok(None);
+        }
+
+        let timestamp: u64 = self
+            .io
+            .read(&timestamp_path)?
+            .parse()
+            .expect("Timestamp parsing");
+
+        Ok(Some(
+            SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp),
+        ))
+    }
+
+    fn read_source(&self, path: PathBuf, name: String, mtime: SystemTime) -> Result<Source, Error> {
         let code = self.io.read(&path)?;
-        let mtime = self.io.modification_time(&path)?;
         Ok(Source {
             name,
             path,
