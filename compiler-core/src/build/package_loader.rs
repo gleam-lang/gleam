@@ -94,6 +94,7 @@ where
                 // and does not need to be recompiled.
                 // TODO: test
                 Input::Cached(cached) => {
+                    // TODO: read metadata
                     loaded.cached.push(());
                 }
             }
