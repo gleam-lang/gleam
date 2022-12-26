@@ -90,10 +90,12 @@ where
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
+        let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let modules = PackageLoader::new(
             self.io.clone(),
             self.mode,
             self.root,
+            &artefact_directory,
             self.target.target(),
             &self.config.name,
             already_defined_modules,
