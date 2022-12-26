@@ -37,8 +37,6 @@ pub struct PackageCompiler<'a, IO> {
     pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
-    // TODO: remove this. Tests can use the in memory filesystem instead
-    pub sources: Vec<Source>,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
@@ -73,7 +71,6 @@ where
             mode,
             config,
             target,
-            sources: vec![],
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
@@ -93,14 +90,10 @@ where
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
-        self.read_source_files()?;
+        let sources = self.read_source_files()?;
 
         tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(
-            &self.config.name,
-            std::mem::take(&mut self.sources),
-            already_defined_modules,
-        )?;
+        let parsed_modules = parse_sources(&self.config.name, sources, already_defined_modules)?;
 
         // Determine order in which modules are to be processed
         let sequence = dep_tree::toposort_deps(
@@ -294,39 +287,40 @@ where
         Ok(())
     }
 
-    fn read_source_files(&mut self) -> Result<()> {
+    fn read_source_files(&mut self) -> Result<Vec<Source>> {
         let span = tracing::info_span!("load", package = %self.config.name.as_str());
         let _enter = span.enter();
         tracing::info!("Reading source files");
         let src = self.root.join("src");
         let test = self.root.join("test");
+        let mut sources = Vec::new();
+
+        let mut add_module = |path: PathBuf, dir: &Path, origin: Origin| -> Result<(), Error> {
+            let name = module_name(&dir, &path);
+            let code = self.io.read(&path)?;
+            let mtime = self.io.modification_time(&path)?;
+            sources.push(Source {
+                name,
+                path,
+                code,
+                mtime,
+                origin,
+            });
+            Ok(())
+        };
 
         // Src
         for path in self.io.gleam_source_files(&src) {
-            self.add_module(path, &src, Origin::Src)?;
+            add_module(path, &src, Origin::Src)?;
         }
 
         // Test
         if self.mode.is_dev() {
             for path in self.io.gleam_source_files(&test) {
-                self.add_module(path, &test, Origin::Test)?;
+                add_module(path, &test, Origin::Test)?;
             }
         }
-        Ok(())
-    }
-
-    fn add_module(&mut self, path: PathBuf, dir: &Path, origin: Origin) -> Result<()> {
-        let name = module_name(&dir, &path);
-        let code = self.io.read(&path)?;
-        let mtime = self.io.modification_time(&path)?;
-        self.sources.push(Source {
-            name,
-            path,
-            code,
-            mtime,
-            origin,
-        });
-        Ok(())
+        Ok(sources)
     }
 
     fn add_build_journal(&mut self, path: PathBuf) -> Result<()> {
