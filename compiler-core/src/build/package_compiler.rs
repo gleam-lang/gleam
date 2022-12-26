@@ -419,6 +419,7 @@ fn type_check(
         mtime,
         origin,
         package,
+        dependencies,
         extra,
     } in parsed_modules
     {
@@ -452,6 +453,7 @@ fn type_check(
         // Register the successfully type checked module data so that it can be
         // used for code generation
         modules.push(Module {
+            dependencies,
             origin,
             extra,
             mtime,
@@ -589,6 +591,14 @@ impl Input {
             Input::Cached(m) => todo!(),
         }
     }
+
+    pub fn dependencies(&self) -> &[(String, SrcSpan)] {
+        match self {
+            Input::New(m) => &m.dependencies,
+            // TODO: implement
+            Input::Cached(m) => todo!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -610,6 +620,7 @@ pub(crate) struct UncompiledModule {
     pub mtime: SystemTime,
     pub origin: Origin,
     pub package: String,
+    pub dependencies: Vec<(String, SrcSpan)>,
     pub ast: UntypedModule,
     pub extra: ModuleExtra,
 }

@@ -57,13 +57,18 @@ where
         let mut inputs = self.read_source_files()?;
 
         // Determine order in which modules are to be processed
-        let sequence = dep_tree::toposort_deps(
-            inputs
-                .values()
-                .map(|m| module_deps_for_graph(self.target, m))
-                .collect(),
-        )
-        .map_err(convert_deps_tree_error)?;
+        let deps = inputs
+            .values()
+            .map(|m| {
+                let deps = m
+                    .dependencies()
+                    .iter()
+                    .map(|(m, _)| m.to_string())
+                    .collect();
+                (m.name().to_string(), deps)
+            })
+            .collect();
+        let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
         let mut loaded = Loaded::default();
         let mut stale = HashSet::new();
@@ -114,6 +119,7 @@ where
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             mode: self.mode,
+            target: self.target,
             package_name: self.package_name,
             artefact_directory: self.artefact_directory,
             source_directory: &src,
@@ -142,25 +148,6 @@ where
     }
 }
 
-fn module_deps_for_graph(target: Target, input: &Input) -> (String, Vec<String>) {
-    match input {
-        Input::New(input) => {
-            let name = input.name.clone();
-            let deps: Vec<_> = input
-                .ast
-                .dependencies(target)
-                .into_iter()
-                .map(|(dep, _span)| dep)
-                .collect();
-            (name, deps)
-        }
-
-        // TODO: implement
-        // TODO: test
-        Input::Cached(_) => todo!(),
-    }
-}
-
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     match e {
         dep_tree::Error::Cycle(modules) => Error::ImportCycle { modules },
@@ -171,6 +158,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 struct ModuleLoader<'a, IO> {
     io: IO,
     mode: Mode,
+    target: Target,
     package_name: &'a str,
     source_directory: &'a Path,
     artefact_directory: &'a Path,
@@ -194,14 +182,16 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
-        match self.read_timestamp(&artefact)? {
+        Ok(match self.read_timestamp(&artefact)? {
             // If there's a timestamp and it's newer than the source file
             // modification time then we read the cached data.
-            Some(timestamp) if timestamp <= source_mtime => todo!("Load cache plz"),
+            Some(previous_compile_timestamp) if previous_compile_timestamp <= source_mtime => {
+                Input::Cached(self.read_cached(name)?)
+            }
 
             // Otherwise we read the source file to compile it.
-            _ => Ok(Input::New(self.read_source(path, name, source_mtime)?)),
-        }
+            _ => Input::New(self.read_source(path, name, source_mtime)?),
+        })
     }
 
     /// Read the timestamp file from the artefact directory for the given
@@ -241,11 +231,14 @@ where
             error,
         })?;
 
+        let dependencies = ast.dependencies(self.target);
+
         // TODO: store the name on the AST as a string.
         ast.name = name.split("/").map(String::from).collect();
         let module = UncompiledModule {
             package: self.package_name.to_string(),
             origin: self.origin,
+            dependencies,
             extra,
             mtime,
             path,
@@ -254,6 +247,10 @@ where
             ast,
         };
         Ok(module)
+    }
+
+    fn read_cached(&self, name: String) -> Result<CachedModule> {
+        Ok(CachedModule { name })
     }
 }
 
