@@ -179,7 +179,7 @@ where
         Ok(match self.read_cache_metadata(&artefact)? {
             // If there's a timestamp and it's newer than the source file
             // modification time then we read the cached data.
-            Some(meta) if meta.mtime <= source_mtime => Input::Cached(self.read_cached(name)?),
+            Some(meta) if meta.mtime <= source_mtime => Input::Cached(self.cached(name, meta)),
 
             // Otherwise we read the source file to compile it.
             _ => Input::New(self.read_source(path, name, source_mtime)?),
@@ -242,8 +242,12 @@ where
         Ok(module)
     }
 
-    fn read_cached(&self, name: String) -> Result<CachedModule> {
-        Ok(CachedModule { name })
+    fn cached(&self, name: String, meta: CacheMetadata) -> CachedModule {
+        CachedModule {
+            dependencies: meta.dependencies,
+            source_path: self.source_directory.join(format!("{}.gleam", name)),
+            name,
+        }
     }
 }
 
