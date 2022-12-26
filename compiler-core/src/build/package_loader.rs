@@ -4,7 +4,7 @@ use std::{
 };
 
 use crate::{
-    build::{dep_tree, package_compiler::module_name, Origin},
+    build::{dep_tree, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemIO},
     Error, Result,
@@ -77,33 +77,29 @@ where
         let span = tracing::info_span!("load", package = %self.package_name);
         let _enter = span.enter();
         tracing::info!("Reading source files");
-        let src = self.root.join("src");
-        let test = self.root.join("test");
         let mut sources = Vec::new();
 
-        let mut add_module = |path: PathBuf, dir: &Path, origin: Origin| -> Result<()> {
-            let name = module_name(&dir, &path);
-            let code = self.io.read(&path)?;
-            let mtime = self.io.modification_time(&path)?;
-            sources.push(Source {
-                name,
-                path,
-                code,
-                mtime,
-                origin,
-            });
-            Ok(())
+        let src = self.root.join("src");
+        let mut loader = ModuleLoader {
+            io: self.io.clone(),
+            mode: self.mode,
+            source_directory: &src,
+            origin: Origin::Src,
         };
 
         // Src
         for path in self.io.gleam_source_files(&src) {
-            add_module(path, &src, Origin::Src)?;
+            sources.push(loader.load(path)?);
         }
 
         // Test
         if self.mode.is_dev() {
+            let test = self.root.join("test");
+            loader.origin = Origin::Test;
+            loader.source_directory = &test;
+
             for path in self.io.gleam_source_files(&test) {
-                add_module(path, &test, Origin::Test)?;
+                sources.push(loader.load(path)?);
             }
         }
         Ok(sources)
@@ -174,5 +170,41 @@ fn module_deps_for_graph(target: Target, module: &UncompiledModule) -> (String, 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     match e {
         dep_tree::Error::Cycle(modules) => Error::ImportCycle { modules },
+    }
+}
+
+#[derive(Debug)]
+struct ModuleLoader<'a, IO> {
+    io: IO,
+    mode: Mode,
+    source_directory: &'a Path,
+    origin: Origin,
+}
+
+impl<'a, IO> ModuleLoader<'a, IO>
+where
+    IO: FileSystemIO + CommandExecutor + Clone,
+{
+    fn new(io: IO, mode: Mode, source_directory: &'a Path, origin: Origin) -> Self {
+        Self {
+            io,
+            mode,
+            source_directory,
+            origin,
+        }
+    }
+
+    fn load(&self, path: PathBuf) -> Result<Source> {
+        dbg!(&path);
+        let name = module_name(self.source_directory, &path);
+        let code = self.io.read(&path)?;
+        let mtime = self.io.modification_time(&path)?;
+        Ok(Source {
+            name,
+            path,
+            code,
+            mtime,
+            origin: self.origin,
+        })
     }
 }
