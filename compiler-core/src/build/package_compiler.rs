@@ -277,10 +277,14 @@ where
             self.io.write_bytes(&path, &bytes)?;
             self.add_build_journal(path);
 
-            // Write timestamp
-            let name = format!("{}.timestamp", &module_name);
+            // Write cache info
+            let name = format!("{}.cache_meta", &module_name);
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
-            self.io.write(&path, &module.mtime_unix().to_string())?;
+            let info = CacheMetadata {
+                mtime: module.mtime,
+                dependencies: module.dependencies_list(),
+            };
+            self.io.write_bytes(&path, &info.to_binary())?;
             self.add_build_journal(path);
         }
         Ok(())
@@ -592,9 +596,9 @@ impl Input {
         }
     }
 
-    pub fn dependencies(&self) -> &[(String, SrcSpan)] {
+    pub fn dependencies(&self) -> Vec<String> {
         match self {
-            Input::New(m) => &m.dependencies,
+            Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
             // TODO: implement
             Input::Cached(m) => todo!(),
         }
@@ -604,6 +608,22 @@ impl Input {
 #[derive(Debug)]
 pub(crate) struct CachedModule {
     pub name: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub(crate) struct CacheMetadata {
+    pub mtime: SystemTime,
+    pub dependencies: Vec<String>,
+}
+
+impl CacheMetadata {
+    pub fn to_binary(&self) -> Vec<u8> {
+        bincode::serialize(self).expect("Serializing cache info")
+    }
+
+    pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
+        bincode::deserialize(bytes).map_err(|e| e.to_string())
+    }
 }
 
 #[derive(Debug, Default)]

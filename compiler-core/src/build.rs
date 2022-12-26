@@ -193,6 +193,13 @@ impl Module {
             }
         }
     }
+
+    pub(crate) fn dependencies_list(&self) -> Vec<String> {
+        self.dependencies
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

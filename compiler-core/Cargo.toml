@@ -66,6 +66,8 @@ base16 = "0.2.1"
 toml = "0.5.8"
 # SPDX license parsing
 spdx = "0.8.0"
+# Binary format de-serialization
+bincode = "1.3.3"
 
 [build-dependencies]
 # Data (de)serialisation

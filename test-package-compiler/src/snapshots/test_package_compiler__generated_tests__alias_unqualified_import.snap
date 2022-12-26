@@ -3,6 +3,9 @@ source: test-package-compiler/src/generated_tests.rs
 assertion_line: 195
 expression: "./cases/alias_unqualified_import"
 ---
+//// /out/lib/the_package/_gleam_artefacts/one.cache_meta
+<20 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
 -compile(no_auto_import).
@@ -20,8 +23,8 @@ id(X) ->
 //// /out/lib/the_package/_gleam_artefacts/one.gleam_module
 <.gleam_module binary>
 
-//// /out/lib/the_package/_gleam_artefacts/one.timestamp
-663112800
+//// /out/lib/the_package/_gleam_artefacts/two.cache_meta
+<31 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
@@ -36,9 +39,6 @@ make() ->
 
 //// /out/lib/the_package/_gleam_artefacts/two.gleam_module
 <.gleam_module binary>
-
-//// /out/lib/the_package/_gleam_artefacts/two.timestamp
-663112800
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [
