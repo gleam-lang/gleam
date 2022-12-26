@@ -130,13 +130,6 @@ impl Module {
         PathBuf::from(path)
     }
 
-    /// Get the modification time of this module as the number of seconds since
-    /// the Unix epoch. If the modification time is before the Unix epoch this
-    /// returns 0.
-    pub fn mtime_unix(&self) -> u64 {
-        seconds_since_unix_epoch(self.mtime)
-    }
-
     pub fn is_test(&self) -> bool {
         self.origin == Origin::Test
     }
@@ -253,10 +246,4 @@ fn comments_before<'a>(
         }
     }
     comments
-}
-
-fn seconds_since_unix_epoch(time: SystemTime) -> u64 {
-    time.duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs()
 }
