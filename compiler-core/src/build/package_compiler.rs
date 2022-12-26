@@ -569,22 +569,30 @@ pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> Strin
 }
 
 #[derive(Debug)]
-pub(crate) enum Input<A, B> {
-    New(A),
-    Cached(B),
+pub(crate) enum Input {
+    New(UncompiledModule),
+    Cached(CachedModule),
+}
+
+impl Input {
+    pub fn name(&self) -> &str {
+        match self {
+            Input::New(m) => &m.name,
+            Input::Cached(m) => &m.name,
+        }
+    }
+
+    pub fn source_path(&self) -> &Path {
+        match self {
+            Input::New(m) => &m.path,
+            // TODO: implement
+            Input::Cached(m) => todo!(),
+        }
+    }
 }
 
 #[derive(Debug)]
-pub struct Source {
-    pub path: PathBuf,
-    pub name: String,
-    pub code: String,
-    pub origin: Origin,
-    pub mtime: SystemTime,
-}
-
-#[derive(Debug)]
-pub(crate) struct Cached {
+pub(crate) struct CachedModule {
     pub name: String,
 }
 

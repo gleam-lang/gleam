@@ -4,6 +4,8 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+use itertools::Itertools;
+
 use crate::{
     build::{dep_tree, package_compiler::module_name, seconds_since_unix_epoch, Module, Origin},
     config::PackageConfig,
@@ -12,7 +14,7 @@ use crate::{
 };
 
 use super::{
-    package_compiler::{Cached, Input, Loaded, Source, UncompiledModule},
+    package_compiler::{CachedModule, Input, Loaded, UncompiledModule},
     Mode, Target,
 };
 
@@ -51,42 +53,36 @@ where
         }
     }
 
-    // TODO: traverse the modules and determine which caches need to be invalidated
-    // TODO: load the cached data and register it for other modules to use
-    // TODO: split out the to-compile modules
     pub(crate) fn run(mut self) -> Result<Loaded> {
-        let mut loaded = Loaded::default();
-
-        let inputs = self.read_source_files()?;
-        self.ensure_no_duplicate_modules(&inputs)?;
-
-        tracing::info!("Parsing source code");
-        let mut sources_map: HashMap<_, _> = inputs
-            .into_iter()
-            .map(|i| self.parse_input(i))
-            .collect::<Result<_, _>>()?;
+        let mut inputs = self.read_source_files()?;
 
         // Determine order in which modules are to be processed
         let sequence = dep_tree::toposort_deps(
-            sources_map
+            inputs
                 .values()
                 .map(|m| module_deps_for_graph(self.target, m))
                 .collect(),
         )
         .map_err(convert_deps_tree_error)?;
 
+        let mut loaded = Loaded::default();
         let mut stale = HashSet::new();
         for name in sequence {
-            let input = sources_map
+            let input = inputs
                 .remove(&name)
                 .expect("Getting parsed module for name");
 
             match input {
+                // A new uncached module is to be compiled
+                // TODO: test
                 Input::New(module) => {
                     _ = stale.insert(module.name.clone());
                     loaded.to_compile.push(module);
                 }
 
+                // A cached module with dependencies that are stale must be
+                // recompiled as the changes in the dependencies may have affect
+                // the output, making the cache invalid.
                 // TODO: implement
                 // TODO: test
                 // Input::Cached(cached) if any_stale(stale, cached.dependencies) => {
@@ -94,6 +90,10 @@ where
                 //     let module = self.load_and_parse(cached)?;
                 //     loaded.to_compile.push(module);
                 // }
+
+                // A cached module with no stale dependencies can be used as-is
+                // and does not need to be recompiled.
+                // TODO: test
                 Input::Cached(cached) => {
                     loaded.cached.push(());
                 }
@@ -103,16 +103,18 @@ where
         Ok(loaded)
     }
 
-    fn read_source_files(&self) -> Result<Vec<Input<Source, Cached>>> {
+    fn read_source_files(&self) -> Result<HashMap<String, Input>> {
         let span = tracing::info_span!("load", package = %self.package_name);
         let _enter = span.enter();
         tracing::info!("Reading source files");
-        let mut sources = Vec::new();
+
+        let mut inputs = Inputs::new(self.already_defined_modules);
 
         let src = self.root.join("src");
         let mut loader = ModuleLoader {
             io: self.io.clone(),
             mode: self.mode,
+            package_name: self.package_name,
             artefact_directory: self.artefact_directory,
             source_directory: &src,
             origin: Origin::Src,
@@ -120,7 +122,8 @@ where
 
         // Src
         for path in self.io.gleam_source_files(&src) {
-            sources.push(loader.load(path)?);
+            let input = loader.load(path)?;
+            inputs.insert(input)?;
         }
 
         // Test
@@ -130,76 +133,16 @@ where
             loader.source_directory = &test;
 
             for path in self.io.gleam_source_files(&test) {
-                sources.push(loader.load(path)?);
+                let input = loader.load(path)?;
+                inputs.insert(input)?;
             }
         }
-        Ok(sources)
-    }
 
-    fn parse_input(
-        &mut self,
-        input: Input<Source, Cached>,
-    ) -> Result<(String, Input<UncompiledModule, Cached>), Error> {
-        match input {
-            Input::New(Source {
-                path,
-                name,
-                code,
-                origin,
-                mtime,
-            }) => {
-                let (mut ast, extra) =
-                    crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-                        path: path.clone(),
-                        src: code.clone(),
-                        error,
-                    })?;
-                ast.name = name.split("/").map(String::from).collect();
-                let module = UncompiledModule {
-                    package: self.package_name.to_string(),
-                    origin,
-                    extra,
-                    mtime,
-                    path,
-                    name: name.clone(),
-                    code,
-                    ast,
-                };
-                Ok((name, Input::New(module)))
-            }
-
-            Input::Cached(Cached { name }) => Ok((name.clone(), Input::Cached(Cached { name }))),
-        }
-    }
-
-    fn ensure_no_duplicate_modules(&mut self, inputs: &[Input<Source, Cached>]) -> Result<()> {
-        for input in inputs {
-            match input {
-                Input::New(Source { path, name, .. }) => {
-                    // Ensure there are no modules defined that already have this name
-                    let first = self
-                        .already_defined_modules
-                        .insert(name.clone(), path.clone());
-                    if let Some(first) = first {
-                        return Err(Error::DuplicateModule {
-                            module: name.clone(),
-                            first,
-                            second: path.clone(),
-                        });
-                    }
-                }
-
-                Input::Cached(_) => (),
-            }
-        }
-        Ok(())
+        Ok(inputs.collection)
     }
 }
 
-fn module_deps_for_graph(
-    target: Target,
-    input: &Input<UncompiledModule, Cached>,
-) -> (String, Vec<String>) {
+fn module_deps_for_graph(target: Target, input: &Input) -> (String, Vec<String>) {
     match input {
         Input::New(input) => {
             let name = input.name.clone();
@@ -228,6 +171,7 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 struct ModuleLoader<'a, IO> {
     io: IO,
     mode: Mode,
+    package_name: &'a str,
     source_directory: &'a Path,
     artefact_directory: &'a Path,
     origin: Origin,
@@ -245,7 +189,7 @@ where
     /// Whether the module has changed or not is determined by comparing the
     /// modification time of the source file with the value recorded in the
     /// `.timestamp` file in the artefact directory.
-    fn load(&self, path: PathBuf) -> Result<Input<Source, Cached>> {
+    fn load(&self, path: PathBuf) -> Result<Input> {
         let name = module_name(self.source_directory, &path);
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
@@ -256,10 +200,12 @@ where
             Some(timestamp) if timestamp <= source_mtime => todo!("Load cache plz"),
 
             // Otherwise we read the source file to compile it.
-            _ => self.read_source(path, name, source_mtime),
+            _ => Ok(Input::New(self.read_source(path, name, source_mtime)?)),
         }
     }
 
+    /// Read the timestamp file from the artefact directory for the given
+    /// artefact slug. If the file does not exist, return `None`.
     fn read_timestamp(&self, artefact: &str) -> Result<Option<SystemTime>> {
         let timestamp_path = self
             .artefact_directory
@@ -286,14 +232,67 @@ where
         path: PathBuf,
         name: String,
         mtime: SystemTime,
-    ) -> Result<Input<Source, Cached>, Error> {
+    ) -> Result<UncompiledModule, Error> {
         let code = self.io.read(&path)?;
-        Ok(Input::New(Source {
-            name,
-            path,
-            code,
-            mtime,
+
+        let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+            path: path.clone(),
+            src: code.clone(),
+            error,
+        })?;
+
+        // TODO: store the name on the AST as a string.
+        ast.name = name.split("/").map(String::from).collect();
+        let module = UncompiledModule {
+            package: self.package_name.to_string(),
             origin: self.origin,
-        }))
+            extra,
+            mtime,
+            path,
+            name: name.clone(),
+            code,
+            ast,
+        };
+        Ok(module)
+    }
+}
+
+#[derive(Debug)]
+struct Inputs<'a> {
+    collection: HashMap<String, Input>,
+    already_defined_modules: &'a im::HashMap<String, PathBuf>,
+}
+
+impl<'a> Inputs<'a> {
+    fn new(already_defined_modules: &'a im::HashMap<String, PathBuf>) -> Self {
+        Self {
+            collection: Default::default(),
+            already_defined_modules,
+        }
+    }
+
+    /// Insert a module into the hashmap. If there is already a module with the
+    /// same name then an error is returned.
+    fn insert(&mut self, input: Input) -> Result<()> {
+        let name = input.name().to_string();
+
+        if let Some(first) = self.already_defined_modules.get(&name) {
+            return Err(Error::DuplicateModule {
+                module: name.clone(),
+                first: first.to_path_buf(),
+                second: input.source_path().to_path_buf(),
+            });
+        }
+
+        let second = input.source_path().to_path_buf();
+        if let Some(first) = self.collection.insert(name.clone(), input) {
+            return Err(Error::DuplicateModule {
+                module: name.clone(),
+                first: first.source_path().to_path_buf(),
+                second,
+            });
+        }
+
+        Ok(())
     }
 }
