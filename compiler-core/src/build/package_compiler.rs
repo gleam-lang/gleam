@@ -165,8 +165,7 @@ where
 
         build_manifest.insert_modules(&modules);
 
-        let mut writer = self.io.writer(manifest_path.as_path())?;
-        writer.write(build_manifest.serialize().as_bytes())?;
+        self.io.write_bytes(manifest_path.as_path(), build_manifest.serialize().as_bytes())?;
         Ok(())
     }
 
