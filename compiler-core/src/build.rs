@@ -120,6 +120,7 @@ pub struct Module {
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
+    pub dependencies: Vec<(String, SrcSpan)>,
 }
 
 impl Module {
