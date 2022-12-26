@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     time::{Duration, SystemTime},
 };
@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    package_compiler::{Source, UncompiledModule},
+    package_compiler::{Cached, Input, Loaded, Source, UncompiledModule},
     Mode, Target,
 };
 
@@ -51,11 +51,20 @@ where
         }
     }
 
-    pub(crate) fn run(mut self) -> Result<Vec<UncompiledModule>> {
-        let sources = self.read_source_files()?;
+    // TODO: traverse the modules and determine which caches need to be invalidated
+    // TODO: load the cached data and register it for other modules to use
+    // TODO: split out the to-compile modules
+    pub(crate) fn run(mut self) -> Result<Loaded> {
+        let mut loaded = Loaded::default();
+
+        let inputs = self.read_source_files()?;
+        self.ensure_no_duplicate_modules(&inputs)?;
 
         tracing::info!("Parsing source code");
-        let mut sources_map = self.parse_sources(sources)?;
+        let mut sources_map: HashMap<_, _> = inputs
+            .into_iter()
+            .map(|i| self.parse_input(i))
+            .collect::<Result<_, _>>()?;
 
         // Determine order in which modules are to be processed
         let sequence = dep_tree::toposort_deps(
@@ -66,18 +75,35 @@ where
         )
         .map_err(convert_deps_tree_error)?;
 
-        let mut modules = Vec::with_capacity(sequence.len());
+        let mut stale = HashSet::new();
         for name in sequence {
-            let module = sources_map
+            let input = sources_map
                 .remove(&name)
                 .expect("Getting parsed module for name");
-            modules.push(module);
+
+            match input {
+                Input::New(module) => {
+                    _ = stale.insert(module.name.clone());
+                    loaded.to_compile.push(module);
+                }
+
+                // TODO: implement
+                // TODO: test
+                // Input::Cached(cached) if any_stale(stale, cached.dependencies) => {
+                //     _ = stale.insert(cached.name.as_str());
+                //     let module = self.load_and_parse(cached)?;
+                //     loaded.to_compile.push(module);
+                // }
+                Input::Cached(cached) => {
+                    loaded.cached.push(());
+                }
+            }
         }
 
-        Ok(modules)
+        Ok(loaded)
     }
 
-    fn read_source_files(&self) -> Result<Vec<Source>> {
+    fn read_source_files(&self) -> Result<Vec<Input<Source, Cached>>> {
         let span = tracing::info_span!("load", package = %self.package_name);
         let _enter = span.enter();
         tracing::info!("Reading source files");
@@ -110,66 +136,86 @@ where
         Ok(sources)
     }
 
-    fn parse_sources(&mut self, sources: Vec<Source>) -> Result<HashMap<String, UncompiledModule>> {
-        let mut parsed_modules = HashMap::with_capacity(sources.len());
-        for Source {
-            name,
-            code,
-            path,
-            origin,
-            mtime,
-        } in sources
-        {
-            // Ensure there are no modules defined that already have this name
-            if let Some(first) = self
-                .already_defined_modules
-                .insert(name.clone(), path.clone())
-            {
-                return Err(Error::DuplicateModule {
-                    module: name.clone(),
-                    first,
-                    second: path.clone(),
-                });
-            }
-
-            let (mut ast, extra) =
-                crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-                    path: path.clone(),
-                    src: code.clone(),
-                    error,
-                })?;
-
-            // Store the name
-            // TODO: store the module name as a string
-            ast.name = name.split("/").map(String::from).collect();
-
-            let module = UncompiledModule {
-                package: self.package_name.to_string(),
-                origin,
-                extra,
-                mtime,
+    fn parse_input(
+        &mut self,
+        input: Input<Source, Cached>,
+    ) -> Result<(String, Input<UncompiledModule, Cached>), Error> {
+        match input {
+            Input::New(Source {
                 path,
                 name,
                 code,
-                ast,
-            };
+                origin,
+                mtime,
+            }) => {
+                let (mut ast, extra) =
+                    crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+                        path: path.clone(),
+                        src: code.clone(),
+                        error,
+                    })?;
+                ast.name = name.split("/").map(String::from).collect();
+                let module = UncompiledModule {
+                    package: self.package_name.to_string(),
+                    origin,
+                    extra,
+                    mtime,
+                    path,
+                    name: name.clone(),
+                    code,
+                    ast,
+                };
+                Ok((name, Input::New(module)))
+            }
 
-            // Register the parsed module
-            let _ = parsed_modules.insert(module.name.clone(), module);
+            Input::Cached(Cached { name }) => Ok((name.clone(), Input::Cached(Cached { name }))),
         }
-        Ok(parsed_modules)
+    }
+
+    fn ensure_no_duplicate_modules(&mut self, inputs: &[Input<Source, Cached>]) -> Result<()> {
+        for input in inputs {
+            match input {
+                Input::New(Source { path, name, .. }) => {
+                    // Ensure there are no modules defined that already have this name
+                    let first = self
+                        .already_defined_modules
+                        .insert(name.clone(), path.clone());
+                    if let Some(first) = first {
+                        return Err(Error::DuplicateModule {
+                            module: name.clone(),
+                            first,
+                            second: path.clone(),
+                        });
+                    }
+                }
+
+                Input::Cached(_) => (),
+            }
+        }
+        Ok(())
     }
 }
 
-fn module_deps_for_graph(target: Target, module: &UncompiledModule) -> (String, Vec<String>) {
-    let name = module.name.clone();
-    let deps: Vec<_> = module
-        .ast
-        .dependencies(target)
-        .into_iter()
-        .map(|(dep, _span)| dep)
-        .collect();
-    (name, deps)
+fn module_deps_for_graph(
+    target: Target,
+    input: &Input<UncompiledModule, Cached>,
+) -> (String, Vec<String>) {
+    match input {
+        Input::New(input) => {
+            let name = input.name.clone();
+            let deps: Vec<_> = input
+                .ast
+                .dependencies(target)
+                .into_iter()
+                .map(|(dep, _span)| dep)
+                .collect();
+            (name, deps)
+        }
+
+        // TODO: implement
+        // TODO: test
+        Input::Cached(_) => todo!(),
+    }
 }
 
 fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
@@ -199,13 +245,17 @@ where
     /// Whether the module has changed or not is determined by comparing the
     /// modification time of the source file with the value recorded in the
     /// `.timestamp` file in the artefact directory.
-    fn load(&self, path: PathBuf) -> Result<Source> {
+    fn load(&self, path: PathBuf) -> Result<Input<Source, Cached>> {
         let name = module_name(self.source_directory, &path);
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
         match self.read_timestamp(&artefact)? {
+            // If there's a timestamp and it's newer than the source file
+            // modification time then we read the cached data.
             Some(timestamp) if timestamp <= source_mtime => todo!("Load cache plz"),
+
+            // Otherwise we read the source file to compile it.
             _ => self.read_source(path, name, source_mtime),
         }
     }
@@ -220,7 +270,7 @@ where
             return Ok(None);
         }
 
-        let timestamp: u64 = self
+        let timestamp = self
             .io
             .read(&timestamp_path)?
             .parse()
@@ -231,14 +281,19 @@ where
         ))
     }
 
-    fn read_source(&self, path: PathBuf, name: String, mtime: SystemTime) -> Result<Source, Error> {
+    fn read_source(
+        &self,
+        path: PathBuf,
+        name: String,
+        mtime: SystemTime,
+    ) -> Result<Input<Source, Cached>, Error> {
         let code = self.io.read(&path)?;
-        Ok(Source {
+        Ok(Input::New(Source {
             name,
             path,
             code,
             mtime,
             origin: self.origin,
-        })
+        }))
     }
 }

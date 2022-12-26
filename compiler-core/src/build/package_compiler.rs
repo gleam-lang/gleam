@@ -91,7 +91,7 @@ where
         let _enter = span.enter();
 
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
-        let modules = PackageLoader::new(
+        let loaded = PackageLoader::new(
             self.io.clone(),
             self.mode,
             self.root,
@@ -102,12 +102,14 @@ where
         )
         .run()?;
 
+        // TODO: insert type information from loaded.cached
+
         tracing::info!("Type checking modules");
         let mut modules = type_check(
             &self.config.name,
             self.target.target(),
             &self.ids,
-            modules,
+            loaded.to_compile,
             existing_modules,
             warnings,
         )?;
@@ -567,9 +569,9 @@ pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> Strin
 }
 
 #[derive(Debug)]
-pub enum Input<A, B> {
-    Fresh(A),
-    Stale(B),
+pub(crate) enum Input<A, B> {
+    New(A),
+    Cached(B),
 }
 
 #[derive(Debug)]
@@ -577,8 +579,19 @@ pub struct Source {
     pub path: PathBuf,
     pub name: String,
     pub code: String,
-    pub origin: Origin, // TODO: is this used?
+    pub origin: Origin,
     pub mtime: SystemTime,
+}
+
+#[derive(Debug)]
+pub(crate) struct Cached {
+    pub name: String,
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Loaded {
+    pub to_compile: Vec<UncompiledModule>,
+    pub cached: Vec<()>, // TODO: load recompiled data
 }
 
 #[derive(Debug)]
