@@ -109,7 +109,9 @@ macro_rules! assert_javascript_compile {
             &root,
             &out,
             &lib,
-            &TargetCodegenConfiguration::JavaScript,
+            &TargetCodegenConfiguration::JavaScript {
+                emit_typescript_definitions: true,
+            },
             ids,
             file_writer,
             Some(&mut build_journal),

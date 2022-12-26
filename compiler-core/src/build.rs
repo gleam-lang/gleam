@@ -51,7 +51,9 @@ impl Target {
 
 #[derive(Debug)]
 pub enum TargetCodegenConfiguration {
-    JavaScript,
+    JavaScript {
+        emit_typescript_definitions: bool,
+    },
     Erlang {
         app_file: Option<ErlangAppCodegenConfiguration>,
     },
@@ -60,7 +62,7 @@ pub enum TargetCodegenConfiguration {
 impl TargetCodegenConfiguration {
     pub fn target(&self) -> Target {
         match self {
-            Self::JavaScript => Target::JavaScript,
+            Self::JavaScript { .. } => Target::JavaScript,
             Self::Erlang { .. } => Target::Erlang,
         }
     }

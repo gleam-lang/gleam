@@ -50,6 +50,7 @@ pub struct Options {
 
 #[derive(Debug)]
 pub struct ProjectCompiler<IO> {
+    // The gleam.toml config for the root package of the project
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<String, type_::Module>,
@@ -461,7 +462,9 @@ where
                     include_dev_deps: is_root,
                 }),
             },
-            Target::JavaScript => super::TargetCodegenConfiguration::JavaScript,
+            Target::JavaScript => super::TargetCodegenConfiguration::JavaScript {
+                emit_typescript_definitions: self.config.javascript.typescript_declarations,
+            },
         };
         let mut compiler = PackageCompiler::new(
             config,

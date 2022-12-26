@@ -1,7 +1,7 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{dep_tree, BuildManifest, Mode, Module, Origin, Package, Target},
-    codegen::{Erlang, ErlangApp, JavaScript},
+    codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
     io::{
@@ -410,7 +410,9 @@ where
         }
 
         match self.target {
-            TargetCodegenConfiguration::JavaScript => self.perform_javascript_codegen(modules),
+            TargetCodegenConfiguration::JavaScript {
+                emit_typescript_definitions,
+            } => self.perform_javascript_codegen(modules, *emit_typescript_definitions),
             TargetCodegenConfiguration::Erlang { app_file } => {
                 self.perform_erlang_codegen(modules, app_file.as_ref())
             }
@@ -462,11 +464,20 @@ where
         Ok(())
     }
 
-    fn perform_javascript_codegen(&mut self, modules: &[Module]) -> Result<(), Error> {
+    fn perform_javascript_codegen(
+        &mut self,
+        modules: &[Module],
+        typescript: bool,
+    ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let artifact_dir = self.out.join("dist");
+        let typescript = if typescript {
+            TypeScriptDeclarations::Emit
+        } else {
+            TypeScriptDeclarations::None
+        };
 
-        JavaScript::new(&artifact_dir, &self.config.javascript).render(&self.io, modules)?;
+        JavaScript::new(&artifact_dir, typescript).render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&artifact_dir, &mut written)?;
