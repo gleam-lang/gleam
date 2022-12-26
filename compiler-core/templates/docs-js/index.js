@@ -39,16 +39,15 @@ window.Gleam = (function () {
   };
 
   self.toggleSidebar = function () {
-    htmlDocumentDataAttribs.drawer = htmlDocumentDataAttribs.drawer == "closed" ? "opened" : "closed";
-    if (htmlDocumentDataAttribs.drawer === "opened") {
+    htmlElm.dataset.drawer = htmlElm.dataset.drawer == "closed" ? "opened" : "closed";
+    if (htmlElm.dataset.drawer === "opened") {
       document.addEventListener("click", closeSidebar, false);
     }
   };
 
   /* Private Properties */
 
-  const html = document.documentElement;
-  const htmlDocumentDataAttribs = html.dataset;
+  const htmlElm = document.documentElement;
   const body = document.body;
   const sidebar = document.querySelector(".sidebar");
   const sidebarToggles = document.querySelectorAll(".sidebar-toggle");

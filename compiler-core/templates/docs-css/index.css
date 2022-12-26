@@ -1231,7 +1231,7 @@ html[data-theme="dark"] .pride .blue {
   }
 }
 
-/* stabilizes built-height of remote loaded images */
+/* stabilizes computed-height of remote loaded images */
 main > h1:first-child + p {
   height: 1.67em;
 }
