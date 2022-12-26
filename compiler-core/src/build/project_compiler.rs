@@ -201,9 +201,11 @@ where
             let old_journals: HashSet<PathBuf> = io_journals.lines().map(PathBuf::from).collect();
 
             tracing::info!("Deleting outdated build files");
-            for diff in old_journals.difference(&self.build_journal) {
-                self.io.delete_file(Path::new(&diff));
-            }
+            // TODO: we need to handle the build journal better as to not delete
+            // the results of previous compilation runs.
+            // for diff in old_journals.difference(&self.build_journal) {
+            //     self.io.delete_file(Path::new(&diff));
+            // }
         }
 
         let contents = self
