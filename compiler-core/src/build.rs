@@ -2,6 +2,7 @@
 
 mod dep_tree;
 pub mod package_compiler;
+mod package_loader;
 mod project_compiler;
 mod telemetry;
 
