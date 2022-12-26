@@ -591,16 +591,14 @@ impl Input {
     pub fn source_path(&self) -> &Path {
         match self {
             Input::New(m) => &m.path,
-            // TODO: implement
-            Input::Cached(m) => todo!(),
+            Input::Cached(m) => &m.source_path,
         }
     }
 
     pub fn dependencies(&self) -> Vec<String> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            // TODO: implement
-            Input::Cached(m) => todo!(),
+            Input::Cached(m) => m.dependencies.clone(),
         }
     }
 }
@@ -608,6 +606,8 @@ impl Input {
 #[derive(Debug)]
 pub(crate) struct CachedModule {
     pub name: String,
+    pub dependencies: Vec<String>,
+    pub source_path: PathBuf,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
