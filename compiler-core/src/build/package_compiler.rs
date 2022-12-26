@@ -90,27 +90,22 @@ where
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
-        let sources = self.read_source_files()?;
-
-        tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(&self.config.name, sources, already_defined_modules)?;
-
-        // Determine order in which modules are to be processed
-        let sequence = dep_tree::toposort_deps(
-            parsed_modules
-                .values()
-                .map(|m| module_deps_for_graph(self.target.target(), m))
-                .collect(),
+        let modules = SourceLoader::new(
+            self.io.clone(),
+            self.mode,
+            self.root,
+            self.config,
+            self.target.target(),
+            already_defined_modules,
         )
-        .map_err(convert_deps_tree_error)?;
+        .run()?;
 
         tracing::info!("Type checking modules");
         let mut modules = type_check(
             &self.config.name,
             self.target.target(),
             &self.ids,
-            sequence,
-            parsed_modules,
+            modules,
             existing_modules,
             warnings,
         )?;
@@ -287,42 +282,6 @@ where
         Ok(())
     }
 
-    fn read_source_files(&mut self) -> Result<Vec<Source>> {
-        let span = tracing::info_span!("load", package = %self.config.name.as_str());
-        let _enter = span.enter();
-        tracing::info!("Reading source files");
-        let src = self.root.join("src");
-        let test = self.root.join("test");
-        let mut sources = Vec::new();
-
-        let mut add_module = |path: PathBuf, dir: &Path, origin: Origin| -> Result<(), Error> {
-            let name = module_name(&dir, &path);
-            let code = self.io.read(&path)?;
-            let mtime = self.io.modification_time(&path)?;
-            sources.push(Source {
-                name,
-                path,
-                code,
-                mtime,
-                origin,
-            });
-            Ok(())
-        };
-
-        // Src
-        for path in self.io.gleam_source_files(&src) {
-            add_module(path, &src, Origin::Src)?;
-        }
-
-        // Test
-        if self.mode.is_dev() {
-            for path in self.io.gleam_source_files(&test) {
-                add_module(path, &test, Origin::Test)?;
-            }
-        }
-        Ok(sources)
-    }
-
     fn add_build_journal(&mut self, path: PathBuf) -> Result<()> {
         if let Some(b) = self.build_journal.as_mut() {
             let _ = b.insert(path);
@@ -435,8 +394,7 @@ fn type_check(
     package_name: &str,
     target: Target,
     ids: &UniqueIdGenerator,
-    sequence: Vec<String>,
-    mut parsed_modules: HashMap<String, Parsed>,
+    mut parsed_modules: Vec<Parsed>,
     module_types: &mut im::HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
@@ -449,20 +407,17 @@ fn type_check(
     // place.
     let _ = module_types.insert("gleam".to_string(), type_::build_prelude(ids));
 
-    for name in sequence {
-        let Parsed {
-            name,
-            code,
-            ast,
-            path,
-            mtime,
-            origin,
-            package,
-            extra,
-        } = parsed_modules
-            .remove(&name)
-            .expect("Getting parsed module for name");
-
+    for Parsed {
+        name,
+        code,
+        ast,
+        path,
+        mtime,
+        origin,
+        package,
+        extra,
+    } in parsed_modules
+    {
         tracing::debug!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
         let ast = type_::infer_module(
@@ -604,58 +559,6 @@ fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String
     (name, deps)
 }
 
-fn parse_sources(
-    package_name: &str,
-    sources: Vec<Source>,
-    already_defined_modules: &mut im::HashMap<String, PathBuf>,
-) -> Result<HashMap<String, Parsed>, Error> {
-    let mut parsed_modules = HashMap::with_capacity(sources.len());
-    for Source {
-        name,
-        code,
-        path,
-        origin,
-        mtime,
-    } in sources
-    {
-        let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-            path: path.clone(),
-            src: code.clone(),
-            error,
-        })?;
-
-        // Store the name
-        // TODO: store the module name as a string
-        ast.name = name.split("/").map(String::from).collect();
-
-        let module = Parsed {
-            package: package_name.to_string(),
-            origin,
-            extra,
-            mtime,
-            path,
-            name,
-            code,
-            ast,
-        };
-
-        // Ensure there are no modules defined that already have this name
-        if let Some(first) =
-            already_defined_modules.insert(module.name.clone(), module.path.clone())
-        {
-            return Err(Error::DuplicateModule {
-                module: module.name.clone(),
-                first,
-                second: module.path.clone(),
-            });
-        }
-
-        // Register the parsed module
-        let _ = parsed_modules.insert(module.name.clone(), module);
-    }
-    Ok(parsed_modules)
-}
-
 fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
@@ -679,6 +582,12 @@ fn module_name(package_path: &Path, full_module_path: &Path) -> String {
 }
 
 #[derive(Debug)]
+pub enum Input<A, B> {
+    Fresh(A),
+    Stale(B),
+}
+
+#[derive(Debug)]
 pub struct Source {
     pub path: PathBuf,
     pub name: String,
@@ -688,7 +597,7 @@ pub struct Source {
 }
 
 #[derive(Debug)]
-struct Parsed {
+pub(crate) struct Parsed {
     path: PathBuf,
     name: String,
     code: String,
@@ -703,4 +612,153 @@ struct Parsed {
 #[template(path = "gleam@@main.erl", escape = "none")]
 struct ErlangEntrypointModule<'a> {
     application: &'a str,
+}
+
+#[derive(Debug)]
+pub struct SourceLoader<'a, IO> {
+    io: IO,
+    mode: Mode,
+    root: &'a Path,
+    config: &'a PackageConfig,
+    target: Target,
+    already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
+}
+
+impl<'a, IO> SourceLoader<'a, IO>
+where
+    IO: FileSystemIO + CommandExecutor + Clone,
+{
+    pub(crate) fn new(
+        io: IO,
+        mode: Mode,
+        root: &'a Path,
+        config: &'a PackageConfig,
+        target: Target,
+        already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
+    ) -> Self {
+        Self {
+            io,
+            mode,
+            root,
+            config,
+            target,
+            already_defined_modules,
+        }
+    }
+
+    pub(crate) fn run(mut self) -> Result<Vec<Parsed>, Error> {
+        let sources = self.read_source_files()?;
+
+        tracing::info!("Parsing source code");
+        let mut sources_map = self.parse_sources(&self.config.name, sources)?;
+
+        // Determine order in which modules are to be processed
+        let sequence = dep_tree::toposort_deps(
+            sources_map
+                .values()
+                .map(|m| module_deps_for_graph(self.target, m))
+                .collect(),
+        )
+        .map_err(convert_deps_tree_error)?;
+
+        let mut modules = Vec::with_capacity(sequence.len());
+        for name in sequence {
+            let module = sources_map
+                .remove(&name)
+                .expect("Getting parsed module for name");
+            modules.push(module);
+        }
+
+        Ok(modules)
+    }
+
+    fn read_source_files(&self) -> Result<Vec<Source>> {
+        let span = tracing::info_span!("load", package = %self.config.name.as_str());
+        let _enter = span.enter();
+        tracing::info!("Reading source files");
+        let src = self.root.join("src");
+        let test = self.root.join("test");
+        let mut sources = Vec::new();
+
+        let mut add_module = |path: PathBuf, dir: &Path, origin: Origin| -> Result<(), Error> {
+            let name = module_name(&dir, &path);
+            let code = self.io.read(&path)?;
+            let mtime = self.io.modification_time(&path)?;
+            sources.push(Source {
+                name,
+                path,
+                code,
+                mtime,
+                origin,
+            });
+            Ok(())
+        };
+
+        // Src
+        for path in self.io.gleam_source_files(&src) {
+            add_module(path, &src, Origin::Src)?;
+        }
+
+        // Test
+        if self.mode.is_dev() {
+            for path in self.io.gleam_source_files(&test) {
+                add_module(path, &test, Origin::Test)?;
+            }
+        }
+        Ok(sources)
+    }
+
+    fn parse_sources(
+        &mut self,
+        package_name: &str,
+        sources: Vec<Source>,
+    ) -> Result<HashMap<String, Parsed>, Error> {
+        let mut parsed_modules = HashMap::with_capacity(sources.len());
+        for Source {
+            name,
+            code,
+            path,
+            origin,
+            mtime,
+        } in sources
+        {
+            let (mut ast, extra) =
+                crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+                    path: path.clone(),
+                    src: code.clone(),
+                    error,
+                })?;
+
+            // Store the name
+            // TODO: store the module name as a string
+            ast.name = name.split("/").map(String::from).collect();
+
+            let module = Parsed {
+                package: package_name.to_string(),
+                origin,
+                extra,
+                mtime,
+                path,
+                name,
+                code,
+                ast,
+            };
+
+            // Ensure there are no modules defined that already have this name
+            if let Some(first) = self
+                .already_defined_modules
+                .insert(module.name.clone(), module.path.clone())
+            {
+                return Err(Error::DuplicateModule {
+                    module: module.name.clone(),
+                    first,
+                    second: module.path.clone(),
+                });
+            }
+
+            // Register the parsed module
+            let _ = parsed_modules.insert(module.name.clone(), module);
+        }
+        Ok(parsed_modules)
+    }
 }
