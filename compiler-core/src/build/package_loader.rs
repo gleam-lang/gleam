@@ -7,7 +7,7 @@ use std::{
 use itertools::Itertools;
 
 use crate::{
-    build::{dep_tree, package_compiler::module_name, seconds_since_unix_epoch, Module, Origin},
+    build::{dep_tree, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemIO},
@@ -71,6 +71,7 @@ where
                 .remove(&name)
                 .expect("Getting parsed module for name");
 
+            // TODO: Add logging to indicate caching vs reading etc
             match input {
                 // A new uncached module is to be compiled
                 // TODO: test
