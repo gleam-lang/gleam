@@ -77,15 +77,15 @@ pub fn generate_html(
         let unnest = page_unnest(&page.path);
 
         let temp = PageTemplate {
-            content: render_markdown(&content),
             gleam_version: VERSION,
             links: &links,
+            pages: &pages,
             modules: &modules_links,
+            project_name: &config.name,
             page_title: &config.name,
             page_meta_description: &config.description,
-            pages: &pages,
-            project_name: &config.name,
             project_version: &config.version.to_string(),
+            content: render_markdown(&content),
             rendering_timestamp: &rendering_timestamp,
             unnest: &unnest,
         };
@@ -215,21 +215,21 @@ pub fn generate_html(
         );
 
         let template = ModuleTemplate {
-            constants,
-            documentation: rendered_documentation,
-            functions,
             gleam_version: VERSION,
+            unnest,
             links: &links,
-            module_name: name,
+            pages: &pages,
+            documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
             modules: &modules_links,
+            project_name: &config.name,
             page_title: &page_title,
             page_meta_description,
-            pages: &pages,
-            project_name: &config.name,
+            module_name: name,
             project_version: &config.version.to_string(),
-            rendering_timestamp: &rendering_timestamp,
+            functions,
             types,
-            unnest,
+            constants,
+            rendering_timestamp: &rendering_timestamp,
         };
 
         files.push(OutputFile {
@@ -700,37 +700,37 @@ struct Constant<'a> {
 #[derive(Template)]
 #[template(path = "documentation_page.html")]
 struct PageTemplate<'a> {
-    content: String,
     gleam_version: &'a str,
-    links: &'a [Link],
-    modules: &'a [Link],
+    unnest: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
-    pages: &'a [Link],
     project_name: &'a str,
     project_version: &'a str,
+    pages: &'a [Link],
+    links: &'a [Link],
+    modules: &'a [Link],
+    content: String,
     rendering_timestamp: &'a str,
-    unnest: &'a str,
 }
 
 #[derive(Template)]
 #[template(path = "documentation_module.html")]
 struct ModuleTemplate<'a> {
-    constants: Vec<Constant<'a>>,
-    documentation: String,
-    functions: Vec<Function<'a>>,
     gleam_version: &'a str,
-    links: &'a [Link],
-    module_name: String,
-    modules: &'a [Link],
+    unnest: String,
     page_title: &'a str,
     page_meta_description: &'a str,
-    pages: &'a [Link],
+    module_name: String,
     project_name: &'a str,
     project_version: &'a str,
-    rendering_timestamp: &'a str,
+    pages: &'a [Link],
+    links: &'a [Link],
+    modules: &'a [Link],
+    functions: Vec<Function<'a>>,
     types: Vec<Type<'a>>,
-    unnest: String,
+    constants: Vec<Constant<'a>>,
+    documentation: String,
+    rendering_timestamp: &'a str,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
