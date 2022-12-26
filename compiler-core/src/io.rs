@@ -137,6 +137,7 @@ pub trait FileSystemReader {
     fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf>;
     fn read_dir(&self, path: &Path) -> Result<ReadDir>;
     fn read(&self, path: &Path) -> Result<String, Error>;
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error>;
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;

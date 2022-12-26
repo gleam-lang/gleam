@@ -119,4 +119,8 @@ impl FileSystemReader for WasmFileSystem {
     fn modification_time(&self, path: &Path) -> Result<std::time::SystemTime, Error> {
         self.imfs.modification_time(path)
     }
+
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
+        self.imfs.read_bytes(path)
+    }
 }

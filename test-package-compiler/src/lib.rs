@@ -84,17 +84,17 @@ impl TestCompileOutput {
             buffer.push_str(path.to_str().unwrap());
             buffer.push('\n');
 
+            let extension = path.extension().and_then(OsStr::to_str);
             match content {
-                _ if path.extension().and_then(OsStr::to_str) == Some("gleam_module") => {
-                    buffer.push_str("<.gleam_module binary>")
-                }
+                _ if extension == Some("gleam_module") => buffer.push_str("<.gleam_module binary>"),
 
                 _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
                     buffer.push_str("<prelude>")
                 }
 
-                Content::Text(text) => buffer.push_str(text),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
+
+                Content::Text(text) => buffer.push_str(text),
             };
             buffer.push('\n');
             buffer.push('\n');

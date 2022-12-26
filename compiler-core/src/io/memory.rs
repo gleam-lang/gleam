@@ -138,6 +138,19 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(unicode)
     }
 
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
+        let path = path.to_path_buf();
+        let files = self.files.deref().borrow();
+        let file = files.get(&path).ok_or_else(|| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Open,
+            path: path.clone(),
+            err: None,
+        })?;
+        let bytes = file.buffer.borrow().clone();
+        Ok(bytes)
+    }
+
     fn is_file(&self, path: &Path) -> bool {
         self.files.deref().borrow().contains_key(path)
     }

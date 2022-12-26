@@ -9,12 +9,13 @@ use itertools::Itertools;
 use crate::{
     build::{dep_tree, package_compiler::module_name, seconds_since_unix_epoch, Module, Origin},
     config::PackageConfig,
+    error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemIO},
     Error, Result,
 };
 
 use super::{
-    package_compiler::{CachedModule, Input, Loaded, UncompiledModule},
+    package_compiler::{CacheMetadata, CachedModule, Input, Loaded, UncompiledModule},
     Mode, Target,
 };
 
@@ -59,14 +60,7 @@ where
         // Determine order in which modules are to be processed
         let deps = inputs
             .values()
-            .map(|m| {
-                let deps = m
-                    .dependencies()
-                    .iter()
-                    .map(|(m, _)| m.to_string())
-                    .collect();
-                (m.name().to_string(), deps)
-            })
+            .map(|m| (m.name().to_string(), m.dependencies()))
             .collect();
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
@@ -182,12 +176,10 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
-        Ok(match self.read_timestamp(&artefact)? {
+        Ok(match self.read_cache_metadata(&artefact)? {
             // If there's a timestamp and it's newer than the source file
             // modification time then we read the cached data.
-            Some(previous_compile_timestamp) if previous_compile_timestamp <= source_mtime => {
-                Input::Cached(self.read_cached(name)?)
-            }
+            Some(meta) if meta.mtime <= source_mtime => Input::Cached(self.read_cached(name)?),
 
             // Otherwise we read the source file to compile it.
             _ => Input::New(self.read_source(path, name, source_mtime)?),
@@ -196,25 +188,26 @@ where
 
     /// Read the timestamp file from the artefact directory for the given
     /// artefact slug. If the file does not exist, return `None`.
-    fn read_timestamp(&self, artefact: &str) -> Result<Option<SystemTime>> {
-        let timestamp_path = self
+    fn read_cache_metadata(&self, artefact: &str) -> Result<Option<CacheMetadata>> {
+        let meta_path = self
             .artefact_directory
             .join(artefact)
-            .with_extension("timestamp");
+            .with_extension("cache_meta");
 
-        if !self.io.is_file(&timestamp_path) {
+        if !self.io.is_file(&meta_path) {
             return Ok(None);
         }
 
-        let timestamp = self
-            .io
-            .read(&timestamp_path)?
-            .parse()
-            .expect("Timestamp parsing");
-
-        Ok(Some(
-            SystemTime::UNIX_EPOCH + Duration::from_secs(timestamp),
-        ))
+        let binary = self.io.read_bytes(&meta_path)?;
+        let cache_metadata = CacheMetadata::from_binary(&binary).map_err(|e| -> Error {
+            Error::FileIo {
+                action: FileIoAction::Parse,
+                kind: FileKind::File,
+                path: meta_path,
+                err: Some(e),
+            }
+        })?;
+        Ok(Some(cache_metadata))
     }
 
     fn read_source(
