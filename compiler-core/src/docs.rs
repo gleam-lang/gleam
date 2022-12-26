@@ -16,6 +16,8 @@ use askama::Template;
 use itertools::Itertools;
 use serde::Serialize;
 use serde_json::to_string as serde_to_string;
+use voca_rs::manipulate;
+use voca_rs::Voca;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -75,14 +77,15 @@ pub fn generate_html(
         let unnest = page_unnest(&page.path);
 
         let temp = PageTemplate {
+            content: render_markdown(&content),
             gleam_version: VERSION,
             links: &links,
-            pages: &pages,
             modules: &modules_links,
-            project_name: &config.name,
             page_title: &config.name,
+            page_meta_description: &config.description,
+            pages: &pages,
+            project_name: &config.name,
             project_version: &config.version.to_string(),
-            content: render_markdown(&content),
             rendering_timestamp: &rendering_timestamp,
             unnest: &unnest,
         };
@@ -108,7 +111,7 @@ pub fn generate_html(
         // Read module src & create line number lookup structure
         let source_links = SourceLinker::new(config, module);
 
-        let page_title = format!("{} - {}", name, config.name);
+        let page_title = format!("{} · {}", name, config.name);
 
         let functions: Vec<Function<'_>> = module
             .ast
@@ -198,21 +201,35 @@ pub fn generate_html(
             url: format!("{}.html", module.name),
         });
 
+        let rendered_documentation = render_markdown(&module.ast.documentation.iter().join("\n"));
+        let rendered_text_documentation =
+            manipulate::trim(rendered_documentation._strip_tags().as_str(), "\n ");
+        let page_meta_description = &manipulate::replace_all(
+            manipulate::trim(
+                format!("{} · {}", &module.name, &rendered_text_documentation).as_str(),
+                "· \n",
+            )
+            .as_str(),
+            "\n",
+            " ",
+        );
+
         let template = ModuleTemplate {
-            gleam_version: VERSION,
-            unnest,
-            links: &links,
-            pages: &pages,
-            documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
-            modules: &modules_links,
-            project_name: &config.name,
-            page_title: &page_title,
-            module_name: name,
-            project_version: &config.version.to_string(),
-            functions,
-            types,
             constants,
+            documentation: rendered_documentation,
+            functions,
+            gleam_version: VERSION,
+            links: &links,
+            module_name: name,
+            modules: &modules_links,
+            page_title: &page_title,
+            page_meta_description,
+            pages: &pages,
+            project_name: &config.name,
+            project_version: &config.version.to_string(),
             rendering_timestamp: &rendering_timestamp,
+            types,
+            unnest,
         };
 
         files.push(OutputFile {
@@ -683,35 +700,37 @@ struct Constant<'a> {
 #[derive(Template)]
 #[template(path = "documentation_page.html")]
 struct PageTemplate<'a> {
+    content: String,
     gleam_version: &'a str,
-    unnest: &'a str,
-    page_title: &'a str,
-    project_name: &'a str,
-    project_version: &'a str,
-    pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    content: String,
+    page_title: &'a str,
+    page_meta_description: &'a str,
+    pages: &'a [Link],
+    project_name: &'a str,
+    project_version: &'a str,
     rendering_timestamp: &'a str,
+    unnest: &'a str,
 }
 
 #[derive(Template)]
 #[template(path = "documentation_module.html")]
 struct ModuleTemplate<'a> {
-    gleam_version: &'a str,
-    unnest: String,
-    page_title: &'a str,
-    module_name: String,
-    project_name: &'a str,
-    project_version: &'a str,
-    pages: &'a [Link],
-    links: &'a [Link],
-    modules: &'a [Link],
-    functions: Vec<Function<'a>>,
-    types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
+    functions: Vec<Function<'a>>,
+    gleam_version: &'a str,
+    links: &'a [Link],
+    module_name: String,
+    modules: &'a [Link],
+    page_title: &'a str,
+    page_meta_description: &'a str,
+    pages: &'a [Link],
+    project_name: &'a str,
+    project_version: &'a str,
     rendering_timestamp: &'a str,
+    types: Vec<Type<'a>>,
+    unnest: String,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]

@@ -249,7 +249,8 @@ pre {
 
 pre > code,
 code.hljs {
-  padding: var(--small-gap) var(--gap);
+  display: block;
+  padding: 1em;
   background: transparent;
 }
 
@@ -439,8 +440,8 @@ p code {
   font-size: calc(0.8 * var(--sidebar-toggle-size));
 }
 
-body.drawer-closed .label-open,
-body.drawer-open .label-closed {
+html[data-drawer="closed"] .label-opened,
+html[data-drawer="opened"] .label-closed {
   display: none;
 }
 
@@ -665,14 +666,14 @@ table tr:nth-child(2n) {
 
 /* Pre-Wrap Option */
 
-body.prewrap-on code,
-body.prewrap-on pre {
+html[data-prewrap="on"] code,
+html[data-prewrap="on"] pre {
   white-space: pre-wrap;
 }
 
 /* Dark Theme Option */
 
-body.theme-dark {
+html[data-theme="dark"] {
   /* Colour palette adapted from:
    * https://github.com/dustypomerleau/yarra-valley
    */
@@ -738,53 +739,53 @@ body.theme-dark {
   --nav-shadow: 0 0 5px 5px rgba(0, 0, 0, 0.1);
 }
 
-body.theme-dark {
+html[data-theme="dark"] body {
   background-color: var(--bg);
   color: var(--fg-shade-1);
 }
 
-body.theme-dark .page-header {
+html[data-theme="dark"] .page-header {
   background-color: var(--bg-mono-1);
 }
 
-body.theme-dark .page-header h2 {
+html[data-theme="dark"] .page-header h2 {
   color: var(--fg-shade-1);
 }
 
-body.theme-dark .page-header a,
-body.theme-dark .page-header a:visited {
+html[data-theme="dark"] .page-header a,
+html[data-theme="dark"] .page-header a:visited {
   color: var(--pink);
 }
 
-body.theme-dark .page-header .sidebar-toggle {
+html[data-theme="dark"] .page-header .sidebar-toggle {
   color: var(--fg-shade-1);
 }
-body.theme-dark .page-header .search-nav-button {
-  color: var(--fg-shade-1);
-}
-
-body.theme-dark #project-version select,
-body.theme-dark .control {
+html[data-theme="dark"] .page-header .search-nav-button {
   color: var(--fg-shade-1);
 }
 
-body.theme-dark .module-name {
+html[data-theme="dark"] #project-version select,
+html[data-theme="dark"] .control {
+  color: var(--fg-shade-1);
+}
+
+html[data-theme="dark"] .module-name {
   color: var(--taupe-mono-1);
 }
 
-body.theme-dark .pride {
+html[data-theme="dark"] .pride {
   color: var(--bg-shade-3);
 }
 
-body.theme-dark .pride .white {
+html[data-theme="dark"] .pride .white {
   background-color: var(--fg-shade-1);
 }
 
-body.theme-dark .pride .pink {
+html[data-theme="dark"] .pride .pink {
   background-color: var(--argument-atom);
 }
 
-body.theme-dark .pride .blue {
+html[data-theme="dark"] .pride .blue {
   background-color: var(--punctuation);
 }
 
@@ -824,7 +825,7 @@ body.theme-dark .pride .blue {
     z-index: 500;
   }
 
-  body.drawer-open .sidebar {
+  html[data-drawer="opened"] .sidebar {
     transform: translate(0);
   }
 
@@ -1229,3 +1230,9 @@ body.theme-dark .pride .blue {
     padding-top: 0;
   }
 }
+
+/* stabilizes built-height of remote loaded images */
+main > h1:first-child + p {
+  height: 1.67em;
+}
+

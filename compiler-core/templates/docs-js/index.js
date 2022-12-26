@@ -25,7 +25,7 @@ window.Gleam = (function () {
     return Array.from(arguments).reduce(
       (acc, name) =>
         `${acc}
-        <svg class="icon icon-${name}"><use xlink:href="#icon-${name}"></use></svg>`,
+        <svg alt="icon-${name}" class="icon icon-${name}"><use xlink:href="#icon-${name}"></use></svg>`,
       ""
     );
   };
@@ -39,21 +39,8 @@ window.Gleam = (function () {
   };
 
   self.toggleSidebar = function () {
-    const previousState = bodyClasses.contains("drawer-open")
-      ? "open"
-      : "closed";
-
-    let state;
-    if (0 < arguments.length) {
-      state = false === arguments[0] ? "closed" : "open";
-    } else {
-      state = "open" === previousState ? "closed" : "open";
-    }
-
-    bodyClasses.remove(`drawer-${previousState}`);
-    bodyClasses.add(`drawer-${state}`);
-
-    if ("open" === state) {
+    htmlDocumentDataAttribs.drawer = htmlDocumentDataAttribs.drawer == "closed" ? "opened" : "closed";
+    if (htmlDocumentDataAttribs.drawer === "opened") {
       document.addEventListener("click", closeSidebar, false);
     }
   };
@@ -61,8 +48,8 @@ window.Gleam = (function () {
   /* Private Properties */
 
   const html = document.documentElement;
+  const htmlDocumentDataAttribs = html.dataset;
   const body = document.body;
-  const bodyClasses = body.classList;
   const sidebar = document.querySelector(".sidebar");
   const sidebarToggles = document.querySelectorAll(".sidebar-toggle");
   const displayControls = document.createElement("div");
@@ -98,6 +85,7 @@ window.Gleam = (function () {
           `;
         },
         `<button
+          aria-label="${property} toggle"
           id="${property}-toggle"
           class="control control-${property} toggle toggle-0">
         `
@@ -123,8 +111,7 @@ window.Gleam = (function () {
       localStorage.setItem("Gleam." + property, value);
     } catch (_error) {}
 
-    bodyClasses.remove(`${property}-${previousValue}`);
-    bodyClasses.add(`${property}-${value}`);
+    document.documentElement.dataset[property] = value;
 
     const isDefault = value === gleamConfig[property].values[0].value;
     const toggleClasses = document.querySelector(
