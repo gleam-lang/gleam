@@ -1,14 +1,14 @@
 #!/bin/sh
 set -eu
 
-PROJECT=$PROJECT_NAME_FROM_GLEAM
+PACKAGE=$PACKAGE_NAME_FROM_GLEAM
 BASE=$(dirname $0)
 COMMAND="${1-default}"
 
 run() {
   erl \
     -pa "$BASE"/*/ebin \
-    -eval "gleam@@main:run($PROJECT)" \
+    -eval "$PACKAGE@@main:run($PACKAGE)" \
     -noshell \
     -extra "$@"
 }
