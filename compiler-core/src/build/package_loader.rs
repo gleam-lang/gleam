@@ -4,6 +4,8 @@ use std::{
     time::{Duration, SystemTime},
 };
 
+// TODO: emit warnings fror cached modules even if they are not compiled again.
+
 use itertools::Itertools;
 
 use crate::{
