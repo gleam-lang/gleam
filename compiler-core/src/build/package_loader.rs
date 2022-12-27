@@ -83,13 +83,12 @@ where
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                // TODO: implement
                 // TODO: test
-                // Input::Cached(cached) if any_stale(stale, cached.dependencies) => {
-                //     _ = stale.insert(cached.name.as_str());
-                //     let module = self.load_and_parse(cached)?;
-                //     loaded.to_compile.push(module);
-                // }
+                Input::Cached(cached) if cached.dependencies.iter().any(|d| stale.contains(d)) => {
+                    _ = stale.insert(cached.name.clone());
+                    let module = self.load_and_parse(cached)?;
+                    loaded.to_compile.push(module);
+                }
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
@@ -141,6 +140,19 @@ where
         }
 
         Ok(inputs.collection)
+    }
+
+    fn load_and_parse(&self, cached: CachedModule) -> Result<UncompiledModule> {
+        let mtime = self.io.modification_time(&cached.source_path)?;
+        read_source(
+            self.io.clone(),
+            self.target,
+            cached.origin,
+            cached.source_path,
+            cached.name,
+            &self.package_name,
+            mtime,
+        )
     }
 }
 
@@ -218,36 +230,22 @@ where
         name: String,
         mtime: SystemTime,
     ) -> Result<UncompiledModule, Error> {
-        let code = self.io.read(&path)?;
-
-        let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-            path: path.clone(),
-            src: code.clone(),
-            error,
-        })?;
-
-        let dependencies = ast.dependencies(self.target);
-
-        // TODO: store the name on the AST as a string.
-        ast.name = name.split("/").map(String::from).collect();
-        let module = UncompiledModule {
-            package: self.package_name.to_string(),
-            origin: self.origin,
-            dependencies,
-            extra,
-            mtime,
+        read_source(
+            self.io.clone(),
+            self.target,
+            self.origin,
             path,
-            name: name.clone(),
-            code,
-            ast,
-        };
-        Ok(module)
+            name,
+            &self.package_name,
+            mtime,
+        )
     }
 
     fn cached(&self, name: String, meta: CacheMetadata) -> CachedModule {
         CachedModule {
             dependencies: meta.dependencies,
             source_path: self.source_directory.join(format!("{}.gleam", name)),
+            origin: self.origin,
             name,
         }
     }
@@ -291,4 +289,39 @@ impl<'a> Inputs<'a> {
 
         Ok(())
     }
+}
+
+fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
+    io: IO,
+    target: Target,
+    origin: Origin,
+    path: PathBuf,
+    name: String,
+    package_name: &str,
+    mtime: SystemTime,
+) -> Result<UncompiledModule> {
+    let code = io.read(&path)?;
+
+    let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
+        path: path.clone(),
+        src: code.clone(),
+        error,
+    })?;
+
+    let dependencies = ast.dependencies(target);
+
+    // TODO: store the name on the AST as a string.
+    ast.name = name.split("/").map(String::from).collect();
+    let module = UncompiledModule {
+        package: package_name.to_string(),
+        dependencies,
+        origin,
+        extra,
+        mtime,
+        path,
+        name: name.clone(),
+        code,
+        ast,
+    };
+    Ok(module)
 }

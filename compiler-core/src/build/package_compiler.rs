@@ -585,6 +585,7 @@ impl Input {
 #[derive(Debug)]
 pub(crate) struct CachedModule {
     pub name: String,
+    pub origin: Origin,
     pub dependencies: Vec<String>,
     pub source_path: PathBuf,
 }
