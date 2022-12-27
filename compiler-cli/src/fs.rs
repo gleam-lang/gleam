@@ -395,6 +395,10 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 }
 
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    if path.as_ref().exists() {
+        return Ok(());
+    }
+
     tracing::debug!(path=?path, "creating_directory");
 
     std::fs::create_dir_all(&path).map_err(|err| Error::FileIo {

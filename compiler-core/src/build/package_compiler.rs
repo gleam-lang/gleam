@@ -90,6 +90,7 @@ where
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let loaded = PackageLoader::new(
             self.io.clone(),
+            self.ids.clone(),
             self.mode,
             self.root,
             &artefact_directory,
@@ -99,9 +100,18 @@ where
         )
         .run()?;
 
-        // TODO: insert type information from loaded.cached
+        // Load the cached modules that have previously been compiled
+        for module in loaded.cached.into_iter() {
+            _ = existing_modules.insert(module.name.join("/"), module);
+        }
 
-        tracing::info!("Type checking modules");
+        if loaded.to_compile.is_empty() {
+            tracing::info!("no_modules_to_compile");
+            return Ok(vec![]);
+        }
+
+        // Type check the modules that are new or have changed
+        tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
         let mut modules = type_check(
             &self.config.name,
             self.target.target(),
@@ -111,11 +121,9 @@ where
             warnings,
         )?;
 
-        tracing::info!("Performing code generation");
+        tracing::info!("performing_code_generation");
         self.perform_codegen(&modules)?;
-
         self.encode_and_write_metadata(&modules)?;
-
         Ok(modules)
     }
 
@@ -369,7 +377,7 @@ where
         // If the entrypoint module has already been created then we don't need
         // to write and compile it again.
         if self.io.is_file(&path) {
-            tracing::trace!("erlang_entrypoint_already_exists");
+            tracing::debug!("erlang_entrypoint_already_exists");
             return Ok(());
         }
 
@@ -379,7 +387,7 @@ where
         let module = template.render().expect("Erlang entrypoint rendering");
         self.io.write(&path, &module)?;
         let _ = modules_to_compile.insert(name.into());
-        tracing::trace!("erlang_entrypoint_written");
+        tracing::debug!("erlang_entrypoint_written");
         Ok(())
     }
 }
@@ -616,7 +624,7 @@ impl CacheMetadata {
 #[derive(Debug, Default)]
 pub(crate) struct Loaded {
     pub to_compile: Vec<UncompiledModule>,
-    pub cached: Vec<()>, // TODO: load recompiled data
+    pub cached: Vec<type_::Module>,
 }
 
 #[derive(Debug)]
