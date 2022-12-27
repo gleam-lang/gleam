@@ -65,7 +65,7 @@ where
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
         let mut loaded = Loaded::default();
-        let mut stale = HashSet::new();
+        let mut stale = StaleTracker::default();
         for name in sequence {
             let input = inputs
                 .remove(&name)
@@ -76,7 +76,7 @@ where
                 // A new uncached module is to be compiled
                 // TODO: test
                 Input::New(module) => {
-                    _ = stale.insert(module.name.clone());
+                    stale.add(module.name.clone());
                     loaded.to_compile.push(module);
                 }
 
@@ -84,15 +84,16 @@ where
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
                 // TODO: test
-                Input::Cached(cached) if cached.dependencies.iter().any(|d| stale.contains(d)) => {
-                    _ = stale.insert(cached.name.clone());
+                Input::Cached(cached) if stale.includes_any(&cached.dependencies) => {
+                    stale.add(cached.name.clone());
                     let module = self.load_and_parse(cached)?;
                     loaded.to_compile.push(module);
                 }
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                // TODO: test
+                // TODO: test (this module cached and other module is changed to
+                // now import it)
                 Input::Cached(cached) => {
                     // TODO: read metadata
                     loaded.cached.push(());
@@ -324,4 +325,17 @@ fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
         ast,
     };
     Ok(module)
+}
+
+#[derive(Debug, Default)]
+struct StaleTracker(HashSet<String>);
+
+impl StaleTracker {
+    fn add(&mut self, name: String) {
+        _ = self.0.insert(name);
+    }
+
+    fn includes_any(&self, names: &[String]) -> bool {
+        names.iter().any(|n| self.0.contains(n.as_str()))
+    }
 }
