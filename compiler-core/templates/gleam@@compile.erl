@@ -14,16 +14,12 @@ main(Args) ->
     ok = configure_logging(),
     ok = add_lib_to_erlang_path(Lib),
     ok = filelib:ensure_dir([Out, $/]),
-    {ErlangOk, ErlangBeams} = compile_erlang(ErlangModules, Out),
-    {ElixirOk, ElixirBeams} = case ErlangOk of
+    {ErlangOk, _ErlangBeams} = compile_erlang(ErlangModules, Out),
+    {ElixirOk, _ElixirBeams} = case ErlangOk of
         true -> compile_elixir(ElixirModules, Out);
         false -> {false, []}
     end,
-    JournalOk = case ErlangBeams ++ ElixirBeams of
-        [] -> true;
-        Beams -> write_journal(Beams, Lib)
-    end,
-    case ErlangOk and ElixirOk and JournalOk of
+    case ErlangOk and ElixirOk of
         true -> ok;
         false -> erlang:halt(1)
     end.
@@ -133,16 +129,6 @@ do_compile_elixir(Modules, Out) ->
             lists:foreach(Log, ErrorFiles),
             {false, []};
         _ -> {false, []}
-    end.
-
-write_journal(Beams, Lib) ->
-    Journal = filename:join(Lib, "gleam_build_journal.tmp"),
-    log({writing, Journal}),
-    case file:write_file(Journal, string:join(Beams, "\n")) of
-        ok -> true;
-        {error, Reason} ->
-            log({failed_to_write, Journal, Reason}),
-            false
     end.
 
 add_lib_to_erlang_path(Lib) ->

@@ -44,7 +44,6 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
-    pub build_journal: Option<&'a mut HashSet<PathBuf>>,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -60,7 +59,6 @@ where
         target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
         io: IO,
-        build_journal: Option<&'a mut HashSet<PathBuf>>,
     ) -> Self {
         Self {
             io,
@@ -77,7 +75,6 @@ where
             copy_native_files: true,
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
-            build_journal,
         }
     }
 
@@ -153,24 +150,11 @@ where
         for module in modules {
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
             args.push(path.to_string_lossy().to_string());
-            self.add_build_journal(path);
         }
         // Compile Erlang and Elixir modules
-        // Write a temporary journal of compiled Beam files
         let status = self
             .io
             .exec("escript", &args, &[], None, self.subprocess_stdio)?;
-
-        let tmp_journal = self.lib.join("gleam_build_journal.tmp");
-        if self.io.is_file(&tmp_journal) {
-            // Consume the temporary journal
-            // Each line is a `.beam` file path
-            let read_tmp_journal = self.io.read(&tmp_journal)?;
-            for beam_path in read_tmp_journal.split('\n') {
-                self.add_build_journal(PathBuf::from(beam_path));
-            }
-            self.io.delete_file(&tmp_journal)?;
-        }
 
         if status == 0 {
             Ok(())
@@ -255,7 +239,6 @@ where
             let destination = out.join(&relative_path);
 
             self.io.copy(&path, &destination)?;
-            self.add_build_journal(out.join(&relative_path));
 
             // TODO: test
             if !copied.insert(relative_path.clone()) {
@@ -281,7 +264,6 @@ where
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
             self.io.write_bytes(&path, &bytes)?;
-            self.add_build_journal(path);
 
             // Write cache info
             let name = format!("{}.cache_meta", &module_name);
@@ -291,14 +273,6 @@ where
                 dependencies: module.dependencies_list(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
-            self.add_build_journal(path);
-        }
-        Ok(())
-    }
-
-    fn add_build_journal(&mut self, path: PathBuf) -> Result<()> {
-        if let Some(b) = self.build_journal.as_mut() {
-            let _ = b.insert(path);
         }
         Ok(())
     }
@@ -399,7 +373,6 @@ where
         .expect("Erlang entrypoint rendering");
         self.io.write(&out.join(name), &module)?;
         let _ = modules_to_compile.insert(name.into());
-        self.add_build_journal(out.join(name));
         Ok(())
     }
 }

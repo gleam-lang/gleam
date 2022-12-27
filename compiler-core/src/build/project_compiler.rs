@@ -60,7 +60,6 @@ pub struct ProjectCompiler<IO> {
     options: Options,
     ids: UniqueIdGenerator,
     io: IO,
-    build_journal: HashSet<PathBuf>,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
     /// The language server talks over stdio so printing would break that.
     pub subprocess_stdio: Stdio,
@@ -96,7 +95,6 @@ where
             options,
             config,
             io,
-            build_journal: HashSet::new(),
         }
     }
 
@@ -144,8 +142,6 @@ where
         }
         let result = self.compile_root_package();
 
-        self.check_build_journal()?;
-
         // Print warnings
         for warning in &self.warnings {
             self.telemetry.warning(warning);
@@ -187,38 +183,6 @@ where
                 action: FileIoAction::WriteTo,
                 kind: FileKind::File,
                 path: version_path,
-                err: Some(e.to_string()),
-            })
-    }
-
-    /// Checks that build journal file found in the build directory matches the
-    /// current build of gleam. If not, we will clear the outdated files
-    pub fn check_build_journal(&self) -> Result<(), Error> {
-        let build_path = paths::build_packages(self.mode(), self.target());
-        let journal_path = paths::build_journal(self.mode(), self.target());
-        if self.io.is_file(&journal_path) {
-            let io_journals = self.io.read(&journal_path)?;
-            let old_journals: HashSet<PathBuf> = io_journals.lines().map(PathBuf::from).collect();
-
-            tracing::info!("Deleting outdated build files");
-            // TODO: we need to handle the build journal better as to not delete
-            // the results of previous compilation runs.
-            // for diff in old_journals.difference(&self.build_journal) {
-            //     self.io.delete_file(Path::new(&diff));
-            // }
-        }
-
-        let contents = self
-            .build_journal
-            .iter()
-            .map(|b| b.to_string_lossy().to_string())
-            .join("\n");
-        self.io
-            .write(&journal_path, &contents)
-            .map_err(|e| Error::FileIo {
-                action: FileIoAction::WriteTo,
-                kind: FileKind::File,
-                path: journal_path,
                 err: Some(e.to_string()),
             })
     }
@@ -473,11 +437,6 @@ where
             &target,
             self.ids.clone(),
             self.io.clone(),
-            if (is_root) {
-                Some(&mut self.build_journal)
-            } else {
-                None
-            },
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
