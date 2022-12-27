@@ -2,6 +2,8 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
+// TODO: remove the ids resetting
+
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},

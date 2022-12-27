@@ -11,6 +11,8 @@ use crate::{
     config::PackageConfig,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemIO},
+    metadata, type_,
+    uid::UniqueIdGenerator,
     Error, Result,
 };
 
@@ -22,6 +24,7 @@ use super::{
 #[derive(Debug)]
 pub struct PackageLoader<'a, IO> {
     io: IO,
+    ids: UniqueIdGenerator,
     mode: Mode,
     root: &'a Path,
     artefact_directory: &'a Path,
@@ -36,6 +39,7 @@ where
 {
     pub(crate) fn new(
         io: IO,
+        ids: UniqueIdGenerator,
         mode: Mode,
         root: &'a Path,
         artefact_directory: &'a Path,
@@ -45,6 +49,7 @@ where
     ) -> Self {
         Self {
             io,
+            ids,
             mode,
             root,
             target,
@@ -86,22 +91,29 @@ where
                 // TODO: test
                 Input::Cached(cached) if stale.includes_any(&cached.dependencies) => {
                     stale.add(cached.name.clone());
-                    let module = self.load_and_parse(cached)?;
-                    loaded.to_compile.push(module);
+                    loaded.to_compile.push(self.load_and_parse(cached)?);
                 }
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
                 // TODO: test (this module cached and other module is changed to
                 // now import it)
-                Input::Cached(cached) => {
-                    // TODO: read metadata
-                    loaded.cached.push(());
+                Input::Cached(info) => {
+                    loaded.cached.push(self.load_cached_module(info)?);
                 }
             }
         }
 
         Ok(loaded)
+    }
+
+    fn load_cached_module(&self, info: CachedModule) -> Result<type_::Module, Error> {
+        let path = self
+            .artefact_directory
+            .join(info.name.replace('/', "@"))
+            .with_extension("gleam_module");
+        let bytes = self.io.read_bytes(&path)?;
+        metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }
 
     fn read_source_files(&self) -> Result<HashMap<String, Input>> {
@@ -192,9 +204,9 @@ where
         let source_mtime = self.io.modification_time(&path)?;
 
         Ok(match self.read_cache_metadata(&artefact)? {
-            // If there's a timestamp and it's newer than the source file
-            // modification time then we read the cached data.
-            Some(meta) if meta.mtime <= source_mtime => Input::Cached(self.cached(name, meta)),
+            // If there's a timestamp and it's newer or the same than the source
+            // file modification time then we read the cached data.
+            Some(meta) if meta.mtime >= source_mtime => Input::Cached(self.cached(name, meta)),
 
             // Otherwise we read the source file to compile it.
             _ => Input::New(self.read_source(path, name, source_mtime)?),
