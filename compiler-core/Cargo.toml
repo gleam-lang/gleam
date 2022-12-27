@@ -28,8 +28,7 @@ strsim = "0.10.0"
 # Data (de)serialisation
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "*"
-# Cap'n Proto binary format runtime
-capnp = "0.14.3"
+bincode = { version = "2.0.0-rc.2", features = ["derive"] }
 # Enum trait impl macros
 strum = { version = "0.24.0", features = ["derive"] }
 # Template rendering
@@ -76,8 +75,6 @@ smol_str = { version = "0.1", features = ["serde"] }
 [build-dependencies]
 # Data (de)serialisation
 serde_derive = "1.0.130"
-# Cap'n Proto binary format codegen
-capnpc = "0.14.4"
 
 [dev-dependencies]
 # Test assertion errors with diffs

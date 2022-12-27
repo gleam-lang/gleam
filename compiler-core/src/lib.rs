@@ -74,14 +74,10 @@ pub mod type_;
 pub mod uid;
 pub mod version;
 pub mod warning;
+pub mod compiler_cache;
 
 mod call_graph;
 pub(crate) mod graph;
 
 pub use error::{Error, Result};
 pub use warning::Warning;
-
-mod schema_capnp {
-    #![allow(dead_code, unused_qualifications)]
-    include!("../generated/schema_capnp.rs");
-}
