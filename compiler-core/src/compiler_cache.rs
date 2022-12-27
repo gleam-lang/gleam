@@ -1,5 +1,7 @@
 use std::iter::Map;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Module {
     pub name: Vec<String>,
     pub types: Vec<Map<String, TypeConstructor>>,
@@ -9,6 +11,7 @@ pub struct Module {
     pub types_constructors: Vec<Map<String, Vec<String>>>
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Var(u64),
     Tuple(Vec<Type>),
@@ -23,6 +26,7 @@ pub enum Type {
     },
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub _type: Type,
     // TODO: convert this to an int as we only need to reconstruct type vars,
@@ -32,22 +36,26 @@ pub struct TypeConstructor {
     pub module: Vec<String>
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AccessorsMap {
     pub _type: Type,
     pub accessors: Vec<Map<String, RecordAccessor>>
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RecordAccessor {
     pub _type: Type,
     pub index: u16,
     pub label: String
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
     pub _type: Type,
     pub variant: ValueConstructorVariant
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum ValueConstructorVariant {
     ModuleConstant {
         literal: Constant,
@@ -71,16 +79,19 @@ pub enum ValueConstructorVariant {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
     pub arity: u16,
     pub fields: Vec<Map<String, u32>>
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum Constant {
     Int(String),
     Float(String),
@@ -104,12 +115,14 @@ pub enum Constant {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BitStringSegment {
     pub value: Constant,
     pub options: Vec<BitStringSegmentOption>,
     pub _type: Type
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum BitStringSegmentOption {
     Binary,
     Integer,
