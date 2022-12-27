@@ -16,7 +16,8 @@ pub fn main() {
         let path = cases.join(&name);
         let path = path.to_str().unwrap();
         module.push_str(&format!(
-            r#"#[test]
+            r#"#[rustfmt::skip]
+#[test]
 fn {name}() {{
     let output =
         crate::prepare("{path}");
