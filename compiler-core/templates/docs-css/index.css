@@ -568,7 +568,9 @@ body.drawer-open .label-closed {
   margin: 0;
 }
 
-.constructor-name > code {
+/* .hljs included to have higher specificity than
+   matching classes in atom-one themes */
+.constructor-name > code.hljs {
   padding: var(--small-gap);
 }
 
