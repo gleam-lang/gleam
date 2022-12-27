@@ -1,94 +1,72 @@
-use std::iter::Map;
-use serde::{Serialize, Deserialize};
+use crate::type_::{Type, ValueConstructorVariant};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct Module {
     pub name: Vec<String>,
-    pub types: Vec<Map<String, TypeConstructor>>,
-    pub values: Vec<Map<String, ValueConstructor>>,
-    pub accessors: Vec<Map<String, AccessorsMap>>,
+    pub types: HashMap<String, TypeConstructor>,
+    pub values: HashMap<String, ValueConstructor>,
+    pub accessors: HashMap<String, AccessorsHashMap>,
     pub package: String,
-    pub types_constructors: Vec<Map<String, Vec<String>>>
+    pub types_constructors: HashMap<String, Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub enum Type {
-    Var(u64),
-    Tuple(Vec<Type>),
-    App {
-        name: String,
-        module: Vec<String>,
-        parameters: Vec<Type>
-    },
-    Fn {
-        arguments: Vec<Type>,
-        _return: Type
-    },
-}
+// #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+// pub enum Type {
+//     Var(u64),
+//     Tuple(Vec<Type>),
+//     App {
+//         name: String,
+//         module: Vec<String>,
+//         parameters: Vec<Type>
+//     },
+//     Fn {
+//         arguments: Vec<Type>,
+//         _return: Type
+//     },
+// }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
-    pub _type: Type,
+    pub _type: Arc<Type>,
     // TODO: convert this to an int as we only need to reconstruct type vars,
     // not other types
     // TODO: test
-    pub parameters: Vec<Type>,
-    pub module: Vec<String>
+    pub parameters: Vec<Arc<Type>>,
+    pub module: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct AccessorsMap {
-    pub _type: Type,
-    pub accessors: Vec<Map<String, RecordAccessor>>
+pub struct AccessorsHashMap {
+    pub _type: Arc<Type>,
+    pub accessors: HashMap<String, RecordAccessor>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct RecordAccessor {
-    pub _type: Type,
-    pub index: u16,
-    pub label: String
+    pub _type: Arc<Type>,
+    pub index: u64,
+    pub label: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct ValueConstructor {
-    pub _type: Type,
-    pub variant: ValueConstructorVariant
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub enum ValueConstructorVariant {
-    ModuleConstant {
-        literal: Constant,
-        location: SrcSpan,
-        module: String
-    },
-    ModuleFn {
-        name: String,
-        field_map: Option<FieldMap>,
-        module: Vec<String>,
-        arity: u16,
-        location: SrcSpan
-    },
-    Record {
-        name: String,
-        field_map: Option<FieldMap>,
-        module: Vec<String>,
-        arity: u16,
-        location: SrcSpan,
-        constructors_count: u16
-    }
+    pub _type: Arc<Type>,
+    pub variant: ValueConstructorVariant,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct SrcSpan {
     pub start: u32,
-    pub end: u32
+    pub end: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct FieldMap {
+pub struct FieldHashMap {
     pub arity: u16,
-    pub fields: Vec<Map<String, u32>>
+    pub fields: HashMap<String, u32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -99,27 +77,27 @@ pub enum Constant {
     Tuple(Vec<Constant>),
     BitString(Vec<BitStringSegment>),
     List {
-        _type: Type,
-        elements: Vec<Constant>
+        _type: Arc<Type>,
+        elements: Vec<Constant>,
     },
     Record {
         args: Vec<Constant>,
         tag: String,
-        _type: Type
+        _type: Arc<Type>,
     },
     Var {
         module: String,
         name: String,
-        _type: Type,
-        constructor: ValueConstructor
-    }
+        _type: Arc<Type>,
+        constructor: ValueConstructor,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BitStringSegment {
     pub value: Constant,
     pub options: Vec<BitStringSegmentOption>,
-    pub _type: Type
+    pub _type: Arc<Type>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -139,12 +117,6 @@ pub enum BitStringSegmentOption {
     Big,
     Little,
     Native,
-    Size {
-        value: Constant,
-        short_form: bool
-    },
-    Unit {
-        value: u8,
-        short_form: bool
-    }
+    Size { value: Constant, short_form: bool },
+    Unit { value: u8, short_form: bool },
 }

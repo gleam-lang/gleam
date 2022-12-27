@@ -55,6 +55,7 @@ pub mod ast;
 pub mod bit_string;
 pub mod build;
 pub mod codegen;
+pub mod compiler_cache;
 pub mod config;
 pub mod diagnostic;
 pub mod docs;
@@ -74,7 +75,6 @@ pub mod type_;
 pub mod uid;
 pub mod version;
 pub mod warning;
-pub mod compiler_cache;
 
 mod call_graph;
 pub(crate) mod graph;
