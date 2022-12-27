@@ -324,3 +324,4 @@ fn opaque_type_construct() {
         "./cases/opaque_type_construct"
     );
 }
+
