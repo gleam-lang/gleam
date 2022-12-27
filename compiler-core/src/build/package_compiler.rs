@@ -122,9 +122,6 @@ where
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
-        // TODO: we also need to not recompile the entrypoint module etc if it
-        // has already been written and compiled.
-
         // TODO: we also need to not recompile any native modules if they have
         // not changed.
 
@@ -360,19 +357,29 @@ where
         Ok(())
     }
 
+    // TODO: test that the entrypoint is not written if it already exists
     fn render_entrypoint_module(
         &mut self,
         out: &Path,
         modules_to_compile: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
-        let name = "gleam@@main.erl";
-        let module = ErlangEntrypointModule {
-            application: &self.config.name,
+        let name = format!("{name}@@main.erl", name = self.config.name);
+        let path = out.join(&name);
+
+        // If the entrypoint module has already been created then we don't need
+        // to write and compile it again.
+        if self.io.is_file(&path) {
+            tracing::trace!("erlang_entrypoint_already_exists");
+            return Ok(());
         }
-        .render()
-        .expect("Erlang entrypoint rendering");
-        self.io.write(&out.join(name), &module)?;
+
+        let template = ErlangEntrypointModule {
+            application: &self.config.name,
+        };
+        let module = template.render().expect("Erlang entrypoint rendering");
+        self.io.write(&path, &module)?;
         let _ = modules_to_compile.insert(name.into());
+        tracing::trace!("erlang_entrypoint_written");
         Ok(())
     }
 }

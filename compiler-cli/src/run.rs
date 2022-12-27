@@ -37,14 +37,14 @@ pub fn command(arguments: Vec<String>, target: Option<Target>, which: Which) -> 
 
     // Run the command
     let status = match target.unwrap_or(config.target) {
-        Target::Erlang => run_erlang(&module, arguments),
+        Target::Erlang => run_erlang(&config.name, &module, arguments),
         Target::JavaScript => run_javascript(&config, &module, arguments),
     }?;
 
     std::process::exit(status);
 }
 
-fn run_erlang(module: &str, arguments: Vec<String>) -> Result<i32, Error> {
+fn run_erlang(package: &str, module: &str, arguments: Vec<String>) -> Result<i32, Error> {
     let mut args = vec![];
 
     // Specify locations of .beam files
@@ -56,7 +56,7 @@ fn run_erlang(module: &str, arguments: Vec<String>) -> Result<i32, Error> {
     }
 
     args.push("-eval".into());
-    args.push(format!("gleam@@main:run({})", &module));
+    args.push(format!("{package}@@main:run({module})"));
 
     // Don't run the Erlang shell
     args.push("-noshell".into());

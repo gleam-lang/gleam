@@ -62,7 +62,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     // Write entrypoint script
     let entrypoint = out.join("entrypoint.sh");
     let text = include_str!("../templates/erlang-shipment-entrypoint.sh")
-        .replace("$PROJECT_NAME_FROM_GLEAM", &package.config.name);
+        .replace("$PACKAGE_NAME_FROM_GLEAM", &package.config.name);
     crate::fs::write(&entrypoint, &text)?;
     crate::fs::make_executable(&entrypoint)?;
 
