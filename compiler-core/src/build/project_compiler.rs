@@ -102,9 +102,6 @@ where
         &self.importable_modules
     }
 
-    // TODO: we need to change the checkpointing to merge in the new modules
-    // rather than replacing them because we don't have this information for
-    // modules that have been previously compiled.
     // TODO: we need to ignore all caches the first time the LSP runs because
     // caches do not have all the required information.
     // TODO: test
@@ -151,6 +148,11 @@ where
         }
 
         result
+    }
+
+    pub fn delete_root_package_build(&self) -> Result<()> {
+        let dir = paths::build_package(self.mode(), self.target(), &self.config.name);
+        self.io.delete(&dir)
     }
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
