@@ -66,6 +66,30 @@ impl Content {
     }
 }
 
+impl From<Vec<u8>> for Content {
+    fn from(bytes: Vec<u8>) -> Self {
+        Content::Binary(bytes)
+    }
+}
+
+impl From<&[u8]> for Content {
+    fn from(bytes: &[u8]) -> Self {
+        Content::Binary(bytes.to_vec())
+    }
+}
+
+impl From<String> for Content {
+    fn from(text: String) -> Self {
+        Content::Text(text)
+    }
+}
+
+impl From<&str> for Content {
+    fn from(text: &str) -> Self {
+        Content::Text(text.to_string())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct OutputFile {
     pub content: Content,

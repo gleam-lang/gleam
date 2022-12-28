@@ -1,13 +1,14 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
 };
 
-use crate::{
-    io::{CommandExecutor, FileSystemIO},
-    Error, Result,
-};
+use crate::{io::FileSystemIO, Error, Result};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
     pub any_elixir: bool,
     pub to_compile: Vec<PathBuf>,
@@ -17,7 +18,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     io: IO,
     root: &'a Path,
     destination_dir: &'a Path,
-    copied: HashSet<PathBuf>,
+    seen_native_files: HashSet<PathBuf>,
     to_compile: Vec<PathBuf>,
     elixir_files_copied: bool,
 }
@@ -32,7 +33,7 @@ where
             root,
             destination_dir: out,
             to_compile: Vec::new(),
-            copied: HashSet::new(),
+            seen_native_files: HashSet::new(),
             elixir_files_copied: false,
         }
     }
@@ -88,9 +89,9 @@ where
             .to_path_buf();
         let destination = self.destination_dir.join(&relative_path);
 
-        // TODO: Test: file not copied
-        // TODO: Test: file copied and outdated
-        // TODO: Test: file copied and up to date
+        // Check that this native file was not already copied
+        self.check_for_duplicate(&relative_path)?;
+
         // If the source file's mtime is older than the destination file's mtime
         // then it has not changed and as such does not need to be copied.
         //
@@ -105,26 +106,21 @@ where
 
         self.io.copy(&file, &destination)?;
         self.elixir_files_copied = self.elixir_files_copied || extension == "ex";
-        self.register_copied(extension, relative_path)?;
 
-        Ok(())
-    }
-
-    fn register_copied(&mut self, extension: &str, relative_path: PathBuf) -> Result<(), Error> {
-        // TODO: test
         // BEAM native modules need to be compiled
         if matches!(extension, "erl" | "ex") {
             _ = self.to_compile.push(relative_path.clone());
         }
 
-        // TODO: test
-        // Check that this native file was not already copied
-        if !self.copied.insert(relative_path.clone()) {
+        Ok(())
+    }
+
+    fn check_for_duplicate(&mut self, relative_path: &PathBuf) -> Result<(), Error> {
+        if !self.seen_native_files.insert(relative_path.clone()) {
             return Err(Error::DuplicateSourceFile {
                 file: relative_path.to_string_lossy().to_string(),
             });
         }
-
         Ok(())
     }
 }
