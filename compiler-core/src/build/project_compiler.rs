@@ -107,7 +107,6 @@ where
         CheckpointState {
             importable_modules: self.importable_modules.clone(),
             defined_modules: self.defined_modules.clone(),
-            ids: self.ids.fork(),
         }
     }
 
@@ -115,7 +114,6 @@ where
     pub fn restore(&mut self, checkpoint: CheckpointState) {
         self.importable_modules = checkpoint.importable_modules;
         self.defined_modules = checkpoint.defined_modules;
-        self.ids = checkpoint.ids;
     }
 
     pub fn mode(&self) -> Mode {
@@ -503,5 +501,4 @@ pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, 
 pub struct CheckpointState {
     importable_modules: im::HashMap<String, type_::Module>,
     defined_modules: im::HashMap<String, PathBuf>,
-    ids: UniqueIdGenerator,
 }
