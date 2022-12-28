@@ -24,7 +24,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
 
 impl<'a, IO> NativeFileCopier<'a, IO>
 where
-    IO: FileSystemIO + CommandExecutor + Clone,
+    IO: FileSystemIO + Clone,
 {
     pub(crate) fn new(io: IO, root: &'a Path, out: &'a Path) -> Self {
         Self {
