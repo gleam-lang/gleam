@@ -83,8 +83,10 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
-        let mut file = InMemoryFile::default();
-        file.modification_time = SystemTime::now();
+        let mut file = InMemoryFile {
+            modification_time: SystemTime::now(),
+            ..Default::default()
+        };
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
         _ = self
             .files
@@ -164,7 +166,7 @@ impl FileSystemReader for InMemoryFileSystem {
 
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
         // TODO
-        todo!("Memory reader unimplemented")
+        unreachable!("Memory reader unimplemented")
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
