@@ -78,11 +78,11 @@ where
                 .remove(&name)
                 .expect("Getting parsed module for name");
 
-            // TODO: Add logging to indicate caching vs reading etc
             match input {
                 // A new uncached module is to be compiled
                 // TODO: test
                 Input::New(module) => {
+                    tracing::debug!(module = %module.name, "module_to_be_compiled");
                     stale.add(module.name.clone());
                     loaded.to_compile.push(module);
                 }
@@ -91,9 +91,11 @@ where
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
                 // TODO: test
-                Input::Cached(cached) if stale.includes_any(&cached.dependencies) => {
-                    stale.add(cached.name.clone());
-                    loaded.to_compile.push(self.load_and_parse(cached)?);
+                Input::Cached(info) if stale.includes_any(&info.dependencies) => {
+                    tracing::debug!(module = %info.name, "module_to_be_compiled");
+                    stale.add(info.name.clone());
+                    let module = self.load_and_parse(info)?;
+                    loaded.to_compile.push(module);
                 }
 
                 // A cached module with no stale dependencies can be used as-is
@@ -101,7 +103,9 @@ where
                 // TODO: test (this module cached and other module is changed to
                 // now import it)
                 Input::Cached(info) => {
-                    loaded.cached.push(self.load_cached_module(info)?);
+                    tracing::debug!(module = %info.name, "module_to_load_from_cache");
+                    let module = self.load_cached_module(info)?;
+                    loaded.cached.push(module);
                 }
             }
         }
