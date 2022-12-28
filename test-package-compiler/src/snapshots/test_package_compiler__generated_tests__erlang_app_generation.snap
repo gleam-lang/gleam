@@ -3,15 +3,15 @@ source: test-package-compiler/src/generated_tests.rs
 assertion_line: 85
 expression: "./cases/erlang_app_generation"
 ---
+//// /out/lib/the_package/_gleam_artefacts/main.cache_meta
+<20 byte binary>
+
 //// /out/lib/the_package/_gleam_artefacts/main.erl
 -module(main).
 
 
 //// /out/lib/the_package/_gleam_artefacts/main.gleam_module
 <.gleam_module binary>
-
-//// /out/lib/the_package/_gleam_artefacts/main.timestamp
-663112800
 
 //// /out/lib/the_package/ebin/my_erlang_application.app
 {application, my_erlang_application, [

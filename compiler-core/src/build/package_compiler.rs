@@ -1,6 +1,9 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, Mode, Module, Origin, Package, Target},
+    build::{
+        dep_tree, native_file_copier::NativeFileCopier, package_loader::PackageLoader, Mode,
+        Module, Origin, Package, Target,
+    },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
@@ -37,8 +40,6 @@ pub struct PackageCompiler<'a, IO> {
     pub mode: Mode,
     pub target: &'a TargetCodegenConfiguration,
     pub config: &'a PackageConfig,
-    // TODO: remove this. Tests can use the in memory filesystem instead
-    pub sources: Vec<Source>,
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
@@ -46,7 +47,6 @@ pub struct PackageCompiler<'a, IO> {
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
-    pub build_journal: Option<&'a mut HashSet<PathBuf>>,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -62,7 +62,6 @@ where
         target: &'a TargetCodegenConfiguration,
         ids: UniqueIdGenerator,
         io: IO,
-        build_journal: Option<&'a mut HashSet<PathBuf>>,
     ) -> Self {
         Self {
             io,
@@ -73,17 +72,19 @@ where
             mode,
             config,
             target,
-            sources: vec![],
             write_metadata: true,
             perform_codegen: true,
             write_entrypoint: false,
             copy_native_files: true,
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
-            build_journal,
         }
     }
 
+    /// Compile the package.
+    /// Returns a list of modules that were compiled. Any modules that were read
+    /// from the cache will not be returned.
+    // TODO: return the cached modules.
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
@@ -93,38 +94,42 @@ where
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
-        self.read_source_files()?;
-
-        tracing::info!("Parsing source code");
-        let parsed_modules = parse_sources(
+        let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
+        let loaded = PackageLoader::new(
+            self.io.clone(),
+            self.ids.clone(),
+            self.mode,
+            self.root,
+            &artefact_directory,
+            self.target.target(),
             &self.config.name,
-            std::mem::take(&mut self.sources),
             already_defined_modules,
-        )?;
-
-        // Determine order in which modules are to be processed
-        let sequence = dep_tree::toposort_deps(
-            parsed_modules
-                .values()
-                .map(|m| module_deps_for_graph(self.target.target(), m))
-                .collect(),
         )
-        .map_err(convert_deps_tree_error)?;
+        .run()?;
 
-        tracing::info!("Type checking modules");
-        let mut modules = type_check(
+        // Load the cached modules that have previously been compiled
+        for module in loaded.cached.into_iter() {
+            _ = existing_modules.insert(module.name.join("/"), module.clone());
+        }
+
+        if loaded.to_compile.is_empty() {
+            tracing::info!("no_modules_to_compile");
+            return Ok(vec![]);
+        }
+
+        // Type check the modules that are new or have changed
+        tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
+        let modules = type_check(
             &self.config.name,
             self.target.target(),
             &self.ids,
-            sequence,
-            parsed_modules,
+            loaded.to_compile,
             existing_modules,
             warnings,
         )?;
 
-        tracing::info!("Performing code generation");
+        tracing::info!("performing_code_generation");
         self.perform_codegen(&modules)?;
-
         self.encode_and_write_metadata(&modules)?;
 
         Ok(modules)
@@ -155,24 +160,11 @@ where
         for module in modules {
             let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
             args.push(path.to_string_lossy().to_string());
-            self.add_build_journal(path);
         }
         // Compile Erlang and Elixir modules
-        // Write a temporary journal of compiled Beam files
         let status = self
             .io
             .exec("escript", &args, &[], None, self.subprocess_stdio)?;
-
-        let tmp_journal = self.lib.join("gleam_build_journal.tmp");
-        if self.io.is_file(&tmp_journal) {
-            // Consume the temporary journal
-            // Each line is a `.beam` file path
-            let read_tmp_journal = self.io.read(&tmp_journal)?;
-            for beam_path in read_tmp_journal.split('\n') {
-                self.add_build_journal(PathBuf::from(beam_path));
-            }
-            self.io.delete_file(&tmp_journal)?;
-        }
 
         if status == 0 {
             Ok(())
@@ -186,8 +178,8 @@ where
 
     fn copy_project_native_files(
         &mut self,
-        build_dir: &Path,
-        modules: &mut HashSet<PathBuf>,
+        destination_dir: &Path,
+        to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
 
@@ -199,73 +191,17 @@ where
             self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
-        let src = self.root.join("src");
-        let test = self.root.join("test");
-        let mut copied = HashSet::new();
-        self.copy_native_files(&src, build_dir, &mut copied, modules)?;
-        if self.io.is_directory(&test) {
-            self.copy_native_files(&test, build_dir, &mut copied, modules)?;
+        let copier = NativeFileCopier::new(self.io.clone(), self.root.clone(), destination_dir);
+        let copied = copier.run()?;
+
+        to_compile_modules.extend(copied.to_compile.into_iter());
+
+        // If there are any Elixir files then we need to locate Elixir
+        // installed on this system for use in compilation.
+        if copied.any_elixir {
+            maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
         }
 
-        Ok(())
-    }
-
-    fn copy_native_files(
-        &mut self,
-        src_path: &Path,
-        out: &Path,
-        copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut HashSet<PathBuf>,
-    ) -> Result<()> {
-        self.io.mkdir(&out)?;
-
-        // If `src` contains any `.ex` files, Elixir core libs must be loaded
-        let mut check_elixir_libs = true;
-        for entry in self.io.read_dir(src_path)? {
-            let path = entry.expect("copy_native_files dir_entry").pathbuf;
-
-            let extension = path
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-            let relative_path = path
-                .strip_prefix(src_path)
-                .expect("copy_native_files strip prefix")
-                .to_path_buf();
-
-            match extension {
-                "mjs" | "js" | "ts" | "hrl" => (),
-                "erl" => {
-                    let _ = to_compile_modules.insert(relative_path.clone());
-                }
-                "ex" => {
-                    if check_elixir_libs {
-                        maybe_link_elixir_libs(
-                            &self.io,
-                            &self.lib.to_path_buf(),
-                            self.subprocess_stdio,
-                        )?;
-                        // Check Elixir libs just once
-                        check_elixir_libs = false;
-                    }
-                    let _ = to_compile_modules.insert(relative_path.clone());
-                }
-                _ => continue,
-            };
-
-            let destination = out.join(&relative_path);
-
-            self.io.copy(&path, &destination)?;
-            self.add_build_journal(out.join(&relative_path));
-
-            // TODO: test
-            if !copied.insert(relative_path.clone()) {
-                return Err(Error::DuplicateSourceFile {
-                    file: relative_path.to_string_lossy().to_string(),
-                });
-            }
-        }
         Ok(())
     }
 
@@ -274,64 +210,27 @@ where
             tracing::info!("Package metadata writing disabled");
             return Ok(());
         }
+
+        let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
+
         tracing::info!("Writing package metadata to disc");
         for module in modules {
             let module_name = module.name.replace('/', "@");
 
             // Write metadata file
             let name = format!("{}.gleam_module", &module_name);
-            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
+            let path = artefact_dir.join(name);
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
             self.io.write_bytes(&path, &bytes)?;
-            self.add_build_journal(path);
 
-            // Write timestamp
-            let name = format!("{}.timestamp", &module_name);
-            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
-            self.io.write(&path, &module.mtime_unix().to_string())?;
-            self.add_build_journal(path);
-        }
-        Ok(())
-    }
-
-    fn read_source_files(&mut self) -> Result<()> {
-        let span = tracing::info_span!("load", package = %self.config.name.as_str());
-        let _enter = span.enter();
-        tracing::info!("Reading source files");
-        let src = self.root.join("src");
-        let test = self.root.join("test");
-
-        // Src
-        for path in self.io.gleam_source_files(&src) {
-            self.add_module(path, &src, Origin::Src)?;
-        }
-
-        // Test
-        if self.mode.is_dev() {
-            for path in self.io.gleam_source_files(&test) {
-                self.add_module(path, &test, Origin::Test)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn add_module(&mut self, path: PathBuf, dir: &Path, origin: Origin) -> Result<()> {
-        let name = module_name(&dir, &path);
-        let code = self.io.read(&path)?;
-        let mtime = self.io.modification_time(&path)?;
-        self.sources.push(Source {
-            name,
-            path,
-            code,
-            mtime,
-            origin,
-        });
-        Ok(())
-    }
-
-    fn add_build_journal(&mut self, path: PathBuf) -> Result<()> {
-        if let Some(b) = self.build_journal.as_mut() {
-            let _ = b.insert(path);
+            // Write cache info
+            let name = format!("{}.cache_meta", &module_name);
+            let path = artefact_dir.join(name);
+            let info = CacheMetadata {
+                mtime: module.mtime,
+                dependencies: module.dependencies_list(),
+            };
+            self.io.write_bytes(&path, &info.to_binary())?;
         }
         Ok(())
     }
@@ -419,20 +318,29 @@ where
         Ok(())
     }
 
+    // TODO: test that the entrypoint is not written if it already exists
     fn render_entrypoint_module(
         &mut self,
         out: &Path,
         modules_to_compile: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
-        let name = "gleam@@main.erl";
-        let module = ErlangEntrypointModule {
-            application: &self.config.name,
+        let name = format!("{name}@@main.erl", name = self.config.name);
+        let path = out.join(&name);
+
+        // If the entrypoint module has already been created then we don't need
+        // to write and compile it again.
+        if self.io.is_file(&path) {
+            tracing::debug!("erlang_entrypoint_already_exists");
+            return Ok(());
         }
-        .render()
-        .expect("Erlang entrypoint rendering");
-        self.io.write(&out.join(name), &module)?;
+
+        let template = ErlangEntrypointModule {
+            application: &self.config.name,
+        };
+        let module = template.render().expect("Erlang entrypoint rendering");
+        self.io.write(&path, &module)?;
         let _ = modules_to_compile.insert(name.into());
-        self.add_build_journal(out.join(name));
+        tracing::debug!("erlang_entrypoint_written");
         Ok(())
     }
 }
@@ -441,8 +349,7 @@ fn type_check(
     package_name: &str,
     target: Target,
     ids: &UniqueIdGenerator,
-    sequence: Vec<String>,
-    mut parsed_modules: HashMap<String, Parsed>,
+    mut parsed_modules: Vec<UncompiledModule>,
     module_types: &mut im::HashMap<String, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
@@ -455,20 +362,18 @@ fn type_check(
     // place.
     let _ = module_types.insert("gleam".to_string(), type_::build_prelude(ids));
 
-    for name in sequence {
-        let Parsed {
-            name,
-            code,
-            ast,
-            path,
-            mtime,
-            origin,
-            package,
-            extra,
-        } = parsed_modules
-            .remove(&name)
-            .expect("Getting parsed module for name");
-
+    for UncompiledModule {
+        name,
+        code,
+        ast,
+        path,
+        mtime,
+        origin,
+        package,
+        dependencies,
+        extra,
+    } in parsed_modules
+    {
         tracing::debug!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
         let ast = type_::infer_module(
@@ -499,6 +404,7 @@ fn type_check(
         // Register the successfully type checked module data so that it can be
         // used for code generation
         modules.push(Module {
+            dependencies,
             origin,
             extra,
             mtime,
@@ -593,76 +499,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
     Ok(())
 }
 
-fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
-    match e {
-        dep_tree::Error::Cycle(modules) => Error::ImportCycle { modules },
-    }
-}
-
-fn module_deps_for_graph(target: Target, module: &Parsed) -> (String, Vec<String>) {
-    let name = module.name.clone();
-    let deps: Vec<_> = module
-        .ast
-        .dependencies(target)
-        .into_iter()
-        .map(|(dep, _span)| dep)
-        .collect();
-    (name, deps)
-}
-
-fn parse_sources(
-    package_name: &str,
-    sources: Vec<Source>,
-    already_defined_modules: &mut im::HashMap<String, PathBuf>,
-) -> Result<HashMap<String, Parsed>, Error> {
-    let mut parsed_modules = HashMap::with_capacity(sources.len());
-    for Source {
-        name,
-        code,
-        path,
-        origin,
-        mtime,
-    } in sources
-    {
-        let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-            path: path.clone(),
-            src: code.clone(),
-            error,
-        })?;
-
-        // Store the name
-        // TODO: store the module name as a string
-        ast.name = name.split("/").map(String::from).collect();
-
-        let module = Parsed {
-            package: package_name.to_string(),
-            origin,
-            extra,
-            mtime,
-            path,
-            name,
-            code,
-            ast,
-        };
-
-        // Ensure there are no modules defined that already have this name
-        if let Some(first) =
-            already_defined_modules.insert(module.name.clone(), module.path.clone())
-        {
-            return Err(Error::DuplicateModule {
-                module: module.name.clone(),
-                first,
-                second: module.path.clone(),
-            });
-        }
-
-        // Register the parsed module
-        let _ = parsed_modules.insert(module.name.clone(), module);
-    }
-    Ok(parsed_modules)
-}
-
-fn module_name(package_path: &Path, full_module_path: &Path) -> String {
+pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> String {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -685,24 +522,75 @@ fn module_name(package_path: &Path, full_module_path: &Path) -> String {
 }
 
 #[derive(Debug)]
-pub struct Source {
-    pub path: PathBuf,
-    pub name: String,
-    pub code: String,
-    pub origin: Origin, // TODO: is this used?
-    pub mtime: SystemTime,
+pub(crate) enum Input {
+    New(UncompiledModule),
+    Cached(CachedModule),
+}
+
+impl Input {
+    pub fn name(&self) -> &str {
+        match self {
+            Input::New(m) => &m.name,
+            Input::Cached(m) => &m.name,
+        }
+    }
+
+    pub fn source_path(&self) -> &Path {
+        match self {
+            Input::New(m) => &m.path,
+            Input::Cached(m) => &m.source_path,
+        }
+    }
+
+    pub fn dependencies(&self) -> Vec<String> {
+        match self {
+            Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
+            Input::Cached(m) => m.dependencies.clone(),
+        }
+    }
 }
 
 #[derive(Debug)]
-struct Parsed {
-    path: PathBuf,
-    name: String,
-    code: String,
-    mtime: SystemTime,
-    origin: Origin,
-    package: String,
-    ast: UntypedModule,
-    extra: ModuleExtra,
+pub(crate) struct CachedModule {
+    pub name: String,
+    pub origin: Origin,
+    pub dependencies: Vec<String>,
+    pub source_path: PathBuf,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub(crate) struct CacheMetadata {
+    pub mtime: SystemTime,
+    pub dependencies: Vec<String>,
+}
+
+impl CacheMetadata {
+    pub fn to_binary(&self) -> Vec<u8> {
+        bincode::serialize(self).expect("Serializing cache info")
+    }
+
+    pub fn from_binary(bytes: &[u8]) -> Result<Self, String> {
+        bincode::deserialize(bytes).map_err(|e| e.to_string())
+    }
+}
+
+#[derive(Debug, Default)]
+pub(crate) struct Loaded {
+    pub to_compile: Vec<UncompiledModule>,
+    pub cached: Vec<type_::Module>,
+}
+
+#[derive(Debug)]
+pub(crate) struct UncompiledModule {
+    pub path: PathBuf,
+    pub name: String,
+    pub code: String,
+    pub mtime: SystemTime,
+    pub origin: Origin,
+    pub package: String,
+    pub dependencies: Vec<(String, SrcSpan)>,
+    pub ast: UntypedModule,
+    pub extra: ModuleExtra,
 }
 
 #[derive(Template)]

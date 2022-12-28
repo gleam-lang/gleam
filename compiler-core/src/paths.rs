@@ -114,12 +114,6 @@ pub fn build_gleam_version(mode: Mode, target: Target) -> PathBuf {
     build_packages(mode, target).join("gleam_version")
 }
 
-/// A path to a special file that contains the build journal of gleam that last built
-/// the artifacts.
-pub fn build_journal(mode: Mode, target: Target) -> PathBuf {
-    build_packages(mode, target).join("gleam_build_journal")
-}
-
 pub fn erlang_shipment() -> PathBuf {
     build().join("erlang-shipment")
 }

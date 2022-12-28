@@ -1,4 +1,4 @@
--module(gleam@@main).
+-module('{{ application }}@@main').
 
 -export([run/1]).
 

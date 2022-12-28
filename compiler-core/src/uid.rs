@@ -15,15 +15,6 @@ impl UniqueIdGenerator {
         Self::default()
     }
 
-    /// Fork the id generator into a new one that does not share the same
-    /// internal id. It will increment independantly. Not to be used in the same
-    /// compilation run.
-    pub fn fork(&self) -> Self {
-        let current = self.id.load(Ordering::Relaxed);
-        let id = AtomicU64::new(current);
-        Self { id: Arc::new(id) }
-    }
-
     pub fn next(&self) -> u64 {
         self.id.fetch_add(1, Ordering::Relaxed)
     }

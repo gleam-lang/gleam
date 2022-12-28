@@ -10,7 +10,7 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     ffi::OsStr,
     fmt::Write,
     path::{Path, PathBuf},
@@ -41,7 +41,6 @@ pub fn prepare(path: &str) -> String {
     let root = PathBuf::from("");
     let out = PathBuf::from("/out/lib/the_package");
     let lib = PathBuf::from("/out/lib");
-    let mut build_journal = HashSet::new();
     let mut compiler = gleam_core::build::PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -51,7 +50,6 @@ pub fn prepare(path: &str) -> String {
         &target,
         ids,
         filesystem.clone(),
-        Some(&mut build_journal),
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
@@ -84,17 +82,17 @@ impl TestCompileOutput {
             buffer.push_str(path.to_str().unwrap());
             buffer.push('\n');
 
+            let extension = path.extension().and_then(OsStr::to_str);
             match content {
-                _ if path.extension().and_then(OsStr::to_str) == Some("gleam_module") => {
-                    buffer.push_str("<.gleam_module binary>")
-                }
+                _ if extension == Some("gleam_module") => buffer.push_str("<.gleam_module binary>"),
 
                 _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
                     buffer.push_str("<prelude>")
                 }
 
-                Content::Text(text) => buffer.push_str(text),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
+
+                Content::Text(text) => buffer.push_str(text),
             };
             buffer.push('\n');
             buffer.push('\n');

@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use lazy_static::__Deref;
 
 use super::*;
@@ -37,12 +36,25 @@ impl InMemoryFileSystem {
             .into_inner()
             .into_iter()
             .map(|(path, file)| (path, file.into_content()))
-            .sorted_by(|a, b| a.0.cmp(&b.0))
             .collect()
     }
 
     pub fn paths(&self) -> Vec<PathBuf> {
         self.files.borrow().keys().cloned().collect()
+    }
+
+    #[cfg(test)]
+    /// Set the modification time of a file.
+    ///
+    /// Panics if the file does not exist.
+    ///
+    pub fn set_modification_time(&self, path: &Path, time: SystemTime) {
+        self.files
+            .deref()
+            .borrow_mut()
+            .get_mut(path)
+            .unwrap()
+            .modification_time = time;
     }
 }
 
@@ -55,8 +67,8 @@ impl FileSystemWriter for InMemoryFileSystem {
         Ok(())
     }
 
-    fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn copy(&self, from: &Path, to: &Path) -> Result<(), Error> {
+        self.write_bytes(to, &self.read_bytes(from)?)
     }
 
     fn copy_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
@@ -138,16 +150,34 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(unicode)
     }
 
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
+        let path = path.to_path_buf();
+        let files = self.files.deref().borrow();
+        let file = files.get(&path).ok_or_else(|| Error::FileIo {
+            kind: FileKind::File,
+            action: FileIoAction::Open,
+            path: path.clone(),
+            err: None,
+        })?;
+        let bytes = file.buffer.borrow().clone();
+        Ok(bytes)
+    }
+
     fn is_file(&self, path: &Path) -> bool {
         self.files.deref().borrow().contains_key(path)
     }
 
-    fn is_directory(&self, _path: &Path) -> bool {
-        unreachable!() // TODO
+    fn is_directory(&self, path: &Path) -> bool {
+        self.files
+            .deref()
+            .borrow()
+            .keys()
+            .any(|file_path| file_path.starts_with(path))
     }
 
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
-        unreachable!() // TODO
+        // TODO
+        unreachable!("Memory reader unimplemented")
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {

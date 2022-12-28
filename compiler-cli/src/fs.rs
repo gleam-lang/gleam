@@ -68,6 +68,10 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
         read(path)
     }
 
+    fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
+        read_bytes(path)
+    }
+
     fn is_file(&self, path: &Path) -> bool {
         path.is_file()
     }
@@ -391,6 +395,10 @@ pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
 }
 
 pub fn mkdir(path: impl AsRef<Path> + Debug) -> Result<(), Error> {
+    if path.as_ref().exists() {
+        return Ok(());
+    }
+
     tracing::debug!(path=?path, "creating_directory");
 
     std::fs::create_dir_all(&path).map_err(|err| Error::FileIo {
@@ -426,6 +434,17 @@ pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {
     tracing::debug!(path=?path,"reading_file");
 
     std::fs::read_to_string(&path).map_err(|err| Error::FileIo {
+        action: FileIoAction::Read,
+        kind: FileKind::File,
+        path: PathBuf::from(path.as_ref()),
+        err: Some(err.to_string()),
+    })
+}
+
+pub fn read_bytes(path: impl AsRef<Path> + Debug) -> Result<Vec<u8>, Error> {
+    tracing::debug!(path=?path,"reading_file");
+
+    std::fs::read(&path).map_err(|err| Error::FileIo {
         action: FileIoAction::Read,
         kind: FileKind::File,
         path: PathBuf::from(path.as_ref()),

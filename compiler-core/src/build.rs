@@ -1,7 +1,9 @@
 #![allow(warnings)]
 
 mod dep_tree;
+mod native_file_copier;
 pub mod package_compiler;
+mod package_loader;
 mod project_compiler;
 mod telemetry;
 
@@ -119,6 +121,7 @@ pub struct Module {
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
+    pub dependencies: Vec<(String, SrcSpan)>,
 }
 
 impl Module {
@@ -126,16 +129,6 @@ impl Module {
         let mut path = self.name.replace("/", "@");
         path.push_str(".erl");
         PathBuf::from(path)
-    }
-
-    /// Get the modification time of this module as the number of seconds since
-    /// the Unix epoch. If the modification time is before the Unix epoch this
-    /// returns 0.
-    pub fn mtime_unix(&self) -> u64 {
-        self.mtime
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs()
     }
 
     pub fn is_test(&self) -> bool {
@@ -193,6 +186,13 @@ impl Module {
                 }
             }
         }
+    }
+
+    pub(crate) fn dependencies_list(&self) -> Vec<String> {
+        self.dependencies
+            .iter()
+            .map(|(name, _)| name.to_string())
+            .collect()
     }
 }
 
