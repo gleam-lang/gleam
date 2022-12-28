@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use lazy_static::__Deref;
 
 use super::*;
@@ -37,7 +36,6 @@ impl InMemoryFileSystem {
             .into_inner()
             .into_iter()
             .map(|(path, file)| (path, file.into_content()))
-            .sorted_by(|a, b| a.0.cmp(&b.0))
             .collect()
     }
 
@@ -55,8 +53,8 @@ impl FileSystemWriter for InMemoryFileSystem {
         Ok(())
     }
 
-    fn copy(&self, _from: &Path, _to: &Path) -> Result<(), Error> {
-        panic!("unimplemented") // TODO
+    fn copy(&self, from: &Path, to: &Path) -> Result<(), Error> {
+        self.write_bytes(to, &self.read_bytes(from)?)
     }
 
     fn copy_dir(&self, _: &Path, _: &Path) -> Result<(), Error> {
@@ -86,6 +84,7 @@ impl FileSystemWriter for InMemoryFileSystem {
 
     fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
         let mut file = InMemoryFile::default();
+        file.modification_time = SystemTime::now();
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
         _ = self
             .files
@@ -155,12 +154,17 @@ impl FileSystemReader for InMemoryFileSystem {
         self.files.deref().borrow().contains_key(path)
     }
 
-    fn is_directory(&self, _path: &Path) -> bool {
-        unreachable!() // TODO
+    fn is_directory(&self, path: &Path) -> bool {
+        self.files
+            .deref()
+            .borrow()
+            .keys()
+            .any(|file_path| file_path.starts_with(path))
     }
 
     fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
-        unreachable!() // TODO
+        // TODO
+        todo!("Memory reader unimplemented")
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
