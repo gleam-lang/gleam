@@ -179,7 +179,7 @@ where
     fn copy_project_native_files(
         &mut self,
         build_dir: &Path,
-        modules: &mut HashSet<PathBuf>,
+        to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
 
@@ -194,9 +194,9 @@ where
         let src = self.root.join("src");
         let test = self.root.join("test");
         let mut copied = HashSet::new();
-        self.copy_native_files(&src, build_dir, &mut copied, modules)?;
+        self.copy_native_files(&src, build_dir, &mut copied, to_compile_modules)?;
         if self.io.is_directory(&test) {
-            self.copy_native_files(&test, build_dir, &mut copied, modules)?;
+            self.copy_native_files(&test, build_dir, &mut copied, to_compile_modules)?;
         }
 
         Ok(())
@@ -225,30 +225,26 @@ where
                 .strip_prefix(src_path)
                 .expect("copy_native_files strip prefix")
                 .to_path_buf();
-
-            match extension {
-                "mjs" | "js" | "ts" | "hrl" => (),
-                "erl" => {
-                    let _ = to_compile_modules.insert(relative_path.clone());
-                }
-                "ex" => {
-                    if check_elixir_libs {
-                        maybe_link_elixir_libs(
-                            &self.io,
-                            &self.lib.to_path_buf(),
-                            self.subprocess_stdio,
-                        )?;
-                        // Check Elixir libs just once
-                        check_elixir_libs = false;
-                    }
-                    let _ = to_compile_modules.insert(relative_path.clone());
-                }
-                _ => continue,
-            };
-
             let destination = out.join(&relative_path);
 
+            // Skip unknown file formats that are not supported native files
+            if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
+                continue;
+            }
+
+            // If there are any Elixir files then we need to locate Elixir
+            // installed on this system for use in compilation.
+            if extension == "ex" && check_elixir_libs {
+                maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
+                check_elixir_libs = false; // Check Elixir libs just once
+            }
+
             self.io.copy(&path, &destination)?;
+
+            // BEAM native modules need to be compiled
+            if matches!(extension, "erl" | "ex") {
+                _ = to_compile_modules.insert(relative_path.clone());
+            }
 
             // TODO: test
             if !copied.insert(relative_path.clone()) {
