@@ -299,14 +299,6 @@ impl LanguageServer {
         self.create_compilation_progress_token(&connection);
         self.start_watching_gleam_toml(&connection);
 
-        // Currently the file system caches of previously compiled modules
-        // cannot be used by the LSP as they lack the type annotated AST.
-        // To ensure we have the required information we delete any precompiled
-        // artefacts now before the first compilation.
-        // TODO: remove this once we have richer caches.
-        // DUPE: lsp-cache-delete
-        self.delete_root_package_build()?;
-
         // Compile the project once so we have all the state and any initial errors
         self.compile(&connection)?;
         self.publish_stored_diagnostics(&connection)?;
@@ -510,15 +502,6 @@ impl LanguageServer {
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
                 self.create_new_compiler()?;
-
-                // Currently the file system caches of previously compiled modules
-                // cannot be used by the LSP as they lack the type annotated AST.
-                // To ensure we have the required information we delete any precompiled
-                // artefacts now before the first compilation.
-                // TODO: remove this once we have richer caches.
-                // DUPE: lsp-cache-delete
-                self.delete_root_package_build()?;
-
                 self.compile(connection)?;
                 Ok(())
             }
@@ -767,13 +750,6 @@ impl LanguageServer {
         };
 
         Ok(vec![text_edit_replace(new_text)])
-    }
-
-    fn delete_root_package_build(&self) -> Result<()> {
-        match self.compiler.as_ref() {
-            Some(compiler) => compiler.delete_root_package_build(),
-            None => Ok(()),
-        }
     }
 }
 
@@ -1045,10 +1021,6 @@ where
             build_lock: BuildLock::new()?,
             dependencies_compiled: false,
         })
-    }
-
-    pub fn delete_root_package_build(&self) -> Result<()> {
-        self.project_compiler.delete_root_package_build()
     }
 
     pub fn compile(&mut self) -> Result<(), Error> {

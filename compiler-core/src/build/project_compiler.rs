@@ -148,11 +148,6 @@ where
         result
     }
 
-    pub fn delete_root_package_build(&self) -> Result<()> {
-        let dir = paths::build_package(self.mode(), self.target(), &self.config.name);
-        self.io.delete(&dir)
-    }
-
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
         let modules = self.compile_gleam_package(&config, true, paths::root())?;
