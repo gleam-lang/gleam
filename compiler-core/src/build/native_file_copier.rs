@@ -70,8 +70,8 @@ where
         Ok(())
     }
 
-    fn copy(&mut self, path: PathBuf, src_root: &Path) -> Result<()> {
-        let extension = path
+    fn copy(&mut self, file: PathBuf, src_root: &Path) -> Result<()> {
+        let extension = file
             .extension()
             .unwrap_or_default()
             .to_str()
@@ -82,22 +82,43 @@ where
             return Ok(());
         }
 
-        let relative_path = path
+        let relative_path = file
             .strip_prefix(src_root)
             .expect("copy_native_files strip prefix")
             .to_path_buf();
         let destination = self.destination_dir.join(&relative_path);
 
-        self.io.copy(&path, &destination)?;
+        // TODO: Test: file not copied
+        // TODO: Test: file copied and outdated
+        // TODO: Test: file copied and up to date
+        // If the source file's mtime is older than the destination file's mtime
+        // then it has not changed and as such does not need to be copied.
+        //
+        // This makes no practical difference for JavaScript etc files, but for
+        // Erlang and Elixir files it mean we can skip compiling them.
+        if self.io.is_file(&destination)
+            && self.io.modification_time(&file)? <= self.io.modification_time(&destination)?
+        {
+            tracing::debug!(?file, "skipping_unchanged_native_file_unchanged");
+            return Ok(());
+        }
 
+        self.io.copy(&file, &destination)?;
         self.elixir_files_copied = self.elixir_files_copied || extension == "ex";
+        self.register_copied(extension, relative_path)?;
 
+        Ok(())
+    }
+
+    fn register_copied(&mut self, extension: &str, relative_path: PathBuf) -> Result<(), Error> {
+        // TODO: test
         // BEAM native modules need to be compiled
         if matches!(extension, "erl" | "ex") {
             _ = self.to_compile.push(relative_path.clone());
         }
 
         // TODO: test
+        // Check that this native file was not already copied
         if !self.copied.insert(relative_path.clone()) {
             return Err(Error::DuplicateSourceFile {
                 file: relative_path.to_string_lossy().to_string(),

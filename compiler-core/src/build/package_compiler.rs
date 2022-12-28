@@ -138,9 +138,6 @@ where
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         tracing::info!("compiling_erlang");
 
-        // TODO: we also need to not recompile any native modules if they have
-        // not changed.
-
         let escript_path = self
             .out
             .join(paths::ARTEFACT_DIRECTORY_NAME)
