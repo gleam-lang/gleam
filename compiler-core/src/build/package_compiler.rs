@@ -1,6 +1,9 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
-    build::{dep_tree, package_loader::PackageLoader, Mode, Module, Origin, Package, Target},
+    build::{
+        dep_tree, native_file_copier::NativeFileCopier, package_loader::PackageLoader, Mode,
+        Module, Origin, Package, Target,
+    },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
@@ -178,7 +181,7 @@ where
 
     fn copy_project_native_files(
         &mut self,
-        build_dir: &Path,
+        destination_dir: &Path,
         to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
         tracing::info!("copying_native_source_files");
@@ -191,68 +194,17 @@ where
             self.io.symlink_dir(&priv_source, &priv_build)?;
         }
 
-        let src = self.root.join("src");
-        let test = self.root.join("test");
-        let mut copied = HashSet::new();
-        self.copy_native_files(&src, build_dir, &mut copied, to_compile_modules)?;
-        if self.io.is_directory(&test) {
-            self.copy_native_files(&test, build_dir, &mut copied, to_compile_modules)?;
+        let copier = NativeFileCopier::new(self.io.clone(), self.root.clone(), destination_dir);
+        let copied = copier.run()?;
+
+        to_compile_modules.extend(copied.to_compile.into_iter());
+
+        // If there are any Elixir files then we need to locate Elixir
+        // installed on this system for use in compilation.
+        if copied.any_elixir {
+            maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
         }
 
-        Ok(())
-    }
-
-    fn copy_native_files(
-        &mut self,
-        src_path: &Path,
-        out: &Path,
-        copied: &mut HashSet<PathBuf>,
-        to_compile_modules: &mut HashSet<PathBuf>,
-    ) -> Result<()> {
-        self.io.mkdir(&out)?;
-
-        // If `src` contains any `.ex` files, Elixir core libs must be loaded
-        let mut check_elixir_libs = true;
-        for entry in self.io.read_dir(src_path)? {
-            let path = entry.expect("copy_native_files dir_entry").pathbuf;
-
-            let extension = path
-                .extension()
-                .unwrap_or_default()
-                .to_str()
-                .unwrap_or_default();
-            let relative_path = path
-                .strip_prefix(src_path)
-                .expect("copy_native_files strip prefix")
-                .to_path_buf();
-            let destination = out.join(&relative_path);
-
-            // Skip unknown file formats that are not supported native files
-            if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
-                continue;
-            }
-
-            // If there are any Elixir files then we need to locate Elixir
-            // installed on this system for use in compilation.
-            if extension == "ex" && check_elixir_libs {
-                maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
-                check_elixir_libs = false; // Check Elixir libs just once
-            }
-
-            self.io.copy(&path, &destination)?;
-
-            // BEAM native modules need to be compiled
-            if matches!(extension, "erl" | "ex") {
-                _ = to_compile_modules.insert(relative_path.clone());
-            }
-
-            // TODO: test
-            if !copied.insert(relative_path.clone()) {
-                return Err(Error::DuplicateSourceFile {
-                    file: relative_path.to_string_lossy().to_string(),
-                });
-            }
-        }
         Ok(())
     }
 
@@ -261,19 +213,22 @@ where
             tracing::info!("Package metadata writing disabled");
             return Ok(());
         }
+
+        let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
+
         tracing::info!("Writing package metadata to disc");
         for module in modules {
             let module_name = module.name.replace('/', "@");
 
             // Write metadata file
             let name = format!("{}.gleam_module", &module_name);
-            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
+            let path = artefact_dir.join(name);
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
             self.io.write_bytes(&path, &bytes)?;
 
             // Write cache info
             let name = format!("{}.cache_meta", &module_name);
-            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
+            let path = artefact_dir.join(name);
             let info = CacheMetadata {
                 mtime: module.mtime,
                 dependencies: module.dependencies_list(),
