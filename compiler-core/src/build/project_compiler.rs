@@ -102,6 +102,11 @@ where
         &self.importable_modules
     }
 
+    // TODO: we need to change the checkpointing to merge in the new modules
+    // rather than replacing them because we don't have this information for
+    // modules that have been previously compiled.
+    // TODO: we need to ignore all caches the first time the LSP runs because
+    // caches do not have all the required information.
     // TODO: test
     pub fn checkpoint(&self) -> CheckpointState {
         CheckpointState {

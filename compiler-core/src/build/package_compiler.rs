@@ -78,6 +78,10 @@ where
         }
     }
 
+    /// Compile the package.
+    /// Returns a list of modules that were compiled. Any modules that were read
+    /// from the cache will not be returned.
+    // TODO: return the cached modules.
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
@@ -102,7 +106,7 @@ where
 
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
-            _ = existing_modules.insert(module.name.join("/"), module);
+            _ = existing_modules.insert(module.name.join("/"), module.clone());
         }
 
         if loaded.to_compile.is_empty() {
@@ -112,7 +116,7 @@ where
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
-        let mut modules = type_check(
+        let modules = type_check(
             &self.config.name,
             self.target.target(),
             &self.ids,
@@ -124,6 +128,7 @@ where
         tracing::info!("performing_code_generation");
         self.perform_codegen(&modules)?;
         self.encode_and_write_metadata(&modules)?;
+
         Ok(modules)
     }
 
