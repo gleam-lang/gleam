@@ -102,8 +102,6 @@ where
         &self.importable_modules
     }
 
-    // TODO: we need to ignore all caches the first time the LSP runs because
-    // caches do not have all the required information.
     // TODO: test
     pub fn checkpoint(&self) -> CheckpointState {
         CheckpointState {
