@@ -42,6 +42,20 @@ impl InMemoryFileSystem {
     pub fn paths(&self) -> Vec<PathBuf> {
         self.files.borrow().keys().cloned().collect()
     }
+
+    #[cfg(test)]
+    /// Set the modification time of a file.
+    ///
+    /// Panics if the file does not exist.
+    ///
+    pub fn set_modification_time(&self, path: &Path, time: SystemTime) {
+        self.files
+            .deref()
+            .borrow_mut()
+            .get_mut(path)
+            .unwrap()
+            .modification_time = time;
+    }
 }
 
 impl FileSystemIO for InMemoryFileSystem {}
@@ -83,10 +97,7 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn write_bytes(&self, path: &Path, content: &[u8]) -> Result<(), Error> {
-        let mut file = InMemoryFile {
-            modification_time: SystemTime::now(),
-            ..Default::default()
-        };
+        let mut file = InMemoryFile::default();
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
         _ = self
             .files

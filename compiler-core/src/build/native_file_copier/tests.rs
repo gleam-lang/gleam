@@ -7,6 +7,7 @@ use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 lazy_static! {
@@ -261,9 +262,12 @@ fn other_files_are_ignored() {
 #[test]
 fn files_do_not_get_copied_if_there_already_is_a_new_version() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Path::new("/src/wibble.mjs"), "in-src").unwrap();
-    // This file is written second and so newer than the one in /src
-    fs.write(&Path::new("/out/wibble.mjs"), "in-out").unwrap();
+    let out = Path::new("/out/wibble.mjs");
+    let src = Path::new("/src/wibble.mjs");
+    fs.write(&out, "in-out").unwrap();
+    fs.write(&src, "in-src").unwrap();
+    fs.set_modification_time(&out, UNIX_EPOCH + Duration::from_secs(1));
+    fs.set_modification_time(&src, UNIX_EPOCH);
 
     let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
     let copied = copier.run().unwrap();
@@ -282,9 +286,12 @@ fn files_do_not_get_copied_if_there_already_is_a_new_version() {
 #[test]
 fn files_get_copied_if_the_previously_copied_vesion_is_older() {
     let fs = InMemoryFileSystem::new();
-    fs.write(&Path::new("/out/wibble.mjs"), "in-out").unwrap();
-    // This file is written second and so newer than the one in /out
-    fs.write(&Path::new("/src/wibble.mjs"), "in-src").unwrap();
+    let out = Path::new("/out/wibble.mjs");
+    let src = Path::new("/src/wibble.mjs");
+    fs.write(&out, "in-out").unwrap();
+    fs.write(&src, "in-src").unwrap();
+    fs.set_modification_time(&out, UNIX_EPOCH);
+    fs.set_modification_time(&src, UNIX_EPOCH + Duration::from_secs(1));
 
     let copier = NativeFileCopier::new(fs.clone(), &ROOT, &OUT);
     let copied = copier.run().unwrap();
