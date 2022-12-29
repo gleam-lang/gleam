@@ -89,7 +89,7 @@ pub struct PackageConfig {
 impl PackageConfig {
     pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
         match mode {
-            Mode::Dev => self.all_dependencies(),
+            Mode::Dev | Mode::Lsp => self.all_dependencies(),
             Mode::Prod => Ok(self.dependencies.clone()),
         }
     }

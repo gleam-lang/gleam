@@ -80,6 +80,7 @@ pub struct ErlangAppCodegenConfiguration {
 pub enum Mode {
     Dev,
     Prod,
+    Lsp,
 }
 
 impl Mode {

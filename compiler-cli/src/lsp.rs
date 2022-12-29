@@ -1003,7 +1003,7 @@ where
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
 
         let options = build::Options {
-            mode: build::Mode::Dev,
+            mode: build::Mode::Lsp,
             target: None,
             perform_codegen: false,
         };
