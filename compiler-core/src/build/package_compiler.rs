@@ -7,10 +7,7 @@ use crate::{
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
-    io::{
-        memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
-        FileSystemWriter, Stdio,
-    },
+    io::{CommandExecutor, FileSystemIO, FileSystemReader, FileSystemWriter, Stdio},
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     paths, type_,
