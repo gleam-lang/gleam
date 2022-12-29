@@ -628,12 +628,6 @@ pub fn infer_module(
         statements.push(statement);
     }
 
-    // Generalise functions now that the entire module has been inferred
-    let statements = statements
-        .into_iter()
-        .map(|s| generalise_statement(s, &name, &mut environment))
-        .collect();
-
     // Generate warnings for unused items
     environment.convert_unused_to_warnings();
 
@@ -988,75 +982,6 @@ fn register_values<'a>(
     Ok(())
 }
 
-fn generalise_statement(
-    s: TypedStatement,
-    module_name: &[String],
-    environment: &mut Environment<'_>,
-) -> TypedStatement {
-    match s {
-        Statement::Fn {
-            doc,
-            location,
-            name,
-            public,
-            arguments: args,
-            body,
-            return_annotation,
-            end_position: end_location,
-            return_type,
-        } => {
-            // Lookup the inferred function information
-            let function = environment
-                .get_variable(&name)
-                .expect("Could not find preregistered type for function");
-            let field_map = function.field_map().cloned();
-            let typ = function.type_.clone();
-
-            // Generalise the function if not already done so
-            let typ = if environment.ungeneralised_functions.remove(&name) {
-                generalise(typ)
-            } else {
-                typ
-            };
-
-            // Insert the function into the module's interface
-            environment.insert_module_value(
-                &name,
-                ValueConstructor {
-                    public,
-                    type_: typ,
-                    variant: ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map,
-                        module: module_name.to_vec(),
-                        arity: args.len(),
-                        location,
-                    },
-                },
-            );
-
-            Statement::Fn {
-                doc,
-                location,
-                name,
-                public,
-                arguments: args,
-                end_position: end_location,
-                return_annotation,
-                return_type,
-                body,
-            }
-        }
-
-        statement @ (Statement::TypeAlias { .. }
-        | Statement::CustomType { .. }
-        | Statement::ExternalFn { .. }
-        | Statement::ExternalType { .. }
-        | Statement::Import { .. }
-        | Statement::ModuleConstant { .. }) => statement,
-    }
-}
-
 fn infer_statement(
     s: UntypedStatement,
     module_name: &[String],
@@ -1079,6 +1004,7 @@ fn infer_statement(
                 .get_variable(&name)
                 .expect("Could not find preregistered type for function");
             let field_map = preregistered_fn.field_map().cloned();
+            let field_map2 = preregistered_fn.field_map().cloned();
             let preregistered_type = preregistered_fn.type_.clone();
             let (args_types, return_type) = preregistered_type
                 .fn_types()
@@ -1127,6 +1053,22 @@ fn infer_statement(
             } else {
                 typ
             };
+
+            // Insert the function into the module's interface
+            environment.insert_module_value(
+                &name,
+                ValueConstructor {
+                    public,
+                    type_: typ.clone(),
+                    variant: ValueConstructorVariant::ModuleFn {
+                        name: name.clone(),
+                        field_map: field_map2,
+                        module: module_name.to_vec(),
+                        arity: args.len(),
+                        location,
+                    },
+                },
+            );
 
             Ok(Statement::Fn {
                 doc,
