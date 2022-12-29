@@ -473,6 +473,9 @@ impl Default for Repository {
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
+
+    #[serde(default)]
+    pub hidden_modules: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
