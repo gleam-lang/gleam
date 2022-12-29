@@ -77,7 +77,7 @@ pub(crate) fn build_documentation(
     config: &PackageConfig,
     compiled: &mut Package,
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
-    compiled.attach_doc_and_module_comments();
+    compiled.attach_doc_and_module_comments(&config.documentation.hidden_modules);
     cli::print_generating_documentation();
     let mut pages = vec![DocsPage {
         title: "README".to_string(),

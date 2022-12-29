@@ -25,7 +25,14 @@ pub fn generate_html(
     analysed: &[Module],
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
-    let modules = analysed.iter().filter(|module| !module.is_test());
+    let modules = analysed.iter().filter(|module| {
+        !module.is_test()
+            && !config
+                .documentation
+                .hidden_modules
+                .iter()
+                .any(|pattern| module.name.starts_with(pattern))
+    });
     let rendering_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("get current timestamp")

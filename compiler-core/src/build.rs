@@ -134,9 +134,14 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn attach_doc_and_module_comments(&mut self) {
+    pub fn attach_doc_and_module_comments(&mut self, hidden_modules: &Vec<String>) {
         for mut module in &mut self.modules {
-            module.attach_doc_and_module_comments();
+            if !hidden_modules
+                .iter()
+                .any(|pattern| module.name.starts_with(pattern))
+            {
+                module.attach_doc_and_module_comments();
+            }
         }
     }
 
