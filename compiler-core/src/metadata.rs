@@ -6,10 +6,7 @@ mod tests;
 
 use crate::type_::{generic_var, Type, TypeVar};
 use crate::uid::UniqueIdGenerator;
-use crate::{
-    type_::Module,
-    Result,
-};
+use crate::{type_::Module, Result};
 use std::sync::Arc;
 
 pub fn encode(data: &Module) -> Result<Vec<u8>> {
@@ -23,13 +20,13 @@ pub fn encode(data: &Module) -> Result<Vec<u8>> {
 
 fn undo_links(id_generator: &UniqueIdGenerator, type_var: TypeVar) -> Arc<Type> {
     match type_var {
-        TypeVar::Link { type_ } => decode_type(id_generator, &type_),
+        TypeVar::Link { type_ } => regenerate_type_ids(id_generator, &type_),
         TypeVar::Generic { .. } => generic_var(id_generator.next()),
         TypeVar::Unbound { .. } => panic!("unexpected `TypeVar::Unbound` in cache decoding"),
     }
 }
 
-fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
+fn regenerate_type_ids(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
     match (*type_).clone() {
         Type::App {
             public,
@@ -42,35 +39,33 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
             name,
             args: args
                 .into_iter()
-                .map(|arg| decode_type(&id_generator, &arg))
+                .map(|arg| regenerate_type_ids(&id_generator, &arg))
                 .collect(),
         }),
         Type::Fn { args, retrn } => Arc::new(Type::Fn {
             args: args
                 .into_iter()
-                .map(|arg| decode_type(&id_generator, &arg))
+                .map(|arg| regenerate_type_ids(&id_generator, &arg))
                 .collect(),
-            retrn: decode_type(&id_generator, &retrn),
+            retrn: regenerate_type_ids(&id_generator, &retrn),
         }),
         Type::Var { type_ } => undo_links(id_generator, (*type_).clone().into_inner()),
         Type::Tuple { elems } => Arc::new(Type::Tuple {
             elems: elems
                 .into_iter()
-                .map(|elm| decode_type(&id_generator, &elm))
+                .map(|elm| regenerate_type_ids(&id_generator, &elm))
                 .collect(),
         }),
     }
 }
 
 pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
-    let mut module: Module = bincode::deserialize(slice).expect("failed to decode metadata (bincode)");
+    let mut module: Module =
+        bincode::deserialize(slice).expect("failed to decode metadata (bincode)");
 
-    module
-        .types
-        .iter_mut()
-        .for_each(|(_key, type_)| {
-            type_.typ = decode_type(&id_generator, &type_.typ);
-        });
+    module.types.iter_mut().for_each(|(_key, type_)| {
+        type_.typ = regenerate_type_ids(&id_generator, &type_.typ);
+    });
 
     Ok(module)
 }
