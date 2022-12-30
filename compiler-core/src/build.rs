@@ -98,12 +98,10 @@ pub struct Package {
 }
 
 impl Package {
-    pub fn attach_doc_and_module_comments(&mut self, hidden_modules: &Vec<String>) {
+    pub fn attach_doc_and_module_comments(&mut self) {
+        let hidden_modules = self.specify_hidden_modules();
         for mut module in &mut self.modules {
-            if !hidden_modules
-                .iter()
-                .any(|pattern| module.name.starts_with(pattern))
-            {
+            if !hidden_modules.contains(&module.name) {
                 module.attach_doc_and_module_comments();
             }
         }
@@ -114,6 +112,15 @@ impl Package {
             .into_iter()
             .map(|m| (m.name.to_string(), m))
             .collect()
+    }
+
+    fn specify_hidden_modules(&self) -> Vec<String> {
+        let modules = self
+            .modules
+            .iter()
+            .map(|module| module.name.clone())
+            .collect();
+        self.config.specify_hidden_modules(modules)
     }
 }
 

@@ -2,8 +2,10 @@ use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
 use crate::{Error, Result};
+use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{Range, Version};
 use http::Uri;
+use itertools::Itertools;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -137,6 +139,19 @@ impl PackageConfig {
                 StalePackageRemover::fresh_and_locked(&self.all_dependencies()?, manifest)
             }
         })
+    }
+
+    pub fn specify_hidden_modules(&self, modules: Vec<String>) -> Vec<String> {
+        let mut glob_builder = GlobSetBuilder::new();
+        for pattern in self.documentation.hidden_modules.iter() {
+            let _ = glob_builder.add(Glob::new(pattern).expect("invalid pattern!"));
+        }
+        let glob_set = glob_builder.build().expect("problem!");
+        modules
+            .iter()
+            .filter(|module| glob_set.matches(module).len() != 0)
+            .map(|module| module.clone())
+            .collect_vec()
     }
 }
 
@@ -475,7 +490,7 @@ pub struct Docs {
     pub pages: Vec<DocsPage>,
 
     #[serde(default)]
-    pub hidden_modules: Vec<String>,
+    hidden_modules: Vec<String>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
