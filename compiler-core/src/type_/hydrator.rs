@@ -18,20 +18,20 @@ use im::hashmap;
 ///
 #[derive(Debug)]
 pub struct Hydrator {
-    created_type_variables: im::HashMap<String, Arc<Type>>,
+    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable. This type_id => name map is used for reporting the original
     /// annotated name on error.
-    rigid_type_names: im::HashMap<u64, String>,
+    rigid_type_names: im::HashMap<u64, SmolStr>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    created_type_variables: im::HashMap<String, Arc<Type>>,
-    rigid_type_names: im::HashMap<u64, String>,
+    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
+    rigid_type_names: im::HashMap<u64, SmolStr>,
 }
 
 impl Default for Hydrator {
@@ -79,7 +79,7 @@ impl Hydrator {
         self.rigid_type_names.contains_key(id)
     }
 
-    pub fn rigid_names(&self) -> im::HashMap<u64, String> {
+    pub fn rigid_names(&self) -> im::HashMap<u64, SmolStr> {
         self.rigid_type_names.clone()
     }
 
@@ -136,7 +136,7 @@ impl Hydrator {
                 if args.len() != parameters.len() {
                     return Err(Error::IncorrectTypeArity {
                         location: *location,
-                        name: name.to_string(),
+                        name: name.into(),
                         expected: parameters.len(),
                         given: args.len(),
                     });
@@ -198,7 +198,7 @@ impl Hydrator {
                 }
 
                 None => Err(Error::UnknownType {
-                    name: name.to_string(),
+                    name: name.clone(),
                     location: *location,
                     types: environment
                         .module_types

@@ -40,11 +40,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
                 self.environment
-                    .init_usage(name.to_string(), EntityKind::Variable, location);
+                    .init_usage(name.into(), EntityKind::Variable, location);
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern {
-                        name: name.to_string(),
+                        name: name.into(),
                     });
                 }
                 // Record that this variable originated in this pattern so any
@@ -54,7 +54,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
                 self.environment
-                    .insert_local_variable(name.to_string(), location, typ);
+                    .insert_local_variable(name.into(), location, typ);
                 Ok(())
             }
 
@@ -69,7 +69,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                     // This variable was not defined in the Initial multi-pattern
                     _ => Err(UnifyError::ExtraVarInAlternativePattern {
-                        name: name.to_string(),
+                        name: name.into(),
                     }),
                 }
             }
@@ -100,7 +100,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .iter()
                         .next()
                         .expect("Getting undefined pattern variable")
-                        .clone(),
+                        .clone()
+                        .into(),
                 })
             }
             PatternMode::Alternative(_) => Ok(typed_multi),
@@ -223,7 +224,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .cloned()
                     .ok_or_else(|| Error::UnknownVariable {
                         location,
-                        name: name.to_string(),
+                        name: name.into(),
                         variables: self.environment.local_value_names(),
                     })?;
                 self.environment.increment_usage(&name);
@@ -396,7 +397,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let cons = self
                     .environment
-                    .get_value_constructor(module.as_ref(), &name)
+                    .get_value_constructor(module.into(), &name)
                     .map_err(|e| convert_get_value_constructor_error(e, location))?;
 
                 match cons.field_map() {
@@ -458,7 +459,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let constructor = match cons.variant {
                     ValueConstructorVariant::Record { ref name, .. } => {
                         PatternConstructor::Record {
-                            name: name.clone(),
+                            name: name.into(),
                             field_map: cons.field_map().cloned(),
                         }
                     }

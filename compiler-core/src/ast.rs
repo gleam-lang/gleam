@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use smol_str::SmolStr;
 
 pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
@@ -32,8 +33,8 @@ pub type UntypedModule = Module<(), TargetGroup>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
-    pub name: Vec<String>,
-    pub documentation: Vec<String>,
+    pub name: Vec<SmolStr>,
+    pub documentation: Vec<SmolStr>,
     pub type_info: Info,
     pub statements: Vec<Statements>,
 }
@@ -96,13 +97,13 @@ impl TargetGroup {
 }
 
 impl<A, B> Module<A, B> {
-    pub fn name_string(&self) -> String {
-        self.name.join("/")
+    pub fn name_string(&self) -> SmolStr {
+        self.name.join("/").into()
     }
 }
 
 impl UntypedModule {
-    pub fn dependencies(&self, target: Target) -> Vec<(String, SrcSpan)> {
+    pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
                 Statement::Import {
@@ -195,10 +196,10 @@ impl<A> ExternalFnArg<A> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: String },
-    LabelledDiscard { label: String, name: String },
-    Named { name: String },
-    NamedLabelled { name: String, label: String },
+    Discard { name: SmolStr },
+    LabelledDiscard { label: SmolStr, name: SmolStr },
+    Named { name: SmolStr },
+    NamedLabelled { name: SmolStr, label: SmolStr },
 }
 
 impl ArgNames {
@@ -215,13 +216,13 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
-    pub name: String,
+    pub name: SmolStr,
     pub arguments: Vec<RecordConstructorArg<T>>,
-    pub documentation: Option<String>,
+    pub documentation: Option<SmolStr>,
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         self.documentation = Some(new_doc);
     }
 }
@@ -230,15 +231,15 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
-    pub doc: Option<String>,
+    pub doc: Option<SmolStr>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         self.doc = Some(new_doc);
     }
 }
@@ -247,8 +248,8 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 pub enum TypeAst {
     Constructor {
         location: SrcSpan,
-        module: Option<String>,
-        name: String,
+        module: Option<SmolStr>,
+        name: SmolStr,
         arguments: Vec<Self>,
     },
 
@@ -260,7 +261,7 @@ pub enum TypeAst {
 
     Var {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     Tuple {
@@ -270,7 +271,7 @@ pub enum TypeAst {
 
     Hole {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 }
 
@@ -359,7 +360,7 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String, String>;
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
 pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -377,13 +378,13 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Fn {
         location: SrcSpan,
         end_position: u32,
-        name: String,
+        name: SmolStr,
         arguments: Vec<Arg<T>>,
         body: Expr,
         public: bool,
         return_annotation: Option<TypeAst>,
         return_type: T,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
     },
 
     /// A new name for an existing type
@@ -396,12 +397,12 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     TypeAlias {
         location: SrcSpan,
-        alias: String,
-        parameters: Vec<String>,
+        alias: SmolStr,
+        parameters: Vec<SmolStr>,
         type_ast: TypeAst,
         type_: T,
         public: bool,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
     },
 
     /// A newly defined type with one or more constructors.
@@ -421,11 +422,11 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     CustomType {
         location: SrcSpan,
-        name: String,
-        parameters: Vec<String>,
+        name: SmolStr,
+        parameters: Vec<SmolStr>,
         public: bool,
         constructors: Vec<RecordConstructor<T>>,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
         opaque: bool,
         typed_parameters: Vec<T>,
     },
@@ -444,12 +445,12 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         location: SrcSpan,
         public: bool,
         arguments: Vec<ExternalFnArg<T>>,
-        name: String,
+        name: SmolStr,
         return_: TypeAst,
         return_type: T,
-        module: String,
-        fun: String,
-        doc: Option<String>,
+        module: SmolStr,
+        fun: SmolStr,
+        doc: Option<SmolStr>,
     },
 
     /// Import a type defined in another language.
@@ -464,9 +465,9 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     ExternalType {
         location: SrcSpan,
         public: bool,
-        name: String,
-        arguments: Vec<String>,
-        doc: Option<String>,
+        name: SmolStr,
+        arguments: Vec<SmolStr>,
+        doc: Option<SmolStr>,
     },
 
     /// Import another Gleam module so the current module can use the types and
@@ -481,8 +482,8 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     Import {
         location: SrcSpan,
-        module: Vec<String>,
-        as_name: Option<String>,
+        module: Vec<SmolStr>,
+        as_name: Option<SmolStr>,
         unqualified: Vec<UnqualifiedImport>,
         package: PackageName,
     },
@@ -496,10 +497,10 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// pub const end_year = 2111
     /// ```
     ModuleConstant {
-        doc: Option<String>,
+        doc: Option<SmolStr>,
         location: SrcSpan,
         public: bool,
-        name: String,
+        name: SmolStr,
         annotation: Option<TypeAst>,
         value: Box<Constant<T, ConstantRecordTag>>,
         type_: T,
@@ -538,7 +539,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
         }
     }
 
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
             Statement::Import { .. } => (),
             Statement::Fn { doc, .. }
@@ -556,8 +557,8 @@ impl<A, B, C, E> Statement<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
-    pub name: String,
-    pub as_name: Option<String>,
+    pub name: SmolStr,
+    pub as_name: Option<SmolStr>,
     pub layer: Layer,
 }
 
@@ -593,7 +594,7 @@ impl Layer {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ExternalFnArg<T> {
     pub location: SrcSpan,
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub annotation: TypeAst,
     pub type_: T,
 }
@@ -695,7 +696,7 @@ impl BinOp {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub location: SrcSpan,
     pub value: A,
     // This is true if this argument is given as the callback in a `use`
@@ -729,14 +730,14 @@ pub struct RecordUpdateSpread {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct UntypedRecordUpdateArg {
-    pub label: String,
+    pub label: SmolStr,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct TypedRecordUpdateArg {
-    pub label: String,
+    pub label: SmolStr,
     pub location: SrcSpan,
     pub value: TypedExpr,
     pub index: u32,
@@ -753,7 +754,7 @@ pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor
 pub type UntypedMultiPattern = MultiPattern<(), ()>;
 pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, String>;
+pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, SmolStr>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
@@ -784,7 +785,7 @@ impl TypedClause {
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>, SmolStr>;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum ClauseGuard<Type, RecordTag> {
@@ -863,7 +864,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     Var {
         location: SrcSpan,
         type_: Type,
-        name: String,
+        name: SmolStr,
     },
 
     TupleIndex {
@@ -973,38 +974,38 @@ pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 pub enum Pattern<Constructor, Type> {
     Int {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
     Var {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     /// A reference to a variable in a bit string. This is always a variable
     /// being used rather than a new variable being assigned.
     VarUsage {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         type_: Type,
     },
 
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
     Assign {
-        name: String,
+        name: SmolStr,
         location: SrcSpan,
         pattern: Box<Self>,
     },
@@ -1012,7 +1013,7 @@ pub enum Pattern<Constructor, Type> {
     /// A pattern that binds to any value but does not assign a variable.
     /// Always starts with an underscore.
     Discard {
-        name: String,
+        name: SmolStr,
         location: SrcSpan,
     },
 
@@ -1025,9 +1026,9 @@ pub enum Pattern<Constructor, Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         arguments: Vec<CallArg<Self>>,
-        module: Option<String>,
+        module: Option<SmolStr>,
         constructor: Constructor,
         with_spread: bool,
         type_: Type,
@@ -1048,7 +1049,7 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
         left_location: SrcSpan,
         right_location: SrcSpan,
-        left_side_string: String,
+        left_side_string: SmolStr,
         /// The variable on the right hand side of the `<>`. It is `None` if the
         /// variable stars with `_` (it is a discard and assigns no variable).
         right_side_assignment: AssignName,
@@ -1057,8 +1058,8 @@ pub enum Pattern<Constructor, Type> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(String),
-    Discard(String),
+    Variable(SmolStr),
+    Discard(SmolStr),
 }
 
 impl AssignName {
@@ -1244,25 +1245,25 @@ impl<A> BitStringSegmentOption<A> {
         }
     }
 
-    pub fn label(&self) -> String {
+    pub fn label(&self) -> SmolStr {
         match self {
-            BitStringSegmentOption::Binary { .. } => "binary".to_string(),
-            BitStringSegmentOption::Int { .. } => "int".to_string(),
-            BitStringSegmentOption::Float { .. } => "float".to_string(),
-            BitStringSegmentOption::BitString { .. } => "bit_string".to_string(),
-            BitStringSegmentOption::Utf8 { .. } => "utf8".to_string(),
-            BitStringSegmentOption::Utf16 { .. } => "utf16".to_string(),
-            BitStringSegmentOption::Utf32 { .. } => "utf32".to_string(),
-            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".to_string(),
-            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".to_string(),
-            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".to_string(),
-            BitStringSegmentOption::Signed { .. } => "signed".to_string(),
-            BitStringSegmentOption::Unsigned { .. } => "unsigned".to_string(),
-            BitStringSegmentOption::Big { .. } => "big".to_string(),
-            BitStringSegmentOption::Little { .. } => "little".to_string(),
-            BitStringSegmentOption::Native { .. } => "native".to_string(),
-            BitStringSegmentOption::Size { .. } => "size".to_string(),
-            BitStringSegmentOption::Unit { .. } => "unit".to_string(),
+            BitStringSegmentOption::Binary { .. } => "binary".into(),
+            BitStringSegmentOption::Int { .. } => "int".into(),
+            BitStringSegmentOption::Float { .. } => "float".into(),
+            BitStringSegmentOption::BitString { .. } => "bit_string".into(),
+            BitStringSegmentOption::Utf8 { .. } => "utf8".into(),
+            BitStringSegmentOption::Utf16 { .. } => "utf16".into(),
+            BitStringSegmentOption::Utf32 { .. } => "utf32".into(),
+            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
+            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
+            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
+            BitStringSegmentOption::Signed { .. } => "signed".into(),
+            BitStringSegmentOption::Unsigned { .. } => "unsigned".into(),
+            BitStringSegmentOption::Big { .. } => "big".into(),
+            BitStringSegmentOption::Little { .. } => "little".into(),
+            BitStringSegmentOption::Native { .. } => "native".into(),
+            BitStringSegmentOption::Size { .. } => "size".into(),
+            BitStringSegmentOption::Unit { .. } => "unit".into(),
         }
     }
 }

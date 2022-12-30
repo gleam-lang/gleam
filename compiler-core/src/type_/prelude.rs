@@ -16,7 +16,7 @@ const UTF_CODEPOINT: &str = "UtfCodepoint";
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: INT.to_string(),
+        name: INT.into(),
         module: vec![],
         args: vec![],
     })
@@ -26,7 +26,7 @@ pub fn float() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: FLOAT.to_string(),
+        name: FLOAT.into(),
         module: vec![],
     })
 }
@@ -35,7 +35,7 @@ pub fn bool() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: BOOL.to_string(),
+        name: BOOL.into(),
         module: vec![],
     })
 }
@@ -44,7 +44,7 @@ pub fn string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: STRING.to_string(),
+        name: STRING.into(),
         module: vec![],
     })
 }
@@ -53,7 +53,7 @@ pub fn nil() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: NIL.to_string(),
+        name: NIL.into(),
         module: vec![],
     })
 }
@@ -61,7 +61,7 @@ pub fn nil() -> Arc<Type> {
 pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: LIST.to_string(),
+        name: LIST.into(),
         module: vec![],
         args: vec![t],
     })
@@ -70,7 +70,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        name: RESULT.to_string(),
+        name: RESULT.into(),
         module: vec![],
         args: vec![a, e],
     })
@@ -88,7 +88,7 @@ pub fn bit_string() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: BIT_STRING.to_string(),
+        name: BIT_STRING.into(),
         module: vec![],
     })
 }
@@ -97,7 +97,7 @@ pub fn utf_codepoint() -> Arc<Type> {
     Arc::new(Type::App {
         args: vec![],
         public: true,
-        name: UTF_CODEPOINT.to_string(),
+        name: UTF_CODEPOINT.into(),
         module: vec![],
     })
 }
@@ -129,8 +129,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     };
 
     let mut prelude = Module {
-        name: vec!["gleam".to_string()],
-        package: "".to_string(),
+        name: vec!["gleam".into()],
+        package: "".into(),
         origin: Origin::Src,
         types: HashMap::new(),
         types_constructors: HashMap::new(),
@@ -139,7 +139,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     };
 
     let _ = prelude.types.insert(
-        INT.to_string(),
+        INT.into(),
         TypeConstructor {
             parameters: vec![],
             typ: int(),
@@ -150,16 +150,16 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types_constructors.insert(
-        BOOL.to_string(),
-        vec!["True".to_string(), "False".to_string()],
+        BOOL.into(),
+        vec!["True".into(), "False".into()],
     );
 
     let _ = prelude.values.insert(
-        "True".to_string(),
+        "True".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "True".to_string(),
+                name: "True".into(),
                 field_map: None,
                 arity: 0,
                 location: SrcSpan::default(),
@@ -169,11 +169,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.values.insert(
-        "False".to_string(),
+        "False".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "False".to_string(),
+                name: "False".into(),
                 field_map: None,
                 arity: 0,
                 location: SrcSpan::default(),
@@ -183,7 +183,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.types.insert(
-        BOOL.to_string(),
+        BOOL.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -195,7 +195,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
 
     let list_parameter = generic_var(ids.next());
     let _ = prelude.types.insert(
-        LIST.to_string(),
+        LIST.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![list_parameter.clone()],
@@ -206,7 +206,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        FLOAT.to_string(),
+        FLOAT.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -217,7 +217,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        STRING.to_string(),
+        STRING.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -230,7 +230,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let result_value = generic_var(ids.next());
     let result_error = generic_var(ids.next());
     let _ = prelude.types.insert(
-        RESULT.to_string(),
+        RESULT.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![result_value.clone(), result_error.clone()],
@@ -241,16 +241,16 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types_constructors.insert(
-        RESULT.to_string(),
-        vec!["Ok".to_string(), "Error".to_string()],
+        RESULT.into(),
+        vec!["Ok".into(), "Error".into()],
     );
 
     let _ = prelude.values.insert(
-        NIL.to_string(),
+        NIL.into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: NIL.to_string(),
+                name: NIL.into(),
                 arity: 0,
                 field_map: None,
                 location: SrcSpan::default(),
@@ -260,7 +260,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.types.insert(
-        NIL.to_string(),
+        NIL.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -271,7 +271,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        "BitString".to_string(),
+        "BitString".into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -282,7 +282,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        UTF_CODEPOINT.to_string(),
+        UTF_CODEPOINT.into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -295,11 +295,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let ok = generic_var(ids.next());
     let error = generic_var(ids.next());
     let _ = prelude.values.insert(
-        "Ok".to_string(),
+        "Ok".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "Ok".to_string(),
+                name: "Ok".into(),
                 field_map: None,
                 arity: 1,
                 location: SrcSpan::default(),
@@ -312,11 +312,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let ok = generic_var(ids.next());
     let error = generic_var(ids.next());
     let _ = prelude.values.insert(
-        "Error".to_string(),
+        "Error".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "Error".to_string(),
+                name: "Error".into(),
                 field_map: None,
                 arity: 1,
                 location: SrcSpan::default(),

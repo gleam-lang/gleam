@@ -2,37 +2,38 @@ use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator};
 
 use super::*;
 use std::collections::HashMap;
+use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    pub current_module: &'a [String],
+    pub current_module: &'a [SmolStr],
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
-    pub unqualified_imported_names: HashMap<String, SrcSpan>,
-    pub importable_modules: &'a im::HashMap<String, Module>,
+    pub unqualified_imported_names: HashMap<SmolStr, SrcSpan>,
+    pub importable_modules: &'a im::HashMap<SmolStr, Module>,
 
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
-    pub imported_modules: HashMap<String, (SrcSpan, &'a Module)>,
-    pub unused_modules: HashMap<String, SrcSpan>,
-    pub imported_types: HashSet<String>,
+    pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a Module)>,
+    pub unused_modules: HashMap<SmolStr, SrcSpan>,
+    pub imported_types: HashSet<SmolStr>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<String, ValueConstructor>,
+    pub scope: im::HashMap<SmolStr, ValueConstructor>,
 
     /// Types defined in the current module (or the prelude)
-    pub module_types: HashMap<String, TypeConstructor>,
+    pub module_types: HashMap<SmolStr, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<String, Vec<String>>,
+    pub module_types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
 
     /// Values defined in the current module (or the prelude)
-    pub module_values: HashMap<String, ValueConstructor>,
+    pub module_values: HashMap<SmolStr, ValueConstructor>,
 
     /// Accessors defined in the current module
-    pub accessors: HashMap<String, AccessorsMap>,
+    pub accessors: HashMap<SmolStr, AccessorsMap>,
 
     /// Warnings
     pub warnings: &'a mut Vec<Warning>,
@@ -40,13 +41,13 @@ pub struct Environment<'a> {
     /// Functions that have not yet been inferred then generalised.
     /// We use this to determine whether functions that call this one
     /// can safely be generalised.
-    pub ungeneralised_functions: HashSet<String>,
+    pub ungeneralised_functions: HashSet<SmolStr>,
 
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
-    pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, bool)>>,
+    pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
@@ -54,7 +55,7 @@ pub struct Environment<'a> {
 pub enum EntityKind {
     PrivateConstant,
     // String here is the type constructor's type name
-    PrivateTypeConstructor(String),
+    PrivateTypeConstructor(SmolStr),
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
@@ -67,8 +68,8 @@ pub enum EntityKind {
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
-        current_module: &'a [String],
-        importable_modules: &'a im::HashMap<String, Module>,
+        current_module: &'a [SmolStr],
+        importable_modules: &'a im::HashMap<SmolStr, Module>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let prelude = importable_modules
@@ -97,7 +98,7 @@ impl<'a> Environment<'a> {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<String, ValueConstructor>,
+    local_values: im::HashMap<SmolStr, ValueConstructor>,
 }
 
 impl<'a> Environment<'a> {
@@ -154,7 +155,7 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: String, location: SrcSpan, typ: Arc<Type>) {
+    pub fn insert_local_variable(&mut self, name: SmolStr, location: SrcSpan, typ: Arc<Type>) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
@@ -169,7 +170,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_variable(
         &mut self,
-        name: String,
+        name: SmolStr,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
         public: bool,
@@ -188,7 +189,7 @@ impl<'a> Environment<'a> {
     /// Errors if the module already has a value with that name.
     ///
     pub fn insert_module_value(&mut self, name: &str, value: ValueConstructor) {
-        let _ = self.module_values.insert(name.to_string(), value);
+        let _ = self.module_values.insert(name.into(), value);
     }
 
     /// Lookup a variable in the current scope.
@@ -214,7 +215,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_type_constructor(
         &mut self,
-        type_name: String,
+        type_name: SmolStr,
         info: TypeConstructor,
     ) -> Result<(), Error> {
         let name = type_name.clone();
@@ -232,7 +233,7 @@ impl<'a> Environment<'a> {
 
     /// Map a type to constructors in the current scope.
     ///
-    pub fn insert_type_to_constructors(&mut self, type_name: String, constructors: Vec<String>) {
+    pub fn insert_type_to_constructors(&mut self, type_name: SmolStr, constructors: Vec<SmolStr>) {
         let _ = self
             .module_types_constructors
             .insert(type_name, constructors);
@@ -242,7 +243,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_type_constructor(
         &mut self,
-        module_alias: &Option<String>,
+        module_alias: &Option<SmolStr>,
         name: &str,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
@@ -250,14 +251,14 @@ impl<'a> Environment<'a> {
                 .module_types
                 .get(name)
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
-                    name: name.to_string(),
+                    name: name.into(),
                     type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
                 }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: module_name.to_string(),
+                        name: module_name.clone(),
                         imported_modules: self
                             .importable_modules
                             .keys()
@@ -270,7 +271,7 @@ impl<'a> Environment<'a> {
                     .types
                     .get(name)
                     .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
-                        name: name.to_string(),
+                        name: name.into(),
                         module_name: module.name.clone(),
                         type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
                     })
@@ -282,13 +283,13 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_constructors_for_type(
         &mut self,
-        full_module_name: &Option<String>,
+        full_module_name: &Option<SmolStr>,
         name: &str,
-    ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
+    ) -> Result<&Vec<SmolStr>, UnknownTypeConstructorError> {
         match full_module_name {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
-                    name: name.to_string(),
+                    name: name.into(),
                     type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
                 }
             }),
@@ -296,7 +297,7 @@ impl<'a> Environment<'a> {
             Some(m) => {
                 let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: name.to_string(),
+                        name: name.into(),
                         imported_modules: self
                             .importable_modules
                             .keys()
@@ -307,7 +308,7 @@ impl<'a> Environment<'a> {
                 let _ = self.unused_modules.remove(m);
                 module.types_constructors.get(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
-                        name: name.to_string(),
+                        name: name.into(),
                         module_name: module.name.clone(),
                         type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
                     }
@@ -320,7 +321,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_value_constructor(
         &mut self,
-        module: Option<&String>,
+        module: Option<&SmolStr>,
         name: &str,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
@@ -328,14 +329,14 @@ impl<'a> Environment<'a> {
                 .scope
                 .get(name)
                 .ok_or_else(|| UnknownValueConstructorError::Variable {
-                    name: name.to_string(),
+                    name: name.into(),
                     variables: self.local_value_names(),
                 }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
-                        name: module_name.to_string(),
+                        name: module_name.clone(),
                         imported_modules: self
                             .importable_modules
                             .keys()
@@ -348,7 +349,7 @@ impl<'a> Environment<'a> {
                     .values
                     .get(name)
                     .ok_or_else(|| UnknownValueConstructorError::ModuleValue {
-                        name: name.to_string(),
+                        name: name.into(),
                         module_name: module.name.clone(),
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     })
@@ -357,7 +358,7 @@ impl<'a> Environment<'a> {
     }
 
     pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
-        let _ = self.accessors.insert(type_name.to_string(), accessors);
+        let _ = self.accessors.insert(type_name.into(), accessors);
     }
 
     /// Instantiate converts generic variables into unbound ones.
@@ -429,14 +430,14 @@ impl<'a> Environment<'a> {
     }
 
     /// Inserts an entity at the current scope for usage tracking.
-    pub fn init_usage(&mut self, name: String, kind: EntityKind, location: SrcSpan) {
+    pub fn init_usage(&mut self, name: SmolStr, kind: EntityKind, location: SrcSpan) {
         use EntityKind::*;
 
         match self
             .entity_usages
             .last_mut()
             .expect("Attempted to access non-existant entity usages scope")
-            .insert(name.to_string(), (kind, location, false))
+            .insert(name.clone(), (kind, location, false))
         {
             // Private types can be shadowed by a constructor with the same name
             //
@@ -471,7 +472,7 @@ impl<'a> Environment<'a> {
             match kind {
                 // If a type constructor is used, we consider its type also used
                 EntityKind::PrivateTypeConstructor(type_name) if type_name != &name => {
-                    name.clone_from(type_name);
+                    name.clone_from(type_name.into());
                 }
                 _ => return,
             }
@@ -492,8 +493,8 @@ impl<'a> Environment<'a> {
         }
     }
 
-    fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
-        for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
+    fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
+        for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| *!used) {
             let warning = match kind {
                 EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor => {
                     Warning::UnusedType {
@@ -529,7 +530,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn local_value_names(&self) -> Vec<String> {
+    pub fn local_value_names(&self) -> Vec<SmolStr> {
         self.scope
             .keys()
             .filter(|&t| PIPE_VARIABLE != t)
@@ -544,7 +545,7 @@ impl<'a> Environment<'a> {
         &mut self,
         patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
         value_typ: Arc<Type>,
-    ) -> Result<(), Vec<String>> {
+    ) -> Result<(), Vec<SmolStr>> {
         match &*value_typ {
             Type::App {
                 name: type_name,
@@ -557,8 +558,8 @@ impl<'a> Environment<'a> {
                     Some(module_vec.join("/"))
                 };
 
-                if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
-                    let mut unmatched_constructors: HashSet<String> =
+                if let Ok(constructors) = self.get_constructors_for_type(&m.into(), type_name) {
+                    let mut unmatched_constructors: HashSet<SmolStr> =
                         constructors.iter().cloned().collect();
 
                     for p in &patterns {

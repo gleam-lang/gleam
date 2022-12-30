@@ -129,7 +129,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn typed_left_hand_value_variable(&self) -> TypedExpr {
         TypedExpr::Var {
             location: self.argument_location,
-            name: PIPE_VARIABLE.to_string(),
+            name: PIPE_VARIABLE.into(),
             constructor: ValueConstructor {
                 public: true,
                 type_: self.argument_type.clone(),
@@ -145,7 +145,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn untyped_left_hand_value_variable(&self) -> UntypedExpr {
         UntypedExpr::Var {
             location: self.argument_location,
-            name: PIPE_VARIABLE.to_string(),
+            name: PIPE_VARIABLE.into(),
         }
     }
 
@@ -160,7 +160,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let location = expression.location();
         // Insert the variable for use in type checking the rest of the pipeline
         self.expr_typer.environment.insert_local_variable(
-            PIPE_VARIABLE.to_string(),
+            PIPE_VARIABLE.into(),
             location,
             expression.type_(),
         );

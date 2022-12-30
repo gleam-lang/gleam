@@ -7,6 +7,7 @@ use std::{path::PathBuf, sync::Arc};
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use smol_str::SmolStr;
 
 use super::FieldAccessUsage;
 
@@ -23,49 +24,49 @@ pub enum Error {
         location: SrcSpan,
     },
     UnknownLabels {
-        unknown: Vec<(String, SrcSpan)>,
-        valid: Vec<String>,
-        supplied: Vec<String>,
+        unknown: Vec<(SmolStr, SrcSpan)>,
+        valid: Vec<SmolStr>,
+        supplied: Vec<SmolStr>,
     },
 
     UnknownVariable {
         location: SrcSpan,
-        name: String,
-        variables: Vec<String>,
+        name: SmolStr,
+        variables: Vec<SmolStr>,
     },
 
     UnknownType {
         location: SrcSpan,
-        name: String,
-        types: Vec<String>,
+        name: SmolStr,
+        types: Vec<SmolStr>,
     },
 
     UnknownModule {
         location: SrcSpan,
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     UnknownModuleType {
         location: SrcSpan,
-        name: String,
-        module_name: Vec<String>,
-        type_constructors: Vec<String>,
+        name: SmolStr,
+        module_name: Vec<SmolStr>,
+        type_constructors: Vec<SmolStr>,
     },
 
     UnknownModuleValue {
         location: SrcSpan,
-        name: String,
-        module_name: Vec<String>,
-        value_constructors: Vec<String>,
+        name: SmolStr,
+        module_name: Vec<SmolStr>,
+        value_constructors: Vec<SmolStr>,
     },
 
     UnknownModuleField {
         location: SrcSpan,
-        name: String,
-        module_name: Vec<String>,
-        value_constructors: Vec<String>,
-        type_constructors: Vec<String>,
+        name: SmolStr,
+        module_name: Vec<SmolStr>,
+        value_constructors: Vec<SmolStr>,
+        type_constructors: Vec<SmolStr>,
     },
 
     NotFn {
@@ -76,8 +77,8 @@ pub enum Error {
     UnknownRecordField {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: String,
-        fields: Vec<String>,
+        label: SmolStr,
+        fields: Vec<SmolStr>,
         usage: FieldAccessUsage,
     },
 
@@ -85,7 +86,7 @@ pub enum Error {
         location: SrcSpan,
         expected: usize,
         given: usize,
-        labels: Vec<String>,
+        labels: Vec<SmolStr>,
     },
 
     UpdateMultiConstructorType {
@@ -99,7 +100,7 @@ pub enum Error {
 
     IncorrectTypeArity {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         expected: usize,
         given: usize,
     },
@@ -109,7 +110,7 @@ pub enum Error {
         situation: Option<UnifyErrorSituation>,
         expected: Arc<Type>,
         given: Arc<Type>,
-        rigid_type_names: im::HashMap<u64, String>,
+        rigid_type_names: im::HashMap<u64, SmolStr>,
     },
 
     RecursiveType {
@@ -119,35 +120,35 @@ pub enum Error {
     DuplicateName {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateImport {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateTypeName {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateConstName {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateArgument {
         location: SrcSpan,
-        label: String,
+        label: SmolStr,
     },
 
     DuplicateField {
         location: SrcSpan,
-        label: String,
+        label: SmolStr,
     },
 
     PrivateTypeLeak {
@@ -157,7 +158,7 @@ pub enum Error {
 
     UnexpectedLabelledArg {
         location: SrcSpan,
-        label: String,
+        label: SmolStr,
     },
 
     PositionalArgumentAfterLabelled {
@@ -172,22 +173,22 @@ pub enum Error {
 
     NonLocalClauseGuardVariable {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     ExtraVarInAlternativePattern {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     MissingVarInAlternativePattern {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateVarInPattern {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     OutOfBoundsTupleIndex {
@@ -218,17 +219,17 @@ pub enum Error {
     },
 
     ReservedModuleName {
-        name: String,
+        name: SmolStr,
     },
 
     KeywordInModuleName {
-        name: String,
-        keyword: String,
+        name: SmolStr,
+        keyword: SmolStr,
     },
 
     NotExhaustivePatternMatch {
         location: SrcSpan,
-        unmatched: Vec<String>,
+        unmatched: Vec<SmolStr>,
     },
 }
 
@@ -259,38 +260,38 @@ pub enum Warning {
     UnusedType {
         location: SrcSpan,
         imported: bool,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedConstructor {
         location: SrcSpan,
         imported: bool,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedImportedValue {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedImportedModule {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedPrivateModuleConstant {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedPrivateFunction {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedVariable {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 }
 
@@ -307,7 +308,7 @@ impl Error {
         }
     }
 
-    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, String>) -> Self {
+    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, SmolStr>) -> Self {
         match self {
             Error::CouldNotUnify {
                 rigid_type_names: ref mut annotated_names,
@@ -322,7 +323,7 @@ impl Error {
 }
 
 impl Warning {
-    pub fn into_warning(self, path: PathBuf, src: String) -> crate::Warning {
+    pub fn into_warning(self, path: PathBuf, src: SmolStr) -> crate::Warning {
         crate::Warning::Type {
             path,
             src,
@@ -334,19 +335,19 @@ impl Warning {
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownValueConstructorError {
     Variable {
-        name: String,
-        variables: Vec<String>,
+        name: SmolStr,
+        variables: Vec<SmolStr>,
     },
 
     Module {
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     ModuleValue {
-        name: String,
-        module_name: Vec<String>,
-        value_constructors: Vec<String>,
+        name: SmolStr,
+        module_name: Vec<SmolStr>,
+        value_constructors: Vec<SmolStr>,
     },
 }
 
@@ -386,19 +387,19 @@ pub fn convert_get_value_constructor_error(
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownTypeConstructorError {
     Type {
-        name: String,
-        type_constructors: Vec<String>,
+        name: SmolStr,
+        type_constructors: Vec<SmolStr>,
     },
 
     Module {
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     ModuleType {
-        name: String,
-        module_name: Vec<String>,
-        type_constructors: Vec<String>,
+        name: SmolStr,
+        module_name: Vec<SmolStr>,
+        type_constructors: Vec<SmolStr>,
     },
 }
 
@@ -594,15 +595,15 @@ pub enum UnifyError {
     },
 
     ExtraVarInAlternativePattern {
-        name: String,
+        name: SmolStr,
     },
 
     MissingVarInAlternativePattern {
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateVarInPattern {
-        name: String,
+        name: SmolStr,
     },
 
     RecursiveType,

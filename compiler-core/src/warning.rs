@@ -5,9 +5,10 @@ use crate::{
 };
 use std::io::Write;
 use std::path::PathBuf;
+use smol_str::SmolStr;
 use termcolor::Buffer;
 
-pub type Src = String;
+pub type Src = SmolStr;
 
 #[derive(Debug, PartialEq)]
 pub enum Warning {

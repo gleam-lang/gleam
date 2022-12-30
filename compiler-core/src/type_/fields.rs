@@ -2,11 +2,12 @@ use super::Error;
 use crate::ast::{CallArg, SrcSpan};
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
+use smol_str::SmolStr;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
     pub arity: u32,
-    pub fields: HashMap<String, u32>,
+    pub fields: HashMap<SmolStr, u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,7 +21,7 @@ impl FieldMap {
         }
     }
 
-    pub fn insert(&mut self, label: String, index: u32) -> Result<(), DuplicateField> {
+    pub fn insert(&mut self, label: SmolStr, index: u32) -> Result<(), DuplicateField> {
         match self.fields.insert(label, index) {
             Some(_) => Err(DuplicateField),
             None => Ok(()),
@@ -106,7 +107,7 @@ impl FieldMap {
                 if seen_labels.contains(label) {
                     return Err(Error::DuplicateArgument {
                         location,
-                        label: label.to_string(),
+                        label: label.into(),
                     });
                 }
                 let _ = seen_labels.insert(label.clone());
@@ -126,7 +127,7 @@ impl FieldMap {
         }
     }
 
-    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<String> {
+    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<SmolStr> {
         let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
 
         self.fields

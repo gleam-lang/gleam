@@ -1,5 +1,6 @@
 use super::*;
 use crate::type_::{bool, HasType, Type};
+use smol_str::SmolStr;
 
 use lazy_static::lazy_static;
 
@@ -8,19 +9,19 @@ pub enum TypedExpr {
     Int {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     Sequence {
@@ -41,7 +42,7 @@ pub enum TypedExpr {
     Var {
         location: SrcSpan,
         constructor: ValueConstructor,
-        name: String,
+        name: SmolStr,
     },
 
     Fn {
@@ -95,13 +96,13 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, String>>,
+        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, SmolStr>>,
     },
 
     RecordAccess {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: String,
+        label: SmolStr,
         index: u64,
         record: Box<Self>,
     },
@@ -109,9 +110,9 @@ pub enum TypedExpr {
     ModuleSelect {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: String,
-        module_name: String,
-        module_alias: String,
+        label: SmolStr,
+        module_name: SmolStr,
+        module_alias: SmolStr,
         constructor: ModuleValueConstructor,
     },
 
@@ -130,7 +131,7 @@ pub enum TypedExpr {
 
     Todo {
         location: SrcSpan,
-        label: Option<String>,
+        label: Option<SmolStr>,
         typ: Arc<Type>,
     },
 

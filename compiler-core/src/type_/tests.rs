@@ -542,7 +542,7 @@ macro_rules! assert_no_warnings {
 #[test]
 fn field_map_reorder_test() {
     let int = |value: &str| UntypedExpr::Int {
-        value: value.to_string(),
+        value: value.into(),
         location: SrcSpan { start: 0, end: 0 },
     };
 

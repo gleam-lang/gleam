@@ -12,6 +12,7 @@ use crate::ast::{
 };
 
 use im::hashmap;
+use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub(crate) struct ExprTyper<'a, 'b> {
@@ -198,7 +199,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         kind: TodoKind,
-        label: Option<String>,
+        label: Option<SmolStr>,
     ) -> TypedExpr {
         let typ = self.new_unbound_var();
         self.environment.warnings.push(Warning::Todo {
@@ -214,7 +215,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_string(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+    fn infer_string(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
         TypedExpr::String {
             location,
             value,
@@ -222,7 +223,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_int(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+    fn infer_int(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
         TypedExpr::Int {
             location,
             value,
@@ -230,7 +231,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_float(&mut self, value: String, location: SrcSpan) -> TypedExpr {
+    fn infer_float(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
         TypedExpr::Float {
             location,
             value,
@@ -493,7 +494,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typ,
         })
     }
-    fn infer_var(&mut self, name: String, location: SrcSpan) -> Result<TypedExpr, Error> {
+    fn infer_var(&mut self, name: SmolStr, location: SrcSpan) -> Result<TypedExpr, Error> {
         let constructor = self.infer_value_constructor(&None, &name, &location)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -505,7 +506,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
-        label: String,
+        label: SmolStr,
         access_location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1228,7 +1229,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_module_access(
         &mut self,
         module_alias: &str,
-        label: String,
+        label: SmolStr,
         module_location: &SrcSpan,
         select_location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
@@ -1296,7 +1297,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_record_access(
         &mut self,
         record: UntypedExpr,
-        label: String,
+        label: SmolStr,
         location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1309,7 +1310,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_known_record_access(
         &mut self,
         record: TypedExpr,
-        label: String,
+        label: SmolStr,
         location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> Result<TypedExpr, Error> {
@@ -1510,7 +1511,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_value_constructor(
         &mut self,
-        module: &Option<String>,
+        module: &Option<SmolStr>,
         name: &str,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
@@ -2066,8 +2067,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         subjects_count: usize,
         subjects: &[Arc<Type>],
-        typed_clauses: &[Clause<TypedExpr, PatternConstructor, Arc<Type>, String>],
-    ) -> Result<(), Vec<String>> {
+        typed_clauses: &[Clause<TypedExpr, PatternConstructor, Arc<Type>, SmolStr>],
+    ) -> Result<(), Vec<SmolStr>> {
         // Because exhaustiveness checking in presence of multiple subjects is similar
         // to full exhaustiveness checking of tuples or other nested record patterns,
         // and we currently only do only limited exhaustiveness checking of custom types

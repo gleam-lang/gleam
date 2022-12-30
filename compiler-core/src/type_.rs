@@ -40,6 +40,7 @@ use std::{
 use error::*;
 use hydrator::Hydrator;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 pub trait HasType {
     fn type_(&self) -> Arc<Type>;
@@ -415,19 +416,19 @@ impl ModuleValueConstructor {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Module {
-    pub name: Vec<String>,
+    pub name: Vec<SmolStr>,
     pub origin: Origin,
-    pub package: String,
-    pub types: HashMap<String, TypeConstructor>,
-    pub types_constructors: HashMap<String, Vec<String>>,
-    pub values: HashMap<String, ValueConstructor>,
-    pub accessors: HashMap<String, AccessorsMap>,
+    pub package: SmolStr,
+    pub types: HashMap<SmolStr, TypeConstructor>,
+    pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
+    pub values: HashMap<SmolStr, ValueConstructor>,
+    pub accessors: HashMap<SmolStr, AccessorsMap>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternConstructor {
     Record {
-        name: String,
+        name: SmolStr,
         field_map: Option<FieldMap>,
     },
 }
@@ -508,7 +509,7 @@ impl TypeVar {
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
-    pub module: Vec<String>,
+    pub module: Vec<SmolStr>,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
 }
@@ -549,7 +550,7 @@ impl ValueConstructor {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeAliasConstructor {
     pub public: bool,
-    pub module: Vec<String>,
+    pub module: Vec<SmolStr>,
     pub type_: Type,
     pub arity: usize,
 }
@@ -574,7 +575,7 @@ pub fn infer_module(
     mut module: UntypedModule,
     origin: Origin,
     package: &str,
-    modules: &im::HashMap<String, Module>,
+    modules: &im::HashMap<SmolStr, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
@@ -680,7 +681,7 @@ pub fn infer_module(
     })
 }
 
-fn validate_module_name(name: &[String]) -> Result<(), Error> {
+fn validate_module_name(name: &[SmolStr]) -> Result<(), Error> {
     if name == ["gleam"] {
         return Err(Error::ReservedModuleName {
             name: name.join("/"),
@@ -744,8 +745,8 @@ fn assert_unique_const_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
-    module_name: &[String],
-    hydrators: &mut HashMap<String, Hydrator>,
+    module_name: &[SmolStr],
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
@@ -990,7 +991,7 @@ fn register_values<'a>(
 
 fn generalise_statement(
     s: TypedStatement,
-    module_name: &[String],
+    module_name: &[SmolStr],
     environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
@@ -1059,8 +1060,8 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
-    module_name: &[String],
-    hydrators: &mut HashMap<String, Hydrator>,
+    module_name: &[SmolStr],
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     match s {
@@ -1600,7 +1601,7 @@ fn generalise(t: Arc<Type>) -> Arc<Type> {
 }
 
 fn make_type_vars(
-    args: &[String],
+    args: &[SmolStr],
     location: &SrcSpan,
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
@@ -1618,7 +1619,7 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
-) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+) -> Result<Option<HashMap<SmolStr, RecordAccessor>>, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
@@ -1688,8 +1689,8 @@ fn get_compatible_record_fields<A>(
 /// Iterate over a module, registering any new types created by the module into the typer
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
-    module: &[String],
-    hydrators: &mut HashMap<String, Hydrator>,
+    module: &[SmolStr],
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
@@ -1819,7 +1820,7 @@ pub fn register_types<'a>(
 
 pub fn register_import(
     s: &UntypedStatement,
-    current_module: &[String],
+    current_module: &[SmolStr],
     origin: Origin,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
@@ -1877,7 +1878,7 @@ pub fn register_import(
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: *previous,
-                        name: name.to_string(),
+                        name: name.into(),
                     });
                 }
 
