@@ -7,7 +7,7 @@ mod tests;
 use crate::type_::{generic_var, Type, TypeVar};
 use crate::uid::UniqueIdGenerator;
 use crate::{
-    type_::{Module, TypeConstructor},
+    type_::Module,
     Result,
 };
 use std::sync::Arc;
@@ -63,22 +63,8 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
 }
 
 pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
-    let module: Module = bincode::deserialize(slice).expect("failed to decode metadata (bincode)");
+    let mut module: Module = bincode::deserialize(slice).expect("failed to decode metadata (bincode)");
 
     Ok(Module {
-        types: module
-            .types
-            .into_iter()
-            .map(|(key, type_)| -> (String, TypeConstructor) {
-                (
-                    key,
-                    TypeConstructor {
-                        typ: decode_type(&id_generator, &type_.typ),
-                        ..type_
-                    },
-                )
-            })
-            .collect(),
-        ..module
     })
 }
