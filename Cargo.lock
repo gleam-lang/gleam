@@ -718,6 +718,7 @@ dependencies = [
  "dirs-next",
  "flate2",
  "futures",
+ "globset",
  "heck",
  "hexpm",
  "http",
