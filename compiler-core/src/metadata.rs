@@ -10,7 +10,6 @@ use crate::{
     type_::{Module, TypeConstructor},
     Result,
 };
-use std::cell::RefCell;
 use std::sync::Arc;
 
 pub fn encode(data: &Module) -> Result<Vec<u8>> {
@@ -22,7 +21,7 @@ pub fn encode(data: &Module) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn undo_links(id_generator: &UniqueIdGenerator, type_var: TypeVar) -> Type {
+fn undo_links(id_generator: &UniqueIdGenerator, type_var: TypeVar) -> Arc<Type> {
     match type_var {
         TypeVar::Link { type_ } => decode_type(id_generator, &type_),
         TypeVar::Generic { .. } => generic_var(id_generator.next()),
@@ -30,36 +29,36 @@ fn undo_links(id_generator: &UniqueIdGenerator, type_var: TypeVar) -> Type {
     }
 }
 
-fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Type {
+fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
     match (*type_).clone() {
         Type::App {
             public,
             module,
             name,
             args,
-        } => Type::App {
+        } => Arc::new(Type::App {
             public: public.clone(),
             module: module.clone(),
             name: name.clone(),
             args: args
                 .into_iter()
-                .map(|arg| Arc::new(decode_type(&id_generator, &arg)))
+                .map(|arg| decode_type(&id_generator, &arg))
                 .collect(),
-        },
-        Type::Fn { args, retrn } => Type::Fn {
+        }),
+        Type::Fn { args, retrn } => Arc::new(Type::Fn {
             args: args
                 .into_iter()
-                .map(|arg| Arc::new(decode_type(&id_generator, &arg)))
+                .map(|arg| decode_type(&id_generator, &arg))
                 .collect(),
-            retrn: Arc::new(decode_type(&id_generator, &retrn)),
-        },
+            retrn: decode_type(&id_generator, &retrn),
+        }),
         Type::Var { type_ } => undo_links(id_generator, (*type_).clone().into_inner()),
-        Type::Tuple { elems } => Type::Tuple {
+        Type::Tuple { elems } => Arc::new(Type::Tuple {
             elems: elems
                 .into_iter()
-                .map(|elm| Arc::new(decode_type(&id_generator, &elm)))
+                .map(|elm| decode_type(&id_generator, &elm))
                 .collect(),
-        },
+        }),
     }
 }
 
@@ -70,11 +69,12 @@ pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
         types: module
             .types
             .into_iter()
-            .map(|(_, (key, type_)): (usize, (String, TypeConstructor))| -> (String, TypeConstructor) {
+            .enumerate()
+            .map(|(_, (key, type_))| -> (String, TypeConstructor) {
                 (
                     key,
                     TypeConstructor {
-                        typ: Arc::new(decode_type(&id_generator, &type_.typ)),
+                        typ: decode_type(&id_generator, &type_.typ),
                         ..type_
                     },
                 )

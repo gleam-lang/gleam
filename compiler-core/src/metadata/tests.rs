@@ -146,10 +146,10 @@ fn module_with_tuple_type() {
 
 #[test]
 fn module_with_generic_type() {
-    let t0 = type_::generic_var(0);
-    let t1 = type_::generic_var(1);
-    let t7 = type_::generic_var(7);
-    let t8 = type_::generic_var(8);
+    let t0 = generic_var(0);
+    let t1 = generic_var(1);
+    let t7 = generic_var(7);
+    let t8 = generic_var(8);
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> Module {
         Module {
