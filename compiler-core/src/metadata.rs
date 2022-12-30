@@ -69,8 +69,7 @@ pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
         types: module
             .types
             .into_iter()
-            .enumerate()
-            .map(|(_, (key, type_))| -> (String, TypeConstructor) {
+            .map(|(key, type_)| -> (String, TypeConstructor) {
                 (
                     key,
                     TypeConstructor {
