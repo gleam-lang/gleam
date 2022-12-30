@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::type_::{generic_var, Type, TypeVar};
+use crate::type_::{fn_, generic_var, tuple, Type, TypeVar};
 use crate::uid::UniqueIdGenerator;
 use crate::{type_::Module, Result};
 use std::sync::Arc;
@@ -42,20 +42,19 @@ fn regenerate_type_ids(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Ty
                 .map(|arg| regenerate_type_ids(&id_generator, &arg))
                 .collect(),
         }),
-        Type::Fn { args, retrn } => Arc::new(Type::Fn {
-            args: args
-                .into_iter()
+        Type::Fn { args, retrn } => fn_(
+            args.into_iter()
                 .map(|arg| regenerate_type_ids(&id_generator, &arg))
                 .collect(),
-            retrn: regenerate_type_ids(&id_generator, &retrn),
-        }),
+            regenerate_type_ids(&id_generator, &retrn),
+        ),
         Type::Var { type_ } => undo_links(id_generator, (*type_).clone().into_inner()),
-        Type::Tuple { elems } => Arc::new(Type::Tuple {
-            elems: elems
+        Type::Tuple { elems } => tuple(
+            elems
                 .into_iter()
                 .map(|elm| regenerate_type_ids(&id_generator, &elm))
                 .collect(),
-        }),
+        ),
     }
 }
 
