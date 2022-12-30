@@ -10,13 +10,13 @@ use crate::{
     build::Origin,
     type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
 };
-use std::{collections::HashMap, io::BufReader, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &Module) -> Module {
     let buffer = Metadata::encode(input).unwrap();
-    Metadata::decode( UniqueIdGenerator::new(), BufReader::new(buffer.as_slice())).unwrap()
+    Metadata::decode( UniqueIdGenerator::new(), buffer.as_slice()).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> Module {

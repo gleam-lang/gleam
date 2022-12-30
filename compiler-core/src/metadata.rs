@@ -11,7 +11,6 @@ use crate::{
     Result,
 };
 use std::cell::RefCell;
-use std::io::BufRead;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
@@ -81,10 +80,10 @@ impl Metadata {
 
     pub fn decode(
         id_generator: UniqueIdGenerator,
-        reader: impl BufRead + bincode::de::read::Reader,
+        slice: &[u8],
     ) -> Result<Module> {
         let config = bincode::config::standard();
-        let module: Module = bincode::serde::decode_from_reader(reader, config).expect("bincode");
+        let (module, _) : (Module, usize)= bincode::serde::decode_from_slice(slice, config).expect("bincode");
 
         Ok(Module {
             types: module

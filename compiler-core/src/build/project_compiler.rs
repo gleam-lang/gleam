@@ -377,7 +377,7 @@ where
     ) -> Result<(), Error> {
         for path in self.io.gleam_cache_files(&build_dir) {
             let reader = BufReader::new(self.io.reader(&path)?);
-            let module = metadata::Metadata::decode(self.ids.clone(), reader)?;
+            let module = metadata::Metadata::decode(self.ids.clone(), reader.buffer())?;
             let _ = self
                 .importable_modules
                 .insert(module.name.clone(), module)
