@@ -134,8 +134,12 @@ impl Metadata {
                     TypeVar::Link { type_: _type } => TypeVar::Link {
                         type_: Arc::new(Metadata::decode_type(&id_generator, &_type)),
                     },
-                    TypeVar::Generic { .. } => TypeVar::Generic { id: id_generator.next() },
-                    TypeVar::Unbound { .. } => TypeVar::Unbound { id: id_generator.next() },
+                    TypeVar::Generic { .. } => TypeVar::Generic {
+                        id: id_generator.next(),
+                    },
+                    TypeVar::Unbound { .. } => TypeVar::Unbound {
+                        id: id_generator.next(),
+                    },
                 })),
             },
             Type::Tuple { elems } => Type::Tuple {
@@ -173,9 +177,7 @@ impl Metadata {
                             parameters: value
                                 .parameters
                                 .iter()
-                                .map(|param| {
-                                    Arc::new(Metadata::decode_type(&id_generator, param))
-                                })
+                                .map(|param| Arc::new(Metadata::decode_type(&id_generator, param)))
                                 .collect::<Vec<Arc<Type>>>(),
                             typ: value._type.clone(),
                         },

@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+use std::io::BufReader;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
