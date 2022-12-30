@@ -55,7 +55,6 @@ pub mod ast;
 pub mod bit_string;
 pub mod build;
 pub mod codegen;
-pub mod compiler_cache;
 pub mod config;
 pub mod diagnostic;
 pub mod docs;
