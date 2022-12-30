@@ -15,8 +15,8 @@ use std::{collections::HashMap, sync::Arc};
 use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &Module) -> Module {
-    let buffer = Metadata::encode(input).unwrap();
-    Metadata::decode( UniqueIdGenerator::new(), buffer.as_slice()).unwrap()
+    let buffer = encode(input).unwrap();
+    decode(UniqueIdGenerator::new(), buffer.as_slice()).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> Module {

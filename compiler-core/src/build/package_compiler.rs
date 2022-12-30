@@ -1,4 +1,3 @@
-use crate::metadata::Metadata;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
@@ -14,6 +13,7 @@ use crate::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
         FileSystemWriter, Stdio,
     },
+    metadata,
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
