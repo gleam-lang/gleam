@@ -26,9 +26,9 @@ lazy_static = "1.4.0"
 # Levenshtein string distance for typo suggestions
 strsim = "0.10.0"
 # Data (de)serialisation
-serde = { version = "1.0.130", features = ["derive"] }
+serde = { version = "1.0.130", features = ["derive", "rc"] }
 serde_json = "*"
-bincode = { version = "2.0.0-rc.2", features = ["derive"] }
+bincode = { version = "2.0.0-rc.2", features = ["derive", "serde"] }
 # Enum trait impl macros
 strum = { version = "0.24.0", features = ["derive"] }
 # Template rendering

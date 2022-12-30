@@ -127,9 +127,9 @@ impl UntypedModule {
 #[test]
 fn module_dependencies_test() {
     let (module, _) = crate::parse::parse_module(
-        "import one 
-         if erlang { import two } 
-         if javascript { import three } 
+        "import one
+         if erlang { import two }
+         if javascript { import three }
          import four",
     )
     .expect("syntax error");
@@ -714,7 +714,7 @@ impl BinOp {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
     pub label: Option<SmolStr>,
     pub location: SrcSpan,
@@ -965,7 +965,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Default, Clone, Copy)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
@@ -1153,7 +1153,7 @@ pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Typ
 pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
 pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct BitStringSegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
@@ -1169,8 +1169,9 @@ impl TypedExprBitStringSegment {
 
 pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BitStringSegmentOption<Value> {
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum BitStringSegmentOption<Value>
+{
     Binary {
         location: SrcSpan,
     },

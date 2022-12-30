@@ -4,28 +4,19 @@
 #[cfg(test)]
 mod tests;
 
-use itertools::Itertools;
-
 use crate::{
-    ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
-        TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
-    },
     build::Origin,
     compiler_cache,
-    type_::{
-        self, AccessorsMap, FieldMap, Module, RecordAccessor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
-    },
-    uid::UniqueIdGenerator,
+    type_::{AccessorsMap, Module, RecordAccessor, TypeConstructor, ValueConstructor},
     Result,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc};
+use std::{collections::HashMap, io::BufRead};
 
+#[derive(Debug, Clone, Copy)]
 pub struct Metadata;
 
 impl Metadata {
-    pub fn encode(data: Module) -> Result<Vec<u8>> {
+    pub fn encode(data: &Module) -> Result<Vec<u8>> {
         let span = tracing::info_span!("metadata");
         let _enter = span.enter();
 
@@ -35,7 +26,7 @@ impl Metadata {
             .enumerate()
             .map(|(_, (key, value))| {
                 (
-                    key,
+                    key.clone(),
                     compiler_cache::TypeConstructor {
                         _type: value.typ.clone(),
                         parameters: value.parameters.clone(),
@@ -51,7 +42,7 @@ impl Metadata {
             .enumerate()
             .map(|(_, (key, value))| {
                 (
-                    key,
+                    key.clone(),
                     compiler_cache::ValueConstructor {
                         _type: value.type_.clone(),
                         variant: value.variant.clone(),
@@ -66,7 +57,7 @@ impl Metadata {
             .enumerate()
             .map(|(_, (key, value))| {
                 (
-                    key,
+                    key.clone(),
                     compiler_cache::AccessorsHashMap {
                         _type: value.type_.clone(),
                         accessors: value
@@ -75,7 +66,7 @@ impl Metadata {
                             .enumerate()
                             .map(|(_, (key, value))| {
                                 (
-                                    key,
+                                    key.clone(),
                                     compiler_cache::RecordAccessor {
                                         _type: value.type_.clone(),
                                         index: value.index.clone(),
@@ -93,11 +84,11 @@ impl Metadata {
             .types_constructors
             .iter()
             .enumerate()
-            .map(|(_, (key, value))| (key, *(value.clone())))
+            .map(|(_, (key, value))| (key.clone(), value.clone()))
             .collect::<HashMap<String, Vec<String>>>();
 
-        let mut module = compiler_cache::Module {
-            name: data.name.iter().collect::<Vec<String>>(),
+        let module = compiler_cache::Module {
+            name: data.name.clone(),
             types,
             values,
             accessors,
@@ -106,15 +97,15 @@ impl Metadata {
         };
 
         let config = bincode::config::standard();
-        let buffer = bincode::encode_to_vec(module, config).expect("bincode");
+        let buffer = bincode::serde::encode_to_vec(module, config).expect("bincode");
 
         Ok(buffer)
     }
 
-    pub fn decode(reader: impl BufRead) -> Result<Module> {
+    pub fn decode(reader: impl BufRead + bincode::de::read::Reader) -> Result<Module> {
         let config = bincode::config::standard();
         let module: compiler_cache::Module =
-            bincode::decode_from_reader(reader, config).expect("bincode");
+            bincode::serde::decode_from_reader(reader, config).expect("bincode");
 
         Ok(Module {
             name: module.name,
@@ -126,9 +117,9 @@ impl Metadata {
                 .enumerate()
                 .map(|(_, (key, value))| {
                     (
-                        key,
+                        key.clone(),
                         TypeConstructor {
-                            public: false,
+                            public: true,
                             origin: Default::default(),
                             module: value.module.clone(),
                             parameters: value.parameters.clone(),
@@ -144,9 +135,9 @@ impl Metadata {
                 .enumerate()
                 .map(|(_, (key, value))| {
                     (
-                        key,
+                        key.clone(),
                         ValueConstructor {
-                            public: false,
+                            public: true,
                             variant: value.variant.clone(),
                             type_: value._type.clone(),
                         },
@@ -159,9 +150,9 @@ impl Metadata {
                 .enumerate()
                 .map(|(_, (key, value))| {
                     (
-                        key,
+                        key.clone(),
                         AccessorsMap {
-                            public: false,
+                            public: true,
                             type_: value._type.clone(),
                             accessors: value
                                 .accessors
@@ -169,7 +160,7 @@ impl Metadata {
                                 .enumerate()
                                 .map(|(_, (key, value))| {
                                     (
-                                        key,
+                                        key.clone(),
                                         RecordAccessor {
                                             index: value.index,
                                             label: value.label.clone(),

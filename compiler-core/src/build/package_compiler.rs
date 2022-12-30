@@ -1,3 +1,4 @@
+use crate::metadata::Metadata;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
@@ -9,8 +10,10 @@ use crate::{
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
-    io::{CommandExecutor, FileSystemIO, FileSystemReader, FileSystemWriter, Stdio},
-    metadata::ModuleEncoder,
+    io::{
+        memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
+        FileSystemWriter, Stdio,
+    },
     parse::extra::ModuleExtra,
     paths, type_,
     uid::UniqueIdGenerator,
@@ -227,9 +230,9 @@ where
             let module_name = module.name.replace('/', "@");
 
             // Write metadata file
-            let name = format!("{}.cache", &module_name);
-            let path = artefact_dir.join(name);
-            let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
+            let name = format!("{}.gleam_module", &module_name);
+            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(name);
+            let bytes = Metadata::encode(&module.ast.type_info)?;
             self.io.write_bytes(&path, &bytes)?;
 
             // Write cache info

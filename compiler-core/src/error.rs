@@ -248,22 +248,6 @@ impl Error {
     }
 }
 
-impl From<capnp::Error> for Error {
-    fn from(error: capnp::Error) -> Self {
-        Error::MetadataDecodeError {
-            error: Some(error.to_string()),
-        }
-    }
-}
-
-impl From<capnp::NotInSchema> for Error {
-    fn from(error: capnp::NotInSchema) -> Self {
-        Error::MetadataDecodeError {
-            error: Some(error.to_string()),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,

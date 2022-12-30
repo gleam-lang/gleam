@@ -9,18 +9,14 @@ use crate::{
     },
     build::Origin,
     type_::{self, Module, Type, TypeConstructor, ValueConstructor, ValueConstructorVariant},
-    uid::UniqueIdGenerator,
 };
 use std::{collections::HashMap, io::BufReader, sync::Arc};
 
 use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &Module) -> Module {
-    let buffer = ModuleEncoder::new(input).encode().unwrap();
-    let ids = UniqueIdGenerator::new();
-    ModuleDecoder::new(ids)
-        .read(BufReader::new(buffer.as_slice()))
-        .unwrap()
+    let buffer = Metadata::encode(input).unwrap();
+    Metadata::decode(BufReader::new(buffer.as_slice())).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> Module {
