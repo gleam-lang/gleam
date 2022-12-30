@@ -18,7 +18,8 @@ pub fn encode(data: &Module) -> Result<Vec<u8>> {
     let _enter = span.enter();
 
     let config = bincode::config::standard();
-    let buffer = bincode::serde::encode_to_vec(data, config).expect("failed to encode metadata (bincode)");
+    let buffer =
+        bincode::serde::encode_to_vec(data, config).expect("failed to encode metadata (bincode)");
 
     Ok(buffer)
 }
@@ -74,8 +75,8 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Type {
 
 pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
     let config = bincode::config::standard();
-    let (module, _): (Module, usize) =
-        bincode::serde::decode_from_slice(slice, config).expect("failed to decode metadata (bincode)");
+    let (module, _): (Module, usize) = bincode::serde::decode_from_slice(slice, config)
+        .expect("failed to decode metadata (bincode)");
 
     Ok(Module {
         types: module
