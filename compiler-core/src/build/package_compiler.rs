@@ -121,6 +121,11 @@ where
             _ = existing_modules.insert(module.name.clone(), module.clone());
         }
 
+        if loaded.to_compile.is_empty() {
+            tracing::info!("no_modules_to_compile");
+            return Ok(vec![]);
+        }
+
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
         let modules = type_check(
