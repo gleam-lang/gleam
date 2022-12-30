@@ -65,6 +65,12 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
 pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
     let mut module: Module = bincode::deserialize(slice).expect("failed to decode metadata (bincode)");
 
-    Ok(Module {
-    })
+    module
+        .types
+        .iter_mut()
+        .for_each(|(_key, type_)| {
+            type_.typ = decode_type(&id_generator, &type_.typ);
+        });
+
+    Ok(module)
 }
