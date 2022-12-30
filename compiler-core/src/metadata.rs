@@ -4,7 +4,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::type_::{Type, TypeVar};
+use crate::type_::{generic_var, Type, TypeVar};
 use crate::uid::UniqueIdGenerator;
 use crate::{
     type_::{Module, TypeConstructor},
@@ -25,16 +25,8 @@ pub fn encode(data: &Module) -> Result<Vec<u8>> {
 fn undo_links(id_generator: &UniqueIdGenerator, type_var: TypeVar) -> Type {
     match type_var {
         TypeVar::Link { type_ } => decode_type(id_generator, &type_),
-        TypeVar::Generic { .. } => Type::Var {
-            type_: Arc::new(RefCell::new(TypeVar::Generic {
-                id: id_generator.next(),
-            })),
-        },
-        TypeVar::Unbound { .. } => Type::Var {
-            type_: Arc::new(RefCell::new(TypeVar::Unbound {
-                id: id_generator.next(),
-            })),
-        },
+        TypeVar::Generic { .. } => generic_var(id_generator.next()),
+        TypeVar::Unbound { .. } => panic!("unexpected `TypeVar::Unbound` in cache decoding"),
     }
 }
 
@@ -52,13 +44,13 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Type {
             args: args
                 .into_iter()
                 .map(|arg| Arc::new(decode_type(&id_generator, &arg)))
-                .collect::<Vec<Arc<Type>>>(),
+                .collect(),
         },
         Type::Fn { args, retrn } => Type::Fn {
             args: args
                 .into_iter()
                 .map(|arg| Arc::new(decode_type(&id_generator, &arg)))
-                .collect::<Vec<Arc<Type>>>(),
+                .collect(),
             retrn: Arc::new(decode_type(&id_generator, &retrn)),
         },
         Type::Var { type_ } => undo_links(id_generator, (*type_).clone().into_inner()),
@@ -66,7 +58,7 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Type {
             elems: elems
                 .into_iter()
                 .map(|elm| Arc::new(decode_type(&id_generator, &elm)))
-                .collect::<Vec<Arc<Type>>>(),
+                .collect(),
         },
     }
 }
@@ -78,8 +70,7 @@ pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
         types: module
             .types
             .into_iter()
-            .enumerate()
-            .map(|(_, (key, type_))| -> (String, TypeConstructor) {
+            .map(|(_, (key, type_)): (usize, (String, TypeConstructor))| -> (String, TypeConstructor) {
                 (
                     key,
                     TypeConstructor {
