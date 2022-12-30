@@ -88,10 +88,18 @@
 - Fixed a bug where long `use` expressions could be formatted incorrectly.
 - Fixed a bug integer multiplication would overflow large integers when
   compiling to JavaScript.
-- Fixed `int` and `float` formatting in `const`s and patterns.
-- Fixed a bug where piping into a function capture expression with a pipe as one
-  of the arguments would produce invalid Erlang code.
-- Formatter no longer removes new lines in expression blocks within case branches
+- 4 digit integers are now always formatted without underscores.
+- Running `gleam new` will skip `git init` if the new project directory is
+  already part of a git work tree.
+- Generated HTML documentation now includes all static assets, including web
+  fonts, so that it can be accessed offline and in future once CDNs would 404.
+- Generated HTML documentation now supports TypeScript syntax highlighting.
+- The `gleam new` command gains the `--skip-git` flag to skip creation of
+  `.git/*`, `.gitignore` and `.github/*` files.
+- The `gleam new` command gains the `--skip-github` flag to skip creation of
+  `.github/*` files.
+- Added support for Deno runtime for JavaScript target.
+- Compiler Cache now uses `bincode` with `serde` for serialization instead of `cap'n'proto`
 
 ## v0.25.3 - 2022-12-16
 
