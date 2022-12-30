@@ -16,7 +16,7 @@ use pretty_assertions::assert_eq;
 
 fn roundtrip(input: &Module) -> Module {
     let buffer = Metadata::encode(input).unwrap();
-    Metadata::decode(BufReader::new(buffer.as_slice())).unwrap()
+    Metadata::decode(UniqueIdGenerator::new(), BufReader::new(buffer.as_slice())).unwrap()
 }
 
 fn constant_module(constant: TypedConstant) -> Module {

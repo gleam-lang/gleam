@@ -4,12 +4,16 @@
 #[cfg(test)]
 mod tests;
 
+use crate::type_::{Type, TypeVar};
+use crate::uid::UniqueIdGenerator;
 use crate::{
     build::Origin,
     compiler_cache,
     type_::{AccessorsMap, Module, RecordAccessor, TypeConstructor, ValueConstructor},
     Result,
 };
+use std::cell::RefCell;
+use std::sync::Arc;
 use std::{collections::HashMap, io::BufRead};
 
 #[derive(Debug, Clone, Copy)]
@@ -102,7 +106,51 @@ impl Metadata {
         Ok(buffer)
     }
 
-    pub fn decode(reader: impl BufRead + bincode::de::read::Reader) -> Result<Module> {
+    fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Type {
+        match (*type_).clone() {
+            Type::App {
+                public,
+                module,
+                name,
+                args,
+            } => Type::App {
+                public: public.clone(),
+                module: module.clone(),
+                name: name.clone(),
+                args: args
+                    .into_iter()
+                    .map(|arg| Arc::new(Metadata::decode_type(&id_generator, &arg)))
+                    .collect::<Vec<Arc<Type>>>(),
+            },
+            Type::Fn { args, retrn } => Type::Fn {
+                args: args
+                    .into_iter()
+                    .map(|arg| Arc::new(Metadata::decode_type(&id_generator, &arg)))
+                    .collect::<Vec<Arc<Type>>>(),
+                retrn: Arc::new(Metadata::decode_type(&id_generator, &retrn)),
+            },
+            Type::Var { type_ } => Type::Var {
+                type_: Arc::new(RefCell::new(match (*type_).clone().into_inner() {
+                    TypeVar::Link { type_: _type } => TypeVar::Link {
+                        type_: Arc::new(Metadata::decode_type(&id_generator, &_type)),
+                    },
+                    TypeVar::Generic { .. } => TypeVar::Generic { id: id_generator.next() },
+                    TypeVar::Unbound { .. } => TypeVar::Unbound { id: id_generator.next() },
+                })),
+            },
+            Type::Tuple { elems } => Type::Tuple {
+                elems: elems
+                    .into_iter()
+                    .map(|elm| Arc::new(Metadata::decode_type(&id_generator, &elm)))
+                    .collect::<Vec<Arc<Type>>>(),
+            },
+        }
+    }
+
+    pub fn decode(
+        id_generator: UniqueIdGenerator,
+        reader: impl BufRead + bincode::de::read::Reader,
+    ) -> Result<Module> {
         let config = bincode::config::standard();
         let module: compiler_cache::Module =
             bincode::serde::decode_from_reader(reader, config).expect("bincode");
@@ -122,7 +170,13 @@ impl Metadata {
                             public: true,
                             origin: Default::default(),
                             module: value.module.clone(),
-                            parameters: value.parameters.clone(),
+                            parameters: value
+                                .parameters
+                                .iter()
+                                .map(|param| {
+                                    Arc::new(Metadata::decode_type(&id_generator, param))
+                                })
+                                .collect::<Vec<Arc<Type>>>(),
                             typ: value._type.clone(),
                         },
                     )
