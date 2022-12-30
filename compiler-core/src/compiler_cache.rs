@@ -30,7 +30,7 @@ pub struct Module {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct TypeConstructor {
-    pub _type: Arc<Type>,
+    pub type_: Arc<Type>,
     // TODO: convert this to an int as we only need to reconstruct type vars,
     // not other types
     // TODO: test
@@ -40,20 +40,20 @@ pub struct TypeConstructor {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AccessorsHashMap {
-    pub _type: Arc<Type>,
+    pub type_: Arc<Type>,
     pub accessors: HashMap<String, RecordAccessor>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct RecordAccessor {
-    pub _type: Arc<Type>,
+    pub type_: Arc<Type>,
     pub index: u64,
     pub label: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ValueConstructor {
-    pub _type: Arc<Type>,
+    pub type_: Arc<Type>,
     pub variant: ValueConstructorVariant,
 }
 
@@ -77,18 +77,18 @@ pub enum Constant {
     Tuple(Vec<Constant>),
     BitString(Vec<BitStringSegment>),
     List {
-        _type: Arc<Type>,
+        type_: Arc<Type>,
         elements: Vec<Constant>,
     },
     Record {
         args: Vec<Constant>,
         tag: String,
-        _type: Arc<Type>,
+        type_: Arc<Type>,
     },
     Var {
         module: String,
         name: String,
-        _type: Arc<Type>,
+        type_: Arc<Type>,
         constructor: ValueConstructor,
     },
 }
@@ -97,7 +97,7 @@ pub enum Constant {
 pub struct BitStringSegment {
     pub value: Constant,
     pub options: Vec<BitStringSegmentOption>,
-    pub _type: Arc<Type>,
+    pub type_: Arc<Type>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

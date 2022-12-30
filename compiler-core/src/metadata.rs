@@ -32,7 +32,7 @@ impl Metadata {
                 (
                     key.clone(),
                     compiler_cache::TypeConstructor {
-                        _type: value.typ.clone(),
+                        type_: value.typ.clone(),
                         parameters: value.parameters.clone(),
                         module: value.module.clone(),
                     },
@@ -48,7 +48,7 @@ impl Metadata {
                 (
                     key.clone(),
                     compiler_cache::ValueConstructor {
-                        _type: value.type_.clone(),
+                        type_: value.type_.clone(),
                         variant: value.variant.clone(),
                     },
                 )
@@ -63,7 +63,7 @@ impl Metadata {
                 (
                     key.clone(),
                     compiler_cache::AccessorsHashMap {
-                        _type: value.type_.clone(),
+                        type_: value.type_.clone(),
                         accessors: value
                             .accessors
                             .iter()
@@ -72,7 +72,7 @@ impl Metadata {
                                 (
                                     key.clone(),
                                     compiler_cache::RecordAccessor {
-                                        _type: value.type_.clone(),
+                                        type_: value.type_.clone(),
                                         index: value.index.clone(),
                                         label: value.label.clone(),
                                     },
@@ -159,31 +159,37 @@ impl Metadata {
         let module: compiler_cache::Module =
             bincode::serde::decode_from_reader(reader, config).expect("bincode");
 
-        Ok(Module {
+        println!("Decoded Module Types: {:?}", &module.types);
+
+        let types = module
+            .types
+            .iter()
+            .enumerate()
+            .map(|(_, (key, value))| {
+                (
+                    key.clone(),
+                    TypeConstructor {
+                        public: true,
+                        origin: Default::default(),
+                        module: value.module.clone(),
+                        parameters: value
+                            .parameters
+                            .iter()
+                            .map(|param| Arc::new(Metadata::decode_type(&id_generator, param)))
+                            .collect::<Vec<Arc<Type>>>(),
+                        typ: Arc::new(Metadata::decode_type(&id_generator, &value.type_)),
+                    },
+                )
+            })
+            .collect::<HashMap<String, TypeConstructor>>();
+
+        println!("Parsed Module Types: {:?}", types);
+
+        let module = Module {
             name: module.name,
             package: module.package,
             origin: Origin::Src,
-            types: module
-                .types
-                .iter()
-                .enumerate()
-                .map(|(_, (key, value))| {
-                    (
-                        key.clone(),
-                        TypeConstructor {
-                            public: true,
-                            origin: Default::default(),
-                            module: value.module.clone(),
-                            parameters: value
-                                .parameters
-                                .iter()
-                                .map(|param| Arc::new(Metadata::decode_type(&id_generator, param)))
-                                .collect::<Vec<Arc<Type>>>(),
-                            typ: value._type.clone(),
-                        },
-                    )
-                })
-                .collect::<HashMap<String, TypeConstructor>>(),
+            types,
             types_constructors: module.types_constructors,
             values: module
                 .values
@@ -195,7 +201,7 @@ impl Metadata {
                         ValueConstructor {
                             public: true,
                             variant: value.variant.clone(),
-                            type_: value._type.clone(),
+                            type_: value.type_.clone(),
                         },
                     )
                 })
@@ -209,7 +215,7 @@ impl Metadata {
                         key.clone(),
                         AccessorsMap {
                             public: true,
-                            type_: value._type.clone(),
+                            type_: value.type_.clone(),
                             accessors: value
                                 .accessors
                                 .iter()
@@ -220,7 +226,7 @@ impl Metadata {
                                         RecordAccessor {
                                             index: value.index,
                                             label: value.label.clone(),
-                                            type_: value._type.clone(),
+                                            type_: value.type_.clone(),
                                         },
                                     )
                                 })
@@ -229,6 +235,8 @@ impl Metadata {
                     )
                 })
                 .collect::<HashMap<String, AccessorsMap>>(),
-        })
+        };
+
+        Ok(module)
     }
 }
