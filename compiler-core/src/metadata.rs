@@ -37,9 +37,9 @@ fn decode_type(id_generator: &UniqueIdGenerator, type_: &Type) -> Arc<Type> {
             name,
             args,
         } => Arc::new(Type::App {
-            public: public.clone(),
-            module: module.clone(),
-            name: name.clone(),
+            public,
+            module,
+            name,
             args: args
                 .into_iter()
                 .map(|arg| decode_type(&id_generator, &arg))
