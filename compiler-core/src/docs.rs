@@ -25,15 +25,10 @@ pub fn generate_html(
     analysed: &[Module],
     docs_pages: &[DocsPage],
 ) -> Vec<OutputFile> {
-    let hidden_modules = config.specify_hidden_modules(
-        analysed
-            .iter()
-            .map(|module| module.name.clone())
-            .collect_vec(),
-    );
     let modules = analysed
         .iter()
-        .filter(|module| !module.is_test() && !hidden_modules.contains(&module.name));
+        .filter(|module| !module.is_test())
+        .filter(|module| !config.is_hidden_module(module));
 
     let rendering_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
