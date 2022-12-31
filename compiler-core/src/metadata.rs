@@ -4,10 +4,10 @@
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashMap;
 use crate::type_::{fn_, generic_var, tuple, Type, TypeVar};
 use crate::uid::UniqueIdGenerator;
 use crate::{type_::Module, Result};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 pub fn encode(data: &Module) -> Result<Vec<u8>> {
@@ -19,22 +19,33 @@ pub fn encode(data: &Module) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
-fn undo_links(id_generator: &UniqueIdGenerator, id_map: &mut HashMap<u64, u64>, type_var: TypeVar) -> Arc<Type> {
+fn undo_links(
+    id_generator: &UniqueIdGenerator,
+    id_map: &mut HashMap<u64, u64>,
+    type_var: TypeVar,
+) -> Arc<Type> {
     match type_var {
         TypeVar::Link { type_ } => regenerate_type_ids(id_generator, id_map, &type_),
-        TypeVar::Generic { id: old_id } => generic_var(match id_map.get(&old_id) {
-            Some(&id) => id,
-            None => {
-                let new_id = id_generator.next();
-                _ = id_map.insert(old_id, new_id);
-                new_id
-            }
-        }),
+        TypeVar::Generic { id: old_id } => {
+            let id_ = match id_map.get(&old_id) {
+                Some(&id) => id,
+                None => {
+                    let new_id = id_generator.next();
+                    _ = id_map.insert(old_id, new_id);
+                    new_id
+                }
+            };
+            generic_var(id_)
+        }
         TypeVar::Unbound { .. } => panic!("unexpected `TypeVar::Unbound` in cache decoding"),
     }
 }
 
-fn regenerate_type_ids(id_generator: &UniqueIdGenerator, id_map: &mut HashMap<u64, u64>, type_: &Type) -> Arc<Type> {
+fn regenerate_type_ids(
+    id_generator: &UniqueIdGenerator,
+    id_map: &mut HashMap<u64, u64>,
+    type_: &Type,
+) -> Arc<Type> {
     match (*type_).clone() {
         Type::App {
             public,
@@ -74,6 +85,12 @@ pub fn decode(id_generator: UniqueIdGenerator, slice: &[u8]) -> Result<Module> {
 
     module.types.iter_mut().for_each(|(_key, type_)| {
         type_.typ = regenerate_type_ids(&id_generator, &mut id_map, &type_.typ);
+        type_.parameters = type_
+            .parameters
+            .clone()
+            .into_iter()
+            .map(|param| regenerate_type_ids(&id_generator, &mut id_map, &param))
+            .collect()
     });
 
     Ok(module)
