@@ -774,6 +774,7 @@ dependencies = [
  "fnv",
  "log",
  "regex",
+ "serde",
 ]
 
 [[package]]
