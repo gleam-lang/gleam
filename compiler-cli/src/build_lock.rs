@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use gleam_core::{build::Telemetry, paths, Result};
+use gleam_core::build::{Mode, Target};
 
 #[derive(Debug)]
 pub(crate) struct BuildLock {
@@ -9,11 +10,21 @@ pub(crate) struct BuildLock {
 
 // TODO: return errors rather than crashing.
 impl BuildLock {
-    pub fn new() -> Result<Self> {
+    pub fn new_scoped(mode: &Mode, target: &Target) -> Result<Self> {
+        let mut build = paths::build();
+        build = build.join(mode.to_string());
+        build = build.join(target.to_string());
+        crate::fs::mkdir(&build)?;
+        Ok(Self {
+            path: build.join("build.lock"),
+        })
+    }
+
+    pub fn new_global() -> Result<Self> {
         let build = paths::build();
         crate::fs::mkdir(&build)?;
         Ok(Self {
-            path: build.join("gleam-compile.lock"),
+            path: build.join("build.lock"),
         })
     }
 
@@ -33,8 +44,50 @@ impl BuildLock {
 pub(crate) struct Guard(fslock::LockFile);
 
 #[test]
-fn locking() {
-    let lock = BuildLock::new().expect("make lock");
+fn locking_global() {
+    let lock = BuildLock::new_global().expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_dev_erlang() {
+    let lock = BuildLock::new_scoped(&Mode::Dev, &Target::Erlang).expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_prod_erlang() {
+    let lock = BuildLock::new_scoped(&Mode::Prod, &Target::Erlang).expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_lsp_erlang() {
+    let lock = BuildLock::new_scoped(&Mode::Lsp, &Target::Erlang).expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_dev_javascript() {
+    let lock = BuildLock::new_scoped(&Mode::Dev, &Target::JavaScript).expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_prod_javascript() {
+    let lock = BuildLock::new_scoped(&Mode::Prod, &Target::JavaScript).expect("make lock");
+    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    println!("Locked!")
+}
+
+#[test]
+fn locking_lsp_javascript() {
+    let lock = BuildLock::new_scoped(&Mode::Lsp, &Target::JavaScript).expect("make lock");
     let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
     println!("Locked!")
 }
