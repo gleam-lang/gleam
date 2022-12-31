@@ -10,6 +10,7 @@ use std::{
 use crate::{
     build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
 };
+use gleam_core::build::Mode;
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -31,7 +32,6 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
-use gleam_core::build::Mode;
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
 
@@ -1002,7 +1002,7 @@ where
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
-        let target = config.target.clone();
+        let target = config.target;
 
         let options = build::Options {
             mode: build::Mode::Lsp,

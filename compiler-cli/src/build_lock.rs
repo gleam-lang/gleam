@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use gleam_core::{build::Telemetry, paths, Result};
 use gleam_core::build::{Mode, Target};
+use gleam_core::{build::Telemetry, paths, Result};
 
 #[derive(Debug)]
 pub(crate) struct BuildLock {
