@@ -31,6 +31,7 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
+use gleam_core::build::Mode;
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
 
@@ -1001,6 +1002,7 @@ where
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
+        let target = config.target.clone();
 
         let options = build::Options {
             mode: build::Mode::Lsp,
@@ -1018,7 +1020,7 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock: BuildLock::new()?,
+            build_lock: BuildLock::new_scoped(&Mode::Lsp, &target)?,
             dependencies_compiled: false,
         })
     }
