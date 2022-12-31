@@ -62,10 +62,10 @@ fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<Smo
         if !path.is_dir() {
             continue;
         }
-        for module in fs::module_caches_paths(path)? {
-            let reader = fs::buffered_reader(module)?;
-            let module = metadata::ModuleDecoder::new(ids.clone()).read(reader)?;
-            let _ = manifests.insert(module.name.clone(), module);
+        for module in fs::gleam_modules_metadata_paths(path)? {
+            let slice = fs::read_bytes(module)?;
+            let module = metadata::decode(ids.clone(), &slice)?;
+            let _ = manifests.insert(module.name.join("/"), module);
         }
     }
     Ok(manifests)
