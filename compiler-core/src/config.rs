@@ -2,10 +2,9 @@ use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
 use crate::{Error, Result};
-use globset::{Glob, GlobSetBuilder};
+use globset::Glob;
 use hexpm::version::{Range, Version};
 use http::Uri;
-use itertools::Itertools;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
@@ -13,7 +12,7 @@ use std::path::{Path, PathBuf};
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
 
-use crate::build::{Mode, Target};
+use crate::build::{Mode, Module, Target};
 
 fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
@@ -141,17 +140,15 @@ impl PackageConfig {
         })
     }
 
-    pub fn specify_hidden_modules(&self, modules: Vec<String>) -> Vec<String> {
-        let mut glob_builder = GlobSetBuilder::new();
-        for pattern in self.documentation.hidden_modules.iter() {
-            let _ = glob_builder.add(Glob::new(pattern).expect("invalid pattern!"));
-        }
-        let glob_set = glob_builder.build().expect("problem!");
-        modules
+    /// Determines whether the given module should be hidden in the docs or not
+    ///
+    /// The developer can specify a list of glob patterns in the gleam.toml file
+    /// to determine modules that should not be shown in the package's documentation
+    pub fn is_hidden_module(&self, module: &Module) -> bool {
+        self.documentation
+            .hidden_modules
             .iter()
-            .filter(|module| glob_set.matches(module).len() != 0)
-            .map(|module| module.clone())
-            .collect_vec()
+            .any(|pattern| pattern.compile_matcher().is_match(&module.name))
     }
 }
 
@@ -490,7 +487,7 @@ pub struct Docs {
     pub pages: Vec<DocsPage>,
 
     #[serde(default)]
-    hidden_modules: Vec<String>,
+    hidden_modules: Vec<Glob>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
