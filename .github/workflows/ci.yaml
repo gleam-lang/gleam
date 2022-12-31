@@ -293,6 +293,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3.0.0
 
+      - name: Install Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
       - name: Install Erlang
         uses: erlef/setup-beam@v1.15.0
         with:
@@ -318,8 +323,12 @@ jobs:
         run: make clean erlang
         working-directory: ./test/language
 
-      - name: test/language JavaScript
+      - name: test/language JavaScript with Node
         run: make clean javascript
+        working-directory: ./test/language
+
+      - name: test/language Javascript with Deno
+        run: make clean deno
         working-directory: ./test/language
 
       - name: test/compile_package0

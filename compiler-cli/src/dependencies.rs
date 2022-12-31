@@ -118,10 +118,10 @@ pub fn download<Telem: Telemetry>(
     let span = tracing::info_span!("download_deps");
     let _enter = span.enter();
 
-    let lock = BuildLock::new()?;
-    let _guard = lock.lock(&telemetry);
-
     let mode = Mode::Dev;
+
+    let lock = BuildLock::new_global()?;
+    let _guard = lock.lock(&telemetry);
 
     let http = HttpClient::boxed();
     let fs = ProjectIO::boxed();

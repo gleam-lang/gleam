@@ -49,6 +49,23 @@ impl Target {
     }
 }
 
+#[derive(
+    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
+)]
+#[strum(serialize_all = "lowercase")]
+pub enum Runtime {
+    #[serde(rename = "node")]
+    Node,
+    #[serde(rename = "deno")]
+    Deno,
+}
+
+impl Default for Runtime {
+    fn default() -> Self {
+        Self::Node
+    }
+}
+
 #[derive(Debug)]
 pub enum TargetCodegenConfiguration {
     JavaScript {
@@ -80,6 +97,7 @@ pub struct ErlangAppCodegenConfiguration {
 pub enum Mode {
     Dev,
     Prod,
+    Lsp,
 }
 
 impl Mode {

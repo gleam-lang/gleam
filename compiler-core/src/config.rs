@@ -7,12 +7,14 @@ use hexpm::version::{Range, Version};
 use http::Uri;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
 
-use crate::build::{Mode, Module, Target};
+use crate::build::{Mode, Module, Runtime, Target};
 
 fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
@@ -20,6 +22,10 @@ fn default_version() -> Version {
 
 fn erlang_target() -> Target {
     Target::Erlang
+}
+
+fn default_javascript_runtime() -> Runtime {
+    Runtime::Node
 }
 
 pub type Dependencies = HashMap<String, Range>;
@@ -90,7 +96,7 @@ pub struct PackageConfig {
 impl PackageConfig {
     pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
         match mode {
-            Mode::Dev => self.all_dependencies(),
+            Mode::Dev | Mode::Lsp => self.all_dependencies(),
             Mode::Prod => Ok(self.dependencies.clone()),
         }
     }
@@ -441,10 +447,87 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<String>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
+    #[serde(default = "default_javascript_runtime")]
+    pub runtime: Runtime,
+    #[serde(default, rename = "deno")]
+    pub deno: DenoConfig,
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+pub enum DenoFlag {
+    AllowAll,
+    Allow(Vec<String>),
+}
+
+impl Default for DenoFlag {
+    fn default() -> Self {
+        Self::Allow(Vec::new())
+    }
+}
+
+fn bool_or_seq_string_to_deno_flag<'de, D>(deserializer: D) -> Result<DenoFlag, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    struct StringOrVec(PhantomData<Vec<String>>);
+
+    impl<'de> serde::de::Visitor<'de> for StringOrVec {
+        type Value = DenoFlag;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+            formatter.write_str("bool or list of strings")
+        }
+
+        fn visit_bool<E>(self, value: bool) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if value {
+                Ok(DenoFlag::AllowAll)
+            } else {
+                Ok(DenoFlag::default())
+            }
+        }
+
+        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+        where
+            S: serde::de::SeqAccess<'de>,
+        {
+            let allow: Vec<String> =
+                Deserialize::deserialize(serde::de::value::SeqAccessDeserializer::new(visitor))
+                    .unwrap_or_default();
+
+            Ok(DenoFlag::Allow(allow))
+        }
+    }
+
+    deserializer.deserialize_any(StringOrVec(PhantomData))
+}
+
+#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+pub struct DenoConfig {
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_env: DenoFlag,
+    #[serde(default)]
+    pub allow_sys: bool,
+    #[serde(default)]
+    pub allow_hrtime: bool,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_net: DenoFlag,
+    #[serde(default)]
+    pub allow_ffi: bool,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_read: DenoFlag,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_run: DenoFlag,
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    pub allow_write: DenoFlag,
+    #[serde(default)]
+    pub allow_all: bool,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
