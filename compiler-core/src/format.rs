@@ -307,7 +307,9 @@ impl<'comments> Formatter<'comments> {
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
         match value {
-            Constant::Int { value, .. } | Constant::Float { value, .. } => value.to_doc(),
+            Constant::Int { value, .. } => self.int(value.as_str()),
+
+            Constant::Float { value, .. } => self.float(value.as_str()),
 
             Constant::String { value, .. } => self.string(value),
 

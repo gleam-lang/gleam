@@ -1123,6 +1123,52 @@ fn expr_int() {
 "#
     );
 
+    assert_format_rewrite!(
+        r#"pub const some_int_01 = 1_234
+pub const some_int_02 = 12_34
+const some_int_03 = 123_4
+const some_int_04 = 1234_5
+const some_int_05 = 12345_6
+const some_int_06 = 123456_7
+const some_int_07 = 1234567_8
+const some_int_08 = -1_234
+const some_int_09 = -12_34
+const some_int_10 = -123_4
+const some_int_11 = -1234_5
+const some_int_12 = -12345_6
+pub const some_int_13 = -123456_7
+pub const some_int_14 = -1234567_8
+"#,
+        r#"pub const some_int_01 = 1234
+
+pub const some_int_02 = 1234
+
+const some_int_03 = 1234
+
+const some_int_04 = 12_345
+
+const some_int_05 = 123_456
+
+const some_int_06 = 1_234_567
+
+const some_int_07 = 12_345_678
+
+const some_int_08 = -1234
+
+const some_int_09 = -1234
+
+const some_int_10 = -1234
+
+const some_int_11 = -12_345
+
+const some_int_12 = -123_456
+
+pub const some_int_13 = -1_234_567
+
+pub const some_int_14 = -12_345_678
+"#
+    );
+
     assert_format!("fn n() {\n  1_234_567\n}\n");
     assert_format!("fn h() {\n  0xCAB005E\n}\n");
     assert_format!("fn h() {\n  0xC_AB_00_5E\n}\n");
@@ -1241,6 +1287,52 @@ fn expr_float() {
   -1_234_567.0
   -12_345_678.0
 }
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"pub const some_float_01 = 1_234.0
+pub const some_float_02 = 12_34.0
+const some_float_03 = 123_4.0
+const some_float_04 = 1234_5.0
+const some_float_05 = 12345_6.0
+const some_float_06 = 123456_7.0
+const some_float_07 = 1234567_8.0
+const some_float_08 = -1_234.0
+const some_float_09 = -12_34.0
+const some_float_00 = -123_4.0
+const some_float_11 = -1234_5.0
+const some_float_12 = -12345_6.0
+pub const some_float_13 = -123456_7.0
+pub const some_float_14 = -1234567_8.0
+"#,
+        r#"pub const some_float_01 = 1234.0
+
+pub const some_float_02 = 1234.0
+
+const some_float_03 = 1234.0
+
+const some_float_04 = 12_345.0
+
+const some_float_05 = 123_456.0
+
+const some_float_06 = 1_234_567.0
+
+const some_float_07 = 12_345_678.0
+
+const some_float_08 = -1234.0
+
+const some_float_09 = -1234.0
+
+const some_float_00 = -1234.0
+
+const some_float_11 = -12_345.0
+
+const some_float_12 = -123_456.0
+
+pub const some_float_13 = -1_234_567.0
+
+pub const some_float_14 = -12_345_678.0
 "#
     );
 
