@@ -1327,9 +1327,9 @@ impl<'comments> Formatter<'comments> {
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
-            Pattern::Int { value, .. } => value.to_doc(),
+            Pattern::Int { value, .. } => self.int(value.as_str()),
 
-            Pattern::Float { value, .. } => value.to_doc(),
+            Pattern::Float { value, .. } => self.float(value.as_str()),
 
             Pattern::String { value, .. } => self.string(value),
 

@@ -26,7 +26,7 @@
 - The `gleam new` command gains the `--skip-github` flag to skip creation of
   `.github/*` files.
 - Added support for Deno runtime for JavaScript target.
-- Fixed `int` and `float` formatting in consts.
+- Fixed `int` and `float` formatting in `const`s and patterns.
 
 ## v0.25.3 - 2022-12-16
 
