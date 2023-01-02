@@ -63,8 +63,8 @@ fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<Smo
             continue;
         }
         for module in fs::gleam_modules_metadata_paths(path)? {
-            let slice = fs::read_bytes(module)?;
-            let module = metadata::decode(ids.clone(), &slice)?;
+            let vec = fs::read_bytes(module)?;
+            let module = metadata::decode(ids.clone(), &vec)?;
             let _ = manifests.insert(module.name.join("/"), module);
         }
     }
