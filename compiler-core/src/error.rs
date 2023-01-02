@@ -115,11 +115,8 @@ pub enum Error {
         err: Option<std::io::ErrorKind>,
     },
 
-    #[error("{name} is not a valid project name")]
-    InvalidProjectName {
-        name: String,
-        reason: InvalidProjectNameReason,
-    },
+    #[error("no valid project name given")]
+    InvalidProjectName {},
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -259,16 +256,6 @@ impl From<capnp::NotInSchema> for Error {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum InvalidProjectNameReason {
-    Format,
-    GleamPrefix,
-    ErlangReservedWord,
-    ErlangStandardLibraryModule,
-    GleamReservedWord,
-    GleamReservedModule,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum StandardIoAction {
     Read,
     Write,
@@ -377,30 +364,10 @@ of the Gleam dependency modules."
                 }
             }
 
-            Error::InvalidProjectName { name, reason } => {
-                let text = wrap_format!(
-                    "We were not able to create your project as `{}` {}
-
-Please try again with a different project name.",
-                    name,
-                    match reason {
-                        InvalidProjectNameReason::ErlangReservedWord =>
-                            "is a reserved word in Erlang.",
-                        InvalidProjectNameReason::ErlangStandardLibraryModule =>
-                            "is a standard library module in Erlang.",
-                        InvalidProjectNameReason::GleamReservedWord =>
-                            "is a reserved word in Gleam.",
-                        InvalidProjectNameReason::GleamReservedModule =>
-                            "is a reserved module name in Gleam.",
-                        InvalidProjectNameReason::Format =>
-                            "does not have the correct format. Project names \
-must start with a lowercase letter and may only contain lowercase letters, \
-numbers and underscores.",
-                        InvalidProjectNameReason::GleamPrefix =>
-                            "has the reserved prefix `gleam_`. \
-This prefix is intended for official Gleam packages only.",
-                    }
-                );
+            Error::InvalidProjectName {} => {
+                let text = "Project name must start with a lowercase letter and may only be \
+lowercase, alphanumeric, and may not be named `gleam` or begin with `gleam_`."
+                    .to_string();
 
                 Diagnostic {
                     title: "Invalid project name".into(),

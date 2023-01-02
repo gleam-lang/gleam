@@ -1,6 +1,6 @@
 use gleam_core::{
     erlang,
-    error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
+    error::{Error, FileIoAction, FileKind},
     parse, Result,
 };
 use serde::{Deserialize, Serialize};
@@ -295,39 +295,16 @@ fn validate_root_folder(name: &str) -> Result<(), Error> {
 }
 
 fn validate_name(name: &str) -> Result<(), Error> {
-    if name.starts_with("gleam_") {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::GleamPrefix,
-        })
-    } else if erlang::is_erlang_reserved_word(name) {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::ErlangReservedWord,
-        })
-    } else if erlang::is_erlang_standard_library_module(name) {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::ErlangStandardLibraryModule,
-        })
-    } else if parse::lexer::str_to_keyword(name).is_some() {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::GleamReservedWord,
-        })
-    } else if name == "gleam" {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::GleamReservedModule,
-        })
-    } else if !regex::Regex::new("^[a-z][a-z0-9_]*$")
-        .expect("new name regex could not be compiled")
-        .is_match(name)
+    if name.starts_with("gleam_")
+        || erlang::is_erlang_reserved_word(name)
+        || erlang::is_erlang_standard_library_module(name)
+        || parse::lexer::str_to_keyword(name).is_some()
+        || name == "gleam"
+        || !regex::Regex::new("^[a-z][a-z0-9_]*$")
+            .expect("new name regex could not be compiled")
+            .is_match(name)
     {
-        Err(Error::InvalidProjectName {
-            name: name.to_string(),
-            reason: InvalidProjectNameReason::Format,
-        })
+        Err(Error::InvalidProjectName {})
     } else {
         Ok(())
     }
