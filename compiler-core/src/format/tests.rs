@@ -1905,57 +1905,122 @@ fn expr_float() {
     );
 
     assert_format_rewrite!(
-        r#"const a_float_1 = 1_234.0
+        r#"const a_float = 1_234.0
 "#,
-        r#"const a_float_1 = 1234.0
+        r#"const a_float = 1234.0
 "#
     );
     assert_format_rewrite!(
-        r#"const a_float_2 = 12_34.0
+        r#"const a_float = 12_34.0
 "#,
-        r#"const a_float_2 = 1234.0
+        r#"const a_float = 1234.0
 "#
     );
     assert_format_rewrite!(
-        r#"const a_float_3 = 1234567_8.0
+        r#"const a_float = 1234567_8.0
 "#,
-        r#"const a_float_3 = 12_345_678.0
+        r#"const a_float = 12_345_678.0
 "#
     );
     assert_format_rewrite!(
-        r#"const a_float_4 = -1_234.0
+        r#"const a_float = -1_234.0
 "#,
-        r#"const a_float_4 = -1234.0
+        r#"const a_float = -1234.0
 "#
     );
     assert_format_rewrite!(
-        r#"const a_float_5 = -12_34.0
+        r#"const a_float = -12_34.0
 "#,
-        r#"const a_float_5 = -1234.0
+        r#"const a_float = -1234.0
 "#
     );
     assert_format_rewrite!(
-        r#"const a_float_6 = -1234567_8.0
+        r#"const a_float = -1234567_8.0
 "#,
-        r#"const a_float_6 = -12_345_678.0
+        r#"const a_float = -12_345_678.0
 "#
     );
 
     assert_format!(
         r#"fn f() {
   1.0e1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0e-1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.0e1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.0e-1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0e10
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0e-10
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.0e10
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -11.0e-10
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0e100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0e-100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.0e100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -11.0e-100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0000e100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   1.0000e100_100
 }
 "#
