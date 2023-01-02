@@ -109,11 +109,6 @@ where
             _ = existing_modules.insert(module.name.join("/"), module.clone());
         }
 
-        if loaded.to_compile.is_empty() {
-            tracing::info!("no_modules_to_compile");
-            return Ok(vec![]);
-        }
-
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
         let modules = type_check(
@@ -133,6 +128,11 @@ where
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
+        if modules.is_empty() {
+            tracing::info!("no_erlang_to_compile");
+            return Ok(());
+        }
+
         tracing::info!("compiling_erlang");
 
         let escript_path = self

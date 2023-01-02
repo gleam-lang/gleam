@@ -104,6 +104,7 @@ where
             return Ok(());
         }
 
+        tracing::debug!(?file, "copying_native_file");
         self.io.copy(&file, &destination)?;
         self.elixir_files_copied = self.elixir_files_copied || extension == "ex";
 
