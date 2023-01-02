@@ -1416,29 +1416,39 @@ fn expr_int() {
     );
 
     assert_format_rewrite!(
-        r#"const an_int_1 = 1_234
-
-const an_int_2 = 12_34
-
-const an_int_3 = 1234567_8
-
-const an_int_4 = -1_234
-
-const an_int_5 = -12_34
-
-const an_int_6 = -1234567_8
+        r#"const an_int = 1_234
 "#,
-        r#"const an_int_1 = 1234
-
-const an_int_2 = 1234
-
-const an_int_3 = 12_345_678
-
-const an_int_4 = -1234
-
-const an_int_5 = -1234
-
-const an_int_6 = -12_345_678
+        r#"const an_int = 1234
+"#
+    );
+    assert_format_rewrite!(
+        r#"const an_int = 12_34
+"#,
+        r#"const an_int = 1234
+"#
+    );
+    assert_format_rewrite!(
+        r#"const an_int = 1234567_8
+"#,
+        r#"const an_int = 12_345_678
+"#
+    );
+    assert_format_rewrite!(
+        r#"const an_int = -1_234
+"#,
+        r#"const an_int = -1234
+"#
+    );
+    assert_format_rewrite!(
+        r#"const an_int = -12_34
+"#,
+        r#"const an_int = -1234
+"#
+    );
+    assert_format_rewrite!(
+        r#"const an_int = -1234567_8
+"#,
+        r#"const an_int = -12_345_678
 "#
     );
 
