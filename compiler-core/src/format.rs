@@ -307,9 +307,9 @@ impl<'comments> Formatter<'comments> {
 
     fn const_expr<'a, A, B>(&mut self, value: &'a Constant<A, B>) -> Document<'a> {
         match value {
-            Constant::Int { value, .. } => self.int(value.as_str()),
+            Constant::Int { value, .. } => self.int(value),
 
-            Constant::Float { value, .. } => self.float(value.as_str()),
+            Constant::Float { value, .. } => self.float(value),
 
             Constant::String { value, .. } => self.string(value),
 
@@ -665,9 +665,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions),
 
-            UntypedExpr::Int { value, .. } => self.int(value.as_str()),
+            UntypedExpr::Int { value, .. } => self.int(value),
 
-            UntypedExpr::Float { value, .. } => self.float(value.as_str()),
+            UntypedExpr::Float { value, .. } => self.float(value),
 
             UntypedExpr::String { value, .. } => self.string(value),
 
@@ -1327,9 +1327,9 @@ impl<'comments> Formatter<'comments> {
     fn pattern<'a>(&mut self, pattern: &'a UntypedPattern) -> Document<'a> {
         let comments = self.pop_comments(pattern.location().start);
         let doc = match pattern {
-            Pattern::Int { value, .. } => self.int(value.as_str()),
+            Pattern::Int { value, .. } => self.int(value),
 
-            Pattern::Float { value, .. } => self.float(value.as_str()),
+            Pattern::Float { value, .. } => self.float(value),
 
             Pattern::String { value, .. } => self.string(value),
 
