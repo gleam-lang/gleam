@@ -1040,336 +1040,376 @@ fn binary_operators() {
 #[test]
 fn expr_int() {
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   1
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   121_234_345_989_000
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -12_928_347_925
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   1_234_567_890
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   123_456_789
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   12_345_678
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   1_234_567
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   123_456
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   12_345
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   1234
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   123
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   12
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   1
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -1_234_567_890
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -123_456_789
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -12_345_678
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -1_234_567
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -123_456
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -12_345
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -1234
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -123
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -12
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn i() {
   -1
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   1_234
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   12_34
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   123_4
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   1234_5
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   12_345
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   12345_6
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   123_456
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   123456_7
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   1_234_567
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   1234567_8
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   12_345_678
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -1_234
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -12_34
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -123_4
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -1234
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -1234_5
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -12_345
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -12345_6
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -123_456
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -123456_7
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -1_234_567
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   -1234567_8
 }
 "#,
-        r#"fn main() {
+        r#"fn i() {
   -12_345_678
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn i() {
   let #(1_234, _) = #(1_234, Nil)
+}
+"#,
+        r#"fn i() {
+  let #(1234, _) = #(1234, Nil)
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn i() {
   let #(12_34, _) = #(12_34, Nil)
+}
+"#,
+        r#"fn i() {
+  let #(1234, _) = #(1234, Nil)
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn i() {
   let #(1234567_8, _) = #(1234567_8, Nil)
+}
+"#,
+        r#"fn i() {
+  let #(12_345_678, _) = #(12_345_678, Nil)
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn i() {
   let #(-1_234, _) = #(-1_234, Nil)
+}
+"#,
+        r#"fn i() {
+  let #(-1234, _) = #(-1234, Nil)
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn i() {
   let #(-12_34, _) = #(-12_34, Nil)
+}
+"#,
+        r#"fn i() {
+  let #(-1234, _) = #(-1234, Nil)
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn i() {
   let #(-1234567_8, _) = #(-1234567_8, Nil)
 }
 "#,
-        r#"fn main() {
-  let #(1234, _) = #(1234, Nil)
-  let #(1234, _) = #(1234, Nil)
-  let #(12_345_678, _) = #(12_345_678, Nil)
-  let #(-1234, _) = #(-1234, Nil)
-  let #(-1234, _) = #(-1234, Nil)
+        r#"fn i() {
   let #(-12_345_678, _) = #(-12_345_678, Nil)
 }
 "#
@@ -1416,32 +1456,32 @@ const an_int_6 = -12_345_678
 #[test]
 fn expr_float() {
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn f() {
   1.
 }
 "#,
-        r#"fn main() {
+        r#"fn f() {
   1.0
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn f() {
   1.0
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn f() {
   -1.0
 }
 "#
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn f() {
   9999.6666
 }
 "#
