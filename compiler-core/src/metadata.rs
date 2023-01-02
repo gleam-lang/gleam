@@ -46,16 +46,16 @@ fn regenerate_type_ids(
     id_map: &mut HashMap<u64, u64>,
     type_: &Type,
 ) -> Arc<Type> {
-    match (*type_).clone() {
+    match type_ {
         Type::App {
             public,
             module,
             name,
             args,
         } => Arc::new(Type::App {
-            public,
-            module,
-            name,
+            public: public.clone(),
+            module: module.clone(),
+            name: name.clone(),
             args: args
                 .into_iter()
                 .map(|arg| regenerate_type_ids(&id_generator, id_map, &arg))
