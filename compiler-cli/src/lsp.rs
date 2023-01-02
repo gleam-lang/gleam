@@ -8,7 +8,10 @@ use std::{
 };
 
 use crate::{
-    build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
+    build_lock::BuildLock,
+    dependencies::UseManifest,
+    fs::{self, ProjectIO},
+    telemetry::NullTelemetry,
 };
 use gleam_core::build::Mode;
 use gleam_core::{
@@ -1003,6 +1006,8 @@ where
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
         let target = config.target;
+        let name = config.name.clone();
+        let build_lock = BuildLock::new_target(Mode::Lsp, target)?;
 
         let options = build::Options {
             mode: build::Mode::Lsp,
@@ -1016,11 +1021,20 @@ where
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.subprocess_stdio = Stdio::Null;
 
+        // The build caches do not contain all the information we need in the
+        // LSP (e.g. the typed AST) so delete the caches for the top level
+        // package before we run for the first time.
+        // TODO: remove this once the caches have contain all the information
+        {
+            let _guard = build_lock.lock(&telemetry);
+            fs::delete_dir(&paths::build_package(Mode::Lsp, target, &name))?;
+        }
+
         Ok(Self {
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock: BuildLock::new_target(Mode::Lsp, target)?,
+            build_lock,
             dependencies_compiled: false,
         })
     }

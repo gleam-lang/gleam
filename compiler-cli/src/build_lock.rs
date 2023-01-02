@@ -9,7 +9,6 @@ pub(crate) struct BuildLock {
     path: PathBuf,
 }
 
-// TODO: return errors rather than crashing.
 impl BuildLock {
     /// Lock the build directory for the specified mode and target.
     pub fn new_target(mode: Mode, target: Target) -> Result<Self> {
