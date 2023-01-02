@@ -465,17 +465,6 @@ pub fn reader(path: impl AsRef<Path> + Debug) -> Result<WrappedReader, Error> {
     Ok(WrappedReader::new(path.as_ref(), Box::new(reader)))
 }
 
-pub fn buffered_reader<P: AsRef<Path> + Debug>(path: P) -> Result<impl BufRead, Error> {
-    tracing::trace!(path=?path,"opening_file_buffered_reader");
-    let reader = File::open(&path).map_err(|err| Error::FileIo {
-        action: FileIoAction::Open,
-        kind: FileKind::File,
-        path: PathBuf::from(path.as_ref()),
-        err: Some(err.to_string()),
-    })?;
-    Ok(BufReader::new(reader))
-}
-
 pub fn copy(path: impl AsRef<Path> + Debug, to: impl AsRef<Path> + Debug) -> Result<(), Error> {
     tracing::trace!(from=?path, to=?to, "copying_file");
 
