@@ -30,10 +30,19 @@ use std::time::SystemTime;
 use std::{
     collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, path::PathBuf, process,
 };
-use strum::{Display, EnumString, EnumVariantNames, VariantNames};
+use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
 
 #[derive(
-    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
+    Debug,
+    Serialize,
+    Deserialize,
+    Display,
+    EnumString,
+    EnumVariantNames,
+    EnumIter,
+    Clone,
+    Copy,
+    PartialEq,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
@@ -91,7 +100,16 @@ pub struct ErlangAppCodegenConfiguration {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
+    Debug,
+    Serialize,
+    Deserialize,
+    Display,
+    EnumString,
+    EnumVariantNames,
+    EnumIter,
+    Clone,
+    Copy,
+    PartialEq,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Mode {

@@ -76,8 +76,12 @@ pub fn default_gleam_cache() -> PathBuf {
         .join("gleam")
 }
 
+pub fn build_for_mode(mode: Mode) -> PathBuf {
+    build().join(mode.to_string())
+}
+
 pub fn build_packages(mode: Mode, target: Target) -> PathBuf {
-    build().join(mode.to_string()).join(target.to_string())
+    build_for_mode(mode).join(target.to_string())
 }
 
 pub fn build_packages_ebins_glob(mode: Mode, target: Target) -> PathBuf {

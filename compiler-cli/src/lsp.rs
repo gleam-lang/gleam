@@ -1020,7 +1020,7 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock: BuildLock::new_scoped(Mode::Lsp, target)?,
+            build_lock: BuildLock::new_target(Mode::Lsp, target)?,
             dependencies_compiled: false,
         })
     }

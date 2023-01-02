@@ -16,6 +16,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use itertools::Itertools;
+use strum::IntoEnumIterator;
 
 use crate::{
     build_lock::BuildLock,
@@ -120,7 +121,7 @@ pub fn download<Telem: Telemetry>(
 
     let mode = Mode::Dev;
 
-    let lock = BuildLock::new_global()?;
+    let lock = BuildLock::new_packages()?;
     let _guard = lock.lock(&telemetry);
 
     let http = HttpClient::boxed();
@@ -168,8 +169,18 @@ pub fn download<Telem: Telemetry>(
         &telemetry,
     ))?;
 
-    // Record new state of the packages directory
     if manifest_updated {
+        // If the manifest has changed then we need to blow away the build
+        // caches as they may now be outdated.
+        // TODO: test
+        let _guard = BuildLock::lock_all_build(&telemetry)?;
+        tracing::info!("deleting_build_caches");
+        for mode in Mode::iter() {
+            fs::delete_dir(&paths::build_for_mode(mode))?;
+        }
+
+        // Record new state of the packages directory
+        // TODO: test
         tracing::info!("writing_manifest_toml");
         write_manifest_to_disc(&manifest)?;
     }
