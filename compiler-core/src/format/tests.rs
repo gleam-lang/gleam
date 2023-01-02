@@ -1063,24 +1063,138 @@ fn expr_int() {
     assert_format!(
         r#"fn main() {
   1_234_567_890
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   123_456_789
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   12_345_678
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   1_234_567
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   123_456
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   12_345
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   1234
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   123
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   12
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   1
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -1_234_567_890
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -123_456_789
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -12_345_678
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -1_234_567
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -123_456
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -12_345
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -1234
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -123
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -12
+}
+"#
+    );
+
+    assert_format!(
+        r#"fn main() {
   -1
 }
 "#
@@ -1089,35 +1203,152 @@ fn expr_int() {
     assert_format_rewrite!(
         r#"fn main() {
   1_234
-  12_34
-  123_4
-  1234_5
-  12345_6
-  123456_7
-  1234567_8
-  -1_234
-  -12_34
-  -123_4
-  -1234_5
-  -12345_6
-  -123456_7
-  -1234567_8
 }
 "#,
         r#"fn main() {
   1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  12_34
+}
+"#,
+        r#"fn main() {
   1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  123_4
+}
+"#,
+        r#"fn main() {
   1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  1234_5
+}
+"#,
+        r#"fn main() {
   12_345
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  12345_6
+}
+"#,
+        r#"fn main() {
   123_456
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  123456_7
+}
+"#,
+        r#"fn main() {
   1_234_567
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  1234567_8
+}
+"#,
+        r#"fn main() {
   12_345_678
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -1_234
+}
+"#,
+        r#"fn main() {
   -1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -12_34
+}
+"#,
+        r#"fn main() {
   -1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -123_4
+}
+"#,
+        r#"fn main() {
   -1234
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -1234_5
+}
+"#,
+        r#"fn main() {
   -12_345
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -12345_6
+}
+"#,
+        r#"fn main() {
   -123_456
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -123456_7
+}
+"#,
+        r#"fn main() {
   -1_234_567
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  -1234567_8
+}
+"#,
+        r#"fn main() {
   -12_345_678
 }
 "#
