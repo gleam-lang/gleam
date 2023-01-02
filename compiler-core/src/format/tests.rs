@@ -1705,35 +1705,139 @@ fn expr_float() {
     assert_format_rewrite!(
         r#"fn f() {
   1_234.0
-  12_34.0
-  123_4.0
-  1234_5.0
-  12345_6.0
-  123456_7.0
-  1234567_8.0
-  -1_234.0
-  -12_34.0
-  -123_4.0
-  -1234_5.0
-  -12345_6.0
-  -123456_7.0
-  -1234567_8.0
 }
 "#,
         r#"fn f() {
   1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  12_34.0
+}
+"#,
+        r#"fn f() {
   1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  123_4.0
+}
+"#,
+        r#"fn f() {
   1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  1234_5.0
+}
+"#,
+        r#"fn f() {
   12_345.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  12345_6.0
+}
+"#,
+        r#"fn f() {
   123_456.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  123456_7.0
+}
+"#,
+        r#"fn f() {
   1_234_567.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  1234567_8.0
+}
+"#,
+        r#"fn f() {
   12_345_678.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -1_234.0
+}
+"#,
+        r#"fn f() {
   -1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -12_34.0
+}
+"#,
+        r#"fn f() {
   -1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -123_4.0
+}
+"#,
+        r#"fn f() {
   -1234.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -1234_5.0
+}
+"#,
+        r#"fn f() {
   -12_345.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -12345_6.0
+}
+"#,
+        r#"fn f() {
   -123_456.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -123456_7.0
+}
+"#,
+        r#"fn f() {
   -1_234_567.0
+}
+"#
+    );
+    assert_format_rewrite!(
+        r#"fn f() {
+  -1234567_8.0
+}
+"#,
+        r#"fn f() {
   -12_345_678.0
 }
 "#
