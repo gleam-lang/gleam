@@ -75,7 +75,7 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: erlef/setup-beam@v1.15.0
+        uses: starbelly/setup-beam@4c757d0297f7ccac7e0a7b5e08684940013cb78c
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
@@ -299,7 +299,7 @@ jobs:
           deno-version: v1.x
 
       - name: Install Erlang
-        uses: erlef/setup-beam@v1.15.0
+        uses: starbelly/setup-beam@4c757d0297f7ccac7e0a7b5e08684940013cb78c
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
