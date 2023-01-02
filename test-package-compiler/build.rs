@@ -10,10 +10,14 @@ pub fn main() {
 
     let cases = PathBuf::from("./cases");
 
-    for entry in std::fs::read_dir(&cases).unwrap() {
-        let name = entry.unwrap().file_name().into_string().unwrap();
+    let mut names: Vec<_> = std::fs::read_dir(&cases)
+        .unwrap()
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort();
+    for name in names.into_iter() {
         let path = cases.join(&name);
-        let path = path.to_str().unwrap();
+        let path = path.to_str().unwrap().replace('\\', "\\\\");
         module.push_str(&format!(
             r#"
 #[rustfmt::skip]
