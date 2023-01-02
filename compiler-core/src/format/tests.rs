@@ -1498,46 +1498,212 @@ fn expr_float() {
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn f() {
   -1_234_567_890.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+  -1_234_567_890.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456_789.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345_678.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1_234_567.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1234.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -0.0
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1_234_567_890.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456_789.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345_678.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1_234_567.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1234.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -0.1
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1_234_567_890.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456_789.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345_678.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1_234_567.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123_456.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12_345.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1234.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -123.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -12.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -1.123456
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
   -0.123456
 }
 "#
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn f() {
   1_234.0
   12_34.0
   123_4.0
@@ -1554,7 +1720,7 @@ fn expr_float() {
   -1234567_8.0
 }
 "#,
-        r#"fn main() {
+        r#"fn f() {
   1234.0
   1234.0
   1234.0
@@ -1574,7 +1740,7 @@ fn expr_float() {
     );
 
     assert_format_rewrite!(
-        r#"fn main() {
+        r#"fn f() {
   let #(1_234.0, _) = #(1_234.0, Nil)
   let #(12_34.0, _) = #(12_34.0, Nil)
   let #(1234567_8.0, _) = #(1234567_8.0, Nil)
@@ -1583,7 +1749,7 @@ fn expr_float() {
   let #(-1234567_8.0, _) = #(-1234567_8.0, Nil)
 }
 "#,
-        r#"fn main() {
+        r#"fn f() {
   let #(1234.0, _) = #(1234.0, Nil)
   let #(1234.0, _) = #(1234.0, Nil)
   let #(12_345_678.0, _) = #(12_345_678.0, Nil)
@@ -1622,7 +1788,7 @@ const a_float_6 = -12_345_678.0
     );
 
     assert_format!(
-        r#"fn main() {
+        r#"fn f() {
   1.0e1
   1.0e-1
   -1.0e1
