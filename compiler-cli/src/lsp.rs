@@ -1002,7 +1002,6 @@ where
     IO: CommandExecutor + FileSystemIO + Clone,
 {
     pub fn new(config: PackageConfig, io: IO) -> Result<Self> {
-        // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
         let target = config.target;
