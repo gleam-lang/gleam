@@ -122,6 +122,18 @@ where
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }
 
+    fn check_file_for_conflicts(&self, path: &PathBuf) -> Result<()> {
+        let erl_file = path.with_extension("erl");
+        if erl_file.exists() {
+            return Err(Error::SourceFileConflict {
+                gleam_file: path.clone(),
+                erl_file,
+            });
+        } else {
+            Ok(())
+        }
+    }
+
     fn read_source_files(&self) -> Result<HashMap<String, Input>> {
         let span = tracing::info_span!("load", package = %self.package_name);
         let _enter = span.enter();
@@ -142,6 +154,7 @@ where
 
         // Src
         for path in self.io.gleam_source_files(&src) {
+            self.check_file_for_conflicts(&path)?;
             let input = loader.load(path)?;
             inputs.insert(input)?;
         }
@@ -153,6 +166,7 @@ where
             loader.source_directory = &test;
 
             for path in self.io.gleam_source_files(&test) {
+                self.check_file_for_conflicts(&path)?;
                 let input = loader.load(path)?;
                 inputs.insert(input)?;
             }

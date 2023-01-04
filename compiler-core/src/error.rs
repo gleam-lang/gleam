@@ -179,6 +179,12 @@ pub enum Error {
         package: String,
         build_tools: Vec<String>,
     },
+
+    #[error("gleam source file {gleam_file} conflicts with {erl_file} ")]
+    SourceFileConflict {
+        gleam_file: PathBuf,
+        erl_file: PathBuf,
+    },
 }
 
 impl Error {
@@ -2306,6 +2312,24 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                     title: format!("Invalid runtime for {}", target),
                     text,
                     hint,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+
+            Error::SourceFileConflict {
+                gleam_file,
+                erl_file,
+            } => {
+                let text = format!(
+                    "The Gleam source file {} conflicts with {} in the same directory.",
+                    gleam_file.to_string_lossy(),
+                    erl_file.to_string_lossy()
+                );
+                Diagnostic {
+                    title: "Failed to compile file".into(),
+                    text,
+                    hint: None,
                     location: None,
                     level: Level::Error,
                 }
