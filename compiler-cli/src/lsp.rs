@@ -10,6 +10,7 @@ use std::{
 use crate::{
     build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry,
 };
+use gleam_core::build::Mode;
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -1001,9 +1002,10 @@ where
         // TODO: different telemetry that doesn't write to stdout
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
+        let target = config.target;
 
         let options = build::Options {
-            mode: build::Mode::Dev,
+            mode: build::Mode::Lsp,
             target: None,
             perform_codegen: false,
         };
@@ -1018,7 +1020,7 @@ where
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock: BuildLock::new()?,
+            build_lock: BuildLock::new_scoped(Mode::Lsp, target)?,
             dependencies_compiled: false,
         })
     }

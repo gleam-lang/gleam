@@ -8,7 +8,6 @@ use gleam_core::{
 use crate::{build_lock::BuildLock, cli, dependencies::UseManifest, fs};
 
 pub fn main(options: Options) -> Result<Package> {
-    let lock = BuildLock::new()?;
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 
     let perform_codegen = options.perform_codegen;
@@ -16,6 +15,7 @@ pub fn main(options: Options) -> Result<Package> {
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::ProjectIO::new();
     let start = Instant::now();
+    let lock = BuildLock::new_scoped(options.mode, options.target.unwrap_or(root_config.target))?;
 
     tracing::info!("Compiling packages");
     let compiled = {

@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
 use crate::type_::FieldAccessUsage;
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
@@ -143,6 +144,12 @@ pub enum Error {
         path: PathBuf,
         src: Src,
         error: crate::javascript::Error,
+    },
+
+    #[error("Invalid runtime for {target} target: {invalid_runtime}")]
+    InvalidRuntime {
+        target: Target,
+        invalid_runtime: Runtime,
     },
 
     #[error("package downloading failed: {error}")]
@@ -2275,6 +2282,30 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                     title: "Unsupported build tool".into(),
                     text,
                     hint: None,
+                    location: None,
+                    level: Level::Error,
+                }
+            }
+            Error::InvalidRuntime {
+                target,
+                invalid_runtime,
+            } => {
+                let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
+
+                let hint = match target {
+                    Target::JavaScript => {
+                        Some("available runtimes for JavaScript are: node, deno".to_string())
+                    }
+                    Target::Erlang => Some(
+                        "You can not set a runtime for Erlang. Did you mean to target JavaScript?"
+                            .into(),
+                    ),
+                };
+
+                Diagnostic {
+                    title: format!("Invalid runtime for {}", target),
+                    text,
+                    hint,
                     location: None,
                     level: Level::Error,
                 }

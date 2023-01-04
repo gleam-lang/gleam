@@ -79,7 +79,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{Mode, Options, Target},
+    build::{Mode, Options, Runtime, Target},
     hex::RetirementReason,
 };
 use hex::ApiKeyCommand as _;
@@ -165,6 +165,9 @@ enum Command {
         #[clap(long, ignore_case = true)]
         target: Option<Target>,
 
+        #[clap(long, ignore_case = true, possible_values = Runtime::VARIANTS)]
+        runtime: Option<Runtime>,
+
         arguments: Vec<String>,
     },
 
@@ -174,6 +177,9 @@ enum Command {
         /// The platform to target
         #[clap(long, ignore_case = true)]
         target: Option<Target>,
+
+        #[clap(long, ignore_case = true)]
+        runtime: Option<Runtime>,
 
         arguments: Vec<String>,
     },
@@ -379,9 +385,17 @@ fn main() {
 
         Command::Shell => shell::command(),
 
-        Command::Run { target, arguments } => run::command(arguments, target, run::Which::Src),
+        Command::Run {
+            target,
+            arguments,
+            runtime,
+        } => run::command(arguments, target, runtime, run::Which::Src),
 
-        Command::Test { target, arguments } => run::command(arguments, target, run::Which::Test),
+        Command::Test {
+            target,
+            arguments,
+            runtime,
+        } => run::command(arguments, target, runtime, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 

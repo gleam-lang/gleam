@@ -1,3 +1,7 @@
 import("./target-javascript/main.mjs").then((module) => {
-  process.exit(module.main());
+  if (globalThis.Deno) {
+    globalThis.Deno.exit(module.main());
+  } else {
+    process.exit(module.main());
+  }
 });

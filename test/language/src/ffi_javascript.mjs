@@ -1,11 +1,19 @@
-import fs from "fs";
+let fs;
+
+if (!globalThis.Deno) {
+  fs = await import("fs");
+}
 
 export function append(a, b) {
   return a + b;
 }
 
 export function print(string) {
-  process.stdout.write(string);
+  if (globalThis.Deno) {
+    globalThis.Deno.stdout.writeSync(new TextEncoder().encode(string));
+  } else {
+    process.stdout.write(string);
+  }
   return string;
 }
 
@@ -23,5 +31,14 @@ export function ansi_green(string) {
 }
 
 export function fileExists(path) {
-  return fs.existsSync(path);
+  if (globalThis.Deno) {
+    try {
+      Deno.statSync(path);
+      return true;
+    } catch {
+      return false;
+    }
+  } else {
+    return fs.existsSync(path);
+  }
 }

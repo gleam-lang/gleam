@@ -4,7 +4,7 @@ version = "0.25.3"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
- 
+
 [dependencies]
 # Immutable data structures
 im = "15.1.0"
