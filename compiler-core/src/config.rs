@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 #[cfg(test)]
 use crate::manifest::ManifestPackage;
 
-use crate::build::{Mode, Module, Runtime, Target};
+use crate::build::{Mode, Runtime, Target};
 
 fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
@@ -150,11 +150,11 @@ impl PackageConfig {
     ///
     /// The developer can specify a list of glob patterns in the gleam.toml file
     /// to determine modules that should not be shown in the package's documentation
-    pub fn is_hidden_module(&self, module: &Module) -> bool {
+    pub fn is_hidden_module(&self, module: &String) -> bool {
         self.documentation
             .hidden_modules
             .iter()
-            .any(|pattern| pattern.compile_matcher().is_match(&module.name))
+            .any(|pattern| pattern.compile_matcher().is_match(module))
     }
 }
 
@@ -393,6 +393,72 @@ fn locked_nested_are_removed_too() {
         ]
         .into()
     );
+}
+
+#[test]
+fn hidden_a_directory_from_docs() {
+    let mut config = PackageConfig::default();
+    config.documentation.hidden_modules = vec![Glob::new("package/internal/*").expect("")];
+
+    let mod1 = String::from("package/internal");
+    let mod2 = String::from("package/internal/module");
+
+    assert_eq!(config.is_hidden_module(&mod1), false);
+    assert_eq!(config.is_hidden_module(&mod2), true);
+}
+
+#[test]
+fn hidden_two_directories_from_docs() {
+    let mut config = PackageConfig::default();
+    config.documentation.hidden_modules = vec![
+        Glob::new("package/internal1/*").expect(""),
+        Glob::new("package/internal2/*").expect(""),
+    ];
+
+    let mod1 = String::from("package/internal1");
+    let mod2 = String::from("package/internal1/module");
+    let mod3 = String::from("package/internal2");
+    let mod4 = String::from("package/internal2/module");
+
+    assert_eq!(config.is_hidden_module(&mod1), false);
+    assert_eq!(config.is_hidden_module(&mod2), true);
+    assert_eq!(config.is_hidden_module(&mod3), false);
+    assert_eq!(config.is_hidden_module(&mod4), true);
+}
+
+#[test]
+fn hidden_a_directory_and_a_file_from_docs() {
+    let mut config = PackageConfig::default();
+    config.documentation.hidden_modules = vec![
+        Glob::new("package/internal1/*").expect(""),
+        Glob::new("package/module").expect(""),
+    ];
+
+    let mod1 = String::from("package/internal1");
+    let mod2 = String::from("package/internal1/module");
+    let mod3 = String::from("package/module");
+    let mod4 = String::from("package/module/inner");
+
+    assert_eq!(config.is_hidden_module(&mod1), false);
+    assert_eq!(config.is_hidden_module(&mod2), true);
+    assert_eq!(config.is_hidden_module(&mod3), true);
+    assert_eq!(config.is_hidden_module(&mod4), false);
+}
+
+#[test]
+fn hidden_a_file_in_all_directories_from_docs() {
+    let mut config = PackageConfig::default();
+    config.documentation.hidden_modules = vec![Glob::new("package/*/module1").expect("")];
+
+    let mod1 = String::from("package/internal1/module1");
+    let mod2 = String::from("package/internal2/module1");
+    let mod3 = String::from("package/internal2/module2");
+    let mod4 = String::from("package/module");
+
+    assert_eq!(config.is_hidden_module(&mod1), true);
+    assert_eq!(config.is_hidden_module(&mod2), true);
+    assert_eq!(config.is_hidden_module(&mod3), false);
+    assert_eq!(config.is_hidden_module(&mod4), false);
 }
 
 #[cfg(test)]
