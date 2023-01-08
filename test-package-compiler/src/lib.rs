@@ -79,7 +79,7 @@ impl TestCompileOutput {
         let mut buffer = String::new();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
             buffer.push_str("//// ");
-            buffer.push_str(path.to_str().unwrap());
+            buffer.push_str(&path.to_str().unwrap().replace('\\', "/"));
             buffer.push('\n');
 
             let extension = path.extension().and_then(OsStr::to_str);
