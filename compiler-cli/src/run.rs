@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use gleam_core::{
     build::{Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
@@ -14,6 +16,7 @@ pub enum Which {
     Test,
 }
 
+// TODO: test
 pub fn command(
     arguments: Vec<String>,
     target: Option<Target>,
@@ -50,8 +53,8 @@ pub fn command(
             _ => run_erlang(&config.name, &module, arguments),
         },
         Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
-            Runtime::Deno => run_javascript_deno(&config, arguments),
-            Runtime::Node => run_javascript_node(&config, arguments),
+            Runtime::Deno => run_javascript_deno(&config, &module, arguments),
+            Runtime::Node => run_javascript_node(&config, &module, arguments),
         },
     }?;
 
@@ -84,14 +87,16 @@ fn run_erlang(package: &str, module: &str, arguments: Vec<String>) -> Result<i32
     ProjectIO::new().exec("erl", &args, &[], None, Stdio::Inherit)
 }
 
-fn run_javascript_node(config: &PackageConfig, arguments: Vec<String>) -> Result<i32, Error> {
+fn run_javascript_node(
+    config: &PackageConfig,
+    module: &str,
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
     let mut args = vec![];
+    let entry = write_javascript_entrypoint(&config.name, module)?;
 
-    let entry = paths::build_package(Mode::Dev, Target::JavaScript, &config.name);
+    args.push(entry);
 
-    args.push(format!("./{}/gleam.main.mjs", entry.to_string_lossy()));
-
-    // Tell Node that any following argument are for the program
     args.push("--".into());
     for argument in arguments.into_iter() {
         args.push(argument);
@@ -100,10 +105,24 @@ fn run_javascript_node(config: &PackageConfig, arguments: Vec<String>) -> Result
     ProjectIO::new().exec("node", &args, &[], None, Stdio::Inherit)
 }
 
-fn run_javascript_deno(config: &PackageConfig, arguments: Vec<String>) -> Result<i32, Error> {
-    let mut args = vec![];
+fn write_javascript_entrypoint(package: &str, module: &str) -> Result<String, Error> {
+    let entry = paths::build_package(Mode::Dev, Target::JavaScript, package);
+    let entrypoint = format!("./{}/gleam.main.mjs", entry.to_string_lossy());
+    let module = format!(
+        r#"import {{ main }} from "./{module}.mjs";
+main();
+"#,
+    );
+    crate::fs::write(&PathBuf::from(&entrypoint), &module)?;
+    Ok(entrypoint)
+}
 
-    let entry = paths::build_package(Mode::Dev, Target::JavaScript, &config.name);
+fn run_javascript_deno(
+    config: &PackageConfig,
+    module: &str,
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
+    let mut args = vec![];
 
     // Run the main function.
     args.push("run".into());
@@ -156,7 +175,8 @@ fn run_javascript_deno(config: &PackageConfig, arguments: Vec<String>) -> Result
         args.push(argument);
     }
 
-    args.push(format!("./{}/gleam.main.mjs", entry.to_string_lossy()));
+    let entrypoint = write_javascript_entrypoint(&config.name, module)?;
+    args.push(entrypoint);
 
     ProjectIO::new().exec("deno", &args, &[], None, Stdio::Inherit)
 }

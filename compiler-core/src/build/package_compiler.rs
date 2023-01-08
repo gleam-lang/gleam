@@ -309,12 +309,6 @@ where
 
         JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
 
-        if self.write_entrypoint {
-            self.render_javascript_entrypoint_module(&self.out, &mut written)?;
-        } else {
-            tracing::info!("skipping_entrypoint_generation");
-        }
-
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
         } else {
@@ -346,22 +340,6 @@ where
         self.io.write(&path, &module)?;
         let _ = modules_to_compile.insert(name.into());
         tracing::debug!("erlang_entrypoint_written");
-        Ok(())
-    }
-
-    fn render_javascript_entrypoint_module(
-        &mut self,
-        out: &Path,
-        modules_to_compile: &mut HashSet<PathBuf>,
-    ) -> Result<(), Error> {
-        let name = "gleam.main.mjs";
-        let module = JavaScriptEntrypointModule {
-            application: &self.config.name,
-        }
-        .render()
-        .expect("Javascript entrypoint rendering");
-        self.io.write(&out.join(name), &module)?;
-        let _ = modules_to_compile.insert(name.into());
         Ok(())
     }
 }
@@ -617,11 +595,5 @@ pub(crate) struct UncompiledModule {
 #[derive(Template)]
 #[template(path = "gleam@@main.erl", escape = "none")]
 struct ErlangEntrypointModule<'a> {
-    application: &'a str,
-}
-
-#[derive(Template)]
-#[template(path = "gleam.main.js", escape = "none")]
-struct JavaScriptEntrypointModule<'a> {
     application: &'a str,
 }
