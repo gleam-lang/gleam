@@ -28,7 +28,7 @@ pub fn generate_html(
     let modules = analysed
         .iter()
         .filter(|module| !module.is_test())
-        .filter(|module| !config.is_hidden_module(&module.name));
+        .filter(|module| !config.is_internal_module(&module.name));
 
     let rendering_timestamp = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)

@@ -91,6 +91,8 @@ pub struct PackageConfig {
     pub javascript: JavaScriptConfig,
     #[serde(default = "erlang_target")]
     pub target: Target,
+    #[serde(default)]
+    pub internal_modules: Vec<Glob>,
 }
 
 impl PackageConfig {
@@ -150,9 +152,8 @@ impl PackageConfig {
     ///
     /// The developer can specify a list of glob patterns in the gleam.toml file
     /// to determine modules that should not be shown in the package's documentation
-    pub fn is_hidden_module(&self, module: &String) -> bool {
-        self.documentation
-            .hidden_modules
+    pub fn is_internal_module(&self, module: &String) -> bool {
+        self.internal_modules
             .iter()
             .any(|pattern| pattern.compile_matcher().is_match(module))
     }
@@ -398,19 +399,19 @@ fn locked_nested_are_removed_too() {
 #[test]
 fn hidden_a_directory_from_docs() {
     let mut config = PackageConfig::default();
-    config.documentation.hidden_modules = vec![Glob::new("package/internal/*").expect("")];
+    config.internal_modules = vec![Glob::new("package/internal/*").expect("")];
 
     let mod1 = String::from("package/internal");
     let mod2 = String::from("package/internal/module");
 
-    assert_eq!(config.is_hidden_module(&mod1), false);
-    assert_eq!(config.is_hidden_module(&mod2), true);
+    assert_eq!(config.is_internal_module(&mod1), false);
+    assert_eq!(config.is_internal_module(&mod2), true);
 }
 
 #[test]
 fn hidden_two_directories_from_docs() {
     let mut config = PackageConfig::default();
-    config.documentation.hidden_modules = vec![
+    config.internal_modules = vec![
         Glob::new("package/internal1/*").expect(""),
         Glob::new("package/internal2/*").expect(""),
     ];
@@ -420,16 +421,16 @@ fn hidden_two_directories_from_docs() {
     let mod3 = String::from("package/internal2");
     let mod4 = String::from("package/internal2/module");
 
-    assert_eq!(config.is_hidden_module(&mod1), false);
-    assert_eq!(config.is_hidden_module(&mod2), true);
-    assert_eq!(config.is_hidden_module(&mod3), false);
-    assert_eq!(config.is_hidden_module(&mod4), true);
+    assert_eq!(config.is_internal_module(&mod1), false);
+    assert_eq!(config.is_internal_module(&mod2), true);
+    assert_eq!(config.is_internal_module(&mod3), false);
+    assert_eq!(config.is_internal_module(&mod4), true);
 }
 
 #[test]
 fn hidden_a_directory_and_a_file_from_docs() {
     let mut config = PackageConfig::default();
-    config.documentation.hidden_modules = vec![
+    config.internal_modules = vec![
         Glob::new("package/internal1/*").expect(""),
         Glob::new("package/module").expect(""),
     ];
@@ -439,26 +440,26 @@ fn hidden_a_directory_and_a_file_from_docs() {
     let mod3 = String::from("package/module");
     let mod4 = String::from("package/module/inner");
 
-    assert_eq!(config.is_hidden_module(&mod1), false);
-    assert_eq!(config.is_hidden_module(&mod2), true);
-    assert_eq!(config.is_hidden_module(&mod3), true);
-    assert_eq!(config.is_hidden_module(&mod4), false);
+    assert_eq!(config.is_internal_module(&mod1), false);
+    assert_eq!(config.is_internal_module(&mod2), true);
+    assert_eq!(config.is_internal_module(&mod3), true);
+    assert_eq!(config.is_internal_module(&mod4), false);
 }
 
 #[test]
 fn hidden_a_file_in_all_directories_from_docs() {
     let mut config = PackageConfig::default();
-    config.documentation.hidden_modules = vec![Glob::new("package/*/module1").expect("")];
+    config.internal_modules = vec![Glob::new("package/*/module1").expect("")];
 
     let mod1 = String::from("package/internal1/module1");
     let mod2 = String::from("package/internal2/module1");
     let mod3 = String::from("package/internal2/module2");
     let mod4 = String::from("package/module");
 
-    assert_eq!(config.is_hidden_module(&mod1), true);
-    assert_eq!(config.is_hidden_module(&mod2), true);
-    assert_eq!(config.is_hidden_module(&mod3), false);
-    assert_eq!(config.is_hidden_module(&mod4), false);
+    assert_eq!(config.is_internal_module(&mod1), true);
+    assert_eq!(config.is_internal_module(&mod2), true);
+    assert_eq!(config.is_internal_module(&mod3), false);
+    assert_eq!(config.is_internal_module(&mod4), false);
 }
 
 #[cfg(test)]
@@ -500,6 +501,7 @@ impl Default for PackageConfig {
             dev_dependencies: Default::default(),
             licences: Default::default(),
             links: Default::default(),
+            internal_modules: Default::default(),
             target: Target::Erlang,
         }
     }
@@ -634,9 +636,6 @@ impl Default for Repository {
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
-
-    #[serde(default)]
-    hidden_modules: Vec<Glob>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
