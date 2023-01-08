@@ -65,7 +65,7 @@ pub fn prepare(path: &str) -> String {
             TestCompileOutput { files, warnings }.as_overview_text()
         }
         Err(error) => {
-            let error = error.pretty_string().replace('\\', "/");
+            let error = error.pretty_string();
 
             // There is an extra ^ on Windows in error messages' code snippets.
             // I've not managed to determine why this is yet (it is especially
@@ -74,7 +74,7 @@ pub fn prepare(path: &str) -> String {
             #[cfg(windows)]
             let error = error.replace("^^ ", "^ ");
 
-            error
+            error.replace('\\', "/")
         }
     }
 }
