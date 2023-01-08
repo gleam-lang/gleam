@@ -26,6 +26,7 @@
 - The `gleam new` command gains the `--skip-github` flag to skip creation of
   `.github/*` files.
 - Added support for deno runtime for JavaScript target.
+- Some modules can now be hidden from the docs by specifying a list of glob patterns in `documentation.hidden_modules` in `gleam.toml`
 
 ## v0.25.3 - 2022-12-16
 
