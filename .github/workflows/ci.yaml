@@ -75,7 +75,7 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: erlef/setup-beam@v1.15.1
+        uses: erlef/setup-beam@v1.15.2
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
