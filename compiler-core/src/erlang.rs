@@ -1327,7 +1327,7 @@ fn docs_args_call<'a>(
                         TypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => {
                             merged_args.push(args.swap_remove(0))
                         }
-                        e => merged_args.push(expr(e, env)),
+                        e => merged_args.push(maybe_block_expr(e, env)),
                     }
                 }
                 docs_args_call(fun, merged_args, env)

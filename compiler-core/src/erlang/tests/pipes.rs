@@ -112,3 +112,23 @@ pub fn add(x) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1931
+#[test]
+fn pipe_in_call() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  123
+  |> two(
+    1 |> two(2),
+    _,
+  )
+}
+
+pub fn two(a, b) {
+  a
+}
+"#
+    );
+}
