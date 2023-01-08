@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added support for Deno runtime for JavaScript target.
 - Scientific notation is now available for float literals.
 - The compiler now supports incremental compilation at the module level. If a
   module or its dependencies have not been changed unchanged then it will not be
@@ -25,9 +26,10 @@
   `.git/*`, `.gitignore` and `.github/*` files.
 - The `gleam new` command gains the `--skip-github` flag to skip creation of
   `.github/*` files.
-- Added support for Deno runtime for JavaScript target.
 - Fixed `int` and `float` formatting in `const`s and patterns.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.2.
+- Some modules can now be hidden from the docs by specifying a list of glob
+  patterns in `documentation.hidden_modules` in `gleam.toml`
 
 ## v0.25.3 - 2022-12-16
 
