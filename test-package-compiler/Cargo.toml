@@ -15,7 +15,10 @@ im = "15.1.0"
 itertools = "0.10.1"
 # Recursively finding files
 walkdir = "2.3.2"
+# Regular expressions
+regex = "*"
 
 [dev-dependencies]
 # Snapshot testing to make test maintenance easier
 insta = "1.8.0"
+

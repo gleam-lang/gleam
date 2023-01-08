@@ -9,6 +9,7 @@ use gleam_core::{
     io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
 };
 use itertools::Itertools;
+use regex::Regex;
 use std::{
     collections::HashMap,
     ffi::OsStr,
@@ -67,12 +68,14 @@ pub fn prepare(path: &str) -> String {
         Err(error) => {
             let error = error.pretty_string();
 
-            // There is an extra ^ on Windows in error messages' code snippets.
+            // There is an extra ^ on Windows in some error messages' code
+            // snippets.
             // I've not managed to determine why this is yet (it is especially
-            // tricky without a Windows computer) so for now we just remove it
+            // tricky without a Windows computer) so for now we just squash them
             // in these cross-platform tests.
-            #[cfg(windows)]
-            let error = error.replace("^^ ", "^ ");
+            let error = Regex::new(r"\^+")
+                .expect("^ sequence regex")
+                .replace_all(&error, "^");
 
             error.replace('\\', "/")
         }

@@ -1,13 +1,13 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 294
+assertion_line: 249
 expression: "./cases/opaque_type_construct"
 ---
 error: Unknown variable
   ┌─ src/two.gleam:7:3
   │
 7 │   User(name: "Alim", score: 10)
-  │   ^^^^ Did you mean `Error`?
+  │   ^ Did you mean `Error`?
 
 The name `User` is not in scope here.
 

@@ -1964,6 +1964,7 @@ dependencies = [
  "im",
  "insta",
  "itertools",
+ "regex",
  "toml",
  "walkdir",
 ]
