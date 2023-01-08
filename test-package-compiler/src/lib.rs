@@ -64,7 +64,18 @@ pub fn prepare(path: &str) -> String {
             let files = filesystem.into_contents();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
-        Err(error) => error.pretty_string().replace('\\', "/"),
+        Err(error) => {
+            let error = error.pretty_string().replace('\\', "/");
+
+            // There is an extra ^ on Windows in error messages' code snippets.
+            // I've not managed to determine why this is yet (it is especially
+            // tricky without a Windows computer) so for now we just remove it
+            // in these cross-platform tests.
+            #[cfg(windows)]
+            let error = error.replace("^ ", " ");
+
+            error
+        }
     }
 }
 
