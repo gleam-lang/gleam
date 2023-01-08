@@ -5,7 +5,7 @@
 - Added support for Deno runtime for JavaScript target.
 - Scientific notation is now available for float literals.
 - The compiler now supports incremental compilation at the module level. If a
-  module or its dependencies have not been changed unchanged then it will not be
+  module or its dependencies have not been changed then it will not be
   recompiled.
 - Fixed a bug where no error would be emitted if a `src` module imported a
   `test` module.
