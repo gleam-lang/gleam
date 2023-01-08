@@ -27,6 +27,7 @@
   `.github/*` files.
 - Added support for Deno runtime for JavaScript target.
 - Fixed `int` and `float` formatting in `const`s and patterns.
+- New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.1.
 
 ## v0.25.3 - 2022-12-16
 
