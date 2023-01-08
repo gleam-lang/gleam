@@ -72,7 +72,7 @@ pub fn prepare(path: &str) -> String {
             // tricky without a Windows computer) so for now we just remove it
             // in these cross-platform tests.
             #[cfg(windows)]
-            let error = error.replace("^ ", " ");
+            let error = error.replace("^^ ", "^ ");
 
             error
         }
