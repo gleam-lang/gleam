@@ -64,7 +64,7 @@ pub fn prepare(path: &str) -> String {
             let files = filesystem.into_contents();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
-        Err(error) => error.pretty_string(),
+        Err(error) => error.pretty_string().replace('\\', "/"),
     }
 }
 
