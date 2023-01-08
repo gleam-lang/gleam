@@ -51,6 +51,10 @@ impl ApiKeyCommand for RemoveCommand {
 
 pub fn build() -> Result<()> {
     let config = crate::config::root_config()?;
+
+    // Reset the build directory so we know the state of the project
+    crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
+
     let out = paths::build_docs(&config.name);
     let mut compiled = crate::build::main(Options {
         mode: Mode::Prod,
@@ -101,9 +105,13 @@ pub fn publish() -> Result<()> {
 impl PublishCommand {
     pub fn new() -> Result<Self> {
         let config = crate::config::root_config()?;
+
+        // Reset the build directory so we know the state of the project
+        crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
+
         let mut compiled = crate::build::main(Options {
             perform_codegen: true,
-            mode: Mode::Dev,
+            mode: Mode::Prod,
             target: None,
         })?;
         let outputs = build_documentation(&config, &mut compiled)?;

@@ -29,16 +29,17 @@ pub struct PublishCommand {
 
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
+        let config = crate::config::root_config()?;
+
         // Reset the build directory so we know the state of the project
-        fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
+        fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
         // Build the project to check that it is valid
         let mut compiled = build::main(Options {
             mode: Mode::Prod,
-            target: Some(Target::Erlang),
+            target: None,
             perform_codegen: true,
         })?;
-        let config = compiled.config.clone();
 
         // These fields are required to publish a Hex package. Hex will reject
         // packages without them.
