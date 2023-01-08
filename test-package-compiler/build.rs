@@ -17,7 +17,7 @@ pub fn main() {
     names.sort();
     for name in names.into_iter() {
         let path = cases.join(&name);
-        let path = path.to_str().unwrap().replace('\\', "\\\\");
+        let path = path.to_str().unwrap().replace('\\', "/");
         module.push_str(&format!(
             r#"
 #[rustfmt::skip]
