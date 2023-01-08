@@ -75,7 +75,7 @@ jobs:
           profile: minimal
 
       - name: Install Erlang (non-macos)
-        uses: starbelly/setup-beam@4c757d0297f7ccac7e0a7b5e08684940013cb78c
+        uses: erlef/setup-beam@v1.15.1
         with:
           otp-version: "25.1"
           elixir-version: "1.14.1"
