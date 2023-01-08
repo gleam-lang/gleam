@@ -29,7 +29,8 @@
 - Fixed `int` and `float` formatting in `const`s and patterns.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.2.
 - Some modules can now be hidden from the docs by specifying a list of glob
-  patterns in `documentation.hidden_modules` in `gleam.toml`
+  patterns in `internal_modules` in `gleam.toml`. The default value for this
+  list is `["$package_name/internal", "$package_name/internal/*"]`.
 
 ## v0.25.3 - 2022-12-16
 
