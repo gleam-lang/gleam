@@ -84,7 +84,6 @@ where
             .with_extension("cache_meta");
 
         if !self.io.is_file(&meta_path) {
-            dbg!("no cache metadata file", &meta_path);
             return Ok(None);
         }
 
