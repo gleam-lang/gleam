@@ -7,6 +7,21 @@
 - The compiler now supports incremental compilation at the module level. If a
   module or its dependencies have not been changed then it will not be
   recompiled.
+- The format used by the formatter has been improved.
+- 4 digit integers are now always formatted without underscores.
+- Running `gleam new` will skip `git init` if the new project directory is
+  already part of a git work tree.
+- Generated HTML documentation now includes all static assets, including web
+  fonts, so that it can be accessed offline and in future once CDNs would 404.
+- Generated HTML documentation now supports TypeScript syntax highlighting.
+- New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.2.
+- Some modules can now be hidden from the docs by specifying a list of glob
+  patterns in `internal_modules` in `gleam.toml`. The default value for this
+  list is `["$package_name/internal", "$package_name/internal/*"]`.
+- The `gleam new` command gains the `--skip-git` flag to skip creation of
+  `.git/*`, `.gitignore` and `.github/*` files.
+- The `gleam new` command gains the `--skip-github` flag to skip creation of
+  `.github/*` files.
 - Fixed a bug where no error would be emitted if a `src` module imported a
   `test` module.
 - Fixed a bug where comments in list prepending expressions could be formatted
@@ -16,23 +31,9 @@
 - Fixed a bug where long `use` expressions could be formatted incorrectly.
 - Fixed a bug integer multiplication would overflow large integers when
   compiling to JavaScript.
-- 4 digit integers are now always formatted without underscores.
-- Running `gleam new` will skip `git init` if the new project directory is
-  already part of a git work tree.
-- Generated HTML documentation now includes all static assets, including web
-  fonts, so that it can be accessed offline and in future once CDNs would 404.
-- Generated HTML documentation now supports TypeScript syntax highlighting.
-- The `gleam new` command gains the `--skip-git` flag to skip creation of
-  `.git/*`, `.gitignore` and `.github/*` files.
-- The `gleam new` command gains the `--skip-github` flag to skip creation of
-  `.github/*` files.
 - Fixed `int` and `float` formatting in `const`s and patterns.
 - Fixed a bug where piping into a function capture expression with a pipe as one
   of the arguments would produce invalid Erlang code.
-- New Gleam projects are created using GitHub actions erlef/setup-beam@v1.15.2.
-- Some modules can now be hidden from the docs by specifying a list of glob
-  patterns in `internal_modules` in `gleam.toml`. The default value for this
-  list is `["$package_name/internal", "$package_name/internal/*"]`.
 
 ## v0.25.3 - 2022-12-16
 
