@@ -1,8 +1,10 @@
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
-        dep_tree, native_file_copier::NativeFileCopier, package_loader::PackageLoader, Mode,
-        Module, Origin, Package, Target,
+        dep_tree,
+        native_file_copier::NativeFileCopier,
+        package_loader::{CodegenRequired, PackageLoader},
+        Mode, Module, Origin, Package, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -92,11 +94,17 @@ where
         let _enter = span.enter();
 
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
+        let codegen_required = if self.perform_codegen {
+            CodegenRequired::Yes
+        } else {
+            CodegenRequired::No
+        };
         let loaded = PackageLoader::new(
             self.io.clone(),
             self.ids.clone(),
             self.mode,
             self.root,
+            codegen_required,
             &artefact_directory,
             self.target.target(),
             &self.config.name,
@@ -204,13 +212,16 @@ where
 
     fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
         if !self.write_metadata {
-            tracing::info!("Package metadata writing disabled");
+            tracing::info!("package_metadata_writing_disabled");
+            return Ok(());
+        }
+        if modules.is_empty() {
             return Ok(());
         }
 
         let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
 
-        tracing::info!("Writing package metadata to disc");
+        tracing::info!("writing_module_caches");
         for module in modules {
             let module_name = module.name.replace('/', "@");
 
@@ -225,6 +236,7 @@ where
             let path = artefact_dir.join(name);
             let info = CacheMetadata {
                 mtime: module.mtime,
+                codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
@@ -560,6 +572,7 @@ pub(crate) struct CachedModule {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
+    pub codegen_performed: bool,
     pub dependencies: Vec<String>,
 }
 
