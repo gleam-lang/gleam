@@ -44,6 +44,7 @@ use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
     Clone,
     Copy,
     PartialEq,
+    Eq,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Target {
@@ -251,7 +252,7 @@ impl<'a> Located<'a> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Origin {
     Src,
     Test,

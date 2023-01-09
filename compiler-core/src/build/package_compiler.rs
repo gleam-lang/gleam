@@ -602,13 +602,13 @@ impl CacheMetadata {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Loaded {
     pub to_compile: Vec<UncompiledModule>,
     pub cached: Vec<type_::Module>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
     pub path: PathBuf,
     pub name: String,

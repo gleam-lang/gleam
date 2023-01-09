@@ -1,8 +1,6 @@
-use std::time::Duration;
-
-use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
-
 use super::*;
+use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
+use std::time::Duration;
 
 #[test]
 fn no_cache_present() {

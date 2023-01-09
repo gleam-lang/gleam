@@ -3,7 +3,7 @@ use crate::type_::{bool, HasType, Type};
 
 use lazy_static::lazy_static;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
     Int {
         location: SrcSpan,

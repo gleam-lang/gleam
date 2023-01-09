@@ -2,7 +2,7 @@ use vec1::Vec1;
 
 use super::*;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,
@@ -218,7 +218,7 @@ impl HasLocation for UntypedExpr {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Use {
     pub location: SrcSpan,
     pub call: Box<UntypedExpr>,

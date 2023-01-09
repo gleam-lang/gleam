@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -100,7 +103,6 @@ where
 
             match input {
                 // A new uncached module is to be compiled
-                // TODO: test
                 Input::New(module) => {
                     tracing::debug!(module = %module.name, "module_to_be_compiled");
                     stale.add(module.name.clone());
@@ -110,7 +112,6 @@ where
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                // TODO: test
                 Input::Cached(info) if stale.includes_any(&info.dependencies) => {
                     tracing::debug!(module = %info.name, "module_to_be_compiled");
                     stale.add(info.name.clone());
@@ -120,8 +121,6 @@ where
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                // TODO: test (this module cached and other module is changed to
-                // now import it)
                 Input::Cached(info) => {
                     tracing::debug!(module = %info.name, "module_to_load_from_cache");
                     let module = self.load_cached_module(info)?;

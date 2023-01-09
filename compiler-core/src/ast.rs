@@ -58,7 +58,7 @@ impl TypedModule {
 /// ```
 /// Outside an if block is `Any`, inside is an `Only`.
 ///
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TargetGroup {
     Any(Vec<UntypedStatement>),
     Only(Target, Vec<UntypedStatement>),
@@ -159,7 +159,7 @@ pub type UntypedArg = Arg<()>;
 pub type TypedExternalFnArg = ExternalFnArg<Arc<Type>>;
 pub type UntypedExternalFnArg = ExternalFnArg<()>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Arg<T> {
     pub names: ArgNames,
     pub location: SrcSpan,
@@ -212,7 +212,7 @@ impl ArgNames {
 
 pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
     pub name: String,
@@ -228,7 +228,7 @@ impl<A> RecordConstructor<A> {
 
 pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
     pub label: Option<String>,
     pub ast: TypeAst,
@@ -243,7 +243,7 @@ impl<T: PartialEq> RecordConstructorArg<T> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAst {
     Constructor {
         location: SrcSpan,
@@ -362,7 +362,7 @@ impl TypeAst {
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String, String>;
 pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// A function definition
     ///
@@ -590,7 +590,7 @@ impl Layer {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalFnArg<T> {
     pub location: SrcSpan,
     pub label: Option<String>,
@@ -721,20 +721,20 @@ impl CallArg<UntypedExpr> {
     }
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordUpdateSpread {
     pub base: Box<UntypedExpr>,
     pub location: SrcSpan,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntypedRecordUpdateArg {
     pub label: String,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedRecordUpdateArg {
     pub label: String,
     pub location: SrcSpan,
@@ -757,7 +757,7 @@ pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, String>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
     pub location: SrcSpan,
     pub pattern: MultiPattern<PatternConstructor, Type>,
@@ -786,7 +786,7 @@ impl TypedClause {
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
 pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
     Equals {
         location: SrcSpan,
@@ -969,7 +969,7 @@ pub struct DefinitionLocation<'module> {
 pub type UntypedPattern = Pattern<(), ()>;
 pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Pattern<Constructor, Type> {
     Int {
         location: SrcSpan,

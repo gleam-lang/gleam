@@ -49,7 +49,6 @@ where
 
         let read_source = |name| Ok(Input::New(self.read_source(path, name, source_mtime)?));
 
-        // TODO: test
         let meta = match self.read_cache_metadata(&artefact)? {
             Some(meta) => meta,
             None => return read_source(name),
@@ -57,7 +56,6 @@ where
 
         // If there's a timestamp and it's newer or the same than the source
         // file modification time then we read the cached data.
-        // TODO: test
         if meta.mtime < source_mtime {
             tracing::debug!(?name, "cache_stale");
             return read_source(name);
@@ -66,7 +64,6 @@ where
         // The cache currently does not contain enough data to perform codegen,
         // so if codegen is required in this compiler run then we must check
         // that codegen has already been performed before using a cache.
-        // TODO: test
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
             return read_source(name);
