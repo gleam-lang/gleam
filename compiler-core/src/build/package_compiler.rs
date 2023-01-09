@@ -559,6 +559,22 @@ impl Input {
             Input::Cached(m) => m.dependencies.clone(),
         }
     }
+
+    /// Returns `true` if the input is [`New`].
+    ///
+    /// [`New`]: Input::New
+    #[must_use]
+    pub(crate) fn is_new(&self) -> bool {
+        matches!(self, Self::New(..))
+    }
+
+    /// Returns `true` if the input is [`Cached`].
+    ///
+    /// [`Cached`]: Input::Cached
+    #[must_use]
+    pub(crate) fn is_cached(&self) -> bool {
+        matches!(self, Self::Cached(..))
+    }
 }
 
 #[derive(Debug)]
