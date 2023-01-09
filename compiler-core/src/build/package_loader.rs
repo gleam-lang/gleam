@@ -117,7 +117,7 @@ where
         let path = self
             .artefact_directory
             .join(info.name.replace('/', "@"))
-            .with_extension("gleam_module");
+            .with_extension("cache");
         let bytes = self.io.read_bytes(&path)?;
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }

@@ -120,14 +120,14 @@ impl FileSystemReader for InMemoryFileSystem {
             .collect()
     }
 
-    fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.files
             .deref()
             .borrow()
             .iter()
             .map(|(file_path, _)| file_path.to_path_buf())
             .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some(OsStr::new("gleam_module")))
+            .filter(|file_path| file_path.extension() == Some(OsStr::new("cache")))
             .collect()
     }
 

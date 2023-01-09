@@ -98,7 +98,7 @@ impl TestCompileOutput {
 
             let extension = path.extension().and_then(OsStr::to_str);
             match content {
-                _ if extension == Some("gleam_module") => buffer.push_str("<.gleam_module binary>"),
+                _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
 
                 _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.ts") => {
                     buffer.push_str("<prelude>")

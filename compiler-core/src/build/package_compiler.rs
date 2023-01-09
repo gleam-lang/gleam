@@ -215,7 +215,7 @@ where
             let module_name = module.name.replace('/', "@");
 
             // Write metadata file
-            let name = format!("{}.gleam_module", &module_name);
+            let name = format!("{}.cache", &module_name);
             let path = artefact_dir.join(name);
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
             self.io.write_bytes(&path, &bytes)?;
