@@ -1,3 +1,0 @@
-pub fn hello() {
-  "world"
-}
