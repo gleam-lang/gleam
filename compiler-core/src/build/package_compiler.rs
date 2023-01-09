@@ -260,12 +260,6 @@ where
 
         io.mkdir(&build_dir)?;
 
-        if self.write_entrypoint {
-            self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
-        } else {
-            tracing::info!("skipping_entrypoint_generation");
-        }
-
         if self.copy_native_files {
             self.copy_project_native_files(&build_dir, &mut written)?;
         } else {
@@ -278,6 +272,12 @@ where
                 &self.config,
                 modules,
             )?;
+        }
+
+        if self.compile_beam_bytecode && self.write_entrypoint {
+            self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
+        } else {
+            tracing::info!("skipping_entrypoint_generation");
         }
 
         // NOTE: This must come after `copy_project_native_files` to ensure that
