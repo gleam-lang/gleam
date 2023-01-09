@@ -7,7 +7,7 @@ expression: "./cases/hello_joe"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.cache_meta
-<20 byte binary>
+<21 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/hello_joe.erl
 -module(hello_joe).

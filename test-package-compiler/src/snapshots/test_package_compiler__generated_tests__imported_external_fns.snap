@@ -7,7 +7,7 @@ expression: "./cases/imported_external_fns"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<20 byte binary>
+<21 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -24,7 +24,7 @@ thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<42 byte binary>
+<43 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

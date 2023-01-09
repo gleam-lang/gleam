@@ -438,6 +438,7 @@ where
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
+        compiler.perform_codegen = !is_root || self.options.perform_codegen;
         compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
         compiler.subprocess_stdio = self.subprocess_stdio;
 
