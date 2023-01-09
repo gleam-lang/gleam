@@ -395,7 +395,7 @@ where
         build_dir: PathBuf,
         package: &ManifestPackage,
     ) -> Result<(), Error> {
-        for path in self.io.gleam_metadata_files(&build_dir) {
+        for path in self.io.gleam_cache_files(&build_dir) {
             let reader = BufReader::new(self.io.reader(&path)?);
             let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
             let _ = self

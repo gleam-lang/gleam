@@ -1,8 +1,11 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 96
+assertion_line: 153
 expression: "./cases/import_shadowed_name_warning"
 ---
+//// /out/lib/the_package/_gleam_artefacts/one.cache
+<.cache binary>
+
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
 <20 byte binary>
 
@@ -17,8 +20,8 @@ expression: "./cases/import_shadowed_name_warning"
 
 
 
-//// /out/lib/the_package/_gleam_artefacts/one.gleam_module
-<.gleam_module binary>
+//// /out/lib/the_package/_gleam_artefacts/two.cache
+<.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
 <31 byte binary>
@@ -36,9 +39,6 @@ expression: "./cases/import_shadowed_name_warning"
 use_type(Field@0) ->
     wibble:wobble(Field@0).
 
-
-//// /out/lib/the_package/_gleam_artefacts/two.gleam_module
-<.gleam_module binary>
 
 //// /out/lib/the_package/ebin/importy.app
 {application, importy, [

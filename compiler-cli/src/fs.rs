@@ -49,7 +49,7 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
             .collect()
     }
 
-    fn gleam_metadata_files(&self, dir: &Path) -> Vec<PathBuf> {
+    fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
         if !dir.is_dir() {
             return vec![];
         }
@@ -60,7 +60,7 @@ impl gleam_core::io::FileSystemReader for ProjectIO {
             .filter_map(Result::ok)
             .filter(|e| e.file_type().is_file())
             .map(|d| d.into_path())
-            .filter(|p| p.extension().and_then(OsStr::to_str) == Some("gleam_module"))
+            .filter(|p| p.extension().and_then(OsStr::to_str) == Some("cache"))
             .collect()
     }
 
@@ -420,14 +420,14 @@ pub fn read_dir(path: impl AsRef<Path> + Debug) -> Result<std::fs::ReadDir, Erro
     })
 }
 
-pub fn gleam_modules_metadata_paths(
+pub fn module_caches_paths(
     path: impl AsRef<Path> + Debug,
 ) -> Result<impl Iterator<Item = PathBuf>, Error> {
     Ok(read_dir(path)?
         .into_iter()
         .filter_map(Result::ok)
         .map(|f| f.path())
-        .filter(|p| p.extension().and_then(OsStr::to_str) == Some("gleam_module")))
+        .filter(|p| p.extension().and_then(OsStr::to_str) == Some("cache")))
 }
 
 pub fn read(path: impl AsRef<Path> + Debug) -> Result<String, Error> {

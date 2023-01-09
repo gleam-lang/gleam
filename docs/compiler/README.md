@@ -48,7 +48,7 @@ The process for compiling Gleam modules within the compiler looks roughly like
 this:
 
 ```text
-  Gleam source code       .gleam_module binaries
+  Gleam source code       .cache binaries
           ▼                         ▼
 ┌────────────────────┐ ┌───────────────────────┐
 │       Parser       │ │ Metadata deserializer │
@@ -75,7 +75,7 @@ this:
 └────────────────────┘ └─────────────────────┘
           │                       │
           │                       ▼
- Erlang or JavaScript   .gleam_module binaries
+ Erlang or JavaScript   .cache binaries
    printing algebra
           ▼
 ┌────────────────────┐
