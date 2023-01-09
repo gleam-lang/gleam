@@ -96,17 +96,16 @@ fn use_6() {
     eleven,
     twelve,
     thirteen
-  <-
-    get_multiple_things_with_a_longer_function(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
+  <- get_multiple_things_with_a_longer_function(
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+  )
 }
 "#
     );
@@ -143,17 +142,16 @@ fn use_pipe_everything() {
 fn long_right_hand_side_0_arguments() {
     assert_format!(
         r#"pub fn main() {
-  use <-
-    some_really_long_function_call(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
+  use <- some_really_long_function_call(
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+  )
 }
 "#
     );
@@ -163,17 +161,16 @@ fn long_right_hand_side_0_arguments() {
 fn long_right_hand_side_1_argument() {
     assert_format!(
         r#"pub fn main() {
-  use x <-
-    some_really_long_function_call(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
+  use x <- some_really_long_function_call(
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+  )
 }
 "#
     );
@@ -183,17 +180,42 @@ fn long_right_hand_side_1_argument() {
 fn long_right_hand_side_2_arguments() {
     assert_format!(
         r#"pub fn main() {
-  use x, y <-
-    some_really_long_function_call(
-      "one",
-      "two",
-      "three",
-      "four",
-      "five",
-      "six",
-      "seven",
-      "eight",
-    )
+  use x, y <- some_really_long_function_call(
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn arity_1_var_call() {
+    assert_format!(
+        r#"pub fn main() {
+  use x, y <- await(
+    file.read()
+    |> promise.map(something),
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn arity_1_access_call() {
+    assert_format!(
+        r#"pub fn main() {
+  use x, y <- promise.await(
+    file.read()
+    |> promise.map(something),
+  )
 }
 "#
     );

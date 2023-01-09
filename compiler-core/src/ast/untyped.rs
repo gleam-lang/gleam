@@ -210,6 +210,14 @@ impl UntypedExpr {
             Self::String { .. } | Self::Int { .. } | Self::Float { .. }
         )
     }
+
+    /// Returns `true` if the untyped expr is [`Call`].
+    ///
+    /// [`Call`]: UntypedExpr::Call
+    #[must_use]
+    pub fn is_call(&self) -> bool {
+        matches!(self, Self::Call { .. })
+    }
 }
 
 impl HasLocation for UntypedExpr {

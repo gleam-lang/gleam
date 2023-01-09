@@ -1505,9 +1505,12 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn use_<'a>(&mut self, use_: &'a Use) -> Document<'a> {
-        let call = docvec![break_("", " "), self.expr(&use_.call)]
-            .nest(INDENT)
-            .group();
+        let call = if use_.call.is_call() {
+            docvec![" ", self.expr(&use_.call)]
+        } else {
+            docvec![break_("", " "), self.expr(&use_.call)].nest(INDENT)
+        }
+        .group();
 
         if use_.assignments.is_empty() {
             docvec!["use <-", call]
