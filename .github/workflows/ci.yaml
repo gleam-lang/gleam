@@ -111,6 +111,7 @@ jobs:
       - name: test/project_erlang
         run: |
           gleam run
+          gleam check
           gleam test
           gleam docs build
         working-directory: ./test/project_erlang
@@ -127,6 +128,7 @@ jobs:
       - name: test/project_javascript
         run: |
           gleam run
+          gleam check
           gleam test
           gleam docs build
         working-directory: ./test/project_javascript
