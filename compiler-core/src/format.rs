@@ -1245,7 +1245,6 @@ impl<'comments> Formatter<'comments> {
 
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
-        let after_position = clause.location.end;
         let clause_doc = join(
             std::iter::once(&clause.pattern)
                 .chain(&clause.alternative_patterns)
@@ -1256,9 +1255,6 @@ impl<'comments> Formatter<'comments> {
             None => clause_doc,
             Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
         };
-
-        // Remove any unused empty lines within the clause
-        let _ = self.pop_empty_lines(after_position);
 
         if index == 0 {
             clause_doc

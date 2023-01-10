@@ -2750,6 +2750,24 @@ fn expr_case() {
 }
 "
     );
+
+    assert_format!(
+        r#"fn main() {
+  case bool {
+    True -> {
+      "Foo"
+      |> io.println
+
+      "Bar"
+      |> io.println
+
+      Nil
+    }
+    False -> Nil
+  }
+}
+"#
+    );
 }
 
 #[test]
