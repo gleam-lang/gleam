@@ -34,6 +34,7 @@
 - Fixed `int` and `float` formatting in `const`s and patterns.
 - Fixed a bug where piping into a function capture expression with a pipe as one
   of the arguments would produce invalid Erlang code.
+- Formatter no longer removes new lines in expression blocks within case branches
 
 ## v0.25.3 - 2022-12-16
 
