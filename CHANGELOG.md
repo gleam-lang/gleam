@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.26.0-rc1 - 2023-01-11
+## Unreleased
 
 - Added support for Deno runtime for JavaScript target.
 - Scientific notation is now available for float literals.
