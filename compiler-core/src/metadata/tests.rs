@@ -27,7 +27,7 @@ fn constant_module(constant: TypedConstant) -> Module {
     Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
@@ -67,7 +67,7 @@ fn empty_module() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "one/two".to_string(),
+        name: "one/two".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
@@ -81,14 +81,14 @@ fn module_with_app_type() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a/b".to_string(),
+        name: "a/b".into(),
         types: [(
             "ListIntType".to_string(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
                 public: true,
                 origin: Default::default(),
-                module: "the/module".to_string(),
+                module: "the/module".into(),
                 parameters: vec![],
             },
         )]
@@ -105,14 +105,14 @@ fn module_with_fn_type() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a/b".to_string(),
+        name: "a/b".into(),
         types: [(
             "FnType".to_string(),
             TypeConstructor {
                 typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 public: true,
                 origin: Default::default(),
-                module: "the/module".to_string(),
+                module: "the/module".into(),
                 parameters: vec![],
             },
         )]
@@ -129,14 +129,14 @@ fn module_with_tuple_type() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a/b".to_string(),
+        name: "a/b".into(),
         types: [(
             "TupleType".to_string(),
             TypeConstructor {
                 typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 public: true,
                 origin: Default::default(),
-                module: "the/module".to_string(),
+                module: "the/module".into(),
                 parameters: vec![],
             },
         )]
@@ -159,14 +159,14 @@ fn module_with_generic_type() {
         Module {
             package: "some_package".to_string(),
             origin: Origin::Src,
-            name: "a/b".to_string(),
+            name: "a/b".into(),
             types: [(
                 "TupleType".to_string(),
                 TypeConstructor {
                     typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     public: true,
                     origin: Default::default(),
-                    module: "the/module".to_string(),
+                    module: "the/module".into(),
                     parameters: vec![t1, t2],
                 },
             )]
@@ -189,14 +189,14 @@ fn module_with_type_links() {
         Module {
             package: "some_package".to_string(),
             origin: Origin::Src,
-            name: "a".to_string(),
+            name: "a".into(),
             types: [(
                 "SomeType".to_string(),
                 TypeConstructor {
                     typ: type_,
                     public: true,
                     origin: Default::default(),
-                    module: "a".to_string(),
+                    module: "a".into(),
                     parameters: vec![],
                 },
             )]
@@ -215,7 +215,7 @@ fn module_type_to_constructors_mapping() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: [("SomeType".to_string(), vec!["One".to_string()])].into(),
         accessors: HashMap::new(),
@@ -230,7 +230,7 @@ fn module_fn_value() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
@@ -295,7 +295,7 @@ fn module_fn_value_with_field_map() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
@@ -329,7 +329,7 @@ fn record_value() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
@@ -364,7 +364,7 @@ fn record_value_with_field_map() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
@@ -404,7 +404,7 @@ fn accessors() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         values: HashMap::new(),
@@ -604,7 +604,7 @@ fn constant_var() {
     let module = Module {
         package: "some_package".to_string(),
         origin: Origin::Src,
-        name: "a".to_string(),
+        name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),

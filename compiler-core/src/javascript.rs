@@ -9,6 +9,7 @@ use std::path::Path;
 
 use crate::{ast::*, docvec, line_numbers::LineNumbers, pretty::*};
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use self::import::{Imports, Member};
 
@@ -335,10 +336,10 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<String>,
+        as_name: &'a Option<SmolStr>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name.as_ref().map(String::as_str).unwrap_or_else(|| {
+        let module_name = as_name.as_ref().map(SmolStr::as_str).unwrap_or_else(|| {
             module
                 .split('/')
                 .last()

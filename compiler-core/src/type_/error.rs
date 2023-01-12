@@ -7,6 +7,7 @@ use std::{path::PathBuf, sync::Arc};
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use smol_str::SmolStr;
 
 use super::FieldAccessUsage;
 
@@ -42,28 +43,28 @@ pub enum Error {
 
     UnknownModule {
         location: SrcSpan,
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     UnknownModuleType {
         location: SrcSpan,
         name: String,
-        module_name: String,
+        module_name: SmolStr,
         type_constructors: Vec<String>,
     },
 
     UnknownModuleValue {
         location: SrcSpan,
         name: String,
-        module_name: String,
+        module_name: SmolStr,
         value_constructors: Vec<String>,
     },
 
     UnknownModuleField {
         location: SrcSpan,
         name: String,
-        module_name: String,
+        module_name: SmolStr,
         value_constructors: Vec<String>,
         type_constructors: Vec<String>,
     },
@@ -125,7 +126,7 @@ pub enum Error {
     DuplicateImport {
         location: SrcSpan,
         previous_location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     DuplicateTypeName {
@@ -275,7 +276,7 @@ pub enum Warning {
 
     UnusedImportedModule {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedPrivateModuleConstant {
@@ -339,13 +340,13 @@ pub enum UnknownValueConstructorError {
     },
 
     Module {
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     ModuleValue {
         name: String,
-        module_name: String,
+        module_name: SmolStr,
         value_constructors: Vec<String>,
     },
 }
@@ -391,13 +392,13 @@ pub enum UnknownTypeConstructorError {
     },
 
     Module {
-        name: String,
-        imported_modules: Vec<String>,
+        name: SmolStr,
+        imported_modules: Vec<SmolStr>,
     },
 
     ModuleType {
         name: String,
-        module_name: String,
+        module_name: SmolStr,
         type_constructors: Vec<String>,
     },
 }

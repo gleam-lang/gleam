@@ -12,6 +12,7 @@ use crate::{
 use hexpm::version::pubgrub_report::{DefaultStringReporter, Reporter};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
+use smol_str::SmolStr;
 use std::env;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
@@ -19,7 +20,7 @@ use termcolor::Buffer;
 use thiserror::Error;
 
 pub type Src = String;
-pub type Name = String;
+pub type Name = SmolStr;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
 
@@ -66,10 +67,10 @@ pub enum Error {
     DuplicateSourceFile { file: String },
 
     #[error("cyclical module imports")]
-    ImportCycle { modules: Vec<String> },
+    ImportCycle { modules: Vec<SmolStr> },
 
     #[error("cyclical package dependencies")]
-    PackageCycle { packages: Vec<String> },
+    PackageCycle { packages: Vec<SmolStr> },
 
     #[error("file operation failed")]
     FileIo {
@@ -1436,21 +1437,26 @@ Private types can only be used within the module that defines them.",
                     location,
                     name,
                     imported_modules,
-                } => Diagnostic {
-                    title: "Unknown module".into(),
-                    text: format!("No module has been found with the name `{}`.", name),
-                    hint: None,
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: did_you_mean(name, imported_modules),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.into(),
-                        extra_labels: vec![],
-                    }),
-                },
+                } => {
+                    // TODO: remove
+                    let imported_modules =
+                        imported_modules.iter().map(|s| s.to_string()).collect_vec();
+                    Diagnostic {
+                        title: "Unknown module".into(),
+                        text: format!("No module has been found with the name `{}`.", name),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, &imported_modules),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.into(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
 
                 TypeError::UnknownModuleType {
                     location,
@@ -2000,7 +2006,7 @@ These values are not matched:
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
-                import_cycle(&mut text, modules);
+                import_cycle(&mut text, &modules);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2018,7 +2024,7 @@ cycle to continue.",
                 let mut text = "The dependencies for these packages form a cycle:
 "
                 .into();
-                import_cycle(&mut text, packages);
+                import_cycle(&mut text, &packages);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2331,7 +2337,7 @@ fn std_io_error_kind_text(kind: &std::io::ErrorKind) -> String {
     }
 }
 
-fn import_cycle(buffer: &mut String, modules: &[String]) {
+fn import_cycle(buffer: &mut String, modules: &[SmolStr]) {
     buffer.push_str(
         "
     ┌─────┐\n",

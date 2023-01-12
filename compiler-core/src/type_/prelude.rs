@@ -131,7 +131,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     };
 
     let mut prelude = Module {
-        name: "gleam".to_string(),
+        name: "gleam".into(),
         package: "".to_string(),
         origin: Origin::Src,
         types: HashMap::new(),

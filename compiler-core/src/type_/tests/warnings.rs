@@ -409,7 +409,7 @@ fn unused_imported_module_warnings_test() {
         ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo",
         Warning::UnusedImportedModule {
-            name: "foo".to_string(),
+            name: "foo".into(),
             location: SrcSpan { start: 7, end: 16 },
         }
     );
@@ -421,7 +421,7 @@ fn unused_imported_module_with_alias_warnings_test() {
         ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo as bar",
         Warning::UnusedImportedModule {
-            name: "bar".to_string(),
+            name: "bar".into(),
             location: SrcSpan { start: 7, end: 23 },
         }
     );

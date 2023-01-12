@@ -110,7 +110,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         label: String,
-        module_name: String,
+        module_name: SmolStr,
         module_alias: String,
         constructor: ModuleValueConstructor,
     },

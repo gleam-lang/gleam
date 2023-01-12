@@ -7,6 +7,8 @@ use std::{
     time::SystemTime,
 };
 
+use smol_str::SmolStr;
+
 use super::{
     package_compiler::{module_name, CacheMetadata, CachedModule, Input, UncompiledModule},
     package_loader::CodegenRequired,
@@ -99,7 +101,7 @@ where
     fn read_source(
         &self,
         path: PathBuf,
-        name: String,
+        name: SmolStr,
         mtime: SystemTime,
     ) -> Result<UncompiledModule, Error> {
         read_source(
@@ -113,7 +115,7 @@ where
         )
     }
 
-    fn cached(&self, name: String, meta: CacheMetadata) -> CachedModule {
+    fn cached(&self, name: SmolStr, meta: CacheMetadata) -> CachedModule {
         CachedModule {
             dependencies: meta.dependencies,
             source_path: self.source_directory.join(format!("{}.gleam", name)),
@@ -128,7 +130,7 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
     target: Target,
     origin: Origin,
     path: PathBuf,
-    name: String,
+    name: SmolStr,
     package_name: &str,
     mtime: SystemTime,
 ) -> Result<UncompiledModule> {
@@ -142,7 +144,7 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
 
     let dependencies = ast.dependencies(target);
 
-    ast.name = name.as_str().into();
+    ast.name = name.clone();
     let module = UncompiledModule {
         package: package_name.to_string(),
         dependencies,

@@ -4,6 +4,7 @@ use crate::{
     pretty::{nil, *},
 };
 use itertools::Itertools;
+use smol_str::SmolStr;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -22,7 +23,7 @@ pub struct Printer {
     names: im::HashMap<u64, String>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<String, String>,
+    printed_types: im::HashMap<String, SmolStr>,
 }
 
 impl Printer {

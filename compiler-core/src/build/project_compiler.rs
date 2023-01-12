@@ -14,6 +14,7 @@ use crate::{
     warning, Error, Result, Warning,
 };
 use itertools::Itertools;
+use smol_str::SmolStr;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
@@ -53,8 +54,8 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<String, type_::Module>,
-    defined_modules: im::HashMap<String, PathBuf>,
+    importable_modules: im::HashMap<SmolStr, type_::Module>,
+    defined_modules: im::HashMap<SmolStr, PathBuf>,
     warnings: Vec<Warning>,
     telemetry: Box<dyn Telemetry>,
     options: Options,
@@ -98,7 +99,7 @@ where
         }
     }
 
-    pub fn get_importable_modules(&self) -> &im::HashMap<String, type_::Module> {
+    pub fn get_importable_modules(&self) -> &im::HashMap<SmolStr, type_::Module> {
         &self.importable_modules
     }
 
@@ -189,7 +190,10 @@ where
         let sequence = order_packages(&self.packages)?;
 
         for name in sequence {
-            let package = self.packages.remove(&name).expect("Missing package config");
+            let package = self
+                .packages
+                .remove(name.as_str())
+                .expect("Missing package config");
             self.load_cache_or_compile_package(&package)?;
         }
 
@@ -453,11 +457,16 @@ where
     }
 }
 
-fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<String>, Error> {
+fn order_packages(packages: &HashMap<String, ManifestPackage>) -> Result<Vec<SmolStr>, Error> {
     dep_tree::toposort_deps(
         packages
             .values()
-            .map(|package| (package.name.clone(), package.requirements.clone()))
+            .map(|package| {
+                (
+                    package.name.as_str().into(),
+                    package.requirements.iter().map(|r| r.into()).collect(),
+                )
+            })
             .collect(),
     )
     .map_err(convert_deps_tree_error)
@@ -500,6 +509,6 @@ pub(crate) fn usable_build_tool(package: &ManifestPackage) -> Result<BuildTool, 
 }
 
 pub struct CheckpointState {
-    importable_modules: im::HashMap<String, type_::Module>,
-    defined_modules: im::HashMap<String, PathBuf>,
+    importable_modules: im::HashMap<SmolStr, type_::Module>,
+    defined_modules: im::HashMap<SmolStr, PathBuf>,
 }

@@ -97,12 +97,12 @@ impl TargetGroup {
 }
 
 impl UntypedModule {
-    pub fn dependencies(&self, target: Target) -> Vec<(String, SrcSpan)> {
+    pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
                 Statement::Import {
                     module, location, ..
-                } => Some((module.to_string(), *location)),
+                } => Some((module.clone(), *location)),
                 _ => None,
             })
             .collect()
@@ -135,15 +135,9 @@ fn module_dependencies_test() {
 
     assert_eq!(
         vec![
-            ("one".to_string(), SrcSpan { start: 7, end: 10 }),
-            ("two".to_string(), SrcSpan { start: 40, end: 43 }),
-            (
-                "four".to_string(),
-                SrcSpan {
-                    start: 104,
-                    end: 108
-                }
-            ),
+            ("one".into(), SrcSpan::new(7, 10)),
+            ("two".into(), SrcSpan::new(40, 43)),
+            ("four".into(), SrcSpan::new(104, 108)),
         ],
         module.dependencies(Target::Erlang)
     );
@@ -242,7 +236,7 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 pub enum TypeAst {
     Constructor {
         location: SrcSpan,
-        module: Option<String>,
+        module: Option<SmolStr>,
         name: String,
         arguments: Vec<Self>,
     },
@@ -476,8 +470,8 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     Import {
         location: SrcSpan,
-        module: String,
-        as_name: Option<String>,
+        module: SmolStr,
+        as_name: Option<SmolStr>,
         unqualified: Vec<UnqualifiedImport>,
         package: PackageName,
     },
@@ -1022,7 +1016,7 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
         name: String,
         arguments: Vec<CallArg<Self>>,
-        module: Option<String>,
+        module: Option<SmolStr>,
         constructor: Constructor,
         with_spread: bool,
         type_: Type,

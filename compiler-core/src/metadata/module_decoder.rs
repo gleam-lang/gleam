@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use crate::{
     ast::{
@@ -63,7 +64,7 @@ impl ModuleDecoder {
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(Module {
-            name: reader.get_name()?.to_string(),
+            name: reader.get_name()?.into(),
             package: reader.get_package()?.to_string(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
@@ -85,7 +86,7 @@ impl ModuleDecoder {
         Ok(TypeConstructor {
             public: true,
             origin: Default::default(),
-            module: reader.get_module()?.to_string(),
+            module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
         })
@@ -102,7 +103,7 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
-        let module = reader.get_module()?.to_string();
+        let module = reader.get_module()?.into();
         let name = reader.get_name()?.to_string();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::App {
@@ -256,7 +257,7 @@ impl ModuleDecoder {
         let constructor = self.value_constructor(&reader.get_constructor()?)?;
         Ok(Constant::Var {
             location: Default::default(),
-            module: module.map(String::from),
+            module: module.map(SmolStr::from),
             name: String::from(name),
             constructor: Some(Box::from(constructor)),
             typ: type_,

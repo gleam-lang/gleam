@@ -20,7 +20,7 @@ fn compile_module(src: &str) -> TypedModule {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+    let _ = modules.insert("gleam".into(), build_prelude(&ids));
     infer_module(
         crate::build::Target::Erlang,
         &ids,
@@ -42,7 +42,7 @@ fn compile_expression(src: &str) -> TypedExpr {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), type_::build_prelude(&ids));
+    let _ = modules.insert("gleam".into(), type_::build_prelude(&ids));
     let mut warnings = vec![];
     let mut environment = Environment::new(ids, "mymod", &modules, &mut warnings);
 
