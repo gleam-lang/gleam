@@ -281,7 +281,7 @@ impl<'a> TypeScriptGenerator<'a> {
             }
         } else {
             // Different package
-            let prefix = "../".repeat(self.current_module_name_segments_count );
+            let prefix = "../".repeat(self.current_module_name_segments_count);
             format!("{prefix}{package}/{module}.d.ts")
         }
     }
