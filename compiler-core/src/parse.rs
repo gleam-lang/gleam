@@ -131,7 +131,7 @@ where
         let statements = Parser::series_of(self, &Parser::parse_target_group, None);
         let statements = self.ensure_no_errors_or_remaining_input(statements)?;
         Ok(Module {
-            name: vec![],
+            name: "".into(),
             documentation: vec![],
             type_info: (),
             statements,
@@ -1936,14 +1936,16 @@ where
     fn parse_import(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
         let mut start = 0;
         let mut end;
-        let mut module = vec![];
+        let mut module = String::new();
         // Gather module names
         loop {
             let (s, name, e) = self.expect_name()?;
             if module.is_empty() {
                 start = s;
+            } else {
+                module.push('/');
             }
-            module.push(name);
+            module.push_str(&name);
             end = e;
 
             // Ueful error for : import a/.{b}
@@ -2484,22 +2486,18 @@ where
     fn expect_assign_name(&mut self) -> Result<(u32, AssignName, u32), ParseError> {
         let t = self.next_tok();
         match t {
-            Some((start, tok, end)) => {
-                if let Token::Name { name } = tok {
-                    Ok((start, AssignName::Variable(name), end))
-                } else if let Token::DiscardName { name, .. } = tok {
-                    Ok((start, AssignName::Discard(name), end))
-                } else if let Token::UpName { .. } = tok {
+            Some((start, tok, end)) => match tok {
+                Token::Name { name } => Ok((start, AssignName::Variable(name), end)),
+                Token::DiscardName { name, .. } => Ok((start, AssignName::Discard(name), end)),
+                Token::UpName { .. } => {
                     parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
-                } else if is_reserved_word(tok) {
-                    parse_error(
-                        ParseErrorType::UnexpectedReservedWord,
-                        SrcSpan { start, end },
-                    )
-                } else {
-                    parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end })
                 }
-            }
+                _ if is_reserved_word(tok) => parse_error(
+                    ParseErrorType::UnexpectedReservedWord,
+                    SrcSpan { start, end },
+                ),
+                _ => parse_error(ParseErrorType::ExpectedName, SrcSpan { start, end }),
+            },
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
     }

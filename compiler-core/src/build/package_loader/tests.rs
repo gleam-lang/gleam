@@ -28,7 +28,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Stri
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
     let cache = crate::type_::Module {
-        name: vec![name.to_string()],
+        name: name.to_string(),
         origin: Origin::Src,
         package: "my_package".into(),
         types: Default::default(),
@@ -62,11 +62,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
 
     LoaderTestOutput {
         to_compile: loaded.to_compile.into_iter().map(|m| m.name).collect(),
-        cached: loaded
-            .cached
-            .into_iter()
-            .map(|m| m.name.join("/"))
-            .collect(),
+        cached: loaded.cached.into_iter().map(|m| m.name).collect(),
     }
 }
 

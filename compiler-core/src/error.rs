@@ -1458,11 +1458,8 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     type_constructors,
                 } => {
-                    let text = format!(
-                        "The module `{}` does not have a `{}` type.",
-                        module_name.join("/"),
-                        name
-                    );
+                    let text =
+                        format!("The module `{module_name}` does not have a `{name}` type.",);
                     Diagnostic {
                         title: "Unknown module type".into(),
                         text,
@@ -1486,11 +1483,8 @@ Private types can only be used within the module that defines them.",
                     module_name,
                     value_constructors,
                 } => {
-                    let text = format!(
-                        "The module `{}` does not have a `{}` field.",
-                        module_name.join("/"),
-                        name
-                    );
+                    let text =
+                        format!("The module `{module_name}` does not have a `{name}` field.",);
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,
@@ -1520,11 +1514,8 @@ Private types can only be used within the module that defines them.",
                         .chain(value_constructors)
                         .map(|s| s.to_string())
                         .collect();
-                    let text = format!(
-                        "The module `{}` does not have a `{}` field.",
-                        module_name.join("/"),
-                        name
-                    );
+                    let text =
+                        format!("The module `{module_name}` does not have a `{name}` field.",);
                     Diagnostic {
                         title: "Unknown module field".into(),
                         text,

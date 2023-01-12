@@ -38,7 +38,7 @@ fn zero_arity_imported() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other
@@ -53,7 +53,7 @@ fn zero_arity_imported_typscript() {
     assert_ts_def!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other
@@ -68,7 +68,7 @@ fn zero_arity_imported_unqualified() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other.{Two}
@@ -83,7 +83,7 @@ fn zero_arity_imported_unqualified_typescript() {
     assert_ts_def!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other.{Two}
@@ -98,7 +98,7 @@ fn zero_arity_imported_unqualified_aliased() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other.{Two as Three}
@@ -113,7 +113,7 @@ fn zero_arity_imported_unqualified_aliased_typescript() {
     assert_ts_def!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other.{Two as Three}
@@ -128,7 +128,7 @@ fn const_zero_arity_imported() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other
@@ -142,7 +142,7 @@ fn const_zero_arity_imported_unqualified() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two }"#
         ),
         r#"import other.{Two}
@@ -155,7 +155,7 @@ const a = Two
 // #[test]
 // fn const_zero_arity_imported_unqualified_aliased() {
 //     assert_js!(
-//         ( CURRENT_PACKAGE, vec!["other".to_string()], r#"pub type One { Two }"#),
+//         ( CURRENT_PACKAGE, "other".to_string(), r#"pub type One { Two }"#),
 //         r#"import other.{Two as Three}
 // const a = Three
 // "#,
@@ -316,7 +316,7 @@ fn imported_no_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(Int) }"#
         ),
         r#"import other
@@ -331,7 +331,7 @@ fn imported_ignoring_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other
@@ -346,7 +346,7 @@ fn imported_using_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other
@@ -361,7 +361,7 @@ fn imported_multiple_fields() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other
@@ -376,7 +376,7 @@ fn unqualified_imported_no_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(Int) }"#
         ),
         r#"import other.{Two}
@@ -391,7 +391,7 @@ fn unqualified_imported_no_label_typescript() {
     assert_ts_def!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(Int) }"#
         ),
         r#"import other.{Two}
@@ -406,7 +406,7 @@ fn unqualified_imported_ignoring_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other.{Two}
@@ -421,7 +421,7 @@ fn unqualified_imported_using_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other.{Two}
@@ -436,7 +436,7 @@ fn unqualified_imported_multiple_fields() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other.{Two}
@@ -451,7 +451,7 @@ fn constructor_as_value() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other
@@ -466,7 +466,7 @@ fn unqualified_constructor_as_value() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other.{Two}
@@ -481,7 +481,7 @@ fn const_imported_no_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(Int) }"#
         ),
         r#"import other
@@ -495,7 +495,7 @@ fn const_imported_ignoring_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other
@@ -509,7 +509,7 @@ fn const_imported_using_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other
@@ -523,7 +523,7 @@ fn const_imported_multiple_fields() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other
@@ -537,7 +537,7 @@ fn const_unqualified_imported_no_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(Int) }"#
         ),
         r#"import other.{Two}
@@ -551,7 +551,7 @@ fn const_unqualified_imported_ignoring_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other.{Two}
@@ -565,7 +565,7 @@ fn const_unqualified_imported_using_label() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(field: Int) }"#
         ),
         r#"import other.{Two}
@@ -579,7 +579,7 @@ fn const_unqualified_imported_multiple_fields() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other.{Two}
@@ -593,7 +593,7 @@ fn imported_pattern() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { Two(a: Int, b: Int, c: Int) }"#
         ),
         r#"import other.{Two}
@@ -624,7 +624,7 @@ fn qualified() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["other".to_string()],
+            "other".to_string(),
             r#"pub type One { One }"#
         ),
         r#"import other

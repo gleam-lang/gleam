@@ -49,21 +49,21 @@ pub enum Error {
     UnknownModuleType {
         location: SrcSpan,
         name: String,
-        module_name: Vec<String>,
+        module_name: String,
         type_constructors: Vec<String>,
     },
 
     UnknownModuleValue {
         location: SrcSpan,
         name: String,
-        module_name: Vec<String>,
+        module_name: String,
         value_constructors: Vec<String>,
     },
 
     UnknownModuleField {
         location: SrcSpan,
         name: String,
-        module_name: Vec<String>,
+        module_name: String,
         value_constructors: Vec<String>,
         type_constructors: Vec<String>,
     },
@@ -345,7 +345,7 @@ pub enum UnknownValueConstructorError {
 
     ModuleValue {
         name: String,
-        module_name: Vec<String>,
+        module_name: String,
         value_constructors: Vec<String>,
     },
 }
@@ -397,7 +397,7 @@ pub enum UnknownTypeConstructorError {
 
     ModuleType {
         name: String,
-        module_name: Vec<String>,
+        module_name: String,
         type_constructors: Vec<String>,
     },
 }

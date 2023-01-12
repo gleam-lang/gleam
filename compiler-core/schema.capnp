@@ -20,7 +20,7 @@ struct Option(Value) {
 }
 
 struct Module {
-  name @0 :List(Text);
+  name @0 :Text;
   types @1 :List(Property(TypeConstructor));
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
@@ -34,7 +34,7 @@ struct TypeConstructor {
   # not other types
   # TODO: test
   parameters @1 :List(Type); 
-  module @2 :List(Text);
+  module @2 :Text;
 }
 
 struct AccessorsMap {
@@ -52,7 +52,7 @@ struct Type {
   union {
     app :group {
       name @0 :Text;
-      module @1 :List(Text);
+      module @1 :Text;
       parameters @2 :List(Type);
     }
 
@@ -87,7 +87,7 @@ struct ValueConstructorVariant {
     moduleFn :group {
       name @3 :Text;
       fieldMap @4 :Option(FieldMap);
-      module @5 :List(Text);
+      module @5 :Text;
       arity @6 :UInt16;
       location @7 :SrcSpan;
     }

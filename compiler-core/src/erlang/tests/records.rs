@@ -42,7 +42,7 @@ fn type_vars() {
 #[test]
 fn module_types() {
     // Types are printed with module qualifiers
-    let module_name = vec!["name".to_string()];
+    let module_name = "name".to_string();
     insta::assert_snapshot!(record_definition(
         "PetCat",
         &[(

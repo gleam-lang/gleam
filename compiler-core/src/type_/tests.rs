@@ -25,7 +25,7 @@ macro_rules! assert_infer {
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         let result = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
-            &[],
+            "themodule",
             &modules,
             &mut vec![],
         ))
@@ -63,10 +63,10 @@ macro_rules! assert_infer_with_module {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name.join("/"), module.type_info);
+        let _ = modules.insert($name.clone(), module.type_info);
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let ast = infer_module(
             Target::Erlang,
             &ids,
@@ -138,7 +138,7 @@ macro_rules! assert_module_infer {
 macro_rules! assert_module_error {
     ($src:expr, $error:expr $(,)?) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
@@ -217,14 +217,9 @@ macro_rules! assert_error {
         // place.
         let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
-        let result = ExprTyper::new(&mut Environment::new(
-            ids,
-            &["somemod".to_string()],
-            &modules,
-            &mut vec![],
-        ))
-        .infer(ast)
-        .expect_err("should infer an error");
+        let result = ExprTyper::new(&mut Environment::new(ids, "somemod", &modules, &mut vec![]))
+            .infer(ast)
+            .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 
@@ -241,7 +236,7 @@ macro_rules! assert_error {
         println!("new assert_error test: {}", modules.len());
         let error = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
-            &["somemod".to_string()],
+            "somemod",
             &modules,
             &mut vec![],
         ))
@@ -281,10 +276,10 @@ macro_rules! assert_with_module_error {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name.join("/"), module.type_info);
+        let _ = modules.insert($name.clone(), module.type_info);
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let error = infer_module(
             Target::Erlang,
             &ids,
@@ -326,7 +321,7 @@ macro_rules! assert_with_module_error {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name.join("/"), module.type_info);
+        let _ = modules.insert($name.clone(), module.type_info);
 
         let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2;
@@ -340,10 +335,10 @@ macro_rules! assert_with_module_error {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name2.join("/"), module.type_info);
+        let _ = modules.insert($name2.clone(), module.type_info);
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let error = infer_module(
             Target::Erlang,
             &ids,
@@ -368,7 +363,7 @@ macro_rules! assert_with_module_error {
 macro_rules! assert_warning {
     ($src:expr) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let mut warnings: Vec<$crate::type_::error::Warning> = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
@@ -401,7 +396,7 @@ macro_rules! assert_warning {
     };
     ($src:expr, $warning:expr $(,)?) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
@@ -447,11 +442,11 @@ macro_rules! assert_warning {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name.join("/"), module.type_info);
+        let _ = modules.insert($name.clone(), module.type_info);
         )*
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let _ = infer_module(
             Target::Erlang,
             &ids,
@@ -472,7 +467,7 @@ macro_rules! assert_warning {
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
         let ids = UniqueIdGenerator::new();
@@ -519,11 +514,11 @@ macro_rules! assert_no_warnings {
             &mut warnings,
         )
         .expect("should successfully infer");
-        let _ = modules.insert($name.join("/"), module.type_info);
+        let _ = modules.insert($name.clone(), module.type_info);
         )*
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my_module".to_string()];
+        ast.name = "my_module".to_string();
         let _ = infer_module(
             Target::Erlang,
             &ids,
@@ -675,7 +670,7 @@ fn field_map_reorder_test() {
 fn infer_module_type_retention_test() {
     let module: UntypedModule = crate::ast::Module {
         documentation: vec![],
-        name: vec!["ok".to_string()],
+        name: "ok".to_string(),
         statements: vec![],
         type_info: (),
     };
@@ -702,7 +697,7 @@ fn infer_module_type_retention_test() {
         Module {
             origin: Origin::Src,
             package: "thepackage".to_string(),
-            name: vec!["ok".to_string()],
+            name: "ok".to_string(),
             types: HashMap::new(), // Core type constructors like String and Int are not included
             types_constructors: HashMap::from([
                 (
@@ -1916,23 +1911,23 @@ fn permit_holes_in_fn_args_and_returns() {
 
 #[test]
 fn module_name_validation() {
-    assert!(validate_module_name(&["dream".to_string()]).is_ok());
+    assert!(validate_module_name("dream").is_ok());
 
-    assert!(validate_module_name(&["gleam".to_string()]).is_err());
+    assert!(validate_module_name("gleam").is_err());
 
-    assert!(validate_module_name(&["gleam".to_string(), "ok".to_string()]).is_ok());
+    assert!(validate_module_name("gleam/ok").is_ok());
 
-    assert!(validate_module_name(&["ok".to_string(), "gleam".to_string()]).is_ok());
+    assert!(validate_module_name("ok/gleam").is_ok());
 
-    assert!(validate_module_name(&["external".to_string()]).is_err());
+    assert!(validate_module_name("external").is_err());
 
-    assert!(validate_module_name(&["type".to_string()]).is_err());
+    assert!(validate_module_name("type").is_err());
 
-    assert!(validate_module_name(&["pub".to_string()]).is_err());
+    assert!(validate_module_name("pub").is_err());
 
-    assert!(validate_module_name(&["ok".to_string(), "external".to_string()]).is_err());
+    assert!(validate_module_name("ok/external").is_err());
 
-    assert!(validate_module_name(&["ok".to_string(), "type".to_string()]).is_err());
+    assert!(validate_module_name("ok/type").is_err());
 
-    assert!(validate_module_name(&["ok".to_string(), "pub".to_string()]).is_err());
+    assert!(validate_module_name("ok/pub").is_err());
 }

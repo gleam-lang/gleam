@@ -13,11 +13,13 @@ const RESULT: &str = "Result";
 const STRING: &str = "String";
 const UTF_CODEPOINT: &str = "UtfCodepoint";
 
+// TODO: use "gleam" as the prelude module name, not ""
+
 pub fn int() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: INT.to_string(),
-        module: vec![],
+        module: "".into(),
         args: vec![],
     })
 }
@@ -27,7 +29,7 @@ pub fn float() -> Arc<Type> {
         args: vec![],
         public: true,
         name: FLOAT.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -36,7 +38,7 @@ pub fn bool() -> Arc<Type> {
         args: vec![],
         public: true,
         name: BOOL.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -45,7 +47,7 @@ pub fn string() -> Arc<Type> {
         args: vec![],
         public: true,
         name: STRING.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -54,7 +56,7 @@ pub fn nil() -> Arc<Type> {
         args: vec![],
         public: true,
         name: NIL.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -62,7 +64,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: LIST.to_string(),
-        module: vec![],
+        module: "".into(),
         args: vec![t],
     })
 }
@@ -71,7 +73,7 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
         name: RESULT.to_string(),
-        module: vec![],
+        module: "".into(),
         args: vec![a, e],
     })
 }
@@ -89,7 +91,7 @@ pub fn bit_string() -> Arc<Type> {
         args: vec![],
         public: true,
         name: BIT_STRING.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -98,7 +100,7 @@ pub fn utf_codepoint() -> Arc<Type> {
         args: vec![],
         public: true,
         name: UTF_CODEPOINT.to_string(),
-        module: vec![],
+        module: "".into(),
     })
 }
 
@@ -129,7 +131,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     };
 
     let mut prelude = Module {
-        name: vec!["gleam".to_string()],
+        name: "gleam".to_string(),
         package: "".to_string(),
         origin: Origin::Src,
         types: HashMap::new(),
@@ -144,7 +146,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             parameters: vec![],
             typ: int(),
             origin: Default::default(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -188,7 +190,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: bool(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -200,7 +202,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![list_parameter.clone()],
             typ: list(list_parameter),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -211,7 +213,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: float(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -222,7 +224,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: string(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -235,7 +237,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![result_value.clone(), result_error.clone()],
             typ: result(result_value, result_error),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -265,7 +267,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: nil(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -276,7 +278,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: bit_string(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );
@@ -287,7 +289,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
             origin: Default::default(),
             parameters: vec![],
             typ: utf_codepoint(),
-            module: vec![],
+            module: "".into(),
             public: true,
         },
     );

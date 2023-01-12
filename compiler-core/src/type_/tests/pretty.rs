@@ -13,7 +13,7 @@ fn print(type_: Arc<Type>) -> String {
 fn custom_bool() -> Arc<Type> {
     Arc::new(Type::App {
         public: true,
-        module: vec!["one".into(), "two".into()],
+        module: "one/two".into(),
         name: "Bool".into(),
         args: vec![],
     })

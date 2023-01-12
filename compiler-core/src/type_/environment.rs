@@ -5,7 +5,7 @@ use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct Environment<'a> {
-    pub current_module: &'a [String],
+    pub current_module: &'a str,
     pub ids: UniqueIdGenerator,
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
@@ -67,7 +67,7 @@ pub enum EntityKind {
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
-        current_module: &'a [String],
+        current_module: &'a str,
         importable_modules: &'a im::HashMap<String, Module>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
@@ -282,7 +282,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_constructors_for_type(
         &mut self,
-        full_module_name: &Option<String>,
+        full_module_name: Option<&str>,
         name: &str,
     ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
         match full_module_name {
@@ -548,16 +548,16 @@ impl<'a> Environment<'a> {
         match &*value_typ {
             Type::App {
                 name: type_name,
-                module: module_vec,
+                module: module_name,
                 ..
             } => {
-                let m = if module_vec.is_empty() || module_vec == self.current_module {
+                let m = if module_name.is_empty() || module_name == self.current_module {
                     None
                 } else {
-                    Some(module_vec.join("/"))
+                    Some(module_name.as_str())
                 };
 
-                if let Ok(constructors) = self.get_constructors_for_type(&m, type_name) {
+                if let Ok(constructors) = self.get_constructors_for_type(m, type_name) {
                     let mut unmatched_constructors: HashSet<String> =
                         constructors.iter().cloned().collect();
 

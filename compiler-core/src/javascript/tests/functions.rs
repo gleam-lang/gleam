@@ -209,11 +209,7 @@ fn reserved_word_fn() {
 #[test]
 fn reserved_word_imported() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            vec!["for".to_string()],
-            "pub fn class() { 1 }"
-        ),
+        (CURRENT_PACKAGE, "for".to_string(), "pub fn class() { 1 }"),
         r#"import for.{class}
 
 pub fn export() {
@@ -226,11 +222,7 @@ pub fn export() {
 #[test]
 fn reserved_word_imported_alias() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            vec!["for".to_string()],
-            "pub fn class() { 1 }"
-        ),
+        (CURRENT_PACKAGE, "for".to_string(), "pub fn class() { 1 }"),
         r#"import for.{class as while} as function
 
 pub fn export() {
@@ -377,7 +369,7 @@ fn pipe_shadow_import() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["foo".to_string()],
+            "foo".to_string(),
             "pub fn println(x: String) {  }"
         ),
         r#"

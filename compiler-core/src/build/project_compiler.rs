@@ -400,7 +400,7 @@ where
             let module = metadata::ModuleDecoder::new(self.ids.clone()).read(reader)?;
             let _ = self
                 .importable_modules
-                .insert(module.name.join("/"), module)
+                .insert(module.name.clone(), module)
                 .ok_or(())
                 .expect_err("Metadata loaded for already loaded module");
         }

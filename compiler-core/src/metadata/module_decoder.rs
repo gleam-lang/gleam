@@ -63,7 +63,7 @@ impl ModuleDecoder {
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
 
         Ok(Module {
-            name: module_name(&reader.get_name()?)?,
+            name: reader.get_name()?.to_string(),
             package: reader.get_package()?.to_string(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
@@ -82,11 +82,10 @@ impl ModuleDecoder {
         reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
-        let module = module_name(&reader.get_module()?)?;
         Ok(TypeConstructor {
             public: true,
             origin: Default::default(),
-            module,
+            module: reader.get_module()?.to_string(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
             typ: type_,
         })
@@ -103,7 +102,7 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
-        let module = module_name(&reader.get_module()?)?;
+        let module = reader.get_module()?.to_string();
         let name = reader.get_name()?.to_string();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::App {
@@ -375,7 +374,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleFn {
             name: reader.get_name()?.to_string(),
-            module: module_name(&reader.get_module()?)?,
+            module: reader.get_module()?.to_string(),
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
@@ -429,9 +428,4 @@ impl ModuleDecoder {
             type_: self.type_(&reader.get_type()?)?,
         })
     }
-}
-
-fn module_name(module: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
-    let name = module.iter().map_ok(String::from).try_collect()?;
-    Ok(name)
 }

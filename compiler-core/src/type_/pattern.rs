@@ -298,7 +298,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 elements,
                 tail,
-            } => match type_.get_app_args(true, &[], "List", 1, self.environment) {
+            } => match type_.get_app_args(true, "", "List", 1, self.environment) {
                 Some(args) => {
                     let typ = args
                         .get(0)

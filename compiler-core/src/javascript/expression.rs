@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
-    module_name: &'module [String],
+    module_name: &'module str,
     line_numbers: &'module LineNumbers,
     function_name: Option<&'module str>,
     function_arguments: Vec<Option<&'module str>>,
@@ -29,7 +29,7 @@ pub(crate) struct Generator<'module> {
 impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
-        module_name: &'module [String],
+        module_name: &'module str,
         line_numbers: &'module LineNumbers,
         function_name: &'module str,
         function_arguments: Vec<Option<&'module str>>,
@@ -967,7 +967,7 @@ impl<'module> Generator<'module> {
         Fields: IntoIterator<Item = (&'a str, Document<'a>)>,
     {
         self.tracker.throw_error_used = true;
-        let module = Document::String(self.module_name.join("/")).surround('"', '"');
+        let module = Document::String(self.module_name.to_string()).surround('"', '"');
         // TODO switch to use `string(self.function_name)`
         // This will require resolving the
         // difference in lifetimes 'module and 'a.

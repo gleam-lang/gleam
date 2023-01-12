@@ -264,7 +264,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => "import "
                 .to_doc()
-                .append(Document::String(module.join("/")))
+                .append(module.as_str())
                 .append(if unqualified.is_empty() {
                     nil()
                 } else {
