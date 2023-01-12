@@ -76,6 +76,8 @@ lsp-server = "0.5"
 lsp-types = "0.92"
 # File locking
 fslock = "0.2.1"
+# Compact and cheap to clone immutable string type
+smol_str = "0.1"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 # File URl decoding

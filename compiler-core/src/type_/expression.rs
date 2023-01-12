@@ -1238,13 +1238,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .imported_modules
                 .get(module_alias)
                 .ok_or_else(|| Error::UnknownModule {
-                    name: module_alias.to_string(),
+                    name: module_alias.into(),
                     location: *module_location,
                     imported_modules: self
                         .environment
                         .imported_modules
                         .keys()
-                        .map(|t| t.to_string())
+                        .map(|t| t.clone())
                         .collect(),
                 })?;
 
@@ -1393,7 +1393,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module_alias,
                 label,
                 ..
-            } => (Some(module_alias), label),
+            } => (Some(module_alias.into()), label),
 
             TypedExpr::Var { name, .. } => (None, name),
 
@@ -1510,7 +1510,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_value_constructor(
         &mut self,
-        module: &Option<String>,
+        module: &Option<SmolStr>,
         name: &str,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
@@ -1553,12 +1553,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .get(module_name)
                     .ok_or_else(|| Error::UnknownModule {
                         location: *location,
-                        name: module_name.to_string(),
+                        name: module_name.clone(),
                         imported_modules: self
                             .environment
                             .imported_modules
                             .keys()
-                            .map(|t| t.to_string())
+                            .map(|t| t.clone())
                             .collect(),
                     })?;
                 module
@@ -1567,7 +1567,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .cloned()
                     .ok_or_else(|| Error::UnknownModuleValue {
                         location: *location,
-                        module_name: module_name.to_string(),
+                        module_name: module_name.clone(),
                         name: name.to_string(),
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     })?
@@ -1706,11 +1706,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         let module_name = self
                             .environment
                             .imported_modules
+                            // TODO: remove
                             .get(module_alias)
                             .expect("Failed to find previously located module import")
                             .1
                             .name
-                            .to_string();
+                            .clone();
                         let module_value_constructor = ModuleValueConstructor::Record {
                             name: name.clone(),
                             field_map: field_map.clone(),
@@ -1721,7 +1722,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         TypedExpr::ModuleSelect {
                             label: name.clone(),
-                            module_alias: module_alias.clone(),
+                            module_alias: module_alias.to_string(),
                             module_name,
                             typ,
                             constructor: module_value_constructor,
@@ -1873,7 +1874,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module_alias,
                 label,
                 ..
-            } => (Some(module_alias), label),
+            } => (Some(SmolStr::from(module_alias.as_str())), label),
 
             TypedExpr::Var { name, .. } => (None, name),
 
@@ -1882,7 +1883,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(self
             .environment
-            .get_value_constructor(module, name)?
+            .get_value_constructor(module.as_ref(), name)?
             .field_map())
     }
 

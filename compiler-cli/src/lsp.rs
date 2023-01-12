@@ -666,7 +666,7 @@ impl LanguageServer {
             .project_compiler
             .get_importable_modules()
             .keys()
-            .cloned();
+            .map(|name| name.to_string());
         // TODO: Test
         let project_modules = compiler
             .modules
@@ -1068,8 +1068,8 @@ where
             let path = path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
-            let _ = self.sources.insert(module.name.clone(), source);
-            let _ = self.modules.insert(module.name.clone(), module);
+            let _ = self.sources.insert(module.name.to_string(), source);
+            let _ = self.modules.insert(module.name.to_string(), module);
         }
 
         Ok(())

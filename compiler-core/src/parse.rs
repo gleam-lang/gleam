@@ -66,6 +66,7 @@ use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
+use smol_str::SmolStr;
 use std::cmp::Ordering;
 use std::str::FromStr;
 use token::Token;
@@ -1211,7 +1212,7 @@ where
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
             arguments: args,
-            module: module.map(|(_, n, _)| n),
+            module: module.map(|(_, n, _)| n.into()),
             name,
             with_spread,
             constructor: (),
@@ -1868,7 +1869,13 @@ where
                 let _ = self.next_tok();
                 if self.maybe_one(&Token::Dot).is_some() {
                     let (_, upname, upname_e) = self.expect_upname()?;
-                    self.parse_type_name_finish(for_const, start, Some(mod_name), upname, upname_e)
+                    self.parse_type_name_finish(
+                        for_const,
+                        start,
+                        Some(mod_name.into()),
+                        upname,
+                        upname_e,
+                    )
                 } else if for_const {
                     parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
                 } else {
@@ -1891,7 +1898,7 @@ where
         &mut self,
         for_const: bool,
         start: u32,
-        module: Option<String>,
+        module: Option<SmolStr>,
         name: String,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
@@ -1978,14 +1985,14 @@ where
         let mut as_name = None;
         if self.maybe_one(&Token::As).is_some() {
             let (_, name, e) = self.expect_name()?;
-            as_name = Some(name);
+            as_name = Some(name.into());
             end = e;
         }
 
         Ok(Some(Statement::Import {
             location: SrcSpan { start, end },
             unqualified,
-            module,
+            module: module.into(),
             as_name,
             package: (),
         }))
@@ -2166,7 +2173,7 @@ where
                 match self.tok0.take() {
                     Some((_, Token::UpName { name: upname }, end)) => {
                         let _ = self.next_tok(); // upname
-                        self.parse_const_record_finish(start, Some(name), upname, end)
+                        self.parse_const_record_finish(start, Some(name.into()), upname, end)
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
                         let _ = self.next_tok(); // name
@@ -2181,7 +2188,7 @@ where
                             ),
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
-                                module: Some(name),
+                                module: Some(name.into()),
                                 name: end_name,
                                 constructor: None,
                                 typ: (),
@@ -2228,7 +2235,7 @@ where
     fn parse_const_record_finish(
         &mut self,
         start: u32,
-        module: Option<String>,
+        module: Option<SmolStr>,
         name: String,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {

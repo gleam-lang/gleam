@@ -15,6 +15,7 @@ pub use error::{Error, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
+use smol_str::SmolStr;
 
 use crate::{
     ast::{
@@ -57,7 +58,7 @@ pub enum Type {
     ///
     App {
         public: bool,
-        module: String,
+        module: SmolStr,
         name: String,
         args: Vec<Arc<Type>>,
     },
@@ -199,7 +200,7 @@ impl Type {
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::App {
                         name: name.to_string(),
-                        module: module.to_owned(),
+                        module: module.into(),
                         args: args.clone(),
                         public,
                     }),
@@ -415,7 +416,7 @@ impl ModuleValueConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
-    pub name: String,
+    pub name: SmolStr,
     pub origin: Origin,
     pub package: String,
     pub types: HashMap<String, TypeConstructor>,
@@ -508,7 +509,7 @@ impl TypeVar {
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
-    pub module: String,
+    pub module: SmolStr,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
 }
@@ -574,12 +575,12 @@ pub fn infer_module(
     mut module: UntypedModule,
     origin: Origin,
     package: &str,
-    modules: &im::HashMap<String, Module>,
+    modules: &im::HashMap<SmolStr, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);
-    let mut environment = Environment::new(ids.clone(), &name, modules, warnings);
+    let mut env = Environment::new(ids.clone(), &name, modules, warnings);
     validate_module_name(&name)?;
 
     let mut type_names = HashMap::with_capacity(module.statements.len());
@@ -590,18 +591,18 @@ pub fn infer_module(
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
     for s in module.iter_statements(target) {
-        register_import(s, &name, origin, &mut environment)?;
+        register_import(s, &name, origin, &mut env)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
     for s in module.iter_statements(target) {
-        register_types(s, &name, &mut hydrators, &mut type_names, &mut environment)?;
+        register_types(s, name.clone(), &mut hydrators, &mut type_names, &mut env)?;
     }
 
     // Register values so they can be used in functions earlier in the module.
     for s in module.iter_statements(target) {
-        register_values(s, &name, &mut hydrators, &mut value_names, &mut environment)?;
+        register_values(s, &name, &mut hydrators, &mut value_names, &mut env)?;
     }
 
     // Infer the types of each statement in the module
@@ -624,30 +625,27 @@ pub fn infer_module(
     }
 
     for statement in consts.into_iter().chain(not_consts) {
-        let statement = infer_statement(statement, &name, &mut hydrators, &mut environment)?;
+        let statement = infer_statement(statement, &name, &mut hydrators, &mut env)?;
         statements.push(statement);
     }
 
     // Generalise functions now that the entire module has been inferred
     let statements = statements
         .into_iter()
-        .map(|s| generalise_statement(s, &name, &mut environment))
+        .map(|s| generalise_statement(s, &name, &mut env))
         .collect();
 
     // Generate warnings for unused items
-    environment.convert_unused_to_warnings();
+    env.convert_unused_to_warnings();
 
     // Remove private and imported types and values to create the public interface
-    environment
-        .module_types
+    env.module_types
         .retain(|_, info| info.public && info.module == name);
-    environment.module_values.retain(|_, info| info.public);
-    environment
-        .accessors
-        .retain(|_, accessors| accessors.public);
+    env.module_values.retain(|_, info| info.public);
+    env.accessors.retain(|_, accessors| accessors.public);
 
     // Ensure no exported values have private types in their type signature
-    for value in environment.module_values.values() {
+    for value in env.module_values.values() {
         if let Some(leaked) = value.type_.find_private_type() {
             return Err(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
@@ -662,22 +660,21 @@ pub fn infer_module(
         module_values: values,
         accessors,
         ..
-    } = environment;
+    } = env;
 
-    let type_info = Module {
-        name: name.to_string(),
-        types,
-        types_constructors,
-        values,
-        accessors,
-        origin,
-        package: package.to_string(),
-    };
     Ok(ast::Module {
         documentation,
-        name,
+        name: name.clone(),
         statements,
-        type_info,
+        type_info: Module {
+            name,
+            types,
+            types_constructors,
+            values,
+            accessors,
+            origin,
+            package: package.to_string(),
+        },
     })
 }
 
@@ -1686,7 +1683,7 @@ fn get_compatible_record_fields<A>(
 /// Iterate over a module, registering any new types created by the module into the typer
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
-    module: &'a str,
+    module: SmolStr,
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
@@ -1706,7 +1703,7 @@ pub fn register_types<'a>(
             let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
             let typ = Arc::new(Type::App {
                 public: *public,
-                module: module.to_owned(),
+                module: module.as_str().into(),
                 name: name.clone(),
                 args: parameters.clone(),
             });
@@ -1716,7 +1713,7 @@ pub fn register_types<'a>(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
-                    module: module.to_owned(),
+                    module: module.into(),
                     public: *public,
                     parameters,
                     typ,
@@ -1844,7 +1841,7 @@ pub fn register_import(
             if origin.is_src() && !module_info.origin.is_src() {
                 return Err(Error::SrcImportingTest {
                     location: *location,
-                    src_module: current_module.to_string(),
+                    src_module: current_module.into(),
                     test_module: name,
                 });
             }
@@ -1852,10 +1849,9 @@ pub fn register_import(
             // Determine local alias of imported module
             let module_name = as_name
                 .as_ref()
-                .map(|s| s.as_str())
-                .or_else(|| module.split('/').last())
-                .expect("Typer could not identify module name.")
-                .to_string();
+                .cloned()
+                .or_else(|| module.split('/').last().map(|s| s.into()))
+                .expect("Typer could not identify module name.");
 
             // Insert unqualified imports into scope
             for UnqualifiedImport {
@@ -1876,7 +1872,7 @@ pub fn register_import(
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: *previous,
-                        name: name.to_string(),
+                        name: name.into(),
                     });
                 }
 
@@ -1971,7 +1967,7 @@ pub fn register_import(
                 return Err(Error::DuplicateImport {
                     location: *location,
                     previous_location: *previous_location,
-                    name: module_name,
+                    name: module_name.clone(),
                 });
             }
 
@@ -1979,7 +1975,7 @@ pub fn register_import(
             // second time in future
             let _ = environment
                 .unqualified_imported_names
-                .insert(module_name.clone(), *location);
+                .insert(module_name.to_string(), *location);
 
             // Insert imported module into scope
             let _ = environment

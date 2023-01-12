@@ -1,3 +1,5 @@
+use smol_str::SmolStr;
+
 use super::*;
 use crate::{
     io::{memory::InMemoryFileSystem, FileSystemWriter},
@@ -7,8 +9,8 @@ use std::time::Duration;
 
 #[derive(Debug)]
 struct LoaderTestOutput {
-    to_compile: Vec<String>,
-    cached: Vec<String>,
+    to_compile: Vec<SmolStr>,
+    cached: Vec<SmolStr>,
 }
 
 fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
@@ -17,7 +19,7 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 
-fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<String>) {
+fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<SmolStr>) {
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
@@ -28,7 +30,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Stri
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
     let cache = crate::type_::Module {
-        name: name.to_string(),
+        name: name.into(),
         origin: Origin::Src,
         package: "my_package".into(),
         types: Default::default(),
@@ -161,7 +163,7 @@ fn module_is_stale_if_deps_are_stale() {
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec!["one".to_string()]);
+    write_cache(&fs, "two", 2, vec!["one".into()]);
 
     // Cache is fresh
     write_src(&fs, "/src/three.gleam", 1, "");

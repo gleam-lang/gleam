@@ -16,6 +16,7 @@ use askama::Template;
 use itertools::Itertools;
 use serde::Serialize;
 use serde_json::to_string as serde_to_string;
+use smol_str::SmolStr;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -705,7 +706,7 @@ struct ModuleTemplate<'a> {
     gleam_version: &'a str,
     unnest: String,
     page_title: &'a str,
-    module_name: String,
+    module_name: SmolStr,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],

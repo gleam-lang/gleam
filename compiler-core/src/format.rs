@@ -11,6 +11,7 @@ use crate::{
     Error, Result,
 };
 use itertools::Itertools;
+use smol_str::SmolStr;
 use std::{path::Path, sync::Arc};
 use vec1::Vec1;
 
@@ -435,7 +436,7 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast_constructor<'a>(
         &mut self,
-        module: &'a Option<String>,
+        module: &'a Option<SmolStr>,
         name: &'a str,
         args: &'a [TypeAst],
     ) -> Document<'a> {
@@ -822,7 +823,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         name: &'a str,
         args: &'a [CallArg<UntypedPattern>],
-        module: &'a Option<String>,
+        module: &'a Option<SmolStr>,
         with_spread: bool,
     ) -> Document<'a> {
         fn is_breakable(expr: &UntypedPattern) -> bool {

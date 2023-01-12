@@ -27,6 +27,7 @@ use crate::{
 };
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use std::time::SystemTime;
 use std::{
     collections::HashMap, ffi::OsString, fs::DirEntry, iter::Peekable, path::PathBuf, process,
@@ -152,14 +153,14 @@ impl Package {
 
 #[derive(Debug)]
 pub struct Module {
-    pub name: String,
+    pub name: SmolStr,
     pub code: String,
     pub mtime: SystemTime,
     pub input_path: PathBuf,
     pub origin: Origin,
     pub ast: TypedModule,
     pub extra: ModuleExtra,
-    pub dependencies: Vec<(String, SrcSpan)>,
+    pub dependencies: Vec<(SmolStr, SrcSpan)>,
 }
 
 impl Module {
@@ -226,10 +227,10 @@ impl Module {
         }
     }
 
-    pub(crate) fn dependencies_list(&self) -> Vec<String> {
+    pub(crate) fn dependencies_list(&self) -> Vec<SmolStr> {
         self.dependencies
             .iter()
-            .map(|(name, _)| name.to_string())
+            .map(|(name, _)| name.clone())
             .collect()
     }
 }

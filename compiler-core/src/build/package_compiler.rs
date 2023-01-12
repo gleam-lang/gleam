@@ -17,6 +17,7 @@ use crate::{
     Error, Result, Warning,
 };
 use askama::Template;
+use smol_str::SmolStr;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use std::{
     collections::HashSet,
@@ -87,8 +88,8 @@ where
     pub fn compile(
         mut self,
         warnings: &mut Vec<Warning>,
-        existing_modules: &mut im::HashMap<String, type_::Module>,
-        already_defined_modules: &mut im::HashMap<String, PathBuf>,
+        existing_modules: &mut im::HashMap<SmolStr, type_::Module>,
+        already_defined_modules: &mut im::HashMap<SmolStr, PathBuf>,
     ) -> Result<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
@@ -361,7 +362,7 @@ fn type_check(
     target: Target,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
-    module_types: &mut im::HashMap<String, type_::Module>,
+    module_types: &mut im::HashMap<SmolStr, type_::Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
@@ -371,7 +372,7 @@ fn type_check(
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = module_types.insert("gleam".to_string(), type_::build_prelude(ids));
+    let _ = module_types.insert("gleam".into(), type_::build_prelude(ids));
 
     for UncompiledModule {
         name,
@@ -510,7 +511,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
     Ok(())
 }
 
-pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> String {
+pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> SmolStr {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -529,7 +530,7 @@ pub(crate) fn module_name(package_path: &Path, full_module_path: &Path) -> Strin
         .to_string();
 
     // normalise windows paths
-    name.replace("\\", "/")
+    name.replace("\\", "/").into()
 }
 
 #[derive(Debug)]
@@ -539,7 +540,7 @@ pub(crate) enum Input {
 }
 
 impl Input {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &SmolStr {
         match self {
             Input::New(m) => &m.name,
             Input::Cached(m) => &m.name,
@@ -553,7 +554,7 @@ impl Input {
         }
     }
 
-    pub fn dependencies(&self) -> Vec<String> {
+    pub fn dependencies(&self) -> Vec<SmolStr> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
             Input::Cached(m) => m.dependencies.clone(),
@@ -579,9 +580,9 @@ impl Input {
 
 #[derive(Debug)]
 pub(crate) struct CachedModule {
-    pub name: String,
+    pub name: SmolStr,
     pub origin: Origin,
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<SmolStr>,
     pub source_path: PathBuf,
 }
 
@@ -589,7 +590,7 @@ pub(crate) struct CachedModule {
 pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
-    pub dependencies: Vec<String>,
+    pub dependencies: Vec<SmolStr>,
 }
 
 impl CacheMetadata {
@@ -611,12 +612,12 @@ pub(crate) struct Loaded {
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
     pub path: PathBuf,
-    pub name: String,
+    pub name: SmolStr,
     pub code: String,
     pub mtime: SystemTime,
     pub origin: Origin,
     pub package: String,
-    pub dependencies: Vec<(String, SrcSpan)>,
+    pub dependencies: Vec<(SmolStr, SrcSpan)>,
     pub ast: UntypedModule,
     pub extra: ModuleExtra,
 }

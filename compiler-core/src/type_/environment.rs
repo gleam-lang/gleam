@@ -11,12 +11,12 @@ pub struct Environment<'a> {
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
     pub unqualified_imported_names: HashMap<String, SrcSpan>,
-    pub importable_modules: &'a im::HashMap<String, Module>,
+    pub importable_modules: &'a im::HashMap<SmolStr, Module>,
 
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
-    pub imported_modules: HashMap<String, (SrcSpan, &'a Module)>,
-    pub unused_modules: HashMap<String, SrcSpan>,
+    pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a Module)>,
+    pub unused_modules: HashMap<SmolStr, SrcSpan>,
     pub imported_types: HashSet<String>,
 
     /// Values defined in the current function (or the prelude)
@@ -68,7 +68,7 @@ impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_module: &'a str,
-        importable_modules: &'a im::HashMap<String, Module>,
+        importable_modules: &'a im::HashMap<SmolStr, Module>,
         warnings: &'a mut Vec<Warning>,
     ) -> Self {
         let prelude = importable_modules
@@ -242,7 +242,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_type_constructor(
         &mut self,
-        module_alias: &Option<String>,
+        module_alias: &Option<SmolStr>,
         name: &str,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
@@ -257,12 +257,8 @@ impl<'a> Environment<'a> {
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: module_name.to_string(),
-                        imported_modules: self
-                            .importable_modules
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        name: module_name.clone(),
+                        imported_modules: self.importable_modules.keys().cloned().collect(),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
@@ -296,12 +292,8 @@ impl<'a> Environment<'a> {
             Some(m) => {
                 let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: name.to_string(),
-                        imported_modules: self
-                            .importable_modules
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        name: name.into(),
+                        imported_modules: self.importable_modules.keys().cloned().collect(),
                     }
                 })?;
                 let _ = self.unused_modules.remove(m);
@@ -320,7 +312,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_value_constructor(
         &mut self,
-        module: Option<&String>,
+        module: Option<&SmolStr>,
         name: &str,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
@@ -335,12 +327,8 @@ impl<'a> Environment<'a> {
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
-                        name: module_name.to_string(),
-                        imported_modules: self
-                            .importable_modules
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        name: module_name.clone(),
+                        imported_modules: self.importable_modules.keys().cloned().collect(),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);

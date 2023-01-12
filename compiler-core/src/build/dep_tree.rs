@@ -1,4 +1,5 @@
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
+use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 
@@ -20,7 +21,7 @@ pub struct DependencyTree<T> {
 ///
 /// Errors if there are duplicate values, unknown deps, or cycles.
 ///
-pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, Error> {
+pub fn toposort_deps(inputs: Vec<(SmolStr, Vec<SmolStr>)>) -> Result<Vec<SmolStr>, Error> {
     let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
@@ -53,8 +54,8 @@ pub fn toposort_deps(inputs: Vec<(String, Vec<String>)>) -> Result<Vec<String>, 
 fn import_cycle(
     cycle: Cycle<NodeIndex>,
     graph: &petgraph::Graph<(), ()>,
-    mut values: HashMap<NodeIndex, String>,
-) -> Vec<String> {
+    mut values: HashMap<NodeIndex, SmolStr>,
+) -> Vec<SmolStr> {
     let origin = cycle.node_id();
     let mut path = vec![];
     let _ = find_cycle(origin, origin, &graph, &mut path, &mut HashSet::new());
@@ -96,37 +97,33 @@ fn toposort_deps_test() {
     // All deps are nodes
     assert_eq!(
         toposort_deps(vec![
-            ("a".to_string(), vec!["b".to_string()]),
-            ("c".to_string(), vec![]),
-            ("b".to_string(), vec!["c".to_string()])
+            ("a".into(), vec!["b".into()]),
+            ("c".into(), vec![]),
+            ("b".into(), vec!["c".into()])
         ]),
-        Ok(vec![
-            "c".to_string().to_string(),
-            "b".to_string().to_string(),
-            "a".to_string().to_string()
-        ])
+        Ok(vec!["c".into(), "b".into(), "a".into()])
     );
 
     // No deps
     assert_eq!(
         toposort_deps(vec![
-            ("no-deps-1".to_string(), vec![]),
-            ("no-deps-2".to_string(), vec![])
+            ("no-deps-1".into(), vec![]),
+            ("no-deps-2".into(), vec![])
         ]),
-        Ok(vec!["no-deps-1".to_string(), "no-deps-2".to_string(),])
+        Ok(vec!["no-deps-1".into(), "no-deps-2".into(),])
     );
 
     // Some deps are not nodes (and thus are ignored)
     assert_eq!(
         toposort_deps(vec![
-            ("a".to_string(), vec!["b".to_string(), "z".to_string()]),
-            ("b".to_string(), vec!["x".to_string()])
+            ("a".into(), vec!["b".into(), "z".into()]),
+            ("b".into(), vec!["x".into()])
         ]),
-        Ok(vec!["b".to_string(), "a".to_string()])
+        Ok(vec!["b".into(), "a".into()])
     );
 }
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Cycle(Vec<String>),
+    Cycle(Vec<SmolStr>),
 }

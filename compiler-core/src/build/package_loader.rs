@@ -10,6 +10,7 @@ use std::{
 // TODO: emit warnings for cached modules even if they are not compiled again.
 
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use crate::{
     build::{dep_tree, module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
@@ -53,7 +54,7 @@ pub struct PackageLoader<'a, IO> {
     artefact_directory: &'a Path,
     package_name: &'a str,
     target: Target,
-    already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
+    already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -69,7 +70,7 @@ where
         artefact_directory: &'a Path,
         target: Target,
         package_name: &'a str,
-        already_defined_modules: &'a mut im::HashMap<String, PathBuf>,
+        already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
     ) -> Self {
         Self {
             io,
@@ -90,7 +91,7 @@ where
         // Determine order in which modules are to be processed
         let deps = inputs
             .values()
-            .map(|m| (m.name().to_string(), m.dependencies()))
+            .map(|m| (m.name().clone(), m.dependencies()))
             .collect();
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
@@ -141,7 +142,7 @@ where
         metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
     }
 
-    fn read_source_files(&self) -> Result<HashMap<String, Input>> {
+    fn read_source_files(&self) -> Result<HashMap<SmolStr, Input>> {
         let span = tracing::info_span!("load", package = %self.package_name);
         let _enter = span.enter();
         tracing::info!("Reading source files");
@@ -202,26 +203,26 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
 }
 
 #[derive(Debug, Default)]
-struct StaleTracker(HashSet<String>);
+struct StaleTracker(HashSet<SmolStr>);
 
 impl StaleTracker {
-    fn add(&mut self, name: String) {
+    fn add(&mut self, name: SmolStr) {
         _ = self.0.insert(name);
     }
 
-    fn includes_any(&self, names: &[String]) -> bool {
+    fn includes_any(&self, names: &[SmolStr]) -> bool {
         names.iter().any(|n| self.0.contains(n.as_str()))
     }
 }
 
 #[derive(Debug)]
 pub struct Inputs<'a> {
-    collection: HashMap<String, Input>,
-    already_defined_modules: &'a im::HashMap<String, PathBuf>,
+    collection: HashMap<SmolStr, Input>,
+    already_defined_modules: &'a im::HashMap<SmolStr, PathBuf>,
 }
 
 impl<'a> Inputs<'a> {
-    fn new(already_defined_modules: &'a im::HashMap<String, PathBuf>) -> Self {
+    fn new(already_defined_modules: &'a im::HashMap<SmolStr, PathBuf>) -> Self {
         Self {
             collection: Default::default(),
             already_defined_modules,
@@ -231,7 +232,7 @@ impl<'a> Inputs<'a> {
     /// Insert a module into the hashmap. If there is already a module with the
     /// same name then an error is returned.
     fn insert(&mut self, input: Input) -> Result<()> {
-        let name = input.name().to_string();
+        let name = input.name().clone();
 
         if let Some(first) = self.already_defined_modules.get(&name) {
             return Err(Error::DuplicateModule {
@@ -244,7 +245,7 @@ impl<'a> Inputs<'a> {
         let second = input.source_path().to_path_buf();
         if let Some(first) = self.collection.insert(name.clone(), input) {
             return Err(Error::DuplicateModule {
-                module: name.clone(),
+                module: name,
                 first: first.source_path().to_path_buf(),
                 second,
             });

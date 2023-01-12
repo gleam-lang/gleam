@@ -22,7 +22,7 @@ macro_rules! assert_infer {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
         let result = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
             "themodule",
@@ -49,7 +49,7 @@ macro_rules! assert_infer_with_module {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
@@ -105,7 +105,7 @@ macro_rules! assert_module_infer {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let ast = infer_module(
             $crate::build::Target::Erlang,
             &ids,
@@ -145,7 +145,7 @@ macro_rules! assert_module_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let ast = infer_module(
             Target::Erlang,
             &ids,
@@ -167,7 +167,7 @@ macro_rules! assert_module_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let error = infer_module(
             Target::Erlang,
             &ids,
@@ -215,7 +215,7 @@ macro_rules! assert_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
         let result = ExprTyper::new(&mut Environment::new(ids, "somemod", &modules, &mut vec![]))
             .infer(ast)
@@ -232,7 +232,7 @@ macro_rules! assert_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
         let error = $crate::type_::ExprTyper::new(&mut $crate::type_::Environment::new(
             ids,
@@ -262,7 +262,7 @@ macro_rules! assert_with_module_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
@@ -307,7 +307,7 @@ macro_rules! assert_with_module_error {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
@@ -371,7 +371,7 @@ macro_rules! assert_warning {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
         let _ = $crate::type_::infer_module(
             $crate::build::Target::Erlang,
             &ids,
@@ -404,7 +404,7 @@ macro_rules! assert_warning {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let _ = infer_module(
             Target::Erlang,
             &ids,
@@ -427,7 +427,7 @@ macro_rules! assert_warning {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
@@ -476,7 +476,7 @@ macro_rules! assert_no_warnings {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let _ = infer_module(
             Target::Erlang,
             &ids,
@@ -499,7 +499,7 @@ macro_rules! assert_no_warnings {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), build_prelude(&ids));
         // Repeatedly create importable modules for each one given
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
@@ -680,7 +680,7 @@ fn infer_module_type_retention_test() {
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
-    let _ = modules.insert("gleam".to_string(), build_prelude(&ids));
+    let _ = modules.insert("gleam".into(), build_prelude(&ids));
     let module = infer_module(
         Target::Erlang,
         &ids,
@@ -697,7 +697,7 @@ fn infer_module_type_retention_test() {
         Module {
             origin: Origin::Src,
             package: "thepackage".to_string(),
-            name: "ok".to_string(),
+            name: "ok".into(),
             types: HashMap::new(), // Core type constructors like String and Int are not included
             types_constructors: HashMap::from([
                 (
