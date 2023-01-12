@@ -112,11 +112,7 @@ pub fn go() { two.go() }"#,
 #[test]
 fn nested_nested_fn_call() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three".to_string(),
-            r#"pub fn go() { 1 }"#
-        ),
+        (CURRENT_PACKAGE, "one/two/three", r#"pub fn go() { 1 }"#),
         r#"import one/two/three
 pub fn go() { three.go() }"#,
     );
@@ -125,7 +121,7 @@ pub fn go() { three.go() }"#,
 #[test]
 fn different_package_import() {
     assert_js!(
-        ("other_package", "one".to_string(), r#"pub fn go() { 1 }"#),
+        ("other_package", "one", r#"pub fn go() { 1 }"#),
         r#"import one
 pub fn go() { one.go() }
 "#,
@@ -135,11 +131,7 @@ pub fn go() { one.go() }
 #[test]
 fn nested_same_package() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three".to_string(),
-            r#"pub fn go() { 1 }"#
-        ),
+        (CURRENT_PACKAGE, "one/two/three", r#"pub fn go() { 1 }"#),
         r#"import one/two/three
 pub fn go() { three.go() }
 "#,
@@ -151,7 +143,7 @@ fn imported_external_types_dont_get_rendered() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            "one/two/three".to_string(),
+            "one/two/three",
             r#"pub external type External"#
         ),
         r#"import one/two/three.{External}
@@ -166,7 +158,7 @@ fn imported_custom_types_dont_get_rendered() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            "one/two/three".to_string(),
+            "one/two/three",
             r#"pub type Custom { One Two }"#
         ),
         r#"import one/two/three.{Custom, One, Two}
@@ -181,7 +173,7 @@ fn imported_custom_types_do_get_rendered_in_typescript() {
     assert_ts_def!(
         (
             CURRENT_PACKAGE,
-            "one/two/three".to_string(),
+            "one/two/three",
             r#"pub type Custom { One Two }"#
         ),
         r#"import one/two/three.{Custom, One, Two}
@@ -196,7 +188,7 @@ fn imported_external_types_dont_get_rendered_with_value_of_same_name() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            "one/two/three".to_string(),
+            "one/two/three",
             r#"pub external type Thingy"#
         ),
         r#"import one/two/three.{Thingy}

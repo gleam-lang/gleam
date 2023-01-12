@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use smol_str::SmolStr;
 
 pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
@@ -32,7 +33,7 @@ pub type UntypedModule = Module<(), TargetGroup>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
-    pub name: String,
+    pub name: SmolStr,
     pub documentation: Vec<String>,
     pub type_info: Info,
     pub statements: Vec<Statements>,

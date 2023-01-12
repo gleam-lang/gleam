@@ -27,7 +27,7 @@ macro_rules! assert_erl {
         // place.
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
-        ast.name = $dep_name;
+        ast.name = $dep_name.into();
         let dep = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -38,9 +38,9 @@ macro_rules! assert_erl {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let _ = modules.insert($dep_name.clone(), dep.type_info);
+        let _ = modules.insert($dep_name.into(), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "my/mod".to_string();
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::Erlang,
             &ids,
@@ -65,7 +65,7 @@ macro_rules! assert_erl {
             uid::UniqueIdGenerator,
         };
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = "the_app".to_string();
+        ast.name = "the_app".into();
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion
