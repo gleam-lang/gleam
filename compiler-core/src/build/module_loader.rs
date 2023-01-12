@@ -143,7 +143,7 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
     let dependencies = ast.dependencies(target);
 
     // TODO: store the name on the AST as a string.
-    ast.name = name.split("/").map(String::from).collect();
+    ast.name = name.clone();
     let module = UncompiledModule {
         package: package_name.to_string(),
         dependencies,
@@ -151,7 +151,7 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
         extra,
         mtime,
         path,
-        name: name.clone(),
+        name,
         code,
         ast,
     };

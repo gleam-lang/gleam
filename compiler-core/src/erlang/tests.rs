@@ -38,9 +38,9 @@ macro_rules! assert_erl {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let _ = modules.insert($dep_name.join("/"), dep.type_info);
+        let _ = modules.insert($dep_name.clone(), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".to_string();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::Erlang,
             &ids,
@@ -65,7 +65,7 @@ macro_rules! assert_erl {
             uid::UniqueIdGenerator,
         };
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["the_app".to_string()];
+        ast.name = "the_app".to_string();
         let mut modules = im::HashMap::new();
         let ids = UniqueIdGenerator::new();
         // DUPE: preludeinsertion

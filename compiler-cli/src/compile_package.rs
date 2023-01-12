@@ -64,7 +64,7 @@ fn load_libraries(ids: &UniqueIdGenerator, lib: &Path) -> Result<im::HashMap<Str
         for module in fs::module_caches_paths(path)? {
             let reader = fs::buffered_reader(module)?;
             let module = metadata::ModuleDecoder::new(ids.clone()).read(reader)?;
-            let _ = manifests.insert(module.name.join("/"), module);
+            let _ = manifests.insert(module.name.clone(), module);
         }
     }
     Ok(manifests)

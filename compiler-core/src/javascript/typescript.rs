@@ -178,16 +178,19 @@ fn ts_safe_type_name(mut name: String) -> String {
 #[derive(Debug)]
 pub struct TypeScriptGenerator<'a> {
     module: &'a TypedModule,
-    aliased_module_names: HashMap<&'a [String], &'a str>,
+    aliased_module_names: HashMap<&'a str, &'a str>,
     tracker: UsageTracker,
+    current_module_name_segments_count: usize,
 }
 
 impl<'a> TypeScriptGenerator<'a> {
     pub fn new(module: &'a TypedModule) -> Self {
+        let current_module_name_segments_count = module.name.split('/').count();
         Self {
             module,
             aliased_module_names: HashMap::new(),
             tracker: UsageTracker::default(),
+            current_module_name_segments_count,
         }
     }
 
@@ -206,7 +209,7 @@ impl<'a> TypeScriptGenerator<'a> {
         // Put it all together
 
         if self.prelude_used() {
-            let path = self.import_path(&self.module.type_info.package, &["gleam".into()]);
+            let path = self.import_path(&self.module.type_info.package, "gleam");
             imports.register_module(path, ["_".into()], []);
         }
 
@@ -256,36 +259,30 @@ impl<'a> TypeScriptGenerator<'a> {
     /// "$" symbol to prevent any clashes with other Gleam names that may be
     /// used in this module.
     ///
-    fn register_import(
-        &mut self,
-        imports: &mut Imports<'a>,
-        package: &'a str,
-        module: &'a [String],
-    ) {
+    fn register_import(&mut self, imports: &mut Imports<'a>, package: &'a str, module: &'a str) {
         let path = self.import_path(package, module);
         imports.register_module(path, [self.module_name(module)], []);
     }
 
     /// Calculates the path of where to import an external module from
     ///
-    fn import_path(&self, package: &'a str, module: &'a [String]) -> String {
-        let path = module.join("/");
-
+    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+        // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
         // module to avoid decending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
-            match self.module.name.len() {
-                1 => format!("./{}.d.ts", path),
+            match self.current_module_name_segments_count {
+                1 => format!("./{module}.d.ts"),
                 _ => {
-                    let prefix = "../".repeat(self.module.name.len() - 1);
-                    format!("{}{}.d.ts", prefix, path)
+                    let prefix = "../".repeat(self.current_module_name_segments_count - 1);
+                    format!("{prefix}{module}.d.ts")
                 }
             }
         } else {
             // Different package
-            let prefix = "../".repeat(self.module.name.len() + 1);
-            format!("{}{}/{}.d.ts", prefix, package, path)
+            let prefix = "../".repeat(self.current_module_name_segments_count );
+            format!("{prefix}{package}/{module}.d.ts")
         }
     }
 
@@ -602,15 +599,19 @@ impl<'a> TypeScriptGenerator<'a> {
     /// Get the locally used name for a module. Either the last segment, or the
     /// alias if one was given when imported.
     ///
-    fn module_name(&self, parts: &[String]) -> String {
+    fn module_name(&self, name: &str) -> String {
         // The prelude is always `_`
-        if parts.is_empty() {
+        if name.is_empty() {
             return "_".into();
         }
 
-        match self.aliased_module_names.get(parts) {
+        match self.aliased_module_names.get(name) {
             Some(name) => (*name).to_string(),
-            None => parts.last().expect("Non empty module path").clone(),
+            None => name
+                .split('/')
+                .last()
+                .expect("Non empty module path")
+                .to_string(),
         }
     }
 
@@ -730,7 +731,7 @@ impl<'a> TypeScriptGenerator<'a> {
         &mut self,
         name: &str,
         args: &[Arc<Type>],
-        module: &[String],
+        module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         let name = format!("{}$", ts_safe_type_name(name.to_upper_camel_case()));

@@ -22,7 +22,7 @@ pub struct Printer {
     names: im::HashMap<u64, String>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<String, Vec<String>>,
+    printed_types: im::HashMap<String, String>,
 }
 
 impl Printer {
@@ -88,7 +88,7 @@ impl Printer {
         }
     }
 
-    fn name_clashes_if_unqualified(&mut self, type_: &String, module: &[String]) -> bool {
+    fn name_clashes_if_unqualified(&mut self, type_: &String, module: &str) -> bool {
         match self.printed_types.get(type_) {
             None => false,
             Some(previous_module) if module == previous_module => false,
@@ -107,13 +107,13 @@ impl Printer {
         match self.names.get(&id) {
             Some(n) => {
                 let typ_name = n.clone();
-                let _ = self.printed_types.insert(typ_name, vec![]);
+                let _ = self.printed_types.insert(typ_name, "".into());
                 Document::String(n.clone())
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
-                let _ = self.printed_types.insert(n.clone(), vec![]);
+                let _ = self.printed_types.insert(n.clone(), "".into());
                 Document::String(n)
             }
         }
@@ -141,7 +141,7 @@ impl Printer {
         chars.into_iter().rev().collect()
     }
 
-    fn args_to_gleam_doc<'a>(&mut self, args: &[Arc<Type>]) -> Document<'a> {
+    fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document<'static> {
         if args.is_empty() {
             return nil();
         }
@@ -158,11 +158,12 @@ impl Printer {
     }
 }
 
-fn qualify_type_name(module: &[String], typ_name: &str) -> Document<'static> {
+fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
+    let type_name = Document::String(type_name.to_string());
     if module.is_empty() {
-        docvec!["gleam.", Document::String(typ_name.to_string())]
+        docvec!["gleam.", type_name]
     } else {
-        Document::String([&module.join("/"), typ_name].join("."))
+        docvec![Document::String(module.to_string()), ".", type_name]
     }
 }
 
@@ -260,7 +261,7 @@ fn pretty_print_test() {
 
     assert_string!(
         Type::App {
-            module: vec!["whatever".to_string()],
+            module: "whatever".into(),
             name: "Int".to_string(),
             public: true,
             args: vec![],
@@ -269,18 +270,18 @@ fn pretty_print_test() {
     );
     assert_string!(
         Type::App {
-            module: vec![],
+            module: "themodule".into(),
             name: "Pair".to_string(),
             public: true,
             args: vec![
                 Arc::new(Type::App {
-                    module: vec!["whatever".to_string()],
+                    module: "whatever".into(),
                     name: "Int".to_string(),
                     public: true,
                     args: vec![],
                 }),
                 Arc::new(Type::App {
-                    module: vec!["whatever".to_string()],
+                    module: "whatever".into(),
                     name: "Bool".to_string(),
                     public: true,
                     args: vec![],
@@ -294,20 +295,20 @@ fn pretty_print_test() {
             args: vec![
                 Arc::new(Type::App {
                     args: vec![],
-                    module: vec!["whatever".to_string()],
+                    module: "whatever".into(),
                     name: "Int".to_string(),
                     public: true,
                 }),
                 Arc::new(Type::App {
                     args: vec![],
-                    module: vec!["whatever".to_string()],
+                    module: "whatever".into(),
                     name: "Bool".to_string(),
                     public: true,
                 }),
             ],
             retrn: Arc::new(Type::App {
                 args: vec![],
-                module: vec!["whatever".to_string()],
+                module: "whatever".into(),
                 name: "Bool".to_string(),
                 public: true,
             }),
@@ -319,7 +320,7 @@ fn pretty_print_test() {
             type_: Arc::new(RefCell::new(TypeVar::Link {
                 type_: Arc::new(Type::App {
                     args: vec![],
-                    module: vec!["whatever".to_string()],
+                    module: "whatever".into(),
                     name: "Int".to_string(),
                     public: true,
                 }),

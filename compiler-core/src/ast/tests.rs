@@ -44,12 +44,12 @@ fn compile_expression(src: &str) -> TypedExpr {
     // place.
     let _ = modules.insert("gleam".to_string(), type_::build_prelude(&ids));
     let mut warnings = vec![];
-    let mut environment = Environment::new(ids, &[], &modules, &mut warnings);
+    let mut environment = Environment::new(ids, "mymod", &modules, &mut warnings);
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::App {
         public: true,
-        module: vec![],
+        module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
     });
@@ -284,7 +284,7 @@ fn find_node_module_select() {
         module_name: "name".into(),
         module_alias: "alias".into(),
         constructor: ModuleValueConstructor::Fn {
-            module: vec!["module".into()],
+            module: "module".into(),
             name: "function".into(),
             location: SrcSpan { start: 1, end: 55 },
         },

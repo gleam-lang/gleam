@@ -422,7 +422,7 @@ pub mod module {
       self.reader.total_size()
     }
     #[inline]
-    pub fn get_name(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
+    pub fn get_name(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
     }
     #[inline]
@@ -520,16 +520,16 @@ pub mod module {
       self.builder.into_reader().total_size()
     }
     #[inline]
-    pub fn get_name(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
+    pub fn get_name(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_name(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
-      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
+    pub fn set_name(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(0).set_text(value);
     }
     #[inline]
-    pub fn init_name(self, size: u32) -> ::capnp::text_list::Builder<'a> {
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), size)
+    pub fn init_name(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(0).init_text(size)
     }
     #[inline]
     pub fn has_name(&self) -> bool {
@@ -695,7 +695,7 @@ pub mod type_constructor {
       !self.reader.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
+    pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
     }
     #[inline]
@@ -785,16 +785,16 @@ pub mod type_constructor {
       !self.builder.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
+    pub fn get_module(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_module(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
-      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
+    pub fn set_module(&mut self, value: ::capnp::text::Reader<'_>)  {
+      self.builder.get_pointer_field(2).set_text(value);
     }
     #[inline]
-    pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
+    pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(2).init_text(size)
     }
     #[inline]
     pub fn has_module(&self) -> bool {
@@ -1416,7 +1416,7 @@ pub mod type_ {
         !self.reader.get_pointer_field(0).is_null()
       }
       #[inline]
-      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
       }
       #[inline]
@@ -1498,16 +1498,16 @@ pub mod type_ {
         !self.builder.get_pointer_field(0).is_null()
       }
       #[inline]
-      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
         ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
       }
       #[inline]
-      pub fn set_module(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
-        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(1), value, false)
+      pub fn set_module(&mut self, value: ::capnp::text::Reader<'_>)  {
+        self.builder.get_pointer_field(1).set_text(value);
       }
       #[inline]
-      pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
-        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
+      pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
+        self.builder.get_pointer_field(1).init_text(size)
       }
       #[inline]
       pub fn has_module(&self) -> bool {
@@ -2586,7 +2586,7 @@ pub mod value_constructor_variant {
         !self.reader.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Reader<'a>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
@@ -2688,16 +2688,16 @@ pub mod value_constructor_variant {
         !self.builder.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_module(self) -> ::capnp::Result<::capnp::text_list::Builder<'a>> {
+      pub fn get_module(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
         ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
-      pub fn set_module(&mut self, value: ::capnp::text_list::Reader<'a>) -> ::capnp::Result<()> {
-        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
+      pub fn set_module(&mut self, value: ::capnp::text::Reader<'_>)  {
+        self.builder.get_pointer_field(2).set_text(value);
       }
       #[inline]
-      pub fn init_module(self, size: u32) -> ::capnp::text_list::Builder<'a> {
-        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
+      pub fn init_module(self, size: u32) -> ::capnp::text::Builder<'a> {
+        self.builder.get_pointer_field(2).init_text(size)
       }
       #[inline]
       pub fn has_module(&self) -> bool {

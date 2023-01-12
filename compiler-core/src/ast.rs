@@ -32,7 +32,7 @@ pub type UntypedModule = Module<(), TargetGroup>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
-    pub name: Vec<String>,
+    pub name: String,
     pub documentation: Vec<String>,
     pub type_info: Info,
     pub statements: Vec<Statements>,
@@ -95,19 +95,13 @@ impl TargetGroup {
     }
 }
 
-impl<A, B> Module<A, B> {
-    pub fn name_string(&self) -> String {
-        self.name.join("/")
-    }
-}
-
 impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(String, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
                 Statement::Import {
                     module, location, ..
-                } => Some((module.join("/"), *location)),
+                } => Some((module.to_string(), *location)),
                 _ => None,
             })
             .collect()
@@ -481,7 +475,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     Import {
         location: SrcSpan,
-        module: Vec<String>,
+        module: String,
         as_name: Option<String>,
         unqualified: Vec<UnqualifiedImport>,
         package: PackageName,

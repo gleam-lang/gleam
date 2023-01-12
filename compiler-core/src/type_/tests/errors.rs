@@ -1554,7 +1554,7 @@ fn negate_string() {
 #[test]
 fn ambiguous_type_error() {
     assert_with_module_error!(
-        (vec!["foo".to_string()], "pub type Thing { Thing }"),
+        ("foo".to_string(), "pub type Thing { Thing }"),
         "import foo; pub type Thing { Thing }; 
         pub fn main() { 
             [Thing] == [foo.Thing]; 
@@ -1565,14 +1565,8 @@ fn ambiguous_type_error() {
 #[test]
 fn ambiguous_import_error_no_unqualified() {
     assert_with_module_error!(
-        (
-            vec!["foo".to_string(), "sub".to_string()],
-            "pub fn bar() { 1 }"
-        ),
-        (
-            vec!["foo2".to_string(), "sub".to_string()],
-            "pub fn bar() { 1 }"
-        ),
+        ("foo/sub".to_string(), "pub fn bar() { 1 }"),
+        ("foo2/sub".to_string(), "pub fn bar() { 1 }"),
         "
         import foo/sub
         import foo2/sub
@@ -1586,14 +1580,8 @@ fn ambiguous_import_error_no_unqualified() {
 #[test]
 fn ambiguous_import_error_with_unqualified() {
     assert_with_module_error!(
-        (
-            vec!["foo".to_string(), "sub".to_string()],
-            "pub fn bar() { 1 }"
-        ),
-        (
-            vec!["foo2".to_string(), "sub".to_string()],
-            "pub fn bar() { 1 }"
-        ),
+        ("foo/sub".to_string(), "pub fn bar() { 1 }"),
+        ("foo2/sub".to_string(), "pub fn bar() { 1 }"),
         "
         import foo/sub
         import foo2/sub.{bar}
@@ -1608,7 +1596,7 @@ fn ambiguous_import_error_with_unqualified() {
 fn same_imports_multiple_times() {
     assert_with_module_error!(
         (
-            vec!["gleam".to_string(), "foo".to_string()],
+            "gleam/foo".to_string(),
             "
             pub fn bar() { 1 }
             pub fn zoo() { 1 }
@@ -1626,13 +1614,13 @@ fn same_imports_multiple_times() {
 fn same_imports_multiple_times_1() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1648,13 +1636,13 @@ fn same_imports_multiple_times_1() {
 fn same_imports_multiple_times_2() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1670,13 +1658,13 @@ fn same_imports_multiple_times_2() {
 fn same_imports_multiple_times_3() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1692,13 +1680,13 @@ fn same_imports_multiple_times_3() {
 fn same_imports_multiple_times_4() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1714,13 +1702,13 @@ fn same_imports_multiple_times_4() {
 fn same_imports_multiple_times_5() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1736,13 +1724,13 @@ fn same_imports_multiple_times_5() {
 fn same_imports_multiple_times_6() {
     assert_with_module_error!(
         (
-            vec!["one".to_string(),],
+            "one".to_string(),
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            vec!["two".to_string(),],
+            "two".to_string(),
             "
             pub fn fn2() { 1 }
             "
@@ -1807,7 +1795,7 @@ pub fn main(user: User) {
 #[test]
 fn unknown_imported_module_type() {
     assert_with_module_error!(
-        (vec!["one".to_string(), "two".to_string()], ""),
+        ("one/two".to_string(), ""),
         "
 import one/two
 

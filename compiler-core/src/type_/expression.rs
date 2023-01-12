@@ -1287,7 +1287,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             typ: Arc::clone(&type_),
             location: select_location,
-            module_name: module_name.join("/"),
+            module_name,
             module_alias: module_alias.to_string(),
             constructor,
         })
@@ -1342,7 +1342,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             Type::App { module, name, .. } => self
                 .environment
                 .importable_modules
-                .get(&module.join("/"))
+                .get(module)
                 .and_then(|module| module.accessors.get(name)),
 
             _something_without_fields => return Err(unknown_field(vec![])),
@@ -1567,7 +1567,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .cloned()
                     .ok_or_else(|| Error::UnknownModuleValue {
                         location: *location,
-                        module_name: vec![module_name.to_string()],
+                        module_name: module_name.to_string(),
                         name: name.to_string(),
                         value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
                     })?
@@ -1710,7 +1710,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .expect("Failed to find previously located module import")
                             .1
                             .name
-                            .join("/");
+                            .to_string();
                         let module_value_constructor = ModuleValueConstructor::Record {
                             name: name.clone(),
                             field_map: field_map.clone(),

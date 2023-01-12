@@ -114,7 +114,7 @@ where
 
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
-            _ = existing_modules.insert(module.name.join("/"), module.clone());
+            _ = existing_modules.insert(module.name.clone(), module.clone());
         }
 
         // Type check the modules that are new or have changed

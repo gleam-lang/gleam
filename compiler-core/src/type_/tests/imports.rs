@@ -6,7 +6,7 @@ use super::*;
 #[test]
 fn import_value_with_same_name_as_imported_module() {
     assert_infer_with_module!(
-        (vec!["other".to_string()], "pub const other = 1"),
+        ("other".to_string(), "pub const other = 1"),
         "
 import other.{other}
 pub const a = other
@@ -18,10 +18,7 @@ pub const a = other
 #[test]
 fn imported_constant_record() {
     assert_infer_with_module!(
-        (
-            vec!["one".to_string(), "two".to_string()],
-            "pub type Thing { Thing(Int) }"
-        ),
+        ("one/two".to_string(), "pub type Thing { Thing(Int) }"),
         "
 import one/two
 

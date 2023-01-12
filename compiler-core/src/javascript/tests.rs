@@ -48,9 +48,9 @@ macro_rules! assert_js {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let _ = modules.insert($dep_name.join("/"), dep.type_info);
+        let _ = modules.insert($dep_name.clone(), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -89,7 +89,7 @@ macro_rules! assert_js {
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.join("/"), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -118,7 +118,7 @@ macro_rules! assert_js {
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -146,7 +146,7 @@ macro_rules! assert_js {
         let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
             &ids,
@@ -187,9 +187,9 @@ macro_rules! assert_ts_def {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let _ = modules.insert($dep_name.join("/"), dep.type_info);
+        let _ = modules.insert($dep_name.clone(), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -227,7 +227,7 @@ macro_rules! assert_ts_def {
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.join("/"), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -255,7 +255,7 @@ macro_rules! assert_ts_def {
         let _ = modules.insert("gleam".to_string(), $crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = $crate::type_::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
@@ -282,7 +282,7 @@ macro_rules! assert_ts_def {
         let _ = modules.insert("gleam".to_string(), crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
-        ast.name = vec!["my".to_string(), "mod".to_string()];
+        ast.name = "my/mod".into();
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
             &ids,

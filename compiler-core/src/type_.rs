@@ -57,7 +57,7 @@ pub enum Type {
     ///
     App {
         public: bool,
-        module: Vec<String>,
+        module: String,
         name: String,
         args: Vec<Arc<Type>>,
     },
@@ -162,7 +162,7 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
-        module: &[String],
+        module: &str,
         name: &str,
         arity: usize,
         environment: &mut Environment<'_>,
@@ -281,7 +281,7 @@ pub enum ValueConstructorVariant {
     ModuleFn {
         name: String,
         field_map: Option<FieldMap>,
-        module: Vec<String>,
+        module: String,
         arity: usize,
         location: SrcSpan,
     },
@@ -301,7 +301,7 @@ impl ValueConstructorVariant {
     fn to_module_value_constructor(
         &self,
         type_: Arc<Type>,
-        module_name: &[String],
+        module_name: &str,
         function_name: &str,
     ) -> ModuleValueConstructor {
         match self {
@@ -329,7 +329,7 @@ impl ValueConstructorVariant {
 
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
                 name: function_name.to_string(),
-                module: module_name.to_vec(),
+                module: module_name.to_string(),
                 location: *location,
             },
 
@@ -393,7 +393,7 @@ pub enum ModuleValueConstructor {
         ///     pub external fn wibble() -> Nil =
         ///       "other" "whoop"
         ///
-        module: Vec<String>,
+        module: String,
         name: String,
     },
 
@@ -415,7 +415,7 @@ impl ModuleValueConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
-    pub name: Vec<String>,
+    pub name: String,
     pub origin: Origin,
     pub package: String,
     pub types: HashMap<String, TypeConstructor>,
@@ -508,7 +508,7 @@ impl TypeVar {
 pub struct TypeConstructor {
     pub public: bool,
     pub origin: SrcSpan,
-    pub module: Vec<String>,
+    pub module: String,
     pub parameters: Vec<Arc<Type>>,
     pub typ: Arc<Type>,
 }
@@ -549,7 +549,7 @@ impl ValueConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAliasConstructor {
     pub public: bool,
-    pub module: Vec<String>,
+    pub module: String,
     pub type_: Type,
     pub arity: usize,
 }
@@ -680,16 +680,16 @@ pub fn infer_module(
     })
 }
 
-fn validate_module_name(name: &[String]) -> Result<(), Error> {
-    if name == ["gleam"] {
+fn validate_module_name(name: &str) -> Result<(), Error> {
+    if name == "gleam" {
         return Err(Error::ReservedModuleName {
-            name: name.join("/"),
+            name: name.to_string(),
         });
     };
-    for segment in name {
+    for segment in name.split('/') {
         if crate::parse::lexer::str_to_keyword(segment).is_some() {
             return Err(Error::KeywordInModuleName {
-                name: name.join("/"),
+                name: name.to_string(),
                 keyword: segment.to_string(),
             });
         }
@@ -744,7 +744,7 @@ fn assert_unique_const_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
-    module_name: &[String],
+    module_name: &'a str,
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
@@ -798,7 +798,7 @@ fn register_values<'a>(
                 ValueConstructorVariant::ModuleFn {
                     name: name.clone(),
                     field_map,
-                    module: module_name.to_vec(),
+                    module: module_name.to_string(),
                     arity: args.len(),
                     location: *location,
                 },
@@ -855,7 +855,7 @@ fn register_values<'a>(
                     variant: ValueConstructorVariant::ModuleFn {
                         name: fun.clone(),
                         field_map: field_map.clone(),
-                        module: vec![module.clone()],
+                        module: module.clone(),
                         arity: args.len(),
                         location: *location,
                     },
@@ -867,7 +867,7 @@ fn register_values<'a>(
                 name.clone(),
                 ValueConstructorVariant::ModuleFn {
                     name: fun.clone(),
-                    module: vec![module.clone()],
+                    module: module.clone(),
                     arity: args.len(),
                     field_map,
                     location: *location,
@@ -947,7 +947,7 @@ fn register_values<'a>(
                     arity: constructor.arguments.len() as u16,
                     field_map: field_map.clone(),
                     location: constructor.location,
-                    module: module_name.join("/"),
+                    module: module_name.to_string(),
                 };
 
                 if !opaque {
@@ -990,7 +990,7 @@ fn register_values<'a>(
 
 fn generalise_statement(
     s: TypedStatement,
-    module_name: &[String],
+    module_name: &str,
     environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
@@ -1028,7 +1028,7 @@ fn generalise_statement(
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.to_vec(),
+                        module: module_name.to_string(),
                         arity: args.len(),
                         location,
                     },
@@ -1059,7 +1059,7 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
-    module_name: &[String],
+    module_name: &str,
     hydrators: &mut HashMap<String, Hydrator>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
@@ -1116,7 +1116,7 @@ fn infer_statement(
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.to_vec(),
+                        module: module_name.to_string(),
                         arity: args.len(),
                         location,
                     },
@@ -1316,17 +1316,14 @@ fn infer_statement(
             mut unqualified,
             ..
         } => {
-            let name = module.join("/");
             // Find imported module
-            let module_info =
-                environment
-                    .importable_modules
-                    .get(&name)
-                    .ok_or_else(|| Error::UnknownModule {
-                        location,
-                        name,
-                        imported_modules: environment.imported_modules.keys().cloned().collect(),
-                    })?;
+            let module_info = environment.importable_modules.get(&module).ok_or_else(|| {
+                Error::UnknownModule {
+                    location,
+                    name: module.clone(),
+                    imported_modules: environment.imported_modules.keys().cloned().collect(),
+                }
+            })?;
             // Record any imports that are types only as this information is
             // needed to prevent types being imported in generated JavaScript
             for import in unqualified.iter_mut() {
@@ -1359,7 +1356,7 @@ fn infer_statement(
                 variant: ValueConstructorVariant::ModuleConstant {
                     location,
                     literal: typed_expr.clone(),
-                    module: module_name.join("/"),
+                    module: module_name.to_string(),
                 },
                 type_: type_.clone(),
             };
@@ -1688,7 +1685,7 @@ fn get_compatible_record_fields<A>(
 /// Iterate over a module, registering any new types created by the module into the typer
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
-    module: &[String],
+    module: &'a str,
     hydrators: &mut HashMap<String, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
@@ -1819,7 +1816,7 @@ pub fn register_types<'a>(
 
 pub fn register_import(
     s: &UntypedStatement,
-    current_module: &[String],
+    current_module: &str,
     origin: Origin,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
@@ -1831,7 +1828,7 @@ pub fn register_import(
             location,
             ..
         } => {
-            let name = module.join("/");
+            let name = module.clone();
             // Find imported module
             let module_info =
                 environment
@@ -1846,7 +1843,7 @@ pub fn register_import(
             if origin.is_src() && !module_info.origin.is_src() {
                 return Err(Error::SrcImportingTest {
                     location: *location,
-                    src_module: current_module.join("/"),
+                    src_module: current_module.to_string(),
                     test_module: name,
                 });
             }
@@ -1854,9 +1851,10 @@ pub fn register_import(
             // Determine local alias of imported module
             let module_name = as_name
                 .as_ref()
-                .or_else(|| module.last())
+                .map(|s| s.as_str())
+                .or_else(|| module.split('/').last())
                 .expect("Typer could not identify module name.")
-                .clone();
+                .to_string();
 
             // Insert unqualified imports into scope
             for UnqualifiedImport {
