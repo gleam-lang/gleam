@@ -406,7 +406,7 @@ fn used_destructure() {
 #[test]
 fn unused_imported_module_warnings_test() {
     assert_warning!(
-        ("gleam/foo".to_string(), "pub fn bar() { 1 }"),
+        ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo",
         Warning::UnusedImportedModule {
             name: "foo".to_string(),
@@ -418,7 +418,7 @@ fn unused_imported_module_warnings_test() {
 #[test]
 fn unused_imported_module_with_alias_warnings_test() {
     assert_warning!(
-        ("gleam/foo".to_string(), "pub fn bar() { 1 }"),
+        ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo as bar",
         Warning::UnusedImportedModule {
             name: "bar".to_string(),
@@ -430,7 +430,7 @@ fn unused_imported_module_with_alias_warnings_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_function_test() {
     assert_no_warnings!(
-        ("gleam/foo".to_string(), "pub fn bar() { 1 }"),
+        ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo; pub fn baz() { foo.bar() }",
     );
 }
@@ -438,7 +438,7 @@ fn unused_imported_module_no_warning_on_used_function_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_type_test() {
     assert_no_warnings!(
-        ("gleam/foo".to_string(), "pub type Foo = Int"),
+        ("gleam/foo", "pub type Foo = Int"),
         "import gleam/foo; pub fn baz(a: foo.Foo) { a }",
     );
 }
@@ -446,7 +446,7 @@ fn unused_imported_module_no_warning_on_used_type_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
     assert_no_warnings!(
-        ("gleam/foo".to_string(), "pub fn bar() { 1 }"),
+        ("gleam/foo", "pub fn bar() { 1 }"),
         "import gleam/foo.{bar}; pub fn baz() { bar() }",
     );
 }
@@ -454,7 +454,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
 #[test]
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
-        ("gleam/foo".to_string(), "pub type Foo = Int"),
+        ("gleam/foo", "pub type Foo = Int"),
         "import gleam/foo.{Foo}; pub fn baz(a: Foo) { a }",
     );
 }
@@ -497,7 +497,7 @@ pub fn main(s) {
 #[test]
 fn imported_function_referenced_in_constant() {
     assert_no_warnings!(
-        ("one".to_string(), "pub fn two() { 2 }"),
+        ("one", "pub fn two() { 2 }"),
         "
 import one
 
@@ -510,7 +510,7 @@ pub const make_two = one.two
 #[test]
 fn imported_constructor_referenced_in_constant() {
     assert_no_warnings!(
-        ("one".to_string(), "pub type Two { Two(Int) }"),
+        ("one", "pub type Two { Two(Int) }"),
         "
 import one
 

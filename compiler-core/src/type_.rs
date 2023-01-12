@@ -664,19 +664,20 @@ pub fn infer_module(
         ..
     } = environment;
 
+    let type_info = Module {
+        name: name.to_string(),
+        types,
+        types_constructors,
+        values,
+        accessors,
+        origin,
+        package: package.to_string(),
+    };
     Ok(ast::Module {
         documentation,
-        name: name.clone(),
+        name,
         statements,
-        type_info: Module {
-            name,
-            types,
-            types_constructors,
-            values,
-            accessors,
-            origin,
-            package: package.to_string(),
-        },
+        type_info,
     })
 }
 

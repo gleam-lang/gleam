@@ -1614,13 +1614,13 @@ fn same_imports_multiple_times() {
 fn same_imports_multiple_times_1() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1636,13 +1636,13 @@ fn same_imports_multiple_times_1() {
 fn same_imports_multiple_times_2() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1658,13 +1658,13 @@ fn same_imports_multiple_times_2() {
 fn same_imports_multiple_times_3() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1680,13 +1680,13 @@ fn same_imports_multiple_times_3() {
 fn same_imports_multiple_times_4() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1702,13 +1702,13 @@ fn same_imports_multiple_times_4() {
 fn same_imports_multiple_times_5() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1724,13 +1724,13 @@ fn same_imports_multiple_times_5() {
 fn same_imports_multiple_times_6() {
     assert_with_module_error!(
         (
-            "one".to_string(),
+            "one",
             "
             pub fn fn1() { 1 }
             "
         ),
         (
-            "two".to_string(),
+            "two",
             "
             pub fn fn2() { 1 }
             "
@@ -1795,7 +1795,7 @@ pub fn main(user: User) {
 #[test]
 fn unknown_imported_module_type() {
     assert_with_module_error!(
-        ("one/two".to_string(), ""),
+        ("one/two", ""),
         "
 import one/two
 

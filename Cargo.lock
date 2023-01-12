@@ -740,6 +740,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
+ "smol_str",
  "spdx",
  "strsim",
  "strum",
@@ -1842,6 +1843,15 @@ name = "smawk"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f67ad224767faa3c7d8b6d91985b78e70a1324408abcb1cfcc2be4c06bc06043"
+
+[[package]]
+name = "smol_str"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7475118a28b7e3a2e157ce0131ba8c5526ea96e90ee601d9f6bb2e286a35ab44"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "socket2"

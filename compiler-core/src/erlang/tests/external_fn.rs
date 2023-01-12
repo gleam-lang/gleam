@@ -47,7 +47,7 @@ fn inlining_external_functions_from_another_module() {
     assert_erl!(
         (
             "lib",
-            "atom".to_string(),
+            "atom",
             "pub external type Atom
 pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
         ),
@@ -65,7 +65,7 @@ fn unqualified_inlining_external_functions_from_another_module() {
     assert_erl!(
         (
             "lib",
-            "atom".to_string(),
+            "atom",
             "pub external type Atom
 pub external fn make(String) -> String = \"erlang\" \"binary_to_atom\""
         ),
