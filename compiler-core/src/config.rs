@@ -726,19 +726,20 @@ mod package_name {
     use lazy_static::lazy_static;
     use regex::Regex;
     use serde::Deserializer;
+    use smol_str::SmolStr;
 
     lazy_static! {
         static ref PACKAGE_NAME_PATTERN: Regex =
             Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<String, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<SmolStr, D::Error>
     where
         D: Deserializer<'de>,
     {
         let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
         if PACKAGE_NAME_PATTERN.is_match(name) {
-            Ok(name.to_string())
+            Ok(name.into())
         } else {
             let error =
                 "Package names may only container lowercase letters, numbers, and underscores";

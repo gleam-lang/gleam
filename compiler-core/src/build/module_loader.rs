@@ -26,7 +26,7 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub mode: Mode,
     pub target: Target,
     pub codegen: CodegenRequired,
-    pub package_name: &'a str,
+    pub package_name: &'a SmolStr,
     pub source_directory: &'a Path,
     pub artefact_directory: &'a Path,
     pub origin: Origin,
@@ -110,7 +110,7 @@ where
             self.origin,
             path,
             name,
-            &self.package_name,
+            self.package_name.clone(),
             mtime,
         )
     }
@@ -134,11 +134,11 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
     package_name: SmolStr,
     mtime: SystemTime,
 ) -> Result<UncompiledModule> {
-    let code = io.read(&path)?;
+    let code: SmolStr = io.read(&path)?.into();
 
     let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
         path: path.clone(),
-        src: code.into(),
+        src: code.clone(),
         error,
     })?;
 

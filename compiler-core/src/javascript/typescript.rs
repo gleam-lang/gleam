@@ -15,6 +15,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc};
 
 use heck::ToUpperCamelCase;
 use itertools::Itertools;
+use smol_str::SmolStr;
 
 use crate::{
     ast::{
@@ -33,9 +34,11 @@ use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 // TypeScript. This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".into();
-        name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
-        return Document::String(name);
+        return std::iter::once(
+            std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"),
+        )
+        .collect::<SmolStr>()
+        .to_doc();
     }
     let mut name = vec![];
     let mut last_char = id;
@@ -45,7 +48,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    Document::String(name.into_iter().collect())
+    name.into_iter().collect::<SmolStr>().to_doc()
 }
 
 fn name_with_generics<'a>(
@@ -346,7 +349,7 @@ impl<'a> TypeScriptGenerator<'a> {
         }
     }
 
-    fn external_type(&self, name: &str, args: &'a [String]) -> Output<'a> {
+    fn external_type(&self, name: &str, args: &'a [SmolStr]) -> Output<'a> {
         let doc_name = Document::String(format!("{}$", ts_safe_type_name(name.to_string())));
         if args.is_empty() {
             Ok(docvec!["export type ", doc_name, " = any;"])
