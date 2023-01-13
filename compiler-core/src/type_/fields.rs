@@ -107,7 +107,7 @@ impl FieldMap {
                 if seen_labels.contains(label) {
                     return Err(Error::DuplicateArgument {
                         location,
-                        label: label.to_string(),
+                        label: label.clone(),
                     });
                 }
                 let _ = seen_labels.insert(label.clone());
@@ -120,14 +120,14 @@ impl FieldMap {
             Ok(())
         } else {
             Err(Error::UnknownLabels {
-                valid: self.fields.keys().map(|t| t.to_string()).collect(),
+                valid: self.fields.keys().cloned().collect(),
                 unknown: unknown_labels,
                 supplied: seen_labels.into_iter().collect(),
             })
         }
     }
 
-    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<String> {
+    pub fn incorrect_arity_labels<A>(&self, args: &[CallArg<A>]) -> Vec<SmolStr> {
         let given: HashSet<_> = args.iter().filter_map(|arg| arg.label.as_ref()).collect();
 
         self.fields

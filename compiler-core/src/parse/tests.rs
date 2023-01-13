@@ -12,7 +12,7 @@ macro_rules! assert_error {
     ($src:expr) => {
         let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");
         let error = crate::error::Error::Parse {
-            src: $src.to_string(),
+            src: $src.into(),
             path: PathBuf::from("/src/parse/error.gleam"),
             error: result,
         };

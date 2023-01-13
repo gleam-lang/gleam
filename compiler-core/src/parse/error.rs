@@ -1,6 +1,7 @@
 use crate::ast::SrcSpan;
 use crate::error::wrap;
 use heck::{ToSnakeCase, ToUpperCamelCase};
+use smol_str::SmolStr;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct LexicalError {
@@ -28,7 +29,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn details(&self) -> (&'static str, Vec<String>) {
+    pub fn details(&self) -> (&'static str, Vec<SmolStr>) {
         match &self.error {
             ParseErrorType::ExpectedEqual => ("I was expecting a '=' after this", vec![]),
             ParseErrorType::ExpectedExpr => ("I was expecting an expression after this.", vec![]),
@@ -246,8 +247,8 @@ pub enum ParseErrorType {
     UnexpectedEof,
     UnexpectedReservedWord, // reserved word used when a name was expected
     UnexpectedToken {
-        expected: Vec<String>,
-        hint: Option<String>,
+        expected: Vec<SmolStr>,
+        hint: Option<SmolStr>,
     },
     ExpectedBoolean,
     UnexpectedFunction, // a function was used called outside of another function
