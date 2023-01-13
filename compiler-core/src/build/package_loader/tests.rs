@@ -88,7 +88,7 @@ fn one_src_module() {
     write_src(&fs, "/src/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["main".into()]);
+    assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -101,7 +101,7 @@ fn one_test_module() {
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["main".into()]);
+    assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -118,7 +118,11 @@ fn importing() {
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(
         loaded.to_compile,
-        vec!["one".into(), "two".into(), "three".into()]
+        vec![
+            SmolStr::new("one"),
+            SmolStr::new("two"),
+            SmolStr::new("three")
+        ]
     );
     assert!(loaded.cached.is_empty());
 }
@@ -134,7 +138,7 @@ fn reading_cache() {
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
-    assert_eq!(loaded.cached, vec!["one".into()]);
+    assert_eq!(loaded.cached, vec![SmolStr::new("one")]);
 }
 
 #[test]
@@ -147,7 +151,7 @@ fn module_is_stale_if_cache_older() {
     write_cache(&fs, "one", 0, vec![]);
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["one".into()]);
+    assert_eq!(loaded.to_compile, vec![SmolStr::new("one")]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -163,13 +167,16 @@ fn module_is_stale_if_deps_are_stale() {
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec!["one".into()]);
+    write_cache(&fs, "two", 2, vec![SmolStr::new("one")]);
 
     // Cache is fresh
     write_src(&fs, "/src/three.gleam", 1, "");
     write_cache(&fs, "three", 2, vec![]);
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["one".into(), "two".into()]);
-    assert_eq!(loaded.cached, vec!["three".into()]);
+    assert_eq!(
+        loaded.to_compile,
+        vec![SmolStr::new("one"), SmolStr::new("two")]
+    );
+    assert_eq!(loaded.cached, vec![SmolStr::new("three")]);
 }

@@ -33,7 +33,7 @@ macro_rules! assert_erl {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            $dep_package,
+            &$dep_package.into(),
             &modules,
             &mut vec![],
         )

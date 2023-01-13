@@ -491,7 +491,7 @@ fn function<'a>(
     }
 }
 
-fn text_documentation(doc: &Option<String>) -> String {
+fn text_documentation(doc: &Option<SmolStr>) -> String {
     let raw_text = doc
         .as_ref()
         .map(|it| it.to_string())
@@ -501,7 +501,7 @@ fn text_documentation(doc: &Option<String>) -> String {
     raw_text.replace("```gleam", "").replace("```", "")
 }
 
-fn markdown_documentation(doc: &Option<String>) -> String {
+fn markdown_documentation(doc: &Option<SmolStr>) -> String {
     doc.as_deref().map(render_markdown).unwrap_or_default()
 }
 

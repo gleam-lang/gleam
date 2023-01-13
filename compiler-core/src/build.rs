@@ -154,7 +154,7 @@ impl Package {
 #[derive(Debug)]
 pub struct Module {
     pub name: SmolStr,
-    pub code: String,
+    pub code: SmolStr,
     pub mtime: SystemTime,
     pub input_path: PathBuf,
     pub origin: Origin,

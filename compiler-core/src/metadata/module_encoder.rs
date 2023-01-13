@@ -1,3 +1,5 @@
+use smol_str::SmolStr;
+
 use crate::{
     ast::{
         Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
@@ -136,7 +138,7 @@ impl<'a> ModuleEncoder<'a> {
     fn build_types_constructors_mapping(
         &mut self,
         mut builder: capnp::text_list::Builder<'_>,
-        constructors: &[String],
+        constructors: &[SmolStr],
     ) {
         for (i, s) in constructors.iter().enumerate() {
             builder.set(i as u32, s);

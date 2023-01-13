@@ -62,7 +62,7 @@ macro_rules! assert_js {
         )
         .expect("should successfully infer");
         let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -130,7 +130,7 @@ macro_rules! assert_js {
         )
         .expect("should successfully infer");
         let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -158,7 +158,7 @@ macro_rules! assert_js {
         )
         .expect("should successfully infer");
         let line_numbers = LineNumbers::new($src);
-        let output = module(&ast, &line_numbers, Path::new(""), "").unwrap();
+        let output = module(&ast, &line_numbers, Path::new(""), &"".into()).unwrap();
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 }
@@ -200,7 +200,7 @@ macro_rules! assert_ts_def {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let output = ts_declaration(&ast, Path::new(""), "").unwrap();
+        let output = ts_declaration(&ast, Path::new(""), &"".into()).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -266,7 +266,7 @@ macro_rules! assert_ts_def {
             &mut vec![],
         )
         .expect("should successfully infer");
-        let output = ts_declaration(&ast, Path::new(""), "").unwrap();
+        let output = ts_declaration(&ast, Path::new(""), &"".into()).unwrap();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 

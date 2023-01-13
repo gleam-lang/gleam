@@ -76,7 +76,7 @@ pub enum Error {
         kind: FileKind,
         action: FileIoAction,
         path: PathBuf,
-        err: Option<SmolStr>,
+        err: Option<String>,
     },
 
     #[error("{error}")]

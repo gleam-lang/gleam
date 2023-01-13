@@ -9,7 +9,7 @@ mod use_;
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         let mut writer = String::new();
-        $crate::format::pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
+        $crate::format::pretty(&mut writer, &$src.into(), std::path::Path::new("<stdin>")).unwrap();
         assert_eq!($src, writer);
     };
 }
@@ -18,7 +18,7 @@ macro_rules! assert_format {
 macro_rules! assert_format_rewrite {
     ($src:expr, $output:expr  $(,)?) => {
         let mut writer = String::new();
-        pretty(&mut writer, $src, std::path::Path::new("<stdin>")).unwrap();
+        pretty(&mut writer, &$src.into(), std::path::Path::new("<stdin>")).unwrap();
         assert_eq!(writer, $output);
     };
 }

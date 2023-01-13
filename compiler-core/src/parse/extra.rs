@@ -1,3 +1,5 @@
+use smol_str::SmolStr;
+
 use crate::ast::SrcSpan;
 
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -18,6 +20,12 @@ impl ModuleExtra {
 pub struct Comment<'a> {
     pub start: u32,
     pub content: &'a str,
+}
+
+impl<'a> From<(&SrcSpan, &'a SmolStr)> for Comment<'a> {
+    fn from(value: (&SrcSpan, &'a SmolStr)) -> Self {
+        Self::from((value.0, value.1.as_str()))
+    }
 }
 
 impl<'a> From<(&SrcSpan, &'a str)> for Comment<'a> {

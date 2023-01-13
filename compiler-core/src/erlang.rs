@@ -21,6 +21,7 @@ use heck::ToSnakeCase;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use pattern::pattern;
+use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 
 const INDENT: isize = 4;
@@ -1388,7 +1389,7 @@ fn needs_wrapping_in_block(expression: &TypedExpr) -> bool {
     )
 }
 
-fn todo<'a>(message: &'a Option<String>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
     let message = message
         .as_deref()
         .unwrap_or("This has not yet been implemented");
@@ -1633,7 +1634,7 @@ fn variable_name(name: &str) -> String {
 // This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".into();
+        let mut name = "".to_string();
         name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }
@@ -1645,7 +1646,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    Document::String(name.into_iter().collect())
+    name.into_iter().collect::<SmolStr>().to_doc()
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {

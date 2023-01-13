@@ -503,13 +503,13 @@ pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     path: &Path,
-    src: &str,
+    src: &SmolStr,
 ) -> Result<String, crate::Error> {
     let document = Generator::new(line_numbers, module)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
-            src: src.to_string(),
+            src: src.clone(),
             error,
         })?;
     Ok(document.to_pretty_string(80))
@@ -518,13 +518,13 @@ pub fn module(
 pub fn ts_declaration(
     module: &TypedModule,
     path: &Path,
-    src: &str,
+    src: &SmolStr,
 ) -> Result<String, crate::Error> {
     let document = typescript::TypeScriptGenerator::new(module)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
-            src: src.to_string(),
+            src: src.clone(),
             error,
         })?;
     Ok(document.to_pretty_string(80))

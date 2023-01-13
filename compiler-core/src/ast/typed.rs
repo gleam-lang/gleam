@@ -95,13 +95,13 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         subjects: Vec<Self>,
-        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, String>>,
+        clauses: Vec<Clause<Self, PatternConstructor, Arc<Type>, SmolStr>>,
     },
 
     RecordAccess {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: String,
+        label: SmolStr,
         index: u64,
         record: Box<Self>,
     },
@@ -109,9 +109,9 @@ pub enum TypedExpr {
     ModuleSelect {
         location: SrcSpan,
         typ: Arc<Type>,
-        label: String,
+        label: SmolStr,
         module_name: SmolStr,
-        module_alias: String,
+        module_alias: SmolStr,
         constructor: ModuleValueConstructor,
     },
 
@@ -130,7 +130,7 @@ pub enum TypedExpr {
 
     Todo {
         location: SrcSpan,
-        label: Option<String>,
+        label: Option<SmolStr>,
         typ: Arc<Type>,
     },
 

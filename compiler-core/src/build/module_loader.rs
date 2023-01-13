@@ -131,14 +131,14 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
     origin: Origin,
     path: PathBuf,
     name: SmolStr,
-    package_name: &str,
+    package_name: SmolStr,
     mtime: SystemTime,
 ) -> Result<UncompiledModule> {
     let code = io.read(&path)?;
 
     let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
         path: path.clone(),
-        src: code.clone(),
+        src: code.into(),
         error,
     })?;
 
@@ -146,7 +146,7 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
 
     ast.name = name.clone();
     let module = UncompiledModule {
-        package: package_name.to_string(),
+        package: package_name,
         dependencies,
         origin,
         extra,
