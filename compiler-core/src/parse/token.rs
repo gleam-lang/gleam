@@ -1,13 +1,15 @@
 use std::fmt;
 
+use smol_str::SmolStr;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Token {
-    Name { name: String },
-    UpName { name: String },
-    DiscardName { name: String },
-    Int { value: String },
-    Float { value: String },
-    String { value: String },
+    Name { name: SmolStr },
+    UpName { name: SmolStr },
+    DiscardName { name: SmolStr },
+    Int { value: SmolStr },
+    Float { value: SmolStr },
+    String { value: SmolStr },
     // Groupings
     LeftParen,   // (
     RightParen,  // )
@@ -104,12 +106,12 @@ impl Token {
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
-            Token::Name { name } => name,
-            Token::UpName { name } => name,
-            Token::DiscardName { name } => name,
-            Token::Int { value } => value,
-            Token::Float { value } => value,
-            Token::String { value } => value,
+            Token::Name { name } | Token::UpName { name } | Token::DiscardName { name } => {
+                name.as_str()
+            }
+            Token::Int { value } | Token::Float { value } | Token::String { value } => {
+                value.as_str()
+            }
             Token::LeftParen => "(",
             Token::RightParen => ")",
             Token::LeftSquare => "[",

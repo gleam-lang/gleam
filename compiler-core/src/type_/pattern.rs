@@ -435,7 +435,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             while pattern_args.len() < field_map.arity as usize {
                                 let new_call_arg = CallArg {
                                     value: Pattern::Discard {
-                                        name: "_".to_string(),
+                                        name: "_".into(),
                                         location: spread_location,
                                     },
                                     location: spread_location,

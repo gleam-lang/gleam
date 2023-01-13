@@ -10,11 +10,11 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
-    module_name: &'module str,
+    module_name: SmolStr,
     line_numbers: &'module LineNumbers,
-    function_name: Option<&'module str>,
-    function_arguments: Vec<Option<&'module str>>,
-    current_scope_vars: im::HashMap<String, usize>,
+    function_name: Option<&'module SmolStr>,
+    function_arguments: Vec<Option<&'module SmolStr>>,
+    current_scope_vars: im::HashMap<SmolStr, usize>,
     pub tail_position: bool,
     pub in_iife: bool,
     // We register whether these features are used within an expression so that
@@ -29,15 +29,15 @@ pub(crate) struct Generator<'module> {
 impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
-        module_name: &'module str,
+        module_name: SmolStr,
         line_numbers: &'module LineNumbers,
-        function_name: &'module str,
-        function_arguments: Vec<Option<&'module str>>,
+        function_name: &'module SmolStr,
+        function_arguments: Vec<Option<&'module SmolStr>>,
         tracker: &'module mut UsageTracker,
-        mut current_scope_vars: im::HashMap<String, usize>,
+        mut current_scope_vars: im::HashMap<SmolStr, usize>,
     ) -> Self {
         for &name in function_arguments.iter().flatten() {
-            let _ = current_scope_vars.insert(name.to_string(), 0);
+            let _ = current_scope_vars.insert(name.clone(), 0);
         }
         Self {
             tracker,
@@ -52,10 +52,10 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var<'a>(&mut self, name: &'a str) -> Document<'a> {
+    pub fn local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
         match self.current_scope_vars.get(name) {
             None => {
-                let _ = self.current_scope_vars.insert(name.to_string(), 0);
+                let _ = self.current_scope_vars.insert(name.clone(), 0);
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
@@ -64,9 +64,9 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn next_local_var<'a>(&mut self, name: &'a str) -> Document<'a> {
+    pub fn next_local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
-        let _ = self.current_scope_vars.insert(name.to_string(), next);
+        let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var(name)
     }
 
@@ -326,7 +326,11 @@ impl<'module> Generator<'module> {
         .group()
     }
 
-    fn variable<'a>(&mut self, name: &'a str, constructor: &'a ValueConstructor) -> Document<'a> {
+    fn variable<'a>(
+        &mut self,
+        name: &'a SmolStr,
+        constructor: &'a ValueConstructor,
+    ) -> Document<'a> {
         match &constructor.variant {
             ValueConstructorVariant::Record { arity, .. } => {
                 self.record_constructor(constructor.type_.clone(), None, name, *arity)
@@ -416,7 +420,7 @@ impl<'module> Generator<'module> {
             self.local_var(name)
         } else {
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(subject))?;
-            let name = self.next_local_var(pattern::ASSIGNMENT_VAR);
+            let name = self.next_local_var(&pattern::ASSIGNMENT_VAR.into());
             docs.push("let ".to_doc());
             docs.push(name.clone());
             docs.push(" = ".to_doc());
@@ -783,7 +787,7 @@ impl<'module> Generator<'module> {
         // And there's a new scope
         let scope = self.current_scope_vars.clone();
         for name in arguments.iter().flat_map(Arg::get_variable_name) {
-            let _ = self.current_scope_vars.insert(name.to_string(), 0);
+            let _ = self.current_scope_vars.insert(name.clone(), 0);
         }
 
         // This is a new function so unset the recorded name so that we don't
@@ -967,11 +971,12 @@ impl<'module> Generator<'module> {
         Fields: IntoIterator<Item = (&'a str, Document<'a>)>,
     {
         self.tracker.throw_error_used = true;
-        let module = Document::String(self.module_name.to_string()).surround('"', '"');
-        // TODO switch to use `string(self.function_name)`
-        // This will require resolving the
-        // difference in lifetimes 'module and 'a.
-        let function = Document::String(self.function_name.unwrap_or_default().to_string())
+        let module = self.module_name.to_doc().surround('"', '"');
+        let function = self
+            .function_name
+            .cloned()
+            .unwrap_or_default()
+            .to_doc()
             .surround("\"", "\"");
         let line = self.line_numbers.line_number(location.start).to_doc();
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));

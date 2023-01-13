@@ -1899,7 +1899,7 @@ where
         for_const: bool,
         start: u32,
         module: Option<SmolStr>,
-        name: String,
+        name: SmolStr,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {

@@ -24,14 +24,14 @@ pub enum Error {
         location: SrcSpan,
     },
     UnknownLabels {
-        unknown: Vec<(String, SrcSpan)>,
-        valid: Vec<String>,
-        supplied: Vec<String>,
+        unknown: Vec<(SmolStr, SrcSpan)>,
+        valid: Vec<SmolStr>,
+        supplied: Vec<SmolStr>,
     },
 
     UnknownVariable {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         variables: Vec<String>,
     },
 
@@ -56,16 +56,16 @@ pub enum Error {
 
     UnknownModuleValue {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         module_name: SmolStr,
         value_constructors: Vec<String>,
     },
 
     UnknownModuleField {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         module_name: SmolStr,
-        value_constructors: Vec<String>,
+        value_constructors: Vec<SmolStr>,
         type_constructors: Vec<String>,
     },
 
@@ -260,18 +260,18 @@ pub enum Warning {
     UnusedType {
         location: SrcSpan,
         imported: bool,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedConstructor {
         location: SrcSpan,
         imported: bool,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedImportedValue {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedImportedModule {
@@ -281,17 +281,17 @@ pub enum Warning {
 
     UnusedPrivateModuleConstant {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedPrivateFunction {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     UnusedVariable {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 }
 
@@ -335,7 +335,7 @@ impl Warning {
 #[derive(Debug, PartialEq, Eq)]
 pub enum UnknownValueConstructorError {
     Variable {
-        name: String,
+        name: SmolStr,
         variables: Vec<String>,
     },
 
@@ -345,7 +345,7 @@ pub enum UnknownValueConstructorError {
     },
 
     ModuleValue {
-        name: String,
+        name: SmolStr,
         module_name: SmolStr,
         value_constructors: Vec<String>,
     },

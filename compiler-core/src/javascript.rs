@@ -25,7 +25,7 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     tracker: UsageTracker,
-    module_scope: im::HashMap<String, usize>,
+    module_scope: im::HashMap<SmolStr, usize>,
     current_module_name_segments_count: usize,
 }
 
@@ -405,13 +405,13 @@ impl<'a> Generator<'a> {
     }
 
     fn register_in_scope(&mut self, name: &str) {
-        let _ = self.module_scope.insert(name.to_string(), 0);
+        let _ = self.module_scope.insert(name.into(), 0);
     }
 
     fn module_function(
         &mut self,
         public: bool,
-        name: &'a str,
+        name: &SmolStr,
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {
@@ -420,7 +420,7 @@ impl<'a> Generator<'a> {
             .map(|arg| arg.names.get_variable_name())
             .collect();
         let mut generator = expression::Generator::new(
-            &self.module.name,
+            self.module.name.clone(),
             self.line_numbers,
             name,
             argument_names,

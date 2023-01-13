@@ -25,14 +25,14 @@ fn roundtrip(input: &Module) -> Module {
 
 fn constant_module(constant: TypedConstant) -> Module {
     Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
@@ -54,7 +54,7 @@ fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption)
             location: Default::default(),
             value: Box::new(Constant::Int {
                 location: Default::default(),
-                value: "1".to_string(),
+                value: "1".into(),
             }),
             options: vec![option],
             type_: type_::int(),
@@ -65,7 +65,7 @@ fn bit_string_segment_option_module(option: TypedConstantBitStringSegmentOption)
 #[test]
 fn empty_module() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
         types: HashMap::new(),
@@ -79,11 +79,11 @@ fn empty_module() {
 #[test]
 fn module_with_app_type() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
-            "ListIntType".to_string(),
+            "ListIntType".into(),
             TypeConstructor {
                 typ: type_::list(type_::int()),
                 public: true,
@@ -103,11 +103,11 @@ fn module_with_app_type() {
 #[test]
 fn module_with_fn_type() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
-            "FnType".to_string(),
+            "FnType".into(),
             TypeConstructor {
                 typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 public: true,
@@ -127,11 +127,11 @@ fn module_with_fn_type() {
 #[test]
 fn module_with_tuple_type() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
-            "TupleType".to_string(),
+            "TupleType".into(),
             TypeConstructor {
                 typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 public: true,
@@ -157,11 +157,11 @@ fn module_with_generic_type() {
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> Module {
         Module {
-            package: "some_package".to_string(),
+            package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
             types: [(
-                "TupleType".to_string(),
+                "TupleType".into(),
                 TypeConstructor {
                     typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     public: true,
@@ -187,11 +187,11 @@ fn module_with_type_links() {
 
     fn make(type_: Arc<Type>) -> Module {
         Module {
-            package: "some_package".to_string(),
+            package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
             types: [(
-                "SomeType".to_string(),
+                "SomeType".into(),
                 TypeConstructor {
                     typ: type_,
                     public: true,
@@ -213,11 +213,11 @@ fn module_with_type_links() {
 #[test]
 fn module_type_to_constructors_mapping() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: [("SomeType".to_string(), vec!["One".to_string()])].into(),
+        types_constructors: [("SomeType".into(), vec!["One".into()])].into(),
         accessors: HashMap::new(),
         values: HashMap::new(),
     };
@@ -228,21 +228,21 @@ fn module_type_to_constructors_mapping() {
 #[test]
 fn module_fn_value() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
-                    name: "one".to_string(),
+                    name: "one".into(),
                     field_map: None,
-                    module: "a".to_string(),
+                    module: "a".into(),
                     arity: 5,
                     location: SrcSpan {
                         start: 535,
@@ -261,21 +261,21 @@ fn module_fn_value() {
 #[test]
 fn module_fn_value_regression() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
-                    name: "one".to_string(),
+                    name: "one".into(),
                     field_map: None,
-                    module: "a".to_string(),
+                    module: "a".into(),
                     arity: 5,
                     location: SrcSpan {
                         start: 52,
@@ -293,24 +293,24 @@ fn module_fn_value_regression() {
 #[test]
 fn module_fn_value_with_field_map() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
-                    name: "one".to_string(),
+                    name: "one".into(),
                     field_map: Some(FieldMap {
                         arity: 20,
-                        fields: [("ok".to_string(), 5), ("ko".to_string(), 7)].into(),
+                        fields: [("ok".into(), 5), ("ko".into(), 7)].into(),
                     }),
-                    module: "a".to_string(),
+                    module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
                 },
@@ -327,20 +327,20 @@ fn record_value() {
     let mut random = rand::thread_rng();
 
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
-                    name: "one".to_string(),
-                    module: "themodule".to_string(),
+                    name: "one".into(),
+                    module: "themodule".into(),
                     field_map: None,
                     arity: random.gen(),
                     constructors_count: random.gen(),
@@ -362,27 +362,23 @@ fn record_value_with_field_map() {
     let mut random = rand::thread_rng();
 
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
         types_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
-            "one".to_string(),
+            "one".into(),
             ValueConstructor {
                 public: true,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
-                    module: "themodule".to_string(),
-                    name: "one".to_string(),
+                    module: "themodule".into(),
+                    name: "one".into(),
                     field_map: Some(FieldMap {
                         arity: random.gen(),
-                        fields: [
-                            ("ok".to_string(), random.gen()),
-                            ("ko".to_string(), random.gen()),
-                        ]
-                        .into(),
+                        fields: [("ok".into(), random.gen()), ("ko".into(), random.gen())].into(),
                     }),
                     arity: random.gen(),
                     constructors_count: random.gen(),
@@ -402,7 +398,7 @@ fn record_value_with_field_map() {
 #[test]
 fn accessors() {
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
@@ -410,24 +406,24 @@ fn accessors() {
         values: HashMap::new(),
         accessors: [
             (
-                "one".to_string(),
+                "one".into(),
                 AccessorsMap {
                     public: true,
                     type_: type_::int(),
                     accessors: [
                         (
-                            "a".to_string(),
+                            "a".into(),
                             RecordAccessor {
                                 index: 6,
-                                label: "siiixxx".to_string(),
+                                label: "siiixxx".into(),
                                 type_: type_::nil(),
                             },
                         ),
                         (
-                            "a".to_string(),
+                            "a".into(),
                             RecordAccessor {
                                 index: 5,
-                                label: "fiveee".to_string(),
+                                label: "fiveee".into(),
                                 type_: type_::float(),
                             },
                         ),
@@ -436,15 +432,15 @@ fn accessors() {
                 },
             ),
             (
-                "two".to_string(),
+                "two".into(),
                 AccessorsMap {
                     public: true,
                     type_: type_::int(),
                     accessors: [(
-                        "a".to_string(),
+                        "a".into(),
                         RecordAccessor {
                             index: 1,
-                            label: "ok".to_string(),
+                            label: "ok".into(),
                             type_: type_::float(),
                         },
                     )]
@@ -462,7 +458,7 @@ fn accessors() {
 fn constant_int() {
     let module = constant_module(Constant::Int {
         location: Default::default(),
-        value: "100".to_string(),
+        value: "100".into(),
     });
 
     assert_eq!(roundtrip(&module), module);
@@ -472,7 +468,7 @@ fn constant_int() {
 fn constant_float() {
     let module = constant_module(Constant::Float {
         location: Default::default(),
-        value: "1.0".to_string(),
+        value: "1.0".into(),
     });
 
     assert_eq!(roundtrip(&module), module);
@@ -482,7 +478,7 @@ fn constant_float() {
 fn constant_string() {
     let module = constant_module(Constant::String {
         location: Default::default(),
-        value: "hello".to_string(),
+        value: "hello".into(),
     });
 
     assert_eq!(roundtrip(&module), module);
@@ -495,22 +491,22 @@ fn constant_tuple() {
         elements: vec![
             Constant::Int {
                 location: Default::default(),
-                value: "1".to_string(),
+                value: "1".into(),
             },
             Constant::Float {
                 location: Default::default(),
-                value: "1.0".to_string(),
+                value: "1.0".into(),
             },
             Constant::Tuple {
                 location: Default::default(),
                 elements: vec![
                     Constant::Int {
                         location: Default::default(),
-                        value: "1".to_string(),
+                        value: "1".into(),
                     },
                     Constant::Float {
                         location: Default::default(),
-                        value: "1.0".to_string(),
+                        value: "1.0".into(),
                     },
                 ],
             },
@@ -528,15 +524,15 @@ fn constant_list() {
         elements: vec![
             Constant::Int {
                 location: Default::default(),
-                value: "1".to_string(),
+                value: "1".into(),
             },
             Constant::Int {
                 location: Default::default(),
-                value: "2".to_string(),
+                value: "2".into(),
             },
             Constant::Int {
                 location: Default::default(),
-                value: "3".to_string(),
+                value: "3".into(),
             },
         ],
     });
@@ -549,7 +545,7 @@ fn constant_record() {
     let module = constant_module(Constant::Record {
         location: Default::default(),
         module: None,
-        name: "".to_string(),
+        name: "".into(),
         args: vec![
             CallArg {
                 implicit: false,
@@ -557,7 +553,7 @@ fn constant_record() {
                 location: Default::default(),
                 value: Constant::Float {
                     location: Default::default(),
-                    value: "0.0".to_string(),
+                    value: "0.0".into(),
                 },
             },
             CallArg {
@@ -566,11 +562,11 @@ fn constant_record() {
                 location: Default::default(),
                 value: Constant::Int {
                     location: Default::default(),
-                    value: "1".to_string(),
+                    value: "1".into(),
                 },
             },
         ],
-        tag: "thetag".to_string(),
+        tag: "thetag".into(),
         typ: type_::int(),
         field_map: None,
     });
@@ -582,13 +578,13 @@ fn constant_record() {
 fn constant_var() {
     let one_original = Constant::Int {
         location: Default::default(),
-        value: "1".to_string(),
+        value: "1".into(),
     };
 
     let one = Constant::Var {
         location: Default::default(),
         module: None,
-        name: "one_original".to_string(),
+        name: "one_original".into(),
         typ: type_::int(),
         constructor: Some(Box::from(ValueConstructor {
             public: true,
@@ -602,7 +598,7 @@ fn constant_var() {
     };
 
     let module = Module {
-        package: "some_package".to_string(),
+        package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
@@ -610,7 +606,7 @@ fn constant_var() {
         accessors: HashMap::new(),
         values: [
             (
-                "one".to_string(),
+                "one".into(),
                 ValueConstructor {
                     public: true,
                     type_: type_::int(),
@@ -622,7 +618,7 @@ fn constant_var() {
                 },
             ),
             (
-                "one_original".to_string(),
+                "one_original".into(),
                 ValueConstructor {
                     public: true,
                     type_: type_::int(),
@@ -680,7 +676,7 @@ fn constant_bit_string_size() {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
-            value: "1".to_string(),
+            value: "1".into(),
         }),
         short_form: false,
     });
@@ -693,7 +689,7 @@ fn constant_bit_string_size_short_form() {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
-            value: "1".to_string(),
+            value: "1".into(),
         }),
         short_form: true,
     });

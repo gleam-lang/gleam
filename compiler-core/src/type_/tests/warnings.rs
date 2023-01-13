@@ -236,7 +236,7 @@ fn unused_private_type_warnings_test() {
     assert_warning!(
         "external type X",
         Warning::UnusedType {
-            name: "X".to_string(),
+            name: "X".into(),
             location: SrcSpan { start: 0, end: 15 },
             imported: false
         }
@@ -254,7 +254,7 @@ fn unused_private_type_warnings_test3() {
     assert_warning!(
         "type X = Int",
         Warning::UnusedType {
-            name: "X".to_string(),
+            name: "X".into(),
             location: SrcSpan { start: 0, end: 12 },
             imported: false
         }
@@ -277,7 +277,7 @@ fn unused_private_type_warnings_test6() {
     assert_warning!(
         "type X { X }",
         Warning::UnusedConstructor {
-            name: "X".to_string(),
+            name: "X".into(),
             location: SrcSpan { start: 9, end: 10 },
             imported: false
         }
@@ -299,7 +299,7 @@ fn unused_private_fn_warnings_test() {
     assert_warning!(
         "fn a() { 1 }",
         Warning::UnusedPrivateFunction {
-            name: "a".to_string(),
+            name: "a".into(),
             location: SrcSpan { start: 0, end: 6 },
         }
     );
@@ -320,7 +320,7 @@ fn unused_private_const_warnings_test() {
     assert_warning!(
         "const a = 1",
         Warning::UnusedPrivateModuleConstant {
-            name: "a".to_string(),
+            name: "a".into(),
             location: SrcSpan { start: 6, end: 7 },
         }
     );
@@ -342,7 +342,7 @@ fn unused_variable_warnings_test() {
     assert_warning!(
         "pub fn a(b) { 1 }",
         Warning::UnusedVariable {
-            name: "b".to_string(),
+            name: "b".into(),
             location: SrcSpan { start: 9, end: 10 },
         }
     );
@@ -359,7 +359,7 @@ fn unused_variable_warnings_test2() {
     assert_warning!(
         "pub fn a() { let b = 1 5 }",
         Warning::UnusedVariable {
-            name: "b".to_string(),
+            name: "b".into(),
             location: SrcSpan { start: 17, end: 18 },
         }
     );
@@ -375,7 +375,7 @@ fn unused_variable_shadowing_test() {
     assert_warning!(
         "pub fn a() { let b = 1 let b = 2 b }",
         Warning::UnusedVariable {
-            name: "b".to_string(),
+            name: "b".into(),
             location: SrcSpan { start: 17, end: 18 },
         }
     );
@@ -392,7 +392,7 @@ fn unused_destructure() {
     assert_warning!(
         "pub fn a(b) { case b { #(c, _) -> 5 } }",
         Warning::UnusedVariable {
-            name: "c".to_string(),
+            name: "c".into(),
             location: SrcSpan { start: 25, end: 26 },
         }
     );

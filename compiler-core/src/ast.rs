@@ -166,7 +166,7 @@ impl<A> Arg<A> {
         }
     }
 
-    pub fn get_variable_name(&self) -> Option<&str> {
+    pub fn get_variable_name(&self) -> Option<&SmolStr> {
         self.names.get_variable_name()
     }
 }
@@ -184,14 +184,14 @@ impl<A> ExternalFnArg<A> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: String },
-    LabelledDiscard { label: String, name: String },
-    Named { name: String },
-    NamedLabelled { name: String, label: String },
+    Discard { name: SmolStr },
+    LabelledDiscard { label: SmolStr, name: SmolStr },
+    Named { name: SmolStr },
+    NamedLabelled { name: SmolStr, label: SmolStr },
 }
 
 impl ArgNames {
-    pub fn get_variable_name(&self) -> Option<&str> {
+    pub fn get_variable_name(&self) -> Option<&SmolStr> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
             ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
@@ -237,7 +237,7 @@ pub enum TypeAst {
     Constructor {
         location: SrcSpan,
         module: Option<SmolStr>,
-        name: String,
+        name: SmolStr,
         arguments: Vec<Self>,
     },
 
@@ -366,7 +366,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Fn {
         location: SrcSpan,
         end_position: u32,
-        name: String,
+        name: SmolStr,
         arguments: Vec<Arg<T>>,
         body: Expr,
         public: bool,
@@ -488,7 +488,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<String>,
         location: SrcSpan,
         public: bool,
-        name: String,
+        name: SmolStr,
         annotation: Option<TypeAst>,
         value: Box<Constant<T, ConstantRecordTag>>,
         type_: T,
@@ -545,8 +545,8 @@ impl<A, B, C, E> Statement<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
-    pub name: String,
-    pub as_name: Option<String>,
+    pub name: SmolStr,
+    pub as_name: Option<SmolStr>,
     pub layer: Layer,
 }
 
@@ -684,7 +684,7 @@ impl BinOp {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub location: SrcSpan,
     pub value: A,
     // This is true if this argument is given as the callback in a `use`
@@ -962,38 +962,38 @@ pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
 pub enum Pattern<Constructor, Type> {
     Int {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
     Var {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     /// A reference to a variable in a bit string. This is always a variable
     /// being used rather than a new variable being assigned.
     VarUsage {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         type_: Type,
     },
 
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
     Assign {
-        name: String,
+        name: SmolStr,
         location: SrcSpan,
         pattern: Box<Self>,
     },
@@ -1001,7 +1001,7 @@ pub enum Pattern<Constructor, Type> {
     /// A pattern that binds to any value but does not assign a variable.
     /// Always starts with an underscore.
     Discard {
-        name: String,
+        name: SmolStr,
         location: SrcSpan,
     },
 
@@ -1037,7 +1037,7 @@ pub enum Pattern<Constructor, Type> {
         location: SrcSpan,
         left_location: SrcSpan,
         right_location: SrcSpan,
-        left_side_string: String,
+        left_side_string: SmolStr,
         /// The variable on the right hand side of the `<>`. It is `None` if the
         /// variable stars with `_` (it is a discard and assigns no variable).
         right_side_assignment: AssignName,
@@ -1046,8 +1046,8 @@ pub enum Pattern<Constructor, Type> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(String),
-    Discard(String),
+    Variable(SmolStr),
+    Discard(SmolStr),
 }
 
 impl AssignName {

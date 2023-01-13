@@ -6,17 +6,17 @@ use super::*;
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Sequence {
@@ -26,7 +26,7 @@ pub enum UntypedExpr {
 
     Var {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     Fn {
