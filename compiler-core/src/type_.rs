@@ -742,7 +742,7 @@ fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &'a SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
-    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
@@ -844,7 +844,7 @@ fn register_values<'a>(
 
             // Insert function into module
             environment.insert_module_value(
-                name,
+                name.clone(),
                 ValueConstructor {
                     public: *public,
                     type_: typ.clone(),
@@ -908,7 +908,7 @@ fn register_values<'a>(
                     // `return_type_constructor` below rather than looking it up twice.
                     type_: typ.clone(),
                 };
-                environment.insert_accessors(name, map)
+                environment.insert_accessors(name.clone(), map)
             }
 
             // Check and register constructors
@@ -986,7 +986,7 @@ fn register_values<'a>(
 
 fn generalise_statement(
     s: TypedStatement,
-    module_name: &str,
+    module_name: &SmolStr,
     environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
@@ -1017,7 +1017,7 @@ fn generalise_statement(
 
             // Insert the function into the module's interface
             environment.insert_module_value(
-                &name,
+                name.clone(),
                 ValueConstructor {
                     public,
                     type_: typ,
@@ -1352,7 +1352,7 @@ fn infer_statement(
                 variant: ValueConstructorVariant::ModuleConstant {
                     location,
                     literal: typed_expr.clone(),
-                    module: module_name.to_string(),
+                    module: module_name.clone(),
                 },
                 type_: type_.clone(),
             };
@@ -1363,7 +1363,7 @@ fn infer_statement(
                 type_.clone(),
                 public,
             );
-            environment.insert_module_value(&name, variant);
+            environment.insert_module_value(name.clone(), variant);
 
             if !public {
                 environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
@@ -1457,7 +1457,7 @@ fn assert_no_labelled_arguments<A>(args: &[CallArg<A>]) -> Result<(), Error> {
         if let Some(label) = &arg.label {
             return Err(Error::UnexpectedLabelledArg {
                 location: arg.location,
-                label: label.to_string(),
+                label: label.clone(),
             });
         }
     }
@@ -1619,7 +1619,7 @@ fn custom_type_accessors<A>(
     for (index, label, ast) in args {
         let typ = hydrator.type_from_ast(ast, environment)?;
         let _ = fields.insert(
-            label.to_string(),
+            label.clone(),
             RecordAccessor {
                 index: index as u64,
                 label: label.clone(),
@@ -1683,7 +1683,7 @@ pub fn register_types<'a>(
     statement: &'a UntypedStatement,
     module: SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
-    names: &mut HashMap<&'a str, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match statement {
@@ -1870,7 +1870,7 @@ pub fn register_import(
                     return Err(Error::DuplicateImport {
                         location: *location,
                         previous_location: *previous,
-                        name: name.into(),
+                        name: name.clone(),
                     });
                 }
 
@@ -1939,11 +1939,7 @@ pub fn register_import(
                         name: name.clone(),
                         module_name: module.clone(),
                         value_constructors: module_info.values.keys().map(|t| t.clone()).collect(),
-                        type_constructors: module_info
-                            .types
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        type_constructors: module_info.types.keys().cloned().collect(),
                     });
                 }
             }
@@ -1969,7 +1965,7 @@ pub fn register_import(
             // second time in future
             let _ = environment
                 .unqualified_imported_names
-                .insert(module_name.to_string(), *location);
+                .insert(module_name.clone(), *location);
 
             // Insert imported module into scope
             let _ = environment

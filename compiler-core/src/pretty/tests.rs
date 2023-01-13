@@ -123,13 +123,13 @@ fn format_test() {
         kind: BreakKind::Strict,
     }
     .group();
-    assert_eq!("broken\n".into(), doc.clone().to_pretty_string(5));
+    assert_eq!("broken\n", doc.clone().to_pretty_string(5));
 
     let doc = Nest(
         2,
         Box::new(String("1".into()).append(Line(1).append(String("2".into())))),
     );
-    assert_eq!("1\n  2".into(), doc.to_pretty_string(1));
+    assert_eq!("1\n  2", doc.to_pretty_string(1));
 
     let doc = ForceBroken(Box::new(Break {
         broken: "broken",
