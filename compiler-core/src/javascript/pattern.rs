@@ -742,7 +742,7 @@ pub(crate) fn assign_subject<'a>(
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
-            let subject = expression_generator.next_local_var(ASSIGNMENT_VAR);
+            let subject = expression_generator.next_local_var(&ASSIGNMENT_VAR.into());
             (subject.clone(), Some(subject))
         }
     }

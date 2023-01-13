@@ -8,17 +8,17 @@ pub type UntypedConstant = Constant<(), ()>;
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
-        value: String,
+        value: SmolStr,
     },
 
     Tuple {
@@ -35,7 +35,7 @@ pub enum Constant<T, RecordTag> {
     Record {
         location: SrcSpan,
         module: Option<SmolStr>,
-        name: String,
+        name: SmolStr,
         args: Vec<CallArg<Self>>,
         tag: RecordTag,
         typ: T,
@@ -50,7 +50,7 @@ pub enum Constant<T, RecordTag> {
     Var {
         location: SrcSpan,
         module: Option<SmolStr>,
-        name: String,
+        name: SmolStr,
         constructor: Option<Box<ValueConstructor>>,
         typ: T,
     },

@@ -760,7 +760,7 @@ impl<'comments> Formatter<'comments> {
         commented(document, comments)
     }
 
-    fn string<'a>(&self, string: &'a String) -> Document<'a> {
+    fn string<'a>(&self, string: &'a SmolStr) -> Document<'a> {
         let doc = string.to_doc().surround("\"", "\"");
         if string.contains('\n') {
             doc.force_break()

@@ -1,12 +1,13 @@
 use super::Error;
 use crate::ast::{CallArg, SrcSpan};
 use itertools::Itertools;
+use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldMap {
     pub arity: u32,
-    pub fields: HashMap<String, u32>,
+    pub fields: HashMap<SmolStr, u32>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -20,7 +21,7 @@ impl FieldMap {
         }
     }
 
-    pub fn insert(&mut self, label: String, index: u32) -> Result<(), DuplicateField> {
+    pub fn insert(&mut self, label: SmolStr, index: u32) -> Result<(), DuplicateField> {
         match self.fields.insert(label, index) {
             Some(_) => Err(DuplicateField),
             None => Ok(()),

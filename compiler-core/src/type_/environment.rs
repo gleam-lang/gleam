@@ -17,10 +17,10 @@ pub struct Environment<'a> {
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<SmolStr, (SrcSpan, &'a Module)>,
     pub unused_modules: HashMap<SmolStr, SrcSpan>,
-    pub imported_types: HashSet<String>,
+    pub imported_types: HashSet<SmolStr>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<String, ValueConstructor>,
+    pub scope: im::HashMap<SmolStr, ValueConstructor>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<String, TypeConstructor>,
@@ -29,7 +29,7 @@ pub struct Environment<'a> {
     pub module_types_constructors: HashMap<String, Vec<String>>,
 
     /// Values defined in the current module (or the prelude)
-    pub module_values: HashMap<String, ValueConstructor>,
+    pub module_values: HashMap<SmolStr, ValueConstructor>,
 
     /// Accessors defined in the current module
     pub accessors: HashMap<String, AccessorsMap>,
@@ -46,7 +46,7 @@ pub struct Environment<'a> {
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
     /// NOTE: The bool in the tuple here tracks if the entity has been used
-    pub entity_usages: Vec<HashMap<String, (EntityKind, SrcSpan, bool)>>,
+    pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
 }
 
 /// For Keeping track of entity usages and knowing which error to display.
@@ -54,7 +54,7 @@ pub struct Environment<'a> {
 pub enum EntityKind {
     PrivateConstant,
     // String here is the type constructor's type name
-    PrivateTypeConstructor(String),
+    PrivateTypeConstructor(SmolStr),
     PrivateFunction,
     ImportedConstructor,
     ImportedType,
@@ -97,7 +97,7 @@ impl<'a> Environment<'a> {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<String, ValueConstructor>,
+    local_values: im::HashMap<SmolStr, ValueConstructor>,
 }
 
 impl<'a> Environment<'a> {
@@ -169,7 +169,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_variable(
         &mut self,
-        name: String,
+        name: SmolStr,
         variant: ValueConstructorVariant,
         typ: Arc<Type>,
         public: bool,
@@ -417,14 +417,14 @@ impl<'a> Environment<'a> {
     }
 
     /// Inserts an entity at the current scope for usage tracking.
-    pub fn init_usage(&mut self, name: String, kind: EntityKind, location: SrcSpan) {
+    pub fn init_usage(&mut self, name: SmolStr, kind: EntityKind, location: SrcSpan) {
         use EntityKind::*;
 
         match self
             .entity_usages
             .last_mut()
             .expect("Attempted to access non-existant entity usages scope")
-            .insert(name.to_string(), (kind, location, false))
+            .insert(name.clone(), (kind, location, false))
         {
             // Private types can be shadowed by a constructor with the same name
             //
@@ -480,7 +480,7 @@ impl<'a> Environment<'a> {
         }
     }
 
-    fn handle_unused(&mut self, unused: HashMap<String, (EntityKind, SrcSpan, bool)>) {
+    fn handle_unused(&mut self, unused: HashMap<SmolStr, (EntityKind, SrcSpan, bool)>) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
                 EntityKind::ImportedType | EntityKind::ImportedTypeAndConstructor => {

@@ -8,19 +8,19 @@ pub enum TypedExpr {
     Int {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     Float {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     String {
         location: SrcSpan,
         typ: Arc<Type>,
-        value: String,
+        value: SmolStr,
     },
 
     Sequence {
@@ -41,7 +41,7 @@ pub enum TypedExpr {
     Var {
         location: SrcSpan,
         constructor: ValueConstructor,
-        name: String,
+        name: SmolStr,
     },
 
     Fn {

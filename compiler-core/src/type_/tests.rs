@@ -86,7 +86,7 @@ macro_rules! assert_infer_with_module {
             .collect();
         let expected: Vec<_> = $module
             .into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .map(|(k, v)| (k.into(), v.into()))
             .collect();
         assert_eq!(($src, constructors), ($src, expected));
     };
@@ -128,7 +128,7 @@ macro_rules! assert_module_infer {
             .collect();
         let expected: Vec<_> = $module
             .into_iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .map(|(k, v)| (k.into(), v.into()))
             .collect();
         assert_eq!(($src, constructors), ($src, expected));
     }};
@@ -537,13 +537,13 @@ macro_rules! assert_no_warnings {
 #[test]
 fn field_map_reorder_test() {
     let int = |value: &str| UntypedExpr::Int {
-        value: value.to_string(),
+        value: value.into(),
         location: SrcSpan { start: 0, end: 0 },
     };
 
     struct Case {
         arity: u32,
-        fields: HashMap<String, u32>,
+        fields: HashMap<SmolStr, u32>,
         args: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), Error>,
         expected_args: Vec<CallArg<UntypedExpr>>,
@@ -620,7 +620,7 @@ fn field_map_reorder_test() {
 
     Case {
         arity: 3,
-        fields: [("last".to_string(), 2)].into(),
+        fields: [("last".into(), 2)].into(),
         args: vec![
             CallArg {
                 implicit: false,
@@ -637,7 +637,7 @@ fn field_map_reorder_test() {
             CallArg {
                 implicit: false,
                 location: Default::default(),
-                label: Some("last".to_string()),
+                label: Some("last".into()),
                 value: int("3"),
             },
         ],
@@ -658,7 +658,7 @@ fn field_map_reorder_test() {
             CallArg {
                 implicit: false,
                 location: Default::default(),
-                label: Some("last".to_string()),
+                label: Some("last".into()),
                 value: int("3"),
             },
         ],

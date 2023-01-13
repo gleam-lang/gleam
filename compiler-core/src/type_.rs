@@ -280,9 +280,9 @@ pub enum ValueConstructorVariant {
 
     /// A function belonging to the module
     ModuleFn {
-        name: String,
+        name: SmolStr,
         field_map: Option<FieldMap>,
-        module: String,
+        module: SmolStr,
         arity: usize,
         location: SrcSpan,
     },
@@ -302,8 +302,8 @@ impl ValueConstructorVariant {
     fn to_module_value_constructor(
         &self,
         type_: Arc<Type>,
-        module_name: &str,
-        function_name: &str,
+        module_name: &SmolStr,
+        function_name: &SmolStr,
     ) -> ModuleValueConstructor {
         match self {
             Self::Record {
@@ -329,8 +329,8 @@ impl ValueConstructorVariant {
             },
 
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
-                name: function_name.to_string(),
-                module: module_name.to_string(),
+                name: function_name.clone(),
+                module: module_name.clone(),
                 location: *location,
             },
 
@@ -394,8 +394,8 @@ pub enum ModuleValueConstructor {
         ///     pub external fn wibble() -> Nil =
         ///       "other" "whoop"
         ///
-        module: String,
-        name: String,
+        module: SmolStr,
+        name: SmolStr,
     },
 
     Constant {
@@ -421,7 +421,7 @@ pub struct Module {
     pub package: String,
     pub types: HashMap<String, TypeConstructor>,
     pub types_constructors: HashMap<String, Vec<String>>,
-    pub values: HashMap<String, ValueConstructor>,
+    pub values: HashMap<SmolStr, ValueConstructor>,
     pub accessors: HashMap<String, AccessorsMap>,
 }
 
@@ -1910,26 +1910,26 @@ pub fn register_import(
 
                 if value_imported && type_imported {
                     environment.init_usage(
-                        imported_name.to_string(),
+                        imported_name.clone(),
                         EntityKind::ImportedTypeAndConstructor,
                         *location,
                     );
                 } else if type_imported {
-                    let _ = environment.imported_types.insert(imported_name.to_string());
+                    let _ = environment.imported_types.insert(imported_name.clone());
                     environment.init_usage(
-                        imported_name.to_string(),
+                        imported_name.clone(),
                         EntityKind::ImportedType,
                         *location,
                     );
                 } else if value_imported {
                     match variant {
                         Some(&ValueConstructorVariant::Record { .. }) => environment.init_usage(
-                            imported_name.to_string(),
+                            imported_name.clone(),
                             EntityKind::ImportedConstructor,
                             *location,
                         ),
                         _ => environment.init_usage(
-                            imported_name.to_string(),
+                            imported_name.clone(),
                             EntityKind::ImportedValue,
                             *location,
                         ),
@@ -1940,11 +1940,7 @@ pub fn register_import(
                         location: *location,
                         name: name.clone(),
                         module_name: module.clone(),
-                        value_constructors: module_info
-                            .values
-                            .keys()
-                            .map(|t| t.to_string())
-                            .collect(),
+                        value_constructors: module_info.values.keys().map(|t| t.clone()).collect(),
                         type_constructors: module_info
                             .types
                             .keys()
