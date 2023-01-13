@@ -255,14 +255,14 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 pub struct AccessorsMap {
     pub public: bool,
     pub type_: Arc<Type>,
-    pub accessors: HashMap<String, RecordAccessor>,
+    pub accessors: HashMap<SmolStr, RecordAccessor>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordAccessor {
     // TODO: smaller int. Doesn't need to be this big
     pub index: u64,
-    pub label: String,
+    pub label: SmolStr,
     pub type_: Arc<Type>,
 }
 
@@ -274,8 +274,8 @@ pub enum ValueConstructorVariant {
     /// A module constant
     ModuleConstant {
         location: SrcSpan,
-        module: String,
-        literal: Constant<Arc<Type>, String>,
+        module: SmolStr,
+        literal: Constant<Arc<Type>, SmolStr>,
     },
 
     /// A function belonging to the module
@@ -289,11 +289,11 @@ pub enum ValueConstructorVariant {
 
     /// A constructor for a custom type
     Record {
-        name: String,
+        name: SmolStr,
         arity: u16,
         field_map: Option<FieldMap>,
         location: SrcSpan,
-        module: String,
+        module: SmolStr,
         constructors_count: u16,
     },
 }
@@ -373,7 +373,7 @@ impl ValueConstructorVariant {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ModuleValueConstructor {
     Record {
-        name: String,
+        name: SmolStr,
         arity: u16,
         type_: Arc<Type>,
         field_map: Option<FieldMap>,
@@ -418,7 +418,7 @@ impl ModuleValueConstructor {
 pub struct Module {
     pub name: SmolStr,
     pub origin: Origin,
-    pub package: String,
+    pub package: SmolStr,
     pub types: HashMap<SmolStr, TypeConstructor>,
     pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
     pub values: HashMap<SmolStr, ValueConstructor>,
@@ -574,7 +574,7 @@ pub fn infer_module(
     ids: &UniqueIdGenerator,
     mut module: UntypedModule,
     origin: Origin,
-    package: &str,
+    package: &SmolStr,
     modules: &im::HashMap<SmolStr, Module>,
     warnings: &mut Vec<Warning>,
 ) -> Result<TypedModule, Error> {
@@ -673,7 +673,7 @@ pub fn infer_module(
             values,
             accessors,
             origin,
-            package: package.to_string(),
+            package: package.clone(),
         },
     })
 }
@@ -740,7 +740,7 @@ fn assert_unique_const_name<'a>(
 
 fn register_values<'a>(
     s: &'a UntypedStatement,
-    module_name: &'a str,
+    module_name: &'a SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
@@ -948,7 +948,7 @@ fn register_values<'a>(
 
                 if !opaque {
                     environment.insert_module_value(
-                        &constructor.name,
+                        constructor.name.clone(),
                         ValueConstructor {
                             public: *public,
                             type_: typ.clone(),
@@ -1055,7 +1055,7 @@ fn generalise_statement(
 
 fn infer_statement(
     s: UntypedStatement,
-    module_name: &str,
+    module_name: &SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
@@ -1292,7 +1292,7 @@ fn infer_statement(
             for arg in &args {
                 let var = TypeAst::Var {
                     location,
-                    name: arg.to_string(),
+                    name: arg.clone(),
                 };
                 let _ = hydrator.type_from_ast(&var, environment)?;
             }
@@ -1601,7 +1601,7 @@ fn make_type_vars(
     args.iter()
         .map(|arg| TypeAst::Var {
             location: *location,
-            name: arg.to_string(),
+            name: arg.clone(),
         })
         .map(|ast| hydrator.type_from_ast(&ast, environment))
         .try_collect()
@@ -1622,7 +1622,7 @@ fn custom_type_accessors<A>(
             label.to_string(),
             RecordAccessor {
                 index: index as u64,
-                label: label.to_string(),
+                label: label.clone(),
                 type_: typ,
             },
         );
@@ -1634,7 +1634,7 @@ fn custom_type_accessors<A>(
 /// the given type.
 fn get_compatible_record_fields<A>(
     constructors: &[RecordConstructor<A>],
-) -> Vec<(usize, &str, &TypeAst)> {
+) -> Vec<(usize, &SmolStr, &TypeAst)> {
     let mut compatible = vec![];
 
     let first = match constructors.get(0) {
@@ -1645,7 +1645,7 @@ fn get_compatible_record_fields<A>(
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
         let label = match first_argument.label.as_ref() {
-            Some(label) => label.as_str(),
+            Some(label) => label,
             None => continue 'next_argument,
         };
 

@@ -57,7 +57,7 @@ pub enum Target {
 
 impl Target {
     pub fn variant_strings() -> Vec<String> {
-        Self::VARIANTS.iter().map(|s| s.to_string()).collect()
+        Self::VARIANTS.iter().map(|s| (*s).into()).collect()
     }
 }
 
@@ -184,11 +184,7 @@ impl Module {
             .extra
             .module_comments
             .iter()
-            .map(|span| {
-                Comment::from((span, self.code.as_str()))
-                    .content
-                    .to_string()
-            })
+            .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
 
         // Order statements to avoid dissociating doc comments from them
@@ -201,7 +197,7 @@ impl Module {
             let docs: Vec<&str> =
                 comments_before(&mut doc_comments, statement.location().start, &self.code);
             if !docs.is_empty() {
-                let doc = docs.join("\n");
+                let doc = docs.join("\n").into();
                 statement.put_doc(doc);
             }
 
@@ -210,7 +206,7 @@ impl Module {
                     let docs: Vec<&str> =
                         comments_before(&mut doc_comments, constructor.location.start, &self.code);
                     if !docs.is_empty() {
-                        let doc = docs.join("\n");
+                        let doc = docs.join("\n").into();
                         constructor.put_doc(doc);
                     }
 
@@ -218,7 +214,7 @@ impl Module {
                         let docs: Vec<&str> =
                             comments_before(&mut doc_comments, argument.location.start, &self.code);
                         if !docs.is_empty() {
-                            let doc = docs.join("\n");
+                            let doc = docs.join("\n").into();
                             argument.put_doc(doc);
                         }
                     }

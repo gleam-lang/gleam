@@ -104,10 +104,10 @@ fn fits_test() {
 #[test]
 fn format_test() {
     let doc = String("Hi".into());
-    assert_eq!("Hi".to_string(), doc.to_pretty_string(10));
+    assert_eq!("Hi", doc.to_pretty_string(10));
 
     let doc = String("Hi".into()).append(String(", world!".into()));
-    assert_eq!("Hi, world!".to_string(), doc.clone().to_pretty_string(10));
+    assert_eq!("Hi, world!", doc.clone().to_pretty_string(10));
 
     let doc = &Break {
         broken: "broken",
@@ -115,7 +115,7 @@ fn format_test() {
         kind: BreakKind::Strict,
     }
     .group();
-    assert_eq!("unbroken".into(), doc.clone().to_pretty_string(10));
+    assert_eq!("unbroken", doc.clone().to_pretty_string(10));
 
     let doc = &Break {
         broken: "broken",
@@ -136,14 +136,14 @@ fn format_test() {
         unbroken: "unbroken",
         kind: BreakKind::Strict,
     }));
-    assert_eq!("broken\n".into(), doc.to_pretty_string(100));
+    assert_eq!("broken\n".to_string(), doc.to_pretty_string(100));
 
     let doc = ForceBroken(Box::new(Break {
         broken: "broken",
         unbroken: "unbroken",
         kind: BreakKind::Flex,
     }));
-    assert_eq!("unbroken".into(), doc.to_pretty_string(100));
+    assert_eq!("unbroken".to_string(), doc.to_pretty_string(100));
 }
 
 #[test]

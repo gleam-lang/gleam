@@ -1198,7 +1198,7 @@ where
     //   UpName( args )
     fn expect_constructor_pattern(
         &mut self,
-        module: Option<(u32, String, u32)>,
+        module: Option<(u32, SmolStr, u32)>,
     ) -> Result<UntypedPattern, ParseError> {
         let (mut start, name, end) = self.expect_upname()?;
         let (args, with_spread, end) = self.parse_constructor_pattern_args(end)?;
@@ -1707,7 +1707,7 @@ where
     // examples:
     //   A
     //   A(one, two)
-    fn expect_type_name(&mut self) -> Result<(u32, String, Vec<String>, u32), ParseError> {
+    fn expect_type_name(&mut self) -> Result<(u32, SmolStr, Vec<SmolStr>, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
@@ -2232,7 +2232,7 @@ where
         &mut self,
         start: u32,
         module: Option<SmolStr>,
-        name: String,
+        name: SmolStr,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
@@ -2318,7 +2318,7 @@ where
         &mut self,
         value_parser: &impl Fn(&mut Self) -> Result<Option<A>, ParseError>,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(String, u32, u32) -> A,
+        to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
     ) -> Result<Option<BitStringSegment<A, ()>>, ParseError>
     where
         A: HasLocation,
@@ -2359,7 +2359,7 @@ where
     fn parse_bit_string_segment_option<A>(
         &mut self,
         arg_parser: &impl Fn(&mut Self) -> Result<A, ParseError>,
-        to_int_segment: &impl Fn(String, u32, u32) -> A,
+        to_int_segment: &impl Fn(SmolStr, u32, u32) -> A,
     ) -> Result<Option<BitStringSegmentOption<A>>, ParseError> {
         match self.next_tok() {
             // named segment
@@ -2471,12 +2471,12 @@ where
     fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
-            None => self.next_tok_unexpected(vec![wanted.to_string()]),
+            None => self.next_tok_unexpected(vec![wanted.into()]),
         }
     }
 
     // Expect a Name else a token dependent helpful error
-    fn expect_name(&mut self) -> Result<(u32, String, u32), ParseError> {
+    fn expect_name(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
         let (start, token, end) = self.expect_assign_name()?;
         match token {
             AssignName::Variable(name) => Ok((start, name, end)),
@@ -2506,7 +2506,7 @@ where
     }
 
     // Expect an UpName else a token dependent helpful error
-    fn expect_upname(&mut self) -> Result<(u32, String, u32), ParseError> {
+    fn expect_upname(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
         let t = self.next_tok();
         match t {
             Some((start, tok, end)) => {
@@ -2542,7 +2542,7 @@ where
     }
 
     // Expect a String else error
-    fn expect_string(&mut self) -> Result<(u32, String, u32), ParseError> {
+    fn expect_string(&mut self) -> Result<(u32, SmolStr, u32), ParseError> {
         match self.next_tok() {
             Some((start, Token::String { value }, end)) => Ok((start, value, end)),
             _ => self.next_tok_unexpected(vec!["a string".into()]),
@@ -2592,7 +2592,7 @@ where
     }
 
     // If next token is a Name, consume it and return relevant info, otherwise, return none
-    fn maybe_name(&mut self) -> Option<(u32, String, u32)> {
+    fn maybe_name(&mut self) -> Option<(u32, SmolStr, u32)> {
         match self.tok0.take() {
             Some((s, Token::Name { name }, e)) => {
                 let _ = self.next_tok();
@@ -2606,7 +2606,7 @@ where
     }
 
     // if next token is an UpName, consume it and return relevant info, otherwise, return none
-    fn maybe_upname(&mut self) -> Option<(u32, String, u32)> {
+    fn maybe_upname(&mut self) -> Option<(u32, SmolStr, u32)> {
         match self.tok0.take() {
             Some((s, Token::UpName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2620,7 +2620,7 @@ where
     }
 
     // if next token is a DiscardName, consume it and return relevant info, otherwise, return none
-    fn maybe_discard_name(&mut self) -> Option<(u32, String, u32)> {
+    fn maybe_discard_name(&mut self) -> Option<(u32, SmolStr, u32)> {
         match self.tok0.take() {
             Some((s, Token::DiscardName { name }, e)) => {
                 let _ = self.next_tok();
@@ -2634,7 +2634,7 @@ where
     }
 
     // Error on the next token or EOF
-    fn next_tok_unexpected<A>(&mut self, expected: Vec<String>) -> Result<A, ParseError> {
+    fn next_tok_unexpected<A>(&mut self, expected: Vec<SmolStr>) -> Result<A, ParseError> {
         match self.next_tok() {
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
 
@@ -2925,21 +2925,21 @@ fn clause_guard_reduction(
 // Bitstrings in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
-fn bit_string_pattern_int(value: String, start: u32, end: u32) -> UntypedPattern {
+fn bit_string_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {
     Pattern::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_expr_int(value: String, start: u32, end: u32) -> UntypedExpr {
+fn bit_string_expr_int(value: SmolStr, start: u32, end: u32) -> UntypedExpr {
     UntypedExpr::Int {
         location: SrcSpan { start, end },
         value,
     }
 }
 
-fn bit_string_const_int(value: String, start: u32, end: u32) -> UntypedConstant {
+fn bit_string_const_int(value: SmolStr, start: u32, end: u32) -> UntypedConstant {
     Constant::Int {
         location: SrcSpan { start, end },
         value,
@@ -3011,7 +3011,7 @@ pub enum ParserArg {
     Arg(Box<CallArg<UntypedExpr>>),
     Hole {
         location: SrcSpan,
-        label: Option<String>,
+        label: Option<SmolStr>,
     },
 }
 

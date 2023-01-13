@@ -124,7 +124,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -152,7 +152,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -261,7 +261,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -288,7 +288,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )

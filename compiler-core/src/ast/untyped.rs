@@ -86,7 +86,7 @@ pub enum UntypedExpr {
 
     FieldAccess {
         location: SrcSpan,
-        label: String,
+        label: SmolStr,
         container: Box<Self>,
     },
 
@@ -104,7 +104,7 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        label: Option<String>,
+        label: Option<SmolStr>,
     },
 
     BitString {
