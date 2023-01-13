@@ -944,7 +944,7 @@ impl<'module> Generator<'module> {
         Ok(docvec!(left, " ", op, " ", right))
     }
 
-    fn todo<'a>(&mut self, message: &'a Option<String>, location: &'a SrcSpan) -> Document<'a> {
+    fn todo<'a>(&mut self, message: &'a Option<SmolStr>, location: &'a SrcSpan) -> Document<'a> {
         let tail_position = self.tail_position;
         self.tail_position = false;
 

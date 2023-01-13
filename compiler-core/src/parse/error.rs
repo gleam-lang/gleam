@@ -29,7 +29,7 @@ pub struct ParseError {
 }
 
 impl ParseError {
-    pub fn details(&self) -> (&'static str, Vec<SmolStr>) {
+    pub fn details(&self) -> (&'static str, Vec<String>) {
         match &self.error {
             ParseErrorType::ExpectedEqual => ("I was expecting a '=' after this", vec![]),
             ParseErrorType::ExpectedExpr => ("I was expecting an expression after this.", vec![]),
@@ -176,14 +176,15 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 vec!["Please remove the argument label.".into()],
             ),
             ParseErrorType::UnexpectedToken { expected, hint } => {
-                let mut messages = expected.clone();
-                if let Some(s) = messages.first_mut() {
-                    *s = format!("Expected one of: {}", s);
-                }
+                let messages = std::iter::once("Expected one of: ".to_string())
+                    .chain(expected.iter().map(|s| s.to_string()));
 
-                if let Some(hint_text) = hint {
-                    messages.push(format!("Hint: {}", hint_text));
-                }
+                let messages = match hint {
+                    Some(hint_text) => messages
+                        .chain(std::iter::once(format!("Hint: {}", hint_text).into()))
+                        .collect(),
+                    _ => messages.collect(),
+                };
 
                 ("I was not expecting this.", messages)
             }

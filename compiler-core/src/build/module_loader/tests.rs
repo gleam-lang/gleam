@@ -138,7 +138,7 @@ fn make_loader<'a>(
         mode: Mode::Dev,
         target: Target::Erlang,
         codegen: CodegenRequired::No,
-        package_name: "my_package",
+        package_name: &"my_package".into(),
         source_directory: &src,
         artefact_directory: &artefact,
         origin: Origin::Src,

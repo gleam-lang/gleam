@@ -63,7 +63,7 @@ pub enum Error {
     },
 
     #[error("duplicate source file {file}")]
-    DuplicateSourceFile { file: SmolStr },
+    DuplicateSourceFile { file: String },
 
     #[error("cyclical module imports")]
     ImportCycle { modules: Vec<SmolStr> },

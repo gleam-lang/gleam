@@ -62,11 +62,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn next_local_var(&mut self, name: &'a str) -> Document<'a> {
+    fn next_local_var(&mut self, name: &'a SmolStr) -> Document<'a> {
         self.expression_generator.next_local_var(name)
     }
 
-    fn local_var(&mut self, name: &'a str) -> Document<'a> {
+    fn local_var(&mut self, name: &'a SmolStr) -> Document<'a> {
         self.expression_generator.local_var(name)
     }
 
@@ -361,7 +361,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 self.push_string_prefix_check(subject.clone(), left_side_string);
                 self.push_string_prefix_slice(left_side_string.len());
                 if let AssignName::Variable(right) = right_side_assignment {
-                    self.push_assignment(subject.clone(), right.as_ref());
+                    self.push_assignment(subject.clone(), right);
                 }
                 self.pop();
                 Ok(())
@@ -476,7 +476,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn push_assignment(&mut self, subject: Document<'a>, name: &'a str) {
+    fn push_assignment(&mut self, subject: Document<'a>, name: &'a SmolStr) {
         let var = self.next_local_var(name);
         let path = self.path_document();
         self.assignments.push(Assignment {

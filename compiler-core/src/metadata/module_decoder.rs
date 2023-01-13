@@ -36,9 +36,9 @@ macro_rules! read_hashmap {
         let reader = $reader;
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {
-            let name = prop.get_key()?;
-            let type_ = $self.$method(&prop.get_value()?)?;
-            let _ = map.insert(name.into(), type_);
+            let name = prop.get_key()?.into();
+            let values = $self.$method(&prop.get_value()?.into())?;
+            let _ = map.insert(name, values);
         }
         map
     }};
@@ -138,9 +138,8 @@ impl ModuleDecoder {
         Ok(type_::generic_var(id))
     }
 
-    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<String>> {
-        let vec = reader.iter().map_ok(String::from).try_collect()?;
-        Ok(vec)
+    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<SmolStr>> {
+        Ok(reader.iter().map_ok(SmolStr::new).try_collect()?)
     }
 
     fn value_constructor(

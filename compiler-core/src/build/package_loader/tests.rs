@@ -56,7 +56,7 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
         root: &root,
         codegen: CodegenRequired::Yes,
         artefact_directory: &artefact,
-        package_name: "my_package",
+        package_name: &"my_package".into(),
         target: Target::JavaScript,
         already_defined_modules: &mut defined,
     };

@@ -52,7 +52,7 @@ pub struct PackageLoader<'a, IO> {
     root: &'a Path,
     codegen: CodegenRequired,
     artefact_directory: &'a Path,
-    package_name: &'a str,
+    package_name: &'a SmolStr,
     target: Target,
     already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
 }
@@ -69,7 +69,7 @@ where
         codegen: CodegenRequired,
         artefact_directory: &'a Path,
         target: Target,
-        package_name: &'a str,
+        package_name: &'a SmolStr,
         already_defined_modules: &'a mut im::HashMap<SmolStr, PathBuf>,
     ) -> Self {
         Self {
@@ -190,7 +190,7 @@ where
             cached.origin,
             cached.source_path,
             cached.name,
-            &self.package_name,
+            self.package_name.clone(),
             mtime,
         )
     }
