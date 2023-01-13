@@ -17,10 +17,10 @@ use vec1::Vec1;
 
 const INDENT: isize = 2;
 
-pub fn pretty(writer: &mut impl Utf8Writer, src: &str, path: &Path) -> Result<()> {
+pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Path) -> Result<()> {
     let (module, extra) = crate::parse::parse_module(src).map_err(|error| Error::Parse {
         path: path.to_path_buf(),
-        src: src.to_string(),
+        src: src.clone(),
         error,
     })?;
     let intermediate = Intermediate {
@@ -489,7 +489,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [String],
+        args: &'a [SmolStr],
         typ: &'a TypeAst,
     ) -> Document<'a> {
         let head = pub_(public).append("type ").append(name);
@@ -816,7 +816,7 @@ impl<'comments> Formatter<'comments> {
             j += 1;
         }
 
-        Document::String(new_value.chars().rev().collect())
+        new_value.chars().rev().collect::<SmolStr>().to_doc()
     }
 
     fn pattern_constructor<'a>(
@@ -1079,7 +1079,7 @@ impl<'comments> Formatter<'comments> {
         public: bool,
         opaque: bool,
         name: &'a str,
-        args: &'a [String],
+        args: &'a [SmolStr],
         constructors: &'a [RecordConstructor<A>],
         location: &'a SrcSpan,
     ) -> Document<'a> {
@@ -1113,7 +1113,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [String],
+        args: &'a [SmolStr],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
@@ -1272,7 +1272,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         public: bool,
         name: &'a str,
-        args: &'a [String],
+        args: &'a [SmolStr],
     ) -> Document<'a> {
         pub_(public)
             .append("external type ")
@@ -1554,9 +1554,9 @@ impl<'a> Documentable<'a> for &'a UnqualifiedImport {
     }
 }
 
-fn label(label: &Option<String>) -> Document<'_> {
+fn label(label: &Option<SmolStr>) -> Document<'_> {
     match label {
-        Some(s) => Document::Str(s).append(": "),
+        Some(s) => s.to_doc().append(": "),
         None => nil(),
     }
 }

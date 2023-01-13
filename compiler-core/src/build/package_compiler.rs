@@ -358,7 +358,7 @@ where
 }
 
 fn type_check(
-    package_name: &str,
+    package_name: &SmolStr,
     target: Target,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
@@ -613,10 +613,10 @@ pub(crate) struct Loaded {
 pub(crate) struct UncompiledModule {
     pub path: PathBuf,
     pub name: SmolStr,
-    pub code: String,
+    pub code: SmolStr,
     pub mtime: SystemTime,
     pub origin: Origin,
-    pub package: String,
+    pub package: SmolStr,
     pub dependencies: Vec<(SmolStr, SrcSpan)>,
     pub ast: UntypedModule,
     pub extra: ModuleExtra,

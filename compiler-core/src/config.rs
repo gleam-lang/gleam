@@ -6,6 +6,7 @@ use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{Range, Version};
 use http::Uri;
 use serde::Deserialize;
+use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::marker::PhantomData;
@@ -68,13 +69,13 @@ impl AsRef<str> for SpdxLicense {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     #[serde(with = "package_name")]
-    pub name: String,
+    pub name: SmolStr,
     #[serde(default = "default_version")]
     pub version: Version,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
-    pub description: String,
+    pub description: SmolStr,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
     #[serde(default)]

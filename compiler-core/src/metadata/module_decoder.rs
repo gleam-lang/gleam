@@ -38,7 +38,7 @@ macro_rules! read_hashmap {
         for prop in reader.into_iter() {
             let name = prop.get_key()?;
             let type_ = $self.$method(&prop.get_value()?)?;
-            let _ = map.insert(name.to_string(), type_);
+            let _ = map.insert(name.into(), type_);
         }
         map
     }};
@@ -65,7 +65,7 @@ impl ModuleDecoder {
 
         Ok(Module {
             name: reader.get_name()?.into(),
-            package: reader.get_package()?.to_string(),
+            package: reader.get_package()?.into(),
             origin: Origin::Src,
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
             types_constructors: read_hashmap!(
@@ -104,7 +104,7 @@ impl ModuleDecoder {
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
         let module = reader.get_module()?.into();
-        let name = reader.get_name()?.to_string();
+        let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::App {
             public: true,
@@ -173,21 +173,21 @@ impl ModuleDecoder {
     fn constant_int(&self, value: &str) -> TypedConstant {
         Constant::Int {
             location: Default::default(),
-            value: value.to_string(),
+            value: value.into(),
         }
     }
 
     fn constant_float(&self, value: &str) -> TypedConstant {
         Constant::Float {
             location: Default::default(),
-            value: value.to_string(),
+            value: value.into(),
         }
     }
 
     fn constant_string(&self, value: &str) -> TypedConstant {
         Constant::String {
             location: Default::default(),
-            value: value.to_string(),
+            value: value.into(),
         }
     }
 
@@ -212,7 +212,7 @@ impl ModuleDecoder {
 
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
         let type_ = self.type_(&reader.get_typ()?)?;
-        let tag = reader.get_tag()?.to_string();
+        let tag = reader.get_tag()?.into();
         let args = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
             location: Default::default(),
@@ -258,7 +258,7 @@ impl ModuleDecoder {
         Ok(Constant::Var {
             location: Default::default(),
             module: module.map(SmolStr::from),
-            name: String::from(name),
+            name: name.into(),
             constructor: Some(Box::from(constructor)),
             typ: type_,
         })
@@ -358,7 +358,7 @@ impl ModuleDecoder {
         Ok(ValueConstructorVariant::ModuleConstant {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
-            module: reader.get_module()?.to_string(),
+            module: reader.get_module()?.into(),
         })
     }
 
@@ -374,8 +374,8 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::module_fn::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleFn {
-            name: reader.get_name()?.to_string(),
-            module: reader.get_module()?.to_string(),
+            name: reader.get_name()?.into(),
+            module: reader.get_module()?.into(),
             arity: reader.get_arity() as usize,
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
@@ -387,8 +387,8 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::record::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::Record {
-            name: reader.get_name()?.to_string(),
-            module: reader.get_module()?.to_string(),
+            name: reader.get_name()?.into(),
+            module: reader.get_module()?.into(),
             arity: reader.get_arity(),
             constructors_count: reader.get_constructors_count(),
             field_map: self.field_map(&reader.get_field_map()?)?,
@@ -425,7 +425,7 @@ impl ModuleDecoder {
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {
         Ok(RecordAccessor {
             index: reader.get_index() as u64,
-            label: reader.get_label()?.to_string(),
+            label: reader.get_label()?.into(),
             type_: self.type_(&reader.get_type()?)?,
         })
     }

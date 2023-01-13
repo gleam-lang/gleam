@@ -1,3 +1,5 @@
+use smol_str::SmolStr;
+
 use crate::ast::{BitStringSegmentOption, SrcSpan};
 use crate::type_::Type;
 use std::sync::Arc;
@@ -312,18 +314,18 @@ pub struct Error {
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ErrorType {
-    ConflictingEndiannessOptions { existing_endianness: String },
-    ConflictingSignednessOptions { existing_signed: String },
+    ConflictingEndiannessOptions { existing_endianness: SmolStr },
+    ConflictingSignednessOptions { existing_signed: SmolStr },
     ConflictingSizeOptions,
-    ConflictingTypeOptions { existing_type: String },
+    ConflictingTypeOptions { existing_type: SmolStr },
     ConflictingUnitOptions,
     FloatWithSize,
     InvalidEndianness,
     OptionNotAllowedInValue,
     SegmentMustHaveSize,
-    SignednessUsedOnNonInt { typ: String },
-    TypeDoesNotAllowSize { typ: String },
-    TypeDoesNotAllowUnit { typ: String },
+    SignednessUsedOnNonInt { typ: SmolStr },
+    TypeDoesNotAllowSize { typ: SmolStr },
+    TypeDoesNotAllowUnit { typ: SmolStr },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
 }
