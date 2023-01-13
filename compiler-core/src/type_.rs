@@ -59,7 +59,7 @@ pub enum Type {
     App {
         public: bool,
         module: SmolStr,
-        name: String,
+        name: SmolStr,
         args: Vec<Arc<Type>>,
     },
 
@@ -163,8 +163,8 @@ impl Type {
     pub fn get_app_args(
         &self,
         public: bool,
-        module: &str,
-        name: &str,
+        module: &SmolStr,
+        name: &SmolStr,
         arity: usize,
         environment: &mut Environment<'_>,
     ) -> Option<Vec<Arc<Self>>> {
@@ -199,8 +199,8 @@ impl Type {
                 // to the desired type.
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::App {
-                        name: name.to_string(),
-                        module: module.into(),
+                        name: name.clone(),
+                        module: module.clone(),
                         args: args.clone(),
                         public,
                     }),
@@ -419,16 +419,16 @@ pub struct Module {
     pub name: SmolStr,
     pub origin: Origin,
     pub package: String,
-    pub types: HashMap<String, TypeConstructor>,
-    pub types_constructors: HashMap<String, Vec<String>>,
+    pub types: HashMap<SmolStr, TypeConstructor>,
+    pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
     pub values: HashMap<SmolStr, ValueConstructor>,
-    pub accessors: HashMap<String, AccessorsMap>,
+    pub accessors: HashMap<SmolStr, AccessorsMap>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PatternConstructor {
     Record {
-        name: String,
+        name: SmolStr,
         field_map: Option<FieldMap>,
     },
 }
@@ -550,7 +550,7 @@ impl ValueConstructor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAliasConstructor {
     pub public: bool,
-    pub module: String,
+    pub module: SmolStr,
     pub type_: Type,
     pub arity: usize,
 }
@@ -678,17 +678,15 @@ pub fn infer_module(
     })
 }
 
-fn validate_module_name(name: &str) -> Result<(), Error> {
+fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
     if name == "gleam" {
-        return Err(Error::ReservedModuleName {
-            name: name.to_string(),
-        });
+        return Err(Error::ReservedModuleName { name: name.clone() });
     };
     for segment in name.split('/') {
         if crate::parse::lexer::str_to_keyword(segment).is_some() {
             return Err(Error::KeywordInModuleName {
-                name: name.to_string(),
-                keyword: segment.to_string(),
+                name: name.clone(),
+                keyword: segment.into(),
             });
         }
     }
@@ -696,13 +694,13 @@ fn validate_module_name(name: &str) -> Result<(), Error> {
 }
 
 fn assert_unique_value_name<'a>(
-    names: &mut HashMap<&'a str, &'a SrcSpan>,
-    name: &'a str,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    name: &'a SmolStr,
     location: &'a SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateName {
-            name: name.to_string(),
+            name: name.clone(),
             previous_location: *previous_location,
             location: *location,
         }),
@@ -711,13 +709,13 @@ fn assert_unique_value_name<'a>(
 }
 
 fn assert_unique_type_name<'a>(
-    names: &mut HashMap<&'a str, &'a SrcSpan>,
-    name: &'a str,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    name: &'a SmolStr,
     location: &'a SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateTypeName {
-            name: name.to_string(),
+            name: name.clone(),
             previous_location: *previous_location,
             location: *location,
         }),
@@ -726,13 +724,13 @@ fn assert_unique_type_name<'a>(
 }
 
 fn assert_unique_const_name<'a>(
-    names: &mut HashMap<&'a str, &'a SrcSpan>,
-    name: &'a str,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    name: &'a SmolStr,
     location: &'a SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateConstName {
-            name: name.to_string(),
+            name: name.clone(),
             previous_location: *previous_location,
             location: *location,
         }),
@@ -743,7 +741,7 @@ fn assert_unique_const_name<'a>(
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &'a str,
-    hydrators: &mut HashMap<String, Hydrator>,
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
@@ -757,7 +755,7 @@ fn register_values<'a>(
             ..
         } => {
             assert_unique_value_name(names, name, location)?;
-            let _ = environment.ungeneralised_functions.insert(name.to_string());
+            let _ = environment.ungeneralised_functions.insert(name.clone());
 
             // Create the field map so we can reorder labels for usage of this function
             let mut field_map = FieldMap::new(args.len() as u32);
@@ -767,7 +765,7 @@ fn register_values<'a>(
                 {
                     field_map.insert(label.clone(), i as u32).map_err(|_| {
                         Error::DuplicateField {
-                            label: label.to_string(),
+                            label: label.clone(),
                             location: *location,
                         }
                     })?;
@@ -796,7 +794,7 @@ fn register_values<'a>(
                 ValueConstructorVariant::ModuleFn {
                     name: name.clone(),
                     field_map,
-                    module: module_name.to_string(),
+                    module: module_name.clone(),
                     arity: args.len(),
                     location: *location,
                 },
@@ -832,7 +830,7 @@ fn register_values<'a>(
                     if let Some(label) = &arg.label {
                         field_map.insert(label.clone(), i as u32).map_err(|_| {
                             Error::DuplicateField {
-                                label: label.to_string(),
+                                label: label.clone(),
                                 location: *location,
                             }
                         })?;
@@ -927,7 +925,7 @@ fn register_values<'a>(
                     if let Some(label) = label {
                         field_map.insert(label.clone(), i as u32).map_err(|_| {
                             Error::DuplicateField {
-                                label: label.to_string(),
+                                label: label.clone(),
                                 location: *location,
                             }
                         })?;
@@ -945,7 +943,7 @@ fn register_values<'a>(
                     arity: constructor.arguments.len() as u16,
                     field_map: field_map.clone(),
                     location: constructor.location,
-                    module: module_name.to_string(),
+                    module: module_name.clone(),
                 };
 
                 if !opaque {
@@ -1026,7 +1024,7 @@ fn generalise_statement(
                     variant: ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.to_string(),
+                        module: module_name.clone(),
                         arity: args.len(),
                         location,
                     },
@@ -1058,7 +1056,7 @@ fn generalise_statement(
 fn infer_statement(
     s: UntypedStatement,
     module_name: &str,
-    hydrators: &mut HashMap<String, Hydrator>,
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     match s {
@@ -1114,7 +1112,7 @@ fn infer_statement(
                     ValueConstructorVariant::ModuleFn {
                         name: name.clone(),
                         field_map,
-                        module: module_name.to_string(),
+                        module: module_name.clone(),
                         arity: args.len(),
                         location,
                     },
@@ -1595,7 +1593,7 @@ fn generalise(t: Arc<Type>) -> Arc<Type> {
 }
 
 fn make_type_vars(
-    args: &[String],
+    args: &[SmolStr],
     location: &SrcSpan,
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
@@ -1613,7 +1611,7 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
-) -> Result<Option<HashMap<String, RecordAccessor>>, Error> {
+) -> Result<Option<HashMap<SmolStr, RecordAccessor>>, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
@@ -1684,7 +1682,7 @@ fn get_compatible_record_fields<A>(
 pub fn register_types<'a>(
     statement: &'a UntypedStatement,
     module: SmolStr,
-    hydrators: &mut HashMap<String, Hydrator>,
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
     names: &mut HashMap<&'a str, &'a SrcSpan>,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {

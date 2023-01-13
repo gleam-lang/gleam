@@ -176,7 +176,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                program: "escript".to_string(),
+                program: "escript".into(),
                 err: None,
             })
         }
@@ -475,7 +475,7 @@ pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
         )?;
         if status != 0 {
             return Err(Error::ShellCommand {
-                program: "elixir".to_string(),
+                program: "elixir".into(),
                 err: None,
             });
         }

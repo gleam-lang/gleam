@@ -179,7 +179,7 @@ macro_rules! assert_module_error {
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            src: $src.to_string(),
+            src: $src.into(),
             path: std::path::PathBuf::from("/src/one/two.gleam"),
             error,
         };
@@ -195,7 +195,7 @@ macro_rules! assert_module_syntax_error {
             $crate::parse::parse_module($src).expect_err("should trigger an error when parsing");
 
         let error = $crate::error::Error::Parse {
-            src: $src.to_string(),
+            src: $src.into(),
             path: std::path::PathBuf::from("/src/one/two.gleam"),
             error,
         };
@@ -243,7 +243,7 @@ macro_rules! assert_error {
         .infer(ast)
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            src: $src.to_string(),
+            src: $src.into(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
         };
@@ -291,7 +291,7 @@ macro_rules! assert_with_module_error {
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            src: $src.to_string(),
+            src: $src.into(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
         };
@@ -350,7 +350,7 @@ macro_rules! assert_with_module_error {
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
-            src: $src.to_string(),
+            src: $src.into(),
             path: PathBuf::from("/src/one/two.gleam"),
             error,
         };
@@ -385,7 +385,7 @@ macro_rules! assert_warning {
 
         let mut nocolor = termcolor::Buffer::no_color();
         for w in warnings {
-            let warning = w.into_warning(std::path::PathBuf::from("/src/warning/wrn.gleam"), $src.to_string());
+            let warning = w.into_warning(std::path::PathBuf::from("/src/warning/wrn.gleam"), $src.into());
             warning.pretty(&mut nocolor)
         }
 
@@ -696,18 +696,12 @@ fn infer_module_type_retention_test() {
         module.type_info,
         Module {
             origin: Origin::Src,
-            package: "thepackage".to_string(),
+            package: "thepackage".into(),
             name: "ok".into(),
             types: HashMap::new(), // Core type constructors like String and Int are not included
             types_constructors: HashMap::from([
-                (
-                    "Bool".to_string(),
-                    vec!["True".to_string(), "False".to_string()]
-                ),
-                (
-                    "Result".to_string(),
-                    vec!["Ok".to_string(), "Error".to_string()]
-                )
+                ("Bool".into(), vec!["True".into(), "False".into()]),
+                ("Result".into(), vec!["Ok".into(), "Error".into()])
             ]),
             values: HashMap::new(),
             accessors: HashMap::new(),
@@ -1911,23 +1905,23 @@ fn permit_holes_in_fn_args_and_returns() {
 
 #[test]
 fn module_name_validation() {
-    assert!(validate_module_name("dream").is_ok());
+    assert!(validate_module_name(&"dream".into()).is_ok());
 
-    assert!(validate_module_name("gleam").is_err());
+    assert!(validate_module_name(&"gleam".into()).is_err());
 
-    assert!(validate_module_name("gleam/ok").is_ok());
+    assert!(validate_module_name(&"gleam/ok".into()).is_ok());
 
-    assert!(validate_module_name("ok/gleam").is_ok());
+    assert!(validate_module_name(&"ok/gleam".into()).is_ok());
 
-    assert!(validate_module_name("external").is_err());
+    assert!(validate_module_name(&"external".into()).is_err());
 
-    assert!(validate_module_name("type").is_err());
+    assert!(validate_module_name(&"type".into()).is_err());
 
-    assert!(validate_module_name("pub").is_err());
+    assert!(validate_module_name(&"pub".into()).is_err());
 
-    assert!(validate_module_name("ok/external").is_err());
+    assert!(validate_module_name(&"ok/external".into()).is_err());
 
-    assert!(validate_module_name("ok/type").is_err());
+    assert!(validate_module_name(&"ok/type".into()).is_err());
 
-    assert!(validate_module_name("ok/pub").is_err());
+    assert!(validate_module_name(&"ok/pub".into()).is_err());
 }

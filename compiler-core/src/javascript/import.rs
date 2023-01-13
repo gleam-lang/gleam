@@ -143,15 +143,15 @@ impl<'a> Member<'a> {
 #[test]
 fn into_doc() {
     let mut imports = Imports::new();
-    imports.register_module("./gleam/empty".to_string(), [], []);
+    imports.register_module("./gleam/empty".into(), [], []);
     imports.register_module(
-        "./multiple/times".to_string(),
-        ["wibble".to_string(), "wobble".to_string()],
+        "./multiple/times".into(),
+        ["wibble".into(), "wobble".into()],
         [],
     );
-    imports.register_module("./multiple/times".to_string(), ["wubble".to_string()], []);
+    imports.register_module("./multiple/times".into(), ["wubble".into()], []);
     imports.register_module(
-        "./multiple/times".to_string(),
+        "./multiple/times".into(),
         [],
         [Member {
             name: "one".to_doc(),
@@ -160,7 +160,7 @@ fn into_doc() {
     );
 
     imports.register_module(
-        "./other".to_string(),
+        "./other".into(),
         [],
         [
             Member {
@@ -179,7 +179,7 @@ fn into_doc() {
     );
 
     imports.register_module(
-        "./other".to_string(),
+        "./other".into(),
         [],
         [
             Member {
@@ -194,7 +194,7 @@ fn into_doc() {
     );
 
     imports.register_module(
-        "./zzz".to_string(),
+        "./zzz".into(),
         [],
         [
             Member {

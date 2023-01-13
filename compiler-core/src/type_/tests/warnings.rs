@@ -462,7 +462,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
 #[test]
 fn module_access_registers_import_usage() {
     assert_no_warnings!(
-        ("gleam/bibble".to_string(), "pub const bobble = 1"),
+        ("gleam/bibble", "pub const bobble = 1"),
         "import gleam/bibble pub fn main() { bibble.bobble }",
     );
 }

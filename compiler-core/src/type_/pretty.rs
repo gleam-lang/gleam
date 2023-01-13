@@ -17,13 +17,12 @@ use pretty_assertions::assert_eq;
 
 const INDENT: isize = 2;
 
-// TODO: use references instead of cloning strings and vectors
 #[derive(Debug, Default)]
 pub struct Printer {
-    names: im::HashMap<u64, String>,
+    names: im::HashMap<u64, SmolStr>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<String, SmolStr>,
+    printed_types: im::HashMap<SmolStr, SmolStr>,
 }
 
 impl Printer {
@@ -31,7 +30,7 @@ impl Printer {
         Default::default()
     }
 
-    pub fn with_names(&mut self, names: im::HashMap<u64, String>) {
+    pub fn with_names(&mut self, names: im::HashMap<u64, SmolStr>) {
         self.names = names;
     }
 
@@ -61,7 +60,7 @@ impl Printer {
                     qualify_type_name(module, name)
                 } else {
                     let _ = self.printed_types.insert(name.clone(), module.clone());
-                    Document::String(name.clone())
+                    name.to_doc()
                 };
                 if args.is_empty() {
                     doc
@@ -89,7 +88,7 @@ impl Printer {
         }
     }
 
-    fn name_clashes_if_unqualified(&mut self, type_: &String, module: &str) -> bool {
+    fn name_clashes_if_unqualified(&mut self, type_: &SmolStr, module: &str) -> bool {
         match self.printed_types.get(type_) {
             None => false,
             Some(previous_module) if module == previous_module => false,
@@ -107,20 +106,19 @@ impl Printer {
     pub fn generic_type_var<'a>(&mut self, id: u64) -> Document<'a> {
         match self.names.get(&id) {
             Some(n) => {
-                let typ_name = n.clone();
-                let _ = self.printed_types.insert(typ_name, "".into());
-                Document::String(n.clone())
+                let _ = self.printed_types.insert(n.clone(), "".into());
+                n.to_doc()
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                Document::String(n)
+                n.to_doc()
             }
         }
     }
 
-    fn next_letter(&mut self) -> String {
+    fn next_letter(&mut self) -> SmolStr {
         let alphabet_length = 26;
         let char_offset = 97;
         let mut chars = vec![];
@@ -171,84 +169,84 @@ fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
 #[test]
 fn next_letter_test() {
     let mut printer = Printer::new();
-    assert_eq!(printer.next_letter(), "a".to_string());
-    assert_eq!(printer.next_letter(), "b".to_string());
-    assert_eq!(printer.next_letter(), "c".to_string());
-    assert_eq!(printer.next_letter(), "d".to_string());
-    assert_eq!(printer.next_letter(), "e".to_string());
-    assert_eq!(printer.next_letter(), "f".to_string());
-    assert_eq!(printer.next_letter(), "g".to_string());
-    assert_eq!(printer.next_letter(), "h".to_string());
-    assert_eq!(printer.next_letter(), "i".to_string());
-    assert_eq!(printer.next_letter(), "j".to_string());
-    assert_eq!(printer.next_letter(), "k".to_string());
-    assert_eq!(printer.next_letter(), "l".to_string());
-    assert_eq!(printer.next_letter(), "m".to_string());
-    assert_eq!(printer.next_letter(), "n".to_string());
-    assert_eq!(printer.next_letter(), "o".to_string());
-    assert_eq!(printer.next_letter(), "p".to_string());
-    assert_eq!(printer.next_letter(), "q".to_string());
-    assert_eq!(printer.next_letter(), "r".to_string());
-    assert_eq!(printer.next_letter(), "s".to_string());
-    assert_eq!(printer.next_letter(), "t".to_string());
-    assert_eq!(printer.next_letter(), "u".to_string());
-    assert_eq!(printer.next_letter(), "v".to_string());
-    assert_eq!(printer.next_letter(), "w".to_string());
-    assert_eq!(printer.next_letter(), "x".to_string());
-    assert_eq!(printer.next_letter(), "y".to_string());
-    assert_eq!(printer.next_letter(), "z".to_string());
-    assert_eq!(printer.next_letter(), "aa".to_string());
-    assert_eq!(printer.next_letter(), "ab".to_string());
-    assert_eq!(printer.next_letter(), "ac".to_string());
-    assert_eq!(printer.next_letter(), "ad".to_string());
-    assert_eq!(printer.next_letter(), "ae".to_string());
-    assert_eq!(printer.next_letter(), "af".to_string());
-    assert_eq!(printer.next_letter(), "ag".to_string());
-    assert_eq!(printer.next_letter(), "ah".to_string());
-    assert_eq!(printer.next_letter(), "ai".to_string());
-    assert_eq!(printer.next_letter(), "aj".to_string());
-    assert_eq!(printer.next_letter(), "ak".to_string());
-    assert_eq!(printer.next_letter(), "al".to_string());
-    assert_eq!(printer.next_letter(), "am".to_string());
-    assert_eq!(printer.next_letter(), "an".to_string());
-    assert_eq!(printer.next_letter(), "ao".to_string());
-    assert_eq!(printer.next_letter(), "ap".to_string());
-    assert_eq!(printer.next_letter(), "aq".to_string());
-    assert_eq!(printer.next_letter(), "ar".to_string());
-    assert_eq!(printer.next_letter(), "as".to_string());
-    assert_eq!(printer.next_letter(), "at".to_string());
-    assert_eq!(printer.next_letter(), "au".to_string());
-    assert_eq!(printer.next_letter(), "av".to_string());
-    assert_eq!(printer.next_letter(), "aw".to_string());
-    assert_eq!(printer.next_letter(), "ax".to_string());
-    assert_eq!(printer.next_letter(), "ay".to_string());
-    assert_eq!(printer.next_letter(), "az".to_string());
-    assert_eq!(printer.next_letter(), "ba".to_string());
-    assert_eq!(printer.next_letter(), "bb".to_string());
-    assert_eq!(printer.next_letter(), "bc".to_string());
-    assert_eq!(printer.next_letter(), "bd".to_string());
-    assert_eq!(printer.next_letter(), "be".to_string());
-    assert_eq!(printer.next_letter(), "bf".to_string());
-    assert_eq!(printer.next_letter(), "bg".to_string());
-    assert_eq!(printer.next_letter(), "bh".to_string());
-    assert_eq!(printer.next_letter(), "bi".to_string());
-    assert_eq!(printer.next_letter(), "bj".to_string());
-    assert_eq!(printer.next_letter(), "bk".to_string());
-    assert_eq!(printer.next_letter(), "bl".to_string());
-    assert_eq!(printer.next_letter(), "bm".to_string());
-    assert_eq!(printer.next_letter(), "bn".to_string());
-    assert_eq!(printer.next_letter(), "bo".to_string());
-    assert_eq!(printer.next_letter(), "bp".to_string());
-    assert_eq!(printer.next_letter(), "bq".to_string());
-    assert_eq!(printer.next_letter(), "br".to_string());
-    assert_eq!(printer.next_letter(), "bs".to_string());
-    assert_eq!(printer.next_letter(), "bt".to_string());
-    assert_eq!(printer.next_letter(), "bu".to_string());
-    assert_eq!(printer.next_letter(), "bv".to_string());
-    assert_eq!(printer.next_letter(), "bw".to_string());
-    assert_eq!(printer.next_letter(), "bx".to_string());
-    assert_eq!(printer.next_letter(), "by".to_string());
-    assert_eq!(printer.next_letter(), "bz".to_string());
+    assert_eq!(printer.next_letter().as_str(), "a");
+    assert_eq!(printer.next_letter().as_str(), "b");
+    assert_eq!(printer.next_letter().as_str(), "c");
+    assert_eq!(printer.next_letter().as_str(), "d");
+    assert_eq!(printer.next_letter().as_str(), "e");
+    assert_eq!(printer.next_letter().as_str(), "f");
+    assert_eq!(printer.next_letter().as_str(), "g");
+    assert_eq!(printer.next_letter().as_str(), "h");
+    assert_eq!(printer.next_letter().as_str(), "i");
+    assert_eq!(printer.next_letter().as_str(), "j");
+    assert_eq!(printer.next_letter().as_str(), "k");
+    assert_eq!(printer.next_letter().as_str(), "l");
+    assert_eq!(printer.next_letter().as_str(), "m");
+    assert_eq!(printer.next_letter().as_str(), "n");
+    assert_eq!(printer.next_letter().as_str(), "o");
+    assert_eq!(printer.next_letter().as_str(), "p");
+    assert_eq!(printer.next_letter().as_str(), "q");
+    assert_eq!(printer.next_letter().as_str(), "r");
+    assert_eq!(printer.next_letter().as_str(), "s");
+    assert_eq!(printer.next_letter().as_str(), "t");
+    assert_eq!(printer.next_letter().as_str(), "u");
+    assert_eq!(printer.next_letter().as_str(), "v");
+    assert_eq!(printer.next_letter().as_str(), "w");
+    assert_eq!(printer.next_letter().as_str(), "x");
+    assert_eq!(printer.next_letter().as_str(), "y");
+    assert_eq!(printer.next_letter().as_str(), "z");
+    assert_eq!(printer.next_letter().as_str(), "aa");
+    assert_eq!(printer.next_letter().as_str(), "ab");
+    assert_eq!(printer.next_letter().as_str(), "ac");
+    assert_eq!(printer.next_letter().as_str(), "ad");
+    assert_eq!(printer.next_letter().as_str(), "ae");
+    assert_eq!(printer.next_letter().as_str(), "af");
+    assert_eq!(printer.next_letter().as_str(), "ag");
+    assert_eq!(printer.next_letter().as_str(), "ah");
+    assert_eq!(printer.next_letter().as_str(), "ai");
+    assert_eq!(printer.next_letter().as_str(), "aj");
+    assert_eq!(printer.next_letter().as_str(), "ak");
+    assert_eq!(printer.next_letter().as_str(), "al");
+    assert_eq!(printer.next_letter().as_str(), "am");
+    assert_eq!(printer.next_letter().as_str(), "an");
+    assert_eq!(printer.next_letter().as_str(), "ao");
+    assert_eq!(printer.next_letter().as_str(), "ap");
+    assert_eq!(printer.next_letter().as_str(), "aq");
+    assert_eq!(printer.next_letter().as_str(), "ar");
+    assert_eq!(printer.next_letter().as_str(), "as");
+    assert_eq!(printer.next_letter().as_str(), "at");
+    assert_eq!(printer.next_letter().as_str(), "au");
+    assert_eq!(printer.next_letter().as_str(), "av");
+    assert_eq!(printer.next_letter().as_str(), "aw");
+    assert_eq!(printer.next_letter().as_str(), "ax");
+    assert_eq!(printer.next_letter().as_str(), "ay");
+    assert_eq!(printer.next_letter().as_str(), "az");
+    assert_eq!(printer.next_letter().as_str(), "ba");
+    assert_eq!(printer.next_letter().as_str(), "bb");
+    assert_eq!(printer.next_letter().as_str(), "bc");
+    assert_eq!(printer.next_letter().as_str(), "bd");
+    assert_eq!(printer.next_letter().as_str(), "be");
+    assert_eq!(printer.next_letter().as_str(), "bf");
+    assert_eq!(printer.next_letter().as_str(), "bg");
+    assert_eq!(printer.next_letter().as_str(), "bh");
+    assert_eq!(printer.next_letter().as_str(), "bi");
+    assert_eq!(printer.next_letter().as_str(), "bj");
+    assert_eq!(printer.next_letter().as_str(), "bk");
+    assert_eq!(printer.next_letter().as_str(), "bl");
+    assert_eq!(printer.next_letter().as_str(), "bm");
+    assert_eq!(printer.next_letter().as_str(), "bn");
+    assert_eq!(printer.next_letter().as_str(), "bo");
+    assert_eq!(printer.next_letter().as_str(), "bp");
+    assert_eq!(printer.next_letter().as_str(), "bq");
+    assert_eq!(printer.next_letter().as_str(), "br");
+    assert_eq!(printer.next_letter().as_str(), "bs");
+    assert_eq!(printer.next_letter().as_str(), "bt");
+    assert_eq!(printer.next_letter().as_str(), "bu");
+    assert_eq!(printer.next_letter().as_str(), "bv");
+    assert_eq!(printer.next_letter().as_str(), "bw");
+    assert_eq!(printer.next_letter().as_str(), "bx");
+    assert_eq!(printer.next_letter().as_str(), "by");
+    assert_eq!(printer.next_letter().as_str(), "bz");
 }
 
 #[test]
@@ -263,7 +261,7 @@ fn pretty_print_test() {
     assert_string!(
         Type::App {
             module: "whatever".into(),
-            name: "Int".to_string(),
+            name: "Int".into(),
             public: true,
             args: vec![],
         },
@@ -272,18 +270,18 @@ fn pretty_print_test() {
     assert_string!(
         Type::App {
             module: "themodule".into(),
-            name: "Pair".to_string(),
+            name: "Pair".into(),
             public: true,
             args: vec![
                 Arc::new(Type::App {
                     module: "whatever".into(),
-                    name: "Int".to_string(),
+                    name: "Int".into(),
                     public: true,
                     args: vec![],
                 }),
                 Arc::new(Type::App {
                     module: "whatever".into(),
-                    name: "Bool".to_string(),
+                    name: "Bool".into(),
                     public: true,
                     args: vec![],
                 }),
@@ -297,20 +295,20 @@ fn pretty_print_test() {
                 Arc::new(Type::App {
                     args: vec![],
                     module: "whatever".into(),
-                    name: "Int".to_string(),
+                    name: "Int".into(),
                     public: true,
                 }),
                 Arc::new(Type::App {
                     args: vec![],
                     module: "whatever".into(),
-                    name: "Bool".to_string(),
+                    name: "Bool".into(),
                     public: true,
                 }),
             ],
             retrn: Arc::new(Type::App {
                 args: vec![],
                 module: "whatever".into(),
-                name: "Bool".to_string(),
+                name: "Bool".into(),
                 public: true,
             }),
         },
@@ -322,7 +320,7 @@ fn pretty_print_test() {
                 type_: Arc::new(Type::App {
                     args: vec![],
                     module: "whatever".into(),
-                    name: "Int".to_string(),
+                    name: "Int".into(),
                     public: true,
                 }),
             })),

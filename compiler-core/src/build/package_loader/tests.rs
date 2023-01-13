@@ -88,7 +88,7 @@ fn one_src_module() {
     write_src(&fs, "/src/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["main".to_string()]);
+    assert_eq!(loaded.to_compile, vec!["main".into()]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -101,7 +101,7 @@ fn one_test_module() {
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["main".to_string()]);
+    assert_eq!(loaded.to_compile, vec!["main".into()]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -118,7 +118,7 @@ fn importing() {
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(
         loaded.to_compile,
-        vec!["one".to_string(), "two".to_string(), "three".to_string()]
+        vec!["one".into(), "two".into(), "three".into()]
     );
     assert!(loaded.cached.is_empty());
 }
@@ -134,7 +134,7 @@ fn reading_cache() {
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
-    assert_eq!(loaded.cached, vec!["one".to_string()]);
+    assert_eq!(loaded.cached, vec!["one".into()]);
 }
 
 #[test]
@@ -147,7 +147,7 @@ fn module_is_stale_if_cache_older() {
     write_cache(&fs, "one", 0, vec![]);
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(loaded.to_compile, vec!["one".to_string()]);
+    assert_eq!(loaded.to_compile, vec!["one".into()]);
     assert!(loaded.cached.is_empty());
 }
 
@@ -170,9 +170,6 @@ fn module_is_stale_if_deps_are_stale() {
     write_cache(&fs, "three", 2, vec![]);
 
     let loaded = run_loader(fs, root, artefact);
-    assert_eq!(
-        loaded.to_compile,
-        vec!["one".to_string(), "two".to_string()]
-    );
-    assert_eq!(loaded.cached, vec!["three".to_string()]);
+    assert_eq!(loaded.to_compile, vec!["one".into(), "two".into()]);
+    assert_eq!(loaded.cached, vec!["three".into()]);
 }

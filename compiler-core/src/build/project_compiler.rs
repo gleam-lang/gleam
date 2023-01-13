@@ -294,7 +294,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                program: "rebar3".to_string(),
+                program: "rebar3".into(),
                 err: None,
             })
         }
@@ -379,7 +379,7 @@ where
             Ok(())
         } else {
             Err(Error::ShellCommand {
-                program: "mix".to_string(),
+                program: "mix".into(),
                 err: None,
             })
         }

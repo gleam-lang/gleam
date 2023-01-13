@@ -103,18 +103,15 @@ impl Manifest {
 fn manifest_toml_format() {
     let mut manifest = Manifest {
         requirements: [
-            ("zzz".to_string(), Range::new("> 0.0.0".to_string())),
-            ("aaa".to_string(), Range::new("> 0.0.0".to_string())),
-            (
-                "gleam_stdlib".to_string(),
-                Range::new("~> 0.17".to_string()),
-            ),
-            ("gleeunit".to_string(), Range::new("~> 0.1".to_string())),
+            ("zzz".into(), Range::new("> 0.0.0".into())),
+            ("aaa".into(), Range::new("> 0.0.0".into())),
+            ("gleam_stdlib".into(), Range::new("~> 0.17".into())),
+            ("gleeunit".into(), Range::new("~> 0.1".into())),
         ]
         .into(),
         packages: vec![
             ManifestPackage {
-                name: "gleam_stdlib".to_string(),
+                name: "gleam_stdlib".into(),
                 version: Version::new(0, 17, 1),
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,
@@ -124,7 +121,7 @@ fn manifest_toml_format() {
                 },
             },
             ManifestPackage {
-                name: "aaa".to_string(),
+                name: "aaa".into(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["rebar3".into(), "make".into()].into(),
                 otp_app: Some("aaa_app".into()),
@@ -134,7 +131,7 @@ fn manifest_toml_format() {
                 },
             },
             ManifestPackage {
-                name: "zzz".to_string(),
+                name: "zzz".into(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["mix".into()].into(),
                 otp_app: None,
@@ -144,7 +141,7 @@ fn manifest_toml_format() {
                 },
             },
             ManifestPackage {
-                name: "gleeunit".to_string(),
+                name: "gleeunit".into(),
                 version: Version::new(0, 4, 0),
                 build_tools: ["gleam".into()].into(),
                 otp_app: None,

@@ -50,7 +50,7 @@ fn module_types() {
             Arc::new(type_::Type::App {
                 public: true,
                 module: module_name,
-                name: "my_type".to_string(),
+                name: "my_type".into(),
                 args: vec![]
             })
         )]

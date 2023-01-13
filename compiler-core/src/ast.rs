@@ -34,7 +34,7 @@ pub type UntypedModule = Module<(), TargetGroup>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
     pub name: SmolStr,
-    pub documentation: Vec<String>,
+    pub documentation: Vec<SmolStr>,
     pub type_info: Info,
     pub statements: Vec<Statements>,
 }
@@ -204,13 +204,13 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
-    pub name: String,
+    pub name: SmolStr,
     pub arguments: Vec<RecordConstructorArg<T>>,
-    pub documentation: Option<String>,
+    pub documentation: Option<SmolStr>,
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         self.documentation = Some(new_doc);
     }
 }
@@ -219,15 +219,15 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
-    pub doc: Option<String>,
+    pub doc: Option<SmolStr>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         self.doc = Some(new_doc);
     }
 }
@@ -249,7 +249,7 @@ pub enum TypeAst {
 
     Var {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 
     Tuple {
@@ -259,7 +259,7 @@ pub enum TypeAst {
 
     Hole {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
     },
 }
 
@@ -348,7 +348,7 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<Arc<Type>, TypedExpr, String, String>;
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
 pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -372,7 +372,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         public: bool,
         return_annotation: Option<TypeAst>,
         return_type: T,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
     },
 
     /// A new name for an existing type
@@ -385,12 +385,12 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     TypeAlias {
         location: SrcSpan,
-        alias: String,
-        parameters: Vec<String>,
+        alias: SmolStr,
+        parameters: Vec<SmolStr>,
         type_ast: TypeAst,
         type_: T,
         public: bool,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
     },
 
     /// A newly defined type with one or more constructors.
@@ -410,11 +410,11 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// ```
     CustomType {
         location: SrcSpan,
-        name: String,
-        parameters: Vec<String>,
+        name: SmolStr,
+        parameters: Vec<SmolStr>,
         public: bool,
         constructors: Vec<RecordConstructor<T>>,
-        doc: Option<String>,
+        doc: Option<SmolStr>,
         opaque: bool,
         typed_parameters: Vec<T>,
     },
@@ -433,12 +433,12 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         location: SrcSpan,
         public: bool,
         arguments: Vec<ExternalFnArg<T>>,
-        name: String,
+        name: SmolStr,
         return_: TypeAst,
         return_type: T,
-        module: String,
-        fun: String,
-        doc: Option<String>,
+        module: SmolStr,
+        fun: SmolStr,
+        doc: Option<SmolStr>,
     },
 
     /// Import a type defined in another language.
@@ -453,9 +453,9 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     ExternalType {
         location: SrcSpan,
         public: bool,
-        name: String,
-        arguments: Vec<String>,
-        doc: Option<String>,
+        name: SmolStr,
+        arguments: Vec<SmolStr>,
+        doc: Option<SmolStr>,
     },
 
     /// Import another Gleam module so the current module can use the types and
@@ -485,7 +485,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// pub const end_year = 2111
     /// ```
     ModuleConstant {
-        doc: Option<String>,
+        doc: Option<SmolStr>,
         location: SrcSpan,
         public: bool,
         name: SmolStr,
@@ -527,7 +527,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
         }
     }
 
-    pub fn put_doc(&mut self, new_doc: String) {
+    pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
             Statement::Import { .. } => (),
             Statement::Fn { doc, .. }
@@ -582,7 +582,7 @@ impl Layer {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExternalFnArg<T> {
     pub location: SrcSpan,
-    pub label: Option<String>,
+    pub label: Option<SmolStr>,
     pub annotation: TypeAst,
     pub type_: T,
 }
@@ -718,14 +718,14 @@ pub struct RecordUpdateSpread {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntypedRecordUpdateArg {
-    pub label: String,
+    pub label: SmolStr,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedRecordUpdateArg {
-    pub label: String,
+    pub label: SmolStr,
     pub location: SrcSpan,
     pub value: TypedExpr,
     pub index: u32,
@@ -742,7 +742,7 @@ pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor
 pub type UntypedMultiPattern = MultiPattern<(), ()>;
 pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, String>;
+pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, SmolStr>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
 
@@ -773,7 +773,7 @@ impl TypedClause {
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, String>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>, SmolStr>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
@@ -852,7 +852,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     Var {
         location: SrcSpan,
         type_: Type,
-        name: String,
+        name: SmolStr,
     },
 
     TupleIndex {
@@ -1014,7 +1014,7 @@ pub enum Pattern<Constructor, Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
-        name: String,
+        name: SmolStr,
         arguments: Vec<CallArg<Self>>,
         module: Option<SmolStr>,
         constructor: Constructor,
@@ -1233,25 +1233,25 @@ impl<A> BitStringSegmentOption<A> {
         }
     }
 
-    pub fn label(&self) -> String {
+    pub fn label(&self) -> SmolStr {
         match self {
-            BitStringSegmentOption::Binary { .. } => "binary".to_string(),
-            BitStringSegmentOption::Int { .. } => "int".to_string(),
-            BitStringSegmentOption::Float { .. } => "float".to_string(),
-            BitStringSegmentOption::BitString { .. } => "bit_string".to_string(),
-            BitStringSegmentOption::Utf8 { .. } => "utf8".to_string(),
-            BitStringSegmentOption::Utf16 { .. } => "utf16".to_string(),
-            BitStringSegmentOption::Utf32 { .. } => "utf32".to_string(),
-            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".to_string(),
-            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".to_string(),
-            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".to_string(),
-            BitStringSegmentOption::Signed { .. } => "signed".to_string(),
-            BitStringSegmentOption::Unsigned { .. } => "unsigned".to_string(),
-            BitStringSegmentOption::Big { .. } => "big".to_string(),
-            BitStringSegmentOption::Little { .. } => "little".to_string(),
-            BitStringSegmentOption::Native { .. } => "native".to_string(),
-            BitStringSegmentOption::Size { .. } => "size".to_string(),
-            BitStringSegmentOption::Unit { .. } => "unit".to_string(),
+            BitStringSegmentOption::Binary { .. } => "binary".into(),
+            BitStringSegmentOption::Int { .. } => "int".into(),
+            BitStringSegmentOption::Float { .. } => "float".into(),
+            BitStringSegmentOption::BitString { .. } => "bit_string".into(),
+            BitStringSegmentOption::Utf8 { .. } => "utf8".into(),
+            BitStringSegmentOption::Utf16 { .. } => "utf16".into(),
+            BitStringSegmentOption::Utf32 { .. } => "utf32".into(),
+            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
+            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
+            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
+            BitStringSegmentOption::Signed { .. } => "signed".into(),
+            BitStringSegmentOption::Unsigned { .. } => "unsigned".into(),
+            BitStringSegmentOption::Big { .. } => "big".into(),
+            BitStringSegmentOption::Little { .. } => "little".into(),
+            BitStringSegmentOption::Native { .. } => "native".into(),
+            BitStringSegmentOption::Size { .. } => "size".into(),
+            BitStringSegmentOption::Unit { .. } => "unit".into(),
         }
     }
 }

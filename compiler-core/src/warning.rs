@@ -3,17 +3,16 @@ use crate::{
     diagnostic::{self, Diagnostic, Location},
     type_,
 };
+use smol_str::SmolStr;
 use std::io::Write;
 use std::path::PathBuf;
 use termcolor::Buffer;
-
-pub type Src = String;
 
 #[derive(Debug, PartialEq)]
 pub enum Warning {
     Type {
         path: PathBuf,
-        src: Src,
+        src: SmolStr,
         warning: crate::type_::Warning,
     },
 }

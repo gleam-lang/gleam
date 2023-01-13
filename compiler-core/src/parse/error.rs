@@ -35,28 +35,28 @@ impl ParseError {
             ParseErrorType::ExpectedName => ("I was expecting a name here.", vec![]),
             ParseErrorType::ExpectedPattern => (
                 "I was expecting a pattern after this.",
-                vec!["See: https://gleam.run/book/tour/patterns".to_string()],
+                vec!["See: https://gleam.run/book/tour/patterns".into()],
             ),
             ParseErrorType::ExpectedType => (
                 "I was expecting a type after this.",
-                vec!["See: https://gleam.run/book/tour/type-annotations".to_string()],
+                vec!["See: https://gleam.run/book/tour/type-annotations".into()],
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here.", vec![]),
             ParseErrorType::ExpectedValue => (
                 "I was expecting a value after this.",
-                vec!["See: https://gleam.run/book/tour/patterns".to_string()],
+                vec!["See: https://gleam.run/book/tour/patterns".into()],
             ),
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter.",
-                vec!["Hint: Try removing it?".to_string()],
+                vec!["Hint: Try removing it?".into()],
             ),
             ParseErrorType::ExprLparStart => (
                 "This parenthesis cannot be understood here.",
-                vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".to_string()],
+                vec!["Hint: To group expressions in gleam use \"{\" and \"}\"".into()],
             ),
             ParseErrorType::ExprThenlessTry => (
                 "A `try` cannot be the last expression.",
-                vec!["Hint: Try using the value?".to_string()],
+                vec!["Hint: Try using the value?".into()],
             ),
             ParseErrorType::IncorrectName => (
                 "I'm expecting a lowercase name here.",
@@ -75,24 +75,24 @@ contain a-z, A-Z, or 0-9.",
             ParseErrorType::InvalidBitStringSegment => (
                 "This is not a valid BitString segment option.",
                 vec![
-                    "Hint: Valid BitString segment options are:".to_string(),
+                    "Hint: Valid BitString segment options are:".into(),
                     wrap(
                         "binary, int, float, bit_string, utf8, utf16, utf32, utf8_codepoint, \
 utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, unit",
                     ),
-                    "See: https://gleam.run/book/tour/bit-strings".to_string(),
+                    "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
             ParseErrorType::InvalidBitStringUnit => (
                 "This is not a valid BitString unit value.",
                 vec![
-                    "Hint: unit must be an integer literal >= 1 and <= 256".to_string(),
-                    "See: https://gleam.run/book/tour/bit-strings".to_string(),
+                    "Hint: unit must be an integer literal >= 1 and <= 256".into(),
+                    "See: https://gleam.run/book/tour/bit-strings".into(),
                 ],
             ),
             ParseErrorType::InvalidTailPattern => (
                 "This part of a list pattern can only be a name or a discard.",
-                vec!["See: https://gleam.run/book/tour/patterns".to_string()],
+                vec!["See: https://gleam.run/book/tour/patterns".into()],
             ),
             ParseErrorType::InvalidTupleAccess => (
                 "This integer is not valid for tuple access.",
@@ -104,29 +104,29 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
             ParseErrorType::NestedBitStringPattern => (
                 "BitString patterns cannot be nested.",
-                vec!["See: https://gleam.run/book/tour/patterns".to_string()],
+                vec!["See: https://gleam.run/book/tour/patterns".into()],
             ),
             ParseErrorType::NoCaseClause => (
                 "This case expression has no clauses.",
-                vec!["See: https://gleam.run/book/tour/case-expressions".to_string()],
+                vec!["See: https://gleam.run/book/tour/case-expressions".into()],
             ),
             ParseErrorType::NoConstructors => (
                 "Custom types must have at least 1 constructor.",
-                vec!["See: https://gleam.run/book/tour/custom-types".to_string()],
+                vec!["See: https://gleam.run/book/tour/custom-types".into()],
             ),
             ParseErrorType::NotConstType => (
                 "This type is not allowed in module constants.",
-                vec!["See: https://gleam.run/book/tour/constants".to_string()],
+                vec!["See: https://gleam.run/book/tour/constants".into()],
             ),
             ParseErrorType::NoExpression => (
                 "There must be an expression in here.",
-                vec!["Hint: Put an expression in there or remove the brackets.".to_string()],
+                vec!["Hint: Put an expression in there or remove the brackets.".into()],
             ),
             ParseErrorType::NoLetBinding => (
                 "There must be a 'let' to bind variable to value",
                 vec![
-                    "Hint: Use let for binding".to_string(),
-                    "See: https://gleam.run/book/tour/let-bindings".to_string(),
+                    "Hint: Use let for binding".into(),
+                    "See: https://gleam.run/book/tour/let-bindings".into(),
                 ],
             ),
             ParseErrorType::NoValueAfterEqual => (
@@ -135,44 +135,44 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::OpaqueTypeAlias => (
                 "Type Aliases cannot be opaque",
-                vec!["See: https://gleam.run/book/tour/type-aliases".to_string()],
+                vec!["See: https://gleam.run/book/tour/type-aliases".into()],
             ),
             ParseErrorType::OpNakedRight => (
                 "This operator has no value on its right side.",
-                vec!["Hint: Remove it or put a value after it.".to_string()],
+                vec!["Hint: Remove it or put a value after it.".into()],
             ),
             ParseErrorType::TooManyArgHoles => (
                 "There is more than 1 argument hole in this function call.",
                 vec![
-                    "Hint: Function calls can have at most one argument hole.".to_string(),
-                    "See: https://gleam.run/book/tour/functions".to_string(),
+                    "Hint: Function calls can have at most one argument hole.".into(),
+                    "See: https://gleam.run/book/tour/functions".into(),
                 ],
             ),
             ParseErrorType::UnexpectedEof => ("The module ended unexpectedly.", vec![]),
             ParseErrorType::ListSpreadWithoutElements => (
                 "This spread does nothing",
                 vec![
-                    "Hint: Try prepending some elements [1, 2, ..list].".to_string(),
-                    "See: https://gleam.run/book/tour/lists.html".to_string(),
+                    "Hint: Try prepending some elements [1, 2, ..list].".into(),
+                    "See: https://gleam.run/book/tour/lists.html".into(),
                 ],
             ),
             ParseErrorType::UnexpectedReservedWord => (
                 "This is a reserved word.",
                 vec![
-                    "Hint: I was expecting to see a name here.".to_string(),
-                    "See: https://gleam.run/book/tour/reserved-words".to_string(),
+                    "Hint: I was expecting to see a name here.".into(),
+                    "See: https://gleam.run/book/tour/reserved-words".into(),
                 ],
             ),
             ParseErrorType::LowcaseBooleanPattern => (
                 "Did you want a Bool instead of a variable?",
                 vec![
-                    "Hint: In Gleam boolean literals are True and False".to_string(),
-                    "See: https://gleam.run/book/tour/bools.html".to_string(),
+                    "Hint: In Gleam boolean literals are True and False".into(),
+                    "See: https://gleam.run/book/tour/bools.html".into(),
                 ],
             ),
             ParseErrorType::UnexpectedLabel => (
                 "Argument labels are not allowed for anonymous functions.",
-                vec!["Please remove the argument label.".to_string()],
+                vec!["Please remove the argument label.".into()],
             ),
             ParseErrorType::UnexpectedToken { expected, hint } => {
                 let mut messages = expected.clone();
@@ -261,8 +261,8 @@ impl LexicalError {
             LexicalErrorType::BadStringEscape => (
                 "I don't understand this escape code",
                 vec![
-                    "Hint: Add another backslash before it.".to_string(),
-                    "See: https://gleam.run/book/tour/strings.html#escape-sequences".to_string(),
+                    "Hint: Add another backslash before it.".into(),
+                    "See: https://gleam.run/book/tour/strings.html#escape-sequences".into(),
                 ],
             ),
             LexicalErrorType::DigitOutOfRadix => {
@@ -270,7 +270,7 @@ impl LexicalError {
             }
             LexicalErrorType::NumTrailingUnderscore => (
                 "Numbers cannot have a trailing underscore.",
-                vec!["Hint: remove it.".to_string()],
+                vec!["Hint: remove it.".into()],
             ),
             LexicalErrorType::RadixIntNoValue => ("This integer has no value.", vec![]),
             LexicalErrorType::UnexpectedStringEnd => {
@@ -278,7 +278,7 @@ impl LexicalError {
             }
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character.",
-                vec!["Hint: Is it a typo?".to_string()],
+                vec!["Hint: Is it a typo?".into()],
             ),
             LexicalErrorType::BadName { name } => (
                 "This is not a valid name.",
@@ -291,15 +291,15 @@ impl LexicalError {
             LexicalErrorType::BadDiscardName { name } => (
                 "This is not a valid discard name.",
                 vec![
-                    "Hint: Discard names start with _ and contain a-z, 0-9, or _.".to_string(),
+                    "Hint: Discard names start with _ and contain a-z, 0-9, or _.".into(),
                     format!("Try: _{}", name.to_snake_case()),
                 ],
             ),
             LexicalErrorType::BadUpname { name } => (
                 "This is not a valid upname.",
                 vec![
-                    "Hint: Upnames start with an uppercase letter and contain".to_string(),
-                    "only lowercase letters, numbers, and uppercase letters.".to_string(),
+                    "Hint: Upnames start with an uppercase letter and contain".into(),
+                    "only lowercase letters, numbers, and uppercase letters.".into(),
                     format!("Try: {}", name.to_upper_camel_case()),
                 ],
             ),
