@@ -209,7 +209,7 @@ fn reserved_word_fn() {
 #[test]
 fn reserved_word_imported() {
     assert_js!(
-        (CURRENT_PACKAGE, "for".into(), "pub fn class() { 1 }"),
+        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
         r#"import for.{class}
 
 pub fn export() {
@@ -222,7 +222,7 @@ pub fn export() {
 #[test]
 fn reserved_word_imported_alias() {
     assert_js!(
-        (CURRENT_PACKAGE, "for".into(), "pub fn class() { 1 }"),
+        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
         r#"import for.{class as while} as function
 
 pub fn export() {
@@ -367,11 +367,7 @@ pub fn version(n) {
 #[test]
 fn pipe_shadow_import() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "foo".into(),
-            "pub fn println(x: String) {  }"
-        ),
+        (CURRENT_PACKAGE, "foo", "pub fn println(x: String) {  }"),
         r#"
         import foo.{println}
         pub fn main() {

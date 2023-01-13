@@ -10,11 +10,7 @@ fn empty_module() {
 #[test]
 fn unqualified_fn_call() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "rocket_ship".into(),
-            r#"pub fn launch() { 1 }"#
-        ),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub fn launch() { 1 }"#),
         r#"import rocket_ship.{launch}
 pub fn go() { launch() }
 "#,
@@ -24,11 +20,7 @@ pub fn go() { launch() }
 #[test]
 fn aliased_unqualified_fn_call() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "rocket_ship".into(),
-            r#"pub fn launch() { 1 }"#
-        ),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub fn launch() { 1 }"#),
         r#"import rocket_ship.{launch as boom_time}
 pub fn go() { boom_time() }
 "#,
@@ -40,7 +32,7 @@ fn multiple_unqualified_fn_call() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            "rocket_ship".into(),
+            "rocket_ship",
             r#"
 pub fn a() { 1 }
 pub fn b() { 2 }"#
@@ -54,7 +46,7 @@ pub fn go() { a() + bb() }
 #[test]
 fn constant() {
     assert_js!(
-        (CURRENT_PACKAGE, "rocket_ship".into(), r#"pub const x = 1"#),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub const x = 1"#),
         r#"
 import rocket_ship
 pub fn go() { rocket_ship.x }
@@ -65,7 +57,7 @@ pub fn go() { rocket_ship.x }
 #[test]
 fn alias_constant() {
     assert_js!(
-        (CURRENT_PACKAGE, "rocket_ship".into(), r#"pub const x = 1"#),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub const x = 1"#),
         r#"
 import rocket_ship as boop
 pub fn go() { boop.x }
@@ -76,11 +68,7 @@ pub fn go() { boop.x }
 #[test]
 fn alias_fn_call() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "rocket_ship".into(),
-            r#"pub fn go() { 1 }"#
-        ),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub fn go() { 1 }"#),
         r#"
 import rocket_ship as boop
 pub fn go() { boop.go() }
@@ -91,7 +79,7 @@ pub fn go() { boop.go() }
 #[test]
 fn nested_fn_call() {
     assert_js!(
-        (CURRENT_PACKAGE, "one/two".into(), r#"pub fn go() { 1 }"#),
+        (CURRENT_PACKAGE, "one/two", r#"pub fn go() { 1 }"#),
         r#"import one/two
 pub fn go() { two.go() }"#,
     );

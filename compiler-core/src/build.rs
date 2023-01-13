@@ -56,7 +56,7 @@ pub enum Target {
 }
 
 impl Target {
-    pub fn variant_strings() -> Vec<String> {
+    pub fn variant_strings() -> Vec<SmolStr> {
         Self::VARIANTS.iter().map(|s| (*s).into()).collect()
     }
 }

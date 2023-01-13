@@ -46,7 +46,7 @@ macro_rules! assert_erl {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -78,7 +78,7 @@ macro_rules! assert_erl {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )

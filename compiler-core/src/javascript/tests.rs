@@ -43,7 +43,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            $dep_package,
+            &$dep_package.into(),
             &modules,
             &mut vec![],
         )
@@ -56,7 +56,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            CURRENT_PACKAGE,
+            &CURRENT_PACKAGE.into(),
             &modules,
             &mut vec![],
         )
@@ -82,7 +82,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            $dep_package,
+            &$dep_package.into(),
             &modules,
             &mut vec![],
         )
@@ -95,7 +95,7 @@ macro_rules! assert_js {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            CURRENT_PACKAGE,
+            &CURRENT_PACKAGE.into(),
             &modules,
             &mut vec![],
         )
@@ -182,7 +182,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            $dep_package,
+            &$dep_package.into(),
             &modules,
             &mut vec![],
         )
@@ -195,7 +195,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            CURRENT_PACKAGE,
+            &CURRENT_PACKAGE.into(),
             &modules,
             &mut vec![],
         )
@@ -220,7 +220,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            $dep_package,
+            &$dep_package.into(),
             &modules,
             &mut vec![],
         )
@@ -233,7 +233,7 @@ macro_rules! assert_ts_def {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            CURRENT_PACKAGE,
+            &CURRENT_PACKAGE.into(),
             &modules,
             &mut vec![],
         )
