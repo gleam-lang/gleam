@@ -33,7 +33,7 @@ use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
 // TypeScript. This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".to_string();
+        let mut name = "".into();
         name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }

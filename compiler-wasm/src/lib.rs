@@ -72,7 +72,7 @@ fn manifest_from_name(name: &str) -> ManifestPackage {
             pre: vec![],
             build: None,
         },
-        build_tools: vec!["gleam".to_string()],
+        build_tools: vec!["gleam".into()],
         otp_app: None,
         requirements: vec![],
         source: ManifestPackageSource::Hex {
@@ -175,7 +175,7 @@ mod test {
 
     fn source(source: &str) -> HashMap<String, String> {
         let mut source_files = HashMap::new();
-        source_files.insert("./src/main.gleam".to_string(), source.to_string());
+        source_files.insert("./src/main.gleam".into(), source.to_string());
         source_files
     }
 
@@ -199,7 +199,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/src/some_library.gleam".to_string(),
+            "build/packages/some_library/src/some_library.gleam".into(),
             r#"
             pub fn function(string: String) -> Nil {
                 Nil
@@ -209,8 +209,8 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/gleam.toml".to_string(),
-            "name = \"some_library\"".to_string(),
+            "build/packages/some_library/gleam.toml".into(),
+            "name = \"some_library\"".into(),
         );
 
         let result = compile_wrapper(CompileOptions {
@@ -239,7 +239,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/src/some_library.gleam".to_string(),
+            "build/packages/some_library/src/some_library.gleam".into(),
             r#"
             pub fn function(string: String) -> Nil {
                 Nil
@@ -249,8 +249,8 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/gleam.toml".to_string(),
-            "name = \"some_library\"".to_string(),
+            "build/packages/some_library/gleam.toml".into(),
+            "name = \"some_library\"".into(),
         );
 
         let result = compile_wrapper(CompileOptions {

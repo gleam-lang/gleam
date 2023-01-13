@@ -1554,7 +1554,7 @@ fn negate_string() {
 #[test]
 fn ambiguous_type_error() {
     assert_with_module_error!(
-        ("foo".to_string(), "pub type Thing { Thing }"),
+        ("foo", "pub type Thing { Thing }"),
         "import foo; pub type Thing { Thing }; 
         pub fn main() { 
             [Thing] == [foo.Thing]; 
@@ -1565,8 +1565,8 @@ fn ambiguous_type_error() {
 #[test]
 fn ambiguous_import_error_no_unqualified() {
     assert_with_module_error!(
-        ("foo/sub".to_string(), "pub fn bar() { 1 }"),
-        ("foo2/sub".to_string(), "pub fn bar() { 1 }"),
+        ("foo/sub", "pub fn bar() { 1 }"),
+        ("foo2/sub", "pub fn bar() { 1 }"),
         "
         import foo/sub
         import foo2/sub
@@ -1580,8 +1580,8 @@ fn ambiguous_import_error_no_unqualified() {
 #[test]
 fn ambiguous_import_error_with_unqualified() {
     assert_with_module_error!(
-        ("foo/sub".to_string(), "pub fn bar() { 1 }"),
-        ("foo2/sub".to_string(), "pub fn bar() { 1 }"),
+        ("foo/sub", "pub fn bar() { 1 }"),
+        ("foo2/sub", "pub fn bar() { 1 }"),
         "
         import foo/sub
         import foo2/sub.{bar}
@@ -1596,7 +1596,7 @@ fn ambiguous_import_error_with_unqualified() {
 fn same_imports_multiple_times() {
     assert_with_module_error!(
         (
-            "gleam/foo".to_string(),
+            "gleam/foo",
             "
             pub fn bar() { 1 }
             pub fn zoo() { 1 }

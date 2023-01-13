@@ -336,7 +336,7 @@ impl FileKind {
     }
 }
 
-fn did_you_mean(name: &str, options: &[String]) -> Option<String> {
+fn did_you_mean(name: &str, options: &[SmolStr]) -> Option<String> {
     // Find best match
     options
         .iter()
@@ -727,10 +727,10 @@ Test modules are not included in production builds so test modules cannot import
                     valid,
                     supplied,
                 } => {
-                    let other_labels: Vec<String> = valid
+                    let other_labels: Vec<_> = valid
                         .iter()
-                        .cloned()
                         .filter(|label| !supplied.contains(label))
+                        .map(SmolStr::to_string)
                         .collect();
 
                     let title = if unknown.len() > 1 {
@@ -738,7 +738,7 @@ Test modules are not included in production builds so test modules cannot import
                     } else {
                         "Unknown label"
                     }
-                    .to_string();
+                    .into();
 
                     let mut labels = unknown.iter().map(|(label, location)| {
                         let text = did_you_mean(label, &other_labels)
@@ -1437,26 +1437,21 @@ Private types can only be used within the module that defines them.",
                     location,
                     name,
                     imported_modules,
-                } => {
-                    // TODO: remove
-                    let imported_modules =
-                        imported_modules.iter().map(|s| s.to_string()).collect_vec();
-                    Diagnostic {
-                        title: "Unknown module".into(),
-                        text: format!("No module has been found with the name `{}`.", name),
-                        hint: None,
-                        level: Level::Error,
-                        location: Some(Location {
-                            label: Label {
-                                text: did_you_mean(name, &imported_modules),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.into(),
-                            extra_labels: vec![],
-                        }),
-                    }
-                }
+                } => Diagnostic {
+                    title: "Unknown module".into(),
+                    text: format!("No module has been found with the name `{}`.", name),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: did_you_mean(name, &imported_modules),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.into(),
+                        extra_labels: vec![],
+                    }),
+                },
 
                 TypeError::UnknownModuleType {
                     location,
@@ -1515,10 +1510,10 @@ Private types can only be used within the module that defines them.",
                     type_constructors,
                     value_constructors,
                 } => {
-                    let options: Vec<String> = type_constructors
+                    let options: Vec<_> = type_constructors
                         .iter()
                         .chain(value_constructors)
-                        .map(|s| s.to_string())
+                        .cloned()
                         .collect();
                     let text =
                         format!("The module `{module_name}` does not have a `{name}` field.",);
@@ -2291,7 +2286,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
 
                 let hint = match target {
                     Target::JavaScript => {
-                        Some("available runtimes for JavaScript are: node, deno".to_string())
+                        Some("available runtimes for JavaScript are: node, deno".into())
                     }
                     Target::Erlang => Some(
                         "You can not set a runtime for Erlang. Did you mean to target JavaScript?"

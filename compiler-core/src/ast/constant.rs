@@ -1,7 +1,7 @@
 use super::*;
 use crate::type_::{FieldMap, HasType};
 
-pub type TypedConstant = Constant<Arc<Type>, String>;
+pub type TypedConstant = Constant<Arc<Type>, SmolStr>;
 pub type UntypedConstant = Constant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]

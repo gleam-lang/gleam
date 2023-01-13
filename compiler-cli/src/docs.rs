@@ -84,8 +84,8 @@ pub(crate) fn build_documentation(
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
     let mut pages = vec![DocsPage {
-        title: "README".to_string(),
-        path: "index.html".to_string(),
+        title: "README".into(),
+        path: "index.html".into(),
         source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
     pages.extend(config.documentation.pages.iter().cloned());

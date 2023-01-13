@@ -253,7 +253,7 @@ impl Downloader {
         }
 
         Err(Error::ExpandTar {
-            error: "Unable to locate Hex package contents.tar.gz".to_string(),
+            error: "Unable to locate Hex package contents.tar.gz".into(),
         })
     }
 

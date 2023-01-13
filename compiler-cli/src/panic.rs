@@ -14,10 +14,10 @@ fn print_compiler_bug_message(info: &PanicInfo<'_>) {
     ) {
         (Some(s), _) => (*s).to_string(),
         (_, Some(s)) => s.to_string(),
-        (None, None) => "unknown error".to_string(),
+        (None, None) => "unknown error".into(),
     };
     let location = match info.location() {
-        None => "".to_string(),
+        None => "".into(),
         Some(location) => format!("{}:{}\n\t", location.file(), location.line()),
     };
 

@@ -144,9 +144,7 @@ fn name_tests() {
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
-                    error: LexicalErrorType::BadName {
-                        name: "xS".to_string()
-                    },
+                    error: LexicalErrorType::BadName { name: "xS".into() },
                     location: SrcSpan { start: 4, end: 6 },
                 }
             },
@@ -159,9 +157,7 @@ fn name_tests() {
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
-                    error: LexicalErrorType::BadDiscardName {
-                        name: "_xS".to_string()
-                    },
+                    error: LexicalErrorType::BadDiscardName { name: "_xS".into() },
                     location: SrcSpan { start: 4, end: 7 },
                 }
             },
@@ -174,9 +170,7 @@ fn name_tests() {
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
-                    error: LexicalErrorType::BadUpname {
-                        name: "S_m".to_string()
-                    },
+                    error: LexicalErrorType::BadUpname { name: "S_m".into() },
                     location: SrcSpan { start: 5, end: 8 },
                 }
             },
@@ -223,8 +217,8 @@ False -> 0
         ParseError {
             location: SrcSpan { start: 36, end: 37 },
             error: ParseErrorType::UnexpectedToken {
-                expected: vec!["\"->\"".to_string()],
-                hint: Some("Did you mean to wrap a multi line clause in curly braces?".to_string())
+                expected: vec!["\"->\"".into()],
+                hint: Some("Did you mean to wrap a multi line clause in curly braces?".into())
             },
         }
     );

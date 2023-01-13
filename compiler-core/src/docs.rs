@@ -52,7 +52,7 @@ pub fn generate_html(
     });
 
     let repo_link = config.repository.url().map(|path| Link {
-        name: "Repository".to_string(),
+        name: "Repository".into(),
         path,
     });
 
@@ -404,7 +404,7 @@ fn page_unnest(path: &str) -> String {
         .map(|_| "..")
         .join("/");
     if unnest.is_empty() {
-        ".".to_string()
+        ".".into()
     } else {
         unnest
     }
@@ -495,7 +495,7 @@ fn text_documentation(doc: &Option<String>) -> String {
     let raw_text = doc
         .as_ref()
         .map(|it| it.to_string())
-        .unwrap_or_else(|| "".to_string());
+        .unwrap_or_else(|| "".into());
 
     // TODO: parse markdown properly and extract the text nodes
     raw_text.replace("```gleam", "").replace("```", "")

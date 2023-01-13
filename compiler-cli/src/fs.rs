@@ -573,7 +573,7 @@ pub fn is_inside_git_work_tree(path: &Path) -> Result<bool, Error> {
             io::ErrorKind::NotFound => Ok(false),
 
             other => Err(Error::ShellCommand {
-                program: "git".to_string(),
+                program: "git".into(),
                 err: Some(other),
             }),
         },

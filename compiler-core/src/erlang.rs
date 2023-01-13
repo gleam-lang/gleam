@@ -45,7 +45,7 @@ struct Env<'a> {
 
 impl<'env> Env<'env> {
     pub fn new(module: &'env str, function: &'env str, line_numbers: &'env LineNumbers) -> Self {
-        let vars: im::HashMap<_, _> = std::iter::once(("_".to_string(), 0)).collect();
+        let vars: im::HashMap<_, _> = std::iter::once(("_".into(), 0)).collect();
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
@@ -1585,7 +1585,7 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 
 fn incrementing_args_list(arity: usize) -> String {
     let arguments = (0..arity).map(|c| format!("Field@{c}"));
-    Itertools::intersperse(arguments, ", ".to_string()).collect()
+    Itertools::intersperse(arguments, ", ".into()).collect()
 }
 
 fn external_fun<'a>(
@@ -1633,7 +1633,7 @@ fn variable_name(name: &str) -> String {
 // This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".to_string();
+        let mut name = "".into();
         name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return Document::String(name);
     }

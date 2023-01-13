@@ -438,7 +438,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 Ok(())
                             }
                             _ => Err(Error::Unsupported {
-                                feature: "This bit string size option in patterns".to_string(),
+                                feature: "This bit string size option in patterns".into(),
                                 location: segment.location,
                             }),
                         },
@@ -460,7 +460,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         }
 
                         _ => Err(Error::Unsupported {
-                            feature: "This bit string segment option in patterns".to_string(),
+                            feature: "This bit string segment option in patterns".into(),
                             location: segment.location,
                         }),
                     }?;
@@ -470,7 +470,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
-                feature: "Bit string matching".to_string(),
+                feature: "Bit string matching".into(),
                 location: *location,
             }),
         }

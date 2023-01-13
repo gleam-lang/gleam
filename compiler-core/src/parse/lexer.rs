@@ -496,9 +496,9 @@ where
         if let Some(tok) = str_to_keyword(&name) {
             Ok((start_pos, tok, end_pos))
         } else if name.starts_with('_') {
-            Ok((start_pos, Token::DiscardName { name }, end_pos))
+            Ok((start_pos, Token::DiscardName { name: name.into() }, end_pos))
         } else {
-            Ok((start_pos, Token::Name { name }, end_pos))
+            Ok((start_pos, Token::Name { name: name.into() }, end_pos))
         }
     }
     // A type name or constructor
@@ -530,7 +530,7 @@ where
         if let Some(tok) = str_to_keyword(&name) {
             Ok((start_pos, tok, end_pos))
         } else {
-            Ok((start_pos, Token::UpName { name }, end_pos))
+            Ok((start_pos, Token::UpName { name: name.into() }, end_pos))
         }
     }
 
@@ -597,7 +597,13 @@ where
         } else {
             let value = format!("{}{}", prefix, num);
             let end_pos = self.get_pos();
-            Ok((start_pos, Token::Int { value }, end_pos))
+            Ok((
+                start_pos,
+                Token::Int {
+                    value: value.into(),
+                },
+                end_pos,
+            ))
         }
     }
 
@@ -630,10 +636,22 @@ where
                 value.push_str(&self.radix_run(10));
             }
             let end_pos = self.get_pos();
-            (start_pos, Token::Float { value }, end_pos)
+            (
+                start_pos,
+                Token::Float {
+                    value: value.into(),
+                },
+                end_pos,
+            )
         } else {
             let end_pos = self.get_pos();
-            (start_pos, Token::Int { value }, end_pos)
+            (
+                start_pos,
+                Token::Int {
+                    value: value.into(),
+                },
+                end_pos,
+            )
         }
     }
 
@@ -754,7 +772,7 @@ where
         let end_pos = self.get_pos();
 
         let tok = Token::String {
-            value: string_content,
+            value: string_content.into(),
         };
 
         Ok((start_pos, tok, end_pos))

@@ -404,17 +404,17 @@ impl<'a> ReleaseRequirement<'a> {
 fn release_metadata_as_erlang() {
     let licences = vec![
         SpdxLicense {
-            licence: "MIT".to_string(),
+            licence: "MIT".into(),
         },
         SpdxLicense {
-            licence: "MPL-2.0".to_string(),
+            licence: "MPL-2.0".into(),
         },
     ];
     let version = "1.2.3".try_into().unwrap();
     let homepage = "https://gleam.run".parse().unwrap();
     let github = "https://github.com/lpil/myapp".parse().unwrap();
-    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".to_string());
-    let req2 = Range::new("~> 1.2".to_string());
+    let req1 = Range::new("~> 1.2.3 or >= 5.0.0".into());
+    let req2 = Range::new("~> 1.2".into());
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,

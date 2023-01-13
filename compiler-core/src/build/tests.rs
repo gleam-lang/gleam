@@ -7,8 +7,8 @@ fn usable_build_tool_unknown() {
     assert_eq!(
         usable_build_tool(&ManifestPackage::default().with_build_tools(&["unknown"])),
         Err(Error::UnsupportedBuildTool {
-            package: "".to_string(),
-            build_tools: vec!["unknown".to_string()],
+            package: "".into(),
+            build_tools: vec!["unknown".into()],
         })
     )
 }
@@ -18,7 +18,7 @@ fn usable_build_tool_none() {
     assert_eq!(
         usable_build_tool(&ManifestPackage::default()),
         Err(Error::UnsupportedBuildTool {
-            package: "".to_string(),
+            package: "".into(),
             build_tools: vec![],
         })
     )

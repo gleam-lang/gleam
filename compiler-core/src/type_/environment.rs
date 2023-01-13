@@ -10,7 +10,7 @@ pub struct Environment<'a> {
     previous_id: u64,
     /// Names of types or values that have been imported an unqualified fashion
     /// from other modules. Used to prevent multiple imports using the same name.
-    pub unqualified_imported_names: HashMap<String, SrcSpan>,
+    pub unqualified_imported_names: HashMap<SmolStr, SrcSpan>,
     pub importable_modules: &'a im::HashMap<SmolStr, Module>,
 
     /// Modules that have been imported by the current module, along with the
@@ -23,16 +23,16 @@ pub struct Environment<'a> {
     pub scope: im::HashMap<SmolStr, ValueConstructor>,
 
     /// Types defined in the current module (or the prelude)
-    pub module_types: HashMap<String, TypeConstructor>,
+    pub module_types: HashMap<SmolStr, TypeConstructor>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
-    pub module_types_constructors: HashMap<String, Vec<String>>,
+    pub module_types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
 
     /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<SmolStr, ValueConstructor>,
 
     /// Accessors defined in the current module
-    pub accessors: HashMap<String, AccessorsMap>,
+    pub accessors: HashMap<SmolStr, AccessorsMap>,
 
     /// Warnings
     pub warnings: &'a mut Vec<Warning>,
@@ -40,7 +40,7 @@ pub struct Environment<'a> {
     /// Functions that have not yet been inferred then generalised.
     /// We use this to determine whether functions that call this one
     /// can safely be generalised.
-    pub ungeneralised_functions: HashSet<String>,
+    pub ungeneralised_functions: HashSet<SmolStr>,
 
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
@@ -154,7 +154,7 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: String, location: SrcSpan, typ: Arc<Type>) {
+    pub fn insert_local_variable(&mut self, name: SmolStr, location: SrcSpan, typ: Arc<Type>) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
@@ -187,19 +187,19 @@ impl<'a> Environment<'a> {
     /// Insert a value into the current module.
     /// Errors if the module already has a value with that name.
     ///
-    pub fn insert_module_value(&mut self, name: &str, value: ValueConstructor) {
-        let _ = self.module_values.insert(name.to_string(), value);
+    pub fn insert_module_value(&mut self, name: SmolStr, value: ValueConstructor) {
+        let _ = self.module_values.insert(name, value);
     }
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &str) -> Option<&ValueConstructor> {
+    pub fn get_variable(&self, name: &SmolStr) -> Option<&ValueConstructor> {
         self.scope.get(name)
     }
 
     /// Lookup a module constant in the current scope.
     ///
-    pub fn get_module_const(&mut self, name: &str) -> Option<&ValueConstructor> {
+    pub fn get_module_const(&mut self, name: &SmolStr) -> Option<&ValueConstructor> {
         self.increment_usage(name);
         self.module_values
             .get(name)
@@ -214,7 +214,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn insert_type_constructor(
         &mut self,
-        type_name: String,
+        type_name: SmolStr,
         info: TypeConstructor,
     ) -> Result<(), Error> {
         let name = type_name.clone();
@@ -232,7 +232,7 @@ impl<'a> Environment<'a> {
 
     /// Map a type to constructors in the current scope.
     ///
-    pub fn insert_type_to_constructors(&mut self, type_name: String, constructors: Vec<String>) {
+    pub fn insert_type_to_constructors(&mut self, type_name: SmolStr, constructors: Vec<SmolStr>) {
         let _ = self
             .module_types_constructors
             .insert(type_name, constructors);
@@ -280,7 +280,7 @@ impl<'a> Environment<'a> {
         &mut self,
         full_module_name: Option<&str>,
         name: &str,
-    ) -> Result<&Vec<String>, UnknownTypeConstructorError> {
+    ) -> Result<&Vec<SmolStr>, UnknownTypeConstructorError> {
         match full_module_name {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
@@ -313,14 +313,14 @@ impl<'a> Environment<'a> {
     pub fn get_value_constructor(
         &mut self,
         module: Option<&SmolStr>,
-        name: &str,
+        name: &SmolStr,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self
                 .scope
                 .get(name)
                 .ok_or_else(|| UnknownValueConstructorError::Variable {
-                    name: name.to_string(),
+                    name: name.clone(),
                     variables: self.local_value_names(),
                 }),
 
@@ -336,16 +336,16 @@ impl<'a> Environment<'a> {
                     .values
                     .get(name)
                     .ok_or_else(|| UnknownValueConstructorError::ModuleValue {
-                        name: name.to_string(),
+                        name: name.clone(),
                         module_name: module.name.clone(),
-                        value_constructors: module.values.keys().map(|t| t.to_string()).collect(),
+                        value_constructors: module.values.keys().cloned().collect(),
                     })
             }
         }
     }
 
-    pub fn insert_accessors(&mut self, type_name: &str, accessors: AccessorsMap) {
-        let _ = self.accessors.insert(type_name.to_string(), accessors);
+    pub fn insert_accessors(&mut self, type_name: SmolStr, accessors: AccessorsMap) {
+        let _ = self.accessors.insert(type_name, accessors);
     }
 
     /// Instantiate converts generic variables into unbound ones.
@@ -445,21 +445,21 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &str) {
-        let mut name = name.to_string();
+    pub fn increment_usage(&mut self, name: &SmolStr) {
+        let mut name = name;
 
         while let Some((kind, _, used)) = self
             .entity_usages
             .iter_mut()
             .rev()
-            .find_map(|scope| scope.get_mut(&name))
+            .find_map(|scope| scope.get_mut(name))
         {
             *used = true;
 
             match kind {
                 // If a type constructor is used, we consider its type also used
-                EntityKind::PrivateTypeConstructor(type_name) if type_name != &name => {
-                    name.clone_from(type_name);
+                EntityKind::PrivateTypeConstructor(type_name) if type_name != name => {
+                    name = type_name;
                 }
                 _ => return,
             }
@@ -517,11 +517,11 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn local_value_names(&self) -> Vec<String> {
+    pub fn local_value_names(&self) -> Vec<SmolStr> {
         self.scope
             .keys()
             .filter(|&t| PIPE_VARIABLE != t)
-            .map(|t| t.to_string())
+            .cloned()
             .collect()
     }
 
@@ -532,7 +532,7 @@ impl<'a> Environment<'a> {
         &mut self,
         patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
         value_typ: Arc<Type>,
-    ) -> Result<(), Vec<String>> {
+    ) -> Result<(), Vec<SmolStr>> {
         match &*value_typ {
             Type::App {
                 name: type_name,
@@ -546,7 +546,7 @@ impl<'a> Environment<'a> {
                 };
 
                 if let Ok(constructors) = self.get_constructors_for_type(m, type_name) {
-                    let mut unmatched_constructors: HashSet<String> =
+                    let mut unmatched_constructors: HashSet<SmolStr> =
                         constructors.iter().cloned().collect();
 
                     for p in &patterns {

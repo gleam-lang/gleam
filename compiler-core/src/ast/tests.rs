@@ -72,7 +72,7 @@ fn compile_expression(src: &str) -> TypedExpr {
     );
 
     environment.insert_accessors(
-        "Cat",
+        "Cat".into(),
         AccessorsMap {
             public: true,
             type_: cat_type,

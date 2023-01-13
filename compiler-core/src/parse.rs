@@ -151,7 +151,7 @@ where
         let parse_result = self.ensure_no_errors(parse_result)?;
         if let Some((start, _, end)) = self.next_tok() {
             // there are still more tokens
-            let expected = vec!["An import, const, type, if block, or function.".to_string()];
+            let expected = vec!["An import, const, type, if block, or function.".into()];
             return parse_error(
                 ParseErrorType::UnexpectedToken {
                     expected,
@@ -249,9 +249,7 @@ where
                 match self.next_tok() {
                     Some((_, Token::Type, _)) => self.parse_external_type(start, true),
                     Some((_, Token::Fn, _)) => self.parse_external_fn(start, true),
-                    _ => {
-                        self.next_tok_unexpected(vec!["A type or function definition".to_string()])?
-                    }
+                    _ => self.next_tok_unexpected(vec!["A type or function definition".into()])?,
                 }
             }
 
@@ -486,8 +484,7 @@ where
 
                     _ => {
                         // this isn't just none, it could also be Some(UntypedExpr::..)
-                        return self
-                            .next_tok_unexpected(vec!["An opening parenthesis.".to_string()]);
+                        return self.next_tok_unexpected(vec!["An opening parenthesis.".into()]);
                     }
                 }
             }
@@ -628,7 +625,7 @@ where
                     t0 => {
                         self.tok0 = t0;
                         return self.next_tok_unexpected(vec![
-                            "A positive integer or a field name.".to_string(),
+                            "A positive integer or a field name.".into(),
                         ]);
                     }
                 }
@@ -724,8 +721,8 @@ where
         } else {
             // DUPE: 62884
             return self.next_tok_unexpected(vec![
-                "A pattern".to_string(),
-                "See: https://gleam.run/book/tour/patterns".to_string(),
+                "A pattern".into(),
+                "See: https://gleam.run/book/tour/patterns".into(),
             ])?;
         };
         let annotation = self.parse_type_annotation(&Token::Colon, false)?;
@@ -772,8 +769,8 @@ where
             } else {
                 // DUPE: 62884
                 return self.next_tok_unexpected(vec![
-                    "A pattern".to_string(),
-                    "See: https://gleam.run/book/tour/patterns".to_string(),
+                    "A pattern".into(),
+                    "See: https://gleam.run/book/tour/patterns".into(),
                 ])?;
             };
             let annotation = self.parse_type_annotation(&Token::Colon, false)?;
@@ -985,7 +982,7 @@ where
                             start: rsqb_e - 1,
                             end: rsqb_e,
                         },
-                        name: "_".to_string(),
+                        name: "_".into(),
                     }),
                     // No tail specified
                     None => None,
@@ -1035,9 +1032,8 @@ where
             let guard = self.parse_case_clause_guard(false)?;
             let (arr_s, arr_e) = self.expect_one(&Token::RArrow).map_err(|mut e| {
                 if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = e.error {
-                    *hint = Some(
-                        "Did you mean to wrap a multi line clause in curly braces?".to_string(),
-                    );
+                    *hint =
+                        Some("Did you mean to wrap a multi line clause in curly braces?".into());
                 }
                 e
             })?;
@@ -1169,7 +1165,7 @@ where
                         Some((start, _, end)) => {
                             parse_error(ParseErrorType::InvalidTupleAccess, SrcSpan { start, end })
                         }
-                        _ => self.next_tok_unexpected(vec!["A positive integer".to_string()]),
+                        _ => self.next_tok_unexpected(vec!["A positive integer".into()]),
                     }
                 } else {
                     Ok(Some(ClauseGuard::Var {
@@ -1308,7 +1304,7 @@ where
                     value,
                 }))
             } else {
-                self.next_tok_unexpected(vec!["An expression".to_string()])
+                self.next_tok_unexpected(vec!["An expression".into()])
             }
         } else {
             Ok(None)
@@ -2197,7 +2193,7 @@ where
                     }
                     Some((start, _, end)) => parse_error(
                         ParseErrorType::UnexpectedToken {
-                            expected: vec!["UpName".to_string(), "Name".to_string()],
+                            expected: vec!["UpName".into(), "Name".into()],
                             hint: None,
                         },
                         SrcSpan { start, end },
@@ -2304,7 +2300,7 @@ where
                 }))
             }
         } else if name.is_some() {
-            self.next_tok_unexpected(vec!["a constant value".to_string()])?
+            self.next_tok_unexpected(vec!["a constant value".into()])?
         } else {
             Ok(None)
         }
@@ -2393,7 +2389,7 @@ where
                                     }),
                                 }
                             } else {
-                                self.next_tok_unexpected(vec!["positive integer".to_string()])
+                                self.next_tok_unexpected(vec!["positive integer".into()])
                             }
                         }
 
@@ -2428,8 +2424,8 @@ where
             })),
             // invalid
             _ => self.next_tok_unexpected(vec![
-                "A valid bitstring segment type".to_string(),
-                "See: https://gleam.run/book/tour/bit-strings.html".to_string(),
+                "A valid bitstring segment type".into(),
+                "See: https://gleam.run/book/tour/bit-strings.html".into(),
             ]),
         }
     }
@@ -2445,7 +2441,7 @@ where
                 location: SrcSpan { start, end },
                 value,
             }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".to_string()]),
+            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
         }
     }
 
@@ -2455,7 +2451,7 @@ where
                 location: SrcSpan { start, end },
                 value,
             }),
-            _ => self.next_tok_unexpected(vec!["A variable name or an integer".to_string()]),
+            _ => self.next_tok_unexpected(vec!["A variable name or an integer".into()]),
         }
     }
 
@@ -2463,7 +2459,7 @@ where
         if let Some(e) = self.parse_expression()? {
             Ok(e)
         } else {
-            self.next_tok_unexpected(vec!["An expression".to_string()])
+            self.next_tok_unexpected(vec!["An expression".into()])
         }
     }
 
@@ -2549,7 +2545,7 @@ where
     fn expect_string(&mut self) -> Result<(u32, String, u32), ParseError> {
         match self.next_tok() {
             Some((start, Token::String { value }, end)) => Ok((start, value, end)),
-            _ => self.next_tok_unexpected(vec!["a string".to_string()]),
+            _ => self.next_tok_unexpected(vec!["a string".into()]),
         }
     }
 

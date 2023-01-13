@@ -132,7 +132,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
 
     let mut prelude = Module {
         name: "gleam".into(),
-        package: "".to_string(),
+        package: "".into(),
         origin: Origin::Src,
         types: HashMap::new(),
         types_constructors: HashMap::new(),
@@ -151,17 +151,16 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         },
     );
 
-    let _ = prelude.types_constructors.insert(
-        BOOL.to_string(),
-        vec!["True".to_string(), "False".to_string()],
-    );
+    let _ = prelude
+        .types_constructors
+        .insert(BOOL.to_string(), vec!["True".into(), "False".into()]);
 
     let _ = prelude.values.insert(
-        "True".to_string(),
+        "True".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "True".to_string(),
+                name: "True".into(),
                 field_map: None,
                 arity: 0,
                 location: SrcSpan::default(),
@@ -171,11 +170,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         ),
     );
     let _ = prelude.values.insert(
-        "False".to_string(),
+        "False".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "False".to_string(),
+                name: "False".into(),
                 field_map: None,
                 arity: 0,
                 location: SrcSpan::default(),
@@ -242,10 +241,9 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
         },
     );
 
-    let _ = prelude.types_constructors.insert(
-        RESULT.to_string(),
-        vec!["Ok".to_string(), "Error".to_string()],
-    );
+    let _ = prelude
+        .types_constructors
+        .insert(RESULT.to_string(), vec!["Ok".into(), "Error".into()]);
 
     let _ = prelude.values.insert(
         NIL.to_string(),
@@ -273,7 +271,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     );
 
     let _ = prelude.types.insert(
-        "BitString".to_string(),
+        "BitString".into(),
         TypeConstructor {
             origin: Default::default(),
             parameters: vec![],
@@ -297,11 +295,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let ok = generic_var(ids.next());
     let error = generic_var(ids.next());
     let _ = prelude.values.insert(
-        "Ok".to_string(),
+        "Ok".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "Ok".to_string(),
+                name: "Ok".into(),
                 field_map: None,
                 arity: 1,
                 location: SrcSpan::default(),
@@ -314,11 +312,11 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> Module {
     let ok = generic_var(ids.next());
     let error = generic_var(ids.next());
     let _ = prelude.values.insert(
-        "Error".to_string(),
+        "Error".into(),
         value(
             ValueConstructorVariant::Record {
                 module: "".into(),
-                name: "Error".to_string(),
+                name: "Error".into(),
                 field_map: None,
                 arity: 1,
                 location: SrcSpan::default(),

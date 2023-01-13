@@ -219,7 +219,7 @@ impl<'module> Generator<'module> {
 
                 // Anything else
                 _ => Err(Error::Unsupported {
-                    feature: "This bit string segment option".to_string(),
+                    feature: "This bit string segment option".into(),
                     location: segment.location,
                 }),
             }
@@ -1154,7 +1154,7 @@ pub(crate) fn constant_expression<'a>(
         }
 
         Constant::BitString { location, .. } => Err(Error::Unsupported {
-            feature: "Bit string syntax".to_string(),
+            feature: "Bit string syntax".into(),
             location: *location,
         }),
         Constant::Var { name, .. } => Ok(name.to_doc()),
