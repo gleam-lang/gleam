@@ -58,7 +58,7 @@ macro_rules! assert_infer_with_module {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -72,7 +72,7 @@ macro_rules! assert_infer_with_module {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -111,7 +111,7 @@ macro_rules! assert_module_infer {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -151,7 +151,7 @@ macro_rules! assert_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -173,7 +173,7 @@ macro_rules! assert_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -271,7 +271,7 @@ macro_rules! assert_with_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -285,7 +285,7 @@ macro_rules! assert_with_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -316,7 +316,7 @@ macro_rules! assert_with_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -330,7 +330,7 @@ macro_rules! assert_with_module_error {
             &ids,
             ast2,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -344,7 +344,7 @@ macro_rules! assert_with_module_error {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut vec![],
         )
@@ -377,7 +377,7 @@ macro_rules! assert_warning {
             &ids,
             ast,
             $crate::build::Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -410,7 +410,7 @@ macro_rules! assert_warning {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -437,7 +437,7 @@ macro_rules! assert_warning {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -452,7 +452,7 @@ macro_rules! assert_warning {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -482,7 +482,7 @@ macro_rules! assert_no_warnings {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -509,7 +509,7 @@ macro_rules! assert_no_warnings {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -524,7 +524,7 @@ macro_rules! assert_no_warnings {
             &ids,
             ast,
             Origin::Src,
-            "thepackage",
+            &"thepackage".into(),
             &modules,
             &mut warnings,
         )
@@ -686,7 +686,7 @@ fn infer_module_type_retention_test() {
         &ids,
         module,
         Origin::Src,
-        "thepackage",
+        &"thepackage".into(),
         &modules,
         &mut vec![],
     )
