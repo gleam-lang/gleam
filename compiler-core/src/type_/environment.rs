@@ -243,15 +243,15 @@ impl<'a> Environment<'a> {
     pub fn get_type_constructor(
         &mut self,
         module_alias: &Option<SmolStr>,
-        name: &str,
+        name: &SmolStr,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
             None => self
                 .module_types
                 .get(name)
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
-                    name: name.to_string(),
-                    type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
+                    name: name.clone(),
+                    type_constructors: self.module_types.keys().cloned().collect(),
                 }),
 
             Some(module_name) => {
@@ -266,9 +266,9 @@ impl<'a> Environment<'a> {
                     .types
                     .get(name)
                     .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
-                        name: name.to_string(),
+                        name: name.clone(),
                         module_name: module.name.clone(),
-                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
+                        type_constructors: module.types.keys().cloned().collect(),
                     })
             }
         }
@@ -279,29 +279,29 @@ impl<'a> Environment<'a> {
     pub fn get_constructors_for_type(
         &mut self,
         full_module_name: Option<&str>,
-        name: &str,
+        name: &SmolStr,
     ) -> Result<&Vec<SmolStr>, UnknownTypeConstructorError> {
         match full_module_name {
             None => self.module_types_constructors.get(name).ok_or_else(|| {
                 UnknownTypeConstructorError::Type {
-                    name: name.to_string(),
-                    type_constructors: self.module_types.keys().map(|t| t.to_string()).collect(),
+                    name: name.clone(),
+                    type_constructors: self.module_types.keys().cloned().collect(),
                 }
             }),
 
             Some(m) => {
                 let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
-                        name: name.into(),
+                        name: name.clone(),
                         imported_modules: self.importable_modules.keys().cloned().collect(),
                     }
                 })?;
                 let _ = self.unused_modules.remove(m);
                 module.types_constructors.get(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
-                        name: name.to_string(),
+                        name: name.clone(),
                         module_name: module.name.clone(),
-                        type_constructors: module.types.keys().map(|t| t.to_string()).collect(),
+                        type_constructors: module.types.keys().cloned().collect(),
                     }
                 })
             }

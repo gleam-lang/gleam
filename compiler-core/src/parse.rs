@@ -1326,7 +1326,7 @@ where
         public: bool,
         is_anon: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
-        let mut name = String::new();
+        let mut name = SmolStr::new("");
         if !is_anon {
             let (_, n, _) = self.expect_name()?;
             name = n;
@@ -2471,7 +2471,7 @@ where
     fn expect_one(&mut self, wanted: &Token) -> Result<(u32, u32), ParseError> {
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
-            None => self.next_tok_unexpected(vec![wanted.into()]),
+            None => self.next_tok_unexpected(vec![wanted.to_string().into()]),
         }
     }
 
@@ -3034,7 +3034,7 @@ pub fn make_call(
                     location,
                     value: UntypedExpr::Var {
                         location,
-                        name: CAPTURE_VARIABLE.to_string(),
+                        name: CAPTURE_VARIABLE.into(),
                     },
                 }
             }
@@ -3057,7 +3057,7 @@ pub fn make_call(
                 location: SrcSpan { start: 0, end: 0 },
                 annotation: None,
                 names: ArgNames::Named {
-                    name: CAPTURE_VARIABLE.to_string(),
+                    name: CAPTURE_VARIABLE.into(),
                 },
                 type_: (),
             }],

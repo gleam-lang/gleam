@@ -160,11 +160,12 @@ impl Type {
     ///
     /// This function is currently only used for finding the `List` type.
     ///
+    // TODO: specialise this to just List.
     pub fn get_app_args(
         &self,
         public: bool,
-        module: &SmolStr,
-        name: &SmolStr,
+        module: &str,
+        name: &str,
         arity: usize,
         environment: &mut Environment<'_>,
     ) -> Option<Vec<Arc<Self>>> {
@@ -199,8 +200,8 @@ impl Type {
                 // to the desired type.
                 *typ.borrow_mut() = TypeVar::Link {
                     type_: Arc::new(Self::App {
-                        name: name.clone(),
-                        module: module.clone(),
+                        name: name.into(),
+                        module: module.into(),
                         args: args.clone(),
                         public,
                     }),
@@ -1743,7 +1744,7 @@ pub fn register_types<'a>(
                 name: name.clone(),
                 args: parameters.clone(),
             });
-            let _ = hydrators.insert(name.to_string(), hydrator);
+            let _ = hydrators.insert(name.clone(), hydrator);
 
             environment.insert_type_constructor(
                 name.clone(),

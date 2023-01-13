@@ -12,12 +12,12 @@ pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
     hydrator: &'a Hydrator,
     mode: PatternMode,
-    initial_pattern_vars: HashSet<String>,
+    initial_pattern_vars: HashSet<SmolStr>,
 }
 
 enum PatternMode {
     Initial,
-    Alternative(Vec<String>),
+    Alternative(Vec<SmolStr>),
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
@@ -40,21 +40,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
                 self.environment
-                    .init_usage(name.to_string(), EntityKind::Variable, location);
+                    .init_usage(name.into(), EntityKind::Variable, location);
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
-                    return Err(UnifyError::DuplicateVarInPattern {
-                        name: name.to_string(),
-                    });
+                    return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
                 }
                 // Record that this variable originated in this pattern so any
                 // following alternative patterns can be checked to ensure they
                 // have the same variables.
-                let _ = self.initial_pattern_vars.insert(name.to_string());
+                let _ = self.initial_pattern_vars.insert(name.into());
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
                 self.environment
-                    .insert_local_variable(name.to_string(), location, typ);
+                    .insert_local_variable(name.into(), location, typ);
                 Ok(())
             }
 
@@ -62,15 +60,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match self.environment.scope.get(name) {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
-                        assigned.push(name.to_string());
+                        assigned.push(name.into());
                         let initial_typ = initial.type_.clone();
                         unify(initial_typ, typ)
                     }
 
                     // This variable was not defined in the Initial multi-pattern
-                    _ => Err(UnifyError::ExtraVarInAlternativePattern {
-                        name: name.to_string(),
-                    }),
+                    _ => Err(UnifyError::ExtraVarInAlternativePattern { name: name.into() }),
                 }
             }
         }
@@ -223,7 +219,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .cloned()
                     .ok_or_else(|| Error::UnknownVariable {
                         location,
-                        name: name.to_string(),
+                        name: name.clone(),
                         variables: self.environment.local_value_names(),
                     })?;
                 self.environment.increment_usage(&name);
