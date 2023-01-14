@@ -74,6 +74,8 @@ pub mod uid;
 pub mod version;
 pub mod warning;
 
+pub(crate) mod graph;
+
 pub use error::{Error, Result};
 pub use warning::Warning;
 
