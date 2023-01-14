@@ -483,21 +483,21 @@ impl<'module> Generator<'module> {
         if let TypedPattern::Var { name, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-            let name = self.next_local_var(name);
+            let js_name = self.next_local_var(name);
             return Ok(if self.tail_position {
                 docvec![
                     "let ",
-                    name.clone(),
+                    js_name.clone(),
                     " = ",
                     subject,
                     ";",
                     line(),
                     "return ",
-                    name,
+                    js_name,
                     ";"
                 ]
             } else {
-                docvec!["let ", name, " = ", subject, ";"]
+                docvec!["let ", js_name, " = ", subject, ";"]
             }
             .force_break());
         }
