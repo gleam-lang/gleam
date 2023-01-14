@@ -7,11 +7,7 @@ use petgraph::{prelude::NodeIndex, stable_graph::StableGraph, Direction};
 /// The same as `leaf_or_cycle` but removes the nodes from the graph.
 /// See the docs there for more details.
 ///
-pub fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex>
-where
-    N: std::fmt::Debug,
-    E: std::fmt::Debug,
-{
+pub fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> {
     let nodes = leaf_or_cycle(graph);
     for node in &nodes {
         _ = graph.remove_node(*node);
