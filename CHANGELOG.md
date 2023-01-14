@@ -4,6 +4,8 @@
 
 [Release blog post](https://gleam.run/news/v0.26-incremental-compilation-and-deno/)
 
+- The error message emitted when a `let` does not match all possible values has
+  been improved.
 - Fixed a bug where defining variables that shadow external functions could
   generate invalid JavaScript.
 - Fixed a bug where discarding values could generate Erlang code that would
