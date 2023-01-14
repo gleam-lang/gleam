@@ -46,7 +46,7 @@ fn regenerate_type_ids(
     id_map: &mut HashMap<u64, u64>,
     type_: &Type,
 ) -> Arc<Type> {
-    match type_ {
+    match (*type_).clone() {
         Type::App {
             public,
             module,
