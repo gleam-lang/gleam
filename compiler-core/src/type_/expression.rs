@@ -2020,12 +2020,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_type: Option<Arc<Type>>,
     ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
         let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
+            // Used to track if any argument names are used more than once
+            let mut argument_names = HashSet::with_capacity(args.len());
+
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
                     ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                        // Check that this name has not already been used for
+                        // another argument
+                        if !argument_names.insert(name) {
+                            return Err(Error::ArgumentNameAlreadyUsed {
+                                location: arg.location,
+                                name: name.clone(),
+                            });
+                        }
+
+                        // Insert a variable for the argument into the environment
                         body_typer
                             .environment
                             .insert_local_variable(name.clone(), arg.location, t);
+
+                        // Register the variable in the usage tracker so that we
+                        // can identify if it is unused
                         body_typer.environment.init_usage(
                             name.clone(),
                             EntityKind::Variable,
@@ -2036,8 +2052,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            (body_typer.hydrator.rigid_names(), body_typer.infer(body))
-        });
+            Ok((body_typer.hydrator.rigid_names(), body_typer.infer(body)))
+        })?;
 
         let body = body_infer.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
 
