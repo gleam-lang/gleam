@@ -14,8 +14,8 @@ mod tests;
 
 use crate::NewOptions;
 
-const GLEAM_STDLIB_VERSION: &str = "0.25";
-const GLEEUNIT_VERSION: &str = "0.7";
+const GLEAM_STDLIB_VERSION: &str = "0.26";
+const GLEEUNIT_VERSION: &str = "0.9";
 const ERLANG_OTP_VERSION: &str = "25.2";
 const REBAR3_VERSION: &str = "3";
 const ELIXIR_VERSION: &str = "1.14.2";
