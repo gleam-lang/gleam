@@ -181,7 +181,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::Negate { location, value } => self.infer_negate(location, value),
+            UntypedExpr::Negate { location, value } => self.infer_negate(location, *value),
 
             UntypedExpr::Use(use_) => {
                 let location = use_.location;
@@ -358,12 +358,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate(
-        &mut self,
-        location: SrcSpan,
-        value: Box<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.infer(*value)?;
+    fn infer_negate(&mut self, location: SrcSpan, value: UntypedExpr) -> Result<TypedExpr, Error> {
+        let value = self.infer(value)?;
 
         unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
@@ -1241,12 +1237,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.clone(),
                     location: *module_location,
-                    imported_modules: self
-                        .environment
-                        .imported_modules
-                        .keys()
-                        .map(|t| t.clone())
-                        .collect(),
+                    imported_modules: self.environment.imported_modules.keys().cloned().collect(),
                 })?;
 
             let constructor =
@@ -1392,7 +1383,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module_alias,
                 label,
                 ..
-            } => (Some(module_alias.into()), label),
+            } => (Some(module_alias), label),
 
             TypedExpr::Var { name, .. } => (None, name),
 
@@ -1557,7 +1548,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .environment
                             .imported_modules
                             .keys()
-                            .map(|t| t.clone())
+                            .cloned()
                             .collect(),
                     })?;
                 module

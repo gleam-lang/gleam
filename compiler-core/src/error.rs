@@ -1443,7 +1443,7 @@ Private types can only be used within the module that defines them.",
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: did_you_mean(name, &imported_modules),
+                            text: did_you_mean(name, imported_modules),
                             span: *location,
                         },
                         path: path.clone(),
@@ -2000,7 +2000,7 @@ These values are not matched:
                 let mut text = "The import statements for these modules form a cycle:
 "
                 .into();
-                import_cycle(&mut text, &modules);
+                import_cycle(&mut text, modules);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",
@@ -2018,7 +2018,7 @@ cycle to continue.",
                 let mut text = "The dependencies for these packages form a cycle:
 "
                 .into();
-                import_cycle(&mut text, &packages);
+                import_cycle(&mut text, packages);
                 text.push_str(
                     "Gleam doesn't support dependency cycles like these, please break the
 cycle to continue.",

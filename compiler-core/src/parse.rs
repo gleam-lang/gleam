@@ -1208,7 +1208,7 @@ where
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
             arguments: args,
-            module: module.map(|(_, n, _)| n.into()),
+            module: module.map(|(_, n, _)| n),
             name,
             with_spread,
             constructor: (),
@@ -1868,7 +1868,7 @@ where
                     self.parse_type_name_finish(
                         for_const,
                         start,
-                        Some(mod_name.into()),
+                        Some(mod_name),
                         upname,
                         upname_e,
                     )
@@ -1981,7 +1981,7 @@ where
         let mut as_name = None;
         if self.maybe_one(&Token::As).is_some() {
             let (_, name, e) = self.expect_name()?;
-            as_name = Some(name.into());
+            as_name = Some(name);
             end = e;
         }
 
@@ -2169,7 +2169,7 @@ where
                 match self.tok0.take() {
                     Some((_, Token::UpName { name: upname }, end)) => {
                         let _ = self.next_tok(); // upname
-                        self.parse_const_record_finish(start, Some(name.into()), upname, end)
+                        self.parse_const_record_finish(start, Some(name), upname, end)
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
                         let _ = self.next_tok(); // name
@@ -2184,7 +2184,7 @@ where
                             ),
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
-                                module: Some(name.into()),
+                                module: Some(name),
                                 name: end_name,
                                 constructor: None,
                                 typ: (),

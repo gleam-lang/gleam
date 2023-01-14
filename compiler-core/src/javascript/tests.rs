@@ -143,7 +143,7 @@ macro_rules! assert_js {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".into(), crate::type_::build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my/mod".into();
@@ -279,7 +279,7 @@ macro_rules! assert_ts_def {
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".into(), crate::type_::build_prelude(&ids));
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
 
         let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my/mod".into();
