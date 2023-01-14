@@ -6,6 +6,8 @@
 
 - Fixed a bug where defining variables that shadow external functions could
   generate invalid JavaScript.
+- Fixed a bug where discarding values could generate Erlang code that would
+  cause the Erlang compiler to emit a warning.
 
 ## Unreleased
 
