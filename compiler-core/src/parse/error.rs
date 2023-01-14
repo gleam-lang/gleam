@@ -207,6 +207,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Functions can only be called within other functions.",
                 vec![],
             ),
+            ParseErrorType::ListSpreadWithoutTail => (
+                "I was expecting a value here.",
+                vec!["If a list expression has a spread then a tail must also be given.".into()],
+            ),
         }
     }
 }
@@ -255,6 +259,7 @@ pub enum ParseErrorType {
     UnexpectedFunction, // a function was used called outside of another function
     // A variable was assigned or discarded on the left hand side of a <> pattern
     ConcatPatternVariableLeftHandSide,
+    ListSpreadWithoutTail,
 }
 
 impl LexicalError {
