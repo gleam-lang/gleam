@@ -10,12 +10,12 @@ expression: "\npub const constant = Ok(1)\n\npub fn main(arg) {\n  let _ = const
 
 -spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->
-    _@1 = {ok, 1},
+    _ = {ok, 1},
     case Arg of
-        _@2 when Arg =:= {ok, 1} ->
+        _ when Arg =:= {ok, 1} ->
             1;
 
-        _@3 ->
+        _ ->
             0
     end.
 

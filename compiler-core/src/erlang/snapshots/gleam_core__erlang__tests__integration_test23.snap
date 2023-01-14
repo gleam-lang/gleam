@@ -11,7 +11,7 @@ expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n
 -spec main(any()) -> integer().
 main(Args) ->
     case Args of
-        _@1 ->
+        _ ->
             A = 1,
             A
     end,

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/case.rs
+assertion_line: 24
+expression: "\npub fn unsafe_head(xs) {\n  assert [x, ..] = xs\n  x\n}\n"
+---
+-module(the_app).
+-compile(no_auto_import).
+
+-export([unsafe_head/1]).
+
+-spec unsafe_head(list(K)) -> K.
+unsafe_head(Xs) ->
+    [X@1 | _] = case Xs of
+        [X | _] -> [X | _];
+        _try ->
+            erlang:error(#{gleam_error => assert,
+                        message => <<"Assertion pattern match failed"/utf8>>,
+                        value => _try,
+                        module => <<"the_app"/utf8>>,
+                        function => <<"unsafe_head"/utf8>>,
+                        line => 3})
+    end,
+    X@1.
+

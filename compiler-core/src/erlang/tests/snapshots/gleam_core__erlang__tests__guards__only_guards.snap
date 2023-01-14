@@ -11,10 +11,10 @@ expression: "\npub const string_value = \"constant value\"\n\npub fn main(arg) {
 -spec main(binary()) -> integer().
 main(Arg) ->
     case Arg of
-        _@1 when Arg =:= <<"constant value"/utf8>> ->
+        _ when Arg =:= <<"constant value"/utf8>> ->
             1;
 
-        _@2 ->
+        _ ->
             0
     end.
 
