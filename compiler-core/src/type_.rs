@@ -1712,7 +1712,7 @@ pub fn register_types<'a>(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
-                    module: module.into(),
+                    module,
                     public: *public,
                     parameters,
                     typ,
@@ -1750,7 +1750,7 @@ pub fn register_types<'a>(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
-                    module: module.to_owned(),
+                    module,
                     public: *public,
                     parameters,
                     typ,
@@ -1789,7 +1789,7 @@ pub fn register_types<'a>(
                 name.clone(),
                 TypeConstructor {
                     origin: *location,
-                    module: module.to_owned(),
+                    module,
                     public: *public,
                     parameters,
                     typ,
@@ -1939,7 +1939,7 @@ pub fn register_import(
                         location: *location,
                         name: name.clone(),
                         module_name: module.clone(),
-                        value_constructors: module_info.values.keys().map(|t| t.clone()).collect(),
+                        value_constructors: module_info.values.keys().cloned().collect(),
                         type_constructors: module_info.types.keys().cloned().collect(),
                     });
                 }
