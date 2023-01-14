@@ -1865,13 +1865,7 @@ where
                 let _ = self.next_tok();
                 if self.maybe_one(&Token::Dot).is_some() {
                     let (_, upname, upname_e) = self.expect_upname()?;
-                    self.parse_type_name_finish(
-                        for_const,
-                        start,
-                        Some(mod_name),
-                        upname,
-                        upname_e,
-                    )
+                    self.parse_type_name_finish(for_const, start, Some(mod_name), upname, upname_e)
                 } else if for_const {
                     parse_error(ParseErrorType::NotConstType, SrcSpan { start, end })
                 } else {
