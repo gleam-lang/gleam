@@ -122,6 +122,11 @@ pub fn download<Telem: Telemetry>(
 
     let mode = Mode::Dev;
 
+    // Read the project config
+    // We do this before acquiring the build lock so that we don't create the
+    // build directory if there is no gleam.toml
+    let mut config = crate::config::root_config()?;
+
     let lock = BuildLock::new_packages()?;
     let _guard = lock.lock(&telemetry);
 
@@ -129,8 +134,6 @@ pub fn download<Telem: Telemetry>(
     let fs = ProjectIO::boxed();
     let downloader = hex::Downloader::new(fs, http, Untar::boxed());
 
-    // Read the project config
-    let mut config = crate::config::root_config()?;
     let project_name = config.name.clone();
 
     // Insert the new packages to add, if it exists
