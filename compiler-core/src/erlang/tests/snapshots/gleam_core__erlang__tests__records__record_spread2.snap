@@ -1,7 +1,7 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 171
-expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  let Triple(b: the_b, ..) = triple\n  the_b\n}\n"
+assertion_line: 193
+expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  let Triple(the_a, c: the_c, ..) = triple\n  the_c\n}\n"
 ---
 -module(the_app).
 -compile(no_auto_import).
@@ -13,6 +13,6 @@ expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, _, The_b, _} = Triple,
-    The_b.
+    {triple, The_a, _, The_c} = Triple,
+    The_c.
 

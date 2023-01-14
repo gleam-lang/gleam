@@ -745,6 +745,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return Err(Error::NotExhaustivePatternMatch {
                     location,
                     unmatched,
+                    kind: PatternMatchKind::Assignment,
                 });
             }
         }
@@ -851,6 +852,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             return Err(Error::NotExhaustivePatternMatch {
                 location,
                 unmatched,
+                kind: PatternMatchKind::Case,
             });
         }
 

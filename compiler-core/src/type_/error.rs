@@ -230,7 +230,14 @@ pub enum Error {
     NotExhaustivePatternMatch {
         location: SrcSpan,
         unmatched: Vec<SmolStr>,
+        kind: PatternMatchKind,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PatternMatchKind {
+    Case,
+    Assignment,
 }
 
 #[derive(Debug, PartialEq, Clone)]

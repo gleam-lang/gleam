@@ -166,7 +166,11 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_spread1() {
+    // Test binding to a record field with the spread operator
     // Test binding to a record field with the spread operator and a labelled argument
     assert_erl!(
         r#"
@@ -181,7 +185,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_spread2() {
     // Test binding to a record field with the spread operator with both a labelled argument and a positional argument
     assert_erl!(
         r#"
@@ -196,7 +203,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn record_spread3() {
     // Test binding to a record field with the spread operator in a match
     assert_erl!(
         r#"
