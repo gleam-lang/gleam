@@ -24,7 +24,7 @@ pub fn ensure_config_exists() -> Result<(), Error> {
     let path = paths::root_config();
     if !path.is_file() {
         return Err(Error::FileIo {
-            action: FileIoAction::Parse,
+            action: FileIoAction::Read,
             kind: FileKind::File,
             path,
             err: Some("File not found".into()),
