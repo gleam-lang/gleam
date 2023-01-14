@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1822
+expression: "\nfn(x, x) {\n  Nil\n}\n"
+---
+error: Argument name already used
+  ┌─ /src/one/two.gleam:2:7
+  │
+2 │ fn(x, x) {
+  │       ^
+
+Two `x` arguments have been defined for this function.
+

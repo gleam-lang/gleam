@@ -232,6 +232,23 @@ pub enum Error {
         unmatched: Vec<SmolStr>,
         kind: PatternMatchKind,
     },
+
+    /// A function was defined with multiple arguments with the same name
+    ///
+    /// # Examples
+    ///
+    /// ```gleam
+    /// fn main(x, x) { Nil }
+    /// ```
+    /// ```gleam
+    /// fn main() {
+    ///   fn(x, x) { Nil }
+    /// }
+    /// ```
+    ArgumentNameAlreadyUsed {
+        location: SrcSpan,
+        name: SmolStr,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

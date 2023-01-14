@@ -1805,3 +1805,25 @@ pub fn main(_x: two.Thing) {
 "
     );
 }
+
+#[test]
+fn duplicate_module_function_arguments() {
+    assert_module_error!(
+        "
+pub fn main(x, x) {
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn duplicate_anon_function_arguments() {
+    assert_error!(
+        "
+fn(x, x) {
+  Nil
+}
+"
+    );
+}

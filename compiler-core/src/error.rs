@@ -1975,6 +1975,22 @@ value, or use `assert` rather than `let`."
                         }),
                     }
                 }
+
+                TypeError::ArgumentNameAlreadyUsed { location, name } => Diagnostic {
+                    title: "Argument name already used".into(),
+                    text: format!("Two `{name}` arguments have been defined for this function."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Error::Parse { path, src, error } => {
