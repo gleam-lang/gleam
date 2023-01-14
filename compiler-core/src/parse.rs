@@ -423,13 +423,27 @@ where
                 let _ = self.next_tok();
                 let elements =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
+
+                // Parse an optional tail
+                let mut spread_given = false;
                 let mut tail = None;
                 if self.maybe_one(&Token::DotDot).is_some() {
+                    spread_given = true;
                     tail = self.parse_expression()?.map(Box::new);
                     let _ = self.maybe_one(&Token::Comma);
                 }
                 let (_, end) = self.expect_one(&Token::RightSquare)?;
 
+                // Return errors for malformed lists
+                if spread_given && tail.is_none() {
+                    return parse_error(
+                        ParseErrorType::ListSpreadWithoutTail,
+                        SrcSpan {
+                            start: end - 1,
+                            end: end,
+                        },
+                    );
+                }
                 if tail.is_some() && elements.is_empty() {
                     return parse_error(
                         ParseErrorType::ListSpreadWithoutElements,
