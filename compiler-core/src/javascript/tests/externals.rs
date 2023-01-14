@@ -80,3 +80,18 @@ pub external fn new() -> Queue(a) = "queue" "new"
 fn external_fn_escaping() {
     assert_js!(r#"pub external fn then(a) -> b = "./ffi.js" "then""#,);
 }
+
+// https://github.com/gleam-lang/gleam/issues/1954
+#[test]
+fn pipe_variable_shadow() {
+    assert_js!(
+        r#"
+external fn name() -> String = "module" "string"
+
+pub fn main() {
+  let name = name()
+  name
+}
+"#
+    );
+}

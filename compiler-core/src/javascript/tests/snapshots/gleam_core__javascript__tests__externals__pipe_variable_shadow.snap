@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+assertion_line: 87
+expression: "\nexternal fn name() -> String = \"module\" \"string\"\n\npub fn main() {\n  let name = name()\n  name\n}\n"
+---
+import { string as name } from "module";
+
+export function main() {
+  let name$1 = name();
+  return name$1;
+}
+

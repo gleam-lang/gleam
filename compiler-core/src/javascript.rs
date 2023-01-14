@@ -470,15 +470,16 @@ impl<'a> Generator<'a> {
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.statements.iter() {
             match statement {
-                Statement::ModuleConstant { name, .. } | Statement::Fn { name, .. } => {
-                    self.register_in_scope(name)
-                }
+                Statement::ExternalFn { name, .. }
+                | Statement::ModuleConstant { name, .. }
+                | Statement::Fn { name, .. } => self.register_in_scope(name),
+
                 Statement::Import { unqualified, .. } => unqualified
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
+
                 Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
-                | Statement::ExternalFn { .. }
                 | Statement::ExternalType { .. } => (),
             }
         }
