@@ -1,11 +1,11 @@
-mod environment;
-mod error;
-mod expression;
-mod fields;
-mod hydrator;
-mod pattern;
-mod pipe;
-mod prelude;
+pub(crate) mod environment;
+pub(crate) mod error;
+pub(crate) mod expression;
+pub(crate) mod fields;
+pub(crate) mod hydrator;
+pub(crate) mod pattern;
+pub(crate) mod pipe;
+pub(crate) mod prelude;
 pub mod pretty;
 #[cfg(test)]
 mod tests;

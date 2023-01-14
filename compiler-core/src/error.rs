@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Runtime, Target};
 use crate::diagnostic::{Diagnostic, Label, Location};
-use crate::type_::FieldAccessUsage;
+use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{
     bit_string,
@@ -1937,17 +1937,28 @@ Try a different name for this module.",
                 TypeError::NotExhaustivePatternMatch {
                     location,
                     unmatched,
+                    kind,
                 } => {
-                    let text = format!(
-                        "This case expression does not match all possibilities.
+                    let mut text = match kind {
+                        PatternMatchKind::Case => {
+                            "This case expression does not match all possibilities.
 Each constructor must have a pattern that matches it or
-else it could crash.
+else it could crash."
+                        }
+                        PatternMatchKind::Assignment => {
+                            "This assignment does not match all possibilities.
+Either use a case expression with patterns for each possible
+value, or use `assert` rather than `let`."
+                        }
+                    }
+                    .to_string();
 
-These values are not matched:
-
-  - {}",
-                        unmatched.join("\n  - "),
-                    );
+                    text.push_str("\n\nThese values are not matched:\n\n");
+                    for unmatched in unmatched {
+                        text.push_str("  - ");
+                        text.push_str(unmatched);
+                        text.push('\n');
+                    }
                     Diagnostic {
                         title: "Not exhaustive pattern match".into(),
                         text,
