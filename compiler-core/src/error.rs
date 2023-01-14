@@ -2386,7 +2386,7 @@ fn hint_string_message() -> String {
 pub struct Unformatted {
     pub source: PathBuf,
     pub destination: PathBuf,
-    pub input: String,
+    pub input: SmolStr,
     pub output: String,
 }
 

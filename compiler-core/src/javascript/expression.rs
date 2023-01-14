@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{pattern::CompiledPattern, *};
 use crate::{
     ast::*,
@@ -7,6 +5,7 @@ use crate::{
     pretty::*,
     type_::{ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
 };
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
@@ -420,7 +419,7 @@ impl<'module> Generator<'module> {
             self.local_var(name)
         } else {
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(subject))?;
-            let name = self.next_local_var(&pattern::ASSIGNMENT_VAR.into());
+            let name = self.next_local_var(&pattern::ASSIGNMENT_VAR_SMOL_STR);
             docs.push("let ".to_doc());
             docs.push(name.clone());
             docs.push(" = ".to_doc());
@@ -971,7 +970,7 @@ impl<'module> Generator<'module> {
         Fields: IntoIterator<Item = (&'a str, Document<'a>)>,
     {
         self.tracker.throw_error_used = true;
-        let module = self.module_name.to_doc().surround('"', '"');
+        let module = self.module_name.clone().to_doc().surround('"', '"');
         let function = self
             .function_name
             .cloned()

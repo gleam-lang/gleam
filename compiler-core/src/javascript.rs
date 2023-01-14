@@ -411,7 +411,7 @@ impl<'a> Generator<'a> {
     fn module_function(
         &mut self,
         public: bool,
-        name: &SmolStr,
+        name: &'a SmolStr,
         args: &'a [TypedArg],
         body: &'a TypedExpr,
     ) -> Output<'a> {

@@ -446,20 +446,20 @@ impl<'a> Environment<'a> {
 
     /// Increments an entity's usage in the current or nearest enclosing scope
     pub fn increment_usage(&mut self, name: &SmolStr) {
-        let mut name = name;
+        let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
             .entity_usages
             .iter_mut()
             .rev()
-            .find_map(|scope| scope.get_mut(name))
+            .find_map(|scope| scope.get_mut(&name))
         {
             *used = true;
 
             match kind {
                 // If a type constructor is used, we consider its type also used
-                EntityKind::PrivateTypeConstructor(type_name) if type_name != name => {
-                    name = type_name;
+                EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
+                    name = type_name.clone();
                 }
                 _ => return,
             }
