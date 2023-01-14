@@ -4,10 +4,11 @@ use std::time::Duration;
 
 #[test]
 fn no_cache_present() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&fs, src, artefact);
+    let loader = make_loader(&name, &fs, src, artefact);
 
     fs.write(&Path::new("/src/main.gleam"), "const x = 1")
         .unwrap();
@@ -21,10 +22,11 @@ fn no_cache_present() {
 
 #[test]
 fn cache_present_and_fresh() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&fs, src, artefact);
+    let loader = make_loader(&name, &fs, src, artefact);
 
     // The mtime of the source is older than that of the cache
     write_src(&fs, "/src/main.gleam", 0);
@@ -39,10 +41,11 @@ fn cache_present_and_fresh() {
 
 #[test]
 fn cache_present_and_stale() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let loader = make_loader(&fs, src, artefact);
+    let loader = make_loader(&name, &fs, src, artefact);
 
     // The mtime of the source is newer than that of the cache
     write_src(&fs, "/src/main.gleam", 2);
@@ -57,10 +60,11 @@ fn cache_present_and_stale() {
 
 #[test]
 fn cache_present_without_codegen_when_required() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&fs, src, artefact);
+    let mut loader = make_loader(&name, &fs, src, artefact);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -76,10 +80,11 @@ fn cache_present_without_codegen_when_required() {
 
 #[test]
 fn cache_present_with_codegen_when_required() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&fs, src, artefact);
+    let mut loader = make_loader(&name, &fs, src, artefact);
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
@@ -95,10 +100,11 @@ fn cache_present_with_codegen_when_required() {
 
 #[test]
 fn cache_present_without_codegen_when_not_required() {
+    let name = "package".into();
     let src = Path::new("/src");
     let artefact = Path::new("/artefact");
     let fs = InMemoryFileSystem::new();
-    let mut loader = make_loader(&fs, src, artefact);
+    let mut loader = make_loader(&name, &fs, src, artefact);
     loader.codegen = CodegenRequired::No;
 
     // The mtime of the cache is newer than that of the source
@@ -129,6 +135,7 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64) {
 }
 
 fn make_loader<'a>(
+    package_name: &'a SmolStr,
     fs: &InMemoryFileSystem,
     src: &'a Path,
     artefact: &'a Path,
@@ -138,7 +145,7 @@ fn make_loader<'a>(
         mode: Mode::Dev,
         target: Target::Erlang,
         codegen: CodegenRequired::No,
-        package_name: &"my_package".into(),
+        package_name,
         source_directory: &src,
         artefact_directory: &artefact,
         origin: Origin::Src,

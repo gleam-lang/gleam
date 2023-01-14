@@ -101,7 +101,7 @@ fn compile_project(
     let mut pcompiler = ProjectCompiler::new(
         PackageConfig {
             target,
-            name: PROJECT_NAME.to_string(),
+            name: PROJECT_NAME.into(),
             ..Default::default()
         },
         options,

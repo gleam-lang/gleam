@@ -1,7 +1,12 @@
 use super::{expression::is_js_scalar, *};
 use crate::type_::{FieldMap, PatternConstructor};
+use lazy_static::lazy_static;
 
 pub static ASSIGNMENT_VAR: &str = "$";
+
+lazy_static! {
+    pub static ref ASSIGNMENT_VAR_SMOL_STR: SmolStr = ASSIGNMENT_VAR.into();
+}
 
 #[derive(Debug)]
 enum Index<'a> {
@@ -742,7 +747,7 @@ pub(crate) fn assign_subject<'a>(
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
-            let subject = expression_generator.next_local_var(&ASSIGNMENT_VAR.into());
+            let subject = expression_generator.next_local_var(&ASSIGNMENT_VAR_SMOL_STR);
             (subject.clone(), Some(subject))
         }
     }

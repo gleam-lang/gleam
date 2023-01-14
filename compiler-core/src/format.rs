@@ -1044,10 +1044,11 @@ impl<'comments> Formatter<'comments> {
         let doc_comments = self.doc_comments(constructor.location.start);
 
         let doc = if constructor.arguments.is_empty() {
-            constructor.name.to_doc()
+            constructor.name.as_str().to_doc()
         } else {
             constructor
                 .name
+                .as_str()
                 .to_doc()
                 .append(wrap_args(constructor.arguments.iter().map(
                     |RecordConstructorArg {
@@ -1200,6 +1201,7 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(arg.location.start);
         let doc = arg
             .label
+            .as_str()
             .to_doc()
             .append(": ")
             .append(self.wrap_expr(&arg.value));
@@ -1547,7 +1549,7 @@ fn pub_(public: bool) -> Document<'static> {
 
 impl<'a> Documentable<'a> for &'a UnqualifiedImport {
     fn to_doc(self) -> Document<'a> {
-        self.name.to_doc().append(match &self.as_name {
+        self.name.as_str().to_doc().append(match &self.as_name {
             None => nil(),
             Some(s) => " as ".to_doc().append(s.as_str()),
         })

@@ -16,6 +16,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use itertools::Itertools;
+use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -193,7 +194,7 @@ async fn download_missing_packages<Telem: Telemetry>(
     downloader: hex::Downloader,
     manifest: &Manifest,
     local: &LocalPackages,
-    project_name: String,
+    project_name: SmolStr,
     telemetry: &Telem,
 ) -> Result<(), Error> {
     let mut count = 0;
