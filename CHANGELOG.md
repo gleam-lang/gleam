@@ -4,6 +4,8 @@
 
 [Release blog post](https://gleam.run/news/v0.26-incremental-compilation-and-deno/)
 
+- An error is now emitted if a list spread expression is written without a tail
+  value.
 - An error is now emitted when a function is defined with multiple arguments
   with the same name.
 - The error message emitted when a `let` does not match all possible values has
