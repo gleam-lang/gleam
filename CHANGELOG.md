@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- New projects require `gleam_stdlib` v0.25 and `gleeunit` v0.9.
+
 ## v0.26.0-rc1 - 2023-01-12
 
 - Added support for Deno runtime for JavaScript target.
