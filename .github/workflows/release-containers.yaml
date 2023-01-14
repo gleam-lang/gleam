@@ -66,7 +66,7 @@ jobs:
         run: tar xf gleam.tar.gz
 
       - name: Build and push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: containers/${{ matrix.base-image }}.dockerfile
