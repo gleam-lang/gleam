@@ -4,6 +4,11 @@
 
 [Release blog post](https://gleam.run/news/v0.26-incremental-compilation-and-deno/)
 
+- Fixed a bug where defining variables that shadow external functions could
+  generate invalid JavaScript.
+
+## Unreleased
+
 - New projects require `gleam_stdlib` v0.25 and `gleeunit` v0.9.
 - Fixed a bug where JavaScript default projects would fail to publish to Hex.
 
