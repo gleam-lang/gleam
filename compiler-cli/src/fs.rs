@@ -11,7 +11,7 @@ use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::File,
-    io::{self, BufRead, BufReader, Write},
+    io::{self, Write},
     path::{Path, PathBuf},
     time::SystemTime,
 };
