@@ -4,6 +4,26 @@ use std::collections::HashSet;
 
 use petgraph::{prelude::NodeIndex, stable_graph::StableGraph, Direction};
 
+/// Sort a graph into a sequence from the leaves to the roots.
+///
+/// Nodes are returned in their smallest possible groups, which is either a leaf
+/// or a cycle.
+///
+/// This function is implemented using `pop_leaf_or_cycle`.
+///
+pub fn into_dependency_order<N, E>(mut graph: StableGraph<N, E>) -> Vec<Vec<NodeIndex>> {
+    let mut items = vec![];
+
+    loop {
+        let current = pop_leaf_or_cycle(&mut graph);
+        if current.is_empty() {
+            return items;
+        } else {
+            items.push(current);
+        }
+    }
+}
+
 /// The same as `leaf_or_cycle` but removes the nodes from the graph.
 /// See the docs there for more details.
 ///

@@ -384,28 +384,31 @@ pub struct ExternalFunction<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// A function definition
+///
+/// # Example(s)
+///
+/// ```gleam
+/// // Public function
+/// pub fn bar() -> String { ... }
+/// // Private function
+/// fn foo(x: Int) -> Int { ... }
+/// ```
+pub struct Function<T, Expr> {
+    pub location: SrcSpan,
+    pub end_position: u32,
+    pub name: SmolStr,
+    pub arguments: Vec<Arg<T>>,
+    pub body: Expr,
+    pub public: bool,
+    pub return_annotation: Option<TypeAst>,
+    pub return_type: T,
+    pub doc: Option<SmolStr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
-    /// A function definition
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// // Public function
-    /// pub fn bar() -> String { ... }
-    /// // Private function
-    /// fn foo(x: Int) -> Int { ... }
-    /// ```
-    Function {
-        location: SrcSpan,
-        end_position: u32,
-        name: SmolStr,
-        arguments: Vec<Arg<T>>,
-        body: Expr,
-        public: bool,
-        return_annotation: Option<TypeAst>,
-        return_type: T,
-        doc: Option<SmolStr>,
-    },
+    Function(Function<T, Expr>),
 
     /// A new name for an existing type
     ///
@@ -511,7 +514,7 @@ impl TypedStatement {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         // TODO: test. Note that the fn src-span covers the function head, not
         // the entire statement.
-        if let Statement::Function { body, .. } = self {
+        if let Statement::Function(Function { body, .. }) = self {
             if let Some(expression) = body.find_node(byte_index) {
                 return Some(Located::Expression(expression));
             }
@@ -529,7 +532,7 @@ impl TypedStatement {
 impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Statement::Function { location, .. }
+            Statement::Function(Function { location, .. })
             | Statement::Import { location, .. }
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
@@ -542,7 +545,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
             Statement::Import { .. } => (),
-            Statement::Function { doc, .. }
+            Statement::Function(Function { doc, .. })
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
             | Statement::ExternalFunction(ExternalFunction { doc, .. })

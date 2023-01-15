@@ -8,7 +8,7 @@ mod typescript;
 use std::path::Path;
 
 use crate::{
-    ast::{ExternalFunction, *},
+    ast::{ExternalFunction, Function, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -170,13 +170,13 @@ impl<'a> Generator<'a> {
                 ..
             } => vec![self.module_constant(*public, name, value)],
 
-            Statement::Function {
+            Statement::Function(Function {
                 arguments,
                 name,
                 body,
                 public,
                 ..
-            } => vec![self.module_function(*public, name, arguments, body)],
+            }) => vec![self.module_function(*public, name, arguments, body)],
 
             Statement::ExternalFunction(ExternalFunction {
                 public,
@@ -272,7 +272,7 @@ impl<'a> Generator<'a> {
                     ..
                 } => self.custom_type_definition(constructors, *public, *opaque),
 
-                Statement::Function { .. }
+                Statement::Function(Function { .. })
                 | Statement::TypeAlias { .. }
                 | Statement::ExternalFunction(ExternalFunction { .. })
                 | Statement::ExternalType { .. }
@@ -287,7 +287,7 @@ impl<'a> Generator<'a> {
 
         for statement in &self.module.statements {
             match statement {
-                Statement::Function { .. }
+                Statement::Function(Function { .. })
                 | Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
@@ -481,7 +481,7 @@ impl<'a> Generator<'a> {
             match statement {
                 Statement::ExternalFunction(ExternalFunction { name, .. })
                 | Statement::ModuleConstant { name, .. }
-                | Statement::Function { name, .. } => self.register_in_scope(name),
+                | Statement::Function(Function { name, .. }) => self.register_in_scope(name),
 
                 Statement::Import { unqualified, .. } => unqualified
                     .iter()

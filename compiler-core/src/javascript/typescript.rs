@@ -19,8 +19,8 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        ExternalFunction, Statement, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
-        TypedRecordConstructor, TypedStatement,
+        ExternalFunction, Function, Statement, TypedArg, TypedConstant, TypedExternalFnArg,
+        TypedModule, TypedRecordConstructor, TypedStatement,
     },
     docvec,
     pretty::{break_, Document, Documentable},
@@ -233,7 +233,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         for statement in &self.module.statements {
             match statement {
-                Statement::Function { .. }
+                Statement::Function(Function { .. })
                 | Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
@@ -329,14 +329,14 @@ impl<'a> TypeScriptGenerator<'a> {
             } if *public => vec![self.module_constant(name, value)],
             Statement::ModuleConstant { .. } => vec![],
 
-            Statement::Function {
+            Statement::Function(Function {
                 arguments,
                 name,
                 public,
                 return_type,
                 ..
-            } if *public => vec![self.module_function(name, arguments, return_type)],
-            Statement::Function { .. } => vec![],
+            }) if *public => vec![self.module_function(name, arguments, return_type)],
+            Statement::Function(Function { .. }) => vec![],
 
             Statement::ExternalFunction(ExternalFunction {
                 public,
