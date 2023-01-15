@@ -56,11 +56,11 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, HasLocation, Module, Pattern,
-    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
-    TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
+    CallArg, Clause, ClauseGuard, Constant, ExternalFn, ExternalFnArg, HasLocation, Module,
+    Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement,
+    TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -1399,7 +1399,7 @@ where
         let (_, fun, end) = self.expect_string()?;
 
         if let Some(retrn) = return_annotation {
-            Ok(Some(Statement::ExternalFn {
+            Ok(Some(Statement::ExternalFn(ExternalFn {
                 doc: None,
                 location: SrcSpan { start, end },
                 public,
@@ -1409,7 +1409,7 @@ where
                 fun,
                 return_: retrn,
                 return_type: (),
-            }))
+            })))
         } else {
             parse_error(
                 ParseErrorType::ExpectedType,

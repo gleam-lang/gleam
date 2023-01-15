@@ -3,7 +3,7 @@ mod source_links;
 use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
-    ast::{Statement, TypedStatement},
+    ast::{ExternalFn, Statement, TypedStatement},
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -455,7 +455,7 @@ fn function<'a>(
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Statement::ExternalFn {
+        Statement::ExternalFn(ExternalFn {
             public: true,
             name,
             doc,
@@ -463,7 +463,7 @@ fn function<'a>(
             arguments: args,
             location,
             ..
-        } => Some(Function {
+        }) => Some(Function {
             name,
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),

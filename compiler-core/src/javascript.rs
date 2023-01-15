@@ -7,7 +7,12 @@ mod typescript;
 
 use std::path::Path;
 
-use crate::{ast::*, docvec, line_numbers::LineNumbers, pretty::*};
+use crate::{
+    ast::{ExternalFn, *},
+    docvec,
+    line_numbers::LineNumbers,
+    pretty::*,
+};
 use itertools::Itertools;
 use smol_str::SmolStr;
 
@@ -173,18 +178,18 @@ impl<'a> Generator<'a> {
                 ..
             } => vec![self.module_function(*public, name, arguments, body)],
 
-            Statement::ExternalFn {
+            Statement::ExternalFn(ExternalFn {
                 public,
                 name,
                 arguments,
                 module,
                 fun,
                 ..
-            } if module.is_empty() => vec![Ok(
+            }) if module.is_empty() => vec![Ok(
                 self.global_external_function(*public, name, arguments, fun)
             )],
 
-            Statement::ExternalFn { .. } => vec![],
+            Statement::ExternalFn(ExternalFn { .. }) => vec![],
         }
     }
 
@@ -269,7 +274,7 @@ impl<'a> Generator<'a> {
 
                 Statement::Fn { .. }
                 | Statement::TypeAlias { .. }
-                | Statement::ExternalFn { .. }
+                | Statement::ExternalFn(ExternalFn { .. })
                 | Statement::ExternalType { .. }
                 | Statement::Import { .. }
                 | Statement::ModuleConstant { .. } => vec![],
@@ -287,15 +292,15 @@ impl<'a> Generator<'a> {
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
                 | Statement::ModuleConstant { .. } => (),
-                Statement::ExternalFn { module, .. } if module.is_empty() => (),
+                Statement::ExternalFn(ExternalFn { module, .. }) if module.is_empty() => (),
 
-                Statement::ExternalFn {
+                Statement::ExternalFn(ExternalFn {
                     public,
                     name,
                     module,
                     fun,
                     ..
-                } => self.register_external_function(&mut imports, *public, name, module, fun),
+                }) => self.register_external_function(&mut imports, *public, name, module, fun),
 
                 Statement::Import {
                     module,
@@ -470,7 +475,7 @@ impl<'a> Generator<'a> {
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.statements.iter() {
             match statement {
-                Statement::ExternalFn { name, .. }
+                Statement::ExternalFn(ExternalFn { name, .. })
                 | Statement::ModuleConstant { name, .. }
                 | Statement::Fn { name, .. } => self.register_in_scope(name),
 

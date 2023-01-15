@@ -20,8 +20,8 @@ use smol_str::SmolStr;
 use crate::{
     ast::{
         self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant,
-        DefinitionLocation, Layer, Pattern, RecordConstructor, RecordConstructorArg, SrcSpan,
-        Statement, TypeAst, TypedConstant, TypedExpr, TypedModule, TypedPattern,
+        DefinitionLocation, ExternalFn, Layer, Pattern, RecordConstructor, RecordConstructorArg,
+        SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule, TypedPattern,
         TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement, UnqualifiedImport,
         UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
         UntypedStatement,
@@ -617,7 +617,7 @@ pub fn infer_module(
             Statement::Fn { .. }
             | Statement::TypeAlias { .. }
             | Statement::CustomType { .. }
-            | Statement::ExternalFn { .. }
+            | Statement::ExternalFn(ExternalFn { .. })
             | Statement::ExternalType { .. }
             | Statement::Import { .. } => not_consts.push(statement),
 
@@ -846,7 +846,7 @@ fn register_values<'a>(
             }
         }
 
-        Statement::ExternalFn {
+        Statement::ExternalFn(ExternalFn {
             location,
             name,
             public,
@@ -855,7 +855,7 @@ fn register_values<'a>(
             module,
             fun,
             ..
-        } => {
+        }) => {
             assert_unique_value_name(names, name, location)?;
 
             // Construct type of function from AST
@@ -1077,7 +1077,7 @@ fn generalise_statement(
 
         statement @ (Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
-        | Statement::ExternalFn { .. }
+        | Statement::ExternalFn(ExternalFn { .. })
         | Statement::ExternalType { .. }
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. }) => statement,
@@ -1170,7 +1170,7 @@ fn infer_statement(
             })
         }
 
-        Statement::ExternalFn {
+        Statement::ExternalFn(ExternalFn {
             doc,
             location,
             name,
@@ -1180,7 +1180,7 @@ fn infer_statement(
             module,
             fun,
             ..
-        } => {
+        }) => {
             let preregistered_fn = environment
                 .get_variable(&name)
                 .expect("Could not find preregistered type value function");
@@ -1193,7 +1193,7 @@ fn infer_statement(
                 .zip(&args_types)
                 .map(|(a, t)| a.set_type(t.clone()))
                 .collect();
-            Ok(Statement::ExternalFn {
+            Ok(Statement::ExternalFn(ExternalFn {
                 return_type,
                 doc,
                 location,
@@ -1203,7 +1203,7 @@ fn infer_statement(
                 return_: retrn,
                 module,
                 fun,
-            })
+            }))
         }
 
         Statement::TypeAlias {
@@ -1833,7 +1833,7 @@ pub fn register_types<'a>(
         }
 
         Statement::Fn { .. }
-        | Statement::ExternalFn { .. }
+        | Statement::ExternalFn(ExternalFn { .. })
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. } => (),
     }
@@ -2008,7 +2008,7 @@ pub fn register_import(
         Statement::Fn { .. }
         | Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
-        | Statement::ExternalFn { .. }
+        | Statement::ExternalFn(ExternalFn { .. })
         | Statement::ExternalType { .. }
         | Statement::ModuleConstant { .. } => Ok(()),
     }
