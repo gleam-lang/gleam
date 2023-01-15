@@ -12,13 +12,13 @@ expression: "\npub fn main() {\n  let x = #(1, 2, 3)\n  case x {\n    _ if x == 
 main() ->
     X = {1, 2, 3},
     case X of
-        _ when X =:= {1, 2, 3} ->
+        _@1 when X =:= {1, 2, 3} ->
             1;
 
-        _ when X =:= {2, 3, 4} ->
+        _@2 when X =:= {2, 3, 4} ->
             2;
 
-        _ ->
+        _@3 ->
             0
     end.
 

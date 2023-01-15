@@ -16,7 +16,7 @@ main() ->
         [First | Rest] when erlang:element(1, First) =:= Key ->
             <<"ok"/utf8>>;
 
-        _ ->
+        _@1 ->
             <<"ko"/utf8>>
     end.
 

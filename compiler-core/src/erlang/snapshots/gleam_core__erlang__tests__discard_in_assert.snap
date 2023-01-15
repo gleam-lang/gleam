@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 458
+assertion_line: 459
 expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
 ---
 -module(the_app).
@@ -10,8 +10,8 @@ expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
 
 -spec x({ok, any()} | {error, any()}) -> integer().
 x(Y) ->
-    {ok, _} = case Y of
-        {ok, _} -> {ok, _};
+    {ok, _@2} = case Y of
+        {ok, _@1} -> {ok, _@1};
         _try ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,

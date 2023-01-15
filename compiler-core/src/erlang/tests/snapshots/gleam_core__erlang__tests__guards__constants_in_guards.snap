@@ -10,12 +10,12 @@ expression: "\npub const string_value = \"constant value\"\npub const float_valu
 
 -spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->
-    _ = [1, 2, 3],
+    _@1 = [1, 2, 3],
     case Arg of
         {W, X, Y, Z} when (((W =:= {1, 2.0, <<"3"/utf8>>}) andalso (X =:= <<"constant value"/utf8>>)) andalso (Y > 3.14)) andalso (Z =:= 42) ->
             1;
 
-        _ ->
+        _@2 ->
             0
     end.
 
