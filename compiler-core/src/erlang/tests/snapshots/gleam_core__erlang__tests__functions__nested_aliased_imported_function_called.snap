@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/functions.rs
+assertion_line: 97
+expression: "\nimport some/other.{wibble as wobble}\n\npub fn main() {\n  wobble()\n}\n"
+---
+-module(my@mod).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> nil.
+main() ->
+    some@other:wibble().
+

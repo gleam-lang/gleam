@@ -2,6 +2,7 @@ mod assert;
 mod bit_strings;
 mod case;
 mod external_fn;
+mod functions;
 mod guards;
 mod numbers;
 mod patterns;
