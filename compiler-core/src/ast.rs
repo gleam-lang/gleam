@@ -371,7 +371,7 @@ pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 /// ```gleam
 /// pub external fn random_float() -> Float = "rand" "uniform"
 /// ```
-pub struct ExternalFn<T> {
+pub struct ExternalFunction<T> {
     pub location: SrcSpan,
     pub public: bool,
     pub arguments: Vec<ExternalFnArg<T>>,
@@ -395,7 +395,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// // Private function
     /// fn foo(x: Int) -> Int { ... }
     /// ```
-    Fn {
+    Function {
         location: SrcSpan,
         end_position: u32,
         name: SmolStr,
@@ -451,7 +451,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         typed_parameters: Vec<T>,
     },
 
-    ExternalFn(ExternalFn<T>),
+    ExternalFunction(ExternalFunction<T>),
 
     /// Import a type defined in another language.
     /// Nothing is known about the runtime characteristics of the type, we only
@@ -511,7 +511,7 @@ impl TypedStatement {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         // TODO: test. Note that the fn src-span covers the function head, not
         // the entire statement.
-        if let Statement::Fn { body, .. } = self {
+        if let Statement::Function { body, .. } = self {
             if let Some(expression) = body.find_node(byte_index) {
                 return Some(Located::Expression(expression));
             }
@@ -529,11 +529,11 @@ impl TypedStatement {
 impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Statement::Fn { location, .. }
+            Statement::Function { location, .. }
             | Statement::Import { location, .. }
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
-            | Statement::ExternalFn(ExternalFn { location, .. })
+            | Statement::ExternalFunction(ExternalFunction { location, .. })
             | Statement::ExternalType { location, .. }
             | Statement::ModuleConstant { location, .. } => *location,
         }
@@ -542,10 +542,10 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
             Statement::Import { .. } => (),
-            Statement::Fn { doc, .. }
+            Statement::Function { doc, .. }
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
-            | Statement::ExternalFn(ExternalFn { doc, .. })
+            | Statement::ExternalFunction(ExternalFunction { doc, .. })
             | Statement::ExternalType { doc, .. }
             | Statement::ModuleConstant { doc, .. } => {
                 let _ = std::mem::replace(doc, Some(new_doc));

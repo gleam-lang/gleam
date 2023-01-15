@@ -7,7 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::{
-    ast::{ExternalFn, *},
+    ast::{ExternalFunction, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -237,14 +237,14 @@ fn register_imports(
     module_name: &str,
 ) {
     match s {
-        Statement::Fn {
+        Statement::Function {
             public: true,
             name,
             arguments: args,
             ..
         } => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-        Statement::ExternalFn(ExternalFn {
+        Statement::ExternalFunction(ExternalFunction {
             public: true,
             name,
             arguments: args,
@@ -364,10 +364,10 @@ fn register_imports(
             type_defs.push(doc);
         }
 
-        Statement::Fn { .. }
+        Statement::Function { .. }
         | Statement::Import { .. }
         | Statement::TypeAlias { .. }
-        | Statement::ExternalFn(ExternalFn { .. })
+        | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ModuleConstant { .. } => (),
     }
 }
@@ -384,9 +384,9 @@ fn statement<'a>(
         | Statement::Import { .. }
         | Statement::ExternalType { .. }
         | Statement::ModuleConstant { .. }
-        | Statement::ExternalFn(ExternalFn { public: false, .. }) => vec![],
+        | Statement::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 
-        Statement::Fn {
+        Statement::Function {
             arguments: args,
             name,
             body,
@@ -394,7 +394,7 @@ fn statement<'a>(
             ..
         } => vec![mod_fun(name, args, body, module, return_type, line_numbers)],
 
-        Statement::ExternalFn(ExternalFn {
+        Statement::ExternalFunction(ExternalFunction {
             fun,
             module,
             arguments: args,

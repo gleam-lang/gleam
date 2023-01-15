@@ -20,11 +20,11 @@ use smol_str::SmolStr;
 use crate::{
     ast::{
         self, ArgNames, BitStringSegment, BitStringSegmentOption, CallArg, Constant,
-        DefinitionLocation, ExternalFn, Layer, Pattern, RecordConstructor, RecordConstructorArg,
-        SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule, TypedPattern,
-        TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement, UnqualifiedImport,
-        UntypedModule, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
-        UntypedStatement,
+        DefinitionLocation, ExternalFunction, Layer, Pattern, RecordConstructor,
+        RecordConstructorArg, SrcSpan, Statement, TypeAst, TypedConstant, TypedExpr, TypedModule,
+        TypedPattern, TypedPatternBitStringSegment, TypedRecordUpdateArg, TypedStatement,
+        UnqualifiedImport, UntypedModule, UntypedMultiPattern, UntypedPattern,
+        UntypedRecordUpdateArg, UntypedStatement,
     },
     bit_string,
     build::{Origin, Target},
@@ -614,10 +614,10 @@ pub fn infer_module(
     let mut not_consts = vec![];
     for statement in module.into_iter_statements(target) {
         match statement {
-            Statement::Fn { .. }
+            Statement::Function { .. }
             | Statement::TypeAlias { .. }
             | Statement::CustomType { .. }
-            | Statement::ExternalFn(ExternalFn { .. })
+            | Statement::ExternalFunction(ExternalFunction { .. })
             | Statement::ExternalType { .. }
             | Statement::Import { .. } => not_consts.push(statement),
 
@@ -795,7 +795,7 @@ fn register_values<'a>(
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
-        Statement::Fn {
+        Statement::Function {
             name,
             arguments: args,
             location,
@@ -846,7 +846,7 @@ fn register_values<'a>(
             }
         }
 
-        Statement::ExternalFn(ExternalFn {
+        Statement::ExternalFunction(ExternalFunction {
             location,
             name,
             public,
@@ -1021,7 +1021,7 @@ fn generalise_statement(
     environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
-        Statement::Fn {
+        Statement::Function {
             doc,
             location,
             name,
@@ -1062,7 +1062,7 @@ fn generalise_statement(
                 },
             );
 
-            Statement::Fn {
+            Statement::Function {
                 doc,
                 location,
                 name,
@@ -1077,7 +1077,7 @@ fn generalise_statement(
 
         statement @ (Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
-        | Statement::ExternalFn(ExternalFn { .. })
+        | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ExternalType { .. }
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. }) => statement,
@@ -1091,7 +1091,7 @@ fn infer_statement(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     match s {
-        Statement::Fn {
+        Statement::Function {
             doc,
             location,
             name,
@@ -1155,7 +1155,7 @@ fn infer_statement(
                 typ
             };
 
-            Ok(Statement::Fn {
+            Ok(Statement::Function {
                 doc,
                 location,
                 name,
@@ -1170,7 +1170,7 @@ fn infer_statement(
             })
         }
 
-        Statement::ExternalFn(ExternalFn {
+        Statement::ExternalFunction(ExternalFunction {
             doc,
             location,
             name,
@@ -1193,7 +1193,7 @@ fn infer_statement(
                 .zip(&args_types)
                 .map(|(a, t)| a.set_type(t.clone()))
                 .collect();
-            Ok(Statement::ExternalFn(ExternalFn {
+            Ok(Statement::ExternalFunction(ExternalFunction {
                 return_type,
                 doc,
                 location,
@@ -1832,8 +1832,8 @@ pub fn register_types<'a>(
             }
         }
 
-        Statement::Fn { .. }
-        | Statement::ExternalFn(ExternalFn { .. })
+        Statement::Function { .. }
+        | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. } => (),
     }
@@ -2005,10 +2005,10 @@ pub fn register_import(
             Ok(())
         }
 
-        Statement::Fn { .. }
+        Statement::Function { .. }
         | Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
-        | Statement::ExternalFn(ExternalFn { .. })
+        | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ExternalType { .. }
         | Statement::ModuleConstant { .. } => Ok(()),
     }
