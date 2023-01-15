@@ -361,6 +361,29 @@ pub type TypedStatement = Statement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
 pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Import a function defined outside of Gleam code.
+/// When compiling to Erlang the function could be implemented in Erlang
+/// or Elixir, when compiling to JavaScript it might be implemented in
+/// JavaScript or TypeScript.
+///
+/// # Example(s)
+///
+/// ```gleam
+/// pub external fn random_float() -> Float = "rand" "uniform"
+/// ```
+pub struct ExternalFn<T> {
+    pub location: SrcSpan,
+    pub public: bool,
+    pub arguments: Vec<ExternalFnArg<T>>,
+    pub name: SmolStr,
+    pub return_: TypeAst,
+    pub return_type: T,
+    pub module: SmolStr,
+    pub fun: SmolStr,
+    pub doc: Option<SmolStr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     /// A function definition
     ///
@@ -428,27 +451,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         typed_parameters: Vec<T>,
     },
 
-    /// Import a function defined outside of Gleam code.
-    /// When compiling to Erlang the function could be implemented in Erlang
-    /// or Elixir, when compiling to JavaScript it might be implemented in
-    /// JavaScript or TypeScript.
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// pub external fn random_float() -> Float = "rand" "uniform"
-    /// ```
-    ExternalFn {
-        location: SrcSpan,
-        public: bool,
-        arguments: Vec<ExternalFnArg<T>>,
-        name: SmolStr,
-        return_: TypeAst,
-        return_type: T,
-        module: SmolStr,
-        fun: SmolStr,
-        doc: Option<SmolStr>,
-    },
+    ExternalFn(ExternalFn<T>),
 
     /// Import a type defined in another language.
     /// Nothing is known about the runtime characteristics of the type, we only
@@ -530,7 +533,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             | Statement::Import { location, .. }
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
-            | Statement::ExternalFn { location, .. }
+            | Statement::ExternalFn(ExternalFn { location, .. })
             | Statement::ExternalType { location, .. }
             | Statement::ModuleConstant { location, .. } => *location,
         }
@@ -542,7 +545,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             Statement::Fn { doc, .. }
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
-            | Statement::ExternalFn { doc, .. }
+            | Statement::ExternalFn(ExternalFn { doc, .. })
             | Statement::ExternalType { doc, .. }
             | Statement::ModuleConstant { doc, .. } => {
                 let _ = std::mem::replace(doc, Some(new_doc));

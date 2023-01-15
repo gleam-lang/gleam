@@ -19,7 +19,7 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        Statement, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
+        ExternalFn, Statement, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
         TypedRecordConstructor, TypedStatement,
     },
     docvec,
@@ -237,7 +237,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 | Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
-                | Statement::ExternalFn { .. }
+                | Statement::ExternalFn(ExternalFn { .. })
                 | Statement::ModuleConstant { .. } => (),
 
                 Statement::Import {
@@ -338,14 +338,14 @@ impl<'a> TypeScriptGenerator<'a> {
             } if *public => vec![self.module_function(name, arguments, return_type)],
             Statement::Fn { .. } => vec![],
 
-            Statement::ExternalFn {
+            Statement::ExternalFn(ExternalFn {
                 public,
                 name,
                 arguments,
                 return_type,
                 ..
-            } if *public => vec![self.external_function(name, arguments, return_type)],
-            Statement::ExternalFn { .. } => vec![],
+            }) if *public => vec![self.external_function(name, arguments, return_type)],
+            Statement::ExternalFn(ExternalFn { .. }) => vec![],
         }
     }
 

@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::{Use, *},
+    ast::{ExternalFn, Use, *},
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -233,7 +233,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.custom_type(*public, *opaque, name, parameters, constructors, location),
 
-            Statement::ExternalFn {
+            Statement::ExternalFn(ExternalFn {
                 public,
                 arguments: args,
                 name,
@@ -241,7 +241,7 @@ impl<'comments> Formatter<'comments> {
                 module,
                 fun,
                 ..
-            } => self
+            }) => self
                 .external_fn_signature(*public, name, args, retrn)
                 .append(" =")
                 .append(line())
