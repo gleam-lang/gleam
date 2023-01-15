@@ -14,7 +14,7 @@ main(Args) ->
         X when (X =/= X) =:= (Args =:= Args) ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 

@@ -14,10 +14,10 @@ main(Args) ->
         [X] when X ->
             1;
 
-        [X, _] when X ->
+        [X, _@1] when X ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 

@@ -14,7 +14,7 @@ main(Args) ->
         X when (X andalso X) orelse ((X =:= X) andalso X) ->
             1;
 
-        _ ->
+        _@1 ->
             0
     end.
 
