@@ -56,7 +56,7 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, ExternalFn, ExternalFnArg, HasLocation, Module,
+    CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, ExternalFunction, HasLocation, Module,
     Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement,
     TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
     UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
@@ -482,7 +482,7 @@ where
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 match self.parse_function(start, false, true)? {
-                    Some(Statement::Fn {
+                    Some(Statement::Function {
                         location,
                         arguments: args,
                         body,
@@ -1365,7 +1365,7 @@ where
             },
             Some((body, _)) => body,
         };
-        Ok(Some(Statement::Fn {
+        Ok(Some(Statement::Function {
             doc: None,
             location: SrcSpan { start, end },
             end_position: rbr_e - 1,
@@ -1399,7 +1399,7 @@ where
         let (_, fun, end) = self.expect_string()?;
 
         if let Some(retrn) = return_annotation {
-            Ok(Some(Statement::ExternalFn(ExternalFn {
+            Ok(Some(Statement::ExternalFunction(ExternalFunction {
                 doc: None,
                 location: SrcSpan { start, end },
                 public,

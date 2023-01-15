@@ -19,7 +19,7 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        ExternalFn, Statement, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
+        ExternalFunction, Statement, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
         TypedRecordConstructor, TypedStatement,
     },
     docvec,
@@ -233,11 +233,11 @@ impl<'a> TypeScriptGenerator<'a> {
 
         for statement in &self.module.statements {
             match statement {
-                Statement::Fn { .. }
+                Statement::Function { .. }
                 | Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
-                | Statement::ExternalFn(ExternalFn { .. })
+                | Statement::ExternalFunction(ExternalFunction { .. })
                 | Statement::ModuleConstant { .. } => (),
 
                 Statement::Import {
@@ -329,23 +329,23 @@ impl<'a> TypeScriptGenerator<'a> {
             } if *public => vec![self.module_constant(name, value)],
             Statement::ModuleConstant { .. } => vec![],
 
-            Statement::Fn {
+            Statement::Function {
                 arguments,
                 name,
                 public,
                 return_type,
                 ..
             } if *public => vec![self.module_function(name, arguments, return_type)],
-            Statement::Fn { .. } => vec![],
+            Statement::Function { .. } => vec![],
 
-            Statement::ExternalFn(ExternalFn {
+            Statement::ExternalFunction(ExternalFunction {
                 public,
                 name,
                 arguments,
                 return_type,
                 ..
             }) if *public => vec![self.external_function(name, arguments, return_type)],
-            Statement::ExternalFn(ExternalFn { .. }) => vec![],
+            Statement::ExternalFunction(ExternalFunction { .. }) => vec![],
         }
     }
 

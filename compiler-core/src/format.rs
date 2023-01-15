@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::{ExternalFn, Use, *},
+    ast::{ExternalFunction, Use, *},
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -205,7 +205,7 @@ impl<'comments> Formatter<'comments> {
 
     fn statement<'a>(&mut self, statement: &'a UntypedStatement) -> Document<'a> {
         match statement {
-            Statement::Fn {
+            Statement::Function {
                 name,
                 arguments: args,
                 body,
@@ -233,7 +233,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.custom_type(*public, *opaque, name, parameters, constructors, location),
 
-            Statement::ExternalFn(ExternalFn {
+            Statement::ExternalFunction(ExternalFunction {
                 public,
                 arguments: args,
                 name,
