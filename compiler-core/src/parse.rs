@@ -56,9 +56,9 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, ExternalFunction, HasLocation, Module,
-    Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement,
-    TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
+    CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, ExternalFunction, Function, HasLocation,
+    Module, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
+    Statement, TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
     UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
     UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
 };
@@ -482,13 +482,13 @@ where
             Some((start, Token::Fn, _)) => {
                 let _ = self.next_tok();
                 match self.parse_function(start, false, true)? {
-                    Some(Statement::Function {
+                    Some(Statement::Function(Function {
                         location,
                         arguments: args,
                         body,
                         return_annotation,
                         ..
-                    }) => UntypedExpr::Fn {
+                    })) => UntypedExpr::Fn {
                         location,
                         is_capture: false,
                         arguments: args,
@@ -1365,7 +1365,7 @@ where
             },
             Some((body, _)) => body,
         };
-        Ok(Some(Statement::Function {
+        Ok(Some(Statement::Function(Function {
             doc: None,
             location: SrcSpan { start, end },
             end_position: rbr_e - 1,
@@ -1375,7 +1375,7 @@ where
             body,
             return_type: (),
             return_annotation,
-        }))
+        })))
     }
 
     // Starts after "fn"

@@ -3,7 +3,7 @@ mod source_links;
 use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
-    ast::{ExternalFunction, Statement, TypedStatement},
+    ast::{ExternalFunction, Function, Statement, TypedStatement},
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -115,7 +115,7 @@ pub fn generate_html(
 
         let page_title = format!("{} - {}", name, config.name);
 
-        let functions: Vec<Function<'_>> = module
+        let functions: Vec<DocsFunction<'_>> = module
             .ast
             .statements
             .iter()
@@ -451,7 +451,7 @@ fn import_synonyms(parent: &str, child: &str) -> String {
 fn function<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedStatement,
-) -> Option<Function<'a>> {
+) -> Option<DocsFunction<'a>> {
     let mut formatter = format::Formatter::new();
 
     match statement {
@@ -463,7 +463,7 @@ fn function<'a>(
             arguments: args,
             location,
             ..
-        }) => Some(Function {
+        }) => Some(DocsFunction {
             name,
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
@@ -471,7 +471,7 @@ fn function<'a>(
             source_url: source_links.url(location),
         }),
 
-        Statement::Function {
+        Statement::Function(Function {
             public: true,
             name,
             doc,
@@ -479,7 +479,7 @@ fn function<'a>(
             return_type: ret,
             location,
             ..
-        } => Some(Function {
+        }) => Some(DocsFunction {
             name,
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
@@ -644,7 +644,7 @@ struct Link {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct Function<'a> {
+struct DocsFunction<'a> {
     name: &'a str,
     signature: String,
     documentation: String,
@@ -712,7 +712,7 @@ struct ModuleTemplate<'a> {
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    functions: Vec<Function<'a>>,
+    functions: Vec<DocsFunction<'a>>,
     types: Vec<Type<'a>>,
     constants: Vec<Constant<'a>>,
     documentation: String,
