@@ -14,7 +14,7 @@ go(X) ->
         <<"Hello, "/utf8, Name/binary>> ->
             Name;
 
-        _@1 ->
+        _ ->
             <<"Unknown"/utf8>>
     end.
 

@@ -10,25 +10,27 @@ expression: "pub fn go() {\n  assert Ok(y) = Ok(1)\n  assert Ok(y) = Ok(1)\n  y\
 
 -spec go() -> integer().
 go() ->
-    {ok, Y@1} = case {ok, 1} of
-        {ok, Y} -> {ok, Y};
-        _try ->
+    _assert_subject = {ok, 1},
+    {ok, Y} = case _assert_subject of
+        {ok, _} -> _assert_subject;
+        _assert_fail ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
-                        value => _try,
+                        value => _assert_fail,
                         module => <<"the_app"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 2})
     end,
-    {ok, Y@3} = case {ok, 1} of
-        {ok, Y@2} -> {ok, Y@2};
-        _try@1 ->
+    _assert_subject@1 = {ok, 1},
+    {ok, Y@1} = case _assert_subject@1 of
+        {ok, _} -> _assert_subject@1;
+        _assert_fail@1 ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
-                        value => _try@1,
+                        value => _assert_fail@1,
                         module => <<"the_app"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 3})
     end,
-    Y@3.
+    Y@1.
 

@@ -11,10 +11,10 @@ expression: "\npub const bits = <<1, \"ok\":utf8, 3, 4:50>>\n\npub fn main(arg) 
 -spec main(bitstring()) -> integer().
 main(Arg) ->
     case Arg of
-        _@1 when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
+        _ when Arg =:= <<1, "ok"/utf8, 3, 4:50>> ->
             1;
 
-        _@2 ->
+        _ ->
             0
     end.
 

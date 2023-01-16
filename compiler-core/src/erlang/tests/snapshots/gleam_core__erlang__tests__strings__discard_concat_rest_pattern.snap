@@ -14,7 +14,7 @@ go(X) ->
         <<"Hello, "/utf8, _/binary>> ->
             nil;
 
-        _@1 ->
+        _ ->
             nil
     end.
 

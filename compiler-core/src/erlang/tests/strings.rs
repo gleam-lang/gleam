@@ -138,3 +138,26 @@ pub fn main() {
 "#,
     );
 }
+
+#[test]
+fn assert_string_prefix() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  assert "m-" <> rest = x
+  rest
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_string_prefix_discar() {
+    assert_erl!(
+        r#"
+pub fn main(x) {
+  assert "m-" <> _ = x
+}
+"#,
+    );
+}

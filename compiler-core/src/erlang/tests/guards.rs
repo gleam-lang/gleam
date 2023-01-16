@@ -359,7 +359,10 @@ pub fn main(arg) {
 }
 "#
     );
+}
 
+#[test]
+fn constants_in_guards1() {
     assert_erl!(
         r#"
 pub const list = [1, 2, 3]

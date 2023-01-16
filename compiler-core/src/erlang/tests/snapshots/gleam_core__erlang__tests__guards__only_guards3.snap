@@ -11,10 +11,10 @@ expression: "\npub const float_value = 3.14\n\npub fn main(arg) {\n  case arg {\
 -spec main(float()) -> integer().
 main(Arg) ->
     case Arg of
-        _@1 when Arg > 3.14 ->
+        _ when Arg > 3.14 ->
             1;
 
-        _@2 ->
+        _ ->
             0
     end.
 

@@ -844,15 +844,22 @@ fn try_<'a>(
 fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
-    let pattern1 = pattern::to_doc(pat, &mut vars, env);
-    let pattern2 = pattern::to_doc(pat, &mut vars, env);
+    let (subject_var, subject_definition) = if value.is_var() {
+        (body, docvec![])
+    } else {
+        let var = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
+        let definition = docvec![var.clone(), " = ", body, ",", line()];
+        (var, definition)
+    };
+    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env);
+    let assign_pattern = pattern::to_doc(pat, &mut vars, env);
     let clauses = docvec![
-        pattern1.clone(),
+        check_pattern.clone(),
         " -> ",
-        pattern1.clone(),
+        subject_var.clone(),
         ";",
         line(),
-        env.next_local_var_name(ASSERT_VARIABLE),
+        env.next_local_var_name(ASSERT_FAIL_VARIABLE),
         " ->",
         docvec![
             line(),
@@ -860,7 +867,7 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
                 "assert",
                 "Assertion pattern match failed",
                 pat.location(),
-                vec![("value", env.local_var_name(ASSERT_VARIABLE))],
+                vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
             )
             .nest(INDENT)
@@ -868,9 +875,10 @@ fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) ->
         .nest(INDENT)
     ];
     docvec![
-        pattern2,
+        subject_definition,
+        assign_pattern,
         " = case ",
-        body,
+        subject_var,
         " of",
         docvec![line(), clauses].nest(INDENT),
         line(),

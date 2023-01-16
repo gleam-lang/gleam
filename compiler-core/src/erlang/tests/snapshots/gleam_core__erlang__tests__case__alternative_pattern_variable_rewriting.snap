@@ -15,7 +15,7 @@ myfun(Mt) ->
             _pipe = 1,
             {ok, _pipe};
 
-        _@1 ->
+        _ ->
             _pipe = 1,
             {ok, _pipe}
     end,
