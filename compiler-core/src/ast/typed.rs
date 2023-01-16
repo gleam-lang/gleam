@@ -393,6 +393,14 @@ impl TypedExpr {
                 | Self::BitString { .. }
         )
     }
+
+    /// Returns `true` if the typed expr is [`Var`].
+    ///
+    /// [`Var`]: TypedExpr::Var
+    #[must_use]
+    pub fn is_var(&self) -> bool {
+        matches!(self, Self::Var { .. })
+    }
 }
 
 impl HasLocation for TypedExpr {

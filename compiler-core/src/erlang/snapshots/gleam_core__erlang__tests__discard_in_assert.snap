@@ -10,12 +10,12 @@ expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
 
 -spec x({ok, any()} | {error, any()}) -> integer().
 x(Y) ->
-    {ok, _@2} = case Y of
-        {ok, _@1} -> {ok, _@1};
-        _try ->
+    {ok, _} = case Y of
+        {ok, _} -> Y;
+        _assert_fail ->
             erlang:error(#{gleam_error => assert,
                         message => <<"Assertion pattern match failed"/utf8>>,
-                        value => _try,
+                        value => _assert_fail,
                         module => <<"the_app"/utf8>>,
                         function => <<"x"/utf8>>,
                         line => 2})

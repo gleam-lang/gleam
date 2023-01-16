@@ -12,7 +12,7 @@ expression: "\npub fn main() {\n  let x = 0\n  case x {\n    _ if 0 < x -> 1\n  
 main() ->
     X = 0,
     case X of
-        _@1 when 0 < X ->
+        _ when 0 < X ->
             1
     end.
 

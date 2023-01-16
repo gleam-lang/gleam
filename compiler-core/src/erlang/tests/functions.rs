@@ -4,8 +4,12 @@ use crate::assert_erl;
 fn function_as_value() {
     assert_erl!(
         r#"
+fn other() {
+  Nil
+}
+
 pub fn main() {
-  main
+  other
 }
 "#
     );

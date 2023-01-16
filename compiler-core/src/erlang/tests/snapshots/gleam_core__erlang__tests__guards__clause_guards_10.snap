@@ -12,7 +12,7 @@ expression: "\npub fn main() {\n  let x = 0.123\n  case x {\n    _ if x == 3.14 
 main() ->
     X = 0.123,
     case X of
-        _@1 when X =:= 3.14 ->
+        _ when X =:= 3.14 ->
             1
     end.
 

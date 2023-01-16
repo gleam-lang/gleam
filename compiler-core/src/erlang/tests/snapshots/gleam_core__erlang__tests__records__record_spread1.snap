@@ -13,6 +13,6 @@ expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},
-    {triple, _@1, The_b, _@2} = Triple,
+    {triple, _, The_b, _} = Triple,
     The_b.
 

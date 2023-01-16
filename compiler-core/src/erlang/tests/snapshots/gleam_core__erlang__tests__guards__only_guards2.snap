@@ -11,10 +11,10 @@ expression: "\npub const constant = #(1, 2.0)\n\npub fn main(arg) {\n  case arg 
 -spec main({integer(), float()}) -> integer().
 main(Arg) ->
     case Arg of
-        _@1 when Arg =:= {1, 2.0} ->
+        _ when Arg =:= {1, 2.0} ->
             1;
 
-        _@2 ->
+        _ ->
             0
     end.
 
