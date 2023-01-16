@@ -10,6 +10,7 @@
   with the same name.
 - The error message emitted when a `let` does not match all possible values has
   been improved.
+- Fixed a bug where `assert` expressions can generate invalid Erlang.
 - Fixed a bug where `assert` expressions can generate Erlang that emits a
   warning.
 - Fixed a bug where defining variables that shadow external functions could
