@@ -1218,7 +1218,13 @@ pub(crate) fn constant_expression<'a>(
             feature: "Bit string syntax".into(),
             location: *location,
         }),
-        Constant::Var { name, .. } => Ok(name.to_doc()),
+
+        Constant::Var { name, module, .. } => Ok({
+            match module {
+                None => name.to_doc(),
+                Some(module) => docvec!["$", module, ".", name],
+            }
+        }),
     }
 }
 
