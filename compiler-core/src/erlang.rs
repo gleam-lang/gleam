@@ -1228,7 +1228,7 @@ fn module_fn_with_args<'a>(
     if module == env.module {
         atom(name.to_string()).append(args)
     } else {
-        atom(module.replace("/", "@"))
+        atom(module.replace('/', "@"))
             .append(":")
             .append(atom(name.to_string()))
             .append(args)
