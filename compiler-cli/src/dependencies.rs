@@ -124,7 +124,7 @@ pub fn download<Telem: Telemetry>(
 
     // We do this before acquiring the build lock so that we don't create the
     // build directory if there is no gleam.toml
-    _ = crate::config::ensure_config_exists()?;
+    crate::config::ensure_config_exists()?;
 
     let lock = BuildLock::new_packages()?;
     let _guard = lock.lock(&telemetry);

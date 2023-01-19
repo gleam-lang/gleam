@@ -440,7 +440,7 @@ where
                         ParseErrorType::ListSpreadWithoutTail,
                         SrcSpan {
                             start: end - 1,
-                            end: end,
+                            end,
                         },
                     );
                 }

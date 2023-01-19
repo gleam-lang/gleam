@@ -30,5 +30,5 @@ pub fn ensure_config_exists() -> Result<(), Error> {
             err: Some("File not found".into()),
         });
     }
-    return Ok(());
+    Ok(())
 }
