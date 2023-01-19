@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.26.0 - 2023-01-19
 
 - New projects require `gleam_stdlib` v0.25 and `gleeunit` v0.9.
 - Fixed a bug where JavaScript default projects would fail to publish to Hex.
