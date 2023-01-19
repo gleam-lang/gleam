@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- New projects now require `gleeunit` v0.10.
 - An error is now emitted if a list spread expression is written without a tail
   value.
 - An error is now emitted when a function is defined with multiple arguments
@@ -19,7 +20,7 @@
 [Release blog post](https://gleam.run/news/v0.26-incremental-compilation-and-deno/)
 
 
-- New projects require `gleam_stdlib` v0.25 and `gleeunit` v0.9.
+- New projects require `gleam_stdlib` v0.26 and `gleeunit` v0.9.
 - Fixed a bug where JavaScript default projects would fail to publish to Hex.
 
 ## v0.26.0-rc1 - 2023-01-12
