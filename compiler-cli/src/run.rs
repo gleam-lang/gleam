@@ -97,7 +97,6 @@ fn run_javascript_node(
 
     args.push(entry);
 
-    args.push("--".into());
     for argument in arguments.into_iter() {
         args.push(argument);
     }
@@ -171,12 +170,12 @@ fn run_javascript_deno(
         );
     }
 
+    let entrypoint = write_javascript_entrypoint(&config.name, module)?;
+    args.push(entrypoint);
+
     for argument in arguments.into_iter() {
         args.push(argument);
     }
-
-    let entrypoint = write_javascript_entrypoint(&config.name, module)?;
-    args.push(entrypoint);
 
     ProjectIO::new().exec("deno", &args, &[], None, Stdio::Inherit)
 }
