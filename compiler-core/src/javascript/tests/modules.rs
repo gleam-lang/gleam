@@ -55,6 +55,36 @@ pub fn go() { rocket_ship.x }
 }
 
 #[test]
+fn alias_aliased_constant() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string()],
+            r#"pub const x = 1"#
+        ),
+        r#"
+import rocket_ship.{ x as y }
+const z = y
+"#,
+    );
+}
+
+#[test]
+fn nested_module_constant() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["rocket_ship".to_string(), "launcher".to_string()],
+            r#"pub const x = 1"#
+        ),
+        r#"
+import rocket_ship/launcher
+pub fn go() { launcher.x }
+"#,
+    );
+}
+
+#[test]
 fn alias_constant() {
     assert_js!(
         (CURRENT_PACKAGE, "rocket_ship", r#"pub const x = 1"#),
