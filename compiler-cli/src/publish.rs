@@ -37,7 +37,7 @@ impl PublishCommand {
         // Build the project to check that it is valid
         let mut compiled = build::main(Options {
             mode: Mode::Prod,
-            target: None,
+            target: Some(Target::Erlang),
             perform_codegen: true,
         })?;
 
