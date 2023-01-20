@@ -100,7 +100,7 @@ jobs:
           profile: minimal
 
       - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: v1-${{ matrix.target }}
 
