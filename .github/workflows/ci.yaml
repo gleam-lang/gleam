@@ -89,7 +89,7 @@ jobs:
         if: ${{ matrix.os == 'macos-latest' }} # setup-beam does not support macOS
 
       - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: v1-${{ matrix.target }}
 
@@ -266,7 +266,7 @@ jobs:
           components: clippy
 
       - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v1
+        uses: Swatinem/rust-cache@v2
         with:
           key: v1-linux-gnu
 
