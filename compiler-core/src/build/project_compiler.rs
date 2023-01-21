@@ -224,45 +224,21 @@ where
         result
     }
 
+    // TODO: extract and unit test
     fn compile_rebar3_dep_package(&mut self, package: &ManifestPackage) -> Result<(), Error> {
         let name = &package.name;
         let mode = self.mode();
         let target = self.target();
 
-        let project_dir = paths::build_deps_package(name);
-        let up = paths::unnest(&project_dir);
-        let rebar3_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
+        let package = paths::build_deps_package(name);
+        let build_packages = paths::build_packages(mode, target);
         let ebins = paths::build_packages_ebins_glob(mode, target);
-        let erl_libs = paths::build_packages_erl_libs_glob(mode, target);
-        let dest = paths::build_package(mode, target, name);
+        let package_build = paths::build_package(mode, target, name);
+        let rebar3_path = |path: &Path| format!("../{}", path.to_str().expect("Build path"));
 
-        // rebar3 would make this if it didn't exist, but we make it anyway as
-        // we may need to copy the include, priv, and/or ebin directory into there
-        self.io.mkdir(&dest)?;
-
-        // TODO: unit test
-        let src_include = project_dir.join("include");
-        if self.io.is_directory(&src_include) {
-            tracing::debug!("copying_include_to_build");
-            // TODO: This could be a symlink
-            self.io.copy_dir(&src_include, &dest)?;
-        }
-
-        // TODO: unit test
-        let priv_dir = project_dir.join("priv");
-        if self.io.is_directory(&priv_dir) {
-            tracing::debug!("copying_priv_to_build");
-            // TODO: This could be a symlink
-            self.io.copy_dir(&priv_dir, &dest)?;
-        }
-
-        // TODO: unit test
-        let ebin_dir = project_dir.join("ebin");
-        if self.io.is_directory(&ebin_dir) {
-            tracing::debug!("copying_ebin_to_build");
-            // TODO: This could be a symlink
-            self.io.copy_dir(&ebin_dir, &dest)?;
-        }
+        tracing::debug!("copying_package_to_build");
+        self.io.mkdir(&build_packages)?;
+        self.io.copy_dir(&package, &build_packages)?;
 
         // TODO: test
         if target != Target::Erlang {
@@ -271,8 +247,8 @@ where
         }
 
         let env = [
-            ("ERL_LIBS", rebar3_path(&erl_libs)),
-            ("REBAR_BARE_COMPILER_OUTPUT_DIR", rebar3_path(&dest)),
+            ("ERL_LIBS", "../*/ebin".into()),
+            ("REBAR_BARE_COMPILER_OUTPUT_DIR", "./".into()),
             ("REBAR_PROFILE", "prod".into()),
             ("TERM", "dumb".into()),
         ];
@@ -280,13 +256,13 @@ where
             "bare".into(),
             "compile".into(),
             "--paths".into(),
-            rebar3_path(&ebins),
+            "../*/ebin".into(),
         ];
         let status = self.io.exec(
             REBAR_EXECUTABLE,
             &args,
             &env,
-            Some(&project_dir),
+            Some(&package_build),
             self.subprocess_stdio,
         )?;
 

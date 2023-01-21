@@ -2,17 +2,29 @@ name = "project"
 version = "0.1.0"
 
 [dependencies]
+# These are Gleam deps
 gleam_stdlib = "~> 0.18"
 gleam_erlang = "~> 0.5"
-certifi = "~> 2.8" # This is a rebar3 dep that uses files in ./priv
-cowboy = "~> 2.9" # This is a rebar3 dep that uses files in ./ebin
-countries = "~> 1.6" # This is a mix dep that uses files in ./priv
+
+# This is a rebar3 dep that uses files in ./priv
+certifi = "~> 2.8"
+# This is a rebar3 dep that uses files in ./ebin
+cowboy = "~> 2.9"
+# This is a mix dep that uses files in ./priv
+countries = "~> 1.6"
 
 # This is both a mix and a rebar3 dep!
 # We want to default to using rebar3 as that is the build tool that is more
 # likely to be installed.
 ssl_verify_fun = "~> 1.1"
 
+# This is a rebar3 dep that calls make to compile C into a .so file that is
+# loaded at runtime from ./priv
+# TODO: replace this with a package with a nif that compiles super fast. Perhaps
+# just a hello world.
+bcrypt = "~> 1.1"
+
 [dev-dependencies]
+# These are Gleam deps
 first_gleam_publish_package = "> 0.0.0"
 gleeunit = "~> 0.1"
