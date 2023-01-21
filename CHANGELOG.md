@@ -3,6 +3,9 @@
 ## Unreleased
 
 - New projects now require `gleeunit` v0.10.
+- Rebar3 dependency projects are now compiled in-place. This fixes an issue
+  where some NIF using projects would fail to boot due to some paths not being
+  copied to the `build` directory.
 - An error is now emitted if a list spread expression is written without a tail
   value.
 - An error is now emitted when a function is defined with multiple arguments
