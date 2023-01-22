@@ -122,12 +122,21 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// Returns `true` if the mode is [`Dev`].
+    /// Returns `true` if the mode includes test code.
     ///
-    /// [`Dev`]: Mode::Dev
-    pub fn is_dev(&self) -> bool {
-        matches!(self, Self::Dev)
+    pub fn includes_tests(&self) -> bool {
+        match self {
+            Self::Dev | Self::Lsp => true,
+            Self::Prod => false,
+        }
     }
+}
+
+#[test]
+fn mode_includes_tests() {
+    assert!(Mode::Dev.includes_tests());
+    assert!(Mode::Lsp.includes_tests());
+    assert!(!Mode::Prod.includes_tests());
 }
 
 #[derive(Debug)]

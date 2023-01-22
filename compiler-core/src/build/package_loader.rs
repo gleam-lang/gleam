@@ -168,7 +168,7 @@ where
         }
 
         // Test
-        if self.mode.is_dev() {
+        if self.mode.includes_tests() {
             let test = self.root.join("test");
             loader.origin = Origin::Test;
             loader.source_directory = &test;
