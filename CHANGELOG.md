@@ -12,6 +12,7 @@
   with the same name.
 - The error message emitted when a `let` does not match all possible values has
   been improved.
+- Fixed a bug where the language server wouldn't analyse test code.
 - Fixed a bug where `assert` expressions can generate invalid Erlang.
 - Fixed a bug where `assert` expressions can generate Erlang that emits a
   warning.
