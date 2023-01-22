@@ -18,6 +18,7 @@
 - Fixed a bug where arguments would be passed incorrectly to Deno.
 - Fixed a bug where defining variables that shadow external functions could
   generate invalid JavaScript.
+- Format long | patterns with sensible breaks.
 
 ## v0.26.0 - 2023-01-19
 
