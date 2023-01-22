@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.26.1 - 2023-01-22
 
 - New projects now require `gleeunit` v0.10.
 - Rebar3 dependency projects are now compiled in-place. This fixes an issue
