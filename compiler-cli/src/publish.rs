@@ -32,7 +32,7 @@ impl PublishCommand {
         let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project
-        fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
+        fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
         // Build the project to check that it is valid
         let mut compiled = build::main(Options {
