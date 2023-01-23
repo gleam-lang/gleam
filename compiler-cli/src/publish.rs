@@ -1,4 +1,5 @@
 use std::{
+    fs::File,
     io::Write,
     path::{Path, PathBuf},
     time::Instant,
@@ -16,19 +17,20 @@ use sha2::Digest;
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
-pub fn command(replace: bool, yes: bool) -> Result<()> {
-    PublishCommand::setup(replace, yes)?.run()
+pub fn command(file: bool, replace: bool, yes: bool) -> Result<()> {
+    PublishCommand::setup(file, replace)?.write_or_publish(yes)
 }
 
 pub struct PublishCommand {
     config: PackageConfig,
     package_tarball: Vec<u8>,
     docs_tarball: Vec<u8>,
+    file: bool,
     replace: bool,
 }
 
 impl PublishCommand {
-    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
+    pub fn setup(file: bool, replace: bool) -> Result<Self> {
         let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project
@@ -75,21 +77,47 @@ impl PublishCommand {
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
 
-        let should_publish = i_am_sure || {
-            let answer = cli::ask("\nDo you wish to publish this package? [y/n]")?;
-            answer == "y" || answer == "Y"
-        };
-        if !should_publish {
-            println!("Not publishing.");
-            std::process::exit(0);
-        }
 
         Ok(Self {
             config,
             docs_tarball,
             package_tarball,
+            file,
             replace,
         })
+    }
+
+    pub fn write_or_publish(&mut self, i_am_sure: bool) -> Result<()> {
+        if self.file {
+            let mut name = String::new();
+            name.push_str(&self.config.name);
+            name.push_str(&"-");
+            name.push_str(&self.config.version.to_string());
+            name.push_str(&".tar");
+            println!("Writing package file '{}'", &name);
+            let mut file = match File::create(&name) {
+                Err(e) => {
+                    println!("Could not create package file '{}': {}", &name, e);
+                    std::process::exit(0);
+                },
+                Ok(f) => f,
+            };
+            if let Err(e) = file.write_all(&self.package_tarball) {
+                println!("Could not write package file '{}': {}", &name, e);
+                std::process::exit(0);
+            }
+            Ok(())
+        } else {
+            let should_publish = i_am_sure || {
+                let answer = cli::ask("\nDo you wish to publish this package on hex.pm? [y/n]")?;
+                answer == "y" || answer == "Y"
+            };
+            if !should_publish {
+                println!("Not publishing.");
+                std::process::exit(0);
+            }
+            self.run()
+        }
     }
 }
 

@@ -116,6 +116,8 @@ enum Command {
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
     #[clap(verbatim_doc_comment)]
     Publish {
+        #[clap(long, help="Produce a .tar file, rather than trying to upload to hex.pm")]
+        file: bool,
         #[clap(long)]
         replace: bool,
         #[clap(short, long)]
@@ -399,7 +401,7 @@ fn main() {
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
-        Command::Publish { replace, yes } => publish::command(replace, yes),
+        Command::Publish { file, replace, yes } => publish::command(file, replace, yes),
 
         Command::PrintConfig => print_config(),
 
