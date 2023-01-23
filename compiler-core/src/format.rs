@@ -1252,7 +1252,7 @@ impl<'comments> Formatter<'comments> {
             std::iter::once(&clause.pattern)
                 .chain(&clause.alternative_patterns)
                 .map(|p| join(p.iter().map(|p| self.pattern(p)), ", ".to_doc())),
-            break_(" |", " | "),
+            break_("", " ").append("| "),
         )
         .group();
 
