@@ -8,9 +8,10 @@ use std::process::Command;
 pub fn command() -> Result<(), Error> {
     // Build project
     let _ = crate::build::main(Options {
-        perform_codegen: true,
         mode: Mode::Dev,
+        perform_codegen: true,
         target: Some(Target::Erlang),
+        warnings_as_errors: false,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

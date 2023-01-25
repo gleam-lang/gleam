@@ -1010,8 +1010,9 @@ where
 
         let options = build::Options {
             mode: build::Mode::Lsp,
-            target: None,
             perform_codegen: false,
+            target: None,
+            warnings_as_errors: false,
         };
         let mut project_compiler =
             ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);

@@ -28,9 +28,10 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     // Build project in production mode
     let package = crate::build::main(Options {
-        perform_codegen: true,
         mode,
+        perform_codegen: true,
         target: Some(target),
+        warnings_as_errors: true,
     })?;
 
     for entry in crate::fs::read_dir(&build)?

@@ -37,8 +37,9 @@ impl PublishCommand {
         // Build the project to check that it is valid
         let mut compiled = build::main(Options {
             mode: Mode::Prod,
-            target: Some(Target::Erlang),
             perform_codegen: true,
+            target: Some(Target::Erlang),
+            warnings_as_errors: true,
         })?;
 
         // These fields are required to publish a Hex package. Hex will reject

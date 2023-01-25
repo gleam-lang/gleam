@@ -33,9 +33,10 @@ pub fn command(
 
     // Build project so we have bytecode to run
     let _ = crate::build::main(Options {
-        perform_codegen: true,
         mode: Mode::Dev,
+        perform_codegen: true,
         target,
+        warnings_as_errors: false,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

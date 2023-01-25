@@ -41,6 +41,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
+    pub warnings_as_errors: bool,
     /// Whether to perform codegen for the root project. Dependencies always
     /// have codegen run. Use for the `gleam check` command.
     /// If future when we have per-module incremental builds we will need to
@@ -144,6 +145,14 @@ where
         // Print warnings
         for warning in &self.warnings {
             self.telemetry.warning(warning);
+        }
+
+        // Exit if warnings_as_errors and warnings
+        let warning_count = &self.warnings.len();
+        if self.options.warnings_as_errors && warning_count > &0 {
+            return Err(Error::ForbiddenWarnings {
+                count: *warning_count,
+            });
         }
 
         result

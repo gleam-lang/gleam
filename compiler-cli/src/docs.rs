@@ -58,8 +58,9 @@ pub fn build() -> Result<()> {
     let out = paths::build_docs(&config.name);
     let mut compiled = crate::build::main(Options {
         mode: Mode::Prod,
-        target: None,
         perform_codegen: true,
+        target: None,
+        warnings_as_errors: false,
     })?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
@@ -110,9 +111,10 @@ impl PublishCommand {
         crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
         let mut compiled = crate::build::main(Options {
-            perform_codegen: true,
             mode: Mode::Prod,
+            perform_codegen: true,
             target: None,
+            warnings_as_errors: false,
         })?;
         let outputs = build_documentation(&config, &mut compiled)?;
         let archive = crate::fs::create_tar_archive(outputs)?;

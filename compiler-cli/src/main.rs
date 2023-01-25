@@ -356,8 +356,8 @@ fn main() {
     let result = match Command::parse() {
         Command::Build {
             target,
-            warnings_as_errors: _,
-        } => command_build(target),
+            warnings_as_errors,
+        } => command_build(target, warnings_as_errors),
 
         Command::Check => command_check(),
 
@@ -444,15 +444,17 @@ fn command_check() -> Result<(), Error> {
         perform_codegen: false,
         mode: Mode::Dev,
         target: None,
+        warnings_as_errors: false,
     })?;
     Ok(())
 }
 
-fn command_build(target: Option<Target>) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
     let _ = build::main(Options {
-        perform_codegen: true,
         mode: Mode::Dev,
+        perform_codegen: true,
         target,
+        warnings_as_errors,
     })?;
     Ok(())
 }

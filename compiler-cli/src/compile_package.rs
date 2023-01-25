@@ -48,9 +48,6 @@ pub fn command(options: CompilePackage) -> Result<()> {
         crate::print_warning(&warning);
     }
 
-    // TODO: Support --warnings-as-errors
-    // TODO: Create a Warnings struct to wrap up this functionality
-
     Ok(())
 }
 

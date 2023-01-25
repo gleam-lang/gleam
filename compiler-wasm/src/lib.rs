@@ -94,8 +94,9 @@ fn compile_project(
 
     let options = Options {
         mode: Mode::Dev,
-        target: Some(target),
         perform_codegen: true,
+        target: Some(target),
+        warnings_as_errors: false,
     };
 
     let mut pcompiler = ProjectCompiler::new(
