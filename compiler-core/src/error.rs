@@ -29,6 +29,15 @@ macro_rules! wrap_format {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct UnknownImportDetails {
+    pub module: Name,
+    pub location: crate::ast::SrcSpan,
+    pub path: PathBuf,
+    pub src: SmolStr,
+    pub modules: Vec<SmolStr>,
+}
+
 #[derive(Debug, PartialEq, Error)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
@@ -45,14 +54,11 @@ pub enum Error {
         error: crate::type_::Error,
     },
 
-    #[error("unknown import {import} in {module}")]
+    #[error("unknown import {import}")]
     UnknownImport {
-        module: Name,
-        import: Name,
-        location: crate::ast::SrcSpan,
-        path: PathBuf,
-        src: SmolStr,
-        modules: Vec<SmolStr>,
+        import: SmolStr,
+        // Boxed to prevent this variant from being overly large
+        details: Box<UnknownImportDetails>,
     },
 
     #[error("duplicate module {module}")]
@@ -483,9 +489,8 @@ You can also install rebar3 via homebrew using \"brew install rebar3\"",
                 program: command,
                 err: None,
             } => {
-                let text = format!(
-                    "There was a problem when running the shell command `{command}`."
-                );
+                let text =
+                    format!("There was a problem when running the shell command `{command}`.");
                 Diagnostic {
                     title: "Shell command failure".into(),
                     text,
@@ -644,9 +649,9 @@ Second: {}",
                 err,
             } => {
                 let err = match err {
-                    Some(e) => format!(
-                        "\nThe error message from the file IO library was:\n\n    {e}\n"
-                    ),
+                    Some(e) => {
+                        format!("\nThe error message from the file IO library was:\n\n    {e}\n")
+                    }
                     None => "".into(),
                 };
                 let text = format!(
@@ -934,9 +939,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                 }
 
                 TypeError::DuplicateField { location, label } => {
-                    let text = format!(
-                        "The field `{label}` has already been defined. Rename this field."
-                    );
+                    let text =
+                        format!("The field `{label}` has already been defined. Rename this field.");
                     Diagnostic {
                         title: "Duplicate field".into(),
                         text,
@@ -955,9 +959,8 @@ Names in a Gleam module must be unique so one will need to be renamed."
                 }
 
                 TypeError::DuplicateArgument { location, label } => {
-                    let text = format!(
-                        "The labelled argument `{label}` has already been supplied."
-                    );
+                    let text =
+                        format!("The labelled argument `{label}` has already been supplied.");
                     Diagnostic {
                         title: "Duplicate argument".into(),
                         text,
@@ -1535,9 +1538,7 @@ Each clause must have a pattern for every subject value.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: Some(format!(
-                                    "Expected {expected} patterns, got {given}"
-                                )),
+                                text: Some(format!("Expected {expected} patterns, got {given}")),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -2038,14 +2039,14 @@ cycle to continue.",
                 }
             }
 
-            Error::UnknownImport {
-                module,
-                import,
-                location,
-                path,
-                src,
-                modules,
-            } => {
+            Error::UnknownImport { import, details } => {
+                let UnknownImportDetails {
+                    module,
+                    location,
+                    path,
+                    src,
+                    modules,
+                } = details.as_ref();
                 let text = wrap(&format!(
                     "The module `{module}` is trying to import the module `{import}`, but it cannot be found."
                 ));
