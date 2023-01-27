@@ -1,10 +1,12 @@
 //! Graphs that represent the relationships between entities in a Gleam module,
 //! such as module functions or constants.
 
-// TODO: remove
 #![allow(unused)]
 
-use crate::ast::SrcSpan;
+#[cfg(test)]
+mod into_dependency_order_tests;
+
+use crate::ast::{SrcSpan, Use};
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -39,6 +41,7 @@ impl Function {
 struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, (NodeIndex, SrcSpan)>,
     graph: StableGraph<(), (), Directed>,
+    current_function: NodeIndex,
 }
 
 impl<'a> CallGraphBuilder<'a> {
@@ -67,28 +70,49 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn register_references(&mut self, function: &Function) {
         match function {
-            Function::Module(f) => self.register_expression(&f.body),
+            Function::Module(f) => {
+                let current = self
+                    .names
+                    .get(f.name.as_str())
+                    .expect("Function must exist")
+                    .0;
+                self.expression(current, &f.body)
+            }
             Function::External(_) => {}
         }
     }
 
-    fn register_expression(&self, expression: &UntypedExpr) {
+    fn referenced(&mut self, current: NodeIndex, name: &str) {
+        // If we don't know what the target is then it's either a programmer
+        // error to be detected later, or it's not a module function and as such
+        // is not a value we are tracking.
+        let Some((target, _)) = self.names.get(name) else { return };
+        _ = self.graph.add_edge(current, *target, ());
+    }
+
+    fn expression(&mut self, current: NodeIndex, expression: &UntypedExpr) {
         match expression {
             UntypedExpr::Todo { .. }
             | UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. } => (),
 
+            // Aha! A variable is being referenced.
+            UntypedExpr::Var { name, .. } => self.referenced(current, name),
+
+            UntypedExpr::Call { fun, arguments, .. } => {
+                self.expression(current, fun);
+                for argument in arguments {
+                    self.expression(current, &argument.value);
+                }
+            }
+
             // TODO: test
             UntypedExpr::Sequence { expressions, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::Var { name, .. } => todo!(),
             // TODO: test
             UntypedExpr::Fn { body, .. } => todo!(),
             // TODO: test
             UntypedExpr::List { elements, tail, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::Call { fun, arguments, .. } => todo!(),
             // TODO: test
             UntypedExpr::BinOp { left, right, .. } => todo!(),
             // TODO: test
@@ -98,7 +122,7 @@ impl<'a> CallGraphBuilder<'a> {
             // TODO: test
             UntypedExpr::Try { value, then, .. } => todo!(),
             // TODO: test
-            UntypedExpr::Use(_) => todo!(),
+            UntypedExpr::Use(Use { call, .. }) => todo!(),
             // TODO: test
             UntypedExpr::Case {
                 subjects, clauses, ..
@@ -165,82 +189,4 @@ pub fn into_dependency_order(functions: Vec<Function>) -> Result<Vec<Vec<Functio
         .collect_vec();
 
     Ok(ordered)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ast::TypeAst;
-    use smol_str::SmolStr;
-
-    enum Input {
-        Module(&'static str, &'static str),
-        External(&'static str),
-    }
-
-    #[test]
-    fn into_dependency_order_empty() {
-        let functions = [];
-        assert_eq!(
-            parse_and_order(&functions).unwrap(),
-            Vec::<Vec<SmolStr>>::new()
-        );
-    }
-
-    #[test]
-    fn into_dependency_order_no_deps() {
-        let functions = [
-            Input::External("a"),
-            Input::Module("b", r#""ok""#),
-            Input::Module("c", r#"1"#),
-            Input::Module("d", r#"1.0"#),
-            Input::Module("e", r#"todo"#),
-        ];
-        assert_eq!(
-            parse_and_order(&functions).unwrap(),
-            vec![vec!["a"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]]
-        );
-    }
-
-    fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
-        let functions = functions
-            .iter()
-            .map(|input| match input {
-                Input::Module(name, src) => Function::Module(ModuleFunction {
-                    name: name.into(),
-                    arguments: vec![],
-                    body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
-                    location: Default::default(),
-                    return_annotation: None,
-                    public: true,
-                    end_position: src.len() as u32,
-                    return_type: (),
-                    doc: None,
-                }),
-                Input::External(name) => Function::External(ExternalFunction {
-                    name: name.into(),
-                    arguments: vec![],
-                    module: "themodule".into(),
-                    fun: name.into(),
-                    location: Default::default(),
-                    public: true,
-                    return_: TypeAst::Hole {
-                        location: Default::default(),
-                        name: "_".into(),
-                    },
-                    return_type: (),
-                    doc: None,
-                }),
-            })
-            .collect_vec();
-        Ok(into_dependency_order(functions)?
-            .into_iter()
-            .map(|level| {
-                level
-                    .into_iter()
-                    .map(|function| function.name().into())
-                    .collect_vec()
-            })
-            .collect())
-    }
 }

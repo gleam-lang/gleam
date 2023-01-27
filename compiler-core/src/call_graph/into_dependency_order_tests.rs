@@ -1,0 +1,126 @@
+use super::*;
+use crate::ast::TypeAst;
+use smol_str::SmolStr;
+
+enum Input {
+    Module(&'static str, &'static str),
+    External(&'static str),
+}
+
+#[test]
+fn empty() {
+    let functions = [];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        Vec::<Vec<SmolStr>>::new()
+    );
+}
+
+#[test]
+fn no_deps() {
+    let functions = [
+        Input::External("a"),
+        Input::Module("b", r#""ok""#),
+        Input::Module("c", r#"1"#),
+        Input::Module("d", r#"1.0"#),
+        Input::Module("e", r#"todo"#),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["b"], vec!["c"], vec!["d"], vec!["e"]]
+    );
+}
+
+#[test]
+fn one_dep() {
+    let functions = [
+        Input::External("a"),
+        Input::Module("b", r#"c"#),
+        Input::Module("c", r#"0"#),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["c"], vec!["b"]]
+    );
+}
+
+#[test]
+fn unknown_vars() {
+    let functions = [
+        Input::External("a"),
+        Input::Module("b", r#"Nil"#),
+        Input::Module("c", r#"Ok"#),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["b"], vec!["c"]]
+    );
+}
+
+#[test]
+fn calling_function() {
+    let functions = [
+        Input::Module("a", r#"b()"#),
+        Input::Module("b", r#"c(1, 2)"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["c"], vec!["b"], vec!["a"]]
+    );
+}
+
+#[test]
+fn ref_in_call_argument() {
+    let functions = [
+        Input::Module("a", r#"c(1, b())"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
+    let functions = functions
+        .iter()
+        .map(|input| match input {
+            Input::Module(name, src) => Function::Module(ModuleFunction {
+                name: name.into(),
+                arguments: vec![],
+                body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
+                location: Default::default(),
+                return_annotation: None,
+                public: true,
+                end_position: src.len() as u32,
+                return_type: (),
+                doc: None,
+            }),
+            Input::External(name) => Function::External(ExternalFunction {
+                name: name.into(),
+                arguments: vec![],
+                module: "themodule".into(),
+                fun: name.into(),
+                location: Default::default(),
+                public: true,
+                return_: TypeAst::Hole {
+                    location: Default::default(),
+                    name: "_".into(),
+                },
+                return_type: (),
+                doc: None,
+            }),
+        })
+        .collect_vec();
+    Ok(into_dependency_order(functions)?
+        .into_iter()
+        .map(|level| {
+            level
+                .into_iter()
+                .map(|function| function.name().into())
+                .collect_vec()
+        })
+        .collect())
+}
