@@ -137,7 +137,7 @@ fn pattern_segment<'a>(
         )
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
     bit_string_segment(document, options, size, unit, true, env)
 }

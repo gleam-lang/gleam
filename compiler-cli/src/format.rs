@@ -23,7 +23,7 @@ fn process_stdin(check: bool) -> Result<()> {
     gleam_core::format::pretty(&mut out, &src, Path::new("<stdin>"))?;
 
     if !check {
-        print!("{}", out);
+        print!("{out}");
         return Ok(());
     }
 

@@ -40,7 +40,7 @@ impl<'a> Erlang<'a> {
         module: &Module,
         erl_name: &str,
     ) -> Result<()> {
-        let name = format!("{}.erl", erl_name);
+        let name = format!("{erl_name}.erl");
         let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
         let output = erlang::module(&module.ast, &line_numbers);
@@ -55,7 +55,7 @@ impl<'a> Erlang<'a> {
         erl_name: &str,
     ) -> Result<()> {
         for (name, text) in erlang::records(&module.ast) {
-            let name = format!("{}_{}.hrl", erl_name, name);
+            let name = format!("{erl_name}_{name}.hrl");
             tracing::debug!(name = ?name, "Generated Erlang header");
             writer.write(&self.include_directory.join(name), &text)?;
         }
@@ -85,7 +85,7 @@ impl<'a> ErlangApp<'a> {
         modules: &[Module],
     ) -> Result<()> {
         fn tuple(key: &str, value: &str) -> String {
-            format!("    {{{}, {}}},\n", key, value)
+            format!("    {{{key}, {value}}},\n")
         }
 
         let path = self.output_directory.join(format!("{}.app", &config.name));
@@ -193,7 +193,7 @@ impl<'a> JavaScript<'a> {
         module: &Module,
         js_name: &str,
     ) -> Result<()> {
-        let name = format!("{}.d.ts", js_name);
+        let name = format!("{js_name}.d.ts");
         let path = self.output_directory.join(name);
         let output = javascript::ts_declaration(&module.ast, &module.input_path, &module.code);
         tracing::debug!(name = ?js_name, "Generated TS declaration");
@@ -206,7 +206,7 @@ impl<'a> JavaScript<'a> {
         module: &Module,
         js_name: &str,
     ) -> Result<()> {
-        let name = format!("{}.mjs", js_name);
+        let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
         let output =

@@ -342,7 +342,7 @@ fn did_you_mean(name: &str, options: &[SmolStr]) -> Option<String> {
         .filter(|&option| option != crate::ast::CAPTURE_VARIABLE)
         .sorted()
         .min_by_key(|option| strsim::levenshtein(option, name))
-        .map(|option| format!("Did you mean `{}`?", option))
+        .map(|option| format!("Did you mean `{option}`?"))
 }
 
 impl Error {
@@ -413,7 +413,7 @@ This prefix is intended for official Gleam packages only.",
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
                 title: "Project folder already exists".into(),
-                text: format!("Project folder root:\n\n  {}", path),
+                text: format!("Project folder root:\n\n  {path}"),
                 level: Level::Error,
                 hint: None,
                 location: None,
@@ -421,7 +421,7 @@ This prefix is intended for official Gleam packages only.",
 
             Error::UnableToFindProjectRoot { path } => Diagnostic {
                 title: "Invalid project root".into(),
-                text: format!("We were unable to find the project root:\n\n  {}", path),
+                text: format!("We were unable to find the project root:\n\n  {path}"),
                 hint: None,
                 level: Level::Error,
                 location: None,
@@ -429,9 +429,8 @@ This prefix is intended for official Gleam packages only.",
 
             Error::VersionDoesNotMatch { toml_ver, app_ver } => {
                 let text = format!(
-                    "The version in gleam.toml \"{}\" does not match the version in
-your app.src file \"{}\"",
-                    toml_ver, app_ver
+                    "The version in gleam.toml \"{toml_ver}\" does not match the version in
+your app.src file \"{app_ver}\""
                 );
                 Diagnostic {
                     title: "Version does not match".into(),
@@ -443,7 +442,7 @@ your app.src file \"{}\"",
             }
 
             Error::ShellProgramNotFound { program } => {
-                let mut text = format!("The program `{}` was not found. Is it installed?", program);
+                let mut text = format!("The program `{program}` was not found. Is it installed?");
 
                 match program.as_str() {
                     "erl" | "erlc" | "escript" => text.push_str(
@@ -485,8 +484,7 @@ You can also install rebar3 via homebrew using \"brew install rebar3\"",
                 err: None,
             } => {
                 let text = format!(
-                    "There was a problem when running the shell command `{}`.",
-                    command
+                    "There was a problem when running the shell command `{command}`."
                 );
                 Diagnostic {
                     title: "Shell command failure".into(),
@@ -525,8 +523,7 @@ The error from the shell command library was:
 
 This was error from the gzip library:
 
-    {}",
-                    detail
+    {detail}"
                 );
                 Diagnostic {
                     title: "Gzip compression failure".into(),
@@ -563,8 +560,7 @@ This was error from the tar library:
 
 This was error from the tar library:
 
-    {}",
-                    error
+    {error}"
                 );
                 Diagnostic {
                     title: "Failure opening tar archive".into(),
@@ -581,8 +577,7 @@ This was error from the tar library:
 
 This was error from the tar library:
 
-    {}",
-                    detail
+    {detail}"
                 );
                 Diagnostic {
                     title: "Failure creating tar archive".into(),
@@ -599,8 +594,7 @@ This was error from the tar library:
 
 This was error from the Hex client library:
 
-    {}",
-                    detail
+    {detail}"
                 );
                 Diagnostic {
                     title: "Hex API failure".into(),
@@ -637,7 +631,7 @@ Second: {}",
 
             Error::DuplicateSourceFile { file } => Diagnostic {
                 title: "Duplicate Source file".into(),
-                text: format!("The file `{}` is defined multiple times.", file),
+                text: format!("The file `{file}` is defined multiple times."),
                 hint: None,
                 level: Level::Error,
                 location: None,
@@ -651,8 +645,7 @@ Second: {}",
             } => {
                 let err = match err {
                     Some(e) => format!(
-                        "\nThe error message from the file IO library was:\n\n    {}\n",
-                        e
+                        "\nThe error message from the file IO library was:\n\n    {e}\n"
                     ),
                     None => "".into(),
                 };
@@ -679,8 +672,7 @@ Second: {}",
                 let text = format!(
                     "An error occurred while trying make a git repository for this project:
 
-    {}",
-                    error
+    {error}"
                 );
                 Diagnostic {
                     title: "Failed to initialize git repository".into(),
@@ -780,8 +772,7 @@ constructor accepts."
                 TypeError::UnexpectedLabelledArg { location, label } => {
                     let text = format!(
                         "This argument has been given a label but the constructor does
-not expect any. Please remove the label `{}`.",
-                        label
+not expect any. Please remove the label `{label}`."
                     );
                     Diagnostic {
                         title: "Unexpected labelled argument".into(),
@@ -829,9 +820,8 @@ also be labelled."
                     name,
                 } => {
                     let text = format!(
-                        "{} has been imported multiple times.
-Names in a Gleam module must be unique so one will need to be renamed.",
-                        name
+                        "{name} has been imported multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
                         title: "Duplicate import".into(),
@@ -860,9 +850,8 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "`{}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed.",
-                        name
+                        "`{name}` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
                         title: "Duplicate definition".into(),
@@ -891,9 +880,8 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "`{}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed.",
-                        name
+                        "`{name}` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
                         title: "Duplicate constant definition".into(),
@@ -922,9 +910,8 @@ Names in a Gleam module must be unique so one will need to be renamed.",
                     ..
                 } => {
                     let text = format!(
-                        "The type `{}` has been defined multiple times.
-Names in a Gleam module must be unique so one will need to be renamed.",
-                        name
+                        "The type `{name}` has been defined multiple times.
+Names in a Gleam module must be unique so one will need to be renamed."
                     );
                     Diagnostic {
                         title: "Duplicate type definition".into(),
@@ -948,8 +935,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
 
                 TypeError::DuplicateField { location, label } => {
                     let text = format!(
-                        "The field `{}` has already been defined. Rename this field.",
-                        label
+                        "The field `{label}` has already been defined. Rename this field."
                     );
                     Diagnostic {
                         title: "Duplicate field".into(),
@@ -970,8 +956,7 @@ Names in a Gleam module must be unique so one will need to be renamed.",
 
                 TypeError::DuplicateArgument { location, label } => {
                     let text = format!(
-                        "The labelled argument `{}` has already been supplied.",
-                        label
+                        "The labelled argument `{label}` has already been supplied."
                     );
                     Diagnostic {
                         title: "Duplicate argument".into(),
@@ -1273,12 +1258,11 @@ number of arguments."
                     } else {
                         let labels = labels
                             .iter()
-                            .map(|p| format!("  - {}", p))
+                            .map(|p| format!("  - {p}"))
                             .sorted()
                             .join("\n");
                         format!(
-                            "This call accepts these additional labelled arguments:\n\n{}",
-                            labels,
+                            "This call accepts these additional labelled arguments:\n\n{labels}",
                         )
                     };
                     let expected = match expected {
@@ -1438,7 +1422,7 @@ Private types can only be used within the module that defines them.",
                     imported_modules,
                 } => Diagnostic {
                     title: "Unknown module".into(),
-                    text: format!("No module has been found with the name `{}`.", name),
+                    text: format!("No module has been found with the name `{name}`."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
@@ -1552,8 +1536,7 @@ Each clause must have a pattern for every subject value.",
                         location: Some(Location {
                             label: Label {
                                 text: Some(format!(
-                                    "Expected {} patterns, got {}",
-                                    expected, given
+                                    "Expected {expected} patterns, got {given}"
                                 )),
                                 span: *location,
                             },
@@ -1778,7 +1761,7 @@ function and try again."
                     let (label, mut extra) = match error {
                         bit_string::ErrorType::ConflictingTypeOptions { existing_type } => (
                             "This is an extra type specifier.",
-                            vec![format!("Hint: This segment already has the type {}.", existing_type)],
+                            vec![format!("Hint: This segment already has the type {existing_type}.")],
                         ),
 
                         bit_string::ErrorType::ConflictingSignednessOptions {
@@ -1786,8 +1769,7 @@ function and try again."
                         } => (
                             "This is an extra signedness specifier.",
                             vec![format!(
-                                "Hint: This segment already has a signedness of {}.",
-                                existing_signed
+                                "Hint: This segment already has a signedness of {existing_signed}."
                             )],
                         ),
 
@@ -1796,8 +1778,7 @@ function and try again."
                         } => (
                             "This is an extra endianness specifier.",
                             vec![format!(
-                                "Hint: This segment already has an endianness of {}.",
-                                existing_endianness
+                                "Hint: This segment already has an endianness of {existing_endianness}."
                             )],
                         ),
 
@@ -1828,15 +1809,15 @@ function and try again."
 
                         bit_string::ErrorType::SignednessUsedOnNonInt { typ } => (
                             "Signedness is only valid with int types.",
-                            vec![format!("Hint: This segment has a type of {}", typ)],
+                            vec![format!("Hint: This segment has a type of {typ}")],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowSize { typ } => (
                             "Size cannot be specified here",
-                            vec![format!("Hint: {} segments have an autoatic size.", typ)],
+                            vec![format!("Hint: {typ} segments have an autoatic size.")],
                         ),
                         bit_string::ErrorType::TypeDoesNotAllowUnit { typ } => (
                             "Unit cannot be specified here",
-                            vec![wrap(&format!("Hint: {} segments are sized based on their value and cannot have a unit.", typ))],
+                            vec![wrap(&format!("Hint: {typ} segments are sized based on their value and cannot have a unit."))],
                         ),
                         bit_string::ErrorType::VariableUtfSegmentInPattern => (
                             "This cannot be a variable",
@@ -1905,9 +1886,8 @@ function and try again."
 
                 TypeError::ReservedModuleName { name } => {
                     let text = format!(
-                        "The module name `{}` is reserved.
-Try a different name for this module.",
-                        name
+                        "The module name `{name}` is reserved.
+Try a different name for this module."
                     );
                     Diagnostic {
                         title: "Reserved module name".into(),
@@ -1920,10 +1900,9 @@ Try a different name for this module.",
 
                 TypeError::KeywordInModuleName { name, keyword } => {
                     let text = wrap(&format!(
-                        "The module name `{}` contains the keyword `{}`, so importing \
+                        "The module name `{name}` contains the keyword `{keyword}`, so importing \
 it would be a syntax error.
-Try a different name for this module.",
-                        name, keyword
+Try a different name for this module."
                     ));
                     Diagnostic {
                         title: "Invalid module name".into(),
@@ -2068,8 +2047,7 @@ cycle to continue.",
                 modules,
             } => {
                 let text = wrap(&format!(
-                    "The module `{}` is trying to import the module `{}`, but it cannot be found.",
-                    module, import
+                    "The module `{module}` is trying to import the module `{import}`, but it cannot be found."
                 ));
                 Diagnostic {
                     title: "Unknown import".into(),
@@ -2115,7 +2093,7 @@ cycle to continue.",
                 let files: Vec<_> = problem_files
                     .iter()
                     .flat_map(|formatted| formatted.source.to_str())
-                    .map(|p| format!("  - {}", p))
+                    .map(|p| format!("  - {p}"))
                     .sorted()
                     .collect();
                 let mut text = files.iter().join("\n");
@@ -2138,7 +2116,7 @@ cycle to continue.",
 Fix the warnings and try again."
                     .into();
                 Diagnostic {
-                    title: format!("{} {} generated.", count, word_warning),
+                    title: format!("{count} {word_warning} generated."),
                     text,
                     hint: None,
                     location: None,
@@ -2149,7 +2127,7 @@ Fix the warnings and try again."
             Error::JavaScript { src, path, error } => match error {
                 javascript::Error::Unsupported { feature, location } => Diagnostic {
                     title: "Unsupported feature for compilation target".into(),
-                    text: format!("{} is not supported for JavaScript compilation", feature),
+                    text: format!("{feature} is not supported for JavaScript compilation"),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
@@ -2170,11 +2148,10 @@ Fix the warnings and try again."
                 error,
             } => {
                 let text = format!(
-                    "A problem was encountered when downloading {} {}.
+                    "A problem was encountered when downloading {package_name} {package_version}.
 The error from the package manager client was:
 
-    {}",
-                    package_name, package_version, error
+    {error}"
                 );
                 Diagnostic {
                     title: "Failed to download package".into(),
@@ -2190,8 +2167,7 @@ The error from the package manager client was:
                     "A HTTP request failed.
 The error from the HTTP client was:
 
-    {}",
-                    error
+    {error}"
                 );
                 Diagnostic {
                     title: "HTTP error".into(),
@@ -2204,11 +2180,10 @@ The error from the HTTP client was:
 
             Error::InvalidVersionFormat { input, error } => {
                 let text = format!(
-                    "I was unable to parse the version {}.
+                    "I was unable to parse the version {input}.
 The error from the parser was:
 
-    {}",
-                    input, error
+    {error}"
                 );
                 Diagnostic {
                     title: "Invalid version format".into(),
@@ -2239,9 +2214,8 @@ The error from the version resolver library was:
 
             Error::DuplicateDependency(name) => {
                 let text = format!(
-                    "The package {} is specified in both the dependencies and
-dev-dependencies sections of the gleam.toml file.",
-                    name
+                    "The package {name} is specified in both the dependencies and
+dev-dependencies sections of the gleam.toml file."
                 );
                 Diagnostic {
                     title: "Dependency duplicated".into(),
@@ -2308,7 +2282,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 target,
                 invalid_runtime,
             } => {
-                let text = format!("Invalid runtime for {} target: {}", target, invalid_runtime);
+                let text = format!("Invalid runtime for {target} target: {invalid_runtime}");
 
                 let hint = match target {
                     Target::JavaScript => {
@@ -2321,7 +2295,7 @@ issue in our tracker: https://github.com/gleam-lang/gleam/issues",
                 };
 
                 Diagnostic {
-                    title: format!("Invalid runtime for {}", target),
+                    title: format!("Invalid runtime for {target}"),
                     text,
                     hint,
                     location: None,
@@ -2402,7 +2376,7 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 }
 
 fn hint_numeric_message(alt: &str, type_: &str) -> String {
-    format!("the {} operator can be used with {}s\n", alt, type_)
+    format!("the {alt} operator can be used with {type_}s\n")
 }
 
 fn hint_string_message() -> String {

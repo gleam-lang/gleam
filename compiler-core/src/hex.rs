@@ -43,7 +43,7 @@ pub fn resolve_versions(
 }
 
 fn key_name(hostname: &str) -> String {
-    format!("gleam-{}", hostname)
+    format!("gleam-{hostname}")
 }
 
 pub async fn publish_package<Http: HttpClient>(

@@ -211,7 +211,7 @@ impl<'a> Generator<'a> {
             arg.label
                 .as_ref()
                 .map(|s| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| Document::String(format!("x{}", i)))
+                .unwrap_or_else(|| Document::String(format!("x{i}")))
         }
 
         let head = if public && !opaque {
@@ -318,16 +318,16 @@ impl<'a> Generator<'a> {
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{}.mjs", module),
+                1 => format!("./{module}.mjs"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{}{}.mjs", prefix, module)
+                    format!("{prefix}{module}.mjs")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{}{}/{}.mjs", prefix, package, module)
+            format!("{prefix}{package}/{module}.mjs")
         }
     }
 
@@ -345,7 +345,7 @@ impl<'a> Generator<'a> {
                 .last()
                 .expect("JavaScript generator could not identify imported module name.")
         });
-        let module_name = format!("${}", module_name);
+        let module_name = format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified
             .iter()
@@ -495,7 +495,7 @@ fn external_fn_args<T>(arguments: &[ExternalFnArg<T>]) -> Document<'_> {
                 label
                     .as_ref()
                     .map(|l| l.to_doc())
-                    .unwrap_or_else(|| Document::String(format!("arg{}", index)))
+                    .unwrap_or_else(|| Document::String(format!("arg{index}")))
             }),
     )
 }
@@ -543,12 +543,12 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
-                Document::String(format!("_{}", discards))
+                Document::String(format!("_{discards}"))
             };
             discards += 1;
             doc
         }
-        Some(name) if tail_recursion_used => Document::String(format!("loop${}", name)),
+        Some(name) if tail_recursion_used => Document::String(format!("loop${name}")),
         Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
@@ -681,7 +681,7 @@ fn maybe_escape_identifier_string(word: &str) -> String {
 }
 
 fn escape_identifier(word: &str) -> String {
-    format!("{}$", word)
+    format!("{word}$")
 }
 
 fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {

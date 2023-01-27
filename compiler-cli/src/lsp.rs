@@ -706,9 +706,8 @@ impl LanguageServer {
         let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
         let contents = format!(
             "```gleam
-{}
-```",
-            type_
+{type_}
+```"
         );
         Ok(Some(Hover {
             contents: HoverContents::Scalar(MarkedString::String(contents)),

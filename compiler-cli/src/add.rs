@@ -49,7 +49,7 @@ pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
             toml["dependencies"][&package_to_add] = toml_edit::value(range);
         };
 
-        cli::print_added(&format!("{} v{}", package_to_add, version));
+        cli::print_added(&format!("{package_to_add} v{version}"));
     }
 
     // Write the updated config

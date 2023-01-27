@@ -181,7 +181,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
 
                 let messages = match hint {
                     Some(hint_text) => messages
-                        .chain(std::iter::once(format!("Hint: {}", hint_text)))
+                        .chain(std::iter::once(format!("Hint: {hint_text}")))
                         .collect(),
                     _ => messages.collect(),
                 };

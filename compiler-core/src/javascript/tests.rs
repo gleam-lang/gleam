@@ -145,7 +145,7 @@ macro_rules! assert_js {
         // place.
         let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my/mod".into();
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,
@@ -281,7 +281,7 @@ macro_rules! assert_ts_def {
         // place.
         let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
 
-        let (mut ast, _) = crate::parse::parse_module($src).expect("syntax error");
+        let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my/mod".into();
         let ast = crate::type_::infer_module(
             crate::build::Target::JavaScript,

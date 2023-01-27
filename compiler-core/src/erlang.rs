@@ -67,7 +67,7 @@ impl<'env> Env<'env> {
             Some(n) => {
                 use std::fmt::Write;
                 let mut name = variable_name(name);
-                write!(name, "@{}", n).expect("pushing number suffix to name");
+                write!(name, "@{n}").expect("pushing number suffix to name");
                 Document::String(name)
             }
         }
@@ -489,13 +489,13 @@ fn escape_atom(value: String) -> String {
 
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
-        format!("'{}'", value)
+        format!("'{value}'")
     } else if RE.is_match(&value) {
         // No need to escape
         value
     } else {
         // Escape because of characters contained
-        format!("'{}'", value)
+        format!("'{value}'")
     }
 }
 
@@ -588,7 +588,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
     bit_string_segment(document, options, size, unit, true, env)
 }
@@ -621,7 +621,7 @@ fn expr_segment<'a>(
         TypedExpr::Int { value, .. } => {
             let v = value.replace('_', "");
             let v = u64::from_str(&v).unwrap_or(0);
-            Some(Document::String(format!(":{}", v)))
+            Some(Document::String(format!(":{v}")))
         }
 
         _ => {
@@ -637,7 +637,7 @@ fn expr_segment<'a>(
         }
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{}", value)));
+    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
     bit_string_segment(
         document,
@@ -1618,12 +1618,12 @@ fn external_fun<'a>(
     let spec = fun_spec(name, args_spec, return_spec);
 
     spec.append(atom(name.to_string())).append(
-        Document::String(format!("({}) ->", chars))
+        Document::String(format!("({chars}) ->"))
             .append(line())
             .append(atom(module.to_string()))
             .append(":")
             .append(atom(fun.to_string()))
-            .append(Document::String(format!("({}).", chars)))
+            .append(Document::String(format!("({chars}).")))
             .nest(INDENT)
             .group(),
     )
@@ -1934,7 +1934,7 @@ impl<'a> TypePrinter<'a> {
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
             // compiler error
-            name => panic!("{} is not a built-in type.", name),
+            name => panic!("{name} is not a built-in type."),
         }
     }
 

@@ -595,7 +595,7 @@ where
                 },
             })
         } else {
-            let value = format!("{}{}", prefix, num);
+            let value = format!("{prefix}{num}");
             let end_pos = self.get_pos();
             Ok((
                 start_pos,
@@ -689,7 +689,7 @@ where
     fn is_digit_of_radix(c: Option<char>, radix: u32) -> bool {
         match radix {
             2 | 8 | 10 | 16 => c.filter(|c| c.is_digit(radix)).is_some(),
-            other => panic!("Radix not implemented: {}", other),
+            other => panic!("Radix not implemented: {other}"),
         }
     }
 
@@ -782,7 +782,7 @@ where
         matches!(c, '_' | 'a'..='z')
     }
     fn is_upname_start(&self, c: char) -> bool {
-        matches!(c, 'A'..='Z')
+        c.is_ascii_uppercase()
     }
     fn is_number_start(&self, c: char, c1: Option<char>) -> bool {
         match c {

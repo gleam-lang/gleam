@@ -52,7 +52,7 @@ impl Telemetry for Reporter {
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {
-    print!("{}: ", question);
+    print!("{question}: ");
     std::io::stdout().flush().expect("ask stdout flush");
     let mut answer = String::new();
     let _ = std::io::stdin()
@@ -65,7 +65,7 @@ pub fn ask(question: &str) -> Result<String, Error> {
 }
 
 pub fn ask_password(question: &str) -> Result<String, Error> {
-    let prompt = format!("{} (will not be printed as you type): ", question);
+    let prompt = format!("{question} (will not be printed as you type): ");
     rpassword::read_password_from_tty(Some(&prompt))
         .map_err(|e| Error::StandardIo {
             action: StandardIoAction::Read,
@@ -75,7 +75,7 @@ pub fn ask_password(question: &str) -> Result<String, Error> {
 }
 
 pub fn print_publishing(name: &str, version: &Version) {
-    print_colourful_prefix(" Publishing", &format!("{} v{}", name, version))
+    print_colourful_prefix(" Publishing", &format!("{name} v{version}"))
 }
 
 pub fn print_published(duration: Duration) {
@@ -83,11 +83,11 @@ pub fn print_published(duration: Duration) {
 }
 
 pub fn print_retired(package: &str, version: &str) {
-    print_colourful_prefix("    Retired", &format!("{} {}", package, version))
+    print_colourful_prefix("    Retired", &format!("{package} {version}"))
 }
 
 pub fn print_unretired(package: &str, version: &str) {
-    print_colourful_prefix("  Unretired", &format!("{} {}", package, version))
+    print_colourful_prefix("  Unretired", &format!("{package} {version}"))
 }
 
 pub fn print_publishing_documentation() {
@@ -141,8 +141,8 @@ pub(crate) fn print_generating_documentation() {
 fn print_packages_downloaded(start: Instant, count: usize) {
     let elapsed = seconds(start.elapsed());
     let msg = match count {
-        1 => format!("1 package in {}", elapsed),
-        _ => format!("{} packages in {}", count, elapsed),
+        1 => format!("1 package in {elapsed}"),
+        _ => format!("{count} packages in {elapsed}"),
     };
     print_colourful_prefix(" Downloaded", &msg)
 }
@@ -161,11 +161,11 @@ pub fn print_colourful_prefix(prefix: &str, text: &str) {
                 .set_fg(Some(Color::Magenta)),
         )
         .expect("print_green_prefix");
-    write!(buffer, "{}", prefix).expect("print_green_prefix");
+    write!(buffer, "{prefix}").expect("print_green_prefix");
     buffer
         .set_color(&ColorSpec::new())
         .expect("print_green_prefix");
-    writeln!(buffer, " {}", text).expect("print_green_prefix");
+    writeln!(buffer, " {text}").expect("print_green_prefix");
     buffer_writer.print(&buffer).expect("print_green_prefix");
 }
 

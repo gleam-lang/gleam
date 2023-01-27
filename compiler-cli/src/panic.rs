@@ -39,8 +39,7 @@ fn print_compiler_bug_message(info: &PanicInfo<'_>) {
 Please report this crash to https://github.com/gleam-lang/gleam/issues/new
 with this information and the code that produces the crash.
 
-\t{}{}",
-        location, message
+\t{location}{message}"
     )
     .unwrap();
     buffer_writer.print(&buffer).unwrap();

@@ -174,6 +174,6 @@ impl fmt::Display for Token {
             Token::Type => "type",
             Token::LtGt => "<>",
         };
-        write!(f, "\"{}\"", s)
+        write!(f, "\"{s}\"")
     }
 }

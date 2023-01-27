@@ -113,7 +113,7 @@ impl TestCompileOutput {
         }
 
         for warning in self.warnings.iter() {
-            write!(buffer, "//// Warning\n{:#?}", warning).unwrap();
+            write!(buffer, "//// Warning\n{warning:#?}").unwrap();
             buffer.push('\n');
             buffer.push('\n');
         }

@@ -55,7 +55,7 @@ impl Diagnostic {
         }
 
         if let Some(hint) = &self.hint {
-            writeln!(buffer, "Hint: {}", hint).expect("write hint");
+            writeln!(buffer, "Hint: {hint}").expect("write hint");
         }
     }
 
@@ -102,7 +102,7 @@ impl Diagnostic {
         buffer
             .set_color(ColorSpec::new().set_bold(true).set_fg(Some(colour)))
             .expect("write_title_color1");
-        write!(buffer, "{}", kind).expect("write_title_kind");
+        write!(buffer, "{kind}").expect("write_title_kind");
         buffer
             .set_color(ColorSpec::new().set_bold(true))
             .expect("write_title_color2");

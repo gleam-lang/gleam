@@ -445,7 +445,7 @@ fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
 }
 
 fn import_synonyms(parent: &str, child: &str) -> String {
-    format!("Synonyms:\n{}.{}\n{} {}", parent, child, parent, child)
+    format!("Synonyms:\n{parent}.{child}\n{parent} {child}")
 }
 
 fn function<'a>(

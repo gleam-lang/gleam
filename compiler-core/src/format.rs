@@ -1760,7 +1760,7 @@ where
         BitStringSegmentOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
-            .append(Document::String(format!("{}", value)))
+            .append(Document::String(format!("{value}")))
             .append(")"),
     }
 }

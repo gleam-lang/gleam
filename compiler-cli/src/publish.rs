@@ -488,5 +488,5 @@ pub fn get_hostname() -> String {
 }
 
 fn quotes(x: &str) -> String {
-    format!(r#"<<"{}">>"#, x)
+    format!(r#"<<"{x}">>"#)
 }

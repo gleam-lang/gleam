@@ -398,7 +398,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         definitions.push(Ok(docvec![
             "export type ",
-            name_with_generics(Document::String(format!("{}$", name)), typed_parameters),
+            name_with_generics(Document::String(format!("{name}$")), typed_parameters),
             " = ",
             concat(Itertools::intersperse(
                 constructors.iter().map(|x| name_with_generics(
@@ -447,7 +447,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     .label
                     .as_ref()
                     .map(|s| super::maybe_escape_identifier_doc(s))
-                    .unwrap_or_else(|| Document::String(format!("{}", i)));
+                    .unwrap_or_else(|| Document::String(format!("{i}")));
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
@@ -460,7 +460,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         .label
                         .as_ref()
                         .map(|s| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| Document::String(format!("x{}", i)));
+                        .unwrap_or_else(|| Document::String(format!("x{i}")));
                     docvec![
                         name,
                         ": ",
@@ -723,7 +723,7 @@ impl<'a> TypeScriptGenerator<'a> {
             }
             // Getting here sholud mean we either forgot a built-in type or there is a
             // compiler error
-            name => panic!("{} is not a built-in type.", name),
+            name => panic!("{name} is not a built-in type."),
         }
     }
 

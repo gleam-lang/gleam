@@ -459,7 +459,7 @@ fn command_build(target: Option<Target>) -> Result<(), Error> {
 
 fn print_config() -> Result<()> {
     let config = root_config()?;
-    println!("{:#?}", config);
+    println!("{config:#?}");
     Ok(())
 }
 

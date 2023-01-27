@@ -50,8 +50,7 @@ impl<'de> Deserialize<'de> for SpdxLicense {
         let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
         match spdx::license_id(s) {
             None => Err(serde::de::Error::custom(format!(
-                "{} is not a valid SPDX License ID",
-                s
+                "{s} is not a valid SPDX License ID"
             ))),
             Some(_) => Ok(SpdxLicense {
                 licence: String::from(s),
@@ -662,13 +661,13 @@ impl Repository {
     pub fn url(&self) -> Option<String> {
         match self {
             Repository::GitHub { repo, user } => {
-                Some(format!("https://github.com/{}/{}", user, repo))
+                Some(format!("https://github.com/{user}/{repo}"))
             }
             Repository::GitLab { repo, user } => {
-                Some(format!("https://gitlab.com/{}/{}", user, repo))
+                Some(format!("https://gitlab.com/{user}/{repo}"))
             }
             Repository::BitBucket { repo, user } => {
-                Some(format!("https://bitbucket.com/{}/{}", user, repo))
+                Some(format!("https://bitbucket.com/{user}/{repo}"))
             }
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,

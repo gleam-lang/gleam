@@ -51,7 +51,7 @@ impl SourceLinker {
             Some((base, line_sep)) => {
                 let start_line = self.line_numbers.line_number(span.start);
                 let end_line = self.line_numbers.line_number(span.end);
-                format!("{}{}{}{}", base, start_line, line_sep, end_line)
+                format!("{base}{start_line}{line_sep}{end_line}")
             }
 
             None => "".into(),

@@ -58,8 +58,8 @@ impl<'module> Generator<'module> {
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => Document::String(format!("${}", n)),
-            Some(n) => Document::String(format!("{}${}", name, n)),
+            Some(n) if name == "$" => Document::String(format!("${n}")),
+            Some(n) => Document::String(format!("{name}${n}")),
         }
     }
 
@@ -366,7 +366,7 @@ impl<'module> Generator<'module> {
                 None => docvec!["new ", name, "()"],
             }
         } else {
-            let vars = (0..arity).map(|i| Document::String(format!("var{}", i)));
+            let vars = (0..arity).map(|i| Document::String(format!("var{i}")));
             let body = docvec![
                 "return ",
                 construct_record(qualifier, name, vars.clone()),
@@ -843,7 +843,7 @@ impl<'module> Generator<'module> {
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, Document::String(format!("[{}]", index))])
+            Ok(docvec![tuple, Document::String(format!("[{index}]"))])
         })
     }
 

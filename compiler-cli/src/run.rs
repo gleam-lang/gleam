@@ -41,7 +41,7 @@ pub fn command(
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
-    crate::cli::print_running(&format!("{}.main", module));
+    crate::cli::print_running(&format!("{module}.main"));
 
     // Run the command
     let status = match target.unwrap_or(config.target) {
