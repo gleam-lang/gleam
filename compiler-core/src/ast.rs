@@ -1078,6 +1078,13 @@ impl AssignName {
             AssignName::Discard(name) => ArgNames::Discard { name },
         }
     }
+
+    pub fn assigned_name(&self) -> Option<&str> {
+        match self {
+            AssignName::Variable(name) => Some(name),
+            AssignName::Discard(_) => None,
+        }
+    }
 }
 
 impl<A, B> Pattern<A, B> {

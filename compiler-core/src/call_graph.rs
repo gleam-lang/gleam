@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{SrcSpan, Use};
+use crate::ast::{AssignName, SrcSpan, Use};
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -39,7 +39,7 @@ impl Function {
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
-    names: im::HashMap<&'a str, (NodeIndex, SrcSpan)>,
+    names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
 }
@@ -56,10 +56,10 @@ impl<'a> CallGraphBuilder<'a> {
         let location = function.location();
 
         let index = self.graph.add_node(());
-        let previous = self.names.insert(name, (index, location));
+        let previous = self.names.insert(name, Some((index, location)));
 
         // TODO: return an error if there are duplicate function names
-        if let Some((_, previous_location)) = previous {
+        if let Some(Some((_, previous_location))) = previous {
             panic!(
                 "Duplicate function name {} found at {:?} and {:?}",
                 name, location, previous_location
@@ -68,13 +68,14 @@ impl<'a> CallGraphBuilder<'a> {
         Ok(())
     }
 
-    fn register_references(&mut self, function: &Function) {
+    fn register_references(&mut self, function: &'a Function) {
         match function {
             Function::Module(f) => {
                 let current = self
                     .names
                     .get(f.name.as_str())
                     .expect("Function must exist")
+                    .expect("Function must not be shadowed")
                     .0;
                 self.expression(current, &f.body)
             }
@@ -86,11 +87,20 @@ impl<'a> CallGraphBuilder<'a> {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
-        let Some((target, _)) = self.names.get(name) else { return };
+        let Some(target) = self.names.get(name) else { return };
+        // If the target is known but registered as None then it's local value
+        // that shadows a module function.
+        let Some((target, _)) = target else { return };
         _ = self.graph.add_edge(current, *target, ());
     }
 
-    fn expression(&mut self, current: NodeIndex, expression: &UntypedExpr) {
+    fn scoped_expression(&mut self, current: NodeIndex, expression: &'a UntypedExpr) {
+        let names = self.names.clone();
+        self.expression(current, expression);
+        self.names = names;
+    }
+
+    fn expression(&mut self, current: NodeIndex, expression: &'a UntypedExpr) {
         match expression {
             UntypedExpr::Todo { .. }
             | UntypedExpr::Int { .. }
@@ -105,7 +115,7 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Call { fun, arguments, .. } => {
                 self.expression(current, fun);
                 for argument in arguments {
-                    self.expression(current, &argument.value);
+                    self.scoped_expression(current, &argument.value);
                 }
             }
 
@@ -115,26 +125,32 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::Tuple {
-                elems: expressions, ..
-            }
-            | UntypedExpr::Sequence { expressions, .. } => {
-                for expression in expressions {
-                    self.expression(current, expression);
+            UntypedExpr::Tuple { elems, .. } => {
+                for expression in elems {
+                    self.scoped_expression(current, expression);
                 }
             }
 
+            // TODO: test scope resetting
+            UntypedExpr::Sequence { expressions, .. } => {
+                let names = self.names.clone();
+                for expression in expressions {
+                    self.expression(current, expression);
+                }
+                self.names = names;
+            }
+
             UntypedExpr::BinOp { left, right, .. } => {
-                self.expression(current, left);
-                self.expression(current, right);
+                self.scoped_expression(current, left);
+                self.scoped_expression(current, right);
             }
 
             UntypedExpr::List { elements, tail, .. } => {
                 for element in elements {
-                    self.expression(current, element);
+                    self.scoped_expression(current, element);
                 }
                 if let Some(tail) = tail {
-                    self.expression(current, tail);
+                    self.scoped_expression(current, tail);
                 }
             }
 
@@ -148,22 +164,29 @@ impl<'a> CallGraphBuilder<'a> {
                 container: expression,
                 ..
             } => {
-                self.expression(current, expression);
+                self.scoped_expression(current, expression);
             }
 
             UntypedExpr::BitString { segments, .. } => {
                 for segment in segments {
-                    self.expression(current, &segment.value);
+                    self.scoped_expression(current, &segment.value);
                 }
             }
 
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
             } => {
-                self.expression(current, &spread.base);
+                self.scoped_expression(current, &spread.base);
                 for argument in arguments {
-                    self.expression(current, &argument.value);
+                    self.scoped_expression(current, &argument.value);
                 }
+            }
+
+            UntypedExpr::Use(use_) => {
+                for name in use_.assigned_names() {
+                    self.define(name);
+                }
+                self.expression(current, &use_.call);
             }
 
             // TODO: test
@@ -175,12 +198,14 @@ impl<'a> CallGraphBuilder<'a> {
             // TODO: test
             UntypedExpr::Try { value, then, .. } => todo!(),
             // TODO: test
-            UntypedExpr::Use(Use { call, .. }) => todo!(),
-            // TODO: test
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => todo!(),
         }
+    }
+
+    fn define(&mut self, name: &'a str) {
+        _ = self.names.insert(name, None);
     }
 }
 

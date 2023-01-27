@@ -226,6 +226,32 @@ fn negate() {
     );
 }
 
+#[test]
+fn use_() {
+    let functions = [
+        Input::Module("a", r#"use x <- c"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn use_shadowing() {
+    let functions = [
+        Input::Module("a", r#"123"#),
+        Input::Module("b", r#"{ use c <- a c }"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["b"], vec!["c"]]
+    );
+}
+
 fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
     let functions = functions
         .iter()
