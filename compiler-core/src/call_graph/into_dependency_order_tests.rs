@@ -83,6 +83,149 @@ fn ref_in_call_argument() {
     );
 }
 
+#[test]
+fn sequence() {
+    let functions = [
+        Input::Module("a", r#"c({ 1 2 b })"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn tuple() {
+    let functions = [
+        Input::Module("a", r#"#(b, c, 1)"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn pipeline() {
+    let functions = [
+        Input::Module("a", r#"1 |> b |> c"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn list() {
+    let functions = [
+        Input::Module("a", r#"[b, b, c, 1]"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn list_spread() {
+    let functions = [
+        Input::Module("a", r#"[b, b, ..c]"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn record_access() {
+    let functions = [
+        Input::External("a"),
+        Input::Module("b", r#"b().wibble"#),
+        Input::Module("c", r#"123"#),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["c"], vec!["b"]]
+    );
+}
+
+#[test]
+fn binop() {
+    let functions = [
+        Input::Module("a", r#"1 + a() + 2 / b() * 4"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn bit_strings() {
+    let functions = [
+        Input::Module("a", r#"<<b, c>>"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn tuple_index() {
+    let functions = [
+        Input::Module("a", r#"b.0"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn record_update() {
+    let functions = [
+        Input::Module("a", r#"Wibble(..b, wobble: c())"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn negate() {
+    let functions = [
+        Input::Module("a", r#"!c()"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
 fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
     let functions = functions
         .iter()
