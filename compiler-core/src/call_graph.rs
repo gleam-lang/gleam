@@ -98,7 +98,9 @@ impl<'a> CallGraphBuilder<'a> {
             | UntypedExpr::String { .. } => (),
 
             // Aha! A variable is being referenced.
-            UntypedExpr::Var { name, .. } => self.referenced(current, name),
+            UntypedExpr::Var { name, .. } => {
+                self.referenced(current, name);
+            }
 
             UntypedExpr::Call { fun, arguments, .. } => {
                 self.expression(current, fun);
@@ -107,18 +109,69 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
+            UntypedExpr::PipeLine { expressions } => {
+                for expression in expressions {
+                    self.expression(current, expression);
+                }
+            }
+
+            UntypedExpr::Tuple {
+                elems: expressions, ..
+            }
+            | UntypedExpr::Sequence { expressions, .. } => {
+                for expression in expressions {
+                    self.expression(current, expression);
+                }
+            }
+
+            UntypedExpr::BinOp { left, right, .. } => {
+                self.expression(current, left);
+                self.expression(current, right);
+            }
+
+            UntypedExpr::List { elements, tail, .. } => {
+                for element in elements {
+                    self.expression(current, element);
+                }
+                if let Some(tail) = tail {
+                    self.expression(current, tail);
+                }
+            }
+
+            UntypedExpr::Negate {
+                value: expression, ..
+            }
+            | UntypedExpr::TupleIndex {
+                tuple: expression, ..
+            }
+            | UntypedExpr::FieldAccess {
+                container: expression,
+                ..
+            } => {
+                self.expression(current, expression);
+            }
+
+            UntypedExpr::BitString { segments, .. } => {
+                for segment in segments {
+                    self.expression(current, &segment.value);
+                }
+            }
+
+            UntypedExpr::RecordUpdate {
+                spread, arguments, ..
+            } => {
+                self.expression(current, &spread.base);
+                for argument in arguments {
+                    self.expression(current, &argument.value);
+                }
+            }
+
             // TODO: test
-            UntypedExpr::Sequence { expressions, .. } => todo!(),
+            UntypedExpr::Fn {
+                arguments, body, ..
+            } => todo!(),
             // TODO: test
-            UntypedExpr::Fn { body, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::List { elements, tail, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::BinOp { left, right, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::PipeLine { expressions } => todo!(),
-            // TODO: test
-            UntypedExpr::Assignment { value, .. } => todo!(),
+            UntypedExpr::Assignment { value, pattern, .. } => todo!(),
             // TODO: test
             UntypedExpr::Try { value, then, .. } => todo!(),
             // TODO: test
@@ -127,23 +180,6 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => todo!(),
-            // TODO: test
-            UntypedExpr::FieldAccess { container, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::Tuple { elems, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::TupleIndex { tuple, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::BitString { segments, .. } => todo!(),
-            // TODO: test
-            UntypedExpr::RecordUpdate {
-                constructor,
-                spread,
-                arguments,
-                ..
-            } => todo!(),
-            // TODO: test
-            UntypedExpr::Negate { value, .. } => todo!(),
         }
     }
 }
