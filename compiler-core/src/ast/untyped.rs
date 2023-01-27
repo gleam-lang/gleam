@@ -232,3 +232,11 @@ pub struct Use {
     pub call: Box<UntypedExpr>,
     pub assignments: Vec<(AssignName, SrcSpan)>,
 }
+impl Use {
+    pub(crate) fn assigned_names(&self) -> impl Iterator<Item = &str> {
+        self.assignments
+            .iter()
+            .map(|(name, _)| name)
+            .flat_map(AssignName::assigned_name)
+    }
+}
