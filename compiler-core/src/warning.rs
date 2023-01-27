@@ -262,9 +262,7 @@ expression.",
                 type_::Warning::UnusedVariable { location, name, .. } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: Some(format!(
-                        "You can ignore it with an underscore: `_{name}`."
-                    )),
+                    hint: Some(format!("You can ignore it with an underscore: `_{name}`.")),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
