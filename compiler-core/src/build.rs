@@ -34,6 +34,12 @@ use std::{
 };
 use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
 
+#[derive(Debug)]
+pub enum WarningLevel {
+    Warn,
+    Error,
+}
+
 #[derive(
     Debug,
     Serialize,

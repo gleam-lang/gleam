@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
-    build::{Mode, Options, Package},
+    build::{Mode, Options, Package, WarningLevel},
     config::{DocsPage, PackageConfig},
     error::Error,
     hex,
@@ -60,7 +60,7 @@ pub fn build() -> Result<()> {
         mode: Mode::Prod,
         perform_codegen: true,
         target: None,
-        warnings_as_errors: false,
+        warnings_as_errors: WarningLevel::Warn,
     })?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
@@ -114,7 +114,7 @@ impl PublishCommand {
             mode: Mode::Prod,
             perform_codegen: true,
             target: None,
-            warnings_as_errors: false,
+            warnings_as_errors: WarningLevel::Warn,
         })?;
         let outputs = build_documentation(&config, &mut compiled)?;
         let archive = crate::fs::create_tar_archive(outputs)?;

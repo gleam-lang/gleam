@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Options, Target},
+    build::{Mode, Options, Target, WarningLevel},
     paths, Result,
 };
 
@@ -31,7 +31,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
         mode,
         perform_codegen: true,
         target: Some(target),
-        warnings_as_errors: true,
+        warnings_as_errors: WarningLevel::Error,
     })?;
 
     for entry in crate::fs::read_dir(&build)?

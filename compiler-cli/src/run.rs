@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use gleam_core::{
-    build::{Mode, Options, Runtime, Target},
+    build::{Mode, Options, Runtime, Target, WarningLevel},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -36,7 +36,7 @@ pub fn command(
         mode: Mode::Dev,
         perform_codegen: true,
         target,
-        warnings_as_errors: false,
+        warnings_as_errors: WarningLevel::Warn,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

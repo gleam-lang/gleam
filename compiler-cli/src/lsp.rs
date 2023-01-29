@@ -13,7 +13,10 @@ use crate::{
     fs::{self, ProjectIO},
     telemetry::NullTelemetry,
 };
-use gleam_core::{ast::Import, build::Mode};
+use gleam_core::{
+    ast::Import,
+    build::{Mode, WarningLevel},
+};
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -1012,7 +1015,7 @@ where
             mode: build::Mode::Lsp,
             perform_codegen: false,
             target: None,
-            warnings_as_errors: false,
+            warnings_as_errors: WarningLevel::Warn,
         };
         let mut project_compiler =
             ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);

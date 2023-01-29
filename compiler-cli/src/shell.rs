@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Options, Target},
+    build::{Mode, Options, Target, WarningLevel},
     error::Error,
     paths,
 };
@@ -11,7 +11,7 @@ pub fn command() -> Result<(), Error> {
         mode: Mode::Dev,
         perform_codegen: true,
         target: Some(Target::Erlang),
-        warnings_as_errors: false,
+        warnings_as_errors: WarningLevel::Warn,
     })?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

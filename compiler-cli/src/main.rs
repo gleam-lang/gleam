@@ -79,7 +79,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{Mode, Options, Runtime, Target},
+    build::{Mode, Options, Runtime, Target, WarningLevel},
     hex::RetirementReason,
 };
 use hex::ApiKeyCommand as _;
@@ -357,7 +357,14 @@ fn main() {
         Command::Build {
             target,
             warnings_as_errors,
-        } => command_build(target, warnings_as_errors),
+        } => command_build(
+            target,
+            if warnings_as_errors {
+                WarningLevel::Error
+            } else {
+                WarningLevel::Warn
+            },
+        ),
 
         Command::Check => command_check(),
 
@@ -444,17 +451,17 @@ fn command_check() -> Result<(), Error> {
         perform_codegen: false,
         mode: Mode::Dev,
         target: None,
-        warnings_as_errors: false,
+        warnings_as_errors: WarningLevel::Error,
     })?;
     Ok(())
 }
 
-fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(), Error> {
+fn command_build(target: Option<Target>, warning_level: WarningLevel) -> Result<(), Error> {
     let _ = build::main(Options {
         mode: Mode::Dev,
         perform_codegen: true,
         target,
-        warnings_as_errors,
+        warnings_as_errors: warning_level,
     })?;
     Ok(())
 }

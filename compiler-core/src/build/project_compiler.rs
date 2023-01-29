@@ -1,7 +1,7 @@
 use crate::{
     build::{
         dep_tree, package_compiler, package_compiler::PackageCompiler, project_compiler,
-        telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        telemetry::Telemetry, Mode, Module, Origin, Package, Target, WarningLevel,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
@@ -41,7 +41,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
-    pub warnings_as_errors: bool,
+    pub warnings_as_errors: WarningLevel,
     /// Whether to perform codegen for the root project. Dependencies always
     /// have codegen run. Use for the `gleam check` command.
     /// If future when we have per-module incremental builds we will need to
@@ -148,11 +148,17 @@ where
         }
 
         // Exit if warnings_as_errors and warnings
+        // TODO: test
         let warning_count = &self.warnings.len();
-        if self.options.warnings_as_errors && warning_count > &0 {
-            return Err(Error::ForbiddenWarnings {
-                count: *warning_count,
-            });
+        if warning_count > &0 {
+            match self.options.warnings_as_errors {
+                WarningLevel::Warn => {}
+                WarningLevel::Error => {
+                    return Err(Error::ForbiddenWarnings {
+                        count: *warning_count,
+                    });
+                }
+            }
         }
 
         result

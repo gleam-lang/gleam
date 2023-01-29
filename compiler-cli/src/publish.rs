@@ -6,7 +6,7 @@ use std::{
 
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
-    build::{Mode, Options, Package, Target},
+    build::{Mode, Options, Package, Target, WarningLevel},
     config::{PackageConfig, SpdxLicense},
     hex, paths, Error, Result,
 };
@@ -39,7 +39,7 @@ impl PublishCommand {
             mode: Mode::Prod,
             perform_codegen: true,
             target: Some(Target::Erlang),
-            warnings_as_errors: true,
+            warnings_as_errors: WarningLevel::Error,
         })?;
 
         // These fields are required to publish a Hex package. Hex will reject
