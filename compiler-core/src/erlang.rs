@@ -1493,7 +1493,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
                 .to_doc()
                 .append(Document::String(chars.clone()))
                 .append(") -> {")
-                .append(Document::String(name.to_snake_case()))
+                .append(atom(name.to_snake_case()))
                 .append(", ")
                 .append(Document::String(chars))
                 .append("} end")

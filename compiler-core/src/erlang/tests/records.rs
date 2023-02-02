@@ -350,3 +350,16 @@ pub fn main() {
 }"
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1981
+#[test]
+fn imported_qualified_constructor_as_fn_name_escape() {
+    assert_erl!(
+        ("other_package", "other_module", "pub type Let { Let(Int) }"),
+        "import other_module
+
+pub fn main() {
+  other_module.Let
+}"
+    );
+}

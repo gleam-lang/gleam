@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 357
+expression: "import other_module\n\npub fn main() {\n  other_module.Let\n}"
+---
+-module(my@mod).
+-compile(no_auto_import).
+
+-export([main/0]).
+
+-spec main() -> fun((integer()) -> other_module:'let'()).
+main() ->
+    fun(Field@0) -> {'let', Field@0} end.
+
