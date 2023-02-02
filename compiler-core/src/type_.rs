@@ -739,6 +739,49 @@ fn assert_unique_const_name<'a>(
     }
 }
 
+#[derive(Debug)]
+struct FieldMapBuilder {
+    index: u32,
+    field_map: FieldMap,
+}
+
+impl FieldMapBuilder {
+    fn new(size: u32) -> Self {
+        Self {
+            index: 0,
+            field_map: FieldMap::new(size),
+        }
+    }
+
+    fn add(&mut self, label: Option<&SmolStr>, location: SrcSpan) -> Result<(), Error> {
+        match label {
+            Some(label) => self.labelled(label, location)?,
+            None => self.unlabelled(location)?,
+        }
+        self.index += 1;
+        Ok(())
+    }
+
+    fn labelled(&mut self, label: &SmolStr, location: SrcSpan) -> Result<(), Error> {
+        if let Err(_) = self.field_map.insert(label.clone(), self.index) {
+            return Err(Error::DuplicateField {
+                label: label.clone(),
+                location,
+            });
+        };
+        Ok(())
+    }
+
+    fn unlabelled(&mut self, _location: SrcSpan) -> Result<(), Error> {
+        self.index += 1;
+        Ok(())
+    }
+
+    fn finish(self) -> Option<FieldMap> {
+        self.field_map.into_option()
+    }
+}
+
 fn register_values<'a>(
     s: &'a UntypedStatement,
     module_name: &'a SmolStr,
@@ -759,20 +802,11 @@ fn register_values<'a>(
             let _ = environment.ungeneralised_functions.insert(name.clone());
 
             // Create the field map so we can reorder labels for usage of this function
-            let mut field_map = FieldMap::new(args.len() as u32);
-            for (i, arg) in args.iter().enumerate() {
-                if let ArgNames::NamedLabelled { label, .. }
-                | ArgNames::LabelledDiscard { label, .. } = &arg.names
-                {
-                    field_map.insert(label.clone(), i as u32).map_err(|_| {
-                        Error::DuplicateField {
-                            label: label.clone(),
-                            location: *location,
-                        }
-                    })?;
-                }
+            let mut builder = FieldMapBuilder::new(args.len() as u32);
+            for arg in args.iter() {
+                builder.add(arg.names.get_label(), arg.location)?;
             }
-            let field_map = field_map.into_option();
+            let field_map = builder.finish();
 
             // Construct type from annotations
             let mut hydrator = Hydrator::new();
@@ -824,23 +858,14 @@ fn register_values<'a>(
             let (typ, field_map) = environment.in_new_scope(|environment| {
                 let return_type = hydrator.type_from_ast(retrn, environment)?;
                 let mut args_types = Vec::with_capacity(args.len());
-                let mut field_map = FieldMap::new(args.len() as u32);
-                for (i, arg) in args.iter().enumerate() {
-                    let t = hydrator.type_from_ast(&arg.annotation, environment)?;
-                    args_types.push(t);
-                    if let Some(label) = &arg.label {
-                        field_map.insert(label.clone(), i as u32).map_err(|_| {
-                            Error::DuplicateField {
-                                label: label.clone(),
-                                location: *location,
-                            }
-                        })?;
-                    }
-                }
-                let field_map = field_map.into_option();
-                let typ = fn_(args_types, return_type);
+                let mut builder = FieldMapBuilder::new(args.len() as u32);
 
-                Ok((typ, field_map))
+                for arg in args.iter() {
+                    args_types.push(hydrator.type_from_ast(&arg.annotation, environment)?);
+                    builder.add(arg.label.as_ref(), arg.location)?;
+                }
+                let typ = fn_(args_types, return_type);
+                Ok((typ, builder.finish()))
             })?;
 
             // Insert function into module

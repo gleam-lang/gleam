@@ -192,6 +192,14 @@ pub enum ArgNames {
 }
 
 impl ArgNames {
+    pub fn get_label(&self) -> Option<&SmolStr> {
+        match self {
+            ArgNames::Discard { .. } | ArgNames::Named { .. } => None,
+            ArgNames::LabelledDiscard { label, .. } | ArgNames::NamedLabelled { label, .. } => {
+                Some(label)
+            }
+        }
+    }
     pub fn get_variable_name(&self) -> Option<&SmolStr> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
