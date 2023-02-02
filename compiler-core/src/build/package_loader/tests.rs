@@ -19,12 +19,17 @@ fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 
-fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<SmolStr>) {
+fn write_cache(
+    fs: &InMemoryFileSystem,
+    name: &str,
+    seconds: u64,
+    dependencies: Vec<(SmolStr, SrcSpan)>,
+) {
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
         codegen_performed: true,
-        dependencies: deps,
+        dependencies,
     };
     let path = Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
@@ -46,7 +51,11 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
     .unwrap();
 }
 
-fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTestOutput {
+fn run_loader(
+    fs: InMemoryFileSystem,
+    root: &Path,
+    artefact: &Path,
+) -> Result<LoaderTestOutput, ()> {
     let mut defined = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     let loader = PackageLoader {
@@ -60,12 +69,12 @@ fn run_loader(fs: InMemoryFileSystem, root: &Path, artefact: &Path) -> LoaderTes
         target: Target::JavaScript,
         already_defined_modules: &mut defined,
     };
-    let loaded = loader.run().unwrap();
+    let loaded = loader.run().map_err(|_| ())?;
 
-    LoaderTestOutput {
+    Ok(LoaderTestOutput {
         to_compile: loaded.to_compile.into_iter().map(|m| m.name).collect(),
         cached: loaded.cached.into_iter().map(|m| m.name).collect(),
-    }
+    })
 }
 
 #[test]
@@ -74,7 +83,7 @@ fn no_modules() {
     let root = Path::new("/");
     let artefact = Path::new("/artefact");
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert!(loaded.to_compile.is_empty());
     assert!(loaded.cached.is_empty());
 }
@@ -87,7 +96,7 @@ fn one_src_module() {
 
     write_src(&fs, "/src/main.gleam", 0, "const x = 1");
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
     assert!(loaded.cached.is_empty());
 }
@@ -100,7 +109,7 @@ fn one_test_module() {
 
     write_src(&fs, "/test/main.gleam", 0, "const x = 1");
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert_eq!(loaded.to_compile, vec![SmolStr::new("main")]);
     assert!(loaded.cached.is_empty());
 }
@@ -115,7 +124,7 @@ fn importing() {
     write_src(&fs, "/src/one.gleam", 0, "");
     write_src(&fs, "/src/two.gleam", 0, "import one");
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert_eq!(
         loaded.to_compile,
         vec![
@@ -136,7 +145,7 @@ fn reading_cache() {
     write_src(&fs, "/src/one.gleam", 0, "");
     write_cache(&fs, "one", 0, vec![]);
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert!(loaded.to_compile.is_empty());
     assert_eq!(loaded.cached, vec![SmolStr::new("one")]);
 }
@@ -150,7 +159,7 @@ fn module_is_stale_if_cache_older() {
     write_src(&fs, "/src/one.gleam", 1, "");
     write_cache(&fs, "one", 0, vec![]);
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert_eq!(loaded.to_compile, vec![SmolStr::new("one")]);
     assert!(loaded.cached.is_empty());
 }
@@ -167,16 +176,36 @@ fn module_is_stale_if_deps_are_stale() {
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec![SmolStr::new("one")]);
+    write_cache(&fs, "two", 2, vec![dep("one", 0, 1)]);
 
     // Cache is fresh
     write_src(&fs, "/src/three.gleam", 1, "");
     write_cache(&fs, "three", 2, vec![]);
 
-    let loaded = run_loader(fs, root, artefact);
+    let loaded = run_loader(fs, root, artefact).unwrap();
     assert_eq!(
         loaded.to_compile,
         vec![SmolStr::new("one"), SmolStr::new("two")]
     );
     assert_eq!(loaded.cached, vec![SmolStr::new("three")]);
+}
+
+#[test]
+fn error_if_cached_module_has_been_deleted_and_is_still_imported() {
+    let fs = InMemoryFileSystem::new();
+    let root = Path::new("/");
+    let artefact = Path::new("/artefact");
+
+    // No source for this one
+    write_cache(&fs, "one", 0, vec![]);
+
+    // This one imports the other
+    write_src(&fs, "/src/two.gleam", 1, "import one");
+    write_cache(&fs, "two", 2, vec![dep("one", 0, 1)]);
+
+    assert!(run_loader(fs, root, artefact).is_err());
+}
+
+fn dep(module: &str, start: u32, end: u32) -> (SmolStr, SrcSpan) {
+    (SmolStr::new(module), SrcSpan::new(start, end))
 }

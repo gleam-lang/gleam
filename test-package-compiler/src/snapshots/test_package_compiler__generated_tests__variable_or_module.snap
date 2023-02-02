@@ -7,7 +7,7 @@ expression: "./cases/variable_or_module"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.cache_meta
-<34 byte binary>
+<42 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/main.erl
 -module(main).

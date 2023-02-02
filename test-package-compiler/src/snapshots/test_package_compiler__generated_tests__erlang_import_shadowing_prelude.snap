@@ -24,7 +24,7 @@ expression: "./cases/erlang_import_shadowing_prelude"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<32 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

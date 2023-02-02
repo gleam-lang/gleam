@@ -24,7 +24,7 @@ thing() ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<43 byte binary>
+<59 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

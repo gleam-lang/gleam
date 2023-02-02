@@ -238,7 +238,7 @@ where
             let info = CacheMetadata {
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
-                dependencies: module.dependencies_list(),
+                dependencies: module.dependencies.clone(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }
@@ -554,10 +554,10 @@ impl Input {
         }
     }
 
-    pub fn dependencies(&self) -> Vec<SmolStr> {
+    pub fn dependencies(&self) -> &[(SmolStr, SrcSpan)] {
         match self {
-            Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            Input::Cached(m) => m.dependencies.clone(),
+            Input::New(m) => &m.dependencies,
+            Input::Cached(m) => &m.dependencies,
         }
     }
 
@@ -582,7 +582,7 @@ impl Input {
 pub(crate) struct CachedModule {
     pub name: SmolStr,
     pub origin: Origin,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<(SmolStr, SrcSpan)>,
     pub source_path: PathBuf,
 }
 
@@ -590,7 +590,7 @@ pub(crate) struct CachedModule {
 pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<(SmolStr, SrcSpan)>,
 }
 
 impl CacheMetadata {

@@ -7,7 +7,7 @@ expression: "./cases/erlang_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<32 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).

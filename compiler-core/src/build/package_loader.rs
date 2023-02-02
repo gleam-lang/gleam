@@ -13,9 +13,10 @@ use itertools::Itertools;
 use smol_str::SmolStr;
 
 use crate::{
+    ast::SrcSpan,
     build::{dep_tree, module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileKind, UnknownImportDetails},
     io::{CommandExecutor, FileSystemIO},
     metadata, type_,
     uid::UniqueIdGenerator,
@@ -91,12 +92,19 @@ where
         // Determine order in which modules are to be processed
         let deps = inputs
             .values()
-            .map(|m| (m.name().clone(), m.dependencies()))
+            .map(|m| {
+                let deps = m
+                    .dependencies()
+                    .iter()
+                    .map(|(name, _)| name.clone())
+                    .collect();
+                (m.name().clone(), deps)
+            })
             .collect();
         let sequence = dep_tree::toposort_deps(deps).map_err(convert_deps_tree_error)?;
 
         let mut loaded = Loaded::default();
-        let mut stale = StaleTracker::default();
+        let mut tracker = StaleTracker::default();
         for name in sequence {
             let input = inputs
                 .remove(&name)
@@ -106,16 +114,16 @@ where
                 // A new uncached module is to be compiled
                 Input::New(module) => {
                     tracing::debug!(module = %module.name, "module_to_be_compiled");
-                    stale.add(module.name.clone());
+                    tracker.stale(module.name.clone());
                     loaded.to_compile.push(module);
                 }
 
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                Input::Cached(info) if stale.includes_any(&info.dependencies) => {
+                Input::Cached(info) if self.any_stale(&tracker, &info)? => {
                     tracing::debug!(module = %info.name, "module_to_be_compiled");
-                    stale.add(info.name.clone());
+                    tracker.stale(info.name.clone());
                     let module = self.load_and_parse(info)?;
                     loaded.to_compile.push(module);
                 }
@@ -124,6 +132,7 @@ where
                 // and does not need to be recompiled.
                 Input::Cached(info) => {
                     tracing::debug!(module = %info.name, "module_to_load_from_cache");
+                    tracker.fresh(info.name.clone());
                     let module = self.load_cached_module(info)?;
                     loaded.cached.push(module);
                 }
@@ -131,6 +140,23 @@ where
         }
 
         Ok(loaded)
+    }
+
+    fn any_stale(&self, tracker: &StaleTracker, info: &CachedModule) -> Result<bool> {
+        match tracker.any_stale(&info.dependencies) {
+            Ok(result) => Ok(result),
+
+            Err((dependency, location)) => Err(Error::UnknownImport {
+                import: dependency,
+                details: Box::new(UnknownImportDetails {
+                    location,
+                    module: info.name.clone(),
+                    src: self.io.read(&info.source_path)?.into(),
+                    path: info.source_path.clone(),
+                    modules: vec![],
+                }),
+            }),
+        }
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::Module, Error> {
@@ -202,16 +228,35 @@ fn convert_deps_tree_error(e: dep_tree::Error) -> Error {
     }
 }
 
+#[derive(Debug)]
+enum Freshness {
+    Stale,
+    Fresh,
+}
+
 #[derive(Debug, Default)]
-struct StaleTracker(HashSet<SmolStr>);
+struct StaleTracker(HashMap<SmolStr, Freshness>);
 
 impl StaleTracker {
-    fn add(&mut self, name: SmolStr) {
-        _ = self.0.insert(name);
+    fn stale(&mut self, name: SmolStr) {
+        _ = self.0.insert(name, Freshness::Stale);
     }
 
-    fn includes_any(&self, names: &[SmolStr]) -> bool {
-        names.iter().any(|n| self.0.contains(n.as_str()))
+    fn fresh(&mut self, name: SmolStr) {
+        _ = self.0.insert(name, Freshness::Fresh);
+    }
+
+    /// Returns whether any of the given names are recorded as stale.
+    /// Returns an error if the dependency is not known.
+    fn any_stale(&self, deps: &[(SmolStr, SrcSpan)]) -> Result<bool, (SmolStr, SrcSpan)> {
+        for (name, location) in deps {
+            match self.0.get(name) {
+                Some(Freshness::Fresh) => continue,
+                Some(Freshness::Stale) => return Ok(true),
+                None => return Err((name.clone(), *location)),
+            }
+        }
+        Ok(false)
     }
 }
 
