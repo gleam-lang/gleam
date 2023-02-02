@@ -2,6 +2,7 @@ use super::*;
 use crate::ast::UntypedExpr;
 
 mod errors;
+mod functions;
 mod imports;
 mod pretty;
 mod statement_if;
@@ -162,17 +163,17 @@ macro_rules! assert_module_error {
     ($src:expr) => {
         let (ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
-        let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let error = infer_module(
-            Target::Erlang,
+        let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
+        let error = $crate::type_::infer_module(
+            $crate::build::Target::Erlang,
             &ids,
             ast,
-            Origin::Src,
+            $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
             &mut vec![],

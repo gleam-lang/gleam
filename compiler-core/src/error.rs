@@ -1971,6 +1971,24 @@ value, or use `assert` rather than `let`."
                         extra_labels: vec![],
                     }),
                 },
+
+                TypeError::UnlabelledAfterlabelled { location } => Diagnostic {
+                    title: "Unlabelled argument after labelled argument".into(),
+                    text: wrap(
+                        "All unlabelled arguments must come before any labelled arguments.".into(),
+                    ),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
 
             Error::Parse { path, src, error } => {

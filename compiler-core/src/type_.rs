@@ -742,6 +742,7 @@ fn assert_unique_const_name<'a>(
 #[derive(Debug)]
 struct FieldMapBuilder {
     index: u32,
+    any_labels: bool,
     field_map: FieldMap,
 }
 
@@ -749,6 +750,7 @@ impl FieldMapBuilder {
     fn new(size: u32) -> Self {
         Self {
             index: 0,
+            any_labels: false,
             field_map: FieldMap::new(size),
         }
     }
@@ -769,10 +771,14 @@ impl FieldMapBuilder {
                 location,
             });
         };
+        self.any_labels = true;
         Ok(())
     }
 
-    fn unlabelled(&mut self, _location: SrcSpan) -> Result<(), Error> {
+    fn unlabelled(&mut self, location: SrcSpan) -> Result<(), Error> {
+        if self.any_labels {
+            return Err(Error::UnlabelledAfterlabelled { location });
+        }
         self.index += 1;
         Ok(())
     }

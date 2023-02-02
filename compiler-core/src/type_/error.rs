@@ -249,6 +249,11 @@ pub enum Error {
         location: SrcSpan,
         name: SmolStr,
     },
+
+    /// A function was defined with an unlabelled argument after a labelled one.
+    UnlabelledAfterlabelled {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
