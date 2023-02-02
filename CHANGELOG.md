@@ -3,6 +3,8 @@
 ## Unreleased
 
 - The formatter now wraps long `|` patterns in case clauses over multiple lines.
+- Fixed a bug where the build cached for a module would be fail to be
+  invalidated if all the modules that import the deleted module were also cached.
 - Fixed a bug where using a qualified imported record constructor function as a
   value would produce invalid Erlang code if the name of the record variant was
   an Erlang reserved word.
