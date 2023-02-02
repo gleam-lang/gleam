@@ -765,7 +765,7 @@ impl FieldMapBuilder {
     }
 
     fn labelled(&mut self, label: &SmolStr, location: SrcSpan) -> Result<(), Error> {
-        if let Err(_) = self.field_map.insert(label.clone(), self.index) {
+        if self.field_map.insert(label.clone(), self.index).is_err() {
             return Err(Error::DuplicateField {
                 label: label.clone(),
                 location,

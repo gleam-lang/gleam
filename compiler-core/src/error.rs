@@ -1974,9 +1974,7 @@ value, or use `assert` rather than `let`."
 
                 TypeError::UnlabelledAfterlabelled { location } => Diagnostic {
                     title: "Unlabelled argument after labelled argument".into(),
-                    text: wrap(
-                        "All unlabelled arguments must come before any labelled arguments.".into(),
-                    ),
+                    text: wrap("All unlabelled arguments must come before any labelled arguments."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
