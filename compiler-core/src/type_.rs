@@ -779,7 +779,6 @@ impl FieldMapBuilder {
         if self.any_labels {
             return Err(Error::UnlabelledAfterlabelled { location });
         }
-        self.index += 1;
         Ok(())
     }
 

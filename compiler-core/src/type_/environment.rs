@@ -391,8 +391,6 @@ impl<'a> Environment<'a> {
                                 let v = self.new_unbound_var();
                                 let _ = ids.insert(*id, v.clone());
                                 return v;
-                            } else {
-                                tracing::trace!(id = id, "not_instantiating_rigid_type_var")
                             }
                         }
                     },
