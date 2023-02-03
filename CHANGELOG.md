@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.26.2 - 2023-02-03
 
 - The formatter now wraps long `|` patterns in case clauses over multiple lines.
 - Fixed a bug where unlabelled function arguments could be declared after

@@ -664,7 +664,7 @@ dependencies = [
 
 [[package]]
 name = "gleam"
-version = "0.27.0-dev"
+version = "0.26.2"
 dependencies = [
  "async-trait",
  "atty",
@@ -711,7 +711,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "0.27.0-dev"
+version = "0.26.2"
 dependencies = [
  "askama",
  "async-trait",
@@ -756,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "gleam-wasm"
-version = "0.27.0-dev"
+version = "0.26.2"
 dependencies = [
  "console_error_panic_hook",
  "gleam-core",
@@ -1982,7 +1982,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "0.27.0-dev"
+version = "0.26.2"
 dependencies = [
  "gleam-core",
  "im",
