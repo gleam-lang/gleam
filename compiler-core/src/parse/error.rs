@@ -34,19 +34,13 @@ impl ParseError {
             ParseErrorType::ExpectedEqual => ("I was expecting a '=' after this", vec![]),
             ParseErrorType::ExpectedExpr => ("I was expecting an expression after this.", vec![]),
             ParseErrorType::ExpectedName => ("I was expecting a name here.", vec![]),
-            ParseErrorType::ExpectedPattern => (
-                "I was expecting a pattern after this.",
-                vec!["See: https://gleam.run/book/tour/patterns".into()],
-            ),
+            ParseErrorType::ExpectedPattern => ("I was expecting a pattern after this.", vec![]),
             ParseErrorType::ExpectedType => (
                 "I was expecting a type after this.",
                 vec!["See: https://gleam.run/book/tour/type-annotations".into()],
             ),
             ParseErrorType::ExpectedUpName => ("I was expecting a type name here.", vec![]),
-            ParseErrorType::ExpectedValue => (
-                "I was expecting a value after this.",
-                vec!["See: https://gleam.run/book/tour/patterns".into()],
-            ),
+            ParseErrorType::ExpectedValue => ("I was expecting a value after this.", vec![]),
             ParseErrorType::ExtraSeparator => (
                 "This is an extra delimiter.",
                 vec!["Hint: Try removing it?".into()],
@@ -93,7 +87,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
             ),
             ParseErrorType::InvalidTailPattern => (
                 "This part of a list pattern can only be a name or a discard.",
-                vec!["See: https://gleam.run/book/tour/patterns".into()],
+                vec![],
             ),
             ParseErrorType::InvalidTupleAccess => (
                 "This integer is not valid for tuple access.",
@@ -103,10 +97,9 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::LexError { error: lex_err } => lex_err.to_parse_error_info(),
-            ParseErrorType::NestedBitStringPattern => (
-                "BitString patterns cannot be nested.",
-                vec!["See: https://gleam.run/book/tour/patterns".into()],
-            ),
+            ParseErrorType::NestedBitStringPattern => {
+                ("BitString patterns cannot be nested.", vec![])
+            }
             ParseErrorType::NoCaseClause => (
                 "This case expression has no clauses.",
                 vec!["See: https://gleam.run/book/tour/case-expressions".into()],

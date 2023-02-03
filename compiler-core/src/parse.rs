@@ -734,10 +734,7 @@ where
             p
         } else {
             // DUPE: 62884
-            return self.next_tok_unexpected(vec![
-                "A pattern".into(),
-                "See: https://gleam.run/book/tour/patterns".into(),
-            ])?;
+            return self.next_tok_unexpected(vec!["A pattern".into()])?;
         };
         let annotation = self.parse_type_annotation(&Token::Colon, false)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
@@ -782,10 +779,7 @@ where
                 p
             } else {
                 // DUPE: 62884
-                return self.next_tok_unexpected(vec![
-                    "A pattern".into(),
-                    "See: https://gleam.run/book/tour/patterns".into(),
-                ])?;
+                return self.next_tok_unexpected(vec!["A pattern".into()])?;
             };
             let annotation = self.parse_type_annotation(&Token::Colon, false)?;
             let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
