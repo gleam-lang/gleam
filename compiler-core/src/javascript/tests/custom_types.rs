@@ -266,6 +266,44 @@ fn go(cat) {
 }
 
 #[test]
+fn destructure_custom_type_with_mixed_fields_first_unlabelled() {
+    assert_js!(
+        r#"
+type Cat {
+  Cat(String, cuteness: Int)
+}
+
+fn go(cat) {
+  let Cat(x, y) = cat
+  let Cat(cuteness: y, ..) = cat
+  let Cat(x, cuteness: y) = cat
+  x
+}
+
+"#,
+    )
+}
+
+#[test]
+fn destructure_custom_type_with_mixed_fields_second_unlabelled() {
+    assert_js!(
+        r#"
+type Cat {
+  Cat(name: String, Int)
+}
+
+fn go(cat) {
+  let Cat(x, y) = cat
+  let Cat(name: x, ..) = cat
+  let Cat(y, name: x) = cat
+  x
+}
+
+"#,
+    )
+}
+
+#[test]
 fn nested_pattern_with_labels() {
     assert_js!(
         r#"pub type Box(x) { Box(a: Int, b: x) }
