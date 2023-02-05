@@ -45,6 +45,7 @@ pub fn main() -> Int {
       suite("anonymous functions", anonymous_function_tests()),
       suite("string pattern matching", string_pattern_matching_tests()),
       suite("typescript file inclusion", typescript_file_included_tests()),
+      suite("custom types mixed args match", mixed_arg_match_tests()),
     ])
 
   case stats.failures {
@@ -1479,4 +1480,52 @@ if erlang {
       }),
     ]
   }
+}
+
+type Cat {
+  Cat(String, cuteness: Int)
+}
+
+type NestedCat {
+  NestedCat(Cat, String, cuteness: Int)
+}
+
+type InverseCat {
+  InverseCat(cuteness: Int, String)
+}
+
+fn mixed_arg_match_tests() {
+  [
+    "matching second labelled arg as first"
+    |> example(fn() {
+      let Cat(cuteness: y, ..) = Cat("fluffy", 10)
+      assert_equal(y, 10)
+    }),
+    "matching both args on position"
+    |> example(fn() {
+      let Cat(x, y) = Cat("fluffy", 10)
+      assert_equal(#(x, y), #("fluffy", 10))
+    }),
+    "matching second labelled arg as second"
+    |> example(fn() {
+      let Cat(x, cuteness: y) = Cat("fluffy", 10)
+      assert_equal(#(x, y), #("fluffy", 10))
+    }),
+    "nested custom types"
+    |> example(fn() {
+      let NestedCat(Cat(x, cuteness: y), cuteness: y2, ..) =
+        NestedCat(Cat("fluffy", 10), "gleamy", 100)
+      assert_equal(#(x, y, y2), #("fluffy", 10, 100))
+    }),
+    "matching first labelled arg as first"
+    |> example(fn() {
+      let InverseCat(cuteness: y, ..) = InverseCat(10, "fluffy")
+      assert_equal(y, 10)
+    }),
+    "matching first labelled arg as second"
+    |> example(fn() {
+      let InverseCat(x, cuteness: y) = InverseCat(10, "fluffy")
+      assert_equal(#(x, y), #("fluffy", 10))
+    }),
+  ]
 }
