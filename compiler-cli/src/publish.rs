@@ -39,7 +39,7 @@ impl PublishCommand {
             mode: Mode::Prod,
             perform_codegen: true,
             target: Some(Target::Erlang),
-            warnings_as_errors: WarningLevel::Error,
+            warnings_as_errors: WarningLevel::Warn,
         })?;
 
         // These fields are required to publish a Hex package. Hex will reject

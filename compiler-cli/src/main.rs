@@ -451,7 +451,7 @@ fn command_check() -> Result<(), Error> {
         perform_codegen: false,
         mode: Mode::Dev,
         target: None,
-        warnings_as_errors: WarningLevel::Error,
+        warnings_as_errors: WarningLevel::Warn,
     })?;
     Ok(())
 }

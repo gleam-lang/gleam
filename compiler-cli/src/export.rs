@@ -31,7 +31,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
         mode,
         perform_codegen: true,
         target: Some(target),
-        warnings_as_errors: WarningLevel::Error,
+        warnings_as_errors: WarningLevel::Warn,
     })?;
 
     for entry in crate::fs::read_dir(&build)?
