@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Fixed a bug where pattern matches on custom types with mixed labelled and 
+  unlabelled arguments could not be compiled with target=javascript
+
 ## v0.26.2 - 2023-02-03
 
 - The formatter now wraps long `|` patterns in case clauses over multiple lines.

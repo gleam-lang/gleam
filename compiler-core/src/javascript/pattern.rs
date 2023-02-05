@@ -407,7 +407,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             let label = fields.iter().find_map(find);
                             match label {
                                 Some(label) => self.push_string(label),
-                                None => self.push_int(index)
+                                None => self.push_int(index),
                             }
                         }
                     }
