@@ -109,8 +109,6 @@ fn float_tests() -> List(Test) {
     equality_test("Precedence 1", 8.0, 2.0 +. 2.0 *. 3.0),
     equality_test("Precedence 2", 10.0, 2.0 *. { 2.0 +. 3.0 }),
     equality_test("Precedence 3", 12.0, { 2.0 +. 2.0 } *. 3.0),
-
-
     // scientific notation
     basic_addition(0.0e0, 0.0, 0.0),
     basic_addition(0.0, 0.0e0, 0.0),
@@ -123,7 +121,6 @@ fn float_tests() -> List(Test) {
     basic_addition(1.0e-3, 1.0, 1.001),
     basic_addition(5.0, 1.0e-3, 5.001),
     basic_addition(10.0e-2, -3.0e-2, 0.07),
-
     basic_subtraction(0.0e0, 0.0, 0.0),
     basic_subtraction(0.0, 0.0e0, 0.0),
     basic_subtraction(0.0e-0, 0.0, 0.0),
@@ -134,7 +131,6 @@ fn float_tests() -> List(Test) {
     basic_subtraction(1.0e-3, 1.0, -0.999),
     basic_subtraction(5.0, 1.0e-3, 4.999),
     basic_subtraction(10.0e-2, -3.0e-2, 0.13),
-
     basic_multiplication(0.0e0, 0.0, 0.0),
     basic_multiplication(0.0, 0.0e0, 0.0),
     basic_multiplication(0.0e-0, 0.0, 0.0),
@@ -147,7 +143,6 @@ fn float_tests() -> List(Test) {
     basic_multiplication(2.0e5, 4.0e-5, 8.0),
     basic_multiplication(-2.0e-5, 2.0e5, -4.0),
     basic_multiplication(-2.0e5, -4.0e-5, 8.0),
-
   ]
 }
 
@@ -1108,7 +1103,7 @@ fn sized_bit_string_tests() -> List(Test) {
     |> example(fn() { assert_equal(True, <<0, 1, 1>> == <<257:size(24)>>) }),
     "<<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>"
     |> example(fn() {
-      assert_equal(True, <<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>)
+      assert_equal(True, <<1, 0, 0, 0, 1>> == <<4_294_967_297:size(40)>>)
     }),
     "<<>> == <<256:size(-1)>>"
     |> example(fn() { assert_equal(True, <<>> == <<256:size(-1)>>) }),
@@ -1117,7 +1112,9 @@ fn sized_bit_string_tests() -> List(Test) {
     |> example(fn() {
       assert_equal(
         True,
-        <<0, 31, 255, 255, 255, 255, 255, 255>> == <<9007199254740991:size(64)>>,
+        <<0,
+          31,
+          255, 255, 255, 255, 255, 255>> == <<9_007_199_254_740_991:size(64)>>,
       )
     }),
   ]

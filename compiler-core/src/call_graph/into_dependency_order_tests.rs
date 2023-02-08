@@ -252,6 +252,69 @@ fn use_shadowing() {
     );
 }
 
+#[test]
+fn fn_argument_shadowing() {
+    let functions = [
+        Input::Module("a", r#"fn(b) { c b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn fn_argument_shadowing_then_not() {
+    let functions = [
+        Input::Module("a", r#"{ fn(b) { c b } b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn let_var() {
+    let functions = [
+        Input::Module("a", r#"{ let c = b c }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn pattern_int() {
+    let functions = [Input::Module("a", r#"{ let 1 = x }"#)];
+    assert_eq!(parse_and_order(&functions).unwrap(), vec![vec!["a"]]);
+}
+
+#[test]
+fn pattern_float() {
+    let functions = [Input::Module("a", r#"{ let 1.0 = x }"#)];
+    assert_eq!(parse_and_order(&functions).unwrap(), vec![vec!["a"]]);
+}
+
+#[test]
+fn pattern_string() {
+    let functions = [Input::Module("a", r#"{ let "1.0" = x }"#)];
+    assert_eq!(parse_and_order(&functions).unwrap(), vec![vec!["a"]]);
+}
+
+#[test]
+fn pattern_underscore() {
+    let functions = [Input::Module("a", r#"{ let _ = x }"#)];
+    assert_eq!(parse_and_order(&functions).unwrap(), vec![vec!["a"]]);
+}
+
 fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
     let functions = functions
         .iter()
