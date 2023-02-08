@@ -212,7 +212,6 @@ impl<'a> CallGraphBuilder<'a> {
                 self.expression(current, then);
             }
 
-            // TODO: test
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => {
@@ -224,6 +223,7 @@ impl<'a> CallGraphBuilder<'a> {
                     for pattern in &clause.pattern {
                         self.pattern(current, pattern);
                     }
+                    // TODO: do the guard.
                     self.expression(current, &clause.then);
                     self.names = names;
                 }
