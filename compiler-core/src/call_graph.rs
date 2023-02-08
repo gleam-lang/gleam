@@ -133,6 +133,7 @@ impl<'a> CallGraphBuilder<'a> {
 
             // TODO: test scope resetting
             UntypedExpr::Sequence { expressions, .. } => {
+                dbg!(expressions);
                 let names = self.names.clone();
                 for expression in expressions {
                     self.expression(current, expression);
@@ -257,9 +258,16 @@ impl<'a> CallGraphBuilder<'a> {
                 self.referenced(current, name);
             }
 
-            Pattern::Assign { name, pattern, .. } => todo!(),
+            Pattern::Assign { name, pattern, .. } => {
+                self.define(name);
+                self.pattern(current, pattern);
+            }
 
-            Pattern::Constructor { arguments, .. } => todo!(),
+            Pattern::Constructor { arguments, .. } => {
+                for argument in arguments {
+                    self.pattern(current, &argument.value);
+                }
+            }
 
             Pattern::BitString { segments, .. } => {
                 for segment in segments {
@@ -297,7 +305,7 @@ impl<'a> CallGraphBuilder<'a> {
             | BitStringSegmentOption::Utf32 { .. }
             | BitStringSegmentOption::Utf32Codepoint { .. }
             | BitStringSegmentOption::Utf8 { .. }
-            | BitStringSegmentOption::Utf8Codepoint { .. } => todo!(),
+            | BitStringSegmentOption::Utf8Codepoint { .. } => (),
 
             BitStringSegmentOption::Size { value: pattern, .. } => {
                 self.pattern(current, pattern);
