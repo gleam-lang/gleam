@@ -315,6 +315,71 @@ fn pattern_underscore() {
     assert_eq!(parse_and_order(&functions).unwrap(), vec![vec!["a"]]);
 }
 
+#[test]
+fn pattern_concat() {
+    let functions = [
+        Input::Module("a", r#"{ let "a" <> c = b c }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn pattern_tuple() {
+    let functions = [
+        Input::Module("a", r#"{ let #(a, c) = b a c }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn pattern_list() {
+    let functions = [
+        Input::Module("a", r#"{ let [a, c] = b a c }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn pattern_list_spread() {
+    let functions = [
+        Input::Module("a", r#"{ let [a, ..c] = b a c }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn pattern_bit_string_segment_size_var_usage() {
+    let functions = [
+        Input::Module("a", r#"{ let <<y:size(b)>> = c y }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
 fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
     let functions = functions
         .iter()
