@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{AssignName, SrcSpan, Use};
+use crate::ast::{AssignName, Pattern, SrcSpan, UntypedPattern, Use};
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -189,17 +189,62 @@ impl<'a> CallGraphBuilder<'a> {
                 self.expression(current, &use_.call);
             }
 
-            // TODO: test
             UntypedExpr::Fn {
                 arguments, body, ..
-            } => todo!(),
-            // TODO: test
-            UntypedExpr::Assignment { value, pattern, .. } => todo!(),
+            } => {
+                let names = self.names.clone();
+                for argument in arguments {
+                    if let Some(name) = argument.names.get_variable_name() {
+                        self.define(name)
+                    }
+                }
+                self.scoped_expression(current, body);
+                self.names = names;
+            }
+
+            UntypedExpr::Assignment { value, pattern, .. } => {
+                self.expression(current, value);
+                self.pattern(current, pattern);
+            }
+
             // TODO: test
             UntypedExpr::Try { value, then, .. } => todo!(),
+
             // TODO: test
             UntypedExpr::Case {
                 subjects, clauses, ..
+            } => todo!(),
+        }
+    }
+
+    fn pattern(&mut self, current: NodeIndex, pattern: &'a UntypedPattern) {
+        match pattern {
+            Pattern::Discard { .. }
+            | Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. } => (),
+
+            Pattern::Var { name, .. } => {
+                self.define(name);
+            }
+
+            Pattern::VarUsage { name, .. } => todo!(),
+            Pattern::Assign { name, pattern, .. } => todo!(),
+            Pattern::List { elements, tail, .. } => todo!(),
+            Pattern::Constructor {
+                location,
+                name,
+                arguments,
+                module,
+                constructor,
+                with_spread,
+                type_,
+            } => todo!(),
+            Pattern::Tuple { elems, .. } => todo!(),
+            Pattern::BitString { segments, .. } => todo!(),
+            Pattern::Concatenate {
+                right_side_assignment,
+                ..
             } => todo!(),
         }
     }
@@ -241,7 +286,9 @@ pub fn into_dependency_order(functions: Vec<Function>) -> Result<Vec<Vec<Functio
             level
                 .into_iter()
                 .map(|index| {
-                    functions[index.index()]
+                    functions
+                        .get_mut(index.index())
+                        .expect("Index out of bounds")
                         .take()
                         .expect("Function already taken")
                 })
