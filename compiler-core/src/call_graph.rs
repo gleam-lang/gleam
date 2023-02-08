@@ -131,7 +131,6 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            // TODO: test scope resetting
             UntypedExpr::Sequence { expressions, .. } => {
                 dbg!(expressions);
                 let names = self.names.clone();
@@ -208,13 +207,27 @@ impl<'a> CallGraphBuilder<'a> {
                 self.pattern(current, pattern);
             }
 
-            // TODO: test
-            UntypedExpr::Try { value, then, .. } => todo!(),
+            UntypedExpr::Try { value, then, .. } => {
+                self.expression(current, value);
+                self.expression(current, then);
+            }
 
             // TODO: test
             UntypedExpr::Case {
                 subjects, clauses, ..
-            } => todo!(),
+            } => {
+                for subject in subjects {
+                    self.expression(current, subject);
+                }
+                for clause in clauses {
+                    let names = self.names.clone();
+                    for pattern in &clause.pattern {
+                        self.pattern(current, pattern);
+                    }
+                    self.expression(current, &clause.then);
+                    self.names = names;
+                }
+            }
         }
     }
 
