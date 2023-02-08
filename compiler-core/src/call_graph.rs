@@ -61,8 +61,7 @@ impl<'a> CallGraphBuilder<'a> {
         // TODO: return an error if there are duplicate function names
         if let Some(Some((_, previous_location))) = previous {
             panic!(
-                "Duplicate function name {} found at {:?} and {:?}",
-                name, location, previous_location
+                "Duplicate function name {name} found at {location:?} and {previous_location:?}"
             );
         }
         Ok(())
@@ -132,7 +131,6 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             UntypedExpr::Sequence { expressions, .. } => {
-                dbg!(expressions);
                 let names = self.names.clone();
                 for expression in expressions {
                     self.expression(current, expression);

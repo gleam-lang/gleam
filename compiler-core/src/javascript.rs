@@ -295,7 +295,7 @@ impl<'a> Generator<'a> {
                 Statement::ExternalFunction(ExternalFunction { module, .. })
                     if module.is_empty() =>
                 {
-                    ()
+                    
                 }
 
                 Statement::ExternalFunction(ExternalFunction {
