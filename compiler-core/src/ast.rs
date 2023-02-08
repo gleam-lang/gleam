@@ -999,6 +999,7 @@ pub enum Pattern<Constructor, Type> {
 
     /// A reference to a variable in a bit string. This is always a variable
     /// being used rather than a new variable being assigned.
+    /// e.g. `assert <<y:size(somevar)>> = x`
     VarUsage {
         location: SrcSpan,
         name: SmolStr,

@@ -6,7 +6,7 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{AssignName, Pattern, SrcSpan, UntypedPattern, Use};
+use crate::ast::{AssignName, BitStringSegmentOption, Pattern, SrcSpan, UntypedPattern, Use};
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -222,35 +222,87 @@ impl<'a> CallGraphBuilder<'a> {
             Pattern::Discard { .. }
             | Pattern::Int { .. }
             | Pattern::Float { .. }
-            | Pattern::String { .. } => (),
+            | Pattern::String { .. }
+            | Pattern::Concatenate {
+                right_side_assignment: AssignName::Discard(_),
+                ..
+            } => (),
 
-            Pattern::Var { name, .. } => {
+            Pattern::Concatenate {
+                right_side_assignment: AssignName::Variable(name),
+                ..
+            }
+            | Pattern::Var { name, .. } => {
                 self.define(name);
             }
 
-            Pattern::VarUsage { name, .. } => todo!(),
+            Pattern::Tuple {
+                elems: patterns, ..
+            } => {
+                for pattern in patterns {
+                    self.pattern(current, pattern);
+                }
+            }
+
+            Pattern::List { elements, tail, .. } => {
+                for element in elements {
+                    self.pattern(current, element);
+                }
+                if let Some(tail) = tail {
+                    self.pattern(current, tail);
+                }
+            }
+
+            Pattern::VarUsage { name, .. } => {
+                self.referenced(current, name);
+            }
+
             Pattern::Assign { name, pattern, .. } => todo!(),
-            Pattern::List { elements, tail, .. } => todo!(),
-            Pattern::Constructor {
-                location,
-                name,
-                arguments,
-                module,
-                constructor,
-                with_spread,
-                type_,
-            } => todo!(),
-            Pattern::Tuple { elems, .. } => todo!(),
-            Pattern::BitString { segments, .. } => todo!(),
-            Pattern::Concatenate {
-                right_side_assignment,
-                ..
-            } => todo!(),
+
+            Pattern::Constructor { arguments, .. } => todo!(),
+
+            Pattern::BitString { segments, .. } => {
+                for segment in segments {
+                    for option in &segment.options {
+                        self.bit_string_option_pattern(current, option);
+                    }
+                    self.pattern(current, &segment.value);
+                }
+            }
         }
     }
 
     fn define(&mut self, name: &'a str) {
         _ = self.names.insert(name, None);
+    }
+
+    fn bit_string_option_pattern(
+        &mut self,
+        current: NodeIndex,
+        option: &'a BitStringSegmentOption<Pattern<(), ()>>,
+    ) {
+        match option {
+            BitStringSegmentOption::Big { .. }
+            | BitStringSegmentOption::Binary { .. }
+            | BitStringSegmentOption::BitString { .. }
+            | BitStringSegmentOption::Float { .. }
+            | BitStringSegmentOption::Int { .. }
+            | BitStringSegmentOption::Little { .. }
+            | BitStringSegmentOption::Native { .. }
+            | BitStringSegmentOption::Signed { .. }
+            | BitStringSegmentOption::Unit { .. }
+            | BitStringSegmentOption::Unsigned { .. }
+            | BitStringSegmentOption::Utf16 { .. }
+            | BitStringSegmentOption::Utf16Codepoint { .. }
+            | BitStringSegmentOption::Utf32 { .. }
+            | BitStringSegmentOption::Utf32Codepoint { .. }
+            | BitStringSegmentOption::Utf8 { .. }
+            | BitStringSegmentOption::Utf8Codepoint { .. } => todo!(),
+
+            BitStringSegmentOption::Size { value: pattern, .. } => {
+                self.pattern(current, pattern);
+            }
+        }
     }
 }
 
