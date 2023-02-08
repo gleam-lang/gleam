@@ -419,6 +419,97 @@ fn scope_reset() {
     );
 }
 
+#[test]
+fn try_() {
+    let functions = [
+        Input::Module("a", r#"{ try b = c b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn case_subject() {
+    let functions = [
+        Input::Module("a", r#"case b { _ -> 1 }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn case_subjects() {
+    let functions = [
+        Input::Module("a", r#"case b, c { _, _ -> 1 }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["c"], vec!["a"]]
+    );
+}
+
+#[test]
+fn case_pattern_shadow() {
+    let functions = [
+        Input::Module("a", r#"case 1 { b -> b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["a"], vec!["b"], vec!["c"]]
+    );
+}
+
+#[test]
+fn case_use_in_clause() {
+    let functions = [
+        Input::Module("a", r#"case 1 { _ -> b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn case_clause_doesnt_shadow_later_clauses() {
+    let functions = [
+        Input::Module("a", r#"case 1 { b -> 1 _ -> b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn case_clause_doesnt_shadow_after() {
+    let functions = [
+        Input::Module("a", r#"{ case 1 { b -> 1 } b }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
 fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
     let functions = functions
         .iter()
