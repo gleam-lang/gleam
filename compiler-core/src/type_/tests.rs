@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::UntypedExpr;
+use crate::ast::{UntypedExpr, UntypedModule};
 
 mod errors;
 mod functions;
@@ -44,7 +44,7 @@ macro_rules! assert_infer_with_module {
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
         let mut printer = $crate::type_::pretty::Printer::new();
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -54,8 +54,8 @@ macro_rules! assert_infer_with_module {
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -68,8 +68,8 @@ macro_rules! assert_infer_with_module {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let ast = infer_module(
-            Target::Erlang,
+        let ast = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -97,17 +97,16 @@ macro_rules! assert_infer_with_module {
 macro_rules! assert_module_infer {
     ($src:expr, $module:expr $(,)?) => {{
         use itertools::Itertools;
-        use $crate::type_::{build_prelude, infer_module};
-        use $crate::uid::UniqueIdGenerator;
+        use $crate::type_::build_prelude;
         let (ast, _) = $crate::parse::parse_module($src).expect("syntax error");
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = infer_module(
+        let ast = crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
@@ -141,14 +140,14 @@ macro_rules! assert_module_error {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
         let mut modules = im::HashMap::new();
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = infer_module(
-            Target::Erlang,
+        let ast = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -169,7 +168,7 @@ macro_rules! assert_module_error {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let error = $crate::type_::infer_module(
+        let error = $crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
@@ -210,7 +209,7 @@ macro_rules! assert_module_syntax_error {
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -227,7 +226,7 @@ macro_rules! assert_error {
     ($src:expr) => {
         use std::path::PathBuf;
         let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
-        let ids = $crate::type_::UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -257,7 +256,7 @@ macro_rules! assert_error {
 macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -267,8 +266,8 @@ macro_rules! assert_with_module_error {
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -281,8 +280,8 @@ macro_rules! assert_with_module_error {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let error = infer_module(
-            Target::Erlang,
+        let error = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -302,7 +301,7 @@ macro_rules! assert_with_module_error {
 
     (($name:expr, $module_src:literal),($name2:expr, $module_src2:literal), $src:expr $(,)?) => {
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -312,8 +311,8 @@ macro_rules! assert_with_module_error {
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -326,8 +325,8 @@ macro_rules! assert_with_module_error {
 
         let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast2,
             Origin::Src,
@@ -340,8 +339,8 @@ macro_rules! assert_with_module_error {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let error = infer_module(
-            Target::Erlang,
+        let error = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -373,7 +372,7 @@ macro_rules! assert_warning {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
-        let _ = $crate::type_::infer_module(
+        let _ = $crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
@@ -399,15 +398,15 @@ macro_rules! assert_warning {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let _ = infer_module(
-            Target::Erlang,
+        let _ = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -422,7 +421,7 @@ macro_rules! assert_warning {
     };
     ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -433,8 +432,8 @@ macro_rules! assert_warning {
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -448,8 +447,8 @@ macro_rules! assert_warning {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let _ = infer_module(
-            Target::Erlang,
+        let _ = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -471,15 +470,15 @@ macro_rules! assert_no_warnings {
         ast.name = "my_module".into();
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let _ = infer_module(
-            Target::Erlang,
+        let _ = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -494,7 +493,7 @@ macro_rules! assert_no_warnings {
     ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let expected: Vec<Warning> = vec![];
         let mut warnings = vec![];
-        let ids = UniqueIdGenerator::new();
+        let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
         // TODO: Currently we do this here and also in the tests. It would be better
@@ -505,8 +504,8 @@ macro_rules! assert_no_warnings {
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = infer_module(
-            Target::Erlang,
+        let module = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -520,8 +519,8 @@ macro_rules! assert_no_warnings {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let _ = infer_module(
-            Target::Erlang,
+        let _ = crate::analyse::infer_module(
+            crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -675,15 +674,15 @@ fn infer_module_type_retention_test() {
         statements: vec![],
         type_info: (),
     };
-    let ids = UniqueIdGenerator::new();
+    let ids = crate::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert("gleam".into(), build_prelude(&ids));
-    let module = infer_module(
-        Target::Erlang,
+    let module = crate::analyse::infer_module(
+        crate::build::Target::Erlang,
         &ids,
         module,
         Origin::Src,
@@ -1902,27 +1901,4 @@ fn permit_holes_in_fn_args_and_returns() {
 }",
         vec![("run", "fn(List(a)) -> List(b)")],
     );
-}
-
-#[test]
-fn module_name_validation() {
-    assert!(validate_module_name(&"dream".into()).is_ok());
-
-    assert!(validate_module_name(&"gleam".into()).is_err());
-
-    assert!(validate_module_name(&"gleam/ok".into()).is_ok());
-
-    assert!(validate_module_name(&"ok/gleam".into()).is_ok());
-
-    assert!(validate_module_name(&"external".into()).is_err());
-
-    assert!(validate_module_name(&"type".into()).is_err());
-
-    assert!(validate_module_name(&"pub".into()).is_err());
-
-    assert!(validate_module_name(&"ok/external".into()).is_err());
-
-    assert!(validate_module_name(&"ok/type".into()).is_err());
-
-    assert!(validate_module_name(&"ok/pub".into()).is_err());
 }

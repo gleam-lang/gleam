@@ -50,6 +50,7 @@
 #[macro_use]
 extern crate pretty_assertions;
 
+pub mod analyse;
 pub mod ast;
 pub mod bit_string;
 pub mod build;

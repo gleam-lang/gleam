@@ -138,3 +138,51 @@ impl FieldMap {
             .collect()
     }
 }
+
+#[derive(Debug)]
+pub struct FieldMapBuilder {
+    index: u32,
+    any_labels: bool,
+    field_map: FieldMap,
+}
+
+impl FieldMapBuilder {
+    pub fn new(size: u32) -> Self {
+        Self {
+            index: 0,
+            any_labels: false,
+            field_map: FieldMap::new(size),
+        }
+    }
+
+    pub fn add(&mut self, label: Option<&SmolStr>, location: SrcSpan) -> Result<(), Error> {
+        match label {
+            Some(label) => self.labelled(label, location)?,
+            None => self.unlabelled(location)?,
+        }
+        self.index += 1;
+        Ok(())
+    }
+
+    fn labelled(&mut self, label: &SmolStr, location: SrcSpan) -> Result<(), Error> {
+        if self.field_map.insert(label.clone(), self.index).is_err() {
+            return Err(Error::DuplicateField {
+                label: label.clone(),
+                location,
+            });
+        };
+        self.any_labels = true;
+        Ok(())
+    }
+
+    fn unlabelled(&mut self, location: SrcSpan) -> Result<(), Error> {
+        if self.any_labels {
+            return Err(Error::UnlabelledAfterlabelled { location });
+        }
+        Ok(())
+    }
+
+    pub fn finish(self) -> Option<FieldMap> {
+        self.field_map.into_option()
+    }
+}

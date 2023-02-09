@@ -388,7 +388,7 @@ fn type_check(
     {
         tracing::debug!(module = ?name, "Type checking");
         let mut type_warnings = Vec::new();
-        let ast = type_::infer_module(
+        let ast = crate::analyse::infer_module(
             target,
             ids,
             ast,

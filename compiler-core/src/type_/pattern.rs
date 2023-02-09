@@ -164,7 +164,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options: Vec<_> = options
             .into_iter()
-            .map(|o| infer_bit_string_segment_option(o, |value, typ| self.unify(value, typ)))
+            .map(|o| {
+                crate::analyse::infer_bit_string_segment_option(o, |value, typ| {
+                    self.unify(value, typ)
+                })
+            })
             .try_collect()?;
 
         let segment_type = bit_string::type_options_for_pattern(&options, !is_last_segment)
