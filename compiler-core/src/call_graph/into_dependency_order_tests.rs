@@ -7,7 +7,7 @@ enum Input {
     External(&'static str),
 }
 
-fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
+fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
     let functions = functions
         .iter()
         .map(|input| match input {
@@ -43,7 +43,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
         .map(|level| {
             level
                 .into_iter()
-                .map(|function| function.name().into())
+                .map(|function| function.name().clone())
                 .collect_vec()
         })
         .collect())
@@ -576,4 +576,19 @@ fn big_guard() {
         parse_and_order(&functions).unwrap(),
         vec![vec!["b"], vec!["a"], vec!["c"]]
     );
+}
+
+#[test]
+fn duplicate_external_function_name() {
+    let functions = [Input::External("c"), Input::External("c")];
+    _ = parse_and_order(&functions).unwrap_err();
+}
+
+#[test]
+fn duplicate_function_name() {
+    let functions = [
+        Input::Module("b", r#"123456"#),
+        Input::Module("b", r#"123456"#),
+    ];
+    _ = parse_and_order(&functions).unwrap_err();
 }
