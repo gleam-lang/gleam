@@ -1089,59 +1089,7 @@ fn generalise_statement(
     environment: &mut Environment<'_>,
 ) -> TypedStatement {
     match s {
-        Statement::Function(Function {
-            doc,
-            location,
-            name,
-            public,
-            arguments: args,
-            body,
-            return_annotation,
-            end_position: end_location,
-            return_type,
-        }) => {
-            // Lookup the inferred function information
-            let function = environment
-                .get_variable(&name)
-                .expect("Could not find preregistered type for function");
-            let field_map = function.field_map().cloned();
-            let typ = function.type_.clone();
-
-            // Generalise the function if not already done so
-            let typ = if environment.ungeneralised_functions.remove(&name) {
-                type_::generalise(typ)
-            } else {
-                typ
-            };
-
-            // Insert the function into the module's interface
-            environment.insert_module_value(
-                name.clone(),
-                ValueConstructor {
-                    public,
-                    type_: typ,
-                    variant: ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map,
-                        module: module_name.clone(),
-                        arity: args.len(),
-                        location,
-                    },
-                },
-            );
-
-            Statement::Function(Function {
-                doc,
-                location,
-                name,
-                public,
-                arguments: args,
-                end_position: end_location,
-                return_annotation,
-                return_type,
-                body,
-            })
-        }
+        Statement::Function(function) => generalise_function(function, environment, module_name),
 
         statement @ (Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
@@ -1150,6 +1098,66 @@ fn generalise_statement(
         | Statement::Import { .. }
         | Statement::ModuleConstant { .. }) => statement,
     }
+}
+
+fn generalise_function(
+    function: Function<Arc<Type>, ast::TypedExpr>,
+    environment: &mut Environment<'_>,
+    module_name: &SmolStr,
+) -> Statement<Arc<Type>, ast::TypedExpr, SmolStr, SmolStr> {
+    let Function {
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        body,
+        return_annotation,
+        end_position: end_location,
+        return_type,
+    } = function;
+
+    // Lookup the inferred function information
+    let function = environment
+        .get_variable(&name)
+        .expect("Could not find preregistered type for function");
+    let field_map = function.field_map().cloned();
+    let typ = function.type_.clone();
+
+    // Generalise the function if not already done so
+    let typ = if environment.ungeneralised_functions.remove(&name) {
+        type_::generalise(typ)
+    } else {
+        typ
+    };
+
+    // Insert the function into the module's interface
+    environment.insert_module_value(
+        name.clone(),
+        ValueConstructor {
+            public,
+            type_: typ,
+            variant: ValueConstructorVariant::ModuleFn {
+                name: name.clone(),
+                field_map,
+                module: module_name.clone(),
+                arity: args.len(),
+                location,
+            },
+        },
+    );
+
+    Statement::Function(Function {
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        end_position: end_location,
+        return_annotation,
+        return_type,
+        body,
+    })
 }
 
 fn make_type_vars(
