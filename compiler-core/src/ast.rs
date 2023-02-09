@@ -1294,12 +1294,47 @@ pub enum TodoKind {
     IncompleteUse,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct GroupedStatements {
     pub functions: Vec<ModuleFunction>,
     pub constants: Vec<UntypedModuleConstant>,
     pub imports: Vec<Import<()>>,
     pub other: Vec<UntypedStatement>,
+}
+
+impl GroupedStatements {
+    pub fn from_iter(statements: impl IntoIterator<Item = UntypedStatement>) -> Self {
+        let mut this = Self::default();
+
+        for statement in statements {
+            this.add(statement)
+        }
+
+        this
+    }
+
+    pub fn len(&self) -> usize {
+        let Self {
+            functions,
+            constants,
+            imports,
+            other,
+        } = self;
+        functions.len() + constants.len() + imports.len() + other.len()
+    }
+
+    fn add(&mut self, statement: UntypedStatement) {
+        match statement {
+            Statement::Function(f) => self.functions.push(ModuleFunction::Internal(f)),
+            Statement::ExternalFunction(f) => self.functions.push(ModuleFunction::External(f)),
+            Statement::Import(i) => self.imports.push(i),
+            Statement::ModuleConstant(c) => self.constants.push(c),
+
+            statement @ (Statement::ExternalType { .. }
+            | Statement::TypeAlias { .. }
+            | Statement::CustomType { .. }) => self.other.push(statement),
+        }
+    }
 }
 
 #[derive(Debug)]
