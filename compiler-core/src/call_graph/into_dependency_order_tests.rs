@@ -7,6 +7,48 @@ enum Input {
     External(&'static str),
 }
 
+fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
+    let functions = functions
+        .iter()
+        .map(|input| match input {
+            Input::Module(name, src) => Function::Module(ModuleFunction {
+                name: name.into(),
+                arguments: vec![],
+                body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
+                location: Default::default(),
+                return_annotation: None,
+                public: true,
+                end_position: src.len() as u32,
+                return_type: (),
+                doc: None,
+            }),
+            Input::External(name) => Function::External(ExternalFunction {
+                name: name.into(),
+                arguments: vec![],
+                module: "themodule".into(),
+                fun: name.into(),
+                location: Default::default(),
+                public: true,
+                return_: TypeAst::Hole {
+                    location: Default::default(),
+                    name: "_".into(),
+                },
+                return_type: (),
+                doc: None,
+            }),
+        })
+        .collect_vec();
+    Ok(into_dependency_order(functions)?
+        .into_iter()
+        .map(|level| {
+            level
+                .into_iter()
+                .map(|function| function.name().into())
+                .collect_vec()
+        })
+        .collect())
+}
+
 #[test]
 fn empty() {
     let functions = [];
@@ -510,44 +552,28 @@ fn case_clause_doesnt_shadow_after() {
     );
 }
 
-fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>> {
-    let functions = functions
-        .iter()
-        .map(|input| match input {
-            Input::Module(name, src) => Function::Module(ModuleFunction {
-                name: name.into(),
-                arguments: vec![],
-                body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
-                location: Default::default(),
-                return_annotation: None,
-                public: true,
-                end_position: src.len() as u32,
-                return_type: (),
-                doc: None,
-            }),
-            Input::External(name) => Function::External(ExternalFunction {
-                name: name.into(),
-                arguments: vec![],
-                module: "themodule".into(),
-                fun: name.into(),
-                location: Default::default(),
-                public: true,
-                return_: TypeAst::Hole {
-                    location: Default::default(),
-                    name: "_".into(),
-                },
-                return_type: (),
-                doc: None,
-            }),
-        })
-        .collect_vec();
-    Ok(into_dependency_order(functions)?
-        .into_iter()
-        .map(|level| {
-            level
-                .into_iter()
-                .map(|function| function.name().into())
-                .collect_vec()
-        })
-        .collect())
+#[test]
+fn guard() {
+    let functions = [
+        Input::Module("a", r#"case 1 { _ if b -> 1 }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
+}
+
+#[test]
+fn big_guard() {
+    let functions = [
+        Input::Module("a", r#"case 1 { _ if 1 == 2 || x != #(Ok(b), 123) -> 1 }"#),
+        Input::Module("b", r#"123"#),
+        Input::External("c"),
+    ];
+    assert_eq!(
+        parse_and_order(&functions).unwrap(),
+        vec![vec!["b"], vec!["a"], vec!["c"]]
+    );
 }

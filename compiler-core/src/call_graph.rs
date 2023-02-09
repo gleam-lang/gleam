@@ -6,7 +6,10 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{AssignName, BitStringSegmentOption, Pattern, SrcSpan, UntypedPattern, Use};
+use crate::ast::{
+    AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, UntypedPattern,
+    Use,
+};
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -221,7 +224,9 @@ impl<'a> CallGraphBuilder<'a> {
                     for pattern in &clause.pattern {
                         self.pattern(current, pattern);
                     }
-                    // TODO: do the guard.
+                    if let Some(guard) = &clause.guard {
+                        self.guard(current, guard);
+                    }
                     self.expression(current, &clause.then);
                     self.names = names;
                 }
@@ -283,7 +288,7 @@ impl<'a> CallGraphBuilder<'a> {
             Pattern::BitString { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option_pattern(current, option);
+                        self.bit_string_option(current, option, |s, p, c| s.pattern(p, c));
                     }
                     self.pattern(current, &segment.value);
                 }
@@ -295,10 +300,11 @@ impl<'a> CallGraphBuilder<'a> {
         _ = self.names.insert(name, None);
     }
 
-    fn bit_string_option_pattern(
+    fn bit_string_option<T>(
         &mut self,
         current: NodeIndex,
-        option: &'a BitStringSegmentOption<Pattern<(), ()>>,
+        option: &'a BitStringSegmentOption<T>,
+        process: impl Fn(&mut Self, NodeIndex, &'a T),
     ) {
         match option {
             BitStringSegmentOption::Big { .. }
@@ -319,7 +325,69 @@ impl<'a> CallGraphBuilder<'a> {
             | BitStringSegmentOption::Utf8Codepoint { .. } => (),
 
             BitStringSegmentOption::Size { value: pattern, .. } => {
-                self.pattern(current, pattern);
+                process(self, current, pattern);
+            }
+        }
+    }
+
+    fn guard(&mut self, current: NodeIndex, guard: &'a ClauseGuard<(), ()>) {
+        match guard {
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::Or { left, right, .. }
+            | ClauseGuard::And { left, right, .. } => {
+                self.guard(current, left);
+                self.guard(current, right);
+            }
+
+            ClauseGuard::Var { name, .. } => self.referenced(current, name),
+
+            ClauseGuard::TupleIndex { tuple, .. } => self.guard(current, tuple),
+
+            ClauseGuard::Constant(constant) => self.constant(current, constant),
+        }
+    }
+
+    fn constant(&mut self, current: NodeIndex, constant: &'a Constant<(), ()>) {
+        match constant {
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Var {
+                module: Some(_), ..
+            } => (),
+
+            Constant::List { elements, .. } | Constant::Tuple { elements, .. } => {
+                for element in elements {
+                    self.constant(current, element);
+                }
+            }
+
+            Constant::Record { args, .. } => {
+                for arg in args {
+                    self.constant(current, &arg.value);
+                }
+            }
+
+            Constant::Var {
+                module: None, name, ..
+            } => self.referenced(current, name),
+
+            Constant::BitString { segments, .. } => {
+                for segment in segments {
+                    for option in &segment.options {
+                        self.bit_string_option(current, option, |s, p, c| s.constant(p, c));
+                    }
+                    self.constant(current, &segment.value);
+                }
             }
         }
     }
