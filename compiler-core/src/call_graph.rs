@@ -10,6 +10,7 @@ use crate::ast::{
     AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, UntypedPattern,
     Use,
 };
+use crate::type_::Error;
 use crate::{
     ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
     Result,
@@ -17,6 +18,7 @@ use crate::{
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{stable_graph::StableGraph, Directed};
+use smol_str::SmolStr;
 
 #[derive(Debug)]
 pub enum Function {
@@ -25,7 +27,7 @@ pub enum Function {
 }
 
 impl Function {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &SmolStr {
         match self {
             Function::Module(f) => &f.name,
             Function::External(f) => &f.name,
@@ -54,18 +56,19 @@ impl<'a> CallGraphBuilder<'a> {
 
     /// Add each function to the graph, storing the index of the node under the
     /// name of the function.
-    fn register_module_function_existance(&mut self, function: &'a Function) -> Result<()> {
+    fn register_module_function_existance(&mut self, function: &'a Function) -> Result<(), Error> {
         let name = function.name();
         let location = function.location();
 
         let index = self.graph.add_node(());
         let previous = self.names.insert(name, Some((index, location)));
 
-        // TODO: return an error if there are duplicate function names
         if let Some(Some((_, previous_location))) = previous {
-            panic!(
-                "Duplicate function name {name} found at {location:?} and {previous_location:?}"
-            );
+            return Err(Error::DuplicateName {
+                location,
+                previous_location,
+                name: name.clone(),
+            });
         }
         Ok(())
     }
@@ -76,8 +79,8 @@ impl<'a> CallGraphBuilder<'a> {
                 let current = self
                     .names
                     .get(f.name.as_str())
-                    .expect("Function must exist")
-                    .expect("Function must not be shadowed")
+                    .expect("Function must already have been registered as existing")
+                    .expect("Function must not be shadowed at module level")
                     .0;
                 self.expression(current, &f.body)
             }
@@ -396,7 +399,7 @@ impl<'a> CallGraphBuilder<'a> {
 /// Determine the order in which functions should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
-pub fn into_dependency_order(functions: Vec<Function>) -> Result<Vec<Vec<Function>>> {
+pub fn into_dependency_order(functions: Vec<Function>) -> Result<Vec<Vec<Function>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
