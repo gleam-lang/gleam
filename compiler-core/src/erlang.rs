@@ -7,7 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::{
-    ast::{ExternalFunction, Function, *},
+    ast::{ExternalFunction, Function, Import, ModuleConstant, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -365,10 +365,10 @@ fn register_imports(
         }
 
         Statement::Function(Function { .. })
-        | Statement::Import { .. }
+        | Statement::Import(Import { .. })
         | Statement::TypeAlias { .. }
         | Statement::ExternalFunction(ExternalFunction { .. })
-        | Statement::ModuleConstant { .. } => (),
+        | Statement::ModuleConstant(ModuleConstant { .. }) => (),
     }
 }
 
@@ -381,9 +381,9 @@ fn statement<'a>(
     match statement {
         Statement::TypeAlias { .. }
         | Statement::CustomType { .. }
-        | Statement::Import { .. }
+        | Statement::Import(Import { .. })
         | Statement::ExternalType { .. }
-        | Statement::ModuleConstant { .. }
+        | Statement::ModuleConstant(ModuleConstant { .. })
         | Statement::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 
         Statement::Function(Function {

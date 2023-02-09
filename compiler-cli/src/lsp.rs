@@ -13,7 +13,7 @@ use crate::{
     fs::{self, ProjectIO},
     telemetry::NullTelemetry,
 };
-use gleam_core::build::Mode;
+use gleam_core::{ast::Import, build::Mode};
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -648,7 +648,7 @@ impl LanguageServer {
 
         match found {
             // TODO: test
-            None | Some(Located::Statement(Statement::Import { .. })) => {
+            None | Some(Located::Statement(Statement::Import(Import { .. }))) => {
                 self.completion_for_import()
             }
 

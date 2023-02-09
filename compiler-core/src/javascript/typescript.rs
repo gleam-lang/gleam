@@ -19,8 +19,8 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        ExternalFunction, Function, Statement, TypedArg, TypedConstant, TypedExternalFnArg,
-        TypedModule, TypedRecordConstructor, TypedStatement,
+        ExternalFunction, Function, Import, ModuleConstant, Statement, TypedArg, TypedConstant,
+        TypedExternalFnArg, TypedModule, TypedRecordConstructor, TypedStatement,
     },
     docvec,
     pretty::{break_, Document, Documentable},
@@ -238,14 +238,14 @@ impl<'a> TypeScriptGenerator<'a> {
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
                 | Statement::ExternalFunction(ExternalFunction { .. })
-                | Statement::ModuleConstant { .. } => (),
+                | Statement::ModuleConstant(ModuleConstant { .. }) => (),
 
-                Statement::Import {
+                Statement::Import(Import {
                     module,
                     package,
                     as_name,
                     ..
-                } => {
+                }) => {
                     if let Some(alias) = as_name {
                         let _ = self.aliased_module_names.insert(module, alias);
                     }
@@ -307,7 +307,7 @@ impl<'a> TypeScriptGenerator<'a> {
             } if *public => vec![self.external_type(name, arguments)],
             Statement::ExternalType { .. } => vec![],
 
-            Statement::Import { .. } => vec![],
+            Statement::Import(Import { .. }) => vec![],
 
             Statement::CustomType {
                 public,
@@ -321,13 +321,13 @@ impl<'a> TypeScriptGenerator<'a> {
             }
             Statement::CustomType { .. } => vec![],
 
-            Statement::ModuleConstant {
+            Statement::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 value,
                 ..
-            } if *public => vec![self.module_constant(name, value)],
-            Statement::ModuleConstant { .. } => vec![],
+            }) if *public => vec![self.module_constant(name, value)],
+            Statement::ModuleConstant(ModuleConstant { .. }) => vec![],
 
             Statement::Function(Function {
                 arguments,

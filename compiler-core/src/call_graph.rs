@@ -7,40 +7,18 @@
 mod into_dependency_order_tests;
 
 use crate::ast::{
-    AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, UntypedPattern,
-    Use,
+    AssignName, BitStringSegmentOption, ClauseGuard, Constant, ModuleFunction, Pattern, SrcSpan,
+    UntypedPattern, Use,
 };
 use crate::type_::Error;
 use crate::{
-    ast::{ExternalFunction, Function as ModuleFunction, UntypedExpr},
+    ast::{ExternalFunction, Function, UntypedExpr},
     Result,
 };
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{stable_graph::StableGraph, Directed};
 use smol_str::SmolStr;
-
-#[derive(Debug)]
-pub enum Function {
-    Module(ModuleFunction<(), UntypedExpr>),
-    External(ExternalFunction<()>),
-}
-
-impl Function {
-    pub fn name(&self) -> &SmolStr {
-        match self {
-            Function::Module(f) => &f.name,
-            Function::External(f) => &f.name,
-        }
-    }
-
-    pub fn location(&self) -> SrcSpan {
-        match self {
-            Function::Module(f) => f.location,
-            Function::External(f) => f.location,
-        }
-    }
-}
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
@@ -56,7 +34,10 @@ impl<'a> CallGraphBuilder<'a> {
 
     /// Add each function to the graph, storing the index of the node under the
     /// name of the function.
-    fn register_module_function_existance(&mut self, function: &'a Function) -> Result<(), Error> {
+    fn register_module_function_existance(
+        &mut self,
+        function: &'a ModuleFunction,
+    ) -> Result<(), Error> {
         let name = function.name();
         let location = function.location();
 
@@ -73,9 +54,9 @@ impl<'a> CallGraphBuilder<'a> {
         Ok(())
     }
 
-    fn register_references(&mut self, function: &'a Function) {
+    fn register_references(&mut self, function: &'a ModuleFunction) {
         match function {
-            Function::Module(f) => {
+            ModuleFunction::Internal(f) => {
                 let current = self
                     .names
                     .get(f.name.as_str())
@@ -84,7 +65,7 @@ impl<'a> CallGraphBuilder<'a> {
                     .0;
                 self.expression(current, &f.body)
             }
-            Function::External(_) => {}
+            ModuleFunction::External(_) => {}
         }
     }
 
@@ -399,7 +380,9 @@ impl<'a> CallGraphBuilder<'a> {
 /// Determine the order in which functions should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
-pub fn into_dependency_order(functions: Vec<Function>) -> Result<Vec<Vec<Function>>, Error> {
+pub fn into_dependency_order(
+    functions: Vec<ModuleFunction>,
+) -> Result<Vec<Vec<ModuleFunction>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {

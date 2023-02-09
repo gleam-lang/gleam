@@ -101,9 +101,9 @@ impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
-                Statement::Import {
+                Statement::Import(Import {
                     module, location, ..
-                } => Some((module.clone(), *location)),
+                }) => Some((module.clone(), *location)),
                 _ => None,
             })
             .collect()
@@ -407,6 +407,46 @@ pub struct Function<T, Expr> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Import another Gleam module so the current module can use the types and
+/// values it defines.
+///
+/// # Example(s)
+///
+/// ```gleam
+/// import unix/cat
+/// // Import with alias
+/// import animal/cat as kitty
+/// ```
+pub struct Import<PackageName> {
+    pub location: SrcSpan,
+    pub module: SmolStr,
+    pub as_name: Option<SmolStr>,
+    pub unqualified: Vec<UnqualifiedImport>,
+    pub package: PackageName,
+}
+
+pub type UntypedModuleConstant = ModuleConstant<(), ()>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// A certain fixed value that can be used in multiple places
+///
+/// # Example(s)
+///
+/// ```gleam
+/// pub const start_year = 2101
+/// pub const end_year = 2111
+/// ```
+pub struct ModuleConstant<T, ConstantRecordTag> {
+    pub doc: Option<SmolStr>,
+    pub location: SrcSpan,
+    pub public: bool,
+    pub name: SmolStr,
+    pub annotation: Option<TypeAst>,
+    pub value: Box<Constant<T, ConstantRecordTag>>,
+    pub type_: T,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
 
@@ -473,41 +513,9 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<SmolStr>,
     },
 
-    /// Import another Gleam module so the current module can use the types and
-    /// values it defines.
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// import unix/cat
-    /// // Import with alias
-    /// import animal/cat as kitty
-    /// ```
-    Import {
-        location: SrcSpan,
-        module: SmolStr,
-        as_name: Option<SmolStr>,
-        unqualified: Vec<UnqualifiedImport>,
-        package: PackageName,
-    },
+    Import(Import<PackageName>),
 
-    /// A certain fixed value that can be used in multiple places
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// pub const start_year = 2101
-    /// pub const end_year = 2111
-    /// ```
-    ModuleConstant {
-        doc: Option<SmolStr>,
-        location: SrcSpan,
-        public: bool,
-        name: SmolStr,
-        annotation: Option<TypeAst>,
-        value: Box<Constant<T, ConstantRecordTag>>,
-        type_: T,
-    },
+    ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
 }
 
 impl TypedStatement {
@@ -533,24 +541,24 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Statement::Function(Function { location, .. })
-            | Statement::Import { location, .. }
+            | Statement::Import(Import { location, .. })
             | Statement::TypeAlias { location, .. }
             | Statement::CustomType { location, .. }
             | Statement::ExternalFunction(ExternalFunction { location, .. })
             | Statement::ExternalType { location, .. }
-            | Statement::ModuleConstant { location, .. } => *location,
+            | Statement::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
 
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
-            Statement::Import { .. } => (),
+            Statement::Import(Import { .. }) => (),
             Statement::Function(Function { doc, .. })
             | Statement::TypeAlias { doc, .. }
             | Statement::CustomType { doc, .. }
             | Statement::ExternalFunction(ExternalFunction { doc, .. })
             | Statement::ExternalType { doc, .. }
-            | Statement::ModuleConstant { doc, .. } => {
+            | Statement::ModuleConstant(ModuleConstant { doc, .. }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
             }
         }
@@ -1284,4 +1292,34 @@ pub enum TodoKind {
     Keyword,
     EmptyFunction,
     IncompleteUse,
+}
+
+#[derive(Debug)]
+pub struct GroupedStatements {
+    pub functions: Vec<ModuleFunction>,
+    pub constants: Vec<UntypedModuleConstant>,
+    pub imports: Vec<Import<()>>,
+    pub other: Vec<UntypedStatement>,
+}
+
+#[derive(Debug)]
+pub enum ModuleFunction {
+    Internal(Function<(), UntypedExpr>),
+    External(ExternalFunction<()>),
+}
+
+impl ModuleFunction {
+    pub fn name(&self) -> &SmolStr {
+        match self {
+            Self::Internal(f) => &f.name,
+            Self::External(f) => &f.name,
+        }
+    }
+
+    pub fn location(&self) -> SrcSpan {
+        match self {
+            Self::Internal(f) => f.location,
+            Self::External(f) => f.location,
+        }
+    }
 }

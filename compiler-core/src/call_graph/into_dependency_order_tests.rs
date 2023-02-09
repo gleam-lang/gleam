@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::TypeAst;
+use crate::ast::{ModuleFunction, TypeAst};
 use smol_str::SmolStr;
 
 enum Input {
@@ -11,7 +11,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
     let functions = functions
         .iter()
         .map(|input| match input {
-            Input::Module(name, src) => Function::Module(ModuleFunction {
+            Input::Module(name, src) => ModuleFunction::Internal(Function {
                 name: name.into(),
                 arguments: vec![],
                 body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
@@ -22,7 +22,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
                 return_type: (),
                 doc: None,
             }),
-            Input::External(name) => Function::External(ExternalFunction {
+            Input::External(name) => ModuleFunction::External(ExternalFunction {
                 name: name.into(),
                 arguments: vec![],
                 module: "themodule".into(),

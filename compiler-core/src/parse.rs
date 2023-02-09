@@ -57,10 +57,11 @@ mod token;
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
     CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, ExternalFunction, Function, HasLocation,
-    Module, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
-    Statement, TargetGroup, TodoKind, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause,
-    UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
+    Import, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
+    RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TodoKind, TypeAst, UnqualifiedImport,
+    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
+    UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
+    Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -1987,13 +1988,13 @@ where
             end = e;
         }
 
-        Ok(Some(Statement::Import {
+        Ok(Some(Statement::Import(Import {
             location: SrcSpan { start, end },
             unqualified,
             module: module.into(),
             as_name,
             package: (),
-        }))
+        })))
     }
 
     // [Name (as Name)? | UpName (as Name)? ](, [Name (as Name)? | UpName (as Name)?])*,?
@@ -2063,7 +2064,7 @@ where
 
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
-            Ok(Some(Statement::ModuleConstant {
+            Ok(Some(Statement::ModuleConstant(ModuleConstant {
                 doc: None,
                 location: SrcSpan { start, end },
                 public,
@@ -2071,7 +2072,7 @@ where
                 annotation,
                 value: Box::new(value),
                 type_: (),
-            }))
+            })))
         } else {
             parse_error(
                 ParseErrorType::NoValueAfterEqual,
