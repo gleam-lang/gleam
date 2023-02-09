@@ -3,9 +3,9 @@ mod tests;
 
 use crate::{
     ast::{
-        self, BitStringSegmentOption, ExternalFunction, Function, Layer, RecordConstructor,
-        RecordConstructorArg, SrcSpan, Statement, TypeAst, TypedModule, TypedStatement,
-        UnqualifiedImport, UntypedModule, UntypedStatement,
+        self, BitStringSegmentOption, ExternalFunction, Function, Import, Layer, ModuleConstant,
+        RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst, TypedModule,
+        TypedStatement, UnqualifiedImport, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     type_::{
@@ -78,9 +78,9 @@ pub fn infer_module(
             | Statement::CustomType { .. }
             | Statement::ExternalFunction(ExternalFunction { .. })
             | Statement::ExternalType { .. }
-            | Statement::Import { .. } => not_consts.push(statement),
+            | Statement::Import(Import { .. }) => not_consts.push(statement),
 
-            Statement::ModuleConstant { .. } => consts.push(statement),
+            Statement::ModuleConstant(ModuleConstant { .. }) => consts.push(statement),
         }
     }
 
@@ -145,13 +145,13 @@ pub fn register_import(
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match s {
-        Statement::Import {
+        Statement::Import(Import {
             module,
             as_name,
             unqualified,
             location,
             ..
-        } => {
+        }) => {
             let name = module.clone();
             // Find imported module
             let module_info =
@@ -307,7 +307,7 @@ pub fn register_import(
         | Statement::CustomType { .. }
         | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ExternalType { .. }
-        | Statement::ModuleConstant { .. } => Ok(()),
+        | Statement::ModuleConstant(ModuleConstant { .. }) => Ok(()),
     }
 }
 
@@ -451,8 +451,8 @@ pub fn register_types<'a>(
 
         Statement::Function(Function { .. })
         | Statement::ExternalFunction(ExternalFunction { .. })
-        | Statement::Import { .. }
-        | Statement::ModuleConstant { .. } => (),
+        | Statement::Import(Import { .. })
+        | Statement::ModuleConstant(ModuleConstant { .. }) => (),
     }
 
     Ok(())
@@ -676,12 +676,13 @@ fn register_values<'a>(
             }
         }
 
-        Statement::ModuleConstant { name, location, .. } => {
+        Statement::ModuleConstant(ModuleConstant { name, location, .. }) => {
             assert_unique_const_name(names, name, location)?;
         }
 
-        Statement::Import { .. } | Statement::TypeAlias { .. } | Statement::ExternalType { .. } => {
-        }
+        Statement::Import(Import { .. })
+        | Statement::TypeAlias { .. }
+        | Statement::ExternalType { .. } => {}
     }
     Ok(())
 }
@@ -938,13 +939,13 @@ fn infer_statement(
             })
         }
 
-        Statement::Import {
+        Statement::Import(Import {
             location,
             module,
             as_name,
             mut unqualified,
             ..
-        } => {
+        }) => {
             // Find imported module
             let module_info = environment.importable_modules.get(&module).ok_or_else(|| {
                 Error::UnknownModule {
@@ -960,16 +961,16 @@ fn infer_statement(
                     import.layer = Layer::Type;
                 }
             }
-            Ok(Statement::Import {
+            Ok(Statement::Import(Import {
                 location,
                 module,
                 as_name,
                 unqualified,
                 package: module_info.package.clone(),
-            })
+            }))
         }
 
-        Statement::ModuleConstant {
+        Statement::ModuleConstant(ModuleConstant {
             doc,
             location,
             name,
@@ -977,7 +978,7 @@ fn infer_statement(
             public,
             value,
             ..
-        } => {
+        }) => {
             let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
             let type_ = typed_expr.type_();
             let variant = ValueConstructor {
@@ -1002,7 +1003,7 @@ fn infer_statement(
                 environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
             }
 
-            Ok(Statement::ModuleConstant {
+            Ok(Statement::ModuleConstant(ModuleConstant {
                 doc,
                 location,
                 name,
@@ -1010,7 +1011,7 @@ fn infer_statement(
                 public,
                 value: Box::new(typed_expr),
                 type_,
-            })
+            }))
         }
     }
 }
@@ -1095,8 +1096,8 @@ fn generalise_statement(
         | Statement::CustomType { .. }
         | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ExternalType { .. }
-        | Statement::Import { .. }
-        | Statement::ModuleConstant { .. }) => statement,
+        | Statement::Import(Import { .. })
+        | Statement::ModuleConstant(ModuleConstant { .. })) => statement,
     }
 }
 

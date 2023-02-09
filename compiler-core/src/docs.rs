@@ -3,7 +3,7 @@ mod source_links;
 use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
-    ast::{ExternalFunction, Function, Statement, TypedStatement},
+    ast::{ExternalFunction, Function, ModuleConstant, Statement, TypedStatement},
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -614,14 +614,14 @@ fn constant<'a>(
 ) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
-        Statement::ModuleConstant {
+        Statement::ModuleConstant(ModuleConstant {
             public: true,
             doc,
             name,
             value,
             location,
             ..
-        } => Some(Constant {
+        }) => Some(Constant {
             name,
             definition: print(formatter.docs_const_expr(true, name, value)),
             documentation: markdown_documentation(doc),

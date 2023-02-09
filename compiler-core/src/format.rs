@@ -2,7 +2,7 @@
 mod tests;
 
 use crate::{
-    ast::{ExternalFunction, Function, Use, *},
+    ast::{ExternalFunction, Function, Import, ModuleConstant, Use, *},
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -124,7 +124,7 @@ impl<'comments> Formatter<'comments> {
         for statement in target_group.statements_ref() {
             let start = statement.location().start;
             match statement {
-                Statement::Import { .. } => {
+                Statement::Import(Import { .. }) => {
                     has_imports = true;
                     let comments = self.pop_comments(start);
                     let statement = self.statement(statement);
@@ -258,12 +258,12 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => self.external_type(*public, name, args),
 
-            Statement::Import {
+            Statement::Import(Import {
                 module,
                 as_name,
                 unqualified,
                 ..
-            } => "import "
+            }) => "import "
                 .to_doc()
                 .append(module.as_str())
                 .append(if unqualified.is_empty() {
@@ -289,13 +289,13 @@ impl<'comments> Formatter<'comments> {
                     nil()
                 }),
 
-            Statement::ModuleConstant {
+            Statement::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 annotation,
                 value,
                 ..
-            } => {
+            }) => {
                 let head = pub_(*public).append("const ").append(name.as_str());
                 let head = match annotation {
                     None => head,

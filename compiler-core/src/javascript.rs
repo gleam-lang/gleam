@@ -8,7 +8,7 @@ mod typescript;
 use std::path::Path;
 
 use crate::{
-    ast::{ExternalFunction, Function, *},
+    ast::{ExternalFunction, Function, Import, ModuleConstant, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -158,17 +158,17 @@ impl<'a> Generator<'a> {
             Statement::TypeAlias { .. } | Statement::ExternalType { .. } => vec![],
 
             // Handled in collect_imports
-            Statement::Import { .. } => vec![],
+            Statement::Import(Import { .. }) => vec![],
 
             // Handled in collect_definitions
             Statement::CustomType { .. } => vec![],
 
-            Statement::ModuleConstant {
+            Statement::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 value,
                 ..
-            } => vec![self.module_constant(*public, name, value)],
+            }) => vec![self.module_constant(*public, name, value)],
 
             Statement::Function(Function {
                 arguments,
@@ -276,8 +276,8 @@ impl<'a> Generator<'a> {
                 | Statement::TypeAlias { .. }
                 | Statement::ExternalFunction(ExternalFunction { .. })
                 | Statement::ExternalType { .. }
-                | Statement::Import { .. }
-                | Statement::ModuleConstant { .. } => vec![],
+                | Statement::Import(Import { .. })
+                | Statement::ModuleConstant(ModuleConstant { .. }) => vec![],
             })
             .collect()
     }
@@ -291,12 +291,9 @@ impl<'a> Generator<'a> {
                 | Statement::TypeAlias { .. }
                 | Statement::CustomType { .. }
                 | Statement::ExternalType { .. }
-                | Statement::ModuleConstant { .. } => (),
+                | Statement::ModuleConstant(ModuleConstant { .. }) => (),
                 Statement::ExternalFunction(ExternalFunction { module, .. })
-                    if module.is_empty() =>
-                {
-                    
-                }
+                    if module.is_empty() => {}
 
                 Statement::ExternalFunction(ExternalFunction {
                     public,
@@ -306,13 +303,13 @@ impl<'a> Generator<'a> {
                     ..
                 }) => self.register_external_function(&mut imports, *public, name, module, fun),
 
-                Statement::Import {
+                Statement::Import(Import {
                     module,
                     as_name,
                     unqualified,
                     package,
                     ..
-                } => {
+                }) => {
                     self.register_import(&mut imports, package, module, as_name, unqualified);
                 }
             }
@@ -480,10 +477,10 @@ impl<'a> Generator<'a> {
         for statement in self.module.statements.iter() {
             match statement {
                 Statement::ExternalFunction(ExternalFunction { name, .. })
-                | Statement::ModuleConstant { name, .. }
+                | Statement::ModuleConstant(ModuleConstant { name, .. })
                 | Statement::Function(Function { name, .. }) => self.register_in_scope(name),
 
-                Statement::Import { unqualified, .. } => unqualified
+                Statement::Import(Import { unqualified, .. }) => unqualified
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
