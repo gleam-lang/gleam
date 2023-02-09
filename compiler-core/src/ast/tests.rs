@@ -12,7 +12,7 @@ use crate::{
 use super::TypedModule;
 
 fn compile_module(src: &str) -> TypedModule {
-    use crate::type_::{build_prelude, infer_module};
+    use crate::type_::build_prelude;
     let (ast, _) = crate::parse::parse_module(src).expect("syntax error");
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -21,7 +21,7 @@ fn compile_module(src: &str) -> TypedModule {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert("gleam".into(), build_prelude(&ids));
-    infer_module(
+    crate::analyse::infer_module(
         crate::build::Target::Erlang,
         &ids,
         ast,

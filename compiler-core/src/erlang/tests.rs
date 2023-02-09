@@ -29,7 +29,7 @@ macro_rules! assert_erl {
         let _ = modules.insert("gleam".into(), $crate::type_::build_prelude(&ids));
         let (mut ast, _) = $crate::parse::parse_module($dep_src).expect("dep syntax error");
         ast.name = $dep_name.into();
-        let dep = $crate::type_::infer_module(
+        let dep = $crate::analyse::infer_module(
             $crate::build::Target::JavaScript,
             &ids,
             ast,
@@ -42,7 +42,7 @@ macro_rules! assert_erl {
         let _ = modules.insert($dep_name.into(), dep.type_info);
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my/mod".into();
-        let ast = $crate::type_::infer_module(
+        let ast = $crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
@@ -59,10 +59,7 @@ macro_rules! assert_erl {
 
     ($src:expr $(,)?) => {{
         use $crate::{
-            build::Origin,
-            erlang::module,
-            line_numbers::LineNumbers,
-            type_::{build_prelude, infer_module},
+            build::Origin, erlang::module, line_numbers::LineNumbers, type_::build_prelude,
             uid::UniqueIdGenerator,
         };
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
@@ -74,7 +71,7 @@ macro_rules! assert_erl {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = infer_module(
+        let ast = crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
