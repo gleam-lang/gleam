@@ -9,7 +9,9 @@ pub fn test() {
   let duplicate_name = 1
 
   case 1 {
-    1 | 2 -> {
+    // 1 or 2
+    1 
+    | 2 -> {
       let duplicate_name = duplicate_name + 1
       duplicate_name
     }
