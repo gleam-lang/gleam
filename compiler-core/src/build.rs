@@ -15,7 +15,7 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Options, ProjectCompiler};
 pub use self::telemetry::Telemetry;
 
-use crate::ast::{DefinitionLocation, TypedExpr, TypedStatement};
+use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedStatement};
 use crate::{
     ast::{SrcSpan, Statement, TypedModule},
     config::{self, PackageConfig},
@@ -210,7 +210,7 @@ impl Module {
                 statement.put_doc(doc);
             }
 
-            if let Statement::CustomType { constructors, .. } = statement {
+            if let Statement::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
                     let docs: Vec<&str> =
                         comments_before(&mut doc_comments, constructor.location.start, &self.code);

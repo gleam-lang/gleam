@@ -7,7 +7,7 @@ mod pattern;
 mod tests;
 
 use crate::{
-    ast::{ExternalFunction, Function, Import, ModuleConstant, *},
+    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -86,11 +86,11 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .statements
         .iter()
         .filter_map(|s| match s {
-            Statement::CustomType {
+            Statement::CustomType(CustomType {
                 public: true,
                 constructors,
                 ..
-            } => Some(constructors),
+            }) => Some(constructors),
             _ => None,
         })
         .flatten()
@@ -289,13 +289,13 @@ fn register_imports(
             type_defs.push(doc);
         }
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             name,
             constructors,
             typed_parameters,
             opaque,
             ..
-        } => {
+        }) => {
             // Erlang doesn't allow phantom type variables in type definitions but gleam does
             // so we check the type declaratinon against its constroctors and generate a phantom
             // value that uses the unused type variables.
@@ -380,7 +380,7 @@ fn statement<'a>(
 ) -> Vec<Document<'a>> {
     match statement {
         Statement::TypeAlias { .. }
-        | Statement::CustomType { .. }
+        | Statement::CustomType(CustomType { .. })
         | Statement::Import(Import { .. })
         | Statement::ExternalType { .. }
         | Statement::ModuleConstant(ModuleConstant { .. })

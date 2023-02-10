@@ -3,9 +3,9 @@ mod tests;
 
 use crate::{
     ast::{
-        self, BitStringSegmentOption, ExternalFunction, Function, GroupedStatements, Import, Layer,
-        ModuleConstant, RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TypeAst,
-        TypedModule, TypedStatement, UnqualifiedImport, UntypedModule, UntypedStatement,
+        self, BitStringSegmentOption, CustomType, ExternalFunction, Function, GroupedStatements,
+        Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg, SrcSpan, Statement,
+        TypeAst, TypedModule, TypedStatement, UnqualifiedImport, UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     type_::{
@@ -59,7 +59,7 @@ pub fn infer_module(
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in &statements.other {
+    for s in &statements.types {
         register_types(s, name.clone(), &mut hydrators, &mut type_names, &mut env)?;
     }
 
@@ -89,7 +89,7 @@ pub fn infer_module(
         match statement {
             Statement::Function(Function { .. })
             | Statement::TypeAlias { .. }
-            | Statement::CustomType { .. }
+            | Statement::CustomType(CustomType { .. })
             | Statement::ExternalFunction(ExternalFunction { .. })
             | Statement::ExternalType { .. }
             | Statement::Import(Import { .. }) => not_consts.push(statement),
@@ -372,14 +372,14 @@ pub fn register_types<'a>(
             }
         }
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             name,
             public,
             parameters,
             location,
             constructors,
             ..
-        } => {
+        }) => {
             assert_unique_type_name(names, name, location)?;
 
             // Build a type from the type AST
@@ -578,14 +578,14 @@ fn register_values<'a>(
             }
         }
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             location,
             public,
             opaque,
             name,
             constructors,
             ..
-        } => {
+        }) => {
             let mut hydrator = hydrators
                 .remove(name)
                 .expect("Could not find hydrator for register_values custom type");
@@ -834,7 +834,7 @@ fn infer_statement(
             })
         }
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             doc,
             location,
             public,
@@ -843,7 +843,7 @@ fn infer_statement(
             parameters,
             constructors,
             ..
-        } => {
+        }) => {
             let constructors = constructors
                 .into_iter()
                 .map(
@@ -902,7 +902,7 @@ fn infer_statement(
                 .parameters
                 .clone();
 
-            Ok(Statement::CustomType {
+            Ok(Statement::CustomType(CustomType {
                 doc,
                 location,
                 public,
@@ -911,7 +911,7 @@ fn infer_statement(
                 parameters,
                 constructors,
                 typed_parameters,
-            })
+            }))
         }
 
         Statement::ExternalType {
@@ -1093,7 +1093,7 @@ fn generalise_statement(
         Statement::Function(function) => generalise_function(function, environment, module_name),
 
         statement @ (Statement::TypeAlias { .. }
-        | Statement::CustomType { .. }
+        | Statement::CustomType(CustomType { .. })
         | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ExternalType { .. }
         | Statement::Import(Import { .. })

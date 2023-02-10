@@ -56,8 +56,8 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, ExternalFnArg, ExternalFunction, Function, HasLocation,
-    Import, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction, Function,
+    HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
     RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TodoKind, TypeAst, UnqualifiedImport,
     UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
     UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
@@ -1667,7 +1667,7 @@ where
             if constructors.is_empty() {
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
-                Ok(Some(Statement::CustomType {
+                Ok(Some(Statement::CustomType(CustomType {
                     doc: None,
                     location: SrcSpan { start, end },
                     public,
@@ -1676,7 +1676,7 @@ where
                     parameters,
                     constructors,
                     typed_parameters: vec![],
-                }))
+                })))
             }
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias

@@ -3,7 +3,7 @@ mod source_links;
 use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
-    ast::{ExternalFunction, Function, ModuleConstant, Statement, TypedStatement},
+    ast::{CustomType, ExternalFunction, Function, ModuleConstant, Statement, TypedStatement},
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -532,7 +532,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             public: true,
             opaque: false,
             name,
@@ -541,7 +541,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             constructors: cs,
             location,
             ..
-        } => Some(Type {
+        }) => Some(Type {
             name,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
@@ -570,7 +570,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::CustomType {
+        Statement::CustomType(CustomType {
             public: true,
             opaque: true,
             name,
@@ -578,7 +578,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             doc,
             location,
             ..
-        } => Some(Type {
+        }) => Some(Type {
             name,
             definition: print(formatter.docs_opaque_custom_type(true, name, parameters, location)),
             documentation: markdown_documentation(doc),

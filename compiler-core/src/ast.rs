@@ -447,6 +447,33 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// A newly defined type with one or more constructors.
+/// Each variant of the custom type can contain different types, so the type is
+/// the product of the types contained by each variant.
+///
+/// This might be called an algebraic data type (ADT) or tagged union in other
+/// languages and type systems.
+///
+///
+/// # Example(s)
+///
+/// ```gleam
+/// pub type Cat {
+///   Cat(name: String, cuteness: Int)
+/// }
+/// ```
+pub struct CustomType<T> {
+    pub location: SrcSpan,
+    pub name: SmolStr,
+    pub parameters: Vec<SmolStr>,
+    pub public: bool,
+    pub constructors: Vec<RecordConstructor<T>>,
+    pub doc: Option<SmolStr>,
+    pub opaque: bool,
+    pub typed_parameters: Vec<T>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
 
@@ -468,31 +495,7 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
         doc: Option<SmolStr>,
     },
 
-    /// A newly defined type with one or more constructors.
-    /// Each variant of the custom type can contain different types, so the type is
-    /// the product of the types contained by each variant.
-    ///
-    /// This might be called an algebraic data type (ADT) or tagged union in other
-    /// languages and type systems.
-    ///
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// pub type Cat {
-    ///   Cat(name: String, cuteness: Int)
-    /// }
-    /// ```
-    CustomType {
-        location: SrcSpan,
-        name: SmolStr,
-        parameters: Vec<SmolStr>,
-        public: bool,
-        constructors: Vec<RecordConstructor<T>>,
-        doc: Option<SmolStr>,
-        opaque: bool,
-        typed_parameters: Vec<T>,
-    },
+    CustomType(CustomType<T>),
 
     ExternalFunction(ExternalFunction<T>),
 
@@ -543,7 +546,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             Statement::Function(Function { location, .. })
             | Statement::Import(Import { location, .. })
             | Statement::TypeAlias { location, .. }
-            | Statement::CustomType { location, .. }
+            | Statement::CustomType(CustomType { location, .. })
             | Statement::ExternalFunction(ExternalFunction { location, .. })
             | Statement::ExternalType { location, .. }
             | Statement::ModuleConstant(ModuleConstant { location, .. }) => *location,
@@ -555,7 +558,7 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             Statement::Import(Import { .. }) => (),
             Statement::Function(Function { doc, .. })
             | Statement::TypeAlias { doc, .. }
-            | Statement::CustomType { doc, .. }
+            | Statement::CustomType(CustomType { doc, .. })
             | Statement::ExternalFunction(ExternalFunction { doc, .. })
             | Statement::ExternalType { doc, .. }
             | Statement::ModuleConstant(ModuleConstant { doc, .. }) => {
@@ -1298,8 +1301,9 @@ pub enum TodoKind {
 pub struct GroupedStatements {
     pub functions: Vec<ModuleFunction>,
     pub constants: Vec<UntypedModuleConstant>,
+    pub custom_types: Vec<CustomType<()>>,
     pub imports: Vec<Import<()>>,
-    pub other: Vec<UntypedStatement>,
+    pub types: Vec<UntypedStatement>,
 }
 
 impl GroupedStatements {
@@ -1315,12 +1319,13 @@ impl GroupedStatements {
 
     pub fn len(&self) -> usize {
         let Self {
+            custom_types,
             functions,
             constants,
             imports,
-            other,
+            types,
         } = self;
-        functions.len() + constants.len() + imports.len() + other.len()
+        functions.len() + constants.len() + imports.len() + types.len() + custom_types.len()
     }
 
     fn add(&mut self, statement: UntypedStatement) {
@@ -1329,10 +1334,11 @@ impl GroupedStatements {
             Statement::ExternalFunction(f) => self.functions.push(ModuleFunction::External(f)),
             Statement::Import(i) => self.imports.push(i),
             Statement::ModuleConstant(c) => self.constants.push(c),
+            Statement::CustomType(c) => self.custom_types.push(c),
 
-            statement @ (Statement::ExternalType { .. }
-            | Statement::TypeAlias { .. }
-            | Statement::CustomType { .. }) => self.other.push(statement),
+            statement @ (Statement::ExternalType { .. } | Statement::TypeAlias { .. }) => {
+                self.types.push(statement)
+            }
         }
     }
 }
