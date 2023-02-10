@@ -3,7 +3,10 @@ mod source_links;
 use std::{path::PathBuf, time::SystemTime};
 
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, ModuleConstant, Statement, TypedStatement},
+    ast::{
+        CustomType, ExternalFunction, ExternalType, Function, ModuleConstant, Statement, TypeAlias,
+        TypedStatement,
+    },
     build::Module,
     config::{DocsPage, PackageConfig},
     docs::source_links::SourceLinker,
@@ -516,14 +519,14 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
     let mut formatter = format::Formatter::new();
 
     match statement {
-        Statement::ExternalType {
+        Statement::ExternalType(ExternalType {
             public: true,
             name,
             doc,
             arguments: args,
             location,
             ..
-        } => Some(Type {
+        }) => Some(Type {
             name,
             definition: print(formatter.external_type(true, name, args)),
             documentation: markdown_documentation(doc),
@@ -587,7 +590,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             source_url: source_links.url(location),
         }),
 
-        Statement::TypeAlias {
+        Statement::TypeAlias(TypeAlias {
             public: true,
             alias: name,
             type_ast: typ,
@@ -595,7 +598,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             parameters: args,
             location,
             ..
-        } => Some(Type {
+        }) => Some(Type {
             name,
             definition: print(formatter.type_alias(true, name, args, typ)),
             documentation: markdown_documentation(doc),

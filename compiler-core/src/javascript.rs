@@ -8,7 +8,9 @@ mod typescript;
 use std::path::Path;
 
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, *},
+    ast::{
+        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
+    },
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -155,7 +157,8 @@ impl<'a> Generator<'a> {
 
     pub fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
         match statement {
-            Statement::TypeAlias { .. } | Statement::ExternalType { .. } => vec![],
+            Statement::TypeAlias(TypeAlias { .. })
+            | Statement::ExternalType(ExternalType { .. }) => vec![],
 
             // Handled in collect_imports
             Statement::Import(Import { .. }) => vec![],
@@ -273,9 +276,9 @@ impl<'a> Generator<'a> {
                 }) => self.custom_type_definition(constructors, *public, *opaque),
 
                 Statement::Function(Function { .. })
-                | Statement::TypeAlias { .. }
+                | Statement::TypeAlias(TypeAlias { .. })
                 | Statement::ExternalFunction(ExternalFunction { .. })
-                | Statement::ExternalType { .. }
+                | Statement::ExternalType(ExternalType { .. })
                 | Statement::Import(Import { .. })
                 | Statement::ModuleConstant(ModuleConstant { .. }) => vec![],
             })
@@ -288,9 +291,9 @@ impl<'a> Generator<'a> {
         for statement in &self.module.statements {
             match statement {
                 Statement::Function(Function { .. })
-                | Statement::TypeAlias { .. }
+                | Statement::TypeAlias(TypeAlias { .. })
                 | Statement::CustomType(CustomType { .. })
-                | Statement::ExternalType { .. }
+                | Statement::ExternalType(ExternalType { .. })
                 | Statement::ModuleConstant(ModuleConstant { .. }) => (),
                 Statement::ExternalFunction(ExternalFunction { module, .. })
                     if module.is_empty() => {}
@@ -484,9 +487,9 @@ impl<'a> Generator<'a> {
                     .iter()
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
-                Statement::TypeAlias { .. }
+                Statement::TypeAlias(TypeAlias { .. })
                 | Statement::CustomType(CustomType { .. })
-                | Statement::ExternalType { .. } => (),
+                | Statement::ExternalType(ExternalType { .. }) => (),
             }
         }
     }

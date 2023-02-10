@@ -7,7 +7,9 @@ mod pattern;
 mod tests;
 
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, *},
+    ast::{
+        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias, *,
+    },
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -251,11 +253,11 @@ fn register_imports(
             ..
         }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-        Statement::ExternalType {
+        Statement::ExternalType(ExternalType {
             name,
             arguments: args,
             ..
-        } => {
+        }) => {
             // Type Exports
             type_exports.push(
                 Document::String(erl_safe_type_name(name.to_snake_case()))
@@ -366,7 +368,7 @@ fn register_imports(
 
         Statement::Function(Function { .. })
         | Statement::Import(Import { .. })
-        | Statement::TypeAlias { .. }
+        | Statement::TypeAlias(TypeAlias { .. })
         | Statement::ExternalFunction(ExternalFunction { .. })
         | Statement::ModuleConstant(ModuleConstant { .. }) => (),
     }
@@ -379,10 +381,10 @@ fn statement<'a>(
     line_numbers: &'a LineNumbers,
 ) -> Vec<Document<'a>> {
     match statement {
-        Statement::TypeAlias { .. }
+        Statement::TypeAlias(TypeAlias { .. })
         | Statement::CustomType(CustomType { .. })
         | Statement::Import(Import { .. })
-        | Statement::ExternalType { .. }
+        | Statement::ExternalType(ExternalType { .. })
         | Statement::ModuleConstant(ModuleConstant { .. })
         | Statement::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 

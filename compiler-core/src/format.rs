@@ -2,7 +2,10 @@
 mod tests;
 
 use crate::{
-    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, Use, *},
+    ast::{
+        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, TypeAlias,
+        Use, *,
+    },
     docvec,
     io::Utf8Writer,
     parse::extra::Comment,
@@ -215,13 +218,13 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
 
-            Statement::TypeAlias {
+            Statement::TypeAlias(TypeAlias {
                 alias,
                 parameters: args,
                 type_ast: resolved_type,
                 public,
                 ..
-            } => self.type_alias(*public, alias, args, resolved_type),
+            }) => self.type_alias(*public, alias, args, resolved_type),
 
             Statement::CustomType(CustomType {
                 name,
@@ -251,12 +254,12 @@ impl<'comments> Formatter<'comments> {
                 .append(fun.as_str())
                 .append("\""),
 
-            Statement::ExternalType {
+            Statement::ExternalType(ExternalType {
                 public,
                 name,
                 arguments: args,
                 ..
-            } => self.external_type(*public, name, args),
+            }) => self.external_type(*public, name, args),
 
             Statement::Import(Import {
                 module,

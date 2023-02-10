@@ -3,9 +3,10 @@ mod tests;
 
 use crate::{
     ast::{
-        self, BitStringSegmentOption, CustomType, ExternalFunction, Function, GroupedStatements,
-        Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg, SrcSpan, Statement,
-        TypeAst, TypedModule, TypedStatement, UnqualifiedImport, UntypedModule, UntypedStatement,
+        self, BitStringSegmentOption, CustomType, ExternalFunction, ExternalType, Function,
+        GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
+        SrcSpan, Statement, TypeAlias, TypeAst, TypedModule, TypedStatement, UnqualifiedImport,
+        UntypedModule, UntypedStatement,
     },
     build::{Origin, Target},
     type_::{
@@ -59,7 +60,7 @@ pub fn infer_module(
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in &statements.types {
+    for s in &statements.external_types {
         register_types(s, name.clone(), &mut hydrators, &mut type_names, &mut env)?;
     }
 
@@ -88,10 +89,10 @@ pub fn infer_module(
     for statement in module.into_iter_statements(target) {
         match statement {
             Statement::Function(Function { .. })
-            | Statement::TypeAlias { .. }
+            | Statement::TypeAlias(TypeAlias { .. })
             | Statement::CustomType(CustomType { .. })
             | Statement::ExternalFunction(ExternalFunction { .. })
-            | Statement::ExternalType { .. }
+            | Statement::ExternalType(ExternalType { .. })
             | Statement::Import(Import { .. }) => not_consts.push(statement),
 
             Statement::ModuleConstant(ModuleConstant { .. }) => consts.push(statement),
@@ -335,13 +336,13 @@ pub fn register_types<'a>(
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     match statement {
-        Statement::ExternalType {
+        Statement::ExternalType(ExternalType {
             name,
             public,
             arguments: args,
             location,
             ..
-        } => {
+        }) => {
             assert_unique_type_name(names, name, location)?;
 
             // Build a type from the type AST
@@ -413,14 +414,14 @@ pub fn register_types<'a>(
             }
         }
 
-        Statement::TypeAlias {
+        Statement::TypeAlias(TypeAlias {
             location,
             public,
             parameters: args,
             alias: name,
             type_ast: resolved_type,
             ..
-        } => {
+        }) => {
             assert_unique_type_name(names, name, location)?;
 
             // Register the paramerterised types
@@ -681,8 +682,8 @@ fn register_values<'a>(
         }
 
         Statement::Import(Import { .. })
-        | Statement::TypeAlias { .. }
-        | Statement::ExternalType { .. } => {}
+        | Statement::TypeAlias(TypeAlias { .. })
+        | Statement::ExternalType(ExternalType { .. }) => {}
     }
     Ok(())
 }
@@ -809,7 +810,7 @@ fn infer_statement(
             }))
         }
 
-        Statement::TypeAlias {
+        Statement::TypeAlias(TypeAlias {
             doc,
             location,
             public,
@@ -817,13 +818,13 @@ fn infer_statement(
             parameters: args,
             type_ast: resolved_type,
             ..
-        } => {
+        }) => {
             let typ = environment
                 .get_type_constructor(&None, &alias)
                 .expect("Could not find existing type for type alias")
                 .typ
                 .clone();
-            Ok(Statement::TypeAlias {
+            Ok(Statement::TypeAlias(TypeAlias {
                 doc,
                 location,
                 public,
@@ -831,7 +832,7 @@ fn infer_statement(
                 parameters: args,
                 type_ast: resolved_type,
                 type_: typ,
-            })
+            }))
         }
 
         Statement::CustomType(CustomType {
@@ -914,13 +915,13 @@ fn infer_statement(
             }))
         }
 
-        Statement::ExternalType {
+        Statement::ExternalType(ExternalType {
             doc,
             location,
             public,
             name,
             arguments: args,
-        } => {
+        }) => {
             // Check contained types are valid
             let mut hydrator = Hydrator::new();
             for arg in &args {
@@ -930,13 +931,13 @@ fn infer_statement(
                 };
                 let _ = hydrator.type_from_ast(&var, environment)?;
             }
-            Ok(Statement::ExternalType {
+            Ok(Statement::ExternalType(ExternalType {
                 doc,
                 location,
                 public,
                 name,
                 arguments: args,
-            })
+            }))
         }
 
         Statement::Import(Import {
@@ -1092,10 +1093,10 @@ fn generalise_statement(
     match s {
         Statement::Function(function) => generalise_function(function, environment, module_name),
 
-        statement @ (Statement::TypeAlias { .. }
+        statement @ (Statement::TypeAlias(TypeAlias { .. })
         | Statement::CustomType(CustomType { .. })
         | Statement::ExternalFunction(ExternalFunction { .. })
-        | Statement::ExternalType { .. }
+        | Statement::ExternalType(ExternalType { .. })
         | Statement::Import(Import { .. })
         | Statement::ModuleConstant(ModuleConstant { .. })) => statement,
     }
