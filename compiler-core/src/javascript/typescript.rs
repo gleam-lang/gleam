@@ -19,8 +19,9 @@ use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        CustomType, ExternalFunction, Function, Import, ModuleConstant, Statement, TypedArg,
-        TypedConstant, TypedExternalFnArg, TypedModule, TypedRecordConstructor, TypedStatement,
+        CustomType, ExternalFunction, ExternalType, Function, Import, ModuleConstant, Statement,
+        TypeAlias, TypedArg, TypedConstant, TypedExternalFnArg, TypedModule,
+        TypedRecordConstructor, TypedStatement,
     },
     docvec,
     pretty::{break_, Document, Documentable},
@@ -234,9 +235,9 @@ impl<'a> TypeScriptGenerator<'a> {
         for statement in &self.module.statements {
             match statement {
                 Statement::Function(Function { .. })
-                | Statement::TypeAlias { .. }
+                | Statement::TypeAlias(TypeAlias { .. })
                 | Statement::CustomType(CustomType { .. })
-                | Statement::ExternalType { .. }
+                | Statement::ExternalType(ExternalType { .. })
                 | Statement::ExternalFunction(ExternalFunction { .. })
                 | Statement::ModuleConstant(ModuleConstant { .. }) => (),
 
@@ -291,21 +292,21 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn statement(&mut self, statement: &'a TypedStatement) -> Vec<Output<'a>> {
         match statement {
-            Statement::TypeAlias {
+            Statement::TypeAlias(TypeAlias {
                 alias,
                 public,
                 type_,
                 ..
-            } if *public => vec![self.type_alias(alias, type_)],
-            Statement::TypeAlias { .. } => vec![],
+            }) if *public => vec![self.type_alias(alias, type_)],
+            Statement::TypeAlias(TypeAlias { .. }) => vec![],
 
-            Statement::ExternalType {
+            Statement::ExternalType(ExternalType {
                 public,
                 name,
                 arguments,
                 ..
-            } if *public => vec![self.external_type(name, arguments)],
-            Statement::ExternalType { .. } => vec![],
+            }) if *public => vec![self.external_type(name, arguments)],
+            Statement::ExternalType(ExternalType { .. }) => vec![],
 
             Statement::Import(Import { .. }) => vec![],
 

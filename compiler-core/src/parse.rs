@@ -56,12 +56,12 @@ mod token;
 
 use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction, Function,
-    HasLocation, Import, Module, ModuleConstant, Pattern, RecordConstructor, RecordConstructorArg,
-    RecordUpdateSpread, SrcSpan, Statement, TargetGroup, TodoKind, TypeAst, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr,
-    UntypedExternalFnArg, UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement,
-    Use, CAPTURE_VARIABLE,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction,
+    ExternalType, Function, HasLocation, Import, Module, ModuleConstant, Pattern,
+    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
+    TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
+    UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedPattern,
+    UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -1617,13 +1617,13 @@ where
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
         let (_, name, args, end) = self.expect_type_name()?;
-        Ok(Some(Statement::ExternalType {
+        Ok(Some(Statement::ExternalType(ExternalType {
             location: SrcSpan { start, end },
             public,
             name,
             arguments: args,
             doc: None,
-        }))
+        })))
     }
 
     //
@@ -1683,7 +1683,7 @@ where
             if !opaque {
                 if let Some(t) = self.parse_type(false)? {
                     let type_end = t.location().end;
-                    Ok(Some(Statement::TypeAlias {
+                    Ok(Some(Statement::TypeAlias(TypeAlias {
                         doc: None,
                         location: SrcSpan {
                             start,
@@ -1694,7 +1694,7 @@ where
                         parameters,
                         type_ast: t,
                         type_: (),
-                    }))
+                    })))
                 } else {
                     parse_error(
                         ParseErrorType::ExpectedType,

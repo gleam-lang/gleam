@@ -474,47 +474,53 @@ pub struct CustomType<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Import a type defined in another language.
+/// Nothing is known about the runtime characteristics of the type, we only
+/// know that it exists and that we have given it this name.
+///
+/// # Example(s)
+///
+/// ```gleam
+/// pub external type Queue(a)
+/// ```
+pub struct ExternalType {
+    pub location: SrcSpan,
+    pub public: bool,
+    pub name: SmolStr,
+    pub arguments: Vec<SmolStr>,
+    pub doc: Option<SmolStr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+/// A new name for an existing type
+///
+/// # Example(s)
+///
+/// ```gleam
+/// pub type Headers =
+///   List(#(String, String))
+/// ```
+pub struct TypeAlias<T> {
+    pub location: SrcSpan,
+    pub alias: SmolStr,
+    pub parameters: Vec<SmolStr>,
+    pub type_ast: TypeAst,
+    pub type_: T,
+    pub public: bool,
+    pub doc: Option<SmolStr>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
 
-    /// A new name for an existing type
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// pub type Headers =
-    ///   List(#(String, String))
-    /// ```
-    TypeAlias {
-        location: SrcSpan,
-        alias: SmolStr,
-        parameters: Vec<SmolStr>,
-        type_ast: TypeAst,
-        type_: T,
-        public: bool,
-        doc: Option<SmolStr>,
-    },
+    TypeAlias(TypeAlias<T>),
 
     CustomType(CustomType<T>),
 
     ExternalFunction(ExternalFunction<T>),
 
-    /// Import a type defined in another language.
-    /// Nothing is known about the runtime characteristics of the type, we only
-    /// know that it exists and that we have given it this name.
-    ///
-    /// # Example(s)
-    ///
-    /// ```gleam
-    /// pub external type Queue(a)
-    /// ```
-    ExternalType {
-        location: SrcSpan,
-        public: bool,
-        name: SmolStr,
-        arguments: Vec<SmolStr>,
-        doc: Option<SmolStr>,
-    },
+    ExternalType(ExternalType),
 
     Import(Import<PackageName>),
 
@@ -545,10 +551,10 @@ impl<A, B, C, E> Statement<A, B, C, E> {
         match self {
             Statement::Function(Function { location, .. })
             | Statement::Import(Import { location, .. })
-            | Statement::TypeAlias { location, .. }
+            | Statement::TypeAlias(TypeAlias { location, .. })
             | Statement::CustomType(CustomType { location, .. })
             | Statement::ExternalFunction(ExternalFunction { location, .. })
-            | Statement::ExternalType { location, .. }
+            | Statement::ExternalType(ExternalType { location, .. })
             | Statement::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
@@ -557,10 +563,10 @@ impl<A, B, C, E> Statement<A, B, C, E> {
         match self {
             Statement::Import(Import { .. }) => (),
             Statement::Function(Function { doc, .. })
-            | Statement::TypeAlias { doc, .. }
+            | Statement::TypeAlias(TypeAlias { doc, .. })
             | Statement::CustomType(CustomType { doc, .. })
             | Statement::ExternalFunction(ExternalFunction { doc, .. })
-            | Statement::ExternalType { doc, .. }
+            | Statement::ExternalType(ExternalType { doc, .. })
             | Statement::ModuleConstant(ModuleConstant { doc, .. }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
             }
@@ -1303,7 +1309,8 @@ pub struct GroupedStatements {
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<CustomType<()>>,
     pub imports: Vec<Import<()>>,
-    pub types: Vec<UntypedStatement>,
+    pub external_types: Vec<ExternalType>,
+    pub type_aliases: Vec<TypeAlias<()>>,
 }
 
 impl GroupedStatements {
@@ -1323,9 +1330,15 @@ impl GroupedStatements {
             functions,
             constants,
             imports,
-            types,
+            external_types,
+            type_aliases,
         } = self;
-        functions.len() + constants.len() + imports.len() + types.len() + custom_types.len()
+        functions.len()
+            + constants.len()
+            + imports.len()
+            + external_types.len()
+            + custom_types.len()
+            + type_aliases.len()
     }
 
     fn add(&mut self, statement: UntypedStatement) {
@@ -1336,9 +1349,8 @@ impl GroupedStatements {
             Statement::ModuleConstant(c) => self.constants.push(c),
             Statement::CustomType(c) => self.custom_types.push(c),
 
-            statement @ (Statement::ExternalType { .. } | Statement::TypeAlias { .. }) => {
-                self.types.push(statement)
-            }
+            statement @ (Statement::ExternalType(ExternalType { .. })
+            | Statement::TypeAlias(TypeAlias { .. })) => self.external_types.push(statement),
         }
     }
 }
