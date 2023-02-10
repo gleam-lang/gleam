@@ -8,7 +8,7 @@ mod typescript;
 use std::path::Path;
 
 use crate::{
-    ast::{ExternalFunction, Function, Import, ModuleConstant, *},
+    ast::{CustomType, ExternalFunction, Function, Import, ModuleConstant, *},
     docvec,
     line_numbers::LineNumbers,
     pretty::*,
@@ -161,7 +161,7 @@ impl<'a> Generator<'a> {
             Statement::Import(Import { .. }) => vec![],
 
             // Handled in collect_definitions
-            Statement::CustomType { .. } => vec![],
+            Statement::CustomType(CustomType { .. }) => vec![],
 
             Statement::ModuleConstant(ModuleConstant {
                 public,
@@ -265,12 +265,12 @@ impl<'a> Generator<'a> {
             .statements
             .iter()
             .flat_map(|statement| match statement {
-                Statement::CustomType {
+                Statement::CustomType(CustomType {
                     public,
                     constructors,
                     opaque,
                     ..
-                } => self.custom_type_definition(constructors, *public, *opaque),
+                }) => self.custom_type_definition(constructors, *public, *opaque),
 
                 Statement::Function(Function { .. })
                 | Statement::TypeAlias { .. }
@@ -289,7 +289,7 @@ impl<'a> Generator<'a> {
             match statement {
                 Statement::Function(Function { .. })
                 | Statement::TypeAlias { .. }
-                | Statement::CustomType { .. }
+                | Statement::CustomType(CustomType { .. })
                 | Statement::ExternalType { .. }
                 | Statement::ModuleConstant(ModuleConstant { .. }) => (),
                 Statement::ExternalFunction(ExternalFunction { module, .. })
@@ -485,7 +485,7 @@ impl<'a> Generator<'a> {
                     .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
 
                 Statement::TypeAlias { .. }
-                | Statement::CustomType { .. }
+                | Statement::CustomType(CustomType { .. })
                 | Statement::ExternalType { .. } => (),
             }
         }
