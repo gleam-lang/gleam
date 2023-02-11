@@ -60,8 +60,14 @@ pub fn infer_module(
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
-    for s in &statements.external_types {
-        register_types(s, name.clone(), &mut hydrators, &mut type_names, &mut env)?;
+    for t in &statements.external_types {
+        register_external_type(t, &mut type_names, &mut env, &name)?;
+    }
+    for t in &statements.custom_types {
+        register_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
+    }
+    for t in &statements.type_aliases {
+        register_type_alias(t, &mut type_names, &mut env, &name)?;
     }
 
     //
@@ -327,136 +333,117 @@ fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
     Ok(())
 }
 
-/// Iterate over a module, registering any new types created by the module into the typer
-pub fn register_types<'a>(
-    statement: &'a UntypedStatement,
-    module: SmolStr,
+fn register_type_alias<'a>(
+    t: &'a TypeAlias<()>,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    environment: &mut Environment<'a>,
+    module: &SmolStr,
+) -> Result<(), Error> {
+    let TypeAlias {
+        location,
+        public,
+        parameters: args,
+        alias: name,
+        type_ast: resolved_type,
+        ..
+    } = t;
+    assert_unique_type_name(names, name, location)?;
+    let mut hydrator = Hydrator::new();
+    let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+    hydrator.disallow_new_type_variables();
+    let typ = hydrator.type_from_ast(resolved_type, environment)?;
+    environment.insert_type_constructor(
+        name.clone(),
+        TypeConstructor {
+            origin: *location,
+            module: module.clone(),
+            public: *public,
+            parameters,
+            typ,
+        },
+    )?;
+    Ok(if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+    })
+}
+
+fn register_custom_type<'a>(
+    t: &'a CustomType<()>,
+    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    environment: &mut Environment<'a>,
+    module: &'a SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
+) -> Result<(), Error> {
+    let CustomType {
+        name,
+        public,
+        parameters,
+        location,
+        constructors,
+        ..
+    } = t;
+    assert_unique_type_name(names, name, location)?;
+    let mut hydrator = Hydrator::new();
+    let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
+    let typ = Arc::new(Type::App {
+        public: *public,
+        module: module.to_owned(),
+        name: name.clone(),
+        args: parameters.clone(),
+    });
+    let _ = hydrators.insert(name.clone(), hydrator);
+    environment.insert_type_constructor(
+        name.clone(),
+        TypeConstructor {
+            origin: *location,
+            module: module.clone(),
+            public: *public,
+            parameters,
+            typ,
+        },
+    )?;
+    let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
+    environment.insert_type_to_constructors(name.clone(), constructor_names);
+    Ok(if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+    })
+}
+
+fn register_external_type<'a>(
+    t: &'a ExternalType,
     names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
     environment: &mut Environment<'_>,
+    module: &SmolStr,
 ) -> Result<(), Error> {
-    match statement {
-        Statement::ExternalType(ExternalType {
-            name,
-            public,
-            arguments: args,
-            location,
-            ..
-        }) => {
-            assert_unique_type_name(names, name, location)?;
-
-            // Build a type from the type AST
-            let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
-            let typ = Arc::new(Type::App {
-                public: *public,
-                module: module.as_str().into(),
-                name: name.clone(),
-                args: parameters.clone(),
-            });
-
-            // Insert into the module scope
-            environment.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: *location,
-                    module,
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-
-            // Keep track of private types so we can tell if they are later unused
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-            }
-        }
-
-        Statement::CustomType(CustomType {
-            name,
-            public,
+    let ExternalType {
+        name,
+        public,
+        arguments: args,
+        location,
+        ..
+    } = t;
+    assert_unique_type_name(names, name, location)?;
+    let mut hydrator = Hydrator::new();
+    let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
+    let typ = Arc::new(Type::App {
+        public: *public,
+        module: module.as_str().into(),
+        name: name.clone(),
+        args: parameters.clone(),
+    });
+    environment.insert_type_constructor(
+        name.clone(),
+        TypeConstructor {
+            origin: *location,
+            module: module.clone(),
+            public: *public,
             parameters,
-            location,
-            constructors,
-            ..
-        }) => {
-            assert_unique_type_name(names, name, location)?;
-
-            // Build a type from the type AST
-            let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
-            let typ = Arc::new(Type::App {
-                public: *public,
-                module: module.to_owned(),
-                name: name.clone(),
-                args: parameters.clone(),
-            });
-            let _ = hydrators.insert(name.clone(), hydrator);
-
-            environment.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: *location,
-                    module,
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-
-            let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
-            environment.insert_type_to_constructors(name.clone(), constructor_names);
-
-            // Keep track of private types so we can tell if they are later unused
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-            }
-        }
-
-        Statement::TypeAlias(TypeAlias {
-            location,
-            public,
-            parameters: args,
-            alias: name,
-            type_ast: resolved_type,
-            ..
-        }) => {
-            assert_unique_type_name(names, name, location)?;
-
-            // Register the paramerterised types
-            let mut hydrator = Hydrator::new();
-            let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
-
-            // Disallow creation of new types outside the paramerterised types
-            hydrator.disallow_new_type_variables();
-
-            // Create the type that the alias resolves to
-            let typ = hydrator.type_from_ast(resolved_type, environment)?;
-            environment.insert_type_constructor(
-                name.clone(),
-                TypeConstructor {
-                    origin: *location,
-                    module,
-                    public: *public,
-                    parameters,
-                    typ,
-                },
-            )?;
-
-            // Keep track of private types so we can tell if they are later unused
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-            }
-        }
-
-        Statement::Function(Function { .. })
-        | Statement::ExternalFunction(ExternalFunction { .. })
-        | Statement::Import(Import { .. })
-        | Statement::ModuleConstant(ModuleConstant { .. }) => (),
-    }
-
-    Ok(())
+            typ,
+        },
+    )?;
+    Ok(if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+    })
 }
 
 fn register_values<'a>(
