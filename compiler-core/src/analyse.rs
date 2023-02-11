@@ -54,36 +54,39 @@ pub fn infer_module(
     // Register any modules, types, and values being imported
     // We process imports first so that anything imported can be referenced
     // anywhere in the module.
+    // TODO: Extract an ImportRegistrar class to perform this.
     for s in &statements.imports {
         register_import(s, &name, origin, &mut env)?;
     }
 
     // Register types so they can be used in constructors and functions
     // earlier in the module.
+    // TODO: Extract a TypeRegistrar class to perform all this.
     for t in &statements.external_types {
-        register_external_type(t, &mut type_names, &mut env, &name)?;
+        register_types_from_external_type(t, &mut type_names, &mut env, &name)?;
     }
     for t in &statements.custom_types {
-        register_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
+        register_types_from_custom_type(t, &mut type_names, &mut env, &name, &mut hydrators)?;
     }
+    // TODO: Extract a Type alias class to perform this.
+    // TODO: Sort type aliases by dependency order so they don't have to be
+    // ordered in the file
     for t in &statements.type_aliases {
         register_type_alias(t, &mut type_names, &mut env, &name)?;
     }
 
-    //
-    //
-    //
-    // TODO: you are about to use the call graph to order the functions prior to
-    // inference.
-    // Be aware that the register values function also does some validating of
-    // constant name uniqueness, this'll likely need to be preserved in some
-    // fashion.
-    //
-    //
-
     // Register values so they can be used in functions earlier in the module.
-    for s in module.iter_statements(target) {
-        register_values(s, &name, &mut hydrators, &mut value_names, &mut env)?;
+    for f in &statements.functions {
+        register_value_from_function(f, &mut value_names, &mut env, &mut hydrators, &name)?;
+    }
+    for f in &statements.external_functions {
+        register_external_function(f, &mut value_names, &mut env)?;
+    }
+    for t in &statements.custom_types {
+        register_values_from_custom_type(t, &mut hydrators, &mut env, &mut value_names, &name)?;
+    }
+    for c in &statements.constants {
+        assert_unique_const_name(&mut value_names, &c.name, c.location)?;
     }
 
     // Infer the types of each statement in the module
@@ -335,7 +338,7 @@ fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
 
 fn register_type_alias<'a>(
     t: &'a TypeAlias<()>,
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &SmolStr,
 ) -> Result<(), Error> {
@@ -347,7 +350,7 @@ fn register_type_alias<'a>(
         type_ast: resolved_type,
         ..
     } = t;
-    assert_unique_type_name(names, name, location)?;
+    assert_unique_type_name(names, name, *location)?;
     let mut hydrator = Hydrator::new();
     let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
     hydrator.disallow_new_type_variables();
@@ -367,9 +370,9 @@ fn register_type_alias<'a>(
     })
 }
 
-fn register_custom_type<'a>(
+fn register_types_from_custom_type<'a>(
     t: &'a CustomType<()>,
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &'a SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
@@ -382,7 +385,7 @@ fn register_custom_type<'a>(
         constructors,
         ..
     } = t;
-    assert_unique_type_name(names, name, location)?;
+    assert_unique_type_name(names, name, *location)?;
     let mut hydrator = Hydrator::new();
     let parameters = make_type_vars(parameters, location, &mut hydrator, environment)?;
     let typ = Arc::new(Type::App {
@@ -409,9 +412,9 @@ fn register_custom_type<'a>(
     })
 }
 
-fn register_external_type<'a>(
+fn register_types_from_external_type<'a>(
     t: &'a ExternalType,
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     environment: &mut Environment<'_>,
     module: &SmolStr,
 ) -> Result<(), Error> {
@@ -422,7 +425,7 @@ fn register_external_type<'a>(
         location,
         ..
     } = t;
-    assert_unique_type_name(names, name, location)?;
+    assert_unique_type_name(names, name, *location)?;
     let mut hydrator = Hydrator::new();
     let parameters = make_type_vars(args, location, &mut hydrator, environment)?;
     let typ = Arc::new(Type::App {
@@ -446,233 +449,203 @@ fn register_external_type<'a>(
     })
 }
 
-fn register_values<'a>(
-    s: &'a UntypedStatement,
-    module_name: &'a SmolStr,
+fn register_values_from_custom_type<'a>(
+    t: &'a CustomType<()>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
-    environment: &mut Environment<'_>,
+    environment: &mut Environment<'a>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    module_name: &'a SmolStr,
 ) -> Result<(), Error> {
-    match s {
-        Statement::Function(Function {
-            name,
-            arguments: args,
-            location,
-            return_annotation,
-            public,
-            ..
-        }) => {
-            assert_unique_value_name(names, name, location)?;
-            let _ = environment.ungeneralised_functions.insert(name.clone());
+    let CustomType {
+        location,
+        public,
+        opaque,
+        name,
+        constructors,
+        ..
+    } = t;
+    let mut hydrator = hydrators
+        .remove(name)
+        .expect("Could not find hydrator for register_values custom type");
+    hydrator.disallow_new_type_variables();
+    let typ = environment
+        .module_types
+        .get(name)
+        .expect("Type for custom type not found in register_values")
+        .typ
+        .clone();
+    if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+        let map = AccessorsMap {
+            public: (*public && !*opaque),
+            accessors,
+            // TODO: improve the ownership here so that we can use the
+            // `return_type_constructor` below rather than looking it up twice.
+            type_: typ.clone(),
+        };
+        environment.insert_accessors(name.clone(), map)
+    }
+    Ok(for constructor in constructors {
+        assert_unique_value_name(names, &constructor.name, constructor.location)?;
 
-            // Create the field map so we can reorder labels for usage of this function
-            let mut builder = FieldMapBuilder::new(args.len() as u32);
-            for arg in args.iter() {
-                builder.add(arg.names.get_label(), arg.location)?;
-            }
-            let field_map = builder.finish();
-
-            // Construct type from annotations
-            let mut hydrator = Hydrator::new();
-            hydrator.permit_holes(true);
-            let arg_types = args
-                .iter()
-                .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
-                .try_collect()?;
-            let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
-            let typ = fn_(arg_types, return_type);
-
-            // Keep track of which types we create from annotations so we can know
-            // which generic types not to instantiate later when performing
-            // inference of the function body.
-            let _ = hydrators.insert(name.clone(), hydrator);
-
-            // Insert the function into the environment
-            environment.insert_variable(
-                name.clone(),
-                ValueConstructorVariant::ModuleFn {
-                    name: name.clone(),
-                    field_map,
-                    module: module_name.clone(),
-                    arity: args.len(),
-                    location: *location,
-                },
-                typ,
-                *public,
-            );
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+        let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
+        let mut args_types = Vec::with_capacity(constructor.arguments.len());
+        for (i, RecordConstructorArg { label, ast, .. }) in constructor.arguments.iter().enumerate()
+        {
+            let t = hydrator.type_from_ast(ast, environment)?;
+            args_types.push(t);
+            if let Some(label) = label {
+                field_map
+                    .insert(label.clone(), i as u32)
+                    .map_err(|_| Error::DuplicateField {
+                        label: label.clone(),
+                        location: *location,
+                    })?;
             }
         }
+        let field_map = field_map.into_option();
+        // Insert constructor function into module scope
+        let typ = match constructor.arguments.len() {
+            0 => typ.clone(),
+            _ => fn_(args_types, typ.clone()),
+        };
+        let constructor_info = ValueConstructorVariant::Record {
+            constructors_count: constructors.len() as u16,
+            name: constructor.name.clone(),
+            arity: constructor.arguments.len() as u16,
+            field_map: field_map.clone(),
+            location: constructor.location,
+            module: module_name.clone(),
+        };
 
-        Statement::ExternalFunction(ExternalFunction {
-            location,
-            name,
-            public,
-            arguments: args,
-            return_: retrn,
-            module,
-            fun,
-            ..
-        }) => {
-            assert_unique_value_name(names, name, location)?;
-
-            // Construct type of function from AST
-            let mut hydrator = Hydrator::new();
-            let (typ, field_map) = environment.in_new_scope(|environment| {
-                let return_type = hydrator.type_from_ast(retrn, environment)?;
-                let mut args_types = Vec::with_capacity(args.len());
-                let mut builder = FieldMapBuilder::new(args.len() as u32);
-
-                for arg in args.iter() {
-                    args_types.push(hydrator.type_from_ast(&arg.annotation, environment)?);
-                    builder.add(arg.label.as_ref(), arg.location)?;
-                }
-                let typ = fn_(args_types, return_type);
-                Ok((typ, builder.finish()))
-            })?;
-
-            // Insert function into module
+        if !opaque {
             environment.insert_module_value(
-                name.clone(),
+                constructor.name.clone(),
                 ValueConstructor {
                     public: *public,
                     type_: typ.clone(),
-                    variant: ValueConstructorVariant::ModuleFn {
-                        name: fun.clone(),
-                        field_map: field_map.clone(),
-                        module: module.clone(),
-                        arity: args.len(),
-                        location: *location,
-                    },
+                    variant: constructor_info.clone(),
                 },
             );
+        }
 
-            // Insert function into module's internal scope
-            environment.insert_variable(
-                name.clone(),
-                ValueConstructorVariant::ModuleFn {
-                    name: fun.clone(),
-                    module: module.clone(),
-                    arity: args.len(),
-                    field_map,
-                    location: *location,
-                },
-                typ,
-                *public,
+        if !public {
+            environment.init_usage(
+                constructor.name.clone(),
+                EntityKind::PrivateTypeConstructor(name.clone()),
+                constructor.location,
             );
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-            }
         }
 
-        Statement::CustomType(CustomType {
-            location,
-            public,
-            opaque,
-            name,
-            constructors,
-            ..
-        }) => {
-            let mut hydrator = hydrators
-                .remove(name)
-                .expect("Could not find hydrator for register_values custom type");
-            hydrator.disallow_new_type_variables();
+        environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
+    })
+}
 
-            let typ = environment
-                .module_types
-                .get(name)
-                .expect("Type for custom type not found in register_values")
-                .typ
-                .clone();
+fn register_external_function<'a>(
+    f: &'a ExternalFunction<()>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    environment: &mut Environment<'a>,
+) -> Result<(), Error> {
+    let ExternalFunction {
+        location,
+        name,
+        public,
+        arguments: args,
+        return_: retrn,
+        module,
+        fun,
+        ..
+    } = f;
+    assert_unique_value_name(names, name, *location)?;
+    let mut hydrator = Hydrator::new();
+    let (typ, field_map) = environment.in_new_scope(|environment| {
+        let return_type = hydrator.type_from_ast(retrn, environment)?;
+        let mut args_types = Vec::with_capacity(args.len());
+        let mut builder = FieldMapBuilder::new(args.len() as u32);
 
-            // If the custom type only has a single constructor then we can access the
-            // fields using the record.field syntax, so store any fields accessors.
-            if let Some(accessors) =
-                custom_type_accessors(constructors, &mut hydrator, environment)?
-            {
-                let map = AccessorsMap {
-                    public: (*public && !*opaque),
-                    accessors,
-                    // TODO: improve the ownership here so that we can use the
-                    // `return_type_constructor` below rather than looking it up twice.
-                    type_: typ.clone(),
-                };
-                environment.insert_accessors(name.clone(), map)
-            }
-
-            // Check and register constructors
-            for constructor in constructors {
-                assert_unique_value_name(names, &constructor.name, &constructor.location)?;
-
-                let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
-                let mut args_types = Vec::with_capacity(constructor.arguments.len());
-                for (i, RecordConstructorArg { label, ast, .. }) in
-                    constructor.arguments.iter().enumerate()
-                {
-                    let t = hydrator.type_from_ast(ast, environment)?;
-                    args_types.push(t);
-                    if let Some(label) = label {
-                        field_map.insert(label.clone(), i as u32).map_err(|_| {
-                            Error::DuplicateField {
-                                label: label.clone(),
-                                location: *location,
-                            }
-                        })?;
-                    }
-                }
-                let field_map = field_map.into_option();
-                // Insert constructor function into module scope
-                let typ = match constructor.arguments.len() {
-                    0 => typ.clone(),
-                    _ => fn_(args_types, typ.clone()),
-                };
-                let constructor_info = ValueConstructorVariant::Record {
-                    constructors_count: constructors.len() as u16,
-                    name: constructor.name.clone(),
-                    arity: constructor.arguments.len() as u16,
-                    field_map: field_map.clone(),
-                    location: constructor.location,
-                    module: module_name.clone(),
-                };
-
-                if !opaque {
-                    environment.insert_module_value(
-                        constructor.name.clone(),
-                        ValueConstructor {
-                            public: *public,
-                            type_: typ.clone(),
-                            variant: constructor_info.clone(),
-                        },
-                    );
-                }
-
-                if !public {
-                    environment.init_usage(
-                        constructor.name.clone(),
-                        EntityKind::PrivateTypeConstructor(name.clone()),
-                        constructor.location,
-                    );
-                }
-
-                environment.insert_variable(
-                    constructor.name.clone(),
-                    constructor_info,
-                    typ,
-                    *public,
-                );
-            }
+        for arg in args.iter() {
+            args_types.push(hydrator.type_from_ast(&arg.annotation, environment)?);
+            builder.add(arg.label.as_ref(), arg.location)?;
         }
+        let typ = fn_(args_types, return_type);
+        Ok((typ, builder.finish()))
+    })?;
+    environment.insert_module_value(
+        name.clone(),
+        ValueConstructor {
+            public: *public,
+            type_: typ.clone(),
+            variant: ValueConstructorVariant::ModuleFn {
+                name: fun.clone(),
+                field_map: field_map.clone(),
+                module: module.clone(),
+                arity: args.len(),
+                location: *location,
+            },
+        },
+    );
+    environment.insert_variable(
+        name.clone(),
+        ValueConstructorVariant::ModuleFn {
+            name: fun.clone(),
+            module: module.clone(),
+            arity: args.len(),
+            field_map,
+            location: *location,
+        },
+        typ,
+        *public,
+    );
+    Ok(if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+    })
+}
 
-        Statement::ModuleConstant(ModuleConstant { name, location, .. }) => {
-            assert_unique_const_name(names, name, location)?;
-        }
-
-        Statement::Import(Import { .. })
-        | Statement::TypeAlias(TypeAlias { .. })
-        | Statement::ExternalType(ExternalType { .. }) => {}
+fn register_value_from_function<'a>(
+    f: &'a Function<(), ast::UntypedExpr>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    environment: &mut Environment<'a>,
+    hydrators: &mut HashMap<SmolStr, Hydrator>,
+    module_name: &SmolStr,
+) -> Result<(), Error> {
+    let Function {
+        name,
+        arguments: args,
+        location,
+        return_annotation,
+        public,
+        ..
+    } = f;
+    assert_unique_value_name(names, name, *location)?;
+    let _ = environment.ungeneralised_functions.insert(name.clone());
+    let mut builder = FieldMapBuilder::new(args.len() as u32);
+    for arg in args.iter() {
+        builder.add(arg.names.get_label(), arg.location)?;
     }
-    Ok(())
+    let field_map = builder.finish();
+    let mut hydrator = Hydrator::new();
+    hydrator.permit_holes(true);
+    let arg_types = args
+        .iter()
+        .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+        .try_collect()?;
+    let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+    let typ = fn_(arg_types, return_type);
+    let _ = hydrators.insert(name.clone(), hydrator);
+    environment.insert_variable(
+        name.clone(),
+        ValueConstructorVariant::ModuleFn {
+            name: name.clone(),
+            field_map,
+            module: module_name.clone(),
+            arity: args.len(),
+            location: *location,
+        },
+        typ,
+        *public,
+    );
+    Ok(if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+    })
 }
 
 fn infer_statement(
@@ -1165,45 +1138,45 @@ fn make_type_vars(
 }
 
 fn assert_unique_type_name<'a>(
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     name: &'a SmolStr,
-    location: &'a SrcSpan,
+    location: SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateTypeName {
             name: name.clone(),
-            previous_location: *previous_location,
-            location: *location,
+            previous_location,
+            location,
         }),
         None => Ok(()),
     }
 }
 
 fn assert_unique_value_name<'a>(
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     name: &'a SmolStr,
-    location: &'a SrcSpan,
+    location: SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateName {
             name: name.clone(),
-            previous_location: *previous_location,
-            location: *location,
+            previous_location,
+            location,
         }),
         None => Ok(()),
     }
 }
 
 fn assert_unique_const_name<'a>(
-    names: &mut HashMap<&'a SmolStr, &'a SrcSpan>,
+    names: &mut HashMap<&'a SmolStr, SrcSpan>,
     name: &'a SmolStr,
-    location: &'a SrcSpan,
+    location: SrcSpan,
 ) -> Result<(), Error> {
     match names.insert(name, location) {
         Some(previous_location) => Err(Error::DuplicateConstName {
             name: name.clone(),
-            previous_location: *previous_location,
-            location: *location,
+            previous_location,
+            location,
         }),
         None => Ok(()),
     }
