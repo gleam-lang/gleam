@@ -1343,14 +1343,13 @@ impl GroupedStatements {
 
     fn add(&mut self, statement: UntypedStatement) {
         match statement {
-            Statement::Function(f) => self.functions.push(ModuleFunction::Internal(f)),
-            Statement::ExternalFunction(f) => self.functions.push(ModuleFunction::External(f)),
             Statement::Import(i) => self.imports.push(i),
-            Statement::ModuleConstant(c) => self.constants.push(c),
+            Statement::Function(f) => self.functions.push(ModuleFunction::Internal(f)),
+            Statement::TypeAlias(t) => self.type_aliases.push(t),
             Statement::CustomType(c) => self.custom_types.push(c),
-
-            statement @ (Statement::ExternalType(ExternalType { .. })
-            | Statement::TypeAlias(TypeAlias { .. })) => self.external_types.push(statement),
+            Statement::ExternalType(t) => self.external_types.push(t),
+            Statement::ModuleConstant(c) => self.constants.push(c),
+            Statement::ExternalFunction(f) => self.functions.push(ModuleFunction::External(f)),
         }
     }
 }
