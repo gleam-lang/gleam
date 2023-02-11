@@ -1305,7 +1305,8 @@ pub enum TodoKind {
 
 #[derive(Debug, Default)]
 pub struct GroupedStatements {
-    pub functions: Vec<ModuleFunction>,
+    pub functions: Vec<Function<(), UntypedExpr>>,
+    pub external_functions: Vec<ExternalFunction<()>>,
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<CustomType<()>>,
     pub imports: Vec<Import<()>>,
@@ -1328,6 +1329,7 @@ impl GroupedStatements {
         let Self {
             custom_types,
             functions,
+            external_functions,
             constants,
             imports,
             external_types,
@@ -1339,17 +1341,18 @@ impl GroupedStatements {
             + external_types.len()
             + custom_types.len()
             + type_aliases.len()
+            + external_functions.len()
     }
 
     fn add(&mut self, statement: UntypedStatement) {
         match statement {
             Statement::Import(i) => self.imports.push(i),
-            Statement::Function(f) => self.functions.push(ModuleFunction::Internal(f)),
+            Statement::Function(f) => self.functions.push(f),
             Statement::TypeAlias(t) => self.type_aliases.push(t),
             Statement::CustomType(c) => self.custom_types.push(c),
             Statement::ExternalType(t) => self.external_types.push(t),
             Statement::ModuleConstant(c) => self.constants.push(c),
-            Statement::ExternalFunction(f) => self.functions.push(ModuleFunction::External(f)),
+            Statement::ExternalFunction(f) => self.external_functions.push(f),
         }
     }
 }
