@@ -6,7 +6,7 @@ use crate::{
         self, BitStringSegmentOption, CustomType, ExternalFunction, ExternalType, Function,
         GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
         SrcSpan, Statement, TypeAlias, TypeAst, TypedModule, TypedStatement, UnqualifiedImport,
-        UntypedModule, UntypedStatement,
+        UntypedModule,
     },
     build::{Origin, Target},
     type_::{
@@ -48,7 +48,7 @@ pub fn infer_module(
     let mut value_names = HashMap::with_capacity(module.statements.len());
     let mut hydrators = HashMap::with_capacity(module.statements.len());
 
-    let mut statements = GroupedStatements::from_iter(module.into_iter_statements(target));
+    let statements = GroupedStatements::from_iter(module.into_iter_statements(target));
     let statements_count = statements.len();
 
     // Register any modules, types, and values being imported
@@ -90,31 +90,40 @@ pub fn infer_module(
     }
 
     // Infer the types of each statement in the module
-    // We first infer all the constants so they can be used in functions defined
-    // anywhere in the module.
-    let mut statements = Vec::with_capacity(statements_count);
-    let mut consts = vec![];
-    let mut not_consts = vec![];
-    for statement in module.into_iter_statements(target) {
-        match statement {
-            Statement::Function(Function { .. })
-            | Statement::TypeAlias(TypeAlias { .. })
-            | Statement::CustomType(CustomType { .. })
-            | Statement::ExternalFunction(ExternalFunction { .. })
-            | Statement::ExternalType(ExternalType { .. })
-            | Statement::Import(Import { .. }) => not_consts.push(statement),
 
-            Statement::ModuleConstant(ModuleConstant { .. }) => consts.push(statement),
-        }
+    let mut typed_statements = Vec::with_capacity(statements_count);
+
+    for i in statements.imports {
+        let statement = infer_import(i, &mut env)?;
+        typed_statements.push(statement);
     }
-
-    for statement in consts.into_iter().chain(not_consts) {
-        let statement = infer_statement(statement, &name, &mut hydrators, &mut env)?;
-        statements.push(statement);
+    for t in statements.custom_types {
+        let statement = infer_custom_type(t, &mut env)?;
+        typed_statements.push(statement);
+    }
+    for t in statements.external_types {
+        let statement = infer_external_type(t, &mut env)?;
+        typed_statements.push(statement);
+    }
+    for t in statements.type_aliases {
+        let statement = infer_type_alias(t, &mut env)?;
+        typed_statements.push(statement);
+    }
+    for c in statements.constants {
+        let statement = infer_module_constant(c, &mut env, &name)?;
+        typed_statements.push(statement);
+    }
+    for f in statements.external_functions {
+        let statement = infer_external_function(f, &mut env)?;
+        typed_statements.push(statement);
+    }
+    for f in statements.functions {
+        let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
+        typed_statements.push(statement);
     }
 
     // Generalise functions now that the entire module has been inferred
-    let statements = statements
+    let statements = typed_statements
         .into_iter()
         .map(|s| generalise_statement(s, &name, &mut env))
         .collect();
@@ -337,8 +346,8 @@ fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
 }
 
 fn register_type_alias<'a>(
-    t: &'a TypeAlias<()>,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    t: &TypeAlias<()>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &SmolStr,
 ) -> Result<(), Error> {
@@ -371,8 +380,8 @@ fn register_type_alias<'a>(
 }
 
 fn register_types_from_custom_type<'a>(
-    t: &'a CustomType<()>,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    t: &CustomType<()>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
     module: &'a SmolStr,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
@@ -413,8 +422,8 @@ fn register_types_from_custom_type<'a>(
 }
 
 fn register_types_from_external_type<'a>(
-    t: &'a ExternalType,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    t: &ExternalType,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'_>,
     module: &SmolStr,
 ) -> Result<(), Error> {
@@ -450,11 +459,11 @@ fn register_types_from_external_type<'a>(
 }
 
 fn register_values_from_custom_type<'a>(
-    t: &'a CustomType<()>,
+    t: &CustomType<()>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     environment: &mut Environment<'a>,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
-    module_name: &'a SmolStr,
+    names: &mut HashMap<SmolStr, SrcSpan>,
+    module_name: &SmolStr,
 ) -> Result<(), Error> {
     let CustomType {
         location,
@@ -541,8 +550,8 @@ fn register_values_from_custom_type<'a>(
 }
 
 fn register_external_function<'a>(
-    f: &'a ExternalFunction<()>,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    f: &ExternalFunction<()>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
 ) -> Result<(), Error> {
     let ExternalFunction {
@@ -601,8 +610,8 @@ fn register_external_function<'a>(
 }
 
 fn register_value_from_function<'a>(
-    f: &'a Function<(), ast::UntypedExpr>,
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
+    f: &Function<(), ast::UntypedExpr>,
+    names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'a>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     module_name: &SmolStr,
@@ -648,333 +657,345 @@ fn register_value_from_function<'a>(
     })
 }
 
-fn infer_statement(
-    s: UntypedStatement,
-    module_name: &SmolStr,
+fn infer_function(
+    f: Function<(), ast::UntypedExpr>,
+    environment: &mut Environment<'_>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
+    module_name: &SmolStr,
+) -> Result<TypedStatement, Error> {
+    let Function {
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        body,
+        return_annotation,
+        end_position: end_location,
+        ..
+    } = f;
+    let preregistered_fn = environment
+        .get_variable(&name)
+        .expect("Could not find preregistered type for function");
+    let field_map = preregistered_fn.field_map().cloned();
+    let preregistered_type = preregistered_fn.type_.clone();
+    let (args_types, return_type) = preregistered_type
+        .fn_types()
+        .expect("Preregistered type for fn was not a fn");
+
+    // Infer the type using the preregistered args + return types as a starting point
+    let (typ, args, body, safe_to_generalise) = environment.in_new_scope(|environment| {
+        let args = args
+            .into_iter()
+            .zip(&args_types)
+            .map(|(a, t)| a.set_type(t.clone()))
+            .collect();
+        let mut expr_typer = ExprTyper::new(environment);
+        expr_typer.hydrator = hydrators
+            .remove(&name)
+            .expect("Could not find hydrator for fn");
+        let (args, body) = expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
+        let args_types = args.iter().map(|a| a.type_.clone()).collect();
+        let typ = fn_(args_types, body.type_());
+        let safe_to_generalise = !expr_typer.ungeneralised_function_used;
+        Ok((typ, args, body, safe_to_generalise))
+    })?;
+
+    // Assert that the inferred type matches the type of any recursive call
+    unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+
+    // Generalise the function if safe to do so
+    let typ = if safe_to_generalise {
+        let _ = environment.ungeneralised_functions.remove(&name);
+        let typ = type_::generalise(typ);
+        environment.insert_variable(
+            name.clone(),
+            ValueConstructorVariant::ModuleFn {
+                name: name.clone(),
+                field_map,
+                module: module_name.clone(),
+                arity: args.len(),
+                location,
+            },
+            typ.clone(),
+            public,
+        );
+        typ
+    } else {
+        typ
+    };
+
+    Ok(Statement::Function(Function {
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        end_position: end_location,
+        return_annotation,
+        return_type: typ
+            .return_type()
+            .expect("Could not find return type for fn"),
+        body,
+    }))
+}
+
+fn infer_external_function(
+    f: ExternalFunction<()>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
-    match s {
-        Statement::Function(Function {
-            doc,
-            location,
-            name,
-            public,
-            arguments: args,
-            body,
-            return_annotation,
-            end_position: end_location,
-            ..
-        }) => {
-            let preregistered_fn = environment
-                .get_variable(&name)
-                .expect("Could not find preregistered type for function");
-            let field_map = preregistered_fn.field_map().cloned();
-            let preregistered_type = preregistered_fn.type_.clone();
-            let (args_types, return_type) = preregistered_type
-                .fn_types()
-                .expect("Preregistered type for fn was not a fn");
+    let ExternalFunction {
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        return_: retrn,
+        module,
+        fun,
+        ..
+    } = f;
+    let preregistered_fn = environment
+        .get_variable(&name)
+        .expect("Could not find preregistered type value function");
+    let preregistered_type = preregistered_fn.type_.clone();
+    let (args_types, return_type) = preregistered_type
+        .fn_types()
+        .expect("Preregistered type for fn was not a fn");
+    let args = args
+        .into_iter()
+        .zip(&args_types)
+        .map(|(a, t)| a.set_type(t.clone()))
+        .collect();
+    Ok(Statement::ExternalFunction(ExternalFunction {
+        return_type,
+        doc,
+        location,
+        name,
+        public,
+        arguments: args,
+        return_: retrn,
+        module,
+        fun,
+    }))
+}
 
-            // Infer the type using the preregistered args + return types as a starting point
-            let (typ, args, body, safe_to_generalise) =
-                environment.in_new_scope(|environment| {
-                    let args = args
-                        .into_iter()
+fn infer_type_alias(
+    t: TypeAlias<()>,
+    environment: &mut Environment<'_>,
+) -> Result<TypedStatement, Error> {
+    let TypeAlias {
+        doc,
+        location,
+        public,
+        alias,
+        parameters: args,
+        type_ast: resolved_type,
+        ..
+    } = t;
+    let typ = environment
+        .get_type_constructor(&None, &alias)
+        .expect("Could not find existing type for type alias")
+        .typ
+        .clone();
+    Ok(Statement::TypeAlias(TypeAlias {
+        doc,
+        location,
+        public,
+        alias,
+        parameters: args,
+        type_ast: resolved_type,
+        type_: typ,
+    }))
+}
+
+fn infer_custom_type(
+    t: CustomType<()>,
+    environment: &mut Environment<'_>,
+) -> Result<TypedStatement, Error> {
+    let CustomType {
+        doc,
+        location,
+        public,
+        opaque,
+        name,
+        parameters,
+        constructors,
+        ..
+    } = t;
+    let constructors = constructors
+        .into_iter()
+        .map(
+            |RecordConstructor {
+                 location,
+                 name,
+                 arguments: args,
+                 documentation,
+             }| {
+                let preregistered_fn = environment
+                    .get_variable(&name)
+                    .expect("Could not find preregistered type for function");
+                let preregistered_type = preregistered_fn.type_.clone();
+
+                let args = if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
+                    args.into_iter()
                         .zip(&args_types)
-                        .map(|(a, t)| a.set_type(t.clone()))
-                        .collect();
-                    let mut expr_typer = ExprTyper::new(environment);
-                    expr_typer.hydrator = hydrators
-                        .remove(&name)
-                        .expect("Could not find hydrator for fn");
-                    let (args, body) =
-                        expr_typer.infer_fn_with_known_types(args, body, Some(return_type))?;
-                    let args_types = args.iter().map(|a| a.type_.clone()).collect();
-                    let typ = fn_(args_types, body.type_());
-                    let safe_to_generalise = !expr_typer.ungeneralised_function_used;
-                    Ok((typ, args, body, safe_to_generalise))
-                })?;
-
-            // Assert that the inferred type matches the type of any recursive call
-            unify(preregistered_type, typ.clone()).map_err(|e| convert_unify_error(e, location))?;
-
-            // Generalise the function if safe to do so
-            let typ = if safe_to_generalise {
-                let _ = environment.ungeneralised_functions.remove(&name);
-                let typ = type_::generalise(typ);
-                environment.insert_variable(
-                    name.clone(),
-                    ValueConstructorVariant::ModuleFn {
-                        name: name.clone(),
-                        field_map,
-                        module: module_name.clone(),
-                        arity: args.len(),
-                        location,
-                    },
-                    typ.clone(),
-                    public,
-                );
-                typ
-            } else {
-                typ
-            };
-
-            Ok(Statement::Function(Function {
-                doc,
-                location,
-                name,
-                public,
-                arguments: args,
-                end_position: end_location,
-                return_annotation,
-                return_type: typ
-                    .return_type()
-                    .expect("Could not find return type for fn"),
-                body,
-            }))
-        }
-
-        Statement::ExternalFunction(ExternalFunction {
-            doc,
-            location,
-            name,
-            public,
-            arguments: args,
-            return_: retrn,
-            module,
-            fun,
-            ..
-        }) => {
-            let preregistered_fn = environment
-                .get_variable(&name)
-                .expect("Could not find preregistered type value function");
-            let preregistered_type = preregistered_fn.type_.clone();
-            let (args_types, return_type) = preregistered_type
-                .fn_types()
-                .expect("Preregistered type for fn was not a fn");
-            let args = args
-                .into_iter()
-                .zip(&args_types)
-                .map(|(a, t)| a.set_type(t.clone()))
-                .collect();
-            Ok(Statement::ExternalFunction(ExternalFunction {
-                return_type,
-                doc,
-                location,
-                name,
-                public,
-                arguments: args,
-                return_: retrn,
-                module,
-                fun,
-            }))
-        }
-
-        Statement::TypeAlias(TypeAlias {
-            doc,
-            location,
-            public,
-            alias,
-            parameters: args,
-            type_ast: resolved_type,
-            ..
-        }) => {
-            let typ = environment
-                .get_type_constructor(&None, &alias)
-                .expect("Could not find existing type for type alias")
-                .typ
-                .clone();
-            Ok(Statement::TypeAlias(TypeAlias {
-                doc,
-                location,
-                public,
-                alias,
-                parameters: args,
-                type_ast: resolved_type,
-                type_: typ,
-            }))
-        }
-
-        Statement::CustomType(CustomType {
-            doc,
-            location,
-            public,
-            opaque,
-            name,
-            parameters,
-            constructors,
-            ..
-        }) => {
-            let constructors = constructors
-                .into_iter()
-                .map(
-                    |RecordConstructor {
-                         location,
-                         name,
-                         arguments: args,
-                         documentation,
-                     }| {
-                        let preregistered_fn = environment
-                            .get_variable(&name)
-                            .expect("Could not find preregistered type for function");
-                        let preregistered_type = preregistered_fn.type_.clone();
-
-                        let args = if let Some((args_types, _return_type)) =
-                            preregistered_type.fn_types()
-                        {
-                            args.into_iter()
-                                .zip(&args_types)
-                                .map(
-                                    |(
-                                        RecordConstructorArg {
-                                            label,
-                                            ast,
-                                            location,
-                                            ..
-                                        },
-                                        t,
-                                    )| {
-                                        RecordConstructorArg {
-                                            label,
-                                            ast,
-                                            location,
-                                            type_: t.clone(),
-                                            doc: None,
-                                        }
-                                    },
-                                )
-                                .collect()
-                        } else {
-                            vec![]
-                        };
-
-                        RecordConstructor {
-                            location,
-                            name,
-                            arguments: args,
-                            documentation,
-                        }
-                    },
-                )
-                .collect();
-            let typed_parameters = environment
-                .get_type_constructor(&None, &name)
-                .expect("Could not find preregistered type constructor ")
-                .parameters
-                .clone();
-
-            Ok(Statement::CustomType(CustomType {
-                doc,
-                location,
-                public,
-                opaque,
-                name,
-                parameters,
-                constructors,
-                typed_parameters,
-            }))
-        }
-
-        Statement::ExternalType(ExternalType {
-            doc,
-            location,
-            public,
-            name,
-            arguments: args,
-        }) => {
-            // Check contained types are valid
-            let mut hydrator = Hydrator::new();
-            for arg in &args {
-                let var = TypeAst::Var {
-                    location,
-                    name: arg.clone(),
+                        .map(
+                            |(
+                                RecordConstructorArg {
+                                    label,
+                                    ast,
+                                    location,
+                                    ..
+                                },
+                                t,
+                            )| {
+                                RecordConstructorArg {
+                                    label,
+                                    ast,
+                                    location,
+                                    type_: t.clone(),
+                                    doc: None,
+                                }
+                            },
+                        )
+                        .collect()
+                } else {
+                    vec![]
                 };
-                let _ = hydrator.type_from_ast(&var, environment)?;
-            }
-            Ok(Statement::ExternalType(ExternalType {
-                doc,
-                location,
-                public,
-                name,
-                arguments: args,
-            }))
-        }
 
-        Statement::Import(Import {
-            location,
-            module,
-            as_name,
-            mut unqualified,
-            ..
-        }) => {
-            // Find imported module
-            let module_info = environment.importable_modules.get(&module).ok_or_else(|| {
-                Error::UnknownModule {
+                RecordConstructor {
                     location,
-                    name: module.clone(),
-                    imported_modules: environment.imported_modules.keys().cloned().collect(),
+                    name,
+                    arguments: args,
+                    documentation,
                 }
+            },
+        )
+        .collect();
+    let typed_parameters = environment
+        .get_type_constructor(&None, &name)
+        .expect("Could not find preregistered type constructor ")
+        .parameters
+        .clone();
+
+    Ok(Statement::CustomType(CustomType {
+        doc,
+        location,
+        public,
+        opaque,
+        name,
+        parameters,
+        constructors,
+        typed_parameters,
+    }))
+}
+
+fn infer_external_type(
+    t: ExternalType,
+    environment: &mut Environment<'_>,
+) -> Result<TypedStatement, Error> {
+    let ExternalType {
+        doc,
+        location,
+        public,
+        name,
+        arguments: args,
+    } = t;
+    // Check contained types are valid
+    let mut hydrator = Hydrator::new();
+    for arg in &args {
+        let var = TypeAst::Var {
+            location,
+            name: arg.clone(),
+        };
+        let _ = hydrator.type_from_ast(&var, environment)?;
+    }
+    Ok(Statement::ExternalType(ExternalType {
+        doc,
+        location,
+        public,
+        name,
+        arguments: args,
+    }))
+}
+
+fn infer_import(i: Import<()>, environment: &mut Environment<'_>) -> Result<TypedStatement, Error> {
+    let Import {
+        location,
+        module,
+        as_name,
+        mut unqualified,
+        ..
+    } = i;
+    // Find imported module
+    let module_info =
+        environment
+            .importable_modules
+            .get(&module)
+            .ok_or_else(|| Error::UnknownModule {
+                location,
+                name: module.clone(),
+                imported_modules: environment.imported_modules.keys().cloned().collect(),
             })?;
-            // Record any imports that are types only as this information is
-            // needed to prevent types being imported in generated JavaScript
-            for import in unqualified.iter_mut() {
-                if environment.imported_types.contains(import.variable_name()) {
-                    import.layer = Layer::Type;
-                }
-            }
-            Ok(Statement::Import(Import {
-                location,
-                module,
-                as_name,
-                unqualified,
-                package: module_info.package.clone(),
-            }))
-        }
-
-        Statement::ModuleConstant(ModuleConstant {
-            doc,
-            location,
-            name,
-            annotation,
-            public,
-            value,
-            ..
-        }) => {
-            let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
-            let type_ = typed_expr.type_();
-            let variant = ValueConstructor {
-                public,
-                variant: ValueConstructorVariant::ModuleConstant {
-                    location,
-                    literal: typed_expr.clone(),
-                    module: module_name.clone(),
-                },
-                type_: type_.clone(),
-            };
-
-            environment.insert_variable(
-                name.clone(),
-                variant.variant.clone(),
-                type_.clone(),
-                public,
-            );
-            environment.insert_module_value(name.clone(), variant);
-
-            if !public {
-                environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
-            }
-
-            Ok(Statement::ModuleConstant(ModuleConstant {
-                doc,
-                location,
-                name,
-                annotation,
-                public,
-                value: Box::new(typed_expr),
-                type_,
-            }))
+    // Record any imports that are types only as this information is
+    // needed to prevent types being imported in generated JavaScript
+    for import in unqualified.iter_mut() {
+        if environment.imported_types.contains(import.variable_name()) {
+            import.layer = Layer::Type;
         }
     }
+    Ok(Statement::Import(Import {
+        location,
+        module,
+        as_name,
+        unqualified,
+        package: module_info.package.clone(),
+    }))
+}
+
+fn infer_module_constant(
+    c: ModuleConstant<(), ()>,
+    environment: &mut Environment<'_>,
+    module_name: &SmolStr,
+) -> Result<TypedStatement, Error> {
+    let ModuleConstant {
+        doc,
+        location,
+        name,
+        annotation,
+        public,
+        value,
+        ..
+    } = c;
+    let typed_expr = ExprTyper::new(environment).infer_const(&annotation, *value)?;
+    let type_ = typed_expr.type_();
+    let variant = ValueConstructor {
+        public,
+        variant: ValueConstructorVariant::ModuleConstant {
+            location,
+            literal: typed_expr.clone(),
+            module: module_name.clone(),
+        },
+        type_: type_.clone(),
+    };
+
+    environment.insert_variable(name.clone(), variant.variant.clone(), type_.clone(), public);
+    environment.insert_module_value(name.clone(), variant);
+
+    if !public {
+        environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
+    }
+
+    Ok(Statement::ModuleConstant(ModuleConstant {
+        doc,
+        location,
+        name,
+        annotation,
+        public,
+        value: Box::new(typed_expr),
+        type_,
+    }))
 }
 
 pub fn infer_bit_string_segment_option<UntypedValue, TypedValue, Typer>(
@@ -1066,7 +1087,7 @@ fn generalise_function(
     function: Function<Arc<Type>, ast::TypedExpr>,
     environment: &mut Environment<'_>,
     module_name: &SmolStr,
-) -> Statement<Arc<Type>, ast::TypedExpr, SmolStr, SmolStr> {
+) -> TypedStatement {
     let Function {
         doc,
         location,
@@ -1138,11 +1159,11 @@ fn make_type_vars(
 }
 
 fn assert_unique_type_name<'a>(
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
-    name: &'a SmolStr,
+    names: &mut HashMap<SmolStr, SrcSpan>,
+    name: &SmolStr,
     location: SrcSpan,
 ) -> Result<(), Error> {
-    match names.insert(name, location) {
+    match names.insert(name.clone(), location) {
         Some(previous_location) => Err(Error::DuplicateTypeName {
             name: name.clone(),
             previous_location,
@@ -1153,26 +1174,26 @@ fn assert_unique_type_name<'a>(
 }
 
 fn assert_unique_value_name<'a>(
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
-    name: &'a SmolStr,
+    names: &mut HashMap<SmolStr, SrcSpan>,
+    name: &SmolStr,
     location: SrcSpan,
 ) -> Result<(), Error> {
-    match names.insert(name, location) {
+    match names.insert(name.clone(), location) {
         Some(previous_location) => Err(Error::DuplicateName {
             name: name.clone(),
-            previous_location,
-            location,
+            location_b: previous_location,
+            location_a: location,
         }),
         None => Ok(()),
     }
 }
 
 fn assert_unique_const_name<'a>(
-    names: &mut HashMap<&'a SmolStr, SrcSpan>,
-    name: &'a SmolStr,
+    names: &mut HashMap<SmolStr, SrcSpan>,
+    name: &SmolStr,
     location: SrcSpan,
 ) -> Result<(), Error> {
-    match names.insert(name, location) {
+    match names.insert(name.clone(), location) {
         Some(previous_location) => Err(Error::DuplicateConstName {
             name: name.clone(),
             previous_location,
