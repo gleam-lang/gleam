@@ -54,7 +54,7 @@ macro_rules! assert_infer_with_module {
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -106,7 +106,7 @@ macro_rules! assert_module_infer {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = crate::analyse::infer_module(
+        let ast = $crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
@@ -146,7 +146,7 @@ macro_rules! assert_module_error {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = crate::analyse::infer_module(
+        let ast = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -266,7 +266,7 @@ macro_rules! assert_with_module_error {
         // Repeatedly create importable modules for each one given
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -405,7 +405,7 @@ macro_rules! assert_warning {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let _ = crate::analyse::infer_module(
+        let _ = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -477,7 +477,7 @@ macro_rules! assert_no_warnings {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let _ = crate::analyse::infer_module(
+        let _ = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,

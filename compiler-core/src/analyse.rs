@@ -394,9 +394,10 @@ fn register_type_alias<'a>(
             typ,
         },
     )?;
-    Ok(if !public {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    })
+    };
+    Ok(())
 }
 
 fn register_types_from_custom_type<'a>(
@@ -436,9 +437,10 @@ fn register_types_from_custom_type<'a>(
     )?;
     let constructor_names = constructors.iter().map(|c| c.name.clone()).collect();
     environment.insert_type_to_constructors(name.clone(), constructor_names);
-    Ok(if !public {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    })
+    };
+    Ok(())
 }
 
 fn register_types_from_external_type<'a>(
@@ -473,9 +475,10 @@ fn register_types_from_external_type<'a>(
             typ,
         },
     )?;
-    Ok(if !public {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
-    })
+    };
+    Ok(())
 }
 
 fn register_values_from_custom_type<'a>(
@@ -513,7 +516,7 @@ fn register_values_from_custom_type<'a>(
         };
         environment.insert_accessors(name.clone(), map)
     }
-    Ok(for constructor in constructors {
+    for constructor in constructors {
         assert_unique_value_name(names, &constructor.name, constructor.location)?;
 
         let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
@@ -566,7 +569,8 @@ fn register_values_from_custom_type<'a>(
         }
 
         environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
-    })
+    };
+    Ok(())
 }
 
 fn register_external_function<'a>(
@@ -624,9 +628,10 @@ fn register_external_function<'a>(
         typ,
         *public,
     );
-    Ok(if !public {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-    })
+    };
+    Ok(())
 }
 
 fn register_value_from_function<'a>(
@@ -672,9 +677,10 @@ fn register_value_from_function<'a>(
         typ,
         *public,
     );
-    Ok(if !public {
+    if !public {
         environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-    })
+    };
+    Ok(())
 }
 
 fn infer_function(

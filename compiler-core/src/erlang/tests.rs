@@ -71,7 +71,7 @@ macro_rules! assert_erl {
         // to have one place where we create all this required state for use in each
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
-        let ast = crate::analyse::infer_module(
+        let ast = $crate::analyse::infer_module(
             $crate::build::Target::Erlang,
             &ids,
             ast,
