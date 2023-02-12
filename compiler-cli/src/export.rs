@@ -83,3 +83,12 @@ the entrypoint.sh script.
 
     Ok(())
 }
+
+pub fn hex_tarball() -> Result<()> {
+    let config = crate::config::root_config()?;
+    let data: Vec<u8> = crate::publish::build_hex_tarball(&config)?;
+
+    let path = paths::build_tarball(&config.name, &config.version.to_string());
+    println!("Creating package file '{}'", &path.display());
+    crate::fs::write_bytes(&path, &data)
+}

@@ -35,7 +35,7 @@ impl PublishCommand {
             data: package_tarball,
             src_files_added,
             generated_files_added,
-        } = build_hex_tarball(&config)?;
+        } = do_build_hex_tarball(&config)?;
 
         // Build HTML documentation
         let docs_tarball =
@@ -116,7 +116,12 @@ struct Tarball {
     generated_files_added: Vec<(PathBuf, String)>,
 }
 
-fn build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
+pub fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
+    let Tarball { data, .. } = do_build_hex_tarball(config)?;
+    Ok(data)
+}
+
+fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
     check_config_for_publishing(&config)?;
 
     // Reset the build directory so we know the state of the project

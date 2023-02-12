@@ -35,6 +35,10 @@ pub fn package_cache_tarball(package_name: &str, version: &str) -> PathBuf {
     packages_cache().join(format!("{package_name}-{version}.tar"))
 }
 
+pub fn build_tarball(package_name: &str, version: &str) -> PathBuf {
+    build().join(format!("{package_name}-{version}.tar"))
+}
+
 pub fn build_deps_package_src(package: &str) -> PathBuf {
     build_deps_package(package).join("src")
 }

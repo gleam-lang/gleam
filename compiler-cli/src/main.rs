@@ -219,6 +219,7 @@ enum Command {
 pub enum ExportTarget {
     /// Precompiled Erlang, suitable for deployment.
     ErlangShipment,
+    HexTarball,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -423,6 +424,7 @@ fn main() {
         Command::LanguageServer => lsp::main(),
 
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
+        Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
     };
 
     match result {
