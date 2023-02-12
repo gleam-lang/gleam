@@ -6,10 +6,12 @@
 - The unused private type and constructor detection has been improved.
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
+- Fixed a bug where typescript type definitions for types with unlabelled
+  arguments where generated with an invalid identifier.
 - Fixed a bug in the type inferrer were unannotated functions that were
   used before they were defined in a module could in rare cased be inferred with
   a more general type than is correct.
-- Fixed a bug where pattern matches on custom types with mixed labelled and 
+- Fixed a bug where pattern matches on custom types with mixed labelled and
   unlabelled arguments could not be compiled when targeting JavaScript.
 
 ## v0.26.2 - 2023-02-03
@@ -45,7 +47,6 @@
 ## v0.26.0 - 2023-01-19
 
 [Release blog post](https://gleam.run/news/v0.26-incremental-compilation-and-deno/)
-
 
 - New projects require `gleam_stdlib` v0.26 and `gleeunit` v0.9.
 - Fixed a bug where JavaScript default projects would fail to publish to Hex.
@@ -150,8 +151,7 @@
 - Fixed a bug where `try` expressions inside blocks could generate incorrect
   JavaScript.
 - Generated HTML documentation now includes all static assets (but the web
-  fonts), so that it can be accessed offline or in far future once CDNs would
-  404.
+  fonts), so that it can be accessed offline or in far future once CDNs would 404.
 - New Gleam projects are created using GitHub actions erlef/setup-beam@v1.14.0
 - The `javascript.typescript_declarations` field in `gleam.toml` now applies to
   the entire project rather than just the top level package.
