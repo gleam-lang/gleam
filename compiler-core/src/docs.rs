@@ -525,7 +525,6 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             doc,
             arguments: args,
             location,
-            ..
         }) => Some(Type {
             name,
             definition: print(formatter.external_type(true, name, args)),
