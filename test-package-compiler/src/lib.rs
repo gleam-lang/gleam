@@ -112,8 +112,8 @@ impl TestCompileOutput {
             buffer.push('\n');
         }
 
-        for warning in self.warnings.iter() {
-            write!(buffer, "//// Warning\n{warning:#?}").unwrap();
+        for warning in self.warnings.iter().map(|w| w.to_pretty_string()).sorted() {
+            write!(buffer, "//// Warning\n{warning}",).unwrap();
             buffer.push('\n');
             buffer.push('\n');
         }
