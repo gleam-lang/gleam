@@ -95,7 +95,7 @@ pub fn infer_module(
     let mut typed_statements = Vec::with_capacity(statements_count);
 
     for i in statements.imports {
-        let statement = infer_import(i, &mut env)?;
+        let statement = record_imported_items_for_use_detection(i, &mut env)?;
         typed_statements.push(statement);
     }
     for t in statements.custom_types {
@@ -103,11 +103,11 @@ pub fn infer_module(
         typed_statements.push(statement);
     }
     for t in statements.external_types {
-        let statement = infer_external_type(t, &mut env)?;
+        let statement = hydrate_external_type(t, &mut env)?;
         typed_statements.push(statement);
     }
     for t in statements.type_aliases {
-        let statement = infer_type_alias(t, &mut env)?;
+        let statement = insert_type_alias(t, &mut env)?;
         typed_statements.push(statement);
     }
     for c in statements.constants {
@@ -806,7 +806,7 @@ fn infer_external_function(
     }))
 }
 
-fn infer_type_alias(
+fn insert_type_alias(
     t: TypeAlias<()>,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
@@ -917,7 +917,7 @@ fn infer_custom_type(
     }))
 }
 
-fn infer_external_type(
+fn hydrate_external_type(
     t: ExternalType,
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
@@ -946,7 +946,10 @@ fn infer_external_type(
     }))
 }
 
-fn infer_import(i: Import<()>, environment: &mut Environment<'_>) -> Result<TypedStatement, Error> {
+fn record_imported_items_for_use_detection(
+    i: Import<()>,
+    environment: &mut Environment<'_>,
+) -> Result<TypedStatement, Error> {
     let Import {
         location,
         module,
