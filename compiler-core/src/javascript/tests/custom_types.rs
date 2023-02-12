@@ -191,6 +191,20 @@ fn destructure(x) {
 }
 
 #[test]
+fn unnamed_fields_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Ip{
+    Ip(String)
+}
+
+pub const local = Ip("0.0.0.0")
+
+"#,
+    );
+}
+
+#[test]
 fn long_name_variant_without_labels() {
     assert_js!(
         r#"
@@ -202,6 +216,19 @@ type TypeWithALongNameAndSeveralArguments{
 fn go() {
   TypeWithALongNameAndSeveralArguments
 }
+"#,
+    );
+}
+
+#[test]
+fn long_name_variant_mixed_labels_typescript() {
+    assert_ts_def!(
+        r#"
+pub type TypeWithALongNameAndSeveralArguments{
+  TypeWithALongNameAndSeveralArguments(String, String, String, a: String, b: String)
+}
+
+pub const local = TypeWithALongNameAndSeveralArguments("one", "two", "three", "four", "five")
 "#,
     );
 }
