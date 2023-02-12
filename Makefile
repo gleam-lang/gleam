@@ -22,6 +22,7 @@ test: ## Run the compiler unit tests
 	cd test/javascript_prelude && make test
 	cd test/project_erlang && cargo run clean && cargo run check && cargo run test
 	cd test/project_javascript && cargo run clean && cargo run check && cargo run test
+	cd test/hextarball && make test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets
@@ -42,6 +43,10 @@ javascript-prelude-test-watch: ## Run the JavaScript prelude core tests when fil
 .PHONY: test-watch
 test-watch: ## Run compiler tests when files change
 	watchexec --changes-only -e rs,toml,gleam,html,capnp "cargo test --quiet"
+
+.PHONY: export-hex-tarball-test
+export-hex-tarball-test: ## Run `gleam export hex-tarball` and verify it is created
+	cd test/hextarball && make test
 
 # Debug print vars with `make print-VAR_NAME`
 print-%: ; @echo $*=$($*)
