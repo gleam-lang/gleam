@@ -365,10 +365,10 @@ fn validate_module_name(name: &SmolStr) -> Result<(), Error> {
     Ok(())
 }
 
-fn register_type_alias<'a>(
+fn register_type_alias(
     t: &TypeAlias<()>,
     names: &mut HashMap<SmolStr, SrcSpan>,
-    environment: &mut Environment<'a>,
+    environment: &mut Environment<'_>,
     module: &SmolStr,
 ) -> Result<(), Error> {
     let TypeAlias {
@@ -443,7 +443,7 @@ fn register_types_from_custom_type<'a>(
     Ok(())
 }
 
-fn register_types_from_external_type<'a>(
+fn register_types_from_external_type(
     t: &ExternalType,
     names: &mut HashMap<SmolStr, SrcSpan>,
     environment: &mut Environment<'_>,
@@ -481,10 +481,10 @@ fn register_types_from_external_type<'a>(
     Ok(())
 }
 
-fn register_values_from_custom_type<'a>(
+fn register_values_from_custom_type(
     t: &CustomType<()>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
-    environment: &mut Environment<'a>,
+    environment: &mut Environment<'_>,
     names: &mut HashMap<SmolStr, SrcSpan>,
     module_name: &SmolStr,
 ) -> Result<(), Error> {
@@ -569,14 +569,14 @@ fn register_values_from_custom_type<'a>(
         }
 
         environment.insert_variable(constructor.name.clone(), constructor_info, typ, *public);
-    };
+    }
     Ok(())
 }
 
-fn register_external_function<'a>(
+fn register_external_function(
     f: &ExternalFunction<()>,
     names: &mut HashMap<SmolStr, SrcSpan>,
-    environment: &mut Environment<'a>,
+    environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
     let ExternalFunction {
         location,
@@ -634,10 +634,10 @@ fn register_external_function<'a>(
     Ok(())
 }
 
-fn register_value_from_function<'a>(
+fn register_value_from_function(
     f: &Function<(), ast::UntypedExpr>,
     names: &mut HashMap<SmolStr, SrcSpan>,
-    environment: &mut Environment<'a>,
+    environment: &mut Environment<'_>,
     hydrators: &mut HashMap<SmolStr, Hydrator>,
     module_name: &SmolStr,
 ) -> Result<(), Error> {
@@ -1184,7 +1184,7 @@ fn make_type_vars(
         .try_collect()
 }
 
-fn assert_unique_type_name<'a>(
+fn assert_unique_type_name(
     names: &mut HashMap<SmolStr, SrcSpan>,
     name: &SmolStr,
     location: SrcSpan,
