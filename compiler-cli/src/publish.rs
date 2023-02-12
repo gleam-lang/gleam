@@ -30,36 +30,16 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
         let config = crate::config::root_config()?;
-
-        // Reset the build directory so we know the state of the project
-        fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
-
-        // Build the project to check that it is valid
-        let mut compiled = build::main(Options {
-            mode: Mode::Prod,
-            target: Some(Target::Erlang),
-            perform_codegen: true,
-        })?;
-
-        // These fields are required to publish a Hex package. Hex will reject
-        // packages without them.
-        if config.description.is_empty() || config.licences.is_empty() {
-            return Err(Error::MissingHexPublishFields {
-                description_missing: config.description.is_empty(),
-                licence_missing: config.licences.is_empty(),
-            });
-        }
-
-        // Build the package release tarball
         let Tarball {
+            mut compile_result,
             data: package_tarball,
             src_files_added,
             generated_files_added,
-        } = build_hex_tarball(&compiled)?;
+        } = build_hex_tarball(&config)?;
 
         // Build HTML documentation
         let docs_tarball =
-            fs::create_tar_archive(docs::build_documentation(&config, &mut compiled)?)?;
+            fs::create_tar_archive(docs::build_documentation(&config, &mut compile_result)?)?;
 
         // Ask user if this is correct
         if !generated_files_added.is_empty() {
@@ -130,17 +110,30 @@ impl ApiKeyCommand for PublishCommand {
 }
 
 struct Tarball {
+    compile_result: Package,
     data: Vec<u8>,
     src_files_added: Vec<PathBuf>,
     generated_files_added: Vec<(PathBuf, String)>,
 }
 
-fn build_hex_tarball(package: &Package) -> Result<Tarball> {
-    let generated_files = generated_files(package)?;
+fn build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
+    check_config_for_publishing(&config)?;
+
+    // Reset the build directory so we know the state of the project
+    fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
+
+    // Build the project to check that it is valid
+    let compile_result = build::main(Options {
+        mode: Mode::Prod,
+        target: Some(Target::Erlang),
+        perform_codegen: true,
+    })?;
+
+    let generated_files = generated_files(&compile_result)?;
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
-    let metadata = metadata_config(&package.config, &src_files, &generated_files);
+    let metadata = metadata_config(&compile_result.config, &src_files, &generated_files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -162,10 +155,24 @@ fn build_hex_tarball(package: &Package) -> Result<Tarball> {
     }
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
+        compile_result,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,
     })
+}
+
+fn check_config_for_publishing(config: &PackageConfig) -> Result<()> {
+    // These fields are required to publish a Hex package. Hex will reject
+    // packages without them.
+    if config.description.is_empty() || config.licences.is_empty() {
+        Err(Error::MissingHexPublishFields {
+            description_missing: config.description.is_empty(),
+            licence_missing: config.licences.is_empty(),
+        })
+    } else {
+        Ok(())
+    }
 }
 
 fn metadata_config(
