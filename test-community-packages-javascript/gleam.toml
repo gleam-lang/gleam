@@ -1,0 +1,10 @@
+name = "super"
+version = "0.1.0"
+description = "A Gleam project that depends on many other Gleam projects"
+target = "erlang"
+
+[dependencies]
+gleam_stdlib = "~> 0.26"
+
+[dev-dependencies]
+gleeunit = "~> 0.10"
