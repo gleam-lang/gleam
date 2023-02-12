@@ -49,7 +49,7 @@ pub fn infer_module(
     let mut value_names = HashMap::with_capacity(module.statements.len());
     let mut hydrators = HashMap::with_capacity(module.statements.len());
 
-    let statements = GroupedStatements::from_iter(module.into_iter_statements(target));
+    let statements = GroupedStatements::new(module.into_iter_statements(target));
     let statements_count = statements.len();
 
     // Register any modules, types, and values being imported
@@ -1193,7 +1193,7 @@ fn assert_unique_type_name<'a>(
     }
 }
 
-fn assert_unique_value_name<'a>(
+fn assert_unique_value_name(
     names: &mut HashMap<SmolStr, SrcSpan>,
     name: &SmolStr,
     location: SrcSpan,
@@ -1208,7 +1208,7 @@ fn assert_unique_value_name<'a>(
     }
 }
 
-fn assert_unique_const_name<'a>(
+fn assert_unique_const_name(
     names: &mut HashMap<SmolStr, SrcSpan>,
     name: &SmolStr,
     location: SrcSpan,

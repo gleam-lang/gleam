@@ -1315,7 +1315,7 @@ pub struct GroupedStatements {
 }
 
 impl GroupedStatements {
-    pub fn from_iter(statements: impl IntoIterator<Item = UntypedStatement>) -> Self {
+    pub fn new(statements: impl IntoIterator<Item = UntypedStatement>) -> Self {
         let mut this = Self::default();
 
         for statement in statements {
@@ -1323,6 +1323,10 @@ impl GroupedStatements {
         }
 
         this
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn len(&self) -> usize {
