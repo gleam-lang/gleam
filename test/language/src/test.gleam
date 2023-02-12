@@ -80,7 +80,7 @@ fn print_summary(stats: Stats) {
   ffi.print(" failures\n\n")
 }
 
-fn run_list_of_suites(suites, stats) -> Stats {
+fn run_list_of_suites(suites: List(Suite), stats) -> Stats {
   case suites {
     [] -> stats
     [suite, ..suites] -> {
