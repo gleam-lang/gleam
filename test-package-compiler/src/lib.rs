@@ -65,21 +65,20 @@ pub fn prepare(path: &str) -> String {
             let files = filesystem.into_contents();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
-        Err(error) => {
-            let error = error.pretty_string();
-
-            // There is an extra ^ on Windows in some error messages' code
-            // snippets.
-            // I've not managed to determine why this is yet (it is especially
-            // tricky without a Windows computer) so for now we just squash them
-            // in these cross-platform tests.
-            let error = Regex::new(r"\^+")
-                .expect("^ sequence regex")
-                .replace_all(&error, "^");
-
-            error.replace('\\', "/")
-        }
+        Err(error) => normalise_diagnostic(&error.pretty_string()),
     }
+}
+
+fn normalise_diagnostic(text: &str) -> String {
+    // There is an extra ^ on Windows in some error messages' code
+    // snippets.
+    // I've not managed to determine why this is yet (it is especially
+    // tricky without a Windows computer) so for now we just squash them
+    // in these cross-platform tests.
+    Regex::new(r"\^+")
+        .expect("^ sequence regex")
+        .replace_all(text, "^")
+        .replace('\\', "/")
 }
 
 #[derive(Debug)]
@@ -113,7 +112,7 @@ impl TestCompileOutput {
         }
 
         for warning in self.warnings.iter().map(|w| w.to_pretty_string()).sorted() {
-            write!(buffer, "//// Warning\n{warning}",).unwrap();
+            write!(buffer, "//// Warning\n{}", normalise_diagnostic(&warning)).unwrap();
             buffer.push('\n');
             buffer.push('\n');
         }

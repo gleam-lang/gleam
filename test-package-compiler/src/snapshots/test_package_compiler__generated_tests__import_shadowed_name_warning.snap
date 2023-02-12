@@ -57,7 +57,7 @@ warning: Unused private constructor
   ┌─ src/two.gleam:9:3
   │
 9 │   Port
-  │   ^^^^ This private constructor is never used.
+  │   ^ This private constructor is never used.
 
 Hint: You can safely remove it.
 
@@ -68,7 +68,7 @@ warning: Unused private type
   ┌─ src/two.gleam:7:1
   │
 7 │ type Shadowing {
-  │ ^^^^^^^^^^^^^^ This private type is never used.
+  │ ^ This private type is never used.
 
 Hint: You can safely remove it.
 
