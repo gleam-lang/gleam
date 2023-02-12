@@ -4,11 +4,12 @@ mod tests;
 use crate::{
     ast::{
         self, BitStringSegmentOption, CustomType, ExternalFunction, ExternalType, Function,
-        GroupedStatements, Import, Layer, ModuleConstant, RecordConstructor, RecordConstructorArg,
-        SrcSpan, Statement, TypeAlias, TypeAst, TypedModule, TypedStatement, UnqualifiedImport,
-        UntypedModule,
+        GroupedStatements, Import, Layer, ModuleConstant, ModuleFunction, RecordConstructor,
+        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypedModule, TypedStatement,
+        UnqualifiedImport, UntypedModule,
     },
     build::{Origin, Target},
+    call_graph::into_dependency_order,
     type_::{
         self,
         environment::*,
@@ -113,20 +114,39 @@ pub fn infer_module(
         let statement = infer_module_constant(c, &mut env, &name)?;
         typed_statements.push(statement);
     }
-    for f in statements.external_functions {
-        let statement = infer_external_function(f, &mut env)?;
-        typed_statements.push(statement);
-    }
-    for f in statements.functions {
-        let statement = infer_function(f, &mut env, &mut hydrators, &name)?;
-        typed_statements.push(statement);
-    }
 
-    // Generalise functions now that the entire module has been inferred
-    let statements = typed_statements
+    // Sort the functions into dependency order for inference. Functions that do
+    // not depend on other functions are inferred first, then ones that depend
+    // on those, etc.
+    let functions = statements
+        .functions
         .into_iter()
-        .map(|s| generalise_statement(s, &name, &mut env))
-        .collect();
+        .map(ModuleFunction::Internal);
+    let external_functions = statements
+        .external_functions
+        .into_iter()
+        .map(ModuleFunction::External);
+    let functions = functions.chain(external_functions).collect_vec();
+    let function_groups = into_dependency_order(functions)?;
+    let mut working_group = vec![];
+
+    for group in function_groups {
+        // A group may have multiple functions that depend on each other through
+        // mutual recursion.
+        for function in group {
+            let inferred = match function {
+                ModuleFunction::Internal(f) => infer_function(f, &mut env, &mut hydrators, &name)?,
+                ModuleFunction::External(f) => infer_external_function(f, &mut env)?,
+            };
+            working_group.push(inferred);
+        }
+
+        // Now that the entire group has been inferred, generalise their types.
+        for inferred in working_group.drain(..) {
+            let statement = generalise_statement(inferred, &name, &mut env);
+            typed_statements.push(statement);
+        }
+    }
 
     // Generate warnings for unused items
     env.convert_unused_to_warnings();
@@ -158,7 +178,7 @@ pub fn infer_module(
     Ok(ast::Module {
         documentation,
         name: name.clone(),
-        statements,
+        statements: typed_statements,
         type_info: Module {
             name,
             types,
