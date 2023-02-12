@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0\")\n\n"
+---
+import * as _ from "../gleam.d.ts";
+
+export const local: Ip$;
+
+export class Ip extends _.CustomType {
+  constructor(argument$0: string);
+  
+  x0: string;
+}
+
+export type Ip$ = Ip;
+
