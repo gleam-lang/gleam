@@ -51,4 +51,32 @@ use_type(Field@0) ->
 ]}.
 
 
+//// Warning
+Type {
+    path: "src/two.gleam",
+    src: "//// https://github.com/gleam-lang/otp/pull/22\n\n// No warning should be emitted about this imported type. The compiler does not\n// confuse it for the value constructor defined below.\nimport one.{Port}\n\ntype Shadowing {\n  // This value constructor has the same name as the imported type.\n  Port\n}\n\n// Here the type is used.\npub external fn use_type(Port) -> Nil =\n  \"wibble\" \"wobble\"\n",
+    warning: UnusedType {
+        location: SrcSpan {
+            start: 202,
+            end: 216,
+        },
+        imported: false,
+        name: "Shadowing",
+    },
+}
+
+//// Warning
+Type {
+    path: "src/two.gleam",
+    src: "//// https://github.com/gleam-lang/otp/pull/22\n\n// No warning should be emitted about this imported type. The compiler does not\n// confuse it for the value constructor defined below.\nimport one.{Port}\n\ntype Shadowing {\n  // This value constructor has the same name as the imported type.\n  Port\n}\n\n// Here the type is used.\npub external fn use_type(Port) -> Nil =\n  \"wibble\" \"wobble\"\n",
+    warning: UnusedConstructor {
+        location: SrcSpan {
+            start: 289,
+            end: 293,
+        },
+        imported: false,
+        name: "Port",
+    },
+}
+
 
