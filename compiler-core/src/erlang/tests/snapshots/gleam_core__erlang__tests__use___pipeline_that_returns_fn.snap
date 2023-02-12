@@ -1,12 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 70
+assertion_line: 69
 expression: "\npub fn main() {\n  use <- 1 |> add\n  1\n}\n\npub fn add(x) {\n  fn(f) { f() + x }\n}\n"
 ---
 -module(the_app).
 -compile(no_auto_import).
 
--export([main/0, add/1]).
+-export([add/1, main/0]).
+
+-spec add(integer()) -> fun((fun(() -> integer())) -> integer()).
+add(X) ->
+    fun(F) -> F() + X end.
 
 -spec main() -> integer().
 main() ->
@@ -18,8 +22,4 @@ main() ->
             1
         end
     ).
-
--spec add(integer()) -> fun((fun(() -> integer())) -> integer()).
-add(X) ->
-    fun(F) -> F() + X end.
 

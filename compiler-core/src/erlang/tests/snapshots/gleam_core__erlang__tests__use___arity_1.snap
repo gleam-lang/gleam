@@ -8,6 +8,11 @@ expression: "\npub fn main() {\n  use <- pair()\n  123\n}\n\nfn pair(f) {\n  let
 
 -export([main/0]).
 
+-spec pair(fun(() -> L)) -> {L, L}.
+pair(F) ->
+    X = F(),
+    {X, X}.
+
 -spec main() -> {integer(), integer()}.
 main() ->
     pair(
@@ -15,9 +20,4 @@ main() ->
             123
         end
     ).
-
--spec pair(fun(() -> integer())) -> {integer(), integer()}.
-pair(F) ->
-    X = F(),
-    {X, X}.
 

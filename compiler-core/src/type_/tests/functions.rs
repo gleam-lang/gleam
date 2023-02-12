@@ -41,3 +41,22 @@ fn all_labelled() {
         vec![(r#"prepend"#, r#"fn(List(a), a) -> List(a)"#)]
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1814
+#[test]
+fn out_of_order_generalisation() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  call(fn() {
+    "Hello"
+  })
+}
+
+fn call(f: fn() -> a) {
+  f()
+}
+"#,
+        vec![(r#"main"#, r#"fn() -> String"#)]
+    );
+}

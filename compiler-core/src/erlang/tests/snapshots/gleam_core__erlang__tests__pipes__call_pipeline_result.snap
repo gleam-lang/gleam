@@ -6,7 +6,11 @@ expression: "\npub fn main() {\n  { 1 |> add }(1)\n}\n\npub fn add(x) {\n  fn(y)
 -module(the_app).
 -compile(no_auto_import).
 
--export([main/0, add/1]).
+-export([add/1, main/0]).
+
+-spec add(integer()) -> fun((integer()) -> integer()).
+add(X) ->
+    fun(Y) -> X + Y end.
 
 -spec main() -> integer().
 main() ->
@@ -14,8 +18,4 @@ main() ->
         _pipe = 1,
         add(_pipe)
     end(1).
-
--spec add(integer()) -> fun((integer()) -> integer()).
-add(X) ->
-    fun(Y) -> X + Y end.
 
