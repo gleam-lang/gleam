@@ -171,12 +171,12 @@ expression.",
                     let title = if *imported {
                         "Unused imported item".into()
                     } else {
-                        "Unused private type constructor".into()
+                        "Unused private constructor".into()
                     };
                     let label = if *imported {
-                        "This imported type constructor is never used.".into()
+                        "This imported constructor is never used.".into()
                     } else {
-                        "This private type constructor is never used.".into()
+                        "This private constructor is never used.".into()
                     };
                     Diagnostic {
                         title,

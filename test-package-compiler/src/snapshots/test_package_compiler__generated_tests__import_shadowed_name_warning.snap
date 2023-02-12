@@ -53,22 +53,22 @@ use_type(Field@0) ->
 
 //// Warning
 
-warning: Unused private type
-  ┌─ src/two.gleam:7:1
+warning: Unused private constructor
+  ┌─ src/two.gleam:9:3
   │
-7 │ type Shadowing {
-  │ ^^^^^^^^^^^^^^ This private type is never used.
+9 │   Port
+  │   ^^^^ This private constructor is never used.
 
 Hint: You can safely remove it.
 
 
 //// Warning
 
-warning: Unused private type constructor
-  ┌─ src/two.gleam:9:3
+warning: Unused private type
+  ┌─ src/two.gleam:7:1
   │
-9 │   Port
-  │   ^^^^ This private type constructor is never used.
+7 │ type Shadowing {
+  │ ^^^^^^^^^^^^^^ This private type is never used.
 
 Hint: You can safely remove it.
 
