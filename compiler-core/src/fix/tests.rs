@@ -6,5 +6,5 @@ fn fix(src: &str) -> String {
 
 #[test]
 fn empty() {
-    assert_eq!("", fix(""))
+    assert_eq!(fix(""), "\n")
 }

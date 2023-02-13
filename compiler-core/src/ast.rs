@@ -425,6 +425,15 @@ pub struct Import<PackageName> {
     pub unqualified: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
+impl<T> Import<T> {
+    pub(crate) fn variable_name(&self) -> SmolStr {
+        self.as_name
+            .as_ref()
+            .cloned()
+            .or_else(|| self.module.split('/').last().map(|s| s.into()))
+            .expect("Import could not identify variable name.")
+    }
+}
 
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 
