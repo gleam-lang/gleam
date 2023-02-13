@@ -1,8 +1,6 @@
 //! Graphs that represent the relationships between entities in a Gleam module,
 //! such as module functions or constants.
 
-#![allow(unused)]
-
 #[cfg(test)]
 mod into_dependency_order_tests;
 
