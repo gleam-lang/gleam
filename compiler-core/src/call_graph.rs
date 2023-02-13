@@ -4,19 +4,17 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{
-    AssignName, BitStringSegmentOption, ClauseGuard, Constant, ModuleFunction, Pattern, SrcSpan,
-    UntypedPattern, Use,
-};
-use crate::type_::Error;
 use crate::{
-    ast::{ExternalFunction, Function, UntypedExpr},
+    ast::{
+        AssignName, BitStringSegmentOption, ClauseGuard, Constant, ModuleFunction, Pattern,
+        SrcSpan, UntypedExpr, UntypedPattern,
+    },
+    type_::Error,
     Result,
 };
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{stable_graph::StableGraph, Directed};
-use smol_str::SmolStr;
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {
@@ -56,7 +54,7 @@ impl<'a> CallGraphBuilder<'a> {
         match function {
             ModuleFunction::Internal(f) => {
                 let names = self.names.clone();
-                let current = self
+                self.current_function = self
                     .names
                     .get(f.name.as_str())
                     .expect("Function must already have been registered as existing")
@@ -65,14 +63,14 @@ impl<'a> CallGraphBuilder<'a> {
                 for name in f.arguments.iter().flat_map(|a| a.get_variable_name()) {
                     self.define(name);
                 }
-                self.expression(current, &f.body);
+                self.expression(&f.body);
                 self.names = names;
             }
             ModuleFunction::External(_) => {}
         }
     }
 
-    fn referenced(&mut self, current: NodeIndex, name: &str) {
+    fn referenced(&mut self, name: &str) {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
@@ -82,16 +80,16 @@ impl<'a> CallGraphBuilder<'a> {
         // that shadows a module function.
         let Some((target, _)) = target else { return };
 
-        _ = self.graph.add_edge(current, *target, ());
+        _ = self.graph.add_edge(self.current_function, *target, ());
     }
 
-    fn scoped_expression(&mut self, current: NodeIndex, expression: &'a UntypedExpr) {
+    fn scoped_expression(&mut self, expression: &'a UntypedExpr) {
         let names = self.names.clone();
-        self.expression(current, expression);
+        self.expression(expression);
         self.names = names;
     }
 
-    fn expression(&mut self, current: NodeIndex, expression: &'a UntypedExpr) {
+    fn expression(&mut self, expression: &'a UntypedExpr) {
         match expression {
             UntypedExpr::Todo { .. }
             | UntypedExpr::Int { .. }
@@ -100,47 +98,47 @@ impl<'a> CallGraphBuilder<'a> {
 
             // Aha! A variable is being referenced.
             UntypedExpr::Var { name, .. } => {
-                self.referenced(current, name);
+                self.referenced(name);
             }
 
             UntypedExpr::Call { fun, arguments, .. } => {
-                self.expression(current, fun);
+                self.expression(fun);
                 for argument in arguments {
-                    self.scoped_expression(current, &argument.value);
+                    self.scoped_expression(&argument.value);
                 }
             }
 
             UntypedExpr::PipeLine { expressions } => {
                 for expression in expressions {
-                    self.expression(current, expression);
+                    self.expression(expression);
                 }
             }
 
             UntypedExpr::Tuple { elems, .. } => {
                 for expression in elems {
-                    self.scoped_expression(current, expression);
+                    self.scoped_expression(expression);
                 }
             }
 
             UntypedExpr::Sequence { expressions, .. } => {
                 let names = self.names.clone();
                 for expression in expressions {
-                    self.expression(current, expression);
+                    self.expression(expression);
                 }
                 self.names = names;
             }
 
             UntypedExpr::BinOp { left, right, .. } => {
-                self.scoped_expression(current, left);
-                self.scoped_expression(current, right);
+                self.scoped_expression(left);
+                self.scoped_expression(right);
             }
 
             UntypedExpr::List { elements, tail, .. } => {
                 for element in elements {
-                    self.scoped_expression(current, element);
+                    self.scoped_expression(element);
                 }
                 if let Some(tail) = tail {
-                    self.scoped_expression(current, tail);
+                    self.scoped_expression(tail);
                 }
             }
 
@@ -154,21 +152,21 @@ impl<'a> CallGraphBuilder<'a> {
                 container: expression,
                 ..
             } => {
-                self.scoped_expression(current, expression);
+                self.scoped_expression(expression);
             }
 
             UntypedExpr::BitString { segments, .. } => {
                 for segment in segments {
-                    self.scoped_expression(current, &segment.value);
+                    self.scoped_expression(&segment.value);
                 }
             }
 
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
             } => {
-                self.scoped_expression(current, &spread.base);
+                self.scoped_expression(&spread.base);
                 for argument in arguments {
-                    self.scoped_expression(current, &argument.value);
+                    self.scoped_expression(&argument.value);
                 }
             }
 
@@ -176,7 +174,7 @@ impl<'a> CallGraphBuilder<'a> {
                 for name in use_.assigned_names() {
                     self.define(name);
                 }
-                self.expression(current, &use_.call);
+                self.expression(&use_.call);
             }
 
             UntypedExpr::Fn {
@@ -188,42 +186,42 @@ impl<'a> CallGraphBuilder<'a> {
                         self.define(name)
                     }
                 }
-                self.scoped_expression(current, body);
+                self.scoped_expression(body);
                 self.names = names;
             }
 
             UntypedExpr::Assignment { value, pattern, .. } => {
-                self.expression(current, value);
-                self.pattern(current, pattern);
+                self.expression(value);
+                self.pattern(pattern);
             }
 
             UntypedExpr::Try { value, then, .. } => {
-                self.expression(current, value);
-                self.expression(current, then);
+                self.expression(value);
+                self.expression(then);
             }
 
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => {
                 for subject in subjects {
-                    self.expression(current, subject);
+                    self.expression(subject);
                 }
                 for clause in clauses {
                     let names = self.names.clone();
                     for pattern in &clause.pattern {
-                        self.pattern(current, pattern);
+                        self.pattern(pattern);
                     }
                     if let Some(guard) = &clause.guard {
-                        self.guard(current, guard);
+                        self.guard(guard);
                     }
-                    self.expression(current, &clause.then);
+                    self.expression(&clause.then);
                     self.names = names;
                 }
             }
         }
     }
 
-    fn pattern(&mut self, current: NodeIndex, pattern: &'a UntypedPattern) {
+    fn pattern(&mut self, pattern: &'a UntypedPattern) {
         match pattern {
             Pattern::Discard { .. }
             | Pattern::Int { .. }
@@ -246,40 +244,40 @@ impl<'a> CallGraphBuilder<'a> {
                 elems: patterns, ..
             } => {
                 for pattern in patterns {
-                    self.pattern(current, pattern);
+                    self.pattern(pattern);
                 }
             }
 
             Pattern::List { elements, tail, .. } => {
                 for element in elements {
-                    self.pattern(current, element);
+                    self.pattern(element);
                 }
                 if let Some(tail) = tail {
-                    self.pattern(current, tail);
+                    self.pattern(tail);
                 }
             }
 
             Pattern::VarUsage { name, .. } => {
-                self.referenced(current, name);
+                self.referenced(name);
             }
 
             Pattern::Assign { name, pattern, .. } => {
                 self.define(name);
-                self.pattern(current, pattern);
+                self.pattern(pattern);
             }
 
             Pattern::Constructor { arguments, .. } => {
                 for argument in arguments {
-                    self.pattern(current, &argument.value);
+                    self.pattern(&argument.value);
                 }
             }
 
             Pattern::BitString { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(current, option, |s, p, c| s.pattern(p, c));
+                        self.bit_string_option(option, |s, p| s.pattern(p));
                     }
-                    self.pattern(current, &segment.value);
+                    self.pattern(&segment.value);
                 }
             }
         }
@@ -291,9 +289,8 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn bit_string_option<T>(
         &mut self,
-        current: NodeIndex,
         option: &'a BitStringSegmentOption<T>,
-        process: impl Fn(&mut Self, NodeIndex, &'a T),
+        process: impl Fn(&mut Self, &'a T),
     ) {
         match option {
             BitStringSegmentOption::Big { .. }
@@ -314,12 +311,12 @@ impl<'a> CallGraphBuilder<'a> {
             | BitStringSegmentOption::Utf8Codepoint { .. } => (),
 
             BitStringSegmentOption::Size { value: pattern, .. } => {
-                process(self, current, pattern);
+                process(self, pattern);
             }
         }
     }
 
-    fn guard(&mut self, current: NodeIndex, guard: &'a ClauseGuard<(), ()>) {
+    fn guard(&mut self, guard: &'a ClauseGuard<(), ()>) {
         match guard {
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. }
@@ -333,19 +330,19 @@ impl<'a> CallGraphBuilder<'a> {
             | ClauseGuard::LtEqFloat { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
             | ClauseGuard::And { left, right, .. } => {
-                self.guard(current, left);
-                self.guard(current, right);
+                self.guard(left);
+                self.guard(right);
             }
 
-            ClauseGuard::Var { name, .. } => self.referenced(current, name),
+            ClauseGuard::Var { name, .. } => self.referenced(name),
 
-            ClauseGuard::TupleIndex { tuple, .. } => self.guard(current, tuple),
+            ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
-            ClauseGuard::Constant(constant) => self.constant(current, constant),
+            ClauseGuard::Constant(constant) => self.constant(constant),
         }
     }
 
-    fn constant(&mut self, current: NodeIndex, constant: &'a Constant<(), ()>) {
+    fn constant(&mut self, constant: &'a Constant<(), ()>) {
         match constant {
             Constant::Int { .. }
             | Constant::Float { .. }
@@ -356,26 +353,26 @@ impl<'a> CallGraphBuilder<'a> {
 
             Constant::List { elements, .. } | Constant::Tuple { elements, .. } => {
                 for element in elements {
-                    self.constant(current, element);
+                    self.constant(element);
                 }
             }
 
             Constant::Record { args, .. } => {
                 for arg in args {
-                    self.constant(current, &arg.value);
+                    self.constant(&arg.value);
                 }
             }
 
             Constant::Var {
                 module: None, name, ..
-            } => self.referenced(current, name),
+            } => self.referenced(name),
 
             Constant::BitString { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(current, option, |s, p, c| s.constant(p, c));
+                        self.bit_string_option(option, |s, c| s.constant(c));
                     }
-                    self.constant(current, &segment.value);
+                    self.constant(&segment.value);
                 }
             }
         }
