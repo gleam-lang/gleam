@@ -461,7 +461,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         .label
                         .as_ref()
                         .map(|s| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| Document::String(format!("x{i}")));
+                        .unwrap_or_else(|| Document::String(format!("{i}")));
                     docvec![
                         name,
                         ": ",

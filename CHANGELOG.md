@@ -7,7 +7,8 @@
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
 - Fixed a bug where typescript type definitions for types with unlabelled
-  arguments where generated with an invalid identifier.
+  arguments where generated with an invalid identifier and unlabelled fields
+  were generated with a name that didn't match the javascript implementation.
 - Fixed a bug in the type inferrer were unannotated functions that were
   used before they were defined in a module could in rare cased be inferred with
   a more general type than is correct.
