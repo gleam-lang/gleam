@@ -25,7 +25,6 @@ minigen = "~> 0.0"
 gleam_cors = "~> 0.1"
 glog = "~> 0.2"
 emel = "~> 1.0"
-nibble = "~> 0.2"
 gleam_bson = "~> 0.20"
 gap = "~> 0.1"
 
