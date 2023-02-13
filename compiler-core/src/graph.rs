@@ -1,7 +1,5 @@
 //! General functions for working with graphs.
 
-use std::collections::HashSet;
-
 use petgraph::{prelude::NodeIndex, stable_graph::StableGraph, Direction};
 
 /// Sort a graph into a sequence from the leaves to the roots.
