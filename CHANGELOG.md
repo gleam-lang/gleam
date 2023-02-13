@@ -3,11 +3,11 @@
 ## Unreleased
 
 - The unused private type and constructor detection has been improved.
-- Fixed a bug in the type inferrer were unannotated functions used that were
+- Fixed a bug in the type inferrer were unannotated functions that were
   used before they were defined in a module could in rare cased be inferred with
   a more general type than is correct.
 - Fixed a bug where pattern matches on custom types with mixed labelled and 
-  unlabelled arguments could not be compiled with targeting JavaScript.
+  unlabelled arguments could not be compiled when targeting JavaScript.
 
 ## v0.26.2 - 2023-02-03
 
