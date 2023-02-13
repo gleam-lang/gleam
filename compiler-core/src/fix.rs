@@ -36,15 +36,31 @@ pub fn parse_fix_and_format(src: &SmolStr, path: &Path) -> Result<String> {
     Ok(buffer)
 }
 
+#[derive(Debug)]
 enum ResultModule {
     Existing(String),
     Insert(String),
 }
 
-#[derive(Debug, Clone)]
+impl ResultModule {
+    fn name(&self) -> &str {
+        match self {
+            ResultModule::Existing(name) | ResultModule::Insert(name) => &name,
+        }
+    }
+
+    fn into_name(self) -> String {
+        match self {
+            ResultModule::Existing(name) | ResultModule::Insert(name) => name,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct Fixer {
     target: Target,
-    result_module: String,
+    module_used: bool,
+    result_module: ResultModule,
 }
 
 impl Fixer {
@@ -52,23 +68,16 @@ impl Fixer {
     /// Mutates the module in place.
     ///
     pub fn fix(module: &mut UntypedModule, target: Target) {
-        let result_module = match check_for_result_module_import(target, &module) {
-            ResultModule::Existing(name) => name,
-            ResultModule::Insert(name) => {
-                let import = result_module_import_statement(&name);
-                module.statements.push(TargetGroup::Any(vec![import]));
-                name
-            }
-        };
-
         Self {
             target,
-            result_module,
+            module_used: false,
+            result_module: check_for_result_module_import(target, &module),
         }
         .fix_module(module)
     }
 
     fn fix_module(&self, module: &mut UntypedModule) {
+        // Rewrite any `try`s into `use`s.
         for group in module.statements.iter_mut() {
             match group {
                 TargetGroup::Only(t, _) if *t != self.target => (),
@@ -76,6 +85,18 @@ impl Fixer {
                     for statement in statements.iter_mut() {
                         self.fix_statement(statement);
                     }
+                }
+            }
+        }
+
+        // Insert the `result` module import if it is used and not already
+        // imported.
+        if self.module_used {
+            match &self.result_module {
+                ResultModule::Existing(_) => (),
+                ResultModule::Insert(name) => {
+                    let import = result_module_import_statement(&name);
+                    module.statements.push(TargetGroup::Any(vec![import]));
                 }
             }
         }
@@ -149,7 +170,7 @@ fn check_for_result_module_import(target: Target, module: &UntypedModule) -> Res
             TargetGroup::Any(statements) | TargetGroup::Only(_, statements) => {
                 for statement in statements {
                     if let Statement::Import(import) = statement {
-                        action = check_import_for_result(import);
+                        action = check_import_for_result(import, action);
                     }
                 }
             }
@@ -159,6 +180,18 @@ fn check_for_result_module_import(target: Target, module: &UntypedModule) -> Res
     action
 }
 
-fn check_import_for_result(import: &Import<()>) -> ResultModule {
-    todo!()
+fn check_import_for_result(import: &Import<()>, action: ResultModule) -> ResultModule {
+    let import_name = import.variable_name();
+
+    if import.module == "gleam/result" {
+        return ResultModule::Existing(import_name.into());
+    }
+
+    if import_name == action.name() {
+        let mut name = action.into_name();
+        name.push('_');
+        return ResultModule::Insert(name);
+    }
+
+    action
 }
