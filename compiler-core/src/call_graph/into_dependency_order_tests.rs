@@ -1,5 +1,5 @@
 use super::*;
-use crate::ast::{Arg, ModuleFunction, TypeAst};
+use crate::ast::{Arg, ExternalFunction, Function, ModuleFunction, TypeAst};
 use smol_str::SmolStr;
 
 enum Input {
