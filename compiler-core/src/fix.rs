@@ -1,9 +1,40 @@
-use std::sync::Arc;
+#[cfg(test)]
+mod tests;
+
+use std::path::Path;
+
+use smol_str::SmolStr;
+use strum::IntoEnumIterator;
 
 use crate::{
     ast::{Import, Statement, TargetGroup, UntypedModule, UntypedStatement},
     build::Target,
+    format::{Formatter, Intermediate},
+    Error, Result,
 };
+
+pub fn parse_fix_and_format(src: &SmolStr, path: &Path) -> Result<String> {
+    // Parse
+    let (mut module, extra) = crate::parse::parse_module(src).map_err(|error| Error::Parse {
+        path: path.to_path_buf(),
+        src: src.clone(),
+        error,
+    })?;
+    let intermediate = Intermediate::from_extra(&extra, src);
+
+    // Fix
+    for target in Target::iter() {
+        Fixer::fix(&mut module, target);
+    }
+
+    // Format
+    let mut buffer = String::new();
+    Formatter::with_comments(&intermediate)
+        .module(&module)
+        .pretty_print(80, &mut buffer)?;
+
+    Ok(buffer)
+}
 
 enum ResultModule {
     Existing(String),
@@ -16,7 +47,10 @@ pub struct Fixer {
 }
 
 impl Fixer {
-    pub fn fix(module: &mut UntypedModule, target: Target) -> UntypedModule {
+    /// Fix this module to remove use of the `try` keyword.
+    /// Mutates the module in place.
+    ///
+    pub fn fix(module: &mut UntypedModule, target: Target) {
         let result_module = match check_for_result_module_import(target, &module) {
             ResultModule::Existing(name) => name,
             ResultModule::Insert(name) => {
@@ -31,7 +65,7 @@ impl Fixer {
         Self { result_module }.fix_module(module)
     }
 
-    fn fix_module(&self, module: &mut crate::ast::Module<(), TargetGroup>) -> UntypedModule {
+    fn fix_module(&self, module: &mut UntypedModule) {
         todo!()
     }
 }
