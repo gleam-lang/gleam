@@ -202,7 +202,6 @@ pub fn register_import(
 
     let Import {
         module,
-        as_name,
         unqualified,
         location,
         ..

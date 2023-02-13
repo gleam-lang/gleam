@@ -90,4 +90,26 @@ pub fn main(y) {
     )
 }
 
-// TODO: test for when the `result` and `gleam_result` names are taken.
+#[test]
+fn both_module_names_already_taken() {
+    assert_eq!(
+        fix("import two/result as gleam_result
+import one/result
+
+pub fn main(y) {
+  try _ = y
+  y
+}
+"),
+        "import gleam/result as gleam_gleam_result
+
+import two/result as gleam_result
+import one/result
+
+pub fn main(y) {
+  use _ <- gleam_gleam_result.then(y)
+  y
+}
+"
+    )
+}
