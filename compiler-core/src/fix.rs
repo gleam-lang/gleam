@@ -7,7 +7,7 @@ use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
 use crate::{
-    ast::{Import, Statement, TargetGroup, UntypedModule, UntypedStatement},
+    ast::{Function, Import, Statement, TargetGroup, UntypedExpr, UntypedModule, UntypedStatement},
     build::Target,
     format::{Formatter, Intermediate},
     Error, Result,
@@ -43,6 +43,7 @@ enum ResultModule {
 
 #[derive(Debug, Clone)]
 pub struct Fixer {
+    target: Target,
     result_module: String,
 }
 
@@ -55,18 +56,72 @@ impl Fixer {
             ResultModule::Existing(name) => name,
             ResultModule::Insert(name) => {
                 let import = result_module_import_statement(&name);
-                module
-                    .statements
-                    .push(TargetGroup::Only(target, vec![import]));
+                module.statements.push(TargetGroup::Any(vec![import]));
                 name
             }
         };
 
-        Self { result_module }.fix_module(module)
+        Self {
+            target,
+            result_module,
+        }
+        .fix_module(module)
     }
 
     fn fix_module(&self, module: &mut UntypedModule) {
-        todo!()
+        for group in module.statements.iter_mut() {
+            match group {
+                TargetGroup::Only(t, _) if *t != self.target => (),
+                TargetGroup::Any(statements) | TargetGroup::Only(_, statements) => {
+                    for statement in statements.iter_mut() {
+                        self.fix_statement(statement);
+                    }
+                }
+            }
+        }
+    }
+
+    fn fix_statement(&self, statement: &mut UntypedStatement) {
+        match statement {
+            Statement::Function(f) => self.fix_expression(&mut f.body),
+            Statement::TypeAlias(_)
+            | Statement::CustomType(_)
+            | Statement::ExternalFunction(_)
+            | Statement::ExternalType(_)
+            | Statement::Import(_)
+            | Statement::ModuleConstant(_) => (),
+        }
+    }
+
+    fn fix_expression(&self, expression: &mut UntypedExpr) {
+        match expression {
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Todo { .. } => (),
+
+            UntypedExpr::Sequence { expressions, .. } => todo!(),
+            UntypedExpr::Fn { body, .. } => todo!(),
+            UntypedExpr::List { elements, tail, .. } => todo!(),
+            UntypedExpr::Call { fun, arguments, .. } => todo!(),
+            UntypedExpr::BinOp { left, right, .. } => todo!(),
+            UntypedExpr::PipeLine { expressions, .. } => todo!(),
+            UntypedExpr::Assignment { value, .. } => todo!(),
+            UntypedExpr::Try { value, then, .. } => unreachable!("try should have been removed"),
+            UntypedExpr::Use(_) => todo!(),
+            UntypedExpr::Case {
+                subjects, clauses, ..
+            } => todo!(),
+            UntypedExpr::FieldAccess { container, .. } => todo!(),
+            UntypedExpr::Tuple { elems, .. } => todo!(),
+            UntypedExpr::TupleIndex { tuple, .. } => todo!(),
+            UntypedExpr::BitString { segments, .. } => todo!(),
+            UntypedExpr::RecordUpdate {
+                spread, arguments, ..
+            } => todo!(),
+            UntypedExpr::Negate { value, .. } => todo!(),
+        }
     }
 }
 
