@@ -57,13 +57,18 @@ impl<'a> CallGraphBuilder<'a> {
     fn register_references(&mut self, function: &'a ModuleFunction) {
         match function {
             ModuleFunction::Internal(f) => {
+                let names = self.names.clone();
                 let current = self
                     .names
                     .get(f.name.as_str())
                     .expect("Function must already have been registered as existing")
                     .expect("Function must not be shadowed at module level")
                     .0;
-                self.expression(current, &f.body)
+                for name in f.arguments.iter().flat_map(|a| a.get_variable_name()) {
+                    self.define(name);
+                }
+                self.expression(current, &f.body);
+                self.names = names;
             }
             ModuleFunction::External(_) => {}
         }
