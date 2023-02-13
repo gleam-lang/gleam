@@ -215,7 +215,14 @@ impl Fixer {
                 }
             }
 
-            UntypedExpr::List { elements, tail, .. } => todo!(),
+            UntypedExpr::List { elements, tail, .. } => {
+                for element in elements.iter_mut() {
+                    self.fix_expression(element);
+                }
+                if let Some(tail) = tail {
+                    self.fix_expression(tail);
+                }
+            }
 
             UntypedExpr::Call { fun, arguments, .. } => {
                 self.fix_expression(fun);
@@ -224,16 +231,38 @@ impl Fixer {
                 }
             }
 
-            UntypedExpr::BinOp { left, right, .. } => todo!(),
-            UntypedExpr::PipeLine { expressions, .. } => todo!(),
+            UntypedExpr::BinOp { left, right, .. } => {
+                self.fix_expression(left);
+                self.fix_expression(right);
+            }
+
+            UntypedExpr::PipeLine { expressions, .. } => {
+                for expression in expressions.iter_mut() {
+                    self.fix_expression(expression);
+                }
+            }
 
             UntypedExpr::Case {
                 subjects, clauses, ..
-            } => todo!(),
+            } => {
+                for subject in subjects.iter_mut() {
+                    self.fix_expression(subject);
+                }
+                for clause in clauses.iter_mut() {
+                    self.fix_expression(&mut clause.then);
+                }
+            }
+
             UntypedExpr::BitString { segments, .. } => todo!(),
+
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
-            } => todo!(),
+            } => {
+                self.fix_expression(&mut *spread.base);
+                for argument in arguments.iter_mut() {
+                    self.fix_expression(&mut argument.value);
+                }
+            }
         }
     }
 }
@@ -294,9 +323,7 @@ fn check_import_for_result(import: &Import<()>, action: ResultModule) -> ResultM
     }
 
     if import_name == action.name() {
-        let mut name = action.into_name();
-        name.push('_');
-        return ResultModule::Insert(name);
+        return ResultModule::Insert("gleam_result".into());
     }
 
     action
