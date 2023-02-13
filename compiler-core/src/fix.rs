@@ -8,8 +8,8 @@ use strum::IntoEnumIterator;
 
 use crate::{
     ast::{
-        AssignName, AssignmentKind, CallArg, Import, Pattern, Statement, TargetGroup, UntypedExpr,
-        UntypedModule, UntypedPattern, UntypedStatement, Use,
+        AssignName, AssignmentKind, BitStringSegmentOption, CallArg, Import, Pattern, Statement,
+        TargetGroup, UntypedExpr, UntypedModule, UntypedPattern, UntypedStatement, Use,
     },
     build::Target,
     format::{Formatter, Intermediate},
@@ -253,14 +253,26 @@ impl Fixer {
                 }
             }
 
-            UntypedExpr::BitString { segments, .. } => todo!(),
-
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
             } => {
                 self.fix_expression(&mut *spread.base);
                 for argument in arguments.iter_mut() {
                     self.fix_expression(&mut argument.value);
+                }
+            }
+
+            UntypedExpr::BitString { segments, .. } => {
+                for segment in segments.iter_mut() {
+                    self.fix_expression(&mut *segment.value);
+                    for option in segment.options.iter_mut() {
+                        match option {
+                            BitStringSegmentOption::Size { value, .. } => {
+                                self.fix_expression(value);
+                            }
+                            _ => (),
+                        }
+                    }
                 }
             }
         }
