@@ -1797,17 +1797,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
                 match constructor.variant {
                     ValueConstructorVariant::ModuleConstant { .. }
-                    | ValueConstructorVariant::ModuleFn { .. } => Ok(Constant::Var {
+                    | ValueConstructorVariant::ModuleFn { .. }
+                    | ValueConstructorVariant::LocalVariable { .. } => Ok(Constant::Var {
                         location,
                         module,
                         name,
                         typ: Arc::clone(&constructor.type_),
                         constructor: Some(Box::from(constructor)),
                     }),
-                    // constructor.variant cannot be a LocalVariable because module constants can
-                    // only be defined at module scope. It also cannot be a Record because then
-                    // this constant would have been parsed as a Constant::Record. Therefore this
-                    // code is unreachable.
+                    // It cannot be a Record because then this constant would have been 
+                    // parsed as a Constant::Record. Therefore this code is unreachable.
                     _ => unreachable!(),
                 }
             }
