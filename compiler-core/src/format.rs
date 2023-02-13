@@ -8,7 +8,7 @@ use crate::{
     },
     docvec,
     io::Utf8Writer,
-    parse::extra::Comment,
+    parse::extra::{Comment, ModuleExtra},
     pretty::*,
     type_::{self, Type},
     Error, Result,
@@ -26,35 +26,40 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Path) -> Resul
         src: src.clone(),
         error,
     })?;
-    let intermediate = Intermediate {
-        comments: extra
-            .comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-        doc_comments: extra
-            .doc_comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-        empty_lines: &extra.empty_lines,
-        module_comments: extra
-            .module_comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-    };
-
+    let intermediate = Intermediate::from_extra(&extra, src);
     Formatter::with_comments(&intermediate)
         .module(&module)
         .pretty_print(80, writer)
 }
 
-struct Intermediate<'a> {
+pub(crate) struct Intermediate<'a> {
     comments: Vec<Comment<'a>>,
     doc_comments: Vec<Comment<'a>>,
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
+}
+
+impl<'a> Intermediate<'a> {
+    pub fn from_extra(extra: &'a ModuleExtra, src: &'a SmolStr) -> Intermediate<'a> {
+        Intermediate {
+            comments: extra
+                .comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+            doc_comments: extra
+                .doc_comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+            empty_lines: &extra.empty_lines,
+            module_comments: extra
+                .module_comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+        }
+    }
 }
 
 /// Hayleigh's bane
@@ -71,7 +76,7 @@ impl<'comments> Formatter<'comments> {
         Default::default()
     }
 
-    fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
+    pub(crate) fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
         Self {
             comments: &extra.comments,
             doc_comments: &extra.doc_comments,
@@ -165,7 +170,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
+    pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let groups = join(
             module.statements.iter().map(|t| self.target_group(t)),
             lines(2),
