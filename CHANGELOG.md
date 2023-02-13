@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- `let assert ... = ...` is now an accepted syntax for assertion assignments.
 - The unused private type and constructor detection has been improved.
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
