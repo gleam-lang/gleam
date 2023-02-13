@@ -847,6 +847,16 @@ fn clause_guard_tests() -> List(Test) {
         },
       )
     }),
+    "tuple with pattern var"
+    |> example(fn() {
+      assert_equal(
+        0,
+        case True {
+          a if #(a) == #(True) -> 0
+          _ -> 1
+        },
+      )
+    }),
   ]
   // TODO
   // nested operators to check precedence
