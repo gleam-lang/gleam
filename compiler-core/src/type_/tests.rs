@@ -55,7 +55,7 @@ macro_rules! assert_infer_with_module {
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
         let module = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -147,7 +147,7 @@ macro_rules! assert_module_error {
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let ast = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -267,7 +267,7 @@ macro_rules! assert_with_module_error {
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
         let module = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -406,7 +406,7 @@ macro_rules! assert_warning {
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let _ = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -478,7 +478,7 @@ macro_rules! assert_no_warnings {
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
         let _ = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
