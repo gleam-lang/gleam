@@ -1,4 +1,7 @@
-use super::{pattern::CompiledPattern, *};
+use super::{
+    pattern::{Assignment, CompiledPattern},
+    *,
+};
 use crate::{
     ast::*,
     line_numbers::LineNumbers,
@@ -1049,7 +1052,7 @@ impl<'module> Generator<'module> {
         .group())
     }
 
-    fn pattern_assignments_doc(assignments: Vec<pattern::Assignment<'_>>) -> Document<'_> {
+    fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
         let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
         concat(Itertools::intersperse(assignments, line()))
     }
@@ -1101,6 +1104,65 @@ pub fn int(value: &str) -> Document<'_> {
 
 pub fn float(value: &str) -> Document<'_> {
     value.to_doc()
+}
+
+pub(crate) fn guard_constant_expression<'a>(
+    assignments: &mut Vec<Assignment<'a>>,
+    tracker: &mut UsageTracker,
+    expression: &'a TypedConstant,
+) -> Output<'a> {
+    match expression {
+        Constant::Tuple { elements, .. } => array(
+            elements
+                .iter()
+                .map(|e| guard_constant_expression(assignments, tracker, e)),
+        ),
+
+        Constant::List { elements, .. } => {
+            tracker.list_used = true;
+            list(
+                elements
+                    .iter()
+                    .map(|e| guard_constant_expression(assignments, tracker, e)),
+                None,
+            )
+        }
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+            Ok("true".to_doc())
+        }
+        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+            Ok("false".to_doc())
+        }
+        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+
+        Constant::Record {
+            tag,
+            typ,
+            args,
+            module,
+            ..
+        } => {
+            if typ.is_result() {
+                if tag == "Ok" {
+                    tracker.ok_used = true;
+                } else {
+                    tracker.error_used = true;
+                }
+            }
+            let field_values: Vec<_> = args
+                .iter()
+                .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
+                .try_collect()?;
+            Ok(construct_record(module.as_deref(), tag, field_values))
+        }
+
+        Constant::Var { name, .. } => Ok(assignments
+            .iter()
+            .find(|assignment| assignment.name == name)
+            .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
+            .to_doc()),
+        expression => constant_expression(tracker, expression),
+    }
 }
 
 pub(crate) fn constant_expression<'a>(

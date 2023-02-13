@@ -256,7 +256,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
 
             ClauseGuard::Constant(constant) => {
-                return expression::constant_expression(self.expression_generator.tracker, constant)
+                return expression::guard_constant_expression(
+                    &mut self.assignments,
+                    self.expression_generator.tracker,
+                    constant,
+                )
             }
         })
     }
@@ -582,10 +586,10 @@ impl<'a> CompiledPattern<'a> {
 
 #[derive(Debug)]
 pub struct Assignment<'a> {
-    name: &'a str,
+    pub name: &'a str,
     var: Document<'a>,
-    subject: Document<'a>,
-    path: Document<'a>,
+    pub subject: Document<'a>,
+    pub path: Document<'a>,
 }
 
 impl<'a> Assignment<'a> {

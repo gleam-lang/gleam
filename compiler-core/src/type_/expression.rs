@@ -1805,7 +1805,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         typ: Arc::clone(&constructor.type_),
                         constructor: Some(Box::from(constructor)),
                     }),
-                    // It cannot be a Record because then this constant would have been 
+                    // It cannot be a Record because then this constant would have been
                     // parsed as a Constant::Record. Therefore this code is unreachable.
                     _ => unreachable!(),
                 }
