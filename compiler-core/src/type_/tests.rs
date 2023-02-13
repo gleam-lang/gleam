@@ -1,6 +1,7 @@
 use super::*;
 use crate::ast::{UntypedExpr, UntypedModule};
 
+mod assert;
 mod errors;
 mod functions;
 mod imports;

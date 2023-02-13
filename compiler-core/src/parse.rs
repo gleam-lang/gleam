@@ -542,7 +542,13 @@ where
 
             Some((start, Token::Let, _)) => {
                 let _ = self.next_tok();
-                self.parse_assignment(start, AssignmentKind::Let)?
+                let kind = if let Some((_, Token::Assert, _)) = self.tok0 {
+                    _ = self.next_tok();
+                    AssignmentKind::Assert
+                } else {
+                    AssignmentKind::Let
+                };
+                self.parse_assignment(start, kind)?
             }
 
             Some((start, Token::Assert, _)) => {
