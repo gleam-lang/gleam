@@ -15,9 +15,9 @@ export class TypeWithALongNameAndSeveralArguments extends _.CustomType {
     b: string
   );
   
-  x0: string;
-  x1: string;
-  x2: string;
+  0: string;
+  1: string;
+  2: string;
   a: string;
   b: string;
 }
