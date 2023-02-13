@@ -35,12 +35,12 @@ pub fn pop_leaf_or_cycle<N, E>(graph: &mut StableGraph<N, E>) -> Vec<NodeIndex> 
     nodes
 }
 
-/// Return a leaf from the graph. If there are no leaves then a cycle is
-/// returned instead.
-///
-/// The nodes returned are not removed from the graph.
+/// Return a leaf from the graph. If there are no leaves then the smallest cycle
+/// is returned instead.
 ///
 /// If there are no leaves or cycles then an empty vector is returned.
+///
+/// The nodes returned are not removed from the graph.
 ///
 pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
     if graph.node_count() == 0 {
@@ -60,14 +60,18 @@ pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
         .expect_err("Non-empty graph has no leaves or cycles")
         .node_id();
 
-    // Then traverse the graph to find nodes in the cycle
+    // Then traverse the graph to find nodes in the cycle.
+    // This traverses all possible paths to find a cycle, this can likely be
+    // optimised. There's not a large number of functions in a module however so
+    // this is tolerable in this specific instance.
+    #[derive(Debug)]
     enum Step {
         Backtrack,
         Next(NodeIndex),
     }
     let mut path = vec![];
     let mut stack = vec![Step::Next(start)];
-    let mut seen = HashSet::new();
+    let mut cycles = vec![];
 
     while let Some(step) = stack.pop() {
         let node = match step {
@@ -80,27 +84,29 @@ pub fn leaf_or_cycle<N, E>(graph: &StableGraph<N, E>) -> Vec<NodeIndex> {
             Step::Next(node) => node,
         };
 
-        // Record the point at which we need to backtrack in order to go back up
-        // the tree.
-        stack.push(Step::Backtrack);
-
-        if !seen.insert(node) {
+        if path.contains(&node) {
             continue;
         }
 
+        // Add this node to the path and record the point at which we need to
+        // backtrack in order to go back up the tree.
+        stack.push(Step::Backtrack);
+        path.push(node);
+
         // Check each child & add them to the stack if they are not the target.
-        for neighbour in graph.neighbors_directed(node, Direction::Outgoing) {
-            path.push(neighbour);
-
-            if neighbour == start {
-                return path;
+        for node in graph.neighbors_directed(node, Direction::Outgoing) {
+            if node == start {
+                cycles.push(path.clone());
+            } else {
+                stack.push(Step::Next(node));
             }
-
-            stack.push(Step::Next(neighbour));
         }
     }
 
-    unreachable!("Could not find cycle for toposort returned start node")
+    cycles
+        .into_iter()
+        .min_by(|x, y| x.len().cmp(&y.len()))
+        .expect("Could not find cycle for toposort returned start node")
 }
 
 #[cfg(test)]
@@ -194,7 +200,7 @@ mod tests {
                 pop_leaf_or_cycle(&mut graph),
                 pop_leaf_or_cycle(&mut graph),
             ],
-            [vec![c], vec![a, b], vec![]]
+            [vec![c], vec![b, a], vec![]]
         );
     }
 
@@ -216,7 +222,7 @@ mod tests {
                 pop_leaf_or_cycle(&mut graph),
                 pop_leaf_or_cycle(&mut graph),
             ],
-            [vec![a, b, c], vec![d], vec![]]
+            [vec![c, a, b], vec![d], vec![]]
         );
     }
 }
