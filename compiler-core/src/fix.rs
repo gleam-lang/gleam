@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use smol_str::SmolStr;
 use strum::IntoEnumIterator;
@@ -52,9 +52,9 @@ impl ResultModule {
         }
     }
 
-    fn into_name(self) -> String {
+    fn take_name(&mut self) -> String {
         match self {
-            ResultModule::Existing(name) | ResultModule::Insert(name) => name,
+            ResultModule::Existing(name) | ResultModule::Insert(name) => std::mem::take(name),
         }
     }
 }
@@ -310,6 +310,7 @@ fn result_module_import_statement(name: &String) -> UntypedStatement {
 
 fn check_for_result_module_import(target: Target, module: &UntypedModule) -> ResultModule {
     let mut action = ResultModule::Insert("result".into());
+    let mut names = HashSet::new();
 
     for group in &module.statements {
         match group {
@@ -317,25 +318,22 @@ fn check_for_result_module_import(target: Target, module: &UntypedModule) -> Res
             TargetGroup::Any(statements) | TargetGroup::Only(_, statements) => {
                 for statement in statements {
                     if let Statement::Import(import) = statement {
-                        action = check_import_for_result(import, action);
+                        let import_name = import.variable_name();
+                        _ = names.insert(import_name.clone());
+
+                        if import.module == "gleam/result" {
+                            return ResultModule::Existing(import_name.into());
+                        }
+
+                        let mut name = action.take_name();
+                        while names.contains(name.as_str()) {
+                            name = format!("gleam_{}", name);
+                        }
+                        action = ResultModule::Insert(name);
                     }
                 }
             }
         }
-    }
-
-    action
-}
-
-fn check_import_for_result(import: &Import<()>, action: ResultModule) -> ResultModule {
-    let import_name = import.variable_name();
-
-    if import.module == "gleam/result" {
-        return ResultModule::Existing(import_name.into());
-    }
-
-    if import_name == action.name() {
-        return ResultModule::Insert("gleam_result".into());
     }
 
     action
