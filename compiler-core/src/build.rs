@@ -64,17 +64,18 @@ impl Target {
 #[derive(
     Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
 )]
-#[strum(serialize_all = "lowercase")]
 pub enum Runtime {
-    #[serde(rename = "node")]
-    Node,
+    #[strum(serialize = "nodejs", serialize = "node")]
+    #[serde(rename = "nodejs", alias = "node")]
+    NodeJs,
+    #[strum(serialize = "deno")]
     #[serde(rename = "deno")]
     Deno,
 }
 
 impl Default for Runtime {
     fn default() -> Self {
-        Self::Node
+        Self::NodeJs
     }
 }
 

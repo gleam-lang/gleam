@@ -162,10 +162,10 @@ enum Command {
     #[clap(trailing_var_arg = true)]
     Run {
         /// The platform to target
-        #[clap(long, ignore_case = true)]
+        #[clap(long, ignore_case = true, possible_values = Target::VARIANTS)]
         target: Option<Target>,
 
-        #[clap(long, ignore_case = true, possible_values = Runtime::VARIANTS)]
+        #[clap(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
         arguments: Vec<String>,
@@ -175,7 +175,7 @@ enum Command {
     #[clap(trailing_var_arg = true)]
     Test {
         /// The platform to target
-        #[clap(long, ignore_case = true)]
+        #[clap(long, ignore_case = true, possible_values = Target::VARIANTS)]
         target: Option<Target>,
 
         #[clap(long, ignore_case = true)]

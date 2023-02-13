@@ -26,7 +26,7 @@ fn erlang_target() -> Target {
 }
 
 fn default_javascript_runtime() -> Runtime {
-    Runtime::Node
+    Runtime::NodeJs
 }
 
 pub type Dependencies = HashMap<String, Range>;

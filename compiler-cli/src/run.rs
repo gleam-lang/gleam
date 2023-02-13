@@ -54,7 +54,7 @@ pub fn command(
         },
         Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno(&config, &module, arguments),
-            Runtime::Node => run_javascript_node(&config, &module, arguments),
+            Runtime::NodeJs => run_javascript_node(&config, &module, arguments),
         },
     }?;
 
