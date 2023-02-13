@@ -4,8 +4,6 @@ expression: "\npub type TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNa
 ---
 import * as _ from "../gleam.d.ts";
 
-export const local: TypeWithALongNameAndSeveralArguments$;
-
 export class TypeWithALongNameAndSeveralArguments extends _.CustomType {
   constructor(
     argument$0: string,
@@ -23,4 +21,6 @@ export class TypeWithALongNameAndSeveralArguments extends _.CustomType {
 }
 
 export type TypeWithALongNameAndSeveralArguments$ = TypeWithALongNameAndSeveralArguments;
+
+export const local: TypeWithALongNameAndSeveralArguments$;
 
