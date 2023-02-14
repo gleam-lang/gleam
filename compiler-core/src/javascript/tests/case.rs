@@ -158,3 +158,20 @@ fn go(x, y) {
 "#,
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/1978
+#[test]
+fn case_local_var_in_tuple() {
+    assert_js!(
+        r#"
+fn go(x, y) {
+  let z = False
+  case True {
+    x if #(x, z) == #(True, False) -> x
+    _ -> False
+  }
+}
+"#,
+    )
+}
+
