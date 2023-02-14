@@ -113,3 +113,7 @@ pub fn main(y) {
 "
     )
 }
+
+// TODO: test use of patterns
+// TODO: deal with the fact that the pattern variable could shadow the some
+// other variable 🥲
