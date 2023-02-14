@@ -11,6 +11,8 @@
   a more general type than is correct.
 - Fixed a bug where pattern matches on custom types with mixed labelled and 
   unlabelled arguments could not be compiled when targeting JavaScript.
+- Fixed a bug where local variables in case guard constant expressions caused
+  the compiler to panic.
 
 ## v0.26.2 - 2023-02-03
 
