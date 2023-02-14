@@ -55,6 +55,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
  - [Charlie Duong](https://github.com/charlieduong94)
  - [Chew Choon Keat](https://github.com/choonkeat)
  - [Chris Lloyd](https://github.com/chrislloyd)
+ - [Chris Ohk](https://github.com/utilForever)
  - [Christopher Keele](https://github.com/christhekeele)
  - [clangley](https://github.com/clangley)
  - [Clay](https://github.com/connorlay)
