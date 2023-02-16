@@ -1807,7 +1807,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }),
                     // It cannot be a Record because then this constant would have been
                     // parsed as a Constant::Record. Therefore this code is unreachable.
-                    _ => unreachable!(),
+                    ValueConstructorVariant::Record { .. } => unreachable!(),
                 }
             }
         }?;
