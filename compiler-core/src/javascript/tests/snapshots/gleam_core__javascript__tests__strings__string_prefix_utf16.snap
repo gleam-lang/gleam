@@ -1,0 +1,51 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n  }\n}\n"
+---
+import { throwError } from "../gleam.mjs";
+
+export function go(x) {
+  let $ = "Θ foo bar";
+  if ($.startsWith("Θ")) {
+    let rest = $.slice(1);
+    rest
+  } else {
+    throwError(
+      "case_no_match",
+      "my/mod",
+      3,
+      "go",
+      "No case clause matched",
+      { values: [$] }
+    );
+  }
+  let $1 = "🫥 is neutral dotted";
+  if ($1.startsWith("🫥")) {
+    let rest = $1.slice(2);
+    rest
+  } else {
+    throwError(
+      "case_no_match",
+      "my/mod",
+      6,
+      "go",
+      "No case clause matched",
+      { values: [$1] }
+    );
+  }
+  let $2 = "🇺🇸 is a cluster";
+  if ($2.startsWith("🇺🇸")) {
+    let rest = $2.slice(4);
+    return rest;
+  } else {
+    throwError(
+      "case_no_match",
+      "my/mod",
+      9,
+      "go",
+      "No case clause matched",
+      { values: [$2] }
+    );
+  }
+}
+

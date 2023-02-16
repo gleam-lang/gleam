@@ -77,6 +77,25 @@ pub fn go(x) {
 }
 
 #[test]
+fn string_prefix_utf16() {
+    assert_js!(
+        r#"
+pub fn go(x) {
+  case "Θ foo bar" {
+    "Θ" <> rest -> rest
+  }
+  case "🫥 is neutral dotted" {
+    "🫥" <> rest -> rest
+  }
+  case "🇺🇸 is a cluster" {
+    "🇺🇸" <> rest -> rest
+  }
+}
+"#,
+    );
+}
+
+#[test]
 fn discard_concat_rest_pattern() {
     // We can discard the right hand side, it parses and type checks ok
     assert_js!(
