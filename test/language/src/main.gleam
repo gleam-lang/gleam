@@ -1451,6 +1451,33 @@ fn string_pattern_matching_tests() {
         },
       )
     }),
+    "match 🫥 test"
+    |> example(fn() {
+      assert_equal(
+        " is neutral dotted",
+        case "🫥 is neutral dotted" {
+          "🫥" <> rest -> rest
+        },
+      )
+    }),
+    "match Θ test"
+    |> example(fn() {
+      assert_equal(
+        " foo bar",
+        case "Θ foo bar" {
+          "Θ" <> rest -> rest
+        },
+      )
+    }),
+    "match 🇺🇸 test"
+    |> example(fn() {
+      assert_equal(
+        " is a cluster",
+        case "🇺🇸 is a cluster" {
+          "🇺🇸" <> rest -> rest
+        },
+      )
+    }),
   ]
 }
 
