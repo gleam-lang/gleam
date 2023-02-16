@@ -1160,8 +1160,7 @@ pub(crate) fn guard_constant_expression<'a>(
             .iter()
             .find(|assignment| assignment.name == name)
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
-            .unwrap_or_else(|| name.to_doc())
-        ),
+            .unwrap_or_else(|| name.to_doc())),
         expression => constant_expression(tracker, expression),
     }
 }
