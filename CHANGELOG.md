@@ -6,6 +6,8 @@
 - The unused private type and constructor detection has been improved.
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
+- Fixed a bug where string concatenation patterns could generate javascript
+  code with wrong slice index due to ut8/ut16 length mismatch.
 - Fixed a bug where typescript type definitions for types with unlabelled
   arguments where generated with an invalid identifier and unlabelled fields
   were generated with a name that didn't match the javascript implementation.
