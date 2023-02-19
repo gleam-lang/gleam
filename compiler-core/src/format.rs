@@ -811,6 +811,7 @@ impl<'comments> Formatter<'comments> {
         if fp_doc_len == 0 {
             fp_doc.push('0');
         }
+
         let fp_doc = fp_doc.chars().rev().collect::<SmolStr>();
 
         integer_doc
