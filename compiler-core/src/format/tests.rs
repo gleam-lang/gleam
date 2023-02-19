@@ -2111,13 +2111,13 @@ fn expr_float() {
     );
     assert_format!(
         r#"fn f() {
-1.0e100_100
+  1.0e100_100
 }
 "#
     );
     assert_format!(
         r#"fn f() {
-1.001e100_100
+  1.001e100_100
 }
 "#
     );
