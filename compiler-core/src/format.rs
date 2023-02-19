@@ -779,7 +779,7 @@ impl<'comments> Formatter<'comments> {
         // floating point part
         let fp_part = parts.next().unwrap_or_default();
 
-        // Create integer and dot doc
+        // Create integer_doc and dot_doc
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
 
@@ -791,7 +791,7 @@ impl<'comments> Formatter<'comments> {
                 .unwrap_or(fp_part.len()),
         );
 
-        // Build the new FP doc from the reversed char list
+        // Build the new fp_doc from the reversed char list
         let mut fp_doc = String::new();
         let mut fp_rev_loop_had_a_non_zero = false;
         for (_i, ch) in fp_part_regular.chars().rev().enumerate() {
@@ -816,7 +816,7 @@ impl<'comments> Formatter<'comments> {
         integer_doc
             .append(dot_doc)
             .append(fp_doc)
-            .append(fp_part_scientific.to_doc())
+            .append(fp_part_scientific)
     }
 
     fn int<'a>(&self, value: &'a str) -> Document<'a> {
