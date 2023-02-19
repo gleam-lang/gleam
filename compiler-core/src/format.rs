@@ -794,7 +794,7 @@ impl<'comments> Formatter<'comments> {
         // Build the new fp_doc from the reversed char list
         let mut fp_doc = String::new();
         let mut fp_rev_loop_had_a_non_zero = false;
-        for (_i, ch) in fp_part_regular.chars().rev().enumerate() {
+        for ch in fp_part_regular.chars().rev() {
             if ch == '0' {
                 // Do not add if we encounter a zero and haven't encountered a non-zero before
                 if !fp_rev_loop_had_a_non_zero {
