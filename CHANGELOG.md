@@ -18,6 +18,8 @@
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
   the compiler to panic.
+- The formatter now truncates meaningless zeroes of floats' floating point
+  parts.
 
 ## v0.26.2 - 2023-02-03
 
