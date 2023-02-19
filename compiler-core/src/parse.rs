@@ -1362,9 +1362,6 @@ where
             .map(|l| l.location().end)
             .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
         let body = match some_body {
-            None if is_anon => {
-                return self.next_tok_unexpected(vec!["The body of a function".into()]);
-            }
             None => UntypedExpr::Todo {
                 kind: TodoKind::EmptyFunction,
                 location: SrcSpan { start, end },
