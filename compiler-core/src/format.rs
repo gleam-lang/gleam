@@ -776,13 +776,14 @@ impl<'comments> Formatter<'comments> {
         // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
+        // floating point part
         let fp_part = parts.next().unwrap_or_default();
 
         // Create integer and dot doc
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
 
-        // Split fp part into a regular and possibly a scientific part (which could also be empty)
+        // Split fp_doc_len part into a regular and possibly a scientific part (which could also be empty)
         let (fp_part_regular, fp_part_scientific) = fp_part.split_at(
             fp_part
                 .chars()
@@ -790,17 +791,22 @@ impl<'comments> Formatter<'comments> {
                 .unwrap_or(fp_part.len()),
         );
 
-        // Build the new fp doc from the reversed char list
+        // Build the new FP doc from the reversed char list
         let mut fp_doc = String::new();
         let mut fp_rev_loop_had_a_non_zero = false;
         for (_i, ch) in fp_part_regular.chars().rev().enumerate() {
-            if ch == '0' && !fp_rev_loop_had_a_non_zero {
-                continue;
+            if ch == '0' {
+                // Do not add if we encounter a zero and haven't encountered a non-zero before
+                if !fp_rev_loop_had_a_non_zero {
+                    continue;
+                }
+            } else {
+                // Non-zero detected
+                fp_rev_loop_had_a_non_zero = true;
             }
-            fp_rev_loop_had_a_non_zero = true;
             fp_doc.push(ch);
         }
-        // If there is no fp then append a 0 (thus that 1. becomes 1.0 etc)
+        // If there is no FP then append a 0 (thus that 1. becomes 1.0 etc.)
         let fp_doc_len = fp_doc.len();
         if fp_doc_len == 0 {
             fp_doc.push('0');
