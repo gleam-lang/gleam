@@ -1476,6 +1476,72 @@ fn expr_float() {
 "#
     );
 
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00
+}
+"#,
+        r#"fn f() {
+  1.0
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100
+}
+"#,
+        r#"fn f() {
+  1.001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001
+}
+"#,
+        r#"fn f() {
+  1.001001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00e100_100
+}
+"#,
+        r#"fn f() {
+  1.0e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100e100_100
+}
+"#,
+        r#"fn f() {
+  1.001e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001e100_100
+}
+"#,
+        r#"fn f() {
+  1.001001e100_100
+}
+"#
+    );
+
     assert_format!(
         r#"fn f() {
   1.0
@@ -1903,7 +1969,6 @@ fn expr_float() {
 }
 "#
     );
-
     assert_format_rewrite!(
         r#"const a_float = 1_234.0
 "#,
@@ -1938,6 +2003,25 @@ fn expr_float() {
         r#"const a_float = -1234567_8.0
 "#,
         r#"const a_float = -12_345_678.0
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00
+"#,
+        r#"const a_float = 1234.0
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00100
+"#,
+        r#"const a_float = 1234.001
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.001001
+"#,
+        r#"const a_float = 1234.001001
 "#
     );
 
@@ -2022,6 +2106,18 @@ fn expr_float() {
     assert_format!(
         r#"fn f() {
   1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+1.001e100_100
 }
 "#
     );
