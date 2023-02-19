@@ -773,18 +773,44 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn float<'a>(&self, value: &'a str) -> Document<'a> {
+        // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
         let fp_part = parts.next().unwrap_or_default();
 
+        // Create integer and dot doc
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
-        let fp_doc = match value.ends_with('.') {
-            true => "0".to_doc(),
-            false => fp_part.to_doc(),
-        };
 
-        integer_doc.append(dot_doc).append(fp_doc)
+        // Split fp part into a regular and possibly a scientific part (which could also be empty)
+        let (fp_part_regular, fp_part_scientific) = fp_part.split_at(
+            fp_part
+                .chars()
+                .position(|ch| ch == 'e')
+                .unwrap_or(fp_part.len()),
+        );
+
+        // Build the new fp doc from the reversed char list
+        let mut fp_doc = String::new();
+        let mut fp_rev_loop_had_a_non_zero = false;
+        for (_i, ch) in fp_part_regular.chars().rev().enumerate() {
+            if ch == '0' && !fp_rev_loop_had_a_non_zero {
+                continue;
+            }
+            fp_rev_loop_had_a_non_zero = true;
+            fp_doc.push(ch);
+        }
+        // If there is no fp then append a 0 (thus that 1. becomes 1.0 etc)
+        let fp_doc_len = fp_doc.len();
+        if fp_doc_len == 0 {
+            fp_doc.push('0');
+        }
+        let fp_doc = fp_doc.chars().rev().collect::<SmolStr>();
+
+        integer_doc
+            .append(dot_doc)
+            .append(fp_doc)
+            .append(fp_part_scientific.to_doc())
     }
 
     fn int<'a>(&self, value: &'a str) -> Document<'a> {
