@@ -53,25 +53,25 @@ fn regenerate_type_ids(
             name,
             args,
         } => Arc::new(Type::App {
-            public: public.clone(),
-            module: module.clone(),
-            name: name.clone(),
+            public,
+            module,
+            name,
             args: args
                 .into_iter()
-                .map(|arg| regenerate_type_ids(&id_generator, id_map, &arg))
+                .map(|arg| regenerate_type_ids(id_generator, id_map, &arg))
                 .collect(),
         }),
         Type::Fn { args, retrn } => fn_(
             args.into_iter()
-                .map(|arg| regenerate_type_ids(&id_generator, id_map, &arg))
+                .map(|arg| regenerate_type_ids(id_generator, id_map, &arg))
                 .collect(),
-            regenerate_type_ids(&id_generator, id_map, &retrn),
+            regenerate_type_ids(id_generator, id_map, &retrn),
         ),
         Type::Var { type_ } => undo_links(id_generator, id_map, (*type_).clone().into_inner()),
         Type::Tuple { elems } => tuple(
             elems
                 .into_iter()
-                .map(|elm| regenerate_type_ids(&id_generator, id_map, &elm))
+                .map(|elm| regenerate_type_ids(id_generator, id_map, &elm))
                 .collect(),
         ),
     }
