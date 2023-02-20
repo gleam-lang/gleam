@@ -791,28 +791,13 @@ impl<'comments> Formatter<'comments> {
                 .unwrap_or(fp_part.len()),
         );
 
-        // Build the new fp_doc from the reversed char list
-        let mut fp_doc = String::new();
-        let mut fp_rev_loop_had_a_non_zero = false;
-        for ch in fp_part_fractional.chars().rev() {
-            if ch == '0' {
-                // Do not add if we encounter a zero and haven't encountered a non-zero before
-                if !fp_rev_loop_had_a_non_zero {
-                    continue;
-                }
-            } else {
-                // Non-zero detected
-                fp_rev_loop_had_a_non_zero = true;
-            }
-            fp_doc.push(ch);
+        // Trim right any consequtive '0's
+        let mut fp_part_fractional = fp_part_fractional.trim_end_matches('0').to_string();
+        // If there is no fractional part left, add a '0', thus that 1. becomes 1.0 etc.
+        if fp_part_fractional.len() == 0 {
+            fp_part_fractional.push('0');
         }
-        // If there is no FP then append a 0 (thus that 1. becomes 1.0 etc.)
-        let fp_doc_len = fp_doc.len();
-        if fp_doc_len == 0 {
-            fp_doc.push('0');
-        }
-
-        let fp_doc = fp_doc.chars().rev().collect::<SmolStr>();
+        let fp_doc = fp_part_fractional.chars().collect::<SmolStr>();
 
         integer_doc
             .append(dot_doc)
