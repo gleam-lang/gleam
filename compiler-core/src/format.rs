@@ -794,7 +794,7 @@ impl<'comments> Formatter<'comments> {
         // Trim right any consequtive '0's
         let mut fp_part_fractional = fp_part_fractional.trim_end_matches('0').to_string();
         // If there is no fractional part left, add a '0', thus that 1. becomes 1.0 etc.
-        if fp_part_fractional.len() == 0 {
+        if fp_part_fractional.is_empty() {
             fp_part_fractional.push('0');
         }
         let fp_doc = fp_part_fractional.chars().collect::<SmolStr>();
