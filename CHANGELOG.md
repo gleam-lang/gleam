@@ -18,7 +18,6 @@
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
   the compiler to panic.
-- Compiler Cache now uses `bincode` with `serde` for serialization instead of `cap'n'proto`
 
 ## v0.26.2 - 2023-02-03
 
@@ -99,7 +98,6 @@
 - The `gleam new` command gains the `--skip-github` flag to skip creation of
   `.github/*` files.
 - Added support for Deno runtime for JavaScript target.
-- Compiler Cache now uses `bincode` with `serde` for serialization instead of `cap'n'proto`
 
 ## v0.25.3 - 2022-12-16
 
