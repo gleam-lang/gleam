@@ -778,8 +778,6 @@ impl<'comments> Formatter<'comments> {
         let integer_part = parts.next().unwrap_or_default();
         // floating point part
         let fp_part = parts.next().unwrap_or_default();
-
-        // Create integer_doc and dot_doc
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
 
