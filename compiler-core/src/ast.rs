@@ -12,8 +12,8 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::build::{Located, Target};
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use serde::{Serialize, Deserialize};
 
 #[cfg(test)]
 use pretty_assertions::assert_eq;

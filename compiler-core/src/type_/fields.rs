@@ -1,8 +1,8 @@
 use super::Error;
 use crate::ast::{CallArg, SrcSpan};
 use itertools::Itertools;
-use smol_str::SmolStr;
 use serde::{Deserialize, Serialize};
+use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
