@@ -783,7 +783,7 @@ impl<'comments> Formatter<'comments> {
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
 
-        // Split fp_part into a regular and possibly a scientific part (which could also be empty)
+        // Split fp_part into a regular fractional and maybe a scientific part
         let (fp_part_fractional, fp_part_scientific) = fp_part.split_at(
             fp_part
                 .chars()
