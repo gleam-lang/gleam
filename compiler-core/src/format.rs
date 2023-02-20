@@ -784,7 +784,7 @@ impl<'comments> Formatter<'comments> {
         let dot_doc = ".".to_doc();
 
         // Split fp_part into a regular and possibly a scientific part (which could also be empty)
-        let (fp_part_regular, fp_part_scientific) = fp_part.split_at(
+        let (fp_part_fractional, fp_part_scientific) = fp_part.split_at(
             fp_part
                 .chars()
                 .position(|ch| ch == 'e')
@@ -794,7 +794,7 @@ impl<'comments> Formatter<'comments> {
         // Build the new fp_doc from the reversed char list
         let mut fp_doc = String::new();
         let mut fp_rev_loop_had_a_non_zero = false;
-        for ch in fp_part_regular.chars().rev() {
+        for ch in fp_part_fractional.chars().rev() {
             if ch == '0' {
                 // Do not add if we encounter a zero and haven't encountered a non-zero before
                 if !fp_rev_loop_had_a_non_zero {
