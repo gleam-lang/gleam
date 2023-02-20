@@ -4,7 +4,7 @@ use crate::type_::{FieldMap, HasType};
 pub type TypedConstant = Constant<Arc<Type>, SmolStr>;
 pub type UntypedConstant = Constant<(), ()>;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,

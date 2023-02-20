@@ -140,7 +140,7 @@ where
             .join(info.name.replace('/', "@"))
             .with_extension("cache");
         let bytes = self.io.read_bytes(&path)?;
-        metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
+        metadata::decode(self.ids.clone(), bytes.as_slice())
     }
 
     fn read_source_files(&self) -> Result<HashMap<SmolStr, Input>> {

@@ -375,7 +375,7 @@ where
         build_dir: PathBuf,
         package: &ManifestPackage,
     ) -> Result<(), Error> {
-        for path in self.io.gleam_metadata_files(&build_dir) {
+        for path in self.io.gleam_cache_files(&build_dir) {
             let bytes = self.io.read_bytes(&path)?;
             let module = metadata::decode(self.ids.clone(), &bytes)?;
             let _ = self
