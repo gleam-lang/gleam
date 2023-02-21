@@ -19,6 +19,9 @@
 - Fixed a bug where local variables in case guard constant expressions caused
   the compiler to panic.
 - The formatter now truncates meaningless zeroes of floats' fractional parts.
+- Anonymous functions may now have an empty body. The compiler will emit a
+  warning for functions without a body, and these functions will crash at
+  runtime if executed.
 
 ## v0.26.2 - 2023-02-03
 

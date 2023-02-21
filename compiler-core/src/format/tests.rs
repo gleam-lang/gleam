@@ -3125,6 +3125,17 @@ fn expr_todo() {
 }
 "#
     );
+
+    assert_format_rewrite!(
+        r#"fn main() {
+  fn() {}
+}
+"#,
+        r#"fn main() {
+  fn() { todo }
+}
+"#
+    );
 }
 
 #[test]
