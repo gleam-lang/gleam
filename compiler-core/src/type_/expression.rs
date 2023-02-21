@@ -2145,18 +2145,22 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
 
 #[derive(Debug, Default)]
 struct UseAssignments {
+    /// With sugar
     /// ```gleam
     /// use Box(x) = ...
     /// ```
+    /// Without sugar
     /// ```gleam
     /// fn(_use1) { let Box(x) = _use1 }
     /// // ^^^^^ The function arguments
     /// ```
     function_arguments: Vec<Arg<()>>,
 
+    /// With sugar
     /// ```gleam
     /// use Box(x) = ...
     /// ```
+    /// Without sugar
     /// ```gleam
     /// fn(_use1) { let Box(x) = _use1 }
     /// //          ^^^^^^^^^^^^^^^^^^ The body assignments
@@ -2170,6 +2174,7 @@ impl UseAssignments {
 
         for (index, pattern) in patterns.into_iter().enumerate() {
             match pattern {
+                // For discards we add a discard function arguments.
                 Pattern::Discard { name, location } => assignments.function_arguments.push(Arg {
                     location,
                     names: ArgNames::Discard { name },
@@ -2177,6 +2182,8 @@ impl UseAssignments {
                     type_: (),
                 }),
 
+                // For simple patterns of a single variable we add a regular
+                // function argument.
                 Pattern::Var { location, name } => assignments.function_arguments.push(Arg {
                     location,
                     names: ArgNames::Named { name },
@@ -2184,6 +2191,8 @@ impl UseAssignments {
                     type_: (),
                 }),
 
+                // For more complex patterns we add a function argument and also
+                // an assignment in the function body to handle the pattern.
                 pattern @ (Pattern::Int { .. }
                 | Pattern::Float { .. }
                 | Pattern::String { .. }
