@@ -773,18 +773,34 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn float<'a>(&self, value: &'a str) -> Document<'a> {
+        // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
+        // floating point part
         let fp_part = parts.next().unwrap_or_default();
-
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
-        let fp_doc = match value.ends_with('.') {
-            true => "0".to_doc(),
-            false => fp_part.to_doc(),
-        };
 
-        integer_doc.append(dot_doc).append(fp_doc)
+        // Split fp_part into a regular fractional and maybe a scientific part
+        let (fp_part_fractional, fp_part_scientific) = fp_part.split_at(
+            fp_part
+                .chars()
+                .position(|ch| ch == 'e')
+                .unwrap_or(fp_part.len()),
+        );
+
+        // Trim right any consequtive '0's
+        let mut fp_part_fractional = fp_part_fractional.trim_end_matches('0').to_string();
+        // If there is no fractional part left, add a '0', thus that 1. becomes 1.0 etc.
+        if fp_part_fractional.is_empty() {
+            fp_part_fractional.push('0');
+        }
+        let fp_doc = fp_part_fractional.chars().collect::<SmolStr>();
+
+        integer_doc
+            .append(dot_doc)
+            .append(fp_doc)
+            .append(fp_part_scientific)
     }
 
     fn int<'a>(&self, value: &'a str) -> Document<'a> {

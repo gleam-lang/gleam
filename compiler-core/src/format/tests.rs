@@ -1476,6 +1476,72 @@ fn expr_float() {
 "#
     );
 
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00
+}
+"#,
+        r#"fn f() {
+  1.0
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100
+}
+"#,
+        r#"fn f() {
+  1.001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001
+}
+"#,
+        r#"fn f() {
+  1.001001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00e100_100
+}
+"#,
+        r#"fn f() {
+  1.0e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100e100_100
+}
+"#,
+        r#"fn f() {
+  1.001e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001e100_100
+}
+"#,
+        r#"fn f() {
+  1.001001e100_100
+}
+"#
+    );
+
     assert_format!(
         r#"fn f() {
   1.0
@@ -1903,7 +1969,6 @@ fn expr_float() {
 }
 "#
     );
-
     assert_format_rewrite!(
         r#"const a_float = 1_234.0
 "#,
@@ -1938,6 +2003,25 @@ fn expr_float() {
         r#"const a_float = -1234567_8.0
 "#,
         r#"const a_float = -12_345_678.0
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00
+"#,
+        r#"const a_float = 1234.0
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00100
+"#,
+        r#"const a_float = 1234.001
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.001001
+"#,
+        r#"const a_float = 1234.001001
 "#
     );
 
@@ -2015,13 +2099,25 @@ fn expr_float() {
     );
     assert_format!(
         r#"fn f() {
-  1.0000e100
+  1.0e100
 }
 "#
     );
     assert_format!(
         r#"fn f() {
-  1.0000e100_100
+  1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+  1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+  1.001e100_100
 }
 "#
     );
@@ -3832,8 +3928,8 @@ fn concise_wrapping_of_simple_lists() {
     assert_format!(
         "pub fn main() {
   [
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0,
+    15.0, 16.0, 17.0, 18.0, 19.0, 2.0,
   ]
 }
 "
@@ -3859,8 +3955,8 @@ fn concise_wrapping_of_simple_lists() {
 
     assert_format!(
         "const values = [
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.0,
 ]
 "
     );
@@ -3889,8 +3985,8 @@ fn concise_wrapping_of_simple_bit_strings() {
     assert_format!(
         "pub fn main() {
   <<
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0,
+    15.0, 16.0, 17.0, 18.0, 19.0, 2.0,
   >>
 }
 "
@@ -3916,8 +4012,8 @@ fn concise_wrapping_of_simple_bit_strings() {
 
     assert_format!(
         "const values = <<
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.0,
 >>
 "
     );
