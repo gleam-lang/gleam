@@ -18,8 +18,9 @@
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
   the compiler to panic.
-- To be consistent with named functions the formatter now inserts a `todo` into
-  empty anonymous functions.
+- Anonymous functions may now have an empty body. The compiler will emit a
+  warning for functions without a body, and these functions will crash at
+  runtime if executed.
 
 ## v0.26.2 - 2023-02-03
 
