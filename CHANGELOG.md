@@ -9,6 +9,8 @@
 - Patterns can now be used in `use` expressions.
 - Fixed a bug where string concatenation patterns could generate javascript
   code with wrong slice index due to ut8/ut16 length mismatch.
+- The Erlang compiler will no longer emit a duplicate warning for unused
+  variables.
 - Fixed a bug where typescript type definitions for types with unlabelled
   arguments where generated with an invalid identifier and unlabelled fields
   were generated with a name that didn't match the javascript implementation.
