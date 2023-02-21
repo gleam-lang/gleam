@@ -4,7 +4,7 @@ assertion_line: 28
 expression: "pub fn go(x) {\n  assert [1 as a, b, c] = x\n  [a, b, c]\n}"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/1]).
 

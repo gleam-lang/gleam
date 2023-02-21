@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/erlang/tests.rs
+assertion_line: 126
+expression: "pub fn go() {\n  let y = 1\n  let y = 2\n  y\n}"
+---
+-module(the_app).
+-compile([no_auto_import, nowarn_unused_vars]).
+
+-export([go/0]).
+
+-spec go() -> integer().
+go() ->
+    Y = 1,
+    Y@1 = 2,
+    Y@1.
+

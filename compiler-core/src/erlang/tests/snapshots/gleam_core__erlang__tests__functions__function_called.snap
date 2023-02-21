@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
-assertion_line: 58
+assertion_line: 62
 expression: "\npub fn main() {\n  main()\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/0]).
 

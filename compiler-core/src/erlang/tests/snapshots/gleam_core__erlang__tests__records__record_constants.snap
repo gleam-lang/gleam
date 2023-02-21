@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 303
+assertion_line: 313
 expression: "pub type Test { A }\nconst test = A\npub fn a() { A }"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([a/0]).
 -export_type([test/0]).

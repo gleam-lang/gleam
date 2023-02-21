@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 112
+assertion_line: 146
 expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> inc |> inc }"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/0]).
 

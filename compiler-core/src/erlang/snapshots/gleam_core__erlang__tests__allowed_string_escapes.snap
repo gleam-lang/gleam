@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 445
+assertion_line: 443
 expression: "pub fn a() { \"\\n\" \"\\r\" \"\\t\" \"\\\\\" \"\\\"\" \"\\e\" \"\\\\^\" }"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([a/0]).
 

@@ -4,7 +4,7 @@ assertion_line: 5
 expression: "\npub fn go(x, y) {\n  x <> y\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/2]).
 

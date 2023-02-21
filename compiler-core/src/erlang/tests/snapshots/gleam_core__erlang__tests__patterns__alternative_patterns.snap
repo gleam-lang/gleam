@@ -4,7 +4,7 @@ assertion_line: 6
 expression: "\npub fn test() {\n  let duplicate_name = 1\n\n  case 1 {\n    1 | 2 -> {\n      let duplicate_name = duplicate_name + 1\n      duplicate_name\n    }\n  }\n}"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([test/0]).
 

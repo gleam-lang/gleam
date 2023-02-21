@@ -4,7 +4,7 @@ assertion_line: 193
 expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  let Triple(the_a, c: the_c, ..) = triple\n  the_c\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export_type([triple/0]).
 

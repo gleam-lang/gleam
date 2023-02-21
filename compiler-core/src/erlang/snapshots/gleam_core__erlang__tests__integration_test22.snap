@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 305
+assertion_line: 301
 expression: "\npub fn factory(f, i) {\n  f(i)\n}\n\npub type Box {\n  Box(i: Int)\n}\n\npub fn main() {\n  factory(Box, 0)\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([factory/2, main/0]).
 -export_type([box/0]).

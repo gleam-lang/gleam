@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 459
+assertion_line: 456
 expression: "pub fn x(y) {\n  assert Ok(_) = y\n  1\n}"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([x/1]).
 

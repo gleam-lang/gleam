@@ -10,7 +10,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn numbers_with_underscores1() {
     assert_erl!(
         r#"
 const i = 100_000
@@ -21,7 +24,10 @@ pub fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn numbers_with_underscores2() {
     assert_erl!(
         r#"
 pub fn main() {
