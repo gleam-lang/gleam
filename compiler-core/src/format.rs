@@ -1276,11 +1276,12 @@ impl<'comments> Formatter<'comments> {
 
     fn clause<'a>(&mut self, clause: &'a UntypedClause, index: u32) -> Document<'a> {
         let space_before = self.pop_empty_lines(clause.location.start);
+        let comments = self.pop_comments(clause.location.start);
         let clause_doc = join(
             std::iter::once(&clause.pattern)
                 .chain(&clause.alternative_patterns)
                 .map(|p| join(p.iter().map(|p| self.pattern(p)), ", ".to_doc())),
-            break_("", " ").append("| ").group(),
+            break_("", " ").append("| "),
         )
         .group();
 
@@ -1289,7 +1290,7 @@ impl<'comments> Formatter<'comments> {
             Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
         };
 
-        if index == 0 {
+        let doc = if index == 0 {
             clause_doc
         } else if space_before {
             lines(2).append(clause_doc)
@@ -1297,7 +1298,9 @@ impl<'comments> Formatter<'comments> {
             lines(1).append(clause_doc)
         }
         .append(" ->")
-        .append(self.case_clause_value(&clause.then))
+        .append(self.case_clause_value(&clause.then));
+
+        commented(doc.group(), comments)
     }
 
     pub fn external_type<'a>(

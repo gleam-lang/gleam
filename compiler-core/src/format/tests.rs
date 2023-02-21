@@ -3010,10 +3010,9 @@ fn expr_case_alternative_patterns() {
     assert_format!(
         r#"fn main() {
   case pat {
-    pat.Typeof("Boolean", pat) | pat.Typeof("Number", pat) | pat.Typeof(
-      "String",
-      pat,
-    ) -> Nil
+    pat.Typeof("Boolean", pat)
+    | pat.Typeof("Number", pat)
+    | pat.Typeof("String", pat) -> Nil
   }
 }
 "#
