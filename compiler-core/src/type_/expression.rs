@@ -5,12 +5,12 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::infer_bit_string_segment_option,
     ast::{
-        Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
-        Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
+        Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
+        ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
         TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
         UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
-        UntypedMultiPattern, UntypedPattern, Use,
+        UntypedMultiPattern, UntypedPattern, Use, USE_ASSIGNMENT_VARIABLE,
     },
 };
 
@@ -313,34 +313,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut following_expressions: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let mut call = get_use_expression_call(*use_.call)?;
-        let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
+        let assignments = UseAssignments::from_use_expression(use_.assignments);
 
-        // TODO: Upgrade this to an error when we have partial type checking.
-        // If there are no following expressions then this expressions is
-        // incomplete. In this case we insert a `todo` so that the user can type
-        // check this code even if it would fail when run.
+        let mut expressions = assignments.body_assignments;
+
         if following_expressions.is_empty() {
             let todo = UntypedExpr::Todo {
                 location: use_.location,
                 label: None,
                 kind: TodoKind::IncompleteUse,
             };
-            following_expressions.push(todo);
+            expressions.push(todo);
+        } else {
+            expressions.append(&mut following_expressions);
         }
+
+        let first = expressions
+            .get(0)
+            .expect("This is safe, a default todo was set above")
+            .location();
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.
-        let first = following_expressions
-            .get(0)
-            .expect("default todo set above");
         let callback = UntypedExpr::Fn {
-            arguments: callback_arguments,
-            location: SrcSpan::new(first.location().start, sequence_location.end),
+            arguments: assignments.function_arguments,
+            location: SrcSpan::new(first.start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
             body: Box::new(UntypedExpr::Sequence {
                 location: sequence_location,
-                expressions: following_expressions,
+                expressions,
             }),
         };
 
@@ -2141,14 +2143,76 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
     }
 }
 
-fn use_assignments_to_function_arguments(assignments: Vec<(AssignName, SrcSpan)>) -> Vec<Arg<()>> {
-    assignments
-        .into_iter()
-        .map(|(name, location)| Arg {
-            names: name.to_arg_names(),
-            location,
-            annotation: None,
-            type_: (),
-        })
-        .collect()
+#[derive(Debug, Default)]
+struct UseAssignments {
+    /// ```gleam
+    /// use Box(x) = ...
+    /// ```
+    /// ```gleam
+    /// fn(_use1) { let Box(x) = _use1 }
+    /// // ^^^^^ The function arguments
+    /// ```
+    function_arguments: Vec<Arg<()>>,
+
+    /// ```gleam
+    /// use Box(x) = ...
+    /// ```
+    /// ```gleam
+    /// fn(_use1) { let Box(x) = _use1 }
+    /// //          ^^^^^^^^^^^^^^^^^^ The body assignments
+    /// ```
+    body_assignments: Vec<UntypedExpr>,
+}
+
+impl UseAssignments {
+    fn from_use_expression(patterns: Vec<UntypedPattern>) -> UseAssignments {
+        let mut assignments = UseAssignments::default();
+
+        for (index, pattern) in patterns.into_iter().enumerate() {
+            match pattern {
+                Pattern::Discard { name, location } => assignments.function_arguments.push(Arg {
+                    location,
+                    names: ArgNames::Discard { name },
+                    annotation: None,
+                    type_: (),
+                }),
+
+                Pattern::Var { location, name } => assignments.function_arguments.push(Arg {
+                    location,
+                    names: ArgNames::Named { name },
+                    annotation: None,
+                    type_: (),
+                }),
+
+                pattern @ (Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::String { .. }
+                | Pattern::VarUsage { .. }
+                | Pattern::Assign { .. }
+                | Pattern::List { .. }
+                | Pattern::Constructor { .. }
+                | Pattern::Tuple { .. }
+                | Pattern::BitString { .. }
+                | Pattern::Concatenate { .. }) => {
+                    let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
+                    let location = pattern.location();
+                    assignments.function_arguments.push(Arg {
+                        location,
+                        names: ArgNames::Named { name: name.clone() },
+                        annotation: None,
+                        type_: (),
+                    });
+                    assignments.body_assignments.push(UntypedExpr::Assignment {
+                        location,
+                        pattern,
+                        kind: AssignmentKind::Let,
+                        annotation: None,
+                        value: Box::new(UntypedExpr::Var { location, name }),
+                    })
+                }
+            }
+        }
+
+        assignments
+    }
 }

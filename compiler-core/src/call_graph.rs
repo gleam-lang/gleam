@@ -171,8 +171,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             UntypedExpr::Use(use_) => {
-                for name in use_.assigned_names() {
-                    self.define(name);
+                for pattern in &use_.assignments {
+                    self.pattern(pattern);
                 }
                 self.expression(&use_.call);
             }

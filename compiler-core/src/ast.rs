@@ -20,6 +20,7 @@ use smol_str::SmolStr;
 
 pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
+pub const USE_ASSIGNMENT_VARIABLE: &str = "_use";
 pub const ASSERT_FAIL_VARIABLE: &str = "_assert_fail";
 pub const ASSERT_SUBJECT_VARIABLE: &str = "_assert_subject";
 pub const CAPTURE_VARIABLE: &str = "_capture";
