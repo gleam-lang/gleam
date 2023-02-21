@@ -2998,7 +2998,7 @@ fn expr_case_alternative_patterns() {
     assert_format!(
         r#"fn main() {
   case 1 {
-    // Hello Joe!
+    // Hello Jose!
     1 | 2 -> Nil
     // Hello Louis!
     n -> Nil

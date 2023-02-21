@@ -1300,7 +1300,7 @@ impl<'comments> Formatter<'comments> {
         .append(" ->")
         .append(self.case_clause_value(&clause.then));
 
-        commented(doc.group(), comments)
+        commented(doc, comments)
     }
 
     pub fn external_type<'a>(
