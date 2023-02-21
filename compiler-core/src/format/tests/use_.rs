@@ -220,3 +220,51 @@ fn arity_1_access_call() {
 "#
     );
 }
+
+#[test]
+fn patterns() {
+    assert_format!(
+        r#"pub fn main() {
+  use Box(x) <- apply(Box(1))
+  x
+}
+"#
+    );
+}
+
+#[test]
+fn long_patterns() {
+    assert_format!(
+        r#"pub fn main() {
+  use
+    Box(
+      xxxxxxxxxxxxxxxxxxxxxxx,
+      yyyyyyyyyyyyyyyyyyyyyyyyyyy,
+      zzzzzzzzzzzzzzzzzzzzzzzzzzzz,
+    )
+  <- apply(Box(1))
+  x
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_long_patterns() {
+    assert_format!(
+        r#"pub fn main() {
+  use
+    Box(
+      xxxxxxxxxxxxxxxxxxxxxxx,
+      yyyyyyyyyyyyyyyyyyyyyyyyyyy,
+      zzzzzzzzzzzzzzzzzzzzzzzzzzzz,
+    ),
+    Box(_),
+    Box(_),
+    Box(_)
+  <- apply(Box(1))
+  x
+}
+"#
+    );
+}
