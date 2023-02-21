@@ -177,3 +177,45 @@ fn apply(fun fun, arg arg) {
         vec![("main", "fn() -> Int")],
     );
 }
+
+#[test]
+fn patterns() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  use Box(x) <- apply(Box(1))
+  x
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg)
+}
+"#,
+        vec![("main", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn multiple_patterns() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  use Box(x), Box(y), Box(z) <- apply(Box(1))
+  x + y + z
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg, arg, arg)
+}
+"#,
+        vec![("main", "fn() -> Int")],
+    );
+}
