@@ -8,7 +8,7 @@ fn clever_pipe_rewriting() {
 pub fn apply(f: fn(a) -> b, a: a) { a |> f }
 "#
     );
-  }
+}
 
 #[test]
 fn clever_pipe_rewriting1() {
