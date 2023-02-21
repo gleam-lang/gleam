@@ -70,6 +70,21 @@ const z = y
 }
 
 #[test]
+fn renamed_module() {
+    assert_js!(
+        (
+            CURRENT_PACKAGE,
+            vec!["x".to_string()],
+            r#"pub const v = 1"#
+        ),
+        r#"
+import x as y
+const z = y.v
+"#,
+    );
+}
+
+#[test]
 fn nested_module_constant() {
     assert_js!(
         (

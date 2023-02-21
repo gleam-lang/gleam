@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "\nimport x as y\nconst z = y.v\n"
+---
+import * as $y from "../x.mjs";
+
+const z = $y.v;
+
