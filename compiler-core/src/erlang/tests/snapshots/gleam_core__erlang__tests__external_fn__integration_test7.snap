@@ -4,7 +4,7 @@ assertion_line: 10
 expression: "pub external fn receive() -> Int = \"try\" \"and\"\n                    pub fn catch(x) { receive() }"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export(['receive'/0, 'catch'/1]).
 

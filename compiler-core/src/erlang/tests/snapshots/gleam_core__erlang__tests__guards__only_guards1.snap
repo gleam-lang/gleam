@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 395
+assertion_line: 398
 expression: "\npub const bits = <<1, \"ok\":utf8, 3, 4:50>>\n\npub fn main(arg) {\n  case arg {\n    _ if arg == bits -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).
 

@@ -4,7 +4,7 @@ assertion_line: 38
 expression: "external fn go(x: Int, y: Int) -> Int = \"m\" \"f\"\npub fn x() { go }"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([x/0]).
 

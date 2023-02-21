@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 540
+assertion_line: 536
 expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).
 -export_type([box/0]).

@@ -4,7 +4,7 @@ assertion_line: 20
 expression: "\npub fn main(args) {\n  case args {\n    x if {x != x} == {args == args} -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([main/1]).
 
