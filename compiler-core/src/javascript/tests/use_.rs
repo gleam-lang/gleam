@@ -62,3 +62,23 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn patterns() {
+    assert_js!(
+        r#"
+pub fn main() {
+  use Box(x) <- apply(Box(1))
+  x
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg)
+}
+"#
+    );
+}
