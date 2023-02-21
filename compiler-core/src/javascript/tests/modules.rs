@@ -59,7 +59,7 @@ fn alias_aliased_constant() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["rocket_ship".to_string()],
+            "rocket_ship",
             r#"pub const x = 1"#
         ),
         r#"
@@ -74,7 +74,7 @@ fn renamed_module() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["x".to_string()],
+            "x",
             r#"pub const v = 1"#
         ),
         r#"
@@ -89,7 +89,7 @@ fn nested_module_constant() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            vec!["rocket_ship".to_string(), "launcher".to_string()],
+            "rocket_ship/launcher",
             r#"pub const x = 1"#
         ),
         r#"
