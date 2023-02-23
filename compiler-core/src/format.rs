@@ -670,6 +670,8 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
+            UntypedExpr::Panic { .. } => "panic".to_doc(),
+
             UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
 
             UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo(\"", l, "\")"],

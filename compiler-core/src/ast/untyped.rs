@@ -107,6 +107,10 @@ pub enum UntypedExpr {
         label: Option<SmolStr>,
     },
 
+    Panic {
+        location: SrcSpan,
+    },
+
     BitString {
         location: SrcSpan,
         segments: Vec<UntypedExprBitStringSegment>,
@@ -141,6 +145,7 @@ impl UntypedExpr {
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
+            | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }

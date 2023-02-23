@@ -174,9 +174,10 @@ impl Fixer {
             }
 
             UntypedExpr::Int { .. }
+            | UntypedExpr::Var { .. }
             | UntypedExpr::Float { .. }
             | UntypedExpr::String { .. }
-            | UntypedExpr::Var { .. }
+            | UntypedExpr::Panic { .. }
             | UntypedExpr::Todo { .. } => (),
 
             UntypedExpr::Negate { value: e, .. }

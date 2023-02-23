@@ -78,6 +78,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
 
+            UntypedExpr::Panic { location } => Ok(self.infer_panic(location)),
+
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
@@ -215,6 +217,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             label,
             typ,
         }
+    }
+
+    fn infer_panic(&mut self, location: SrcSpan) -> TypedExpr {
+        let typ = self.new_unbound_var();
+        TypedExpr::Panic { location, typ }
     }
 
     fn infer_string(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {

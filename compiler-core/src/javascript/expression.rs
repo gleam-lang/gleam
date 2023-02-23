@@ -157,6 +157,8 @@ impl<'module> Generator<'module> {
                 label, location, ..
             } => Ok(self.todo(label, location)),
 
+            TypedExpr::Panic { location, .. } => Ok(self.panic(location)),
+
             TypedExpr::BitString { segments, .. } => self.bit_string(segments),
 
             TypedExpr::ModuleSelect {
@@ -954,6 +956,19 @@ impl<'module> Generator<'module> {
             .as_deref()
             .unwrap_or("This has not yet been implemented");
         let doc = self.throw_error("todo", message, *location, vec![]);
+
+        // Reset tail position so later values are returned as needed. i.e.
+        // following clauses in a case expression.
+        self.tail_position = tail_position;
+
+        doc
+    }
+
+    fn panic<'a>(&mut self, location: &'a SrcSpan) -> Document<'a> {
+        let tail_position = self.tail_position;
+        self.tail_position = false;
+
+        let doc = self.throw_error("todo", "panic expression evaluated", *location, vec![]);
 
         // Reset tail position so later values are returned as needed. i.e.
         // following clauses in a case expression.

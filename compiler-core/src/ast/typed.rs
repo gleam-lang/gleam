@@ -134,6 +134,11 @@ pub enum TypedExpr {
         typ: Arc<Type>,
     },
 
+    Panic {
+        location: SrcSpan,
+        typ: Arc<Type>,
+    },
+
     BitString {
         location: SrcSpan,
         typ: Arc<Type>,
@@ -165,6 +170,7 @@ impl TypedExpr {
             Self::Var { .. }
             | Self::Int { .. }
             | Self::Todo { .. }
+            | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. } => Some(self),
@@ -262,6 +268,7 @@ impl TypedExpr {
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
+            | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::Negate { location, .. }
             | Self::Sequence { location, .. }
@@ -289,6 +296,7 @@ impl TypedExpr {
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
+            | Self::Panic { location, .. }
             | Self::Negate { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
@@ -323,6 +331,7 @@ impl TypedExpr {
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::Tuple { .. }
@@ -366,6 +375,7 @@ impl TypedExpr {
             | Self::List { typ, .. }
             | Self::Call { typ, .. }
             | Self::Float { typ, .. }
+            | Self::Panic { typ, .. }
             | Self::BinOp { typ, .. }
             | Self::Tuple { typ, .. }
             | Self::String { typ, .. }
