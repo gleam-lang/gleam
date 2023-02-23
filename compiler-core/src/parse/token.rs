@@ -73,6 +73,7 @@ pub enum Token {
     Import,
     Let,
     Opaque,
+    Panic,
     Pub,
     Todo,
     Try,
@@ -173,6 +174,7 @@ impl fmt::Display for Token {
             Token::Use => "use",
             Token::Type => "type",
             Token::LtGt => "<>",
+            Token::Panic => "panic",
         };
         write!(f, "\"{s}\"")
     }
