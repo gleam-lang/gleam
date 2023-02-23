@@ -48,7 +48,7 @@ enum ResultModule {
 impl ResultModule {
     fn name(&self) -> &str {
         match self {
-            ResultModule::Existing(name) | ResultModule::Insert(name) => &name,
+            ResultModule::Existing(name) | ResultModule::Insert(name) => name,
         }
     }
 
@@ -74,7 +74,7 @@ impl Fixer {
         Self {
             target,
             module_used: false,
-            result_module: check_for_result_module_import(target, &module),
+            result_module: check_for_result_module_import(target, module),
         }
         .fix_module(module)
     }
@@ -98,7 +98,7 @@ impl Fixer {
             match &self.result_module {
                 ResultModule::Existing(_) => (),
                 ResultModule::Insert(name) => {
-                    let import = result_module_import_statement(&name);
+                    let import = result_module_import_statement(name);
                     module.statements.insert(0, TargetGroup::Any(vec![import]));
                 }
             }
@@ -236,7 +236,7 @@ impl Fixer {
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
             } => {
-                self.fix_expression(&mut *spread.base);
+                self.fix_expression(&mut spread.base);
                 for argument in arguments.iter_mut() {
                     self.fix_expression(&mut argument.value);
                 }
@@ -244,7 +244,7 @@ impl Fixer {
 
             UntypedExpr::BitString { segments, .. } => {
                 for segment in segments.iter_mut() {
-                    self.fix_expression(&mut *segment.value);
+                    self.fix_expression(&mut segment.value);
                     for option in segment.options.iter_mut() {
                         match option {
                             BitStringSegmentOption::Size { value, .. } => {
@@ -307,7 +307,7 @@ fn check_for_result_module_import(target: Target, module: &UntypedModule) -> Res
 
                         let mut name = action.take_name();
                         while names.contains(name.as_str()) {
-                            name = format!("gleam_{}", name);
+                            name = format!("gleam_{name}");
                         }
                         action = ResultModule::Insert(name);
                     }
