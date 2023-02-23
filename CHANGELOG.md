@@ -2,9 +2,12 @@
 
 ## Unreleased
 
+- `try` expressions are now deprecated and will be removed in a future version.
 - The new `gleam fix` command can be used to automatically convert `try`
   expressions to `use` expressions.
-- `let assert ... = ...` is now an accepted syntax for assertion assignments.
+- `let assert ... = ...` is now the syntax for assertion assignments. The
+  `assert ... = ...` syntax is deprecated and will be removed in a future
+  version. Run `gleam format` to automatically update your code.
 - The unused private type and constructor detection has been improved.
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
