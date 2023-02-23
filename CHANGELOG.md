@@ -50,7 +50,6 @@
   been improved.
 - Fixed a bug where the language server wouldn't analyse test code.
 - Fixed a bug where `assert` expressions can generate invalid Erlang.
-- Fixed a bug where `assert` expressions can generate Erlang that emits a
   warning.
 - Fixed a bug where arguments would be passed incorrectly to Deno.
 - Fixed a bug where defining variables that shadow external functions could
