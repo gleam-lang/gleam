@@ -18,7 +18,7 @@ function go(x, foo) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   let a$2 = x[0];
   let b = a$2;

@@ -7,8 +7,8 @@ import { throwError } from "../gleam.mjs";
 
 function go(f) {
   let boop = (() => {
-    throwError("todo", "my/mod", 3, "go", "I should do this", {});
+    throwError("todo", "my/mod", 3, "go", "I should do this", {})
   })();
-  return f((() => { throwError("todo", "my/mod", 4, "go", "Boom", {}); })());
+  return f((() => { throwError("todo", "my/mod", 4, "go", "Boom", {}) })());
 }
 

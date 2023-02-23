@@ -14,7 +14,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (!x.hasLength(1)) {
     throwError(
@@ -24,7 +24,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   let a = x.head;
   if (!x.hasLength(2) || x.head !== 1 || x.tail.head !== 2) {
@@ -35,7 +35,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (!y.hasLength(2) || y.tail.head[0] !== 3) {
     throwError(
@@ -45,7 +45,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: y }
-    );
+    )
   }
   let b = y.tail.head[1];
   if (!y.atLeastLength(1)) {
@@ -56,7 +56,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: y }
-    );
+    )
   }
   let head = y.head;
   let tail = y.tail;

@@ -19,7 +19,7 @@ export function main(x) {
       "main",
       "Assignment pattern did not match",
       { value: x[0] }
-    );
+    )
   }
 
   let $ = new Ok([1, 2]);
@@ -32,7 +32,7 @@ export function main(x) {
       "main",
       "Assignment pattern did not match",
       { value: $[0] }
-    );
+    )
   }
   let a$1 = $[0][0];
 

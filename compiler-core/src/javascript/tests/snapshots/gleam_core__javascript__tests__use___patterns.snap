@@ -28,7 +28,7 @@ export function main() {
           "",
           "Assignment pattern did not match",
           { value: _use0 }
-        );
+        )
       }
       let x = _use0[0];
       return x;

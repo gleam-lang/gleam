@@ -11,6 +11,7 @@ mod generics;
 mod lists;
 mod modules;
 mod numbers;
+mod panic;
 mod prelude;
 mod records;
 mod recursion;

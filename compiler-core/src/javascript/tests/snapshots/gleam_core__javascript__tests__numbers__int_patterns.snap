@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 85
+assertion_line: 104
 expression: "\nfn go(x) {\n  let 4 = x\n}\n"
 ---
 import { throwError } from "../gleam.mjs";
@@ -14,7 +14,7 @@ function go(x) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   return x;
 }

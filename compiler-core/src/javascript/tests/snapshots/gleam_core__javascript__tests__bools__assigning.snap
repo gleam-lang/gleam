@@ -14,7 +14,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (x) {
     throwError(
@@ -24,7 +24,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (y) {
     throwError(
@@ -34,7 +34,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: y }
-    );
+    )
   }
   return y;
 }
