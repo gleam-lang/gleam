@@ -407,6 +407,13 @@ where
                 }
             }
 
+            Some((start, Token::Panic, end)) => {
+                let _ = self.next_tok();
+                UntypedExpr::Panic {
+                    location: SrcSpan { start, end },
+                }
+            }
+
             Some((start, Token::Hash, _)) => {
                 let _ = self.next_tok();
                 let _ = self.expect_one(&Token::LeftParen)?;
