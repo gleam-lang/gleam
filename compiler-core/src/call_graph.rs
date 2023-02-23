@@ -94,6 +94,7 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Todo { .. }
             | UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
+            | UntypedExpr::Panic { .. }
             | UntypedExpr::String { .. } => (),
 
             // Aha! A variable is being referenced.
