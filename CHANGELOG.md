@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- The new `panic` keyword can be used to crash the program. This may be useful
+  for situations in which a program has got into an unrecoverable invalid state.
 - `try` expressions are now deprecated and will be removed in a future version.
 - The new `gleam fix` command can be used to automatically convert `try`
   expressions to `use` expressions.
