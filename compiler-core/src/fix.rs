@@ -246,11 +246,8 @@ impl Fixer {
                 for segment in segments.iter_mut() {
                     self.fix_expression(&mut segment.value);
                     for option in segment.options.iter_mut() {
-                        match option {
-                            BitStringSegmentOption::Size { value, .. } => {
-                                self.fix_expression(value);
-                            }
-                            _ => (),
+                        if let BitStringSegmentOption::Size { value, .. } = option {
+                            self.fix_expression(value);
                         }
                     }
                 }
@@ -276,7 +273,7 @@ fn placeholder_pattern() -> UntypedPattern {
 fn result_module_import_statement(name: &String) -> UntypedStatement {
     let as_name = match name.as_str() {
         "result" => None,
-        _ => Some(name.clone().into()),
+        _ => Some(name.into()),
     };
     let import = Import {
         location: Default::default(),
