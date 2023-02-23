@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 524
+expression: "\npub fn main(x) {\n  try y = x\n  y\n}\n"
+---
+
+warning: try expressions are deprecated
+  ┌─ /src/warning/wrn.gleam:3:3
+  │  
+3 │ ╭   try y = x
+4 │ │   y
+  │ ╰───^
+
+`try` expressions are deprecated and will be removed in a future version of
+Gleam, consider using `use` or `case` instead.
+
+Hint: Run `gleam fix` to automatically update to `use` expressions.
+

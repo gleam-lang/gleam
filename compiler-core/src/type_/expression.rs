@@ -772,6 +772,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        self.environment
+            .warnings
+            .push(Warning::TryUsed { location });
+
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
         let value_type = self.new_unbound_var();
