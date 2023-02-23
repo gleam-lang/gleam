@@ -1523,7 +1523,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Assignment {
             value,
             pattern,
-            kind: AssignmentKind::Assert,
+            kind: AssignmentKind::Assert | AssignmentKind::DeprecatedAssert,
             ..
         } => assert(value, pattern, env),
 
