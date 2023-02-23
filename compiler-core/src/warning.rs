@@ -296,6 +296,25 @@ in a future version of Gleam, consider using `use` or `case` instead.\n",
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::DeprecatedAssertUsed { location } => Diagnostic {
+                    title: "Deprecated assert syntax".into(),
+                    text: "This syntax has been deprecate in favour of `let assert ... = ...`\n"
+                        .into(),
+                    hint: Some(
+                        "Run `gleam format` to automatically update to the new syntax.".into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
             },
         }
     }

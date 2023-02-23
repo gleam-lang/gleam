@@ -530,3 +530,15 @@ pub fn main(x) {
 "
     );
 }
+
+#[test]
+fn bare_assert_is_deprecated() {
+    assert_warning!(
+        "
+pub fn main(x) {
+  assert Ok(y) = x
+  y
+}
+"
+    );
+}

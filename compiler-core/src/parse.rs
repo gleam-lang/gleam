@@ -553,7 +553,7 @@ where
 
             Some((start, Token::Assert, _)) => {
                 let _ = self.next_tok();
-                self.parse_assignment(start, AssignmentKind::Assert)?
+                self.parse_assignment(start, AssignmentKind::DeprecatedAssert)?
             }
 
             Some((start, Token::Use, _)) => {
