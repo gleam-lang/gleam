@@ -1007,7 +1007,6 @@ impl<'module> Generator<'module> {
                 string(message),
                 fields
             ]),
-            ";"
         ]
     }
 

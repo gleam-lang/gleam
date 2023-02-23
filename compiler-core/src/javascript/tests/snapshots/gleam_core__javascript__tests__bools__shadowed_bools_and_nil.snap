@@ -20,7 +20,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (!(x instanceof False)) {
     throwError(
@@ -30,7 +30,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   if (!(y instanceof Nil)) {
     throwError(
@@ -40,7 +40,7 @@ function go(x, y) {
       "go",
       "Assignment pattern did not match",
       { value: y }
-    );
+    )
   }
   return y;
 }

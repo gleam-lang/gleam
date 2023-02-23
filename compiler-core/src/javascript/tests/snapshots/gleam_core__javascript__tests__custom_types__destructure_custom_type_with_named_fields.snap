@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 283
+assertion_line: 278
 expression: "\ntype Cat {\n  Cat(name: String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(name: x, ..) = cat\n  let Cat(cuteness: 4, name: x) = cat\n  x\n}\n\n"
 ---
 import { CustomType as $CustomType, throwError } from "../gleam.mjs";
@@ -22,7 +22,7 @@ function go(cat) {
       "go",
       "Assignment pattern did not match",
       { value: cat }
-    );
+    )
   }
   let x = cat.name;
   let y = cat.cuteness;
@@ -34,7 +34,7 @@ function go(cat) {
       "go",
       "Assignment pattern did not match",
       { value: cat }
-    );
+    )
   }
   let x$1 = cat.name;
   if (!(cat instanceof Cat) || cat.cuteness !== 4) {
@@ -45,7 +45,7 @@ function go(cat) {
       "go",
       "Assignment pattern did not match",
       { value: cat }
-    );
+    )
   }
   let x$2 = cat.name;
   return x$2;

@@ -14,7 +14,7 @@ function go(x) {
       "go",
       "This has not yet been implemented",
       {}
-    );
+    )
   } else {
     return 1;
   }

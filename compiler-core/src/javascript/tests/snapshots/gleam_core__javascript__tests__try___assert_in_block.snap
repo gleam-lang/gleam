@@ -20,7 +20,7 @@ export function main(x) {
       "main",
       "Assignment pattern did not match",
       { value: $ }
-    );
+    )
   }
   let y = $[0];
   return y;

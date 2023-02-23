@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 16
+expression: "\npub fn go() {\n  panic\n}\n"
+---
+export function go(): any;
+

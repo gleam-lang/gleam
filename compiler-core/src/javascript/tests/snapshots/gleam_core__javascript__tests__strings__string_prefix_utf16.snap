@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
+assertion_line: 81
 expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n  }\n}\n"
 ---
 import { throwError } from "../gleam.mjs";
@@ -17,7 +18,7 @@ export function go(x) {
       "go",
       "No case clause matched",
       { values: [$] }
-    );
+    )
   }
   let $1 = "🫥 is neutral dotted";
   if ($1.startsWith("🫥")) {
@@ -31,7 +32,7 @@ export function go(x) {
       "go",
       "No case clause matched",
       { values: [$1] }
-    );
+    )
   }
   let $2 = "🇺🇸 is a cluster";
   if ($2.startsWith("🇺🇸")) {
@@ -45,7 +46,7 @@ export function go(x) {
       "go",
       "No case clause matched",
       { values: [$2] }
-    );
+    )
   }
 }
 
