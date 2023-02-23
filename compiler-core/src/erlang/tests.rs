@@ -5,6 +5,7 @@ mod external_fn;
 mod functions;
 mod guards;
 mod numbers;
+mod panic;
 mod patterns;
 mod pipes;
 mod records;
