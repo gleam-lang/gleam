@@ -3141,6 +3141,16 @@ fn tuple_access() {
 }
 
 #[test]
+fn expr_panic() {
+    assert_format!(
+        "fn main() {
+  panic
+}
+"
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {
@@ -3148,7 +3158,10 @@ fn expr_todo() {
 }
 "
     );
+}
 
+#[test]
+fn expr_todo_with_label() {
     assert_format!(
         r#"fn main() {
   todo("todo with a label")
