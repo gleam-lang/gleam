@@ -1156,6 +1156,15 @@ pub enum AssignmentKind {
     DeprecatedAssert,
 }
 
+impl AssignmentKind {
+    pub(crate) fn performs_exhaustiveness_check(&self) -> bool {
+        match self {
+            AssignmentKind::Let => true,
+            AssignmentKind::Assert | AssignmentKind::DeprecatedAssert => false,
+        }
+    }
+}
+
 // BitStrings
 
 pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;

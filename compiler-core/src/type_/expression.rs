@@ -723,6 +723,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        if kind == AssignmentKind::DeprecatedAssert {
+            self.environment
+                .warnings
+                .push(Warning::DeprecatedAssertUsed { location });
+        }
+
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
         let value_typ = value.type_();
 
@@ -741,8 +747,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // We currently only do only limited exhaustiveness checking of custom types
         // at the top level of patterns.
-        // Do not perform exhaustiveness checking if user explicitly used `assert`.
-        if kind != AssignmentKind::Assert {
+        // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
+        if kind.performs_exhaustiveness_check() {
             if let Err(unmatched) = self
                 .environment
                 .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ.clone()))

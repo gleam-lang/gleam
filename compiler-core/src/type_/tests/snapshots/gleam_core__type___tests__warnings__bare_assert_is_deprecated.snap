@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+assertion_line: 536
+expression: "\npub fn main(x) {\n  assert Ok(y) = x\n  y\n}\n"
+---
+
+warning: Deprecated assert syntax
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   assert Ok(y) = x
+  │   ^^^^^^^^^^^^^^^^
+
+This syntax has been deprecate in favour of `let assert ... = ...`
+
+Hint: Run `gleam format` to automatically update to the new syntax.
+
