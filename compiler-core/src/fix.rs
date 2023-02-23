@@ -8,8 +8,8 @@ use strum::IntoEnumIterator;
 
 use crate::{
     ast::{
-        AssignName, AssignmentKind, BitStringSegmentOption, CallArg, Import, Pattern, Statement,
-        TargetGroup, UntypedExpr, UntypedModule, UntypedPattern, UntypedStatement, Use,
+        BitStringSegmentOption, CallArg, Import, Statement, TargetGroup, UntypedExpr,
+        UntypedModule, UntypedPattern, UntypedStatement, Use,
     },
     build::Target,
     format::{Formatter, Intermediate},
@@ -160,32 +160,12 @@ impl Fixer {
                         value,
                     }],
                 };
-                let pattern_location = pattern.location();
-                let (assignment, include_pattern) = match &pattern {
-                    Pattern::Var { name, .. } => (AssignName::Variable(name.clone()), false),
-                    Pattern::Discard { name, .. } => (AssignName::Discard(name.clone()), false),
-                    _ => (AssignName::Variable("x".into()), true),
-                };
                 let use_ = UntypedExpr::Use(Use {
                     location: *location,
                     call: Box::new(call),
-                    assignments: vec![(assignment, pattern_location)],
+                    assignments: vec![pattern],
                 });
-                let expressions = if include_pattern {
-                    let assign = UntypedExpr::Assignment {
-                        location: pattern_location,
-                        value: Box::new(UntypedExpr::Var {
-                            location: pattern_location,
-                            name: "x".into(),
-                        }),
-                        pattern,
-                        kind: AssignmentKind::Let,
-                        annotation: None,
-                    };
-                    vec![use_, assign, then]
-                } else {
-                    vec![use_, then]
-                };
+                let expressions = vec![use_, then];
                 let mut sequence = UntypedExpr::Sequence {
                     location: *location,
                     expressions,
