@@ -1148,8 +1148,12 @@ impl<A, B> HasLocation for Pattern<A, B> {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AssignmentKind {
+    // let x = ...
     Let,
+    // let assert x = ...
     Assert,
+    // assert x = ...
+    DeprecatedAssert,
 }
 
 // BitStrings

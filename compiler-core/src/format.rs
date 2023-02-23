@@ -633,7 +633,9 @@ impl<'comments> Formatter<'comments> {
 
         let keyword = match kind {
             Some(AssignmentKind::Let) => "let ",
-            Some(AssignmentKind::Assert) => "assert ",
+            Some(AssignmentKind::Assert) => "let assert ",
+            Some(AssignmentKind::DeprecatedAssert) => "let assert ",
+            // TODO: remove when Try has been removed.
             None => "try ",
         };
 
