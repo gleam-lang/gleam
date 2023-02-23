@@ -69,7 +69,7 @@ macro_rules! assert_infer_with_module {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let ast = crate::analyse::infer_module(
+        let ast = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -281,7 +281,7 @@ macro_rules! assert_with_module_error {
 
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let error = crate::analyse::infer_module(
+        let error = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -433,7 +433,7 @@ macro_rules! assert_warning {
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
@@ -505,7 +505,7 @@ macro_rules! assert_no_warnings {
         $(
         let (mut ast, _) = $crate::parse::parse_module($module_src).expect("syntax error");
         ast.name = $name.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast,
