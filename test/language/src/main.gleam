@@ -224,7 +224,7 @@ fn assert_tests() -> List(Test) {
       assert_equal(
         Ok(1),
         {
-          assert Ok(_) = Ok(1)
+          let assert Ok(_) = Ok(1)
         },
       )
     }),
@@ -233,7 +233,7 @@ fn assert_tests() -> List(Test) {
       assert_equal(
         1,
         {
-          assert Ok(x) = Ok(1)
+          let assert Ok(x) = Ok(1)
           x
         },
       )
@@ -299,12 +299,12 @@ fn imported_custom_types_test() -> List(Test) {
     ),
     lazy_equality_test(
       "No fields assert assignment",
-      fn() { assert importable.NoFields = importable.NoFields },
+      fn() { let assert importable.NoFields = importable.NoFields },
       importable.NoFields,
     ),
     lazy_equality_test(
       "No fields unqualified assert assignment",
-      fn() { assert NoFields = importable.NoFields },
+      fn() { let assert NoFields = importable.NoFields },
       importable.NoFields,
     ),
     lazy_equality_test(
@@ -1348,9 +1348,9 @@ fn negation_tests() {
     |> example(fn() { assert_equal(True, !!True) }),
     // This would crash if the right hand side evaluated
     "!True && assert False = True"
-    |> example(fn() { assert_equal(False, !True && assert False = True) }),
+    |> example(fn() { assert_equal(False, !True && let assert False = True) }),
     "!False || assert False = True"
-    |> example(fn() { assert_equal(True, !False || assert False = True) }),
+    |> example(fn() { assert_equal(True, !False || let assert False = True) }),
   ]
 }
 
