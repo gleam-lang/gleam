@@ -23,7 +23,7 @@ use std::{
     time::Instant,
 };
 
-use super::ErlangAppCodegenConfiguration;
+use super::{Codegen, ErlangAppCodegenConfiguration};
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -41,12 +41,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
-    /// Whether to perform codegen for the root project. Dependencies always
-    /// have codegen run. Use for the `gleam check` command.
-    /// If future when we have per-module incremental builds we will need to
-    /// track both whether type metadata has been produced and also whether
-    /// codegen has been performed. As such there will be 2 kinds of caching.
-    pub perform_codegen: bool,
+    pub codegen: Codegen,
 }
 
 #[derive(Debug)]
@@ -134,10 +129,9 @@ where
         self.check_gleam_version()?;
         self.compile_dependencies()?;
 
-        if self.options.perform_codegen {
-            self.telemetry.compiling_package(&self.config.name);
-        } else {
-            self.telemetry.checking_package(&self.config.name);
+        match self.options.codegen {
+            Codegen::All => self.telemetry.compiling_package(&self.config.name),
+            Codegen::DepsOnly | Codegen::None => self.telemetry.checking_package(&self.config.name),
         }
         let result = self.compile_root_package();
 
@@ -230,6 +224,17 @@ where
         let mode = self.mode();
         let target = self.target();
 
+        // TODO: test
+        if !self.options.codegen.should_codegen(false) {
+            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+        }
+
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!(%name, "skipping_rebar3_build_for_non_erlang_target");
+            return Ok(());
+        }
+
         let package = paths::build_deps_package(name);
         let build_packages = paths::build_packages(mode, target);
         let ebins = paths::build_packages_ebins_glob(mode, target);
@@ -239,12 +244,6 @@ where
         tracing::debug!("copying_package_to_build");
         self.io.mkdir(&build_packages)?;
         self.io.copy_dir(&package, &build_packages)?;
-
-        // TODO: test
-        if target != Target::Erlang {
-            tracing::info!("skipping_rebar3_build_for_non_erlang_target");
-            return Ok(());
-        }
 
         let env = [
             ("ERL_LIBS", "../*/ebin".into()),
@@ -283,8 +282,13 @@ where
         let mix_target = "prod";
 
         // TODO: test
+        if !self.options.codegen.should_codegen(false) {
+            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+        }
+
+        // TODO: test
         if target != Target::Erlang {
-            tracing::info!("skipping_mix_build_for_non_erlang_target");
+            tracing::info!(%name, "skipping_mix_build_for_non_erlang_target");
             return Ok(());
         }
 
@@ -418,8 +422,8 @@ where
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
-        compiler.perform_codegen = !is_root || self.options.perform_codegen;
-        compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
+        compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
+        compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
 
         // Compile project to Erlang or JavaScript source code

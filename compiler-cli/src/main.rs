@@ -80,7 +80,7 @@ pub use gleam_core::{
 };
 
 use gleam_core::{
-    build::{Mode, Options, Runtime, Target},
+    build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
 };
 use hex::ApiKeyCommand as _;
@@ -453,7 +453,7 @@ fn main() {
 
 fn command_check() -> Result<(), Error> {
     let _ = build::main(Options {
-        perform_codegen: false,
+        codegen: Codegen::DepsOnly,
         mode: Mode::Dev,
         target: None,
     })?;
@@ -462,7 +462,7 @@ fn command_check() -> Result<(), Error> {
 
 fn command_build(target: Option<Target>) -> Result<(), Error> {
     let _ = build::main(Options {
-        perform_codegen: true,
+        codegen: Codegen::All,
         mode: Mode::Dev,
         target,
     })?;

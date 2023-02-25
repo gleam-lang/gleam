@@ -6,7 +6,7 @@ use std::{
 
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
-    build::{Mode, Options, Package, Target},
+    build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     hex, paths, Error, Result,
 };
@@ -131,7 +131,7 @@ fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
     let compile_result = build::main(Options {
         mode: Mode::Prod,
         target: Some(Target::Erlang),
-        perform_codegen: true,
+        codegen: Codegen::All,
     })?;
 
     let generated_files = generated_files(&compile_result)?;

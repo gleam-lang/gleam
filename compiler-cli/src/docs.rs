@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use crate::{cli, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
-    build::{Mode, Options, Package},
+    build::{Codegen, Mode, Options, Package},
     config::{DocsPage, PackageConfig},
     error::Error,
     hex,
@@ -59,7 +59,7 @@ pub fn build() -> Result<()> {
     let mut compiled = crate::build::main(Options {
         mode: Mode::Prod,
         target: None,
-        perform_codegen: true,
+        codegen: Codegen::All,
     })?;
     let outputs = build_documentation(&config, &mut compiled)?;
 
@@ -110,7 +110,7 @@ impl PublishCommand {
         crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
         let mut compiled = crate::build::main(Options {
-            perform_codegen: true,
+            codegen: Codegen::All,
             mode: Mode::Prod,
             target: None,
         })?;

@@ -514,3 +514,19 @@ import gleam
     assert!(module.find_node(13).is_none());
     assert!(module.find_node(14).is_none());
 }
+
+#[test]
+fn find_node_use() {
+    let use_ = compile_expression(
+        r#"
+use x <- fn(f) { f(1) }
+124
+"#,
+    );
+
+    assert!(use_.find_node(0).is_none());
+    assert!(use_.find_node(1).is_some()); // The use
+    assert!(use_.find_node(23).is_some());
+
+    assert!(use_.find_node(26).is_some()); // The int
+}

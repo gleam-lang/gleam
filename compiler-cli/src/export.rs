@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Options, Target},
+    build::{Mode, Options, Target, Codegen},
     paths, Result,
 };
 
@@ -28,7 +28,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     // Build project in production mode
     let package = crate::build::main(Options {
-        perform_codegen: true,
+        codegen: Codegen::All,
         mode,
         target: Some(target),
     })?;
