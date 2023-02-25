@@ -1827,3 +1827,15 @@ fn(x, x) {
 "
     );
 }
+
+#[test]
+fn negate_non_number() {
+    assert_error!(
+        "
+fn() {
+  let a = True
+  let b = -a
+}
+"
+    );
+}

@@ -186,7 +186,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::Negate { location, value } => self.infer_negate(location, *value),
+            UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
+
+            UntypedExpr::NegateNumber { location, value } => {
+                self.infer_negate_number(location, *value)
+            }
 
             UntypedExpr::Use(use_) => {
                 let location = use_.location;
@@ -370,15 +374,53 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate(&mut self, location: SrcSpan, value: UntypedExpr) -> Result<TypedExpr, Error> {
+    fn infer_negate_bool(
+        &mut self,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> Result<TypedExpr, Error> {
         let value = self.infer(value)?;
 
         unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(TypedExpr::Negate {
+        Ok(TypedExpr::NegateBool {
             location,
             value: Box::new(value),
         })
+    }
+
+    fn infer_negate_number(
+        &mut self,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> Result<TypedExpr, Error> {
+        let value = self.infer(value)?;
+
+        if let Ok(()) =
+            unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))
+        {
+            Ok(TypedExpr::NegateNumber {
+                location,
+                value: Box::new(value),
+            })
+        } else if let Ok(()) =
+            unify(float(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))
+        {
+            Ok(TypedExpr::NegateNumber {
+                location,
+                value: Box::new(value),
+            })
+        } else {
+            Err(Error::CouldNotUnify {
+                location: value.location(),
+                // TODO: The current UnifyErrorSituation is missing a unary op variant
+                situation: None,
+                // TODO: How to report a set of expected types?
+                expected: int(),
+                given: value.type_(),
+                rigid_type_names: im::hashmap![],
+            })
+        }
     }
 
     fn infer_fn(

@@ -152,7 +152,12 @@ pub enum TypedExpr {
         args: Vec<TypedRecordUpdateArg>,
     },
 
-    Negate {
+    NegateBool {
+        location: SrcSpan,
+        value: Box<Self>,
+    },
+
+    NegateNumber {
         location: SrcSpan,
         value: Box<Self>,
     },
@@ -190,7 +195,9 @@ impl TypedExpr {
                 .find_map(|e| e.find_node(byte_index))
                 .or(Some(self)),
 
-            Self::Negate { value, .. } => value.find_node(byte_index).or(Some(self)),
+            Self::NegateBool { value, .. } => value.find_node(byte_index).or(Some(self)),
+
+            Self::NegateNumber { value, .. } => value.find_node(byte_index).or(Some(self)),
 
             Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
 
@@ -270,7 +277,8 @@ impl TypedExpr {
             | Self::Tuple { location, .. }
             | Self::Panic { location, .. }
             | Self::String { location, .. }
-            | Self::Negate { location, .. }
+            | Self::NegateBool { location, .. }
+            | Self::NegateNumber { location, .. }
             | Self::Sequence { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
@@ -297,7 +305,8 @@ impl TypedExpr {
             | Self::Tuple { location, .. }
             | Self::String { location, .. }
             | Self::Panic { location, .. }
-            | Self::Negate { location, .. }
+            | Self::NegateBool { location, .. }
+            | Self::NegateNumber { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -335,7 +344,8 @@ impl TypedExpr {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::Tuple { .. }
-            | TypedExpr::Negate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateNumber { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Sequence { .. }
             | TypedExpr::Pipeline { .. }
@@ -365,7 +375,8 @@ impl TypedExpr {
 
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Self::Negate { .. } => bool(),
+            Self::NegateBool { .. } => bool(),
+            Self::NegateNumber { value, .. } => value.type_(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
