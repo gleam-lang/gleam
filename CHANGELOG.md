@@ -26,6 +26,8 @@
 - Fixed a bug in the type inferrer were unannotated functions that were
   used before they were defined in a module could in rare cased be inferred with
   a more general type than is correct.
+- Fixed a bug where the LSP would fail to show type information on hover for
+  expressions after a use expression.
 - Fixed a bug where imported constants could generated incorrect JavaScript
   code.
 - Fixed a bug where the LSP would perform codegen for dependencies.
