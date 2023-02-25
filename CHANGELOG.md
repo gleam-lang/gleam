@@ -29,6 +29,7 @@
 - Fixed a bug where imported constants could generated incorrect JavaScript
   code.
 - Fixed a bug where the LSP would perform codegen for dependencies.
+- Fixed a bug where the LSP would compile native dependencies needlessly.
 - Fixed a bug where integer division with large numbers on JavaScript could produce
   incorrect results.
 - Fixed a bug where pattern matches on custom types with mixed labelled and
