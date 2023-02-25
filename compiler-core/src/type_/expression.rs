@@ -356,7 +356,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Add this new callback function to the arguments to function call
         call.arguments.push(CallArg {
             label: None,
-            location: callback.location(),
+            location: SrcSpan::new(first.start, sequence_location.end),
             value: callback,
             // This argument is implicitly given by Gleam's use syntax so we
             // mark it as such.
@@ -364,7 +364,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         });
 
         self.infer(UntypedExpr::Call {
-            location: call.location,
+            location: SrcSpan::new(use_.location.start, sequence_location.end),
             fun: call.function,
             arguments: call.arguments,
         })
@@ -2133,7 +2133,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 }
 
 struct UseCall {
-    location: SrcSpan,
     function: Box<UntypedExpr>,
     arguments: Vec<CallArg<UntypedExpr>>,
 }
@@ -2143,17 +2142,15 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
     // call to a function.
     match call {
         UntypedExpr::Call {
-            location,
             fun: function,
             arguments,
+            ..
         } => Ok(UseCall {
-            location,
             arguments,
             function,
         }),
 
         other => Ok(UseCall {
-            location: other.location(),
             function: Box::new(other),
             arguments: vec![],
         }),
