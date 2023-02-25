@@ -224,6 +224,17 @@ where
         let mode = self.mode();
         let target = self.target();
 
+        // TODO: test
+        if !self.options.codegen.should_codegen(false) {
+            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+        }
+
+        // TODO: test
+        if target != Target::Erlang {
+            tracing::info!(%name, "skipping_rebar3_build_for_non_erlang_target");
+            return Ok(());
+        }
+
         let package = paths::build_deps_package(name);
         let build_packages = paths::build_packages(mode, target);
         let ebins = paths::build_packages_ebins_glob(mode, target);
@@ -233,12 +244,6 @@ where
         tracing::debug!("copying_package_to_build");
         self.io.mkdir(&build_packages)?;
         self.io.copy_dir(&package, &build_packages)?;
-
-        // TODO: test
-        if target != Target::Erlang {
-            tracing::info!("skipping_rebar3_build_for_non_erlang_target");
-            return Ok(());
-        }
 
         let env = [
             ("ERL_LIBS", "../*/ebin".into()),
@@ -277,8 +282,13 @@ where
         let mix_target = "prod";
 
         // TODO: test
+        if !self.options.codegen.should_codegen(false) {
+            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+        }
+
+        // TODO: test
         if target != Target::Erlang {
-            tracing::info!("skipping_mix_build_for_non_erlang_target");
+            tracing::info!(%name, "skipping_mix_build_for_non_erlang_target");
             return Ok(());
         }
 
