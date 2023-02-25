@@ -57,11 +57,7 @@ pub fn go() { rocket_ship.x }
 #[test]
 fn alias_aliased_constant() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "rocket_ship",
-            r#"pub const x = 1"#
-        ),
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub const x = 1"#),
         r#"
 import rocket_ship.{ x as y }
 const z = y
@@ -72,11 +68,7 @@ const z = y
 #[test]
 fn renamed_module() {
     assert_js!(
-        (
-            CURRENT_PACKAGE,
-            "x",
-            r#"pub const v = 1"#
-        ),
+        (CURRENT_PACKAGE, "x", r#"pub const v = 1"#),
         r#"
 import x as y
 const z = y.v
