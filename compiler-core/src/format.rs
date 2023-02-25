@@ -1290,7 +1290,9 @@ impl<'comments> Formatter<'comments> {
             Some(guard) => clause_doc.append(" if ").append(self.clause_guard(guard)),
         };
 
-        let doc = if index == 0 {
+        let clause_doc = commented(clause_doc, comments);
+
+        if index == 0 {
             clause_doc
         } else if space_before {
             lines(2).append(clause_doc)
@@ -1298,9 +1300,7 @@ impl<'comments> Formatter<'comments> {
             lines(1).append(clause_doc)
         }
         .append(" ->")
-        .append(self.case_clause_value(&clause.then));
-
-        commented(doc, comments)
+        .append(self.case_clause_value(&clause.then))
     }
 
     pub fn external_type<'a>(
