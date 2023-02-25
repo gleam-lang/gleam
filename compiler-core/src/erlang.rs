@@ -1476,7 +1476,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Fn { args, body, .. } => fun(args, body, env),
 
-        TypedExpr::Negate { value, .. } => negate(value, env),
+        TypedExpr::NegateBool { value, .. } => negate_with("not ", value, env),
+
+        TypedExpr::NegateNumber { value, .. } => negate_with("- ", value, env),
 
         TypedExpr::List { elements, tail, .. } => expr_list(elements, tail, env),
 
@@ -1558,8 +1560,8 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     }
 }
 
-fn negate<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    docvec!["not ", maybe_block_expr(value, env)]
+fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    docvec![op, maybe_block_expr(value, env)]
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {

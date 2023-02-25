@@ -692,7 +692,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            UntypedExpr::Negate { value, .. } => self.negate(value),
+            UntypedExpr::NegateNumber { value, .. } => self.negate_with("-", value),
+
+            UntypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
             UntypedExpr::Fn {
                 is_capture: true,
@@ -1529,10 +1531,10 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn negate<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+    fn negate_with<'a>(&mut self, op: &'static str, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::BinOp { .. } => docvec!["!{ ", self.expr(expr), " }"],
-            _ => docvec!["!", self.wrap_expr(expr)],
+            UntypedExpr::BinOp { .. } => docvec![op, "{ ", self.expr(expr), " }"],
+            _ => docvec![op, self.wrap_expr(expr)],
         }
     }
 
