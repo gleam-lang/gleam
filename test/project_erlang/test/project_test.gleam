@@ -39,5 +39,5 @@ external fn mix_dep_function() -> Dynamic =
 // Testing for this bug in metadata encoding.
 // https://github.com/gleam-lang/gleam/commit/c8f3bd0ddbf61c27ea35f37297058ecca7515f6c
 pub fn name_test() {
-  assert True = atom.from_string("ok") == atom_from_string("ok")
+  let assert True = atom.from_string("ok") == atom_from_string("ok")
 }
