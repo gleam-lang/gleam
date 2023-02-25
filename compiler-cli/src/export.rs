@@ -90,8 +90,11 @@ pub fn hex_tarball() -> Result<()> {
 
     let path = paths::build_tarball(&config.name, &config.version.to_string());
     crate::fs::write_bytes(&path, &data)?;
-    println!("
+    println!(
+        "
 Your hex tarball has been generated in {}.
-", &path.display());
+",
+        &path.display()
+    );
     Ok(())
 }
