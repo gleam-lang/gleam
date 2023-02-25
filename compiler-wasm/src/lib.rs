@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path};
 
 use gleam_core::{
-    build::{Mode, Options, Package, ProjectCompiler, Target},
+    build::{Codegen, Mode, Options, Package, ProjectCompiler, Target},
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
@@ -95,7 +95,7 @@ fn compile_project(
     let options = Options {
         mode: Mode::Dev,
         target: Some(target),
-        perform_codegen: true,
+        codegen: Codegen::All,
     };
 
     let mut pcompiler = ProjectCompiler::new(

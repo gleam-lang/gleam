@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use gleam_core::{
-    build::{Mode, Options, Runtime, Target},
+    build::{Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -33,7 +33,7 @@ pub fn command(
 
     // Build project so we have bytecode to run
     let _ = crate::build::main(Options {
-        perform_codegen: true,
+        codegen: Codegen::All,
         mode: Mode::Dev,
         target,
     })?;
