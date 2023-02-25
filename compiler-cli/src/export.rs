@@ -1,5 +1,5 @@
 use gleam_core::{
-    build::{Mode, Options, Target, Codegen},
+    build::{Codegen, Mode, Options, Target},
     paths, Result,
 };
 
