@@ -1476,6 +1476,72 @@ fn expr_float() {
 "#
     );
 
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00
+}
+"#,
+        r#"fn f() {
+  1.0
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100
+}
+"#,
+        r#"fn f() {
+  1.001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001
+}
+"#,
+        r#"fn f() {
+  1.001001
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00e100_100
+}
+"#,
+        r#"fn f() {
+  1.0e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.00100e100_100
+}
+"#,
+        r#"fn f() {
+  1.001e100_100
+}
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"fn f() {
+  1.001001e100_100
+}
+"#,
+        r#"fn f() {
+  1.001001e100_100
+}
+"#
+    );
+
     assert_format!(
         r#"fn f() {
   1.0
@@ -1903,7 +1969,6 @@ fn expr_float() {
 }
 "#
     );
-
     assert_format_rewrite!(
         r#"const a_float = 1_234.0
 "#,
@@ -1938,6 +2003,25 @@ fn expr_float() {
         r#"const a_float = -1234567_8.0
 "#,
         r#"const a_float = -12_345_678.0
+"#
+    );
+
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00
+"#,
+        r#"const a_float = 1234.0
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.00100
+"#,
+        r#"const a_float = 1234.001
+"#
+    );
+    assert_format_rewrite!(
+        r#"const a_float = 1234.001001
+"#,
+        r#"const a_float = 1234.001001
 "#
     );
 
@@ -2015,13 +2099,25 @@ fn expr_float() {
     );
     assert_format!(
         r#"fn f() {
-  1.0000e100
+  1.0e100
 }
 "#
     );
     assert_format!(
         r#"fn f() {
-  1.0000e100_100
+  1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+  1.0e100_100
+}
+"#
+    );
+    assert_format!(
+        r#"fn f() {
+  1.001e100_100
 }
 "#
     );
@@ -2340,15 +2436,21 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let1() {
     assert_format!(
         r#"fn main() {
-  assert x = 1
+  let assert x = 1
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn expr_let2() {
     assert_format!(
         r#"fn main() {
   let x = {
@@ -2359,7 +2461,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let3() {
     assert_format!(
         r#"fn main() {
   let x = {
@@ -2370,7 +2475,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let4() {
     assert_format!(
         r#"fn main() {
   let y = case x {
@@ -2381,7 +2489,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let5() {
     assert_format!(
         r#"fn main() {
   let y = case x {
@@ -2393,7 +2504,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let6() {
     assert_format!(
         r#"fn main() {
   let x = fn(x) { x }
@@ -2401,7 +2515,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let7() {
     assert_format!(
         r#"fn main() {
   let x = fn() {
@@ -2412,7 +2529,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let8() {
     assert_format!(
         r#"fn main() {
   let x = fn(
@@ -2427,7 +2547,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let9() {
     assert_format!(
         r#"fn main() {
   let x = fn(
@@ -2441,7 +2564,10 @@ fn expr_let() {
 }
 "#
     );
+}
 
+#[test]
+fn expr_let10() {
     assert_format!(
         r#"fn main() {
   let dict = map.from_list([#("a", 0), #("b", 1), #("c", 2), #("d", 3)])
@@ -3037,6 +3163,16 @@ fn tuple_access() {
 }
 
 #[test]
+fn expr_panic() {
+    assert_format!(
+        "fn main() {
+  panic
+}
+"
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {
@@ -3044,10 +3180,27 @@ fn expr_todo() {
 }
 "
     );
+}
 
+#[test]
+fn expr_todo_with_label() {
     assert_format!(
         r#"fn main() {
   todo("todo with a label")
+}
+"#
+    );
+}
+
+#[test]
+fn expr_todo1() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  fn() {}
+}
+"#,
+        r#"fn main() {
+  fn() { todo }
 }
 "#
     );
@@ -3843,8 +3996,8 @@ fn concise_wrapping_of_simple_lists() {
     assert_format!(
         "pub fn main() {
   [
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0,
+    15.0, 16.0, 17.0, 18.0, 19.0, 2.0,
   ]
 }
 "
@@ -3870,8 +4023,8 @@ fn concise_wrapping_of_simple_lists() {
 
     assert_format!(
         "const values = [
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.0,
 ]
 "
     );
@@ -3900,8 +4053,8 @@ fn concise_wrapping_of_simple_bit_strings() {
     assert_format!(
         "pub fn main() {
   <<
-    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-    15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+    1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0,
+    15.0, 16.0, 17.0, 18.0, 19.0, 2.0,
   >>
 }
 "
@@ -3927,8 +4080,8 @@ fn concise_wrapping_of_simple_bit_strings() {
 
     assert_format!(
         "const values = <<
-  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.00, 11.0, 12.0, 13.0, 14.0,
-  15.0, 16.0, 17.0, 18.0, 19.0, 2.00,
+  1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 1.0, 11.0, 12.0, 13.0, 14.0, 15.0,
+  16.0, 17.0, 18.0, 19.0, 2.0,
 >>
 "
     );
@@ -4050,7 +4203,7 @@ fn main() {
 fn assignments_break_value_first_test() {
     assert_format!(
         r#"fn main() {
-  assert Ok(1) = [
+  let assert Ok(1) = [
     10_000_000_000_000_000_000_000_000_001,
     20_000_000_000_000_000_000_000_000_001,
     30_000_000_000_000_000_000_000_000_001,
@@ -4063,7 +4216,7 @@ fn assignments_break_value_first_test() {
 
     assert_format!(
         r#"fn main() {
-  assert Ok(1) = [
+  let assert Ok(1) = [
     1_000_000_000_000_000_000_000_000_000, 2_000_000_000_000_000_000_000_000_000,
     3_000_000_000_000_000_000_000_000_000, 4_000_000_000_000_000_000_000_000_000,
   ]
@@ -4074,7 +4227,7 @@ fn assignments_break_value_first_test() {
 
     assert_format!(
         r#"fn main() {
-  assert <<11, 2, 4, 5, 6>> = [
+  let assert <<11, 2, 4, 5, 6>> = [
     10_000_000_000_000_000_000_000_000_001,
     20_000_000_000_000_000_000_000_000_001,
     30_000_000_000_000_000_000_000_000_001,
@@ -4087,7 +4240,7 @@ fn assignments_break_value_first_test() {
 
     assert_format!(
         r#"fn main() {
-  assert <<11, 2, 4, 5, 6>> = [
+  let assert <<11, 2, 4, 5, 6>> = [
     1_000_000_000_000_000_000_000_000_000, 2_000_000_000_000_000_000_000_000_000,
     3_000_000_000_000_000_000_000_000_000, 4_000_000_000_000_000_000_000_000_000,
   ]
@@ -4098,7 +4251,7 @@ fn assignments_break_value_first_test() {
 
     assert_format!(
         r#"fn main() {
-  assert [11, 2, 4, 5, 6] = [
+  let assert [11, 2, 4, 5, 6] = [
     10_000_000_000_000_000_000_000_000_001,
     20_000_000_000_000_000_000_000_000_001,
     30_000_000_000_000_000_000_000_000_001,
@@ -4111,7 +4264,7 @@ fn assignments_break_value_first_test() {
 
     assert_format!(
         r#"fn main() {
-  assert [11, 2, 4, 5, 6] = [
+  let assert [11, 2, 4, 5, 6] = [
     1_000_000_000_000_000_000_000_000_000, 2_000_000_000_000_000_000_000_000_000,
     3_000_000_000_000_000_000_000_000_000, 4_000_000_000_000_000_000_000_000_000,
   ]
@@ -4178,15 +4331,15 @@ fn let_as_expression() {
 fn assert_as_expression() {
     assert_format!(
         "pub fn main() {
-  assert x = 1
+  let assert x = 1
 }
 "
     );
 
     assert_format!(
         "pub fn main() {
-  assert x = {
-    assert y = 1
+  let assert x = {
+    let assert y = 1
   }
 }
 "
@@ -4444,7 +4597,7 @@ fn list_at_end_of_long_expr_line() {
 fn list_at_end_of_long_pattern_line() {
     assert_format!(
         "pub fn example() {
-  assert LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong([]) =
+  let assert LongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLongLong([]) =
     1
 }
 "
@@ -4639,8 +4792,8 @@ fn case_subject_block() {
         r#"pub fn main() {
   case
     {
-      assert Ok(x) = thing()
-      assert Ok(y) = thing()
+      let assert Ok(x) = thing()
+      let assert Ok(y) = thing()
       x + y
     }
   {
@@ -4716,7 +4869,7 @@ fn multiple_line_spread_list_comments() {
 fn list_spread_comment_pattern() {
     assert_format!(
         r#"fn main() {
-  assert [
+  let assert [
     1,
     // Spread!
     // Spread?
@@ -4732,7 +4885,7 @@ fn list_spread_comment_pattern() {
 fn list_spread_discard_comment_pattern() {
     assert_format!(
         r#"fn main() {
-  assert [
+  let assert [
     1,
     // Spread!
     // Spread?
@@ -4780,6 +4933,20 @@ fn not_add() {
     assert_format!(
         r#"pub fn main() {
   !{ 1 + 3 }
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_assert() {
+    assert_format_rewrite!(
+        r#"fn main(x) {
+  assert True = x
+}
+"#,
+        r#"fn main(x) {
+  let assert True = x
 }
 "#
     );

@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 313
+assertion_line: 323
 expression: "pub type Thing {\n  Thing(a: Int, b: Int)\n}\n\npub fn identity(x) { x }\n\npub fn main() {\n  let thing = Thing(1, 2)\n  Thing(..thing |> identity, b: 1000)\n}"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([identity/1, main/0]).
 -export_type([thing/0]).

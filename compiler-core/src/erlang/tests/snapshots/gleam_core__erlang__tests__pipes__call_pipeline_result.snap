@@ -4,7 +4,7 @@ assertion_line: 103
 expression: "\npub fn main() {\n  { 1 |> add }(1)\n}\n\npub fn add(x) {\n  fn(y) { x + y }\n}\n"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([add/1, main/0]).
 

@@ -53,7 +53,7 @@ pub async fn publish_package<Http: HttpClient>(
     replace: bool,
     http: &Http,
 ) -> Result<()> {
-    tracing::info!("Creating API key with Hex");
+    tracing::info!("Publishing package, replace: {}", replace);
     let request = hexpm::publish_package_request(release_tarball, api_key, config, replace);
     let response = http.send(request).await?;
     hexpm::publish_package_response(response).map_err(Error::hex)

@@ -20,7 +20,7 @@ function go(x, y) {
       "go",
       "No case clause matched",
       { values: [x, y] }
-    );
+    )
   }
 }
 

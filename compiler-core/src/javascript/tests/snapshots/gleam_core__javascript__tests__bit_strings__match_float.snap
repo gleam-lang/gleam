@@ -14,7 +14,7 @@ function go(x) {
       "go",
       "Assignment pattern did not match",
       { value: x }
-    );
+    )
   }
   let a = x.floatAt(0);
   let b = x.byteAt(8);

@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "\nimport rocket_ship/launcher\npub fn go() { launcher.x }\n"
+---
+import * as $launcher from "../rocket_ship/launcher.mjs";
+
+export function go() {
+  return $launcher.x;
+}
+

@@ -197,9 +197,11 @@ pub fn register_import(
     origin: Origin,
     environment: &mut Environment<'_>,
 ) -> Result<(), Error> {
+    // Determine local alias of imported module
+    let module_name = import.variable_name();
+
     let Import {
         module,
-        as_name,
         unqualified,
         location,
         ..
@@ -223,13 +225,6 @@ pub fn register_import(
             test_module: name,
         });
     }
-
-    // Determine local alias of imported module
-    let module_name = as_name
-        .as_ref()
-        .cloned()
-        .or_else(|| module.split('/').last().map(|s| s.into()))
-        .expect("Typer could not identify module name.");
 
     // Insert unqualified imports into scope
     for UnqualifiedImport {

@@ -1,6 +1,7 @@
 use crate::{
     ast::TodoKind,
     diagnostic::{self, Diagnostic, Location},
+    error::wrap,
     type_,
 };
 use smol_str::SmolStr;
@@ -269,6 +270,46 @@ expression.",
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
                             text: Some("This variable is never used.".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::TryUsed { location } => Diagnostic {
+                    title: "try expressions are deprecated".into(),
+                    text: wrap(
+                        "`try` expressions are deprecated and will be removed \
+in a future version of Gleam, consider using `use` or `case` instead.\n",
+                    ),
+                    hint: Some(
+                        "Run `gleam fix` to automatically update to `use` expressions.".into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::DeprecatedAssertUsed { location } => Diagnostic {
+                    title: "Deprecated assert syntax".into(),
+                    text: "This syntax has been deprecate in favour of `let assert ... = ...`\n"
+                        .into(),
+                    hint: Some(
+                        "Run `gleam format` to automatically update to the new syntax.".into(),
+                    ),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
                             span: *location,
                         },
                         extra_labels: Vec::new(),

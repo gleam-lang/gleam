@@ -390,12 +390,12 @@ export function remainderInt(a, b) {
   if (b === 0) {
     return 0;
   } else {
-    return a % b | 0;
+    return a % b;
   }
 }
 
 export function divideInt(a, b) {
-  return divideFloat(a, b) | 0;
+  return Math.trunc(divideFloat(a, b))
 }
 
 export function divideFloat(a, b) {

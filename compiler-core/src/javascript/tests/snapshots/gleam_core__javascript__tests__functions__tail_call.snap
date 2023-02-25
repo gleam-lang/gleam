@@ -23,7 +23,7 @@ export function count(loop$xs, loop$n) {
         "count",
         "No case clause matched",
         { values: [xs] }
-      );
+      )
     }
   }
 }

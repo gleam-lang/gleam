@@ -8,7 +8,7 @@ use crate::{
     },
     docvec,
     io::Utf8Writer,
-    parse::extra::Comment,
+    parse::extra::{Comment, ModuleExtra},
     pretty::*,
     type_::{self, Type},
     Error, Result,
@@ -26,35 +26,40 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &SmolStr, path: &Path) -> Resul
         src: src.clone(),
         error,
     })?;
-    let intermediate = Intermediate {
-        comments: extra
-            .comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-        doc_comments: extra
-            .doc_comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-        empty_lines: &extra.empty_lines,
-        module_comments: extra
-            .module_comments
-            .iter()
-            .map(|span| Comment::from((span, src)))
-            .collect(),
-    };
-
+    let intermediate = Intermediate::from_extra(&extra, src);
     Formatter::with_comments(&intermediate)
         .module(&module)
         .pretty_print(80, writer)
 }
 
-struct Intermediate<'a> {
+pub(crate) struct Intermediate<'a> {
     comments: Vec<Comment<'a>>,
     doc_comments: Vec<Comment<'a>>,
     module_comments: Vec<Comment<'a>>,
     empty_lines: &'a [u32],
+}
+
+impl<'a> Intermediate<'a> {
+    pub fn from_extra(extra: &'a ModuleExtra, src: &'a SmolStr) -> Intermediate<'a> {
+        Intermediate {
+            comments: extra
+                .comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+            doc_comments: extra
+                .doc_comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+            empty_lines: &extra.empty_lines,
+            module_comments: extra
+                .module_comments
+                .iter()
+                .map(|span| Comment::from((span, src)))
+                .collect(),
+        }
+    }
 }
 
 /// Hayleigh's bane
@@ -71,7 +76,7 @@ impl<'comments> Formatter<'comments> {
         Default::default()
     }
 
-    fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
+    pub(crate) fn with_comments(extra: &'comments Intermediate<'comments>) -> Self {
         Self {
             comments: &extra.comments,
             doc_comments: &extra.doc_comments,
@@ -165,7 +170,7 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
+    pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
         let groups = join(
             module.statements.iter().map(|t| self.target_group(t)),
             lines(2),
@@ -628,7 +633,9 @@ impl<'comments> Formatter<'comments> {
 
         let keyword = match kind {
             Some(AssignmentKind::Let) => "let ",
-            Some(AssignmentKind::Assert) => "assert ",
+            Some(AssignmentKind::Assert) => "let assert ",
+            Some(AssignmentKind::DeprecatedAssert) => "let assert ",
+            // TODO: remove when Try has been removed.
             None => "try ",
         };
 
@@ -663,6 +670,8 @@ impl<'comments> Formatter<'comments> {
         let comments = self.pop_comments(expr.start_byte_index());
 
         let document = match expr {
+            UntypedExpr::Panic { .. } => "panic".to_doc(),
+
             UntypedExpr::Todo { label: None, .. } => "todo".to_doc(),
 
             UntypedExpr::Todo { label: Some(l), .. } => docvec!["todo(\"", l, "\")"],
@@ -773,18 +782,34 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn float<'a>(&self, value: &'a str) -> Document<'a> {
+        // Create parts
         let mut parts = value.split('.');
         let integer_part = parts.next().unwrap_or_default();
+        // floating point part
         let fp_part = parts.next().unwrap_or_default();
-
         let integer_doc = self.underscore_integer_string(integer_part);
         let dot_doc = ".".to_doc();
-        let fp_doc = match value.ends_with('.') {
-            true => "0".to_doc(),
-            false => fp_part.to_doc(),
-        };
 
-        integer_doc.append(dot_doc).append(fp_doc)
+        // Split fp_part into a regular fractional and maybe a scientific part
+        let (fp_part_fractional, fp_part_scientific) = fp_part.split_at(
+            fp_part
+                .chars()
+                .position(|ch| ch == 'e')
+                .unwrap_or(fp_part.len()),
+        );
+
+        // Trim right any consequtive '0's
+        let mut fp_part_fractional = fp_part_fractional.trim_end_matches('0').to_string();
+        // If there is no fractional part left, add a '0', thus that 1. becomes 1.0 etc.
+        if fp_part_fractional.is_empty() {
+            fp_part_fractional.push('0');
+        }
+        let fp_doc = fp_part_fractional.chars().collect::<SmolStr>();
+
+        integer_doc
+            .append(dot_doc)
+            .append(fp_doc)
+            .append(fp_part_scientific)
     }
 
     fn int<'a>(&self, value: &'a str) -> Document<'a> {
@@ -1522,10 +1547,7 @@ impl<'comments> Formatter<'comments> {
         if use_.assignments.is_empty() {
             docvec!["use <-", call]
         } else {
-            let assignments = use_
-                .assignments
-                .iter()
-                .map(|(name, _)| name.name().to_doc());
+            let assignments = use_.assignments.iter().map(|pattern| self.pattern(pattern));
             let assignments = Itertools::intersperse(assignments, break_(",", ", "));
             let left = ["use".to_doc(), break_("", " ")]
                 .into_iter()

@@ -16,7 +16,10 @@ pub fn test() {
   }
 }"#
     );
+}
 
+#[test]
+fn alternative_patterns1() {
     // Alternative patterns with a clause containing vars
     assert_erl!(
         r#"
@@ -26,7 +29,10 @@ pub fn test() {
   }
 }"#
     );
+}
 
+#[test]
+fn alternative_patterns2() {
     // Alternative patterns with a guard clause containing vars
     assert_erl!(
         r#"
@@ -38,7 +44,10 @@ pub fn test() {
     }
 }"#
     );
+}
 
+#[test]
+fn alternative_patterns3() {
     assert_erl!(
         r#"
 pub const constant = Ok(1)

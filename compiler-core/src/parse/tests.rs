@@ -239,20 +239,6 @@ fn anonymous_function_labeled_arguments() {
 }
 
 #[test]
-fn anon_function_no_body() {
-    assert_error!(
-        "let x = fn() {} x()",
-        ParseError {
-            error: ParseErrorType::UnexpectedToken {
-                expected: vec!["The body of a function".into()],
-                hint: None
-            },
-            location: SrcSpan { start: 16, end: 17 },
-        }
-    );
-}
-
-#[test]
 fn no_let_binding() {
     assert_error!(
         "foo = 32",

@@ -83,3 +83,18 @@ the entrypoint.sh script.
 
     Ok(())
 }
+
+pub fn hex_tarball() -> Result<()> {
+    let config = crate::config::root_config()?;
+    let data: Vec<u8> = crate::publish::build_hex_tarball(&config)?;
+
+    let path = paths::build_tarball(&config.name, &config.version.to_string());
+    crate::fs::write_bytes(&path, &data)?;
+    println!(
+        "
+Your hex tarball has been generated in {}.
+",
+        &path.display()
+    );
+    Ok(())
+}

@@ -5,6 +5,7 @@ mod external_fn;
 mod functions;
 mod guards;
 mod numbers;
+mod panic;
 mod patterns;
 mod pipes;
 mod records;
@@ -95,7 +96,10 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
   x
 }"#
     );
+}
 
+#[test]
+fn integration_test0_1() {
     assert_erl!(
         r#"pub fn go() {
   let y = 1
@@ -103,7 +107,10 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
   y
 }"#
     );
+}
 
+#[test]
+fn integration_test0_2() {
     // hex, octal, and binary literals
     assert_erl!(
         r#"pub fn go() {
@@ -113,7 +120,10 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
   fifteen
 }"#
     );
+}
 
+#[test]
+fn integration_test0_3() {
     assert_erl!(
         r#"pub fn go() {
   let y = 1
@@ -362,7 +372,10 @@ fn main() {
 }
 "#
     );
+}
 
+#[test]
+fn field_access_function_call1() {
     // Parentheses are added when calling functions returned by tuple access
     assert_erl!(
         r#"
@@ -447,7 +460,11 @@ fn allowed_string_escapes() {
 #[test]
 fn keyword_constructors() {
     assert_erl!("pub type X { Div }");
+}
 
+// https://github.com/gleam-lang/gleam/issues/1006
+#[test]
+fn keyword_constructors1() {
     assert_erl!("pub type X { Fun(Int) }");
 }
 

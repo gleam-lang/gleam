@@ -16,7 +16,7 @@ export function main() {
         "",
         "This has not yet been implemented",
         {}
-      );
+      )
     },
   );
 }

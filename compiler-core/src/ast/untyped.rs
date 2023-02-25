@@ -107,6 +107,10 @@ pub enum UntypedExpr {
         label: Option<SmolStr>,
     },
 
+    Panic {
+        location: SrcSpan,
+    },
+
     BitString {
         location: SrcSpan,
         segments: Vec<UntypedExprBitStringSegment>,
@@ -141,6 +145,7 @@ impl UntypedExpr {
             | Self::Float { location, .. }
             | Self::BinOp { location, .. }
             | Self::Tuple { location, .. }
+            | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -230,13 +235,5 @@ impl HasLocation for UntypedExpr {
 pub struct Use {
     pub location: SrcSpan,
     pub call: Box<UntypedExpr>,
-    pub assignments: Vec<(AssignName, SrcSpan)>,
-}
-impl Use {
-    pub(crate) fn assigned_names(&self) -> impl Iterator<Item = &str> {
-        self.assignments
-            .iter()
-            .map(|(name, _)| name)
-            .flat_map(AssignName::assigned_name)
-    }
+    pub assignments: Vec<UntypedPattern>,
 }

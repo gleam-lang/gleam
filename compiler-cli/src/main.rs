@@ -59,6 +59,7 @@ mod config;
 mod dependencies;
 mod docs;
 mod export;
+mod fix;
 mod format;
 mod fs;
 mod hex;
@@ -155,6 +156,13 @@ enum Command {
         check: bool,
     },
 
+    /// Fix source code
+    Fix {
+        /// Files to fix
+        #[clap(default_value = ".")]
+        files: Vec<String>,
+    },
+
     /// Start an Erlang shell
     Shell,
 
@@ -219,6 +227,7 @@ enum Command {
 pub enum ExportTarget {
     /// Precompiled Erlang, suitable for deployment.
     ErlangShipment,
+    HexTarball,
 }
 
 #[derive(Args, Debug, Clone)]
@@ -373,6 +382,8 @@ fn main() {
             check,
         } => format::run(stdin, check, files),
 
+        Command::Fix { files } => fix::run(files),
+
         Command::Deps(Dependencies::List) => dependencies::list(),
 
         Command::Deps(Dependencies::Download) => {
@@ -423,6 +434,7 @@ fn main() {
         Command::LanguageServer => lsp::main(),
 
         Command::Export(ExportTarget::ErlangShipment) => export::erlang_shipment(),
+        Command::Export(ExportTarget::HexTarball) => export::hex_tarball(),
     };
 
     match result {

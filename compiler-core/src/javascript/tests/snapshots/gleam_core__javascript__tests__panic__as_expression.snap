@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 27
+expression: "\nfn go(f) {\n  let boop = panic\n  f(panic)\n};\n"
+---
+import { throwError } from "../gleam.mjs";
+
+function go(f) {
+  let boop = throwError(
+    "todo",
+    "my/mod",
+    3,
+    "go",
+    "panic expression evaluated",
+    {}
+  );
+  return f(
+    throwError("todo", "my/mod", 4, "go", "panic expression evaluated", {}),
+  );
+}
+

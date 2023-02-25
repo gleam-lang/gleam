@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 39
+expression: "\nfn go(f) {\n  f |> panic\n};\n"
+---
+import { throwError } from "../gleam.mjs";
+
+function go(f) {
+  let _pipe = f;
+  return throwError("todo", "my/mod", 3, "go", "panic expression evaluated", {})(
+    _pipe,
+  );
+}
+

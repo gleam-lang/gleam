@@ -1,0 +1,4 @@
+name = "hextarball"
+version = "0.1.0"
+description = "Test project to construct a hex tarball"
+licences = ["Apache-2.0"]

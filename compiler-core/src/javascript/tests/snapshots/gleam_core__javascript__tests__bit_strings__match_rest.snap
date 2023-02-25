@@ -15,7 +15,7 @@ function go(x) {
       "go",
       "Assignment pattern did not match",
       { value: $ }
-    );
+    )
   }
   let b = $.sliceAfter(1);
   return $;

@@ -21,7 +21,7 @@ export function loop(loop$indentation) {
         "loop",
         "No case clause matched",
         { values: [$] }
-      );
+      )
     }
   }
 }

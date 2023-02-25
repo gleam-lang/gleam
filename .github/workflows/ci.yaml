@@ -344,3 +344,7 @@ jobs:
       - name: Test JavaScript prelude
         run: make
         working-directory: ./test/javascript_prelude
+
+      - name: Test export of hex tarball
+        run: make test
+        working-directory: ./test/hextarball

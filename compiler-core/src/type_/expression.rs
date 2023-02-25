@@ -5,12 +5,12 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::infer_bit_string_segment_option,
     ast::{
-        Arg, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
-        Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
+        Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
+        ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
         TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
         UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
-        UntypedMultiPattern, UntypedPattern, Use,
+        UntypedMultiPattern, UntypedPattern, Use, USE_ASSIGNMENT_VARIABLE,
     },
 };
 
@@ -77,6 +77,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 kind,
                 ..
             } => Ok(self.infer_todo(location, kind, label)),
+
+            UntypedExpr::Panic { location } => Ok(self.infer_panic(location)),
 
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
@@ -217,6 +219,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    fn infer_panic(&mut self, location: SrcSpan) -> TypedExpr {
+        let typ = self.new_unbound_var();
+        TypedExpr::Panic { location, typ }
+    }
+
     fn infer_string(&mut self, value: SmolStr, location: SrcSpan) -> TypedExpr {
         TypedExpr::String {
             location,
@@ -313,34 +320,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut following_expressions: Vec<UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let mut call = get_use_expression_call(*use_.call)?;
-        let callback_arguments = use_assignments_to_function_arguments(use_.assignments);
+        let assignments = UseAssignments::from_use_expression(use_.assignments);
 
-        // TODO: Upgrade this to an error when we have partial type checking.
-        // If there are no following expressions then this expressions is
-        // incomplete. In this case we insert a `todo` so that the user can type
-        // check this code even if it would fail when run.
+        let mut expressions = assignments.body_assignments;
+
         if following_expressions.is_empty() {
             let todo = UntypedExpr::Todo {
                 location: use_.location,
                 label: None,
                 kind: TodoKind::IncompleteUse,
             };
-            following_expressions.push(todo);
+            expressions.push(todo);
+        } else {
+            expressions.append(&mut following_expressions);
         }
+
+        let first = expressions
+            .get(0)
+            .expect("This is safe, a default todo was set above")
+            .location();
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.
-        let first = following_expressions
-            .get(0)
-            .expect("default todo set above");
         let callback = UntypedExpr::Fn {
-            arguments: callback_arguments,
-            location: SrcSpan::new(first.location().start, sequence_location.end),
+            arguments: assignments.function_arguments,
+            location: SrcSpan::new(first.start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
             body: Box::new(UntypedExpr::Sequence {
                 location: sequence_location,
-                expressions: following_expressions,
+                expressions,
             }),
         };
 
@@ -721,6 +730,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        if kind == AssignmentKind::DeprecatedAssert {
+            self.environment
+                .warnings
+                .push(Warning::DeprecatedAssertUsed { location });
+        }
+
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
         let value_typ = value.type_();
 
@@ -739,8 +754,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // We currently only do only limited exhaustiveness checking of custom types
         // at the top level of patterns.
-        // Do not perform exhaustiveness checking if user explicitly used `assert`.
-        if kind != AssignmentKind::Assert {
+        // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
+        if kind.performs_exhaustiveness_check() {
             if let Err(unmatched) = self
                 .environment
                 .check_exhaustiveness(vec![pattern.clone()], collapse_links(value_typ.clone()))
@@ -770,6 +785,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        self.environment
+            .warnings
+            .push(Warning::TryUsed { location });
+
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
 
         let value_type = self.new_unbound_var();
@@ -2141,14 +2160,85 @@ fn get_use_expression_call(call: UntypedExpr) -> Result<UseCall, Error> {
     }
 }
 
-fn use_assignments_to_function_arguments(assignments: Vec<(AssignName, SrcSpan)>) -> Vec<Arg<()>> {
-    assignments
-        .into_iter()
-        .map(|(name, location)| Arg {
-            names: name.to_arg_names(),
-            location,
-            annotation: None,
-            type_: (),
-        })
-        .collect()
+#[derive(Debug, Default)]
+struct UseAssignments {
+    /// With sugar
+    /// ```gleam
+    /// use Box(x) = ...
+    /// ```
+    /// Without sugar
+    /// ```gleam
+    /// fn(_use1) { let Box(x) = _use1 }
+    /// // ^^^^^ The function arguments
+    /// ```
+    function_arguments: Vec<Arg<()>>,
+
+    /// With sugar
+    /// ```gleam
+    /// use Box(x) = ...
+    /// ```
+    /// Without sugar
+    /// ```gleam
+    /// fn(_use1) { let Box(x) = _use1 }
+    /// //          ^^^^^^^^^^^^^^^^^^ The body assignments
+    /// ```
+    body_assignments: Vec<UntypedExpr>,
+}
+
+impl UseAssignments {
+    fn from_use_expression(patterns: Vec<UntypedPattern>) -> UseAssignments {
+        let mut assignments = UseAssignments::default();
+
+        for (index, pattern) in patterns.into_iter().enumerate() {
+            match pattern {
+                // For discards we add a discard function arguments.
+                Pattern::Discard { name, location } => assignments.function_arguments.push(Arg {
+                    location,
+                    names: ArgNames::Discard { name },
+                    annotation: None,
+                    type_: (),
+                }),
+
+                // For simple patterns of a single variable we add a regular
+                // function argument.
+                Pattern::Var { location, name } => assignments.function_arguments.push(Arg {
+                    location,
+                    names: ArgNames::Named { name },
+                    annotation: None,
+                    type_: (),
+                }),
+
+                // For more complex patterns we add a function argument and also
+                // an assignment in the function body to handle the pattern.
+                pattern @ (Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::String { .. }
+                | Pattern::VarUsage { .. }
+                | Pattern::Assign { .. }
+                | Pattern::List { .. }
+                | Pattern::Constructor { .. }
+                | Pattern::Tuple { .. }
+                | Pattern::BitString { .. }
+                | Pattern::Concatenate { .. }) => {
+                    let name: SmolStr = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
+                    let location = pattern.location();
+                    assignments.function_arguments.push(Arg {
+                        location,
+                        names: ArgNames::Named { name: name.clone() },
+                        annotation: None,
+                        type_: (),
+                    });
+                    assignments.body_assignments.push(UntypedExpr::Assignment {
+                        location,
+                        pattern,
+                        kind: AssignmentKind::Let,
+                        annotation: None,
+                        value: Box::new(UntypedExpr::Var { location, name }),
+                    })
+                }
+            }
+        }
+
+        assignments
+    }
 }

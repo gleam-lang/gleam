@@ -1,10 +1,10 @@
 ---
 source: compiler-core/src/erlang/tests/bit_strings.rs
-assertion_line: 101
+assertion_line: 112
 expression: "pub fn go(x) {\n  let <<name_size:8, name:binary-size(name_size)>> = x\n  name\n}"
 ---
 -module(the_app).
--compile(no_auto_import).
+-compile([no_auto_import, nowarn_unused_vars]).
 
 -export([go/1]).
 

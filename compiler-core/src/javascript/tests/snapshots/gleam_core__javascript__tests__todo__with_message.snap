@@ -6,6 +6,6 @@ expression: "\nfn go() {\n  todo(\"I should do this\")\n};\n"
 import { throwError } from "../gleam.mjs";
 
 function go() {
-  throwError("todo", "my/mod", 3, "go", "I should do this", {});
+  throwError("todo", "my/mod", 3, "go", "I should do this", {})
 }
 

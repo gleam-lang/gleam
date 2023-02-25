@@ -2,22 +2,42 @@
 
 ## Unreleased
 
-- `let assert ... = ...` is now an accepted syntax for assertion assignments.
+- The new `panic` keyword can be used to crash the program. This may be useful
+  for situations in which a program has got into an unrecoverable invalid state.
+- `try` expressions are now deprecated and will be removed in a future version.
+- The new `gleam fix` command can be used to automatically convert `try`
+  expressions to `use` expressions.
+- `let assert ... = ...` is now the syntax for assertion assignments. The
+  `assert ... = ...` syntax is deprecated and will be removed in a future
+  version. Run `gleam format` to automatically update your code.
+- `gleam export hex-tarball` can be used to create a tarball suitable for
+  uploading to a Hex compatible package repository.
 - The unused private type and constructor detection has been improved.
 - The argument `--runtime` now accepts `nodejs` as the name for that runtime.
   The previous name `node` is still accepted.
+- Patterns can now be used in `use` expressions.
 - Fixed a bug where string concatenation patterns could generate javascript
   code with wrong slice index due to ut8/ut16 length mismatch.
+- The Erlang compiler will no longer emit a duplicate warning for unused
+  variables.
 - Fixed a bug where typescript type definitions for types with unlabelled
   arguments where generated with an invalid identifier and unlabelled fields
   were generated with a name that didn't match the javascript implementation.
 - Fixed a bug in the type inferrer were unannotated functions that were
   used before they were defined in a module could in rare cased be inferred with
   a more general type than is correct.
+- Fixed a bug where imported constants could generated incorrect JavaScript
+  code.
+- Fixed a bug where integer division with large numbers on JavaScript could produce
+  incorrect results.
 - Fixed a bug where pattern matches on custom types with mixed labelled and
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
   the compiler to panic.
+- The formatter now truncates meaningless zeroes of floats' fractional parts.
+- Anonymous functions may now have an empty body. The compiler will emit a
+  warning for functions without a body, and these functions will crash at
+  runtime if executed.
 
 ## v0.26.2 - 2023-02-03
 
@@ -43,7 +63,6 @@
   been improved.
 - Fixed a bug where the language server wouldn't analyse test code.
 - Fixed a bug where `assert` expressions can generate invalid Erlang.
-- Fixed a bug where `assert` expressions can generate Erlang that emits a
   warning.
 - Fixed a bug where arguments would be passed incorrectly to Deno.
 - Fixed a bug where defining variables that shadow external functions could

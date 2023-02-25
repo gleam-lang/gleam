@@ -264,6 +264,14 @@ pub enum PatternMatchKind {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Warning {
+    TryUsed {
+        location: SrcSpan,
+    },
+
+    DeprecatedAssertUsed {
+        location: SrcSpan,
+    },
+
     Todo {
         kind: TodoKind,
         location: SrcSpan,
