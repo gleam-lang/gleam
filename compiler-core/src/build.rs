@@ -61,6 +61,23 @@ impl Target {
     }
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Codegen {
+    All,
+    DepsOnly,
+    None,
+}
+
+impl Codegen {
+    fn should_codegen(&self, is_root_package: bool) -> bool {
+        match self {
+            Codegen::All => true,
+            Codegen::DepsOnly => !is_root_package,
+            Codegen::None => false,
+        }
+    }
+}
+
 #[derive(
     Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
 )]

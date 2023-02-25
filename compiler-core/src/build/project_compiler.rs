@@ -23,7 +23,7 @@ use std::{
     time::Instant,
 };
 
-use super::ErlangAppCodegenConfiguration;
+use super::{Codegen, ErlangAppCodegenConfiguration};
 
 // On Windows we have to call rebar3 via a little wrapper script.
 //
@@ -41,12 +41,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
-    /// Whether to perform codegen for the root project. Dependencies always
-    /// have codegen run. Use for the `gleam check` command.
-    /// If future when we have per-module incremental builds we will need to
-    /// track both whether type metadata has been produced and also whether
-    /// codegen has been performed. As such there will be 2 kinds of caching.
-    pub perform_codegen: bool,
+    pub codegen: Codegen,
 }
 
 #[derive(Debug)]
@@ -134,10 +129,9 @@ where
         self.check_gleam_version()?;
         self.compile_dependencies()?;
 
-        if self.options.perform_codegen {
-            self.telemetry.compiling_package(&self.config.name);
-        } else {
-            self.telemetry.checking_package(&self.config.name);
+        match self.options.codegen {
+            Codegen::All => self.telemetry.compiling_package(&self.config.name),
+            Codegen::DepsOnly | Codegen::None => self.telemetry.checking_package(&self.config.name),
         }
         let result = self.compile_root_package();
 
@@ -418,8 +412,8 @@ where
         );
         compiler.write_metadata = true;
         compiler.write_entrypoint = is_root;
-        compiler.perform_codegen = !is_root || self.options.perform_codegen;
-        compiler.compile_beam_bytecode = !is_root || self.options.perform_codegen;
+        compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
+        compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
         compiler.subprocess_stdio = self.subprocess_stdio;
 
         // Compile project to Erlang or JavaScript source code

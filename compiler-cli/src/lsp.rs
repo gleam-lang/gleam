@@ -1011,7 +1011,7 @@ where
         let options = build::Options {
             mode: build::Mode::Lsp,
             target: None,
-            perform_codegen: false,
+            codegen: build::Codegen::None,
         };
         let mut project_compiler =
             ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);
