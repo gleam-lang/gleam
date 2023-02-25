@@ -395,8 +395,7 @@ export function remainderInt(a, b) {
 }
 
 export function divideInt(a, b) {
-  const result = divideFloat(a, b);
-  return result < 0 ? Math.ceil(result) : Math.floor(result);
+  return Math.trunc(divideFloat(a, b))
 }
 
 export function divideFloat(a, b) {
