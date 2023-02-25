@@ -122,7 +122,7 @@ pub fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
 }
 
 fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
-    check_config_for_publishing(&config)?;
+    check_config_for_publishing(config)?;
 
     // Reset the build directory so we know the state of the project
     fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
