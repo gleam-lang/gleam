@@ -26,6 +26,8 @@
   a more general type than is correct.
 - Fixed a bug where imported constants could generated incorrect JavaScript
   code.
+- Fixed a bug where integer division with large numbers on JavaScript could produce
+  incorrect results.
 - Fixed a bug where pattern matches on custom types with mixed labelled and
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
