@@ -156,7 +156,7 @@ enum Command {
         check: bool,
     },
 
-    /// Fix source code
+    /// Rewrite deprecated Gleam code
     Fix {
         /// Files to fix
         #[clap(default_value = ".")]
