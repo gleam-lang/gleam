@@ -24,16 +24,16 @@
   arguments where generated with an invalid identifier and unlabelled fields
   were generated with a name that didn't match the javascript implementation.
 - Fixed a bug in the type inferrer were unannotated functions that were
-  used before they were defined in a module could in rare cased be inferred with
-  a more general type than is correct.
+  used before they were defined in a module could in rare cased be inferred
+  with a more general type than is correct.
 - Fixed a bug where the LSP would fail to show type information on hover for
   expressions after a use expression.
 - Fixed a bug where imported constants could generated incorrect JavaScript
   code.
 - Fixed a bug where the LSP would perform codegen for dependencies.
 - Fixed a bug where the LSP would compile native dependencies needlessly.
-- Fixed a bug where integer division with large numbers on JavaScript could produce
-  incorrect results.
+- Fixed a bug where integer division with large numbers on JavaScript could
+  produce incorrect results.
 - Fixed a bug where pattern matches on custom types with mixed labelled and
   unlabelled arguments could not be compiled when targeting JavaScript.
 - Fixed a bug where local variables in case guard constant expressions caused
@@ -42,6 +42,8 @@
 - Anonymous functions may now have an empty body. The compiler will emit a
   warning for functions without a body, and these functions will crash at
   runtime if executed.
+- Fixed bug where raised errors on JS would have an extra stack frame recorded
+  in them.
 
 ## v0.26.2 - 2023-02-03
 
