@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 135
 expression: "\nfn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (x.isOk()) {
@@ -11,7 +10,7 @@ function go(x) {
   } else if (!x.isOk()) {
     return 0;
   } else {
-    throwError(
+    throw makeError(
       "case_no_match",
       "my/mod",
       3,

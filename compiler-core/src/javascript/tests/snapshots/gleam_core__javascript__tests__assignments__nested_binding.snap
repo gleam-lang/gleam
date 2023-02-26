@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 23
 expression: "\nfn go(x) {\n  let #(a, #(b, c, 2) as t, _, 1) = x\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (x[1][2] !== 2 || x[3] !== 1) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       3,

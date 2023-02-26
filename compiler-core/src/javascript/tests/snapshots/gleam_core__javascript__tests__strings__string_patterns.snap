@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 16
 expression: "\nfn go(x) {\n  let \"Hello\" = x\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (x !== "Hello") {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       3,

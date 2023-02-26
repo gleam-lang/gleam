@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 34
 expression: "\n\nfn go(x, foo) {\n  let a = 1\n  foo(a)\n  let a = 2\n  foo(a)\n  let #(a, 3) = x\n  let b = a\n  foo(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  foo(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x, foo) {
   let a = 1;
@@ -11,7 +10,7 @@ function go(x, foo) {
   let a$1 = 2;
   foo(a$1);
   if (x[1] !== 3) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       8,

@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 104
 expression: "\nfn go(x) {\n  let 4 = x\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (x !== 4) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       3,

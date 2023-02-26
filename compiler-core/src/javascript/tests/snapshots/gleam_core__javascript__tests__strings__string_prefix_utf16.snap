@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 81
 expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n  }\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 export function go(x) {
   let $ = "Θ foo bar";
@@ -11,7 +10,7 @@ export function go(x) {
     let rest = $.slice(1);
     rest
   } else {
-    throwError(
+    throw makeError(
       "case_no_match",
       "my/mod",
       3,
@@ -25,7 +24,7 @@ export function go(x) {
     let rest = $1.slice(2);
     rest
   } else {
-    throwError(
+    throw makeError(
       "case_no_match",
       "my/mod",
       6,
@@ -39,7 +38,7 @@ export function go(x) {
     let rest = $2.slice(4);
     return rest;
   } else {
-    throwError(
+    throw makeError(
       "case_no_match",
       "my/mod",
       9,

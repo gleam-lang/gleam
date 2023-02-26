@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 67
 expression: "\npub type True { True False Nil }\nfn go(x, y) {\n  assert True = x\n  assert False = x\n  assert Nil = y\n}\n"
 ---
-import { CustomType as $CustomType, throwError } from "../gleam.mjs";
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 export class True extends $CustomType {}
 
@@ -13,7 +12,7 @@ export class Nil extends $CustomType {}
 
 function go(x, y) {
   if (!(x instanceof True)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       4,
@@ -23,7 +22,7 @@ function go(x, y) {
     )
   }
   if (!(x instanceof False)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       5,
@@ -33,7 +32,7 @@ function go(x, y) {
     )
   }
   if (!(y instanceof Nil)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       6,

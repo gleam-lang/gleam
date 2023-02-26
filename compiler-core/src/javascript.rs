@@ -87,8 +87,8 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
         };
 
-        if self.tracker.throw_error_used {
-            self.register_prelude_usage(&mut imports, "throwError", None);
+        if self.tracker.make_error_used {
+            self.register_prelude_usage(&mut imports, "makeError", None);
         };
 
         if self.tracker.int_remainder_used {
@@ -707,7 +707,7 @@ pub(crate) struct UsageTracker {
     pub list_used: bool,
     pub error_used: bool,
     pub int_remainder_used: bool,
-    pub throw_error_used: bool,
+    pub make_error_used: bool,
     pub custom_type_used: bool,
     pub int_division_used: bool,
     pub float_division_used: bool,

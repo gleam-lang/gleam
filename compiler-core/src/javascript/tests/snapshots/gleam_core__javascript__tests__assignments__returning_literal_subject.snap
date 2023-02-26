@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 80
 expression: "fn go(x) { assert 1 = x + 1 }"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   let $ = x + 1;
   if ($ !== 1) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       1,
