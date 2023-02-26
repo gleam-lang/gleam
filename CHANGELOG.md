@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug where `panic` could generate incorrect JavaScript code.
+
 ## v0.27.0-rc1 - 2023-02-26
 
 - The new `panic` keyword can be used to crash the program. This may be useful
