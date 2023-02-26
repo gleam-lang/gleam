@@ -1,17 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
+assertion_line: 5
 expression: "\nfn go() {\n  panic\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 
 function go() {
-  return throw makeError(
-    "todo",
-    "my/mod",
-    3,
-    "go",
-    "panic expression evaluated",
-    {}
-  );
+  throw makeError("todo", "my/mod", 3, "go", "panic expression evaluated", {})
 }
 

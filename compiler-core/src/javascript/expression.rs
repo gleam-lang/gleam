@@ -1326,6 +1326,7 @@ impl TypedExpr {
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
+                | TypedExpr::Panic { .. }
                 | TypedExpr::Sequence { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::Assignment { .. }

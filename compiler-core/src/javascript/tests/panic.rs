@@ -56,3 +56,16 @@ fn go(at_the_disco) {
 "#,
     );
 }
+
+#[test]
+fn case() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    _ -> panic
+  }
+};
+"#,
+    );
+}
