@@ -329,7 +329,7 @@ fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
 }
 
 fn try_fn(result) {
-  try x = result
+  use x <- try_(result)
   Ok(x + 1)
 }
 
@@ -344,7 +344,7 @@ fn try_tests() -> List(Test) {
       assert_equal(
         Ok(2),
         {
-          try x = Ok(1)
+          use x <- try_(Ok(1))
           Ok(x + 1)
         },
       )
@@ -354,7 +354,7 @@ fn try_tests() -> List(Test) {
       assert_equal(
         Error(Nil),
         {
-          try x = Error(Nil)
+          use x <- try_(Error(Nil))
           Ok(x + 1)
         },
       )
@@ -1562,4 +1562,11 @@ fn mixed_arg_match_tests() {
       assert_equal(#(x, y), #("fluffy", 10))
     }),
   ]
+}
+
+fn try_(result: Result(a, e), next: fn(a) -> Result(b, e)) -> Result(b, e) {
+  case result {
+    Ok(x) -> next(x)
+    Error(e) -> Error(e)
+  }
 }
