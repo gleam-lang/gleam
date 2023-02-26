@@ -1493,25 +1493,20 @@ fn string_pattern_matching_tests() {
 
 if javascript {
   fn typescript_file_included_tests() {
+    let path = "./build/dev/javascript/language/ffi_typescript.ts"
     [
-      "./target-javascript/ffi_typescript.ts"
-      |> example(fn() {
-        assert_equal(file_exists("./target-javascript/ffi_typescript.ts"), True)
-      }),
+      path
+      |> example(fn() { assert_equal(file_exists(path), True) }),
     ]
   }
 }
 
 if erlang {
   fn typescript_file_included_tests() {
+    let path = "./build/dev/erlang/language/_gleam_artefacts/ffi_typescript.ts"
     [
-      "./target-erlang/_gleam_artefacts/ffi_typescript.ts"
-      |> example(fn() {
-        assert_equal(
-          file_exists("./target-erlang/_gleam_artefacts/ffi_typescript.ts"),
-          True,
-        )
-      }),
+      path
+      |> example(fn() { assert_equal(file_exists(path), True) }),
     ]
   }
 }
