@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/use_.rs
-assertion_line: 68
 expression: "\npub fn main() {\n  use Box(x) <- apply(Box(1))\n  x\n}\n\ntype Box(a) {\n  Box(a)\n}\n\nfn apply(arg, fun) {\n  fun(arg)\n}\n"
 ---
-import { CustomType as $CustomType, throwError } from "../gleam.mjs";
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 class Box extends $CustomType {
   constructor(x0) {
@@ -21,7 +20,7 @@ export function main() {
     new Box(1),
     (_use0) => {
       if (!(_use0 instanceof Box)) {
-        throwError(
+        throw makeError(
           "assignment_no_match",
           "my/mod",
           3,

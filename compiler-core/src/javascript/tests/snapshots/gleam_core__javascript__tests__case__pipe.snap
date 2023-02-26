@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 122
 expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> Nil\n  }\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x, f) {
   let $ = (() => {
@@ -13,7 +12,7 @@ function go(x, f) {
   if ($ === 0) {
     return undefined;
   } else {
-    throwError(
+    throw makeError(
       "case_no_match",
       "my/mod",
       3,

@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/try_.rs
-assertion_line: 63
 expression: "pub fn main(x) {\n  assert Ok(y) = {\n    try z = x\n    Ok(z + 1)\n  }\n  y\n}"
 ---
-import { Ok, throwError } from "../gleam.mjs";
+import { Ok, makeError } from "../gleam.mjs";
 
 export function main(x) {
   let $ = (() => {
@@ -13,7 +12,7 @@ export function main(x) {
     return new Ok(z + 1);
   })();
   if (!$.isOk()) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       2,

@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/bit_strings.rs
-assertion_line: 225
 expression: "\nfn go(x) {\n  let <<_, b:binary>> = <<1,2,3>>\n}\n"
 ---
-import { throwError, toBitString } from "../gleam.mjs";
+import { makeError, toBitString } from "../gleam.mjs";
 
 function go(x) {
   let $ = toBitString([1, 2, 3]);
   if (!($.length >= 1)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       3,

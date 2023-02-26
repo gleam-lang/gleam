@@ -1,9 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-assertion_line: 297
 expression: "\ntype Cat {\n  Cat(String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
 ---
-import { CustomType as $CustomType, throwError } from "../gleam.mjs";
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
 
 class Cat extends $CustomType {
   constructor(x0, cuteness) {
@@ -15,7 +14,7 @@ class Cat extends $CustomType {
 
 function go(cat) {
   if (!(cat instanceof Cat)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       7,
@@ -27,7 +26,7 @@ function go(cat) {
   let x = cat[0];
   let y = cat.cuteness;
   if (!(cat instanceof Cat)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       8,
@@ -38,7 +37,7 @@ function go(cat) {
   }
   let y$1 = cat.cuteness;
   if (!(cat instanceof Cat)) {
-    throwError(
+    throw makeError(
       "assignment_no_match",
       "my/mod",
       9,

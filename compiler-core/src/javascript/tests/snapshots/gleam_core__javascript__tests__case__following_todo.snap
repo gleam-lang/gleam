@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 20
 expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
 ---
-import { throwError } from "../gleam.mjs";
+import { makeError } from "../gleam.mjs";
 
 function go(x) {
   if (x) {
-    throwError(
+    throw makeError(
       "todo",
       "my/mod",
       4,
