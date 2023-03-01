@@ -28,7 +28,7 @@ fn with_message() {
         r#"
 fn go() {
   todo("I should do this")
-};
+}
 "#,
     );
 }
@@ -41,7 +41,7 @@ fn as_expression() {
 fn go(f) {
   let boop = todo("I should do this")
   f(todo("Boom"))
-};
+}
 "#,
     );
 }

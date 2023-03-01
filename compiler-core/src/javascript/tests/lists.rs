@@ -31,7 +31,7 @@ fn multi_line_list_literals() {
     assert_js!(
         r#"
 fn go(x) {
-    [{True; 1}]
+    [{True 1}]
 }
 "#,
     );

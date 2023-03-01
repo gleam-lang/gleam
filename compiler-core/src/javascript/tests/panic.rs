@@ -29,7 +29,7 @@ fn as_expression() {
 fn go(f) {
   let boop = panic
   f(panic)
-};
+}
 "#,
     );
 }
@@ -40,7 +40,7 @@ fn pipe() {
         r#"
 fn go(f) {
   f |> panic
-};
+}
 "#,
     );
 }
@@ -52,7 +52,7 @@ fn sequence() {
 fn go(at_the_disco) {
   panic
   at_the_disco
-};
+}
 "#,
     );
 }
@@ -65,7 +65,7 @@ fn go(x) {
   case x {
     _ -> panic
   }
-};
+}
 "#,
     );
 }

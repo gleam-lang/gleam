@@ -276,6 +276,10 @@ impl LexicalError {
             LexicalErrorType::UnexpectedStringEnd => {
                 ("The string starting here was left open.", vec![])
             }
+            LexicalErrorType::UnrecognizedToken { tok } if *tok == ';' => (
+                "Semicolons used to be white space, but are no longer allowed.",
+                vec!["Hint: You can safely delete them.".into()],
+            ),
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character.",
                 vec!["Hint: Is it a typo?".into()],

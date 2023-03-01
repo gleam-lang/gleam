@@ -79,8 +79,8 @@ fn constant_tuples() {
     assert_js!(
         r#"
 const a = "Hello"
-const b = 1;
-const c = 2.0;
+const b = 1
+const c = 2.0
 const e = #("bob", "dug")
         "#,
     );

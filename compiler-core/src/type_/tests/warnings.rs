@@ -81,9 +81,12 @@ fn result_discard_warning_test() {
     assert_warning!(
         "
 fn foo() { Ok(5) }
-fn main() { foo(); 5 }",
+fn main() {
+		foo()
+		5
+}",
         Warning::ImplicitlyDiscardedResult {
-            location: SrcSpan { start: 32, end: 37 }
+            location: SrcSpan { start: 34, end: 39 }
         }
     );
 }
@@ -94,14 +97,14 @@ fn result_discard_warning_test2() {
     assert_no_warnings!(
         "
 pub fn foo() { Ok(5) }
-pub fn main() { let _ = foo(); 5 }",
+pub fn main() { let _ = foo() 5 }",
     );
 }
 
 #[test]
 fn unused_int() {
     assert_warning!(
-        "fn main() { 1; 2 }",
+        "fn main() { 1 2 }",
         Warning::UnusedLiteral {
             location: SrcSpan { start: 12, end: 13 }
         }
@@ -111,7 +114,7 @@ fn unused_int() {
 #[test]
 fn unused_float() {
     assert_warning!(
-        "fn main() { 1.0; 2 }",
+        "fn main() { 1.0 2 }",
         Warning::UnusedLiteral {
             location: SrcSpan { start: 12, end: 15 }
         }
@@ -122,11 +125,12 @@ fn unused_float() {
 fn unused_string() {
     assert_warning!(
         "
-    fn main() { 
-        \"1\"; 2 
+    fn main() {
+        \"1\"
+				2
     }",
         Warning::UnusedLiteral {
-            location: SrcSpan { start: 26, end: 29 }
+            location: SrcSpan { start: 25, end: 28 }
         }
     );
 }
@@ -135,11 +139,12 @@ fn unused_string() {
 fn unused_bit_string() {
     assert_warning!(
         "
-    fn main() { 
-        <<3>>; 2 
+    fn main() {
+        <<3>>
+				2
     }",
         Warning::UnusedLiteral {
-            location: SrcSpan { start: 26, end: 31 }
+            location: SrcSpan { start: 25, end: 30 }
         }
     );
 }
@@ -148,11 +153,12 @@ fn unused_bit_string() {
 fn unused_tuple() {
     assert_warning!(
         "
-    fn main() { 
-        #(1.0, \"Hello world\"); 2
+    fn main() {
+        #(1.0, \"Hello world\")
+				2
     }",
         Warning::UnusedLiteral {
-            location: SrcSpan { start: 26, end: 47 }
+            location: SrcSpan { start: 25, end: 46 }
         }
     );
 }
@@ -161,11 +167,12 @@ fn unused_tuple() {
 fn unused_list() {
     assert_warning!(
         "
-    fn main() { 
-        [1, 2, 3]; 2 
+    fn main() {
+        [1, 2, 3]
+				2
     }",
         Warning::UnusedLiteral {
-            location: SrcSpan { start: 26, end: 35 }
+            location: SrcSpan { start: 25, end: 34 }
         }
     );
 }
@@ -177,7 +184,7 @@ fn record_update_warnings_test() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_person() {
             let past = Person(\"Quinn\", 27)
             let present = Person(..past, name: \"Santi\")
@@ -193,7 +200,7 @@ fn record_update_warnings_test2() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_person() {
             let past = Person(\"Quinn\", 27)
             let present = Person(..past)
@@ -201,8 +208,8 @@ fn record_update_warnings_test2() {
         }",
         Warning::NoFieldsRecordUpdate {
             location: SrcSpan {
-                start: 183,
-                end: 197
+                start: 182,
+                end: 196
             }
         }
     );
@@ -215,7 +222,7 @@ fn record_update_warnings_test3() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_person() {
             let past = Person(\"Quinn\", 27)
             let present = Person(..past, name: \"Quinn\", age: 28)
@@ -223,8 +230,8 @@ fn record_update_warnings_test3() {
         }",
         Warning::AllFieldsRecordUpdate {
             location: SrcSpan {
-                start: 183,
-                end: 221
+                start: 182,
+                end: 220
             }
         }
     );
@@ -431,7 +438,7 @@ fn unused_imported_module_with_alias_warnings_test() {
 fn unused_imported_module_no_warning_on_used_function_test() {
     assert_no_warnings!(
         ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo; pub fn baz() { foo.bar() }",
+        "import gleam/foo pub fn baz() { foo.bar() }",
     );
 }
 
@@ -439,7 +446,7 @@ fn unused_imported_module_no_warning_on_used_function_test() {
 fn unused_imported_module_no_warning_on_used_type_test() {
     assert_no_warnings!(
         ("gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo; pub fn baz(a: foo.Foo) { a }",
+        "import gleam/foo pub fn baz(a: foo.Foo) { a }",
     );
 }
 
@@ -447,7 +454,7 @@ fn unused_imported_module_no_warning_on_used_type_test() {
 fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
     assert_no_warnings!(
         ("gleam/foo", "pub fn bar() { 1 }"),
-        "import gleam/foo.{bar}; pub fn baz() { bar() }",
+        "import gleam/foo.{bar} pub fn baz() { bar() }",
     );
 }
 
@@ -455,7 +462,7 @@ fn unused_imported_module_no_warning_on_used_unqualified_function_test() {
 fn unused_imported_module_no_warning_on_used_unqualified_type_test() {
     assert_no_warnings!(
         ("gleam/foo", "pub type Foo = Int"),
-        "import gleam/foo.{Foo}; pub fn baz(a: Foo) { a }",
+        "import gleam/foo.{Foo} pub fn baz(a: Foo) { a }",
     );
 }
 
