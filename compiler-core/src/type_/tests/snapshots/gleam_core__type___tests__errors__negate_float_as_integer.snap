@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nfn() {\n  let a = 3.0\n  let b = -a\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:12
+  │
+4 │   let b = -a
+  │            ^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float
+

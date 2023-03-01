@@ -1829,11 +1829,23 @@ fn(x, x) {
 }
 
 #[test]
-fn negate_non_number() {
+fn negate_boolean_as_integer() {
     assert_error!(
         "
 fn() {
   let a = True
+  let b = -a
+}
+"
+    );
+}
+
+#[test]
+fn negate_float_as_integer() {
+    assert_error!(
+        "
+fn() {
+  let a = 3.0
   let b = -a
 }
 "

@@ -180,7 +180,7 @@ impl Fixer {
             | UntypedExpr::Panic { .. }
             | UntypedExpr::Todo { .. } => (),
 
-            UntypedExpr::NegateNumber { value: e, .. }
+            UntypedExpr::NegateInteger { value: e, .. }
             | UntypedExpr::NegateBool { value: e, .. }
             | UntypedExpr::FieldAccess { container: e, .. }
             | UntypedExpr::TupleIndex { tuple: e, .. }

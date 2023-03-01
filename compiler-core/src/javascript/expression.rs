@@ -170,7 +170,7 @@ impl<'module> Generator<'module> {
 
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
-            TypedExpr::NegateNumber { value, .. } => self.negate_with("- ", value),
+            TypedExpr::NegateInteger { value, .. } => self.negate_with("- ", value),
         }?;
         Ok(if expression.handles_own_return() {
             document

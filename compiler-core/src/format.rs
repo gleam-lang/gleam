@@ -692,7 +692,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            UntypedExpr::NegateNumber { value, .. } => self.negate_with("-", value),
+            UntypedExpr::NegateInteger { value, .. } => self.negate_with("-", value),
 
             UntypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 

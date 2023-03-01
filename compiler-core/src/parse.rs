@@ -593,11 +593,11 @@ where
                 }
             }
 
-            // Number negation
+            // Integer negation
             Some((start, Token::Minus, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
-                    Some(value) => UntypedExpr::NegateNumber {
+                    Some(value) => UntypedExpr::NegateInteger {
                         location: SrcSpan {
                             start,
                             end: value.location().end,

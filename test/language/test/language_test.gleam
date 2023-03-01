@@ -1418,38 +1418,6 @@ fn number_negation_tests() {
       let c = - a - {- {b}}
       assert_equal(-6, c)
     }),
-    "-a"
-    |> example(fn() {
-      let a = 3.0
-      let b = -a
-      assert_equal(-3.0, b)
-    }),
-    "-{-a}"
-    |> example(fn() {
-      let a = 3.0
-      let b = -{-a}
-      assert_equal(3.0, b)
-    }),
-    "-{-{-a}}"
-    |> example(fn() {
-      let a = 3.0
-      let b = -{-{-a}}
-      assert_equal(-3.0, b)
-    }),
-    "a -. - b"
-    |> example(fn() {
-      let a = 3.0
-      let b = -a
-      let c = a -. - b
-      assert_equal(0.0, c)
-    }),
-    "- a -. {- {b}}"
-    |> example(fn() {
-      let a = 3.0
-      let b = -a
-      let c = - a -. {- {b}}
-      assert_equal(-6.0, c)
-    }),
     "-abs(-6)"
     |> example(fn() {
       let abs = fn(value) {

@@ -128,7 +128,7 @@ pub enum UntypedExpr {
         value: Box<Self>,
     },
 
-    NegateNumber {
+    NegateInteger {
         location: SrcSpan,
         value: Box<Self>,
     },
@@ -158,7 +158,7 @@ impl UntypedExpr {
             | Self::FieldAccess { location, .. }
             | Self::RecordUpdate { location, .. }
             | Self::NegateBool { location, .. }
-            | Self::NegateNumber { location, .. } => *location,
+            | Self::NegateInteger { location, .. } => *location,
             Self::Sequence {
                 location,
                 expressions,

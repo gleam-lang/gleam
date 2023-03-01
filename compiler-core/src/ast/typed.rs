@@ -157,7 +157,7 @@ pub enum TypedExpr {
         value: Box<Self>,
     },
 
-    NegateNumber {
+    NegateInteger {
         location: SrcSpan,
         value: Box<Self>,
     },
@@ -197,7 +197,7 @@ impl TypedExpr {
 
             Self::NegateBool { value, .. } => value.find_node(byte_index).or(Some(self)),
 
-            Self::NegateNumber { value, .. } => value.find_node(byte_index).or(Some(self)),
+            Self::NegateInteger { value, .. } => value.find_node(byte_index).or(Some(self)),
 
             Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
 
@@ -278,7 +278,7 @@ impl TypedExpr {
             | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::NegateBool { location, .. }
-            | Self::NegateNumber { location, .. }
+            | Self::NegateInteger { location, .. }
             | Self::Sequence { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
@@ -306,7 +306,7 @@ impl TypedExpr {
             | Self::String { location, .. }
             | Self::Panic { location, .. }
             | Self::NegateBool { location, .. }
-            | Self::NegateNumber { location, .. }
+            | Self::NegateInteger { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -345,7 +345,7 @@ impl TypedExpr {
             | TypedExpr::Float { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateNumber { .. }
+            | TypedExpr::NegateInteger { .. }
             | TypedExpr::String { .. }
             | TypedExpr::Sequence { .. }
             | TypedExpr::Pipeline { .. }
@@ -376,7 +376,7 @@ impl TypedExpr {
     pub fn type_(&self) -> Arc<Type> {
         match self {
             Self::NegateBool { .. } => bool(),
-            Self::NegateNumber { value, .. } => value.type_(),
+            Self::NegateInteger { value, .. } => value.type_(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
             Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
