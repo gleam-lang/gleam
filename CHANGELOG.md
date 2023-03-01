@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.27.0 - 2023-03-01
 
 - Fixed a bug where `panic` could generate incorrect JavaScript code.
 - New projects now require `gleam_stdlib` v0.27.
