@@ -437,8 +437,8 @@ where
                     }
                 }
             }
-            ' ' | '\t' | '\x0C' | ';' => {
-                // Skip whitespaces and semicolons
+            ' ' | '\t' | '\x0C' => {
+                // Skip whitespaces
                 let _ = self.next_char();
             }
 

@@ -29,7 +29,7 @@ fn in_block() {
     assert_erl!(
         "pub fn main() {
   {
-    try b = Error(Nil);
+    try b = Error(Nil)
     b
   }
   Ok(1)

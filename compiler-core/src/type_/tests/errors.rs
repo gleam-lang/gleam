@@ -1082,7 +1082,7 @@ fn duplicate_custom_type_names() {
 fn duplicate_const_names() {
     // We cannot declare two const with the same name in a module
     assert_module_error!(
-        "const duplicate = 1;
+        "const duplicate = 1
 pub const duplicate = 1"
     );
 }
@@ -1189,10 +1189,10 @@ fn wrong_type_update() {
         "
  pub type Person {
    Person(name: String, age: Int)
- };
+ }
  pub type Box(a) {
    Box(a)
- };
+ }
  pub fn update_person(person: Person, box: Box(a)) {
    Person(..box)
  }"
@@ -1206,7 +1206,7 @@ fn unknown_variable_update() {
         "
 pub type Person {
   Person(name: String, age: Int)
-};
+}
 pub fn update_person() {
   Person(..person)
 }"
@@ -1220,7 +1220,7 @@ fn unknown_field_update() {
         "
  pub type Person {
    Person(name: String)
- };
+ }
  pub fn update_person(person: Person) {
    Person(..person, one: 5)
  }"
@@ -1234,7 +1234,7 @@ fn unknown_field_update2() {
         "
  pub type Person {
    Person(name: String, age: Int, size: Int)
- };
+ }
  pub fn update_person(person: Person) {
    Person(..person, size: 66, one: 5, age: 3)
  }"
@@ -1248,7 +1248,7 @@ fn unknown_constructor_update() {
         "
 pub type Person {
    Person(name: String, age: Int)
-};
+}
 pub fn update_person(person: Person) {
    NotAPerson(..person)
 }"
@@ -1262,7 +1262,7 @@ fn not_a_constructor_update() {
         "
 pub type Person {
   Person(name: String, age: Int)
-};
+}
 pub fn identity(a) { a }
 pub fn update_person(person: Person) {
   identity(..person)
@@ -1277,7 +1277,7 @@ fn expression_constructor_update() {
         "
 pub type Person {
   Person(name: String, age: Int)
-};
+}
 pub fn update_person(person: Person) {
   let constructor = Person
   constructor(..person)
@@ -1292,10 +1292,10 @@ fn generic_record_update1() {
         "
 pub type Box(a) {
   Box(value: a, i: Int)
-};
+}
 pub fn update_box(box: Box(Int), value: String) {
   Box(..box, value: value)
-};"
+}"
     );
 }
 
@@ -1306,10 +1306,10 @@ fn generic_record_update2() {
         "
 pub type Box(a) {
   Box(value: a, i: Int)
-};
+}
 pub fn update_box(box: Box(a), value: b) {
   Box(..box, value: value)
-};"
+}"
     );
 }
 
@@ -1317,7 +1317,7 @@ pub fn update_box(box: Box(a), value: b) {
 fn type_vars_must_be_declared() {
     // https://github.com/gleam-lang/gleam/issues/734
     assert_module_error!(
-        r#"type A(a) { A };
+        r#"type A(a) { A }
 type B = a"#
     );
 }
@@ -1325,7 +1325,7 @@ type B = a"#
 #[test]
 fn type_holes1() {
     // Type holes cannot be used when decaring types or external functions
-    assert_module_error!(r#"type A { A(_) };"#);
+    assert_module_error!(r#"type A { A(_) }"#);
 }
 
 #[test]
@@ -1555,9 +1555,9 @@ fn negate_string() {
 fn ambiguous_type_error() {
     assert_with_module_error!(
         ("foo", "pub type Thing { Thing }"),
-        "import foo; pub type Thing { Thing }; 
-        pub fn main() { 
-            [Thing] == [foo.Thing]; 
+        "import foo pub type Thing { Thing }
+        pub fn main() {
+            [Thing] == [foo.Thing]
         }",
     );
 }

@@ -1369,7 +1369,7 @@ fn fn_annotation_reused() {
         "
         pub type Box(a) {
             Box(value: a)
-        };
+        }
         pub fn go(box1: Box(a)) {
             fn(box2: Box(a)) { box1.value == box2.value }
         }",
@@ -1384,7 +1384,7 @@ fn fn_annotation_reused() {
         "
         pub type Box(a) {
             Box(value: a)
-        };
+        }
         pub fn go(box1: Box(a)) {
             let x: Box(a) = box1
             fn(box2: Box(a)) { x.value == box2.value }
@@ -1481,7 +1481,7 @@ fn record_update_no_fields() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn identity(person: Person) {
             Person(..person)
         }",
@@ -1499,7 +1499,7 @@ fn record_update() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_name(person: Person, name: String) {
             Person(..person, name: name)
         }",
@@ -1517,7 +1517,7 @@ fn record_update_all_fields() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_person(person: Person, name: String, age: Int) {
             Person(..person, name: name, age: age, )
         }",
@@ -1535,7 +1535,7 @@ fn record_update_out_of_order() {
         "
         pub type Person {
             Person(name: String, age: Int)
-        };
+        }
         pub fn update_person(person: Person, name: String, age: Int) {
             Person(..person, age: age, name: name)
         }",
@@ -1553,7 +1553,7 @@ fn record_update_generic() {
         "
         pub type Box(a, b) {
             Box(left: a, right: b)
-        };
+        }
 
         pub fn combine_boxes(a: Box(Int, Bool), b: Box(Bool, Int)) {
             Box(..a, left: a.left + b.right, right: b.left)
@@ -1575,7 +1575,7 @@ fn record_update_generic_unannotated() {
         "
         pub type Box(a, b) {
             Box(left: a, right: b)
-        };
+        }
 
         pub fn combine_boxes(a: Box(t1, t2), b: Box(t2, t1)) {
             Box(..a, left: b.right, right: b.left)

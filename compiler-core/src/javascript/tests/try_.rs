@@ -77,7 +77,7 @@ fn in_block_not_assigned() {
     assert_js!(
         "pub fn main() {
   {
-    try b = Error(Nil);
+    try b = Error(Nil)
     b
   }
   Ok(1)

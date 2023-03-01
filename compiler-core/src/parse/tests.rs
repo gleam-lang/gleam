@@ -347,3 +347,9 @@ fn assign_left_hand_side_of_concat_pattern() {
 fn valueless_list_spread_expression() {
     assert_error!(r#"let x = [1, 2, 3, ..]"#);
 }
+
+// https://github.com/gleam-lang/gleam/issues/2035
+#[test]
+fn semicolons() {
+    assert_error!(r#"{ 2 + 3; - -5; }"#);
+}
