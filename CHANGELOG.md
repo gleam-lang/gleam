@@ -58,7 +58,7 @@
   runtime if executed.
 - Fixed bug where raised errors on JS would have an extra stack frame recorded
   in them.
-- Added support for unary negation of number types.
+- Added support for unary negation of integers.
 
 ## v0.26.2 - 2023-02-03
 

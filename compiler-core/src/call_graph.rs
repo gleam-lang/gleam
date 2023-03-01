@@ -143,7 +143,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::NegateNumber {
+            UntypedExpr::NegateInteger {
                 value: expression, ..
             }
             | UntypedExpr::NegateBool {
