@@ -1,12 +1,14 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 354
 expression: "{ 2 + 3; - -5; }"
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:8
   │
 1 │ { 2 + 3; - -5; }
-  │        ^ Semicolons used to be white space, but are no longer allowed.
+  │        ^ Remove this semicolon
 
-Hint: You can safely delete them.
+Hint: Semicolons used to be whitespace and did nothing.
+You can safely remove them without your program changing.
 
