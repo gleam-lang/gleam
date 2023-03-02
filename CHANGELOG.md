@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Semicolons are no longer whitespace. An error will be emitted if one is
+  encountered.
+
 ## v0.27.0 - 2023-03-01
 
 - Fixed a bug where `panic` could generate incorrect JavaScript code.
