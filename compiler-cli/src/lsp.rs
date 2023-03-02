@@ -4,6 +4,7 @@
 
 use std::{
     collections::{HashMap, HashSet},
+    convert::TryFrom,
     path::{Path, PathBuf},
 };
 
@@ -858,6 +859,7 @@ where
 }
 
 fn text_edit_replace(new_text: String) -> TextEdit {
+    let numlines = u32::try_from(new_text.lines().count()).unwrap();
     TextEdit {
         range: Range {
             start: Position {
@@ -865,7 +867,7 @@ fn text_edit_replace(new_text: String) -> TextEdit {
                 character: 0,
             },
             end: Position {
-                line: u32::MAX,
+                line: numlines,
                 character: 0,
             },
         },
