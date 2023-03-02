@@ -1506,6 +1506,15 @@ fn string_pattern_matching_tests() {
         },
       )
     }),
+    "match newline test"
+    |> example(fn() {
+      assert_equal(
+        " is a newline that escaped",
+        case "\\n is a newline that escaped" {
+          "\\n" <> rest -> rest
+        },
+      )
+    }),
   ]
 }
 
