@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n  }\n}\n"
+expression: "\npub fn go(x) {\n  case \"Θ foo bar\" {\n    \"Θ\" <> rest -> rest\n  }\n  case \"🫥 is neutral dotted\" {\n    \"🫥\" <> rest -> rest\n  }\n  case \"🇺🇸 is a cluster\" {\n    \"🇺🇸\" <> rest -> rest\n  }\n  case \"\\\" is a an escaped quote\" {\n    \"\\\"\" <> rest -> rest\n  }\n  case \"\\\\ is a an escaped backslash\" {\n    \"\\\\\" <> rest -> rest\n  }\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
 
@@ -36,7 +36,7 @@ export function go(x) {
   let $2 = "🇺🇸 is a cluster";
   if ($2.startsWith("🇺🇸")) {
     let rest = $2.slice(4);
-    return rest;
+    rest
   } else {
     throw makeError(
       "case_no_match",
@@ -45,6 +45,34 @@ export function go(x) {
       "go",
       "No case clause matched",
       { values: [$2] }
+    )
+  }
+  let $3 = "\" is a an escaped quote";
+  if ($3.startsWith("\"")) {
+    let rest = $3.slice(1);
+    rest
+  } else {
+    throw makeError(
+      "case_no_match",
+      "my/mod",
+      12,
+      "go",
+      "No case clause matched",
+      { values: [$3] }
+    )
+  }
+  let $4 = "\\ is a an escaped backslash";
+  if ($4.startsWith("\\")) {
+    let rest = $4.slice(1);
+    return rest;
+  } else {
+    throw makeError(
+      "case_no_match",
+      "my/mod",
+      15,
+      "go",
+      "No case clause matched",
+      { values: [$4] }
     )
   }
 }

@@ -90,6 +90,12 @@ pub fn go(x) {
   case "🇺🇸 is a cluster" {
     "🇺🇸" <> rest -> rest
   }
+  case "\" is a an escaped quote" {
+    "\"" <> rest -> rest
+  }
+  case "\\ is a an escaped backslash" {
+    "\\" <> rest -> rest
+  }
 }
 "#,
     );
