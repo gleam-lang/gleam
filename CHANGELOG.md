@@ -4,6 +4,8 @@
 
 - Semicolons are no longer whitespace. An error will be emitted if one is
   encountered.
+- Fixed a bug where string concatenation patterns on strings with escape
+  characters would generate javascript code with wrong slice index.
 
 ## v0.27.0 - 2023-03-01
 

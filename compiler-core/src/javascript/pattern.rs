@@ -368,7 +368,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ..
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
-                self.push_string_prefix_slice(left_side_string.encode_utf16().count());
+                self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
                 if let AssignName::Variable(right) = right_side_assignment {
                     self.push_assignment(subject.clone(), right);
                 }
@@ -769,4 +769,20 @@ pub(crate) fn assign_subjects<'a>(
         out.push(assign_subject(expression_generator, subject))
     }
     out
+}
+// Helper function to calculate length of str as utf16 without escape characters
+fn utf16_no_escape_len(str: &SmolStr) -> usize {
+    let mut filtered_str = String::new();
+    let mut str_iter = str.chars();
+    loop {
+        match str_iter.next() {
+            Some('\\') => match str_iter.next() {
+                Some(c) => filtered_str.push_str(c.to_string().as_str()),
+                None => break,
+            },
+            Some(c) => filtered_str.push_str(c.to_string().as_str()),
+            None => break,
+        }
+    }
+    return filtered_str.encode_utf16().count();
 }
