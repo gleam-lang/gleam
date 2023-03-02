@@ -1488,6 +1488,24 @@ fn string_pattern_matching_tests() {
         },
       )
     }),
+    "match backslash test"
+    |> example(fn() {
+      assert_equal(
+        " is a backslash",
+        case "\" is a backslash" {
+          "\"" <> rest -> rest
+        },
+      )
+    }),
+    "match newline test"
+    |> example(fn() {
+      assert_equal(
+        " is a newline",
+        case "\n is a newline" {
+          "\n" <> rest -> rest
+        },
+      )
+    }),
   ]
 }
 
