@@ -42,7 +42,7 @@ export interface Utf8Codepoint {
 
 export function toBitString(segments: Array<number | Uint8Array>): BitString;
 
-export function sizedInteger(number: number, size: number): BitString;
+export function sizedInt(number: number, size: number): BitString;
 
 export function stringBits(string: string): Uint8Array;
 

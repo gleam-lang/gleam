@@ -466,7 +466,7 @@ where
                 }
             }
 
-            // Bitstring
+            // BitString
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -947,7 +947,7 @@ where
                     elems,
                 }
             }
-            // Bitstring
+            // BitString
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -2143,7 +2143,7 @@ where
                     typ: (),
                 }))
             }
-            // Bitstring
+            // BitString
             Some((start, Token::LtLt, _)) => {
                 let _ = self.next_tok();
                 let segments = Parser::series_of(
@@ -2928,9 +2928,9 @@ fn clause_guard_reduction(
     }
 }
 
-// Bitstring Parse Helpers
+// BitString Parse Helpers
 //
-// Bitstrings in patterns, guards, and expressions have a very similar structure
+// BitStrings in patterns, guards, and expressions have a very similar structure
 // but need specific types. These are helpers for that. There is probably a
 // rustier way to do this :)
 fn bit_string_pattern_int(value: SmolStr, start: u32, end: u32) -> UntypedPattern {

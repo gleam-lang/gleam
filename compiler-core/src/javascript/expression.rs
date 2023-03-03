@@ -197,7 +197,7 @@ impl<'module> Generator<'module> {
                 [Opt::Size { value: size, .. }] => {
                     self.tracker.sized_integer_segment_used = true;
                     let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
-                    Ok(docvec!["sizedInteger(", value, ", ", size, ")"])
+                    Ok(docvec!["sizedInt(", value, ", ", size, ")"])
                 }
 
                 // Floats
