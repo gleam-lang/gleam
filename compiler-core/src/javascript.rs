@@ -112,7 +112,7 @@ impl<'a> Generator<'a> {
         };
 
         if self.tracker.sized_integer_segment_used {
-            self.register_prelude_usage(&mut imports, "sizedInteger", None);
+            self.register_prelude_usage(&mut imports, "sizedInt", None);
         };
 
         if self.tracker.string_bit_string_segment_used {

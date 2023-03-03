@@ -181,7 +181,7 @@ export function toBitString(segments) {
 }
 
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
-export function sizedInteger(value, size) {
+export function sizedInt(value, size) {
   if (size < 0) {
     return new Uint8Array();
   }

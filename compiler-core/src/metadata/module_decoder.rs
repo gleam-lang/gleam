@@ -284,13 +284,13 @@ impl ModuleDecoder {
             Which::Binary(_) => BitStringSegmentOption::Binary {
                 location: Default::default(),
             },
-            Which::Integer(_) => BitStringSegmentOption::Int {
+            Which::Int(_) => BitStringSegmentOption::Int {
                 location: Default::default(),
             },
             Which::Float(_) => BitStringSegmentOption::Float {
                 location: Default::default(),
             },
-            Which::Bitstring(_) => BitStringSegmentOption::BitString {
+            Which::BitString(_) => BitStringSegmentOption::BitString {
                 location: Default::default(),
             },
             Which::Utf8(_) => BitStringSegmentOption::Utf8 {
