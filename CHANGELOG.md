@@ -4,6 +4,8 @@
 
 - Semicolons are no longer whitespace. An error will be emitted if one is
   encountered.
+- Fixed a bug where the compiler used VSCode specific behaviour in the language
+  server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
 
