@@ -4,7 +4,6 @@
 
 use std::{
     collections::{HashMap, HashSet},
-    convert::TryFrom,
     path::{Path, PathBuf},
 };
 
@@ -741,20 +740,35 @@ impl LanguageServer {
         let path = params.text_document.uri.path();
         let mut new_text = String::new();
 
-        match self.edited.get(path) {
+        let line_count = match self.edited.get(path) {
             // If we have a cached version of the file in memory format that
             Some(src) => {
                 gleam_core::format::pretty(&mut new_text, src, Path::new(path))?;
+                src.lines().count() as u32
             }
 
             // Otherwise format the file from disc
             None => {
                 let src = crate::fs::read(path)?.into();
                 gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
+                src.lines().count() as u32
             }
         };
 
-        Ok(vec![text_edit_replace(new_text)])
+        let edit = TextEdit {
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0,
+                },
+                end: Position {
+                    line: line_count,
+                    character: 0,
+                },
+            },
+            new_text,
+        };
+        Ok(vec![edit])
     }
 }
 
@@ -856,23 +870,6 @@ where
 {
     let params = notification.extract::<N::Params>(N::METHOD)?;
     Ok(params)
-}
-
-fn text_edit_replace(new_text: String) -> TextEdit {
-    let numlines = u32::try_from(new_text.lines().count()).unwrap();
-    TextEdit {
-        range: Range {
-            start: Position {
-                line: 0,
-                character: 0,
-            },
-            end: Position {
-                line: numlines,
-                character: 0,
-            },
-        },
-        new_text,
-    }
 }
 
 fn result_to_response(
