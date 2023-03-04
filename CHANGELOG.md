@@ -8,6 +8,7 @@
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
+- Added support for unary negation of integers.
 
 ## v0.27.0 - 2023-03-01
 
@@ -58,7 +59,6 @@
   runtime if executed.
 - Fixed bug where raised errors on JS would have an extra stack frame recorded
   in them.
-- Added support for unary negation of integers.
 
 ## v0.26.2 - 2023-02-03
 
