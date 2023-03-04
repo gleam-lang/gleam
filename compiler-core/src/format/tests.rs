@@ -5080,3 +5080,51 @@ fn repeated_negate_after_subtract() {
 "#
     );
 }
+
+#[test]
+fn wrap_long_line_with_int_negation() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = a * a * a * a * a * a * a * a * a * a * a * a * a *   { a * a * a * a * a * a * a * a * a * a }
+  let c = c * c * c * c * c * c * c * c * c * c * c * c * c * - { c * c * c * c * c * c * c * c * c * c }
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b =
+    a * a * a * a * a * a * a * a * a * a * a * a * a * {
+      a * a * a * a * a * a * a * a * a * a
+    }
+  let c =
+    c * c * c * c * c * c * c * c * c * c * c * c * c * - {
+      c * c * c * c * c * c * c * c * c * c
+    }
+}
+"#
+    );
+}
+
+#[test]
+fn wrap_long_line_with_bool_negation() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = True
+  let b = a || a || a || a || a || a || a || a || a || a || a || a || a ||   { a || a || a || a || a || a || a || a || a || a }
+  let c = c || c || c || c || c || c || c || c || c || c || c || c || c || ! { c || c || c || c || c || c || c || c || c || c }
+}
+"#,
+        r#"pub fn main() {
+  let a = True
+  let b =
+    a || a || a || a || a || a || a || a || a || a || a || a || a || {
+      a || a || a || a || a || a || a || a || a || a
+    }
+  let c =
+    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
+      c || c || c || c || c || c || c || c || c || c
+    }
+}
+"#
+    );
+}
