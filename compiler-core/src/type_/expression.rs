@@ -188,9 +188,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
-            UntypedExpr::NegateInt { location, value } => {
-                self.infer_negate_int(location, *value)
-            }
+            UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
 
             UntypedExpr::Use(use_) => {
                 let location = use_.location;
