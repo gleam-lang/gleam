@@ -5062,3 +5062,21 @@ fn binary_double_negate() {
 "#
     );
 }
+
+#[test]
+fn repeated_negate_after_subtract() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a--------b
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a - - { - { - { - { - { - { -b } } } } } }
+}
+"#
+    );
+}
