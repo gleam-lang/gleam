@@ -8,6 +8,7 @@ use gleam_core::{
 use crate::{build_lock::BuildLock, cli, dependencies::UseManifest, fs};
 
 pub fn main(options: Options) -> Result<Package> {
+    let warnings_as_errors = true; // TODO: Read from options
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 
     let perform_codegen = options.codegen;
@@ -20,12 +21,14 @@ pub fn main(options: Options) -> Result<Package> {
     tracing::info!("Compiling packages");
     let compiled = {
         let _guard = lock.lock(telemetry.as_ref());
-        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?
+        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io)
+            .compile(warnings_as_errors)?
     };
 
     match perform_codegen {
         Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
         Codegen::None => cli::print_checked(start.elapsed()),
     };
+
     Ok(compiled)
 }

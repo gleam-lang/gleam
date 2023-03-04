@@ -125,7 +125,7 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(&mut self) -> Result<Package> {
+    pub fn compile(&mut self, warnings_as_errors: bool) -> Result<Package> {
         self.check_gleam_version()?;
         self.compile_dependencies()?;
 
@@ -138,6 +138,15 @@ where
         // Print warnings
         for warning in &self.warnings {
             self.telemetry.warning(warning);
+        }
+
+        // Maybe return warnings as errors and clear build
+        if warnings_as_errors && self.warnings.is_empty() == false {
+            let build_path = paths::build_packages(self.mode(), self.target());
+            self.io.delete(&build_path)?;
+            return Err(Error::ForbiddenWarnings {
+                count: self.warnings.len(),
+            });
         }
 
         result

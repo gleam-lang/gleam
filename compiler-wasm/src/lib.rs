@@ -86,6 +86,7 @@ fn compile_project(
     target: Target,
     compile_options: &CompileOptions,
 ) -> Result<Package, Error> {
+    let warnings_as_errors = true; // TODO: Read from compile_options
     let packages: Vec<ManifestPackage> = compile_options
         .dependencies
         .iter()
@@ -110,7 +111,7 @@ fn compile_project(
         wfs.clone(),
     );
 
-    pcompiler.compile()
+    pcompiler.compile(warnings_as_errors)
 }
 
 fn gather_compiled_files(

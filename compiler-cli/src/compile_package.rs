@@ -1,8 +1,9 @@
 use crate::{
     config,
     fs::{self, ProjectIO},
-    CompilePackage,
+    CompilePackage, Error,
 };
+
 use gleam_core::{
     build::{Mode, PackageCompiler, Target, TargetCodegenConfiguration},
     metadata, paths,
@@ -14,6 +15,7 @@ use smol_str::SmolStr;
 use std::path::Path;
 
 pub fn command(options: CompilePackage) -> Result<()> {
+    let warnings_as_errors = true; // TODO: Read from options
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
@@ -44,12 +46,16 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
 
     // Print warnings
+    let warnings_count = warnings.len();
     for warning in warnings {
         crate::print_warning(&warning);
     }
-
-    // TODO: Support --warnings-as-errors
     // TODO: Create a Warnings struct to wrap up this functionality
+    if warnings_as_errors && warnings_count > 0 {
+        return Err(Error::ForbiddenWarnings {
+            count: warnings_count,
+        });
+    }
 
     Ok(())
 }
