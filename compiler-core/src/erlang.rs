@@ -1478,7 +1478,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::NegateBool { value, .. } => negate_with("not ", value, env),
 
-        TypedExpr::NegateInteger { value, .. } => negate_with("- ", value, env),
+        TypedExpr::NegateInt { value, .. } => negate_with("- ", value, env),
 
         TypedExpr::List { elements, tail, .. } => expr_list(elements, tail, env),
 

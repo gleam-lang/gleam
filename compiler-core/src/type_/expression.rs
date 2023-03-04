@@ -188,8 +188,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
-            UntypedExpr::NegateInteger { location, value } => {
-                self.infer_negate_integer(location, *value)
+            UntypedExpr::NegateInt { location, value } => {
+                self.infer_negate_int(location, *value)
             }
 
             UntypedExpr::Use(use_) => {
@@ -389,7 +389,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate_integer(
+    fn infer_negate_int(
         &mut self,
         location: SrcSpan,
         value: UntypedExpr,
@@ -398,7 +398,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(TypedExpr::NegateInteger {
+        Ok(TypedExpr::NegateInt {
             location,
             value: Box::new(value),
         })

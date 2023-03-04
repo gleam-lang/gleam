@@ -41,7 +41,7 @@ pub fn main() -> Int {
       suite("shadowed module", shadowed_module_tests()),
       suite("unicode overflow", unicode_overflow_tests()),
       suite("bool negation", bool_negation_tests()),
-      suite("number negation", number_negation_tests()),
+      suite("number negation", int_negation_tests()),
       suite("bit string match", bit_string_match_tests()),
       suite("anonymous functions", anonymous_function_tests()),
       suite("string pattern matching", string_pattern_matching_tests()),
@@ -1377,7 +1377,7 @@ fn bool_negation_tests() {
   ]
 }
 
-fn number_negation_tests() {
+fn int_negation_tests() {
   [
     "-a"
     |> example(fn() {
