@@ -692,9 +692,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            UntypedExpr::NegateInt { value, .. } => self.negate_with("-", value),
+            UntypedExpr::NegateInt { value, .. } => self.negate_int(value),
 
-            UntypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
+            UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
             UntypedExpr::Fn {
                 is_capture: true,
@@ -1531,10 +1531,21 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn negate_with<'a>(&mut self, op: &'static str, expr: &'a UntypedExpr) -> Document<'a> {
+    fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::BinOp { .. } => docvec![op, "{ ", self.expr(expr), " }"],
-            _ => docvec![op, self.wrap_expr(expr)],
+            UntypedExpr::BinOp { .. } => docvec!["!{ ", self.expr(expr), " }"],
+            _ => docvec!["!", self.wrap_expr(expr)],
+        }
+    }
+
+    fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+        match expr {
+            // Always nest repeated negation in a block to avoid confusion with
+            // the pre-decrement operator (which does not exist)
+            UntypedExpr::BinOp { .. } | UntypedExpr::NegateInt { .. } => {
+                docvec!["- { ", self.expr(expr), " }"]
+            }
+            _ => docvec!["-", self.wrap_expr(expr)],
         }
     }
 

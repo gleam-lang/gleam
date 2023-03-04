@@ -4982,3 +4982,83 @@ fn deprecated_assert() {
 "#
     );
 }
+
+#[test]
+fn negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -        a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = -a
+}
+"#
+    );
+}
+
+#[test]
+fn double_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = --a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { -a }
+}
+"#
+    );
+}
+
+#[test]
+fn triple_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -  -   - a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { - { -a } }
+}
+"#
+    );
+}
+
+#[test]
+fn binary_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -{a+3}
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { a + 3 }
+}
+"#
+    );
+}
+
+#[test]
+fn binary_double_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = --{a + 3}
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { - { a + 3 } }
+}
+"#
+    );
+}
