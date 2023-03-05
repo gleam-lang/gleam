@@ -2,6 +2,7 @@ use super::*;
 use crate::ast::{UntypedExpr, UntypedModule};
 
 mod assert;
+mod assignments;
 mod errors;
 mod functions;
 mod imports;
@@ -752,44 +753,6 @@ fn simple_exprs() {
     // scientific notation
     assert_infer!("6.02e23", "Float");
     assert_infer!("6.02e-23", "Float");
-}
-
-#[test]
-fn let_() {
-    assert_infer!("let x = 1 2", "Int");
-    assert_infer!("let x = 1 x", "Int");
-    assert_infer!("let x = 2.0 x", "Float");
-    assert_infer!("let x = 2 let y = x y", "Int");
-    assert_infer!(
-        "let #(#(_, _) as x, _) = #(#(0, 1.0), []) x",
-        "#(Int, Float)"
-    );
-    assert_infer!("let x: String = \"\" x", "String");
-    assert_infer!("let x: #(Int, Int) = #(5, 5) x", "#(Int, Int)",);
-    assert_infer!("let x: #(Int, Float) = #(5, 5.0) x", "#(Int, Float)",);
-    assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
-    assert_infer!(
-        "let #(5, [..x]): #(Int, List(Int)) = #(5, [1,2,3]) x",
-        "List(Int)",
-    );
-    assert_infer!(
-        "let #(5.0, [..x]): #(Float, List(Int)) = #(5.0, [1,2,3]) x",
-        "List(Int)",
-    );
-    assert_infer!("let x: List(_) = [] x", "List(a)");
-    assert_infer!("let x: List(_) = [1] x", "List(Int)");
-
-    assert_infer!("let [] = [] 1", "Int");
-    assert_infer!("let [a] = [1] a", "Int");
-    assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a, .. b] = [1] a", "Int");
-    assert_infer!("let [a, .. _] = [1] a", "Int");
-    assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
-    assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
-    assert_infer!("let _x = 1 2.0", "Float");
-    assert_infer!("let _ = 1 2.0", "Float");
-    assert_infer!("let #(tag, x) = #(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { let #(a, b) = x a }", "fn(#(a, b)) -> a");
 }
 
 #[test]
