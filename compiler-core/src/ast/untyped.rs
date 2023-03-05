@@ -158,30 +158,6 @@ impl UntypedExpr {
         }
     }
 
-    pub fn append_in_sequence(self, next: Self) -> Self {
-        // The new location starts with the start of the first
-        // expression and ends with the end of the last one
-        let location = SrcSpan {
-            start: self.location().start,
-            end: next.location().end,
-        };
-        match self {
-            Self::Block {
-                mut expressions, ..
-            } => {
-                expressions.push(next);
-                Self::Block {
-                    location,
-                    expressions,
-                }
-            }
-            _ => Self::Block {
-                location,
-                expressions: vec![self, next],
-            },
-        }
-    }
-
     pub fn start_byte_index(&self) -> u32 {
         match self {
             Self::Block {
