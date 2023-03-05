@@ -4,7 +4,7 @@ use crate::{
         dep_tree,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader},
-        Mode, Module, Origin, Package, Target,
+        source_digest, Mode, Module, Origin, Package, SourceDigest, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -239,6 +239,7 @@ where
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
+                digest: module.digest(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }
@@ -591,6 +592,7 @@ pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
     pub dependencies: Vec<SmolStr>,
+    pub digest: SourceDigest,
 }
 
 impl CacheMetadata {

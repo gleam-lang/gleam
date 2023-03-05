@@ -1,5 +1,8 @@
 use super::*;
-use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
+use crate::{
+    build::source_digest,
+    io::{memory::InMemoryFileSystem, FileSystemWriter},
+};
 use std::time::Duration;
 
 #[test]
@@ -119,12 +122,13 @@ fn cache_present_without_codegen_when_not_required() {
 }
 
 fn write_cache(fs: &InMemoryFileSystem, path: &str, seconds: u64, codegen_performed: bool) {
-    let path = Path::new(path);
     let cache_metadata = CacheMetadata {
         mtime: SystemTime::UNIX_EPOCH + Duration::from_secs(seconds),
         codegen_performed,
         dependencies: vec![],
+        digest: source_digest(&path.into()),
     };
+    let path = Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 }
 

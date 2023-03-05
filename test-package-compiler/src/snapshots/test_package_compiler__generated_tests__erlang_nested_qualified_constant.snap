@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 117
 expression: "./cases/erlang_nested_qualified_constant"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<21 byte binary>
+<93 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.erl
 -module(one@two).
@@ -24,7 +23,7 @@ expression: "./cases/erlang_nested_qualified_constant"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<36 byte binary>
+<108 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

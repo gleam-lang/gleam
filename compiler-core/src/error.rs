@@ -185,6 +185,9 @@ pub enum Error {
         package: String,
         build_tools: Vec<String>,
     },
+
+    #[error("Invalid source digest: {0}")]
+    InvalidSourceDigest(String),
 }
 
 impl Error {
@@ -446,6 +449,14 @@ your app.src file \"{app_ver}\""
                     location: None,
                 }
             }
+
+            Error::InvalidSourceDigest(details) => Diagnostic {
+                title: "Source digest in the cache metadata has invalid format".into(),
+                text: format!("Details:\n\n  {details}"),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            },
 
             Error::ShellProgramNotFound { program } => {
                 let mut text = format!("The program `{program}` was not found. Is it installed?");
@@ -2258,16 +2269,16 @@ package to Hex.\n"
                         .to_string();
                 text.push_str(if *description_missing && *licence_missing {
                     r#"Add the licences and description fields to your gleam.toml file.
-                
+
 description = "A Gleam library"
 licences = ["Apache-2.0"]"#
                 } else if *description_missing {
                     r#"Add the description field to your gleam.toml file.
-                
+
 description = "A Gleam library""#
                 } else {
                     r#"Add the licences field to your gleam.toml file.
-                
+
 licences = ["Apache-2.0"]"#
                 });
                 Diagnostic {
