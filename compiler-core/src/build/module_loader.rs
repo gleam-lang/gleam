@@ -80,19 +80,23 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
-        let module = self.read_source(path, name.clone(), source_mtime)?;
-
         let meta = match self.read_cache_metadata(&artefact)? {
             Some(meta) => meta,
-            None => return Ok(Input::New(module)),
+            None => return self.read_source(path, name, source_mtime).map(Input::New),
         };
+
+        let mut module = None;
 
         // If the timestamp of the source is newer than the cache entry and
         // the hash of the source differs from the one in the cache entry,
         // then we need to recompile.
-        if meta.mtime < source_mtime && meta.digest != SourceDigest::new(&module.code) {
-            tracing::debug!(?name, "cache_stale");
-            return Ok(Input::New(module));
+        if meta.mtime < source_mtime {
+            let source_module = self.read_source(path.clone(), name.clone(), source_mtime)?;
+            if meta.digest != SourceDigest::new(&source_module.code) {
+                tracing::debug!(?name, "cache_stale");
+                return Ok(Input::New(source_module));
+            }
+            module = Some(source_module);
         }
 
         // The cache currently does not contain enough data to perform codegen,
@@ -100,7 +104,10 @@ where
         // that codegen has already been performed before using a cache.
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
-            return Ok(Input::New(module));
+            return match module {
+                Some(m) => Ok(Input::New(m)),
+                None => self.read_source(path, name, source_mtime).map(Input::New),
+            };
         }
 
         Ok(Input::Cached(self.cached(name, meta)))
