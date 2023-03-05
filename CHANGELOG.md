@@ -9,6 +9,8 @@
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
 - Added support for unary negation of integers.
+- The deprecated `try` expression has been removed.
+- The deprecated `assert ... = ...` syntax has been removed.
 
 ## v0.27.0 - 2023-03-01
 
