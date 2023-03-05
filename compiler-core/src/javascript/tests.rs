@@ -18,7 +18,6 @@ mod recursion;
 mod results;
 mod strings;
 mod todo;
-mod try_;
 mod tuples;
 mod type_alias;
 mod use_;

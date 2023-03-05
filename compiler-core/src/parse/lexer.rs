@@ -32,7 +32,6 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
         "panic" => Some(Token::Panic),
         "pub" => Some(Token::Pub),
         "todo" => Some(Token::Todo),
-        "try" => Some(Token::Try),
         "type" => Some(Token::Type),
         "use" => Some(Token::Use),
         _ => None,

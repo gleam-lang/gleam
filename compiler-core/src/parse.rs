@@ -9,7 +9,7 @@
 //     One or more Expression Units separated by an operator
 //
 //   Binding:
-//     (let|assert|try) name (:TypeAnnotation)? = Expression
+//     (let|let assert|use) name (:TypeAnnotation)? = Expression
 //
 //   Expression Sequence:
 //     * One or more Expressions
@@ -794,8 +794,7 @@ where
 
     // examples:
     //   let pattern = expr
-    //   assert pattern: Type = expr
-    //   try pattern = expr
+    //   let assert pattern: Type = expr
     //   expr expr
     //   expr
     //
@@ -803,45 +802,7 @@ where
     //   you MUST parse another expr, if it is some other expr, you MAY parse another expr
     fn parse_expression_seq(&mut self) -> Result<Option<(UntypedExpr, u32)>, ParseError> {
         // assignment
-        if let Some(start) = self.maybe_try_start() {
-            let pattern = if let Some(p) = self.parse_pattern()? {
-                p
-            } else {
-                // DUPE: 62884
-                return self.next_tok_unexpected(vec!["A pattern".into()])?;
-            };
-            let annotation = self.parse_type_annotation(&Token::Colon, false)?;
-            let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
-            let value = self.parse_expression()?;
-            let then = self.parse_expression_seq()?;
-            match (value, then) {
-                (Some(value), Some((then, end))) => Ok(Some((
-                    UntypedExpr::Try {
-                        location: SrcSpan { start, end },
-                        value: Box::new(value),
-                        pattern,
-                        annotation,
-                        then: Box::new(then),
-                    },
-                    end,
-                ))),
-
-                (None, _) => parse_error(
-                    ParseErrorType::ExpectedValue,
-                    SrcSpan {
-                        start: eq_s,
-                        end: eq_e,
-                    },
-                ),
-                (Some(val), None) => parse_error(
-                    ParseErrorType::ExprThenlessTry,
-                    SrcSpan {
-                        start,
-                        end: val.location().end,
-                    },
-                ),
-            }
-        } else if let Some(expression) = self.parse_expression()? {
+        if let Some(expression) = self.parse_expression()? {
             let mut expression = expression;
             while let Some((next, _)) = self.parse_expression_seq()? {
                 expression = expression.append_in_sequence(next);
@@ -850,17 +811,6 @@ where
             Ok(Some((expression, end)))
         } else {
             Ok(None)
-        }
-    }
-
-    // try
-    fn maybe_try_start(&mut self) -> Option<u32> {
-        match self.tok0 {
-            Some((start, Token::Try, _)) => {
-                let _ = self.next_tok();
-                Some(start)
-            }
-            _ => None,
         }
     }
 
@@ -3027,7 +2977,6 @@ fn is_reserved_word(tok: Token) -> bool {
             | Token::Opaque
             | Token::Pub
             | Token::Todo
-            | Token::Try
             | Token::Type
             | Token::Use
     ]

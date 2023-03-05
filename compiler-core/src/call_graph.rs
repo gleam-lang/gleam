@@ -199,11 +199,6 @@ impl<'a> CallGraphBuilder<'a> {
                 self.pattern(pattern);
             }
 
-            UntypedExpr::Try { value, then, .. } => {
-                self.expression(value);
-                self.expression(then);
-            }
-
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => {

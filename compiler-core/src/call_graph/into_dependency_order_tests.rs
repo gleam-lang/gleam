@@ -470,19 +470,6 @@ fn scope_reset() {
 }
 
 #[test]
-fn try_() {
-    let functions = [
-        Input::Internal("a", &[], r#"{ try b = c b }"#),
-        Input::Internal("b", &[], r#"123"#),
-        Input::External("c"),
-    ];
-    assert_eq!(
-        parse_and_order(&functions).unwrap(),
-        vec![vec!["b"], vec!["c"], vec!["a"]]
-    );
-}
-
-#[test]
 fn case_subject() {
     let functions = [
         Input::Internal("a", &[], r#"case b { _ -> 1 }"#),

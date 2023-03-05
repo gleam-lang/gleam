@@ -811,38 +811,6 @@ fn bin_op<'a>(
     }
 }
 
-fn try_<'a>(
-    value: &'a TypedExpr,
-    pat: &'a TypedPattern,
-    then: &'a TypedExpr,
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    "case "
-        .to_doc()
-        .append(maybe_block_expr(value, env))
-        .append(" of")
-        .append(
-            line()
-                .append("{error, ")
-                .append(env.next_local_var_name(TRY_VARIABLE))
-                .append("} -> {error, ")
-                .append(env.local_var_name(TRY_VARIABLE))
-                .append("};")
-                .nest(INDENT),
-        )
-        .append(
-            line()
-                .append("{ok, ")
-                .append(pattern(pat, env))
-                .append("} ->")
-                .append(line().append(expr(then, env)).nest(INDENT))
-                .nest(INDENT),
-        )
-        .append(line())
-        .append("end")
-        .group()
-}
-
 fn assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
@@ -1520,13 +1488,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
         TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
-
-        TypedExpr::Try {
-            value,
-            pattern,
-            then,
-            ..
-        } => try_(value, pattern, then, env),
 
         TypedExpr::Assignment {
             value,

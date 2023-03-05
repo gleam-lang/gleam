@@ -83,14 +83,6 @@ pub enum TypedExpr {
         kind: AssignmentKind,
     },
 
-    Try {
-        location: SrcSpan,
-        typ: Arc<Type>,
-        value: Box<Self>,
-        then: Box<Self>,
-        pattern: Pattern<PatternConstructor, Arc<Type>>,
-    },
-
     Case {
         location: SrcSpan,
         typ: Arc<Type>,
@@ -213,11 +205,6 @@ impl TypedExpr {
 
             Self::Assignment { value, .. } => value.find_node(byte_index),
 
-            Self::Try { value, then, .. } => value
-                .find_node(byte_index)
-                .or_else(|| then.find_node(byte_index))
-                .or(Some(self)),
-
             Self::Case {
                 subjects, clauses, ..
             } => subjects
@@ -265,7 +252,6 @@ impl TypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Fn { location, .. }
-            | Self::Try { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
@@ -294,7 +280,6 @@ impl TypedExpr {
         match self {
             Self::Fn { location, .. }
             | Self::Int { location, .. }
-            | Self::Try { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
             | Self::Case { location, .. }
@@ -335,7 +320,6 @@ impl TypedExpr {
         match self {
             TypedExpr::Fn { .. }
             | TypedExpr::Int { .. }
-            | TypedExpr::Try { .. }
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
@@ -378,7 +362,6 @@ impl TypedExpr {
             Self::NegateBool { .. } => bool(),
             Self::NegateInt { value, .. } => value.type_(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
-            Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
             | Self::Int { typ, .. }
             | Self::Todo { typ, .. }
