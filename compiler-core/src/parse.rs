@@ -796,7 +796,7 @@ where
 
         // Try and parse as many expressions as possible
         while let Some(expression) = self.parse_expression()? {
-            if start == None {
+            if start.is_none() {
                 start = Some(expression.location().start);
             }
             end = expression.location().end;
