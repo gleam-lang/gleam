@@ -68,6 +68,8 @@ toml = "0.5.8"
 spdx = "0.8.0"
 # Binary format de-serialization
 bincode = "1.3.3"
+# String manipulation, HTML tag stripping
+voca_rs = "1.15.2"
 # cross platform single glob and glob set matching
 globset = { version = "0.4.9", features = ["serde1"] }
 # Compact and cheap to clone immutable string type
