@@ -1614,7 +1614,7 @@ impl<'a> Documentable<'a> for &'a BinOp {
     }
 }
 
-pub fn break_block<'a>(doc: Document<'a>) -> Document<'a> {
+pub fn break_block(doc: Document<'_>) -> Document<'_> {
     "{".to_doc()
         .append(line().append(doc).nest(INDENT))
         .append(line())
@@ -1622,7 +1622,7 @@ pub fn break_block<'a>(doc: Document<'a>) -> Document<'a> {
         .force_break()
 }
 
-pub fn wrap_block<'a>(doc: Document<'a>) -> Document<'a> {
+pub fn wrap_block(doc: Document<'_>) -> Document<'_> {
     break_("{", "{ ")
         .append(doc)
         .nest(INDENT)
