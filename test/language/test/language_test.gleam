@@ -220,7 +220,7 @@ fn pipes_tests() -> List(Test) {
 
 fn assert_tests() -> List(Test) {
   [
-    "assert Ok(_)"
+    "let assert Ok(_)"
     |> example(fn() {
       assert_equal(
         Ok(1),
@@ -229,7 +229,7 @@ fn assert_tests() -> List(Test) {
         },
       )
     }),
-    "assert Ok(x)"
+    "let assert Ok(x)"
     |> example(fn() {
       assert_equal(
         1,

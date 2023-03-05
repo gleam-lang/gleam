@@ -13,9 +13,9 @@ fn go(x) {
 
 #[test]
 fn assert() {
-    assert_js!(r#"fn go(x) { assert 1 = x }"#,);
+    assert_js!(r#"fn go(x) { let assert 1 = x }"#,);
 
-    assert_js!(r#"fn go(x) { assert #(1, 2) = x }"#,);
+    assert_js!(r#"fn go(x) { let assert #(1, 2) = x }"#,);
 }
 
 #[test]
@@ -77,7 +77,7 @@ fn second() {
 
 #[test]
 fn returning_literal_subject() {
-    assert_js!(r#"fn go(x) { assert 1 = x + 1 }"#,);
+    assert_js!(r#"fn go(x) { let assert 1 = x + 1 }"#,);
 }
 
 #[test]

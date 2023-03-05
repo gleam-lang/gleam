@@ -1152,15 +1152,13 @@ pub enum AssignmentKind {
     Let,
     // let assert x = ...
     Assert,
-    // assert x = ...
-    DeprecatedAssert,
 }
 
 impl AssignmentKind {
     pub(crate) fn performs_exhaustiveness_check(&self) -> bool {
         match self {
             AssignmentKind::Let => true,
-            AssignmentKind::Assert | AssignmentKind::DeprecatedAssert => false,
+            AssignmentKind::Assert => false,
         }
     }
 }

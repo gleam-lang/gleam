@@ -757,18 +757,18 @@ fn simple_exprs() {
 
 #[test]
 fn assert() {
-    assert_infer!("assert [] = [] 1", "Int");
-    assert_infer!("assert [a] = [1] a", "Int");
-    assert_infer!("assert [a, 2] = [1] a", "Int");
-    assert_infer!("assert [a, .._] = [1] a", "Int");
-    assert_infer!("assert [a, .._,] = [1] a", "Int");
-    assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
-    assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
-    assert_infer!("assert _x = 1 2.0", "Float");
-    assert_infer!("assert _ = 1 2.0", "Float");
-    assert_infer!("assert #(tag, x) = #(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { assert #(a, b) = x a }", "fn(#(a, b)) -> a");
-    assert_infer!("assert 5: Int = 5 5", "Int");
+    assert_infer!("let assert [] = [] 1", "Int");
+    assert_infer!("let assert [a] = [1] a", "Int");
+    assert_infer!("let assert [a, 2] = [1] a", "Int");
+    assert_infer!("let assert [a, .._] = [1] a", "Int");
+    assert_infer!("let assert [a, .._,] = [1] a", "Int");
+    assert_infer!("fn(x) { let assert [a] = x a }", "fn(List(a)) -> a");
+    assert_infer!("fn(x) { let assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
+    assert_infer!("let assert _x = 1 2.0", "Float");
+    assert_infer!("let assert _ = 1 2.0", "Float");
+    assert_infer!("let assert #(tag, x) = #(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { let assert #(a, b) = x a }", "fn(#(a, b)) -> a");
+    assert_infer!("let assert 5: Int = 5 5", "Int");
 }
 
 #[test]
@@ -1768,14 +1768,6 @@ fn let_as_expression() {
     assert_infer!("let x = 1", "Int");
     assert_infer!("let x = let x = 1", "Int");
     assert_infer!("let x = { let x = 1. }", "Float");
-}
-
-#[test]
-fn assert_as_expression() {
-    assert_infer!("assert x = 1", "Int");
-    assert_infer!("assert x = assert x = 1", "Int");
-    assert_infer!("assert x = { assert x = 1. }", "Float");
-    assert_infer!("assert 1 = 1", "Int");
 }
 
 #[test]
