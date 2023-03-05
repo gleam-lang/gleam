@@ -14,6 +14,7 @@ pub fn main() -> Int {
     test.run([
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
+      suite("blocks", block_tests()),
       suite("assert", assert_tests()),
       suite("floats", float_tests()),
       suite("prelude", prelude_tests()),
@@ -326,11 +327,6 @@ fn equality_test(name: String, left: a, right: a) {
 
 fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
   example(name, fn() { assert_equal(left(), right) })
-}
-
-fn try_fn(result) {
-  use x <- try_(result)
-  Ok(x + 1)
 }
 
 fn true() {
@@ -1638,4 +1634,15 @@ fn try_(result: Result(a, e), next: fn(a) -> Result(b, e)) -> Result(b, e) {
     Ok(x) -> next(x)
     Error(e) -> Error(e)
   }
+}
+
+
+fn block_tests() {
+  [
+    // https://github.com/gleam-lang/gleam/issues/1991
+    "let x = 1 let _ = { let x = 2 x } x"
+    |> example(fn() {
+      assert_equal({ let x = 1 let _ = { let x = 2 x } x }, 1)
+    }),
+  ]
 }
