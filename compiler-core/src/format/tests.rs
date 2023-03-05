@@ -5088,3 +5088,19 @@ fn wrap_long_line_with_bool_negation() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1977
+#[test]
+fn preserve_single_expression_blocks() {
+    assert_format!(
+        r#"pub fn main(x) {
+  case x {
+    1 -> {
+      1
+    }
+    _ -> 2
+  }
+}
+"#
+    );
+}
