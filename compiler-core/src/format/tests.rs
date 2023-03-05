@@ -4982,3 +4982,149 @@ fn deprecated_assert() {
 "#
     );
 }
+
+#[test]
+fn negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -        a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = -a
+}
+"#
+    );
+}
+
+#[test]
+fn double_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = --a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { -a }
+}
+"#
+    );
+}
+
+#[test]
+fn triple_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -  -   - a
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { - { -a } }
+}
+"#
+    );
+}
+
+#[test]
+fn binary_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = -{a+3}
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { a + 3 }
+}
+"#
+    );
+}
+
+#[test]
+fn binary_double_negate() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = --{a + 3}
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = - { - { a + 3 } }
+}
+"#
+    );
+}
+
+#[test]
+fn repeated_negate_after_subtract() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a--------b
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b = 4
+  let c = a - - { - { - { - { - { - { -b } } } } } }
+}
+"#
+    );
+}
+
+#[test]
+fn wrap_long_line_with_int_negation() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = 3
+  let b = a * a * a * a * a * a * a * a * a * a * a * a * a *   { a * a * a * a * a * a * a * a * a * a }
+  let c = c * c * c * c * c * c * c * c * c * c * c * c * c * - { c * c * c * c * c * c * c * c * c * c }
+}
+"#,
+        r#"pub fn main() {
+  let a = 3
+  let b =
+    a * a * a * a * a * a * a * a * a * a * a * a * a * {
+      a * a * a * a * a * a * a * a * a * a
+    }
+  let c =
+    c * c * c * c * c * c * c * c * c * c * c * c * c * - {
+      c * c * c * c * c * c * c * c * c * c
+    }
+}
+"#
+    );
+}
+
+#[test]
+fn wrap_long_line_with_bool_negation() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let a = True
+  let b = a || a || a || a || a || a || a || a || a || a || a || a || a ||   { a || a || a || a || a || a || a || a || a || a }
+  let c = c || c || c || c || c || c || c || c || c || c || c || c || c || ! { c || c || c || c || c || c || c || c || c || c }
+}
+"#,
+        r#"pub fn main() {
+  let a = True
+  let b =
+    a || a || a || a || a || a || a || a || a || a || a || a || a || {
+      a || a || a || a || a || a || a || a || a || a
+    }
+  let c =
+    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
+      c || c || c || c || c || c || c || c || c || c
+    }
+}
+"#
+    );
+}

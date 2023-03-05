@@ -577,7 +577,27 @@ where
             Some((start, Token::Bang, _end)) => {
                 let _ = self.next_tok();
                 match self.parse_expression_unit()? {
-                    Some(value) => UntypedExpr::Negate {
+                    Some(value) => UntypedExpr::NegateBool {
+                        location: SrcSpan {
+                            start,
+                            end: value.location().end,
+                        },
+                        value: Box::from(value),
+                    },
+                    None => {
+                        return parse_error(
+                            ParseErrorType::ExpectedExpr,
+                            SrcSpan { start, end: start },
+                        )
+                    }
+                }
+            }
+
+            // Int negation
+            Some((start, Token::Minus, _end)) => {
+                let _ = self.next_tok();
+                match self.parse_expression_unit()? {
+                    Some(value) => UntypedExpr::NegateInt {
                         location: SrcSpan {
                             start,
                             end: value.location().end,

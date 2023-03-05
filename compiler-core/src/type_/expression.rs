@@ -186,7 +186,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 arguments: args,
             } => self.infer_record_update(*constructor, spread, args, location),
 
-            UntypedExpr::Negate { location, value } => self.infer_negate(location, *value),
+            UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
+
+            UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
 
             UntypedExpr::Use(use_) => {
                 let location = use_.location;
@@ -370,12 +372,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_negate(&mut self, location: SrcSpan, value: UntypedExpr) -> Result<TypedExpr, Error> {
+    fn infer_negate_bool(
+        &mut self,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> Result<TypedExpr, Error> {
         let value = self.infer(value)?;
 
         unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
-        Ok(TypedExpr::Negate {
+        Ok(TypedExpr::NegateBool {
+            location,
+            value: Box::new(value),
+        })
+    }
+
+    fn infer_negate_int(
+        &mut self,
+        location: SrcSpan,
+        value: UntypedExpr,
+    ) -> Result<TypedExpr, Error> {
+        let value = self.infer(value)?;
+
+        unify(int(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
+
+        Ok(TypedExpr::NegateInt {
             location,
             value: Box::new(value),
         })

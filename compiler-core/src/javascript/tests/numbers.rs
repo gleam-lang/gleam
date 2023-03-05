@@ -173,3 +173,27 @@ fn go() {
 "#,
     );
 }
+
+#[test]
+fn int_negation() {
+    assert_js!(
+        r#"
+fn go() {
+  let a = 3
+  let b = -a
+}
+"#,
+    );
+}
+
+#[test]
+fn repeated_int_negation() {
+    assert_js!(
+        r#"
+fn go() {
+  let a = 3
+  let b = --a
+}
+"#
+    );
+}

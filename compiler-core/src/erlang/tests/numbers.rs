@@ -63,3 +63,27 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn int_negation() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let a = 3
+  let b = -a
+}
+"#
+    );
+}
+
+#[test]
+fn repeated_int_negation() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  let a = 3
+  let b = --a
+}
+"#
+    );
+}

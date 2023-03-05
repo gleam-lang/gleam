@@ -595,15 +595,7 @@ impl<'comments> Formatter<'comments> {
             Some(t) => header.append(" -> ").append(self.type_ast(t)),
         };
 
-        header
-            .append(
-                break_(" {", " { ")
-                    .append(body)
-                    .nest(INDENT)
-                    .append(break_("", " "))
-                    .append("}"),
-            )
-            .group()
+        header.append(" ").append(wrap_block(body)).group()
     }
 
     fn sequence<'a>(&mut self, expressions: &'a [UntypedExpr]) -> Document<'a> {
@@ -692,7 +684,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
-            UntypedExpr::Negate { value, .. } => self.negate(value),
+            UntypedExpr::NegateInt { value, .. } => self.negate_int(value),
+
+            UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
             UntypedExpr::Fn {
                 is_capture: true,
@@ -970,12 +964,7 @@ impl<'comments> Formatter<'comments> {
 
     pub fn operator_side<'a>(&mut self, doc: Document<'a>, op: u8, side: u8) -> Document<'a> {
         if op > side {
-            break_("{", "{ ")
-                .append(doc)
-                .nest(INDENT)
-                .append(break_("", " "))
-                .append("}")
-                .group()
+            wrap_block(doc).group()
         } else {
             doc
         }
@@ -1203,12 +1192,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Use(_)
             | UntypedExpr::Sequence { .. }
             | UntypedExpr::Assignment { .. }
-            | UntypedExpr::Try { .. } => "{"
-                .to_doc()
-                .append(line().append(self.expr(expr)).nest(INDENT))
-                .append(line())
-                .append("}")
-                .force_break(),
+            | UntypedExpr::Try { .. } => break_block(self.expr(expr)),
 
             _ => self.expr(expr),
         }
@@ -1249,12 +1233,7 @@ impl<'comments> Formatter<'comments> {
         match expr {
             UntypedExpr::Try { .. }
             | UntypedExpr::Sequence { .. }
-            | UntypedExpr::Assignment { .. } => " {"
-                .to_doc()
-                .append(line().append(self.expr(expr)).nest(INDENT).group())
-                .append(line())
-                .append("}")
-                .force_break(),
+            | UntypedExpr::Assignment { .. } => " ".to_doc().append(break_block(self.expr(expr))),
 
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
@@ -1529,10 +1508,22 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn negate<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+    fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::BinOp { .. } => docvec!["!{ ", self.expr(expr), " }"],
+            UntypedExpr::BinOp { .. } => "!".to_doc().append(wrap_block(self.expr(expr))),
             _ => docvec!["!", self.wrap_expr(expr)],
+        }
+    }
+
+    fn negate_int<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+        match expr {
+            // Always nest repeated negation in a block to avoid confusion with
+            // the pre-decrement operator (which does not exist)
+            UntypedExpr::BinOp { .. } | UntypedExpr::NegateInt { .. } => {
+                "- ".to_doc().append(wrap_block(self.expr(expr)))
+            }
+
+            _ => docvec!["-", self.wrap_expr(expr)],
         }
     }
 
@@ -1621,6 +1612,22 @@ impl<'a> Documentable<'a> for &'a BinOp {
         }
         .to_doc()
     }
+}
+
+pub fn break_block(doc: Document<'_>) -> Document<'_> {
+    "{".to_doc()
+        .append(line().append(doc).nest(INDENT))
+        .append(line())
+        .append("}")
+        .force_break()
+}
+
+pub fn wrap_block(doc: Document<'_>) -> Document<'_> {
+    break_("{", "{ ")
+        .append(doc)
+        .nest(INDENT)
+        .append(break_("", " "))
+        .append("}")
 }
 
 pub fn wrap_args<'a, I>(args: I) -> Document<'a>

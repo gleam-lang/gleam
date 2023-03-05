@@ -168,7 +168,9 @@ impl<'module> Generator<'module> {
                 ..
             } => Ok(self.module_select(module_alias, label, constructor)),
 
-            TypedExpr::Negate { value, .. } => self.negate(value),
+            TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
+
+            TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
         }?;
         Ok(if expression.handles_own_return() {
             document
@@ -177,8 +179,8 @@ impl<'module> Generator<'module> {
         })
     }
 
-    fn negate<'a>(&mut self, value: &'a TypedExpr) -> Output<'a> {
-        self.not_in_tail_position(|gen| Ok(docvec!("!", gen.wrap_expression(value)?)))
+    fn negate_with<'a>(&mut self, with: &'static str, value: &'a TypedExpr) -> Output<'a> {
+        self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
     }
 
     fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {

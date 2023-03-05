@@ -8,6 +8,7 @@
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
+- Added support for unary negation of integers.
 - Cache loader now checks the file hashes in addition to modification times before loading cached entry.
 
 ## v0.27.0 - 2023-03-01
