@@ -21,6 +21,13 @@ macro_rules! assert_error {
     };
 }
 
+macro_rules! assert_parse {
+    ($src:expr) => {
+        let result = crate::parse::parse_expression_sequence($src).expect("should parse");
+        insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
+    };
+}
+
 #[test]
 fn int_tests() {
     // bad binary digit
@@ -78,7 +85,7 @@ fn int_tests() {
 }
 
 #[test]
-fn string_tests() {
+fn string() {
     // bad character escape
     assert_error!(
         r#""\g""#,
@@ -92,7 +99,10 @@ fn string_tests() {
             location: SrcSpan { start: 1, end: 2 },
         }
     );
+}
 
+#[test]
+fn string2() {
     // still bad character escape
     assert_error!(
         r#""\\\g""#,
@@ -109,7 +119,7 @@ fn string_tests() {
 }
 
 #[test]
-fn bit_string_tests() {
+fn bit_string() {
     // non int value in BitString unit option
     assert_error!(
         "let x = <<1:unit(0)>> x",
@@ -118,7 +128,10 @@ fn bit_string_tests() {
             location: SrcSpan { start: 17, end: 18 }
         }
     );
+}
 
+#[test]
+fn bit_string1() {
     assert_error!(
         "let x = <<1:unit(257)>> x",
         ParseError {
@@ -126,7 +139,10 @@ fn bit_string_tests() {
             location: SrcSpan { start: 17, end: 20 }
         }
     );
+}
 
+#[test]
+fn bit_string2() {
     // patterns cannot be nested
     assert_error!(
         "case <<>> { <<<<1>>:bit_string>> -> 1 }",
@@ -138,7 +154,7 @@ fn bit_string_tests() {
 }
 
 #[test]
-fn name_tests() {
+fn name() {
     assert_error!(
         "let xS = 1",
         ParseError {
@@ -151,7 +167,10 @@ fn name_tests() {
             location: SrcSpan { start: 4, end: 6 },
         }
     );
+}
 
+#[test]
+fn name1() {
     assert_error!(
         "let _xS = 1",
         ParseError {
@@ -164,7 +183,10 @@ fn name_tests() {
             location: SrcSpan { start: 4, end: 7 },
         }
     );
+}
 
+#[test]
+fn name2() {
     assert_error!(
         "type S_m = String",
         ParseError {
@@ -247,6 +269,10 @@ fn no_let_binding() {
             error: ParseErrorType::NoLetBinding
         }
     );
+}
+
+#[test]
+fn no_let_binding1() {
     assert_error!(
         "foo:Int = 32",
         ParseError {
@@ -254,6 +280,10 @@ fn no_let_binding() {
             error: ParseErrorType::NoLetBinding
         }
     );
+}
+
+#[test]
+fn no_let_binding2() {
     assert_error!(
         "let bar:Int = 32
         bar = 42",
@@ -262,6 +292,10 @@ fn no_let_binding() {
             error: ParseErrorType::NoLetBinding
         }
     );
+}
+
+#[test]
+fn no_let_binding3() {
     assert_error!(
         "[x] = [2]",
         ParseError {
@@ -280,6 +314,10 @@ fn no_eq_after_binding() {
             error: ParseErrorType::ExpectedEqual
         }
     );
+}
+
+#[test]
+fn no_eq_after_binding1() {
     assert_error!(
         "let foo
         foo = 4",
@@ -352,4 +390,27 @@ fn valueless_list_spread_expression() {
 #[test]
 fn semicolons() {
     assert_error!(r#"{ 2 + 3; - -5; }"#);
+}
+
+#[test]
+fn bare_expression() {
+    assert_parse!(r#"1"#);
+}
+
+// https://github.com/gleam-lang/gleam/issues/1991
+#[test]
+fn block_of_one() {
+    assert_parse!(r#"{ 1 }"#);
+}
+
+// https://github.com/gleam-lang/gleam/issues/1991
+#[test]
+fn block_of_two() {
+    assert_parse!(r#"{ 1 2 }"#);
+}
+
+// https://github.com/gleam-lang/gleam/issues/1991
+#[test]
+fn nested_block() {
+    assert_parse!(r#"{ 1 { 1.0 2.0 } 3 }"#);
 }
