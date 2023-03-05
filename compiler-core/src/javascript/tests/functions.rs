@@ -301,7 +301,7 @@ fn let_last() {
 fn assert_last() {
     assert_js!(
         r#"pub fn main() {
-  assert x = 1
+  let assert x = 1
 }
 "#,
     );

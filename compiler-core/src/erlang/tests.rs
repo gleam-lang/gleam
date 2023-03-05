@@ -471,7 +471,7 @@ fn keyword_constructors1() {
 fn discard_in_assert() {
     assert_erl!(
         "pub fn x(y) {
-  assert Ok(_) = y
+  let assert Ok(_) = y
   1
 }"
     );

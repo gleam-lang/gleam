@@ -4933,7 +4933,7 @@ fn not_add() {
 fn deprecated_assert() {
     assert_format_rewrite!(
         r#"fn main(x) {
-  assert True = x
+  let assert True = x
 }
 "#,
         r#"fn main(x) {

@@ -699,7 +699,7 @@ fn module_could_not_unify6() {
 
 #[test]
 fn module_could_not_unify7() {
-    assert_module_error!("fn main() { assert 5: Int = \"\" 5 }");
+    assert_module_error!("fn main() { let assert 5: Int = \"\" 5 }");
 }
 
 #[test]

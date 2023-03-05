@@ -742,12 +742,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         annotation: &Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        if kind == AssignmentKind::DeprecatedAssert {
-            self.environment
-                .warnings
-                .push(Warning::DeprecatedAssertUsed { location });
-        }
-
         let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
         let value_typ = value.type_();
 
