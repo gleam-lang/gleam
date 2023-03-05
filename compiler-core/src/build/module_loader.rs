@@ -22,7 +22,7 @@ use crate::{
     Error, Result,
 };
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
 pub(crate) struct SourceDigest(Output<Sha256>);
 
@@ -80,18 +80,19 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
-        let read_source = |name| Ok(Input::New(self.read_source(path, name, source_mtime)?));
+        let module = self.read_source(path, name.clone(), source_mtime)?;
 
         let meta = match self.read_cache_metadata(&artefact)? {
             Some(meta) => meta,
-            None => return read_source(name),
+            None => return Ok(Input::New(module)),
         };
 
-        // If there's a timestamp and it's newer or the same than the source
-        // file modification time then we read the cached data.
-        if meta.mtime < source_mtime {
+        // If the timestamp of the source is newer than the cache entry and
+        // the hash of the source differs from the one in the cache entry,
+        // then we need to recompile.
+        if meta.mtime < source_mtime && meta.digest != SourceDigest::new(&module.code) {
             tracing::debug!(?name, "cache_stale");
-            return read_source(name);
+            return Ok(Input::New(module));
         }
 
         // The cache currently does not contain enough data to perform codegen,
@@ -99,7 +100,7 @@ where
         // that codegen has already been performed before using a cache.
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
-            return read_source(name);
+            return Ok(Input::New(module));
         }
 
         Ok(Input::Cached(self.cached(name, meta)))

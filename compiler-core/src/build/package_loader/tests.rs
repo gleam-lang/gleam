@@ -14,19 +14,22 @@ struct LoaderTestOutput {
     cached: Vec<SmolStr>,
 }
 
+const TEST_SOURCE_1: &'static str = "const x = 1";
+const TEST_SOURCE_2: &'static str = "const x = 2";
+
 fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64, src: &str) {
     let path = Path::new(path);
     fs.write(&path, src).unwrap();
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 
-fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<SmolStr>) {
+fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<SmolStr>, src: &str) {
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
         mtime,
         codegen_performed: true,
         dependencies: deps,
-        digest: SourceDigest::new(""),
+        digest: SourceDigest::new(src),
     };
     let path = Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
@@ -135,8 +138,8 @@ fn reading_cache() {
     let root = Path::new("/");
     let artefact = Path::new("/artefact");
 
-    write_src(&fs, "/src/one.gleam", 0, "");
-    write_cache(&fs, "one", 0, vec![]);
+    write_src(&fs, "/src/one.gleam", 0, TEST_SOURCE_1);
+    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
 
     let loaded = run_loader(fs, root, artefact);
     assert!(loaded.to_compile.is_empty());
@@ -149,8 +152,8 @@ fn module_is_stale_if_cache_older() {
     let root = Path::new("/");
     let artefact = Path::new("/artefact");
 
-    write_src(&fs, "/src/one.gleam", 1, "");
-    write_cache(&fs, "one", 0, vec![]);
+    write_src(&fs, "/src/one.gleam", 1, TEST_SOURCE_2);
+    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
 
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(loaded.to_compile, vec![SmolStr::new("one")]);
@@ -164,16 +167,16 @@ fn module_is_stale_if_deps_are_stale() {
     let artefact = Path::new("/artefact");
 
     // Cache is stale
-    write_src(&fs, "/src/one.gleam", 1, "");
-    write_cache(&fs, "one", 0, vec![]);
+    write_src(&fs, "/src/one.gleam", 1, TEST_SOURCE_2);
+    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
 
     // Cache is fresh but dep is stale
     write_src(&fs, "/src/two.gleam", 1, "import one");
-    write_cache(&fs, "two", 2, vec![SmolStr::new("one")]);
+    write_cache(&fs, "two", 2, vec![SmolStr::new("one")], "import one");
 
     // Cache is fresh
-    write_src(&fs, "/src/three.gleam", 1, "");
-    write_cache(&fs, "three", 2, vec![]);
+    write_src(&fs, "/src/three.gleam", 1, TEST_SOURCE_1);
+    write_cache(&fs, "three", 2, vec![], TEST_SOURCE_1);
 
     let loaded = run_loader(fs, root, artefact);
     assert_eq!(
