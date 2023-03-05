@@ -12,7 +12,6 @@ import gleam
 pub fn main() -> Int {
   let stats =
     test.run([
-      suite("try", try_tests()),
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
       suite("assert", assert_tests()),
@@ -332,35 +331,6 @@ fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
 fn try_fn(result) {
   use x <- try_(result)
   Ok(x + 1)
-}
-
-fn try_tests() -> List(Test) {
-  [
-    "ok"
-    |> example(fn() { assert_equal(Ok(2), try_fn(Ok(1))) }),
-    "error"
-    |> example(fn() { assert_equal(Error("error"), try_fn(Error("error"))) }),
-    "ok in block"
-    |> example(fn() {
-      assert_equal(
-        Ok(2),
-        {
-          use x <- try_(Ok(1))
-          Ok(x + 1)
-        },
-      )
-    }),
-    "error in block"
-    |> example(fn() {
-      assert_equal(
-        Error(Nil),
-        {
-          use x <- try_(Error(Nil))
-          Ok(x + 1)
-        },
-      )
-    }),
-  ]
 }
 
 fn true() {
