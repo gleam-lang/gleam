@@ -136,7 +136,7 @@ impl<'module> Generator<'module> {
                 name, constructor, ..
             } => Ok(self.variable(name, constructor)),
 
-            TypedExpr::Pipeline { expressions, .. } | TypedExpr::Sequence { expressions, .. } => {
+            TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
                 self.sequence(expressions)
             }
 
@@ -268,7 +268,7 @@ impl<'module> Generator<'module> {
         match expression {
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
-            | TypedExpr::Sequence { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::Assignment { .. }
             | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
@@ -285,7 +285,7 @@ impl<'module> Generator<'module> {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
             TypedExpr::Case { .. }
-            | TypedExpr::Sequence { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::Assignment { .. }
             | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
@@ -1329,7 +1329,7 @@ impl TypedExpr {
                 | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::Panic { .. }
-                | TypedExpr::Sequence { .. }
+                | TypedExpr::Block { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::Assignment { .. }
         )

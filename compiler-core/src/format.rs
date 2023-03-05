@@ -676,7 +676,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => self.string(value),
 
-            UntypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
+            UntypedExpr::Block { expressions, .. } => self.sequence(expressions),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -1190,7 +1190,7 @@ impl<'comments> Formatter<'comments> {
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Use(_)
-            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Assignment { .. }
             | UntypedExpr::Try { .. } => break_block(self.expr(expr)),
 
@@ -1232,7 +1232,7 @@ impl<'comments> Formatter<'comments> {
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::Try { .. }
-            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Assignment { .. } => " ".to_doc().append(break_block(self.expr(expr))),
 
             UntypedExpr::Fn { .. }
@@ -1852,7 +1852,7 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
     matches!(
         expr,
         UntypedExpr::Fn { .. }
-            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Assignment { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::Case { .. }

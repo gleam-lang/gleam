@@ -19,7 +19,7 @@ pub enum UntypedExpr {
         value: SmolStr,
     },
 
-    Sequence {
+    Block {
         location: SrcSpan,
         expressions: Vec<Self>,
     },
@@ -159,7 +159,7 @@ impl UntypedExpr {
             | Self::RecordUpdate { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. } => *location,
-            Self::Sequence {
+            Self::Block {
                 location,
                 expressions,
                 ..
@@ -175,16 +175,16 @@ impl UntypedExpr {
             end: next.location().end,
         };
         match self {
-            Self::Sequence {
+            Self::Block {
                 mut expressions, ..
             } => {
                 expressions.push(next);
-                Self::Sequence {
+                Self::Block {
                     location,
                     expressions,
                 }
             }
-            _ => Self::Sequence {
+            _ => Self::Block {
                 location,
                 expressions: vec![self, next],
             },
@@ -193,7 +193,7 @@ impl UntypedExpr {
 
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Sequence {
+            Self::Block {
                 expressions,
                 location,
                 ..

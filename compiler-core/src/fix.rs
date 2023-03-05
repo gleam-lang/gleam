@@ -166,7 +166,7 @@ impl Fixer {
                     assignments: vec![pattern],
                 });
                 let expressions = vec![use_, then];
-                let mut sequence = UntypedExpr::Sequence {
+                let mut sequence = UntypedExpr::Block {
                     location: *location,
                     expressions,
                 };
@@ -191,7 +191,7 @@ impl Fixer {
             UntypedExpr::Tuple {
                 elems: expressions, ..
             }
-            | UntypedExpr::Sequence { expressions, .. } => {
+            | UntypedExpr::Block { expressions, .. } => {
                 for expression in expressions.iter_mut() {
                     self.fix_expression(expression);
                 }

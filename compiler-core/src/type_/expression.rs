@@ -86,7 +86,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_int(value, location)),
 
-            UntypedExpr::Sequence {
+            UntypedExpr::Block {
                 expressions,
                 location,
             } => self.infer_seq(location, expressions),
@@ -309,7 +309,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             expressions.push(expression);
         }
 
-        Ok(TypedExpr::Sequence {
+        Ok(TypedExpr::Block {
             location,
             expressions,
         })
@@ -349,7 +349,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location: SrcSpan::new(first.start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
-            body: Box::new(UntypedExpr::Sequence {
+            body: Box::new(UntypedExpr::Block {
                 location: sequence_location,
                 expressions,
             }),
