@@ -121,7 +121,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::Sequence { expressions, .. } => {
+            UntypedExpr::Block { expressions, .. } => {
                 let names = self.names.clone();
                 for expression in expressions {
                     self.expression(expression);

@@ -1395,7 +1395,7 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 fn needs_wrapping_in_block(expression: &TypedExpr) -> bool {
     matches!(
         expression,
-        TypedExpr::Pipeline { .. } | TypedExpr::Sequence { .. } | TypedExpr::Assignment { .. }
+        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } | TypedExpr::Assignment { .. }
     )
 }
 
@@ -1464,7 +1464,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
-        TypedExpr::Pipeline { expressions, .. } | TypedExpr::Sequence { expressions, .. } => {
+        TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
             seq(expressions, env)
         }
 
