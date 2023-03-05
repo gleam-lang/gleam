@@ -185,9 +185,6 @@ pub enum Error {
         package: String,
         build_tools: Vec<String>,
     },
-
-    #[error("Invalid source digest: {0}")]
-    InvalidSourceDigest(String),
 }
 
 impl Error {
@@ -449,14 +446,6 @@ your app.src file \"{app_ver}\""
                     location: None,
                 }
             }
-
-            Error::InvalidSourceDigest(details) => Diagnostic {
-                title: "Source digest in the cache metadata has invalid format".into(),
-                text: format!("Details:\n\n  {details}"),
-                level: Level::Error,
-                hint: None,
-                location: None,
-            },
 
             Error::ShellProgramNotFound { program } => {
                 let mut text = format!("The program `{program}` was not found. Is it installed?");

@@ -2,9 +2,10 @@ use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
         dep_tree,
+        module_loader::SourceDigest,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader},
-        source_digest, Mode, Module, Origin, Package, SourceDigest, Target,
+        Mode, Module, Origin, Package, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -239,7 +240,7 @@ where
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
-                digest: module.digest(),
+                digest: SourceDigest::new(&module.code),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }

@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    build::source_digest,
+    build::module_loader::SourceDigest,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
 };
 use std::time::Duration;
@@ -126,7 +126,7 @@ fn write_cache(fs: &InMemoryFileSystem, path: &str, seconds: u64, codegen_perfor
         mtime: SystemTime::UNIX_EPOCH + Duration::from_secs(seconds),
         codegen_performed,
         dependencies: vec![],
-        digest: source_digest(&path.into()),
+        digest: SourceDigest::new(""),
     };
     let path = Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();

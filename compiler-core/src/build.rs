@@ -26,8 +26,7 @@ use crate::{
     type_,
 };
 use itertools::Itertools;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use sha2::{digest::Output, Digest, Sha256};
+use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 use std::time::SystemTime;
 use std::{
@@ -179,34 +178,6 @@ impl Package {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(try_from = "String", into = "String")]
-pub(crate) struct SourceDigest(Output<Sha256>);
-
-impl TryFrom<String> for SourceDigest {
-    type Error = Error;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let raw_digest = base16::decode(value.as_bytes())
-            .map_err(|e| Error::InvalidSourceDigest(e.to_string()))?;
-        let digest = Output::<Sha256>::from_exact_iter(raw_digest.into_iter())
-            .ok_or_else(|| Error::InvalidSourceDigest("unexpected length for sha256".into()))?;
-        Ok(SourceDigest(digest))
-    }
-}
-
-impl From<SourceDigest> for String {
-    fn from(digest: SourceDigest) -> Self {
-        base16::encode_upper(&digest.0)
-    }
-}
-
-pub(crate) fn source_digest(source: &SmolStr) -> SourceDigest {
-    let mut hasher = Sha256::new();
-    hasher.update(source.as_bytes());
-    SourceDigest(hasher.finalize())
-}
-
 #[derive(Debug)]
 pub struct Module {
     pub name: SmolStr,
@@ -284,10 +255,6 @@ impl Module {
             .iter()
             .map(|(name, _)| name.clone())
             .collect()
-    }
-
-    pub(crate) fn digest(&self) -> SourceDigest {
-        source_digest(&self.code)
     }
 }
 

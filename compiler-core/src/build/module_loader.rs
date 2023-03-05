@@ -7,6 +7,8 @@ use std::{
     time::SystemTime,
 };
 
+use serde::{Deserialize, Serialize};
+use sha2::{digest::Output, Digest, Sha256};
 use smol_str::SmolStr;
 
 use super::{
@@ -19,6 +21,35 @@ use crate::{
     io::{CommandExecutor, FileSystemIO},
     Error, Result,
 };
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub(crate) struct SourceDigest(Output<Sha256>);
+
+impl SourceDigest {
+    pub(crate) fn new(source: &str) -> Self {
+        let mut hasher = Sha256::new();
+        hasher.update(source.as_bytes());
+        SourceDigest(hasher.finalize())
+    }
+}
+
+impl TryFrom<String> for SourceDigest {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        let raw_digest = base16::decode(value.as_bytes()).map_err(|e| e.to_string())?;
+        let digest = Output::<Sha256>::from_exact_iter(raw_digest.into_iter())
+            .ok_or_else(|| "unexpected length for sha256".to_string())?;
+        Ok(SourceDigest(digest))
+    }
+}
+
+impl From<SourceDigest> for String {
+    fn from(digest: SourceDigest) -> Self {
+        base16::encode_upper(&digest.0)
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct ModuleLoader<'a, IO> {
