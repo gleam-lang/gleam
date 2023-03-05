@@ -2,14 +2,14 @@
 # You typically do not need to edit this file
 
 packages = [
-  { name = "bcrypt", version = "1.1.5", build_tools = ["rebar3"], requirements = ["poolboy"], otp_app = "bcrypt", source = "hex", outer_checksum = "3418821BC17CE6E96A4A77D1A88D7485BF783E212069FACFC79510AFBFF95352" },
+  { name = "bcrypt", version = "1.2.0", build_tools = ["rebar3"], requirements = ["poolboy"], otp_app = "bcrypt", source = "hex", outer_checksum = "5112BF4B9C8ACA97F7237CBA898A483C6CE3C8353B406445A7A4197F59A6F32D" },
   { name = "certifi", version = "2.10.0", build_tools = ["rebar3"], requirements = [], otp_app = "certifi", source = "hex", outer_checksum = "E87A9DD6E7FE9C5804887850D4CDBCD83DB4DA7A27F928174F11E4E06FB7902E" },
   { name = "countries", version = "1.6.0", build_tools = ["mix"], requirements = ["yamerl"], otp_app = "countries", source = "hex", outer_checksum = "A1E4D0FDD2A799F16A95AE2E842EDEAABD9AC7639624AC5E139C54DA7A6BCCB0" },
-  { name = "cowboy", version = "2.9.0", build_tools = ["make", "rebar3"], requirements = ["cowlib", "ranch"], otp_app = "cowboy", source = "hex", outer_checksum = "2C729F934B4E1AA149AFF882F57C6372C15399A20D54F65C8D67BEF583021BDE" },
+  { name = "cowboy", version = "2.9.0", build_tools = ["make", "rebar3"], requirements = ["ranch", "cowlib"], otp_app = "cowboy", source = "hex", outer_checksum = "2C729F934B4E1AA149AFF882F57C6372C15399A20D54F65C8D67BEF583021BDE" },
   { name = "cowlib", version = "2.11.0", build_tools = ["make", "rebar3"], requirements = [], otp_app = "cowlib", source = "hex", outer_checksum = "2B3E9DA0B21C4565751A6D4901C20D1B4CC25CBB7FD50D91D2AB6DD287BC86A9" },
   { name = "first_gleam_publish_package", version = "2.2.2", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "first_gleam_publish_package", source = "hex", outer_checksum = "5C8F611B3B8A2F640F7668A710759F549D6104AC1D5E702465E001A73DBCF2D4" },
-  { name = "gleam_erlang", version = "0.18.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "14ABC93A7975369CCDDC0C4D9A34C0E0FE99CA3AD336BE6A17299EC0285B7107" },
-  { name = "gleam_stdlib", version = "0.26.1", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "B17BBE8A78F3909D93BCC6C24F531673A7E328A61F24222EB1E58D0A7552B1FE" },
+  { name = "gleam_erlang", version = "0.18.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleam_erlang", source = "hex", outer_checksum = "C69F59D086AD50B80DE294FB0963550630971C9DC04E92B1F7AEEDD2C0BE226C" },
+  { name = "gleam_stdlib", version = "0.27.0", build_tools = ["gleam"], requirements = [], otp_app = "gleam_stdlib", source = "hex", outer_checksum = "9DBDD21B48C654182CDD8AA15ACF85E8E74A0438583C68BD7EF08BE89F999C6F" },
   { name = "gleeunit", version = "0.10.1", build_tools = ["gleam"], requirements = ["gleam_stdlib"], otp_app = "gleeunit", source = "hex", outer_checksum = "ECEA2DE4BE6528D36AFE74F42A21CDF99966EC36D7F25DEB34D47DD0F7977BAF" },
   { name = "poolboy", version = "1.5.2", build_tools = ["rebar3"], requirements = [], otp_app = "poolboy", source = "hex", outer_checksum = "DAD79704CE5440F3D5A3681C8590B9DC25D1A561E8F5A9C995281012860901E3" },
   { name = "ranch", version = "1.8.0", build_tools = ["make", "rebar3"], requirements = [], otp_app = "ranch", source = "hex", outer_checksum = "49FBCFD3682FAB1F5D109351B61257676DA1A2FDBE295904176D5E521A2DDFE5" },
