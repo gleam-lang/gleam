@@ -76,7 +76,6 @@ pub enum Token {
     Panic,
     Pub,
     Todo,
-    Try,
     Type,
     Use,
 }
@@ -170,7 +169,6 @@ impl fmt::Display for Token {
             Token::Opaque => "opaque",
             Token::Pub => "pub",
             Token::Todo => "todo",
-            Token::Try => "try",
             Token::Use => "use",
             Token::Type => "type",
             Token::LtGt => "<>",

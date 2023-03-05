@@ -8,8 +8,8 @@ use strum::IntoEnumIterator;
 
 use crate::{
     ast::{
-        BitStringSegmentOption, CallArg, Import, Statement, TargetGroup, UntypedExpr,
-        UntypedModule, UntypedPattern, UntypedStatement, Use,
+        BitStringSegmentOption, Import, Statement, TargetGroup, UntypedExpr, UntypedModule,
+        UntypedStatement, Use,
     },
     build::Target,
     format::{Formatter, Intermediate},
@@ -46,12 +46,6 @@ enum ResultModule {
 }
 
 impl ResultModule {
-    fn name(&self) -> &str {
-        match self {
-            ResultModule::Existing(name) | ResultModule::Insert(name) => name,
-        }
-    }
-
     fn take_name(&mut self) -> String {
         match self {
             ResultModule::Existing(name) | ResultModule::Insert(name) => std::mem::take(name),
@@ -119,60 +113,6 @@ impl Fixer {
 
     fn fix_expression(&mut self, expression: &mut UntypedExpr) {
         match expression {
-            UntypedExpr::Try {
-                value: try_value,
-                then: try_then,
-                pattern: try_pattern,
-                location,
-                ..
-            } => {
-                // We've seen a `try` expression, so the result module is needed.
-                self.module_used = true;
-
-                // Take ownership of the sub-expressions and patterns.
-                let mut then = placeholder_expression();
-                std::mem::swap(&mut then, &mut *try_then);
-                let mut value = placeholder_expression();
-                std::mem::swap(&mut value, &mut *try_value);
-                let mut pattern = placeholder_pattern();
-                std::mem::swap(&mut pattern, &mut *try_pattern);
-
-                // Fix the sub-expressions.
-                self.fix_expression(&mut value);
-                self.fix_expression(&mut then);
-
-                // Replace the `try` with `use`.
-                let result_then = UntypedExpr::FieldAccess {
-                    location: value.location(),
-                    label: "then".into(),
-                    container: Box::new(UntypedExpr::Var {
-                        location: *location,
-                        name: self.result_module.name().into(),
-                    }),
-                };
-                let call = UntypedExpr::Call {
-                    location: *location,
-                    fun: Box::new(result_then),
-                    arguments: vec![CallArg {
-                        label: None,
-                        location: value.location(),
-                        implicit: false,
-                        value,
-                    }],
-                };
-                let use_ = UntypedExpr::Use(Use {
-                    location: *location,
-                    call: Box::new(call),
-                    assignments: vec![pattern],
-                });
-                let expressions = vec![use_, then];
-                let mut sequence = UntypedExpr::Block {
-                    location: *location,
-                    expressions,
-                };
-                std::mem::swap(expression, &mut sequence);
-            }
-
             UntypedExpr::Int { .. }
             | UntypedExpr::Var { .. }
             | UntypedExpr::Float { .. }
@@ -255,20 +195,6 @@ impl Fixer {
                 }
             }
         }
-    }
-}
-
-fn placeholder_expression() -> UntypedExpr {
-    UntypedExpr::Int {
-        location: Default::default(),
-        value: "0".into(),
-    }
-}
-
-fn placeholder_pattern() -> UntypedPattern {
-    UntypedPattern::Int {
-        location: Default::default(),
-        value: "0".into(),
     }
 }
 

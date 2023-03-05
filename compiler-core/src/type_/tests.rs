@@ -772,24 +772,6 @@ fn assert() {
 }
 
 #[test]
-fn try_() {
-    assert_infer!("try x = Ok(1) Ok(x)", "Result(Int, a)");
-    assert_infer!("try x = Ok(1) try y = Ok(1) Ok(x + y)", "Result(Int, a)");
-    assert_infer!(
-        "try x = Error(Nil) try y = Ok(1) Ok(x + 1)",
-        "Result(Int, Nil)"
-    );
-    assert_infer!(
-        "try x = Error(Nil) try y = Error(Nil) Ok(x + 1)",
-        "Result(Int, Nil)"
-    );
-    assert_infer!("try x = Error(Nil) Ok(x + 1)", "Result(Int, Nil)");
-
-    // https://github.com/gleam-lang/gleam/issues/786
-    assert_infer!("let _x0 = 1 2", "Int");
-}
-
-#[test]
 fn lists() {
     assert_infer!("[]", "List(a)");
     assert_infer!("[1]", "List(Int)");
@@ -1820,18 +1802,6 @@ pub fn b_get_first(b: B(#(a))) {
   b.value.0
 }",
         vec![("B", "fn(a) -> B(a)"), ("b_get_first", "fn(B(#(a))) -> a")],
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/1348
-#[test]
-fn try_overflow() {
-    assert_module_infer!(
-        "pub fn main() {
-  try #() = Error(1.9)
-  Ok(1)
-}",
-        vec![("main", "fn() -> Result(Int, Float)")],
     );
 }
 

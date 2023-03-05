@@ -68,14 +68,6 @@ pub enum UntypedExpr {
         annotation: Option<TypeAst>,
     },
 
-    Try {
-        location: SrcSpan,
-        value: Box<Self>,
-        pattern: Pattern<(), ()>,
-        then: Box<Self>,
-        annotation: Option<TypeAst>,
-    },
-
     Use(Use),
 
     Case {
@@ -137,7 +129,6 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Try { then, .. } => then.location(),
             Self::PipeLine { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
             | Self::Use(Use { location, .. })
@@ -202,7 +193,7 @@ impl UntypedExpr {
                 .map(|e| e.start_byte_index())
                 .unwrap_or(location.start),
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
-            Self::Try { location, .. } | Self::Assignment { location, .. } => location.start,
+            Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
         }
     }
