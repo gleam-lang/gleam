@@ -8,7 +8,6 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
-use sha2::{digest::Output, Digest, Sha256};
 use smol_str::SmolStr;
 
 use super::{
@@ -23,31 +22,11 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[serde(try_from = "String", into = "String")]
-pub(crate) struct SourceDigest(Output<Sha256>);
+pub(crate) struct SourceFingerprint(u64);
 
-impl SourceDigest {
+impl SourceFingerprint {
     pub(crate) fn new(source: &str) -> Self {
-        let mut hasher = Sha256::new();
-        hasher.update(source.as_bytes());
-        SourceDigest(hasher.finalize())
-    }
-}
-
-impl TryFrom<String> for SourceDigest {
-    type Error = String;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let raw_digest = base16::decode(value.as_bytes()).map_err(|e| e.to_string())?;
-        let digest = Output::<Sha256>::from_exact_iter(raw_digest.into_iter())
-            .ok_or_else(|| "unexpected length for sha256".to_string())?;
-        Ok(SourceDigest(digest))
-    }
-}
-
-impl From<SourceDigest> for String {
-    fn from(digest: SourceDigest) -> Self {
-        base16::encode_upper(&digest.0)
+        SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
     }
 }
 
@@ -80,34 +59,30 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
+        let read_source = |name| self.read_source(path, name, source_mtime);
+
         let meta = match self.read_cache_metadata(&artefact)? {
             Some(meta) => meta,
-            None => return self.read_source(path, name, source_mtime).map(Input::New),
+            None => return read_source(name).map(Input::New),
         };
-
-        let mut module = None;
-
-        // If the timestamp of the source is newer than the cache entry and
-        // the hash of the source differs from the one in the cache entry,
-        // then we need to recompile.
-        if meta.mtime < source_mtime {
-            let source_module = self.read_source(path.clone(), name.clone(), source_mtime)?;
-            if meta.digest != SourceDigest::new(&source_module.code) {
-                tracing::debug!(?name, "cache_stale");
-                return Ok(Input::New(source_module));
-            }
-            module = Some(source_module);
-        }
 
         // The cache currently does not contain enough data to perform codegen,
         // so if codegen is required in this compiler run then we must check
         // that codegen has already been performed before using a cache.
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
-            return match module {
-                Some(m) => Ok(Input::New(m)),
-                None => self.read_source(path, name, source_mtime).map(Input::New),
-            };
+            return read_source(name).map(Input::New);
+        }
+
+        // If the timestamp of the source is newer than the cache entry and
+        // the hash of the source differs from the one in the cache entry,
+        // then we need to recompile.
+        if meta.mtime < source_mtime {
+            let source_module = read_source(name.clone())?;
+            if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
+                tracing::debug!(?name, "cache_stale");
+                return Ok(Input::New(source_module));
+            }
         }
 
         Ok(Input::Cached(self.cached(name, meta)))

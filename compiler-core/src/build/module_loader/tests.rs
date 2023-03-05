@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    build::module_loader::SourceDigest,
+    build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
 };
 use std::time::Duration;
@@ -154,7 +154,7 @@ fn write_cache(
         mtime: SystemTime::UNIX_EPOCH + Duration::from_secs(seconds),
         codegen_performed,
         dependencies: vec![],
-        digest: SourceDigest::new(source),
+        fingerprint: SourceFingerprint::new(source),
     };
     let path = Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();

@@ -6,13 +6,13 @@ expression: "./cases/javascript_import"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<93 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<108 byte binary>
+<44 byte binary>
 
 //// /out/lib/the_package/gleam.d.ts
 <prelude>

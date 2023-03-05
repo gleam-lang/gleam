@@ -6,7 +6,7 @@ expression: "./cases/erlang_empty"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<93 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.erl
 -module(empty).

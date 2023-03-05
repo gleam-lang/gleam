@@ -6,7 +6,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
-<93 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
@@ -27,7 +27,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<123 byte binary>
+<59 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

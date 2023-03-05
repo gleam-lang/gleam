@@ -2,7 +2,7 @@ use smol_str::SmolStr;
 
 use super::*;
 use crate::{
-    build::module_loader::SourceDigest,
+    build::module_loader::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     parse::extra::ModuleExtra,
 };
@@ -29,7 +29,7 @@ fn write_cache(fs: &InMemoryFileSystem, name: &str, seconds: u64, deps: Vec<Smol
         mtime,
         codegen_performed: true,
         dependencies: deps,
-        digest: SourceDigest::new(src),
+        fingerprint: SourceFingerprint::new(src),
     };
     let path = Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
