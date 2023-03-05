@@ -327,7 +327,7 @@ macro_rules! assert_with_module_error {
 
         let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast2,
