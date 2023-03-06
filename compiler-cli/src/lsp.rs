@@ -11,9 +11,8 @@ use std::{
 use crate::{
     build_lock::BuildLock,
     dependencies::UseManifest,
-    fs::{self, ProjectIO},
+    fs::{self},
     lsp_fs_proxy::LspFsProxy,
-    new,
     telemetry::NullTelemetry,
 };
 use gleam_core::{ast::Import, build::Mode, io::FileSystemReader, warning::VectorWarningEmitterIO};
@@ -38,7 +37,6 @@ use lsp_types::{
     HoverContents, HoverProviderCapability, InitializeParams, MarkedString, Position,
     PublishDiagnosticsParams, Range, TextEdit, Url,
 };
-use smol_str::SmolStr;
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
 
@@ -157,9 +155,6 @@ pub struct LanguageServer {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
 
-    /// Files that have been edited in memory
-    edited: HashMap<String, SmolStr>,
-
     /// Diagnostics that have been emitted by the compiler but not yet published
     /// to the client
     stored_diagnostics: HashMap<PathBuf, Vec<lsp::Diagnostic>>,
@@ -187,7 +182,6 @@ impl LanguageServer {
         let project_root = std::env::current_dir().expect("Project root");
         let mut language_server = Self {
             initialise_params,
-            edited: HashMap::new(),
             stored_messages: Vec::new(),
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
@@ -506,7 +500,8 @@ impl LanguageServer {
             "textDocument/didChange" => {
                 let params = cast_notification::<DidChangeTextDocument>(notification)
                     .expect("cast DidChangeTextDocument");
-                self.text_document_did_change(params, connection)
+                let result = self.text_document_did_change(params, connection);
+                self.publish_result_diagnostics(result, connection)
             }
 
             "workspace/didChangeWatchedFiles" => {
@@ -536,7 +531,6 @@ impl LanguageServer {
         // The file is in sync with the file system, discard our cache of the changes
         self.fs_proxy
             .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-        let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
         self.compile(connection)?;
         Ok(())
@@ -546,7 +540,6 @@ impl LanguageServer {
         // The file is in sync with the file system, discard our cache of the changes
         self.fs_proxy
             .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-        let _ = self.edited.remove(params.text_document.uri.path());
         Ok(())
     }
 
@@ -555,13 +548,12 @@ impl LanguageServer {
         params: DidChangeTextDocumentParams,
         connection: &lsp_server::Connection,
     ) -> Result<()> {
-        // A file has changed in the editor so store a copy of the new content in memory
+        // A file has changed in the editor so store a copy of the new content in memory and compile
         let path = params.text_document.uri.path().to_string();
         if let Some(changes) = params.content_changes.into_iter().next() {
             self.fs_proxy
                 .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
             self.compile(connection)?;
-            let _ = self.edited.insert(path, changes.text.into());
         }
         Ok(())
     }
