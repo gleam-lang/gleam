@@ -134,6 +134,7 @@ impl FileSystemReader for InMemoryFileSystem {
     fn read(&self, path: &Path) -> Result<String, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
+        tracing::info!("Files: {:?}", files);
         let file = files.get(&path).ok_or_else(|| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Open,
