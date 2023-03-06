@@ -168,9 +168,7 @@ impl FileSystemReader for LspFsProxy {
     }
 
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
-        let in_mem_result = self
-            .cache
-            .modification_time(path.canonicalize().unwrap().as_path());
+        let in_mem_result = self.cache.modification_time(abs_path(path)?.as_path());
         match in_mem_result {
             Ok(time) => {
                 tracing::info!(
@@ -213,7 +211,7 @@ fn abs_path(path: &Path) -> Result<PathBuf, Error> {
     let abs_path = path.canonicalize().or(Err(Error::FileIo {
         kind: FileKind::File,
         action: gleam_core::error::FileIoAction::Canonicalise,
-        path: path.to_path_buf().clone(),
+        path: path.to_path_buf(),
         err: None,
     }))?;
     Ok(abs_path)
