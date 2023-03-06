@@ -12,9 +12,11 @@ use crate::{
     build_lock::BuildLock,
     dependencies::UseManifest,
     fs::{self, ProjectIO},
+    lsp_fs_proxy::LspFsProxy,
+    new,
     telemetry::NullTelemetry,
 };
-use gleam_core::{ast::Import, build::Mode, warning::VectorWarningEmitterIO};
+use gleam_core::{ast::Import, build::Mode, io::FileSystemReader, warning::VectorWarningEmitterIO};
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -173,7 +175,9 @@ pub struct LanguageServer {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<ProjectIO>>,
+    compiler: Option<LspProjectCompiler<LspFsProxy>>,
+
+    fs_proxy: LspFsProxy,
 
     config: Option<PackageConfig>,
 }
@@ -189,6 +193,7 @@ impl LanguageServer {
             published_diagnostics: HashSet::new(),
             project_root,
             compiler: None,
+            fs_proxy: LspFsProxy::new(),
             config,
         };
         language_server.create_new_compiler()?;
@@ -501,7 +506,7 @@ impl LanguageServer {
             "textDocument/didChange" => {
                 let params = cast_notification::<DidChangeTextDocument>(notification)
                     .expect("cast DidChangeTextDocument");
-                self.text_document_did_change(params)
+                self.text_document_did_change(params, connection)
             }
 
             "workspace/didChangeWatchedFiles" => {
@@ -517,7 +522,7 @@ impl LanguageServer {
 
     fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let compiler = LspProjectCompiler::new(config.clone(), ProjectIO::new())?;
+            let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone())?;
             self.compiler = Some(compiler);
         }
         Ok(())
@@ -529,6 +534,8 @@ impl LanguageServer {
         connection: &lsp_server::Connection,
     ) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
+        self.fs_proxy
+            .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
         let _ = self.edited.remove(params.text_document.uri.path());
         // The files on disc have changed, so compile the project with the new changes
         self.compile(connection)?;
@@ -537,14 +544,23 @@ impl LanguageServer {
 
     fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Result<()> {
         // The file is in sync with the file system, discard our cache of the changes
+        self.fs_proxy
+            .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
         let _ = self.edited.remove(params.text_document.uri.path());
         Ok(())
     }
 
-    fn text_document_did_change(&mut self, params: DidChangeTextDocumentParams) -> Result<()> {
+    fn text_document_did_change(
+        &mut self,
+        params: DidChangeTextDocumentParams,
+        connection: &lsp_server::Connection,
+    ) -> Result<()> {
         // A file has changed in the editor so store a copy of the new content in memory
         let path = params.text_document.uri.path().to_string();
         if let Some(changes) = params.content_changes.into_iter().next() {
+            self.fs_proxy
+                .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
+            self.compile(connection)?;
             let _ = self.edited.insert(path, changes.text.into());
         }
         Ok(())
@@ -740,20 +756,22 @@ impl LanguageServer {
         let path = params.text_document.uri.path();
         let mut new_text = String::new();
 
-        let line_count = match self.edited.get(path) {
-            // If we have a cached version of the file in memory format that
-            Some(src) => {
-                gleam_core::format::pretty(&mut new_text, src, Path::new(path))?;
-                src.lines().count() as u32
-            }
+        let src = self.fs_proxy.read(Path::new(path))?.into();
+        gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
+        let line_count = src.lines().count() as u32;
 
-            // Otherwise format the file from disc
-            None => {
-                let src = crate::fs::read(path)?.into();
-                gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
-                src.lines().count() as u32
-            }
-        };
+        // match self.edited.get(path) {
+        //     // If we have a cached version of the file in memory format that
+        //     Some(src) => {
+        //         gleam_core::format::pretty(&mut new_text, src, Path::new(path))?;
+        //     }
+
+        //     // Otherwise format the file from disc
+        //     None => {
+        //         let src = crate::fs::read(path)?.into();
+        //         gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
+        //     }
+        // };
 
         let edit = TextEdit {
             range: Range {
