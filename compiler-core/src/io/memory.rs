@@ -65,7 +65,7 @@ impl InMemoryFileSystem {
             .ok_or_else(|| Error::FileIo {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
-                path: path.to_path_buf().clone(),
+                path: path.to_path_buf(),
                 err: None,
             })?
             .modification_time = time;

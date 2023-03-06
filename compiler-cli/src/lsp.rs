@@ -752,19 +752,6 @@ impl LanguageServer {
         gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
         let line_count = src.lines().count() as u32;
 
-        // match self.edited.get(path) {
-        //     // If we have a cached version of the file in memory format that
-        //     Some(src) => {
-        //         gleam_core::format::pretty(&mut new_text, src, Path::new(path))?;
-        //     }
-
-        //     // Otherwise format the file from disc
-        //     None => {
-        //         let src = crate::fs::read(path)?.into();
-        //         gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
-        //     }
-        // };
-
         let edit = TextEdit {
             range: Range {
                 start: Position {
