@@ -1,20 +1,25 @@
 use std::{
-    collections::HashMap,
     path::{Path, PathBuf},
     time::SystemTime,
 };
 
 use gleam_core::{
+    error::FileKind,
     io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
         FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Error, Result,
 };
-use im::HashSet;
 
 use crate::fs::ProjectIO;
 
+// A proxy intended for `LanguageServer` to use when files are modified without saving.
+//
+// Uses `ProjectIO` for writing directly to disk, or `InMemoryFileSystem` to cache files
+// that were not yet saved. Reading files will always first try the `InMemoryFileSystem`
+// first and fallback to use the `ProjectIO` if the file was not found in the cache.
+//
 #[derive(Debug, Clone)]
 pub struct LspFsProxy {
     project_io: ProjectIO,
@@ -32,21 +37,21 @@ impl LspFsProxy {
     pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<(), Error> {
         // println!("Writing cache for {}", path.to_string_lossy());
         tracing::info!("Writing file to cache: {}", path.to_string_lossy());
-        self.cache.write(path, content)
+        let write_result = self.cache.write(path, content);
+        self.cache
+            .try_set_modification_time(path, SystemTime::now())?;
+        write_result
     }
 
     pub fn delete_mem_cache(&self, path: &Path) -> Result<(), Error> {
         tracing::info!("Delete file from cache: {}", path.to_string_lossy());
         self.cache.delete(path)
     }
-
-    pub fn clear_mem_cache(&mut self) {
-        self.cache = InMemoryFileSystem::new();
-    }
 }
 
 impl FileSystemIO for LspFsProxy {}
 
+// All write operations goes to disk (for mem-cache use the dedicated `_mem_cache` methods)
 impl FileSystemWriter for LspFsProxy {
     fn mkdir(&self, path: &Path) -> Result<(), Error> {
         self.project_io.mkdir(path)
@@ -86,20 +91,24 @@ impl FileSystemWriter for LspFsProxy {
 }
 
 impl FileSystemReader for LspFsProxy {
+    // Read from disk since `LspFsProxy` should never produce any new files
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.project_io.gleam_source_files(dir)
     }
 
+    // Read from disk since `LspFsProxy` should never produce any new files
     fn gleam_cache_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.project_io.gleam_cache_files(dir)
     }
 
+    // Read from disk since `LspFsProxy` never creates any dirs
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
         self.project_io.read_dir(path)
     }
 
     fn read(&self, path: &Path) -> Result<String, Error> {
-        let in_mem_result = self.cache.read(path.canonicalize().unwrap().as_path());
+        // Note that files are assumed to be stored under abs-path keys
+        let in_mem_result = self.cache.read(abs_path(path)?.as_path());
         match in_mem_result {
             Ok(_) => {
                 tracing::info!("Reading file from cache: {}", path.to_string_lossy());
@@ -117,9 +126,8 @@ impl FileSystemReader for LspFsProxy {
     }
 
     fn read_bytes(&self, path: &Path) -> Result<Vec<u8>, Error> {
-        let in_mem_result = self
-            .cache
-            .read_bytes(path.canonicalize().unwrap().as_path());
+        // Note that files are assumed to be stored under abs-path keys
+        let in_mem_result = self.cache.read_bytes(abs_path(path)?.as_path());
         match in_mem_result {
             Ok(_) => {
                 tracing::info!(
@@ -139,27 +147,54 @@ impl FileSystemReader for LspFsProxy {
         }
     }
 
+    // Not implemented in `InMemoryFileSystem`
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
         self.project_io.reader(path)
     }
 
+    // Read from disk, all files on disk are also files in mem-cache
     fn is_file(&self, path: &Path) -> bool {
         self.project_io.is_file(path)
     }
 
+    // Read from disk - mem cache has no dirs
     fn is_directory(&self, path: &Path) -> bool {
         self.project_io.is_directory(path)
     }
 
+    // Not applicable for mem-cache
     fn current_dir(&self) -> Result<PathBuf, Error> {
         self.project_io.current_dir()
     }
 
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
-        self.project_io.modification_time(path)
+        let in_mem_result = self
+            .cache
+            .modification_time(path.canonicalize().unwrap().as_path());
+        match in_mem_result {
+            Ok(time) => {
+                tracing::info!(
+                    "Reading modification time {:?} from cache: {}",
+                    time,
+                    path.to_string_lossy()
+                );
+                in_mem_result
+            }
+            Err(e) => {
+                let time = self.project_io.modification_time(path);
+                tracing::info!(
+                    "Got {} => Reading modification time {:?} from disk: {}",
+                    e,
+                    time,
+                    path.to_string_lossy()
+                );
+                time
+            }
+        }
     }
 }
 
+// Proxy to `ProjectIO` - not applicable for mem-cache
 impl CommandExecutor for LspFsProxy {
     fn exec(
         &self,
@@ -171,4 +206,15 @@ impl CommandExecutor for LspFsProxy {
     ) -> Result<i32, Error> {
         self.project_io.exec(program, args, env, cwd, stdio)
     }
+}
+
+// Helper method for getting abs-path
+fn abs_path(path: &Path) -> Result<PathBuf, Error> {
+    let abs_path = path.canonicalize().or(Err(Error::FileIo {
+        kind: FileKind::File,
+        action: gleam_core::error::FileIoAction::Canonicalise,
+        path: path.to_path_buf().clone(),
+        err: None,
+    }))?;
+    Ok(abs_path)
 }
