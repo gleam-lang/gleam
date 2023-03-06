@@ -52,9 +52,9 @@ fn assigning() {
     assert_js!(
         r#"
 fn go(x, y) {
-  assert True = x
-  assert False = x
-  assert Nil = y
+  let assert True = x
+  let assert False = x
+  let assert Nil = y
 }
 "#,
     );
@@ -68,9 +68,9 @@ fn shadowed_bools_and_nil() {
         r#"
 pub type True { True False Nil }
 fn go(x, y) {
-  assert True = x
-  assert False = x
-  assert Nil = y
+  let assert True = x
+  let assert False = x
+  let assert Nil = y
 }
 "#,
     );
@@ -82,9 +82,9 @@ fn shadowed_bools_and_nil_typescript() {
         r#"
 pub type True { True False Nil }
 pub fn go(x, y) {
-  assert True = x
-  assert False = x
-  assert Nil = y
+  let assert True = x
+  let assert False = x
+  let assert Nil = y
 }
 "#,
     );

@@ -5,7 +5,7 @@ fn one_var() {
     // One var
     assert_erl!(
         r#"pub fn go() {
-  assert Ok(y) = Ok(1)
+  let assert Ok(y) = Ok(1)
   y
 }"#
     );
@@ -16,7 +16,7 @@ fn more_than_one_var() {
     // More vars
     assert_erl!(
         r#"pub fn go(x) {
-  assert [1, a, b, c] = x
+  let assert [1, a, b, c] = x
   [a, b, c]
 }"#
     );
@@ -27,7 +27,7 @@ fn pattern_let() {
     // Pattern::Let
     assert_erl!(
         r#"pub fn go(x) {
-  assert [1 as a, b, c] = x
+  let assert [1 as a, b, c] = x
   [a, b, c]
 }"#
     );
@@ -38,8 +38,8 @@ fn variable_rewrites() {
     // Following asserts use appropriate variable rewrites
     assert_erl!(
         r#"pub fn go() {
-  assert Ok(y) = Ok(1)
-  assert Ok(y) = Ok(1)
+  let assert Ok(y) = Ok(1)
+  let assert Ok(y) = Ok(1)
   y
 }"#
     );

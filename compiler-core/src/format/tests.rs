@@ -4378,31 +4378,6 @@ fn assert_as_expression() {
 }
 
 #[test]
-fn block_containing_try() {
-    assert_format!(
-        "pub fn main() {
-  let _ = {
-    try _ = 1
-    2
-  }
-}
-"
-    );
-
-    assert_format!(
-        "pub fn main() {
-  #(
-    {
-      try _ = 1
-      2
-    },
-  )
-}
-"
-    );
-}
-
-#[test]
 fn case_in_call() {
     assert_format!(
         "fn clause_guard_tests(_fns) -> List(Test) {
@@ -4451,21 +4426,6 @@ if erlang {
   type Z {
     Z
   }
-}
-"
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/1184
-#[test]
-fn try_empty_line() {
-    assert_format!(
-        "pub fn main(x) {
-  try _ = x
-  try _ = x
-  try _ = x
-
-  let x = x
 }
 "
     );
@@ -4973,7 +4933,7 @@ fn not_add() {
 fn deprecated_assert() {
     assert_format_rewrite!(
         r#"fn main(x) {
-  assert True = x
+  let assert True = x
 }
 "#,
         r#"fn main(x) {
@@ -5124,6 +5084,22 @@ fn wrap_long_line_with_bool_negation() {
     c || c || c || c || c || c || c || c || c || c || c || c || c || !{
       c || c || c || c || c || c || c || c || c || c
     }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/1977
+#[test]
+fn preserve_single_expression_blocks() {
+    assert_format!(
+        r#"pub fn main(x) {
+  case x {
+    1 -> {
+      1
+    }
+    _ -> 2
+  }
 }
 "#
     );

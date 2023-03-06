@@ -144,7 +144,7 @@ fn assert_string_prefix() {
     assert_erl!(
         r#"
 pub fn main(x) {
-  assert "m-" <> rest = x
+  let assert "m-" <> rest = x
   rest
 }
 "#,
@@ -156,7 +156,7 @@ fn assert_string_prefix_discar() {
     assert_erl!(
         r#"
 pub fn main(x) {
-  assert "m-" <> _ = x
+  let assert "m-" <> _ = x
 }
 "#,
     );

@@ -136,18 +136,11 @@ impl<'module> Generator<'module> {
                 name, constructor, ..
             } => Ok(self.variable(name, constructor)),
 
-            TypedExpr::Pipeline { expressions, .. } | TypedExpr::Sequence { expressions, .. } => {
+            TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
                 self.sequence(expressions)
             }
 
             TypedExpr::Assignment { value, pattern, .. } => self.assignment(value, pattern),
-
-            TypedExpr::Try {
-                value,
-                then,
-                pattern,
-                ..
-            } => self.try_(value, pattern, then),
 
             TypedExpr::BinOp {
                 name, left, right, ..
@@ -254,24 +247,16 @@ impl<'module> Generator<'module> {
     }
 
     /// Wrap an expression in an immediately involked function expression if
-    /// required due to using early returns.
-    pub fn top_of_sequence_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
-        match expression {
-            TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
-            _ => self.expression(expression),
-        }
-    }
-
-    /// Wrap an expression in an immediately involked function expression if
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
-            | TypedExpr::Sequence { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
-            | TypedExpr::Assignment { .. }
-            | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
+            | TypedExpr::Assignment { .. } => {
+                self.immediately_involked_function_expression(expression)
+            }
             _ => self.expression(expression),
         }
     }
@@ -285,10 +270,11 @@ impl<'module> Generator<'module> {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
             TypedExpr::Case { .. }
-            | TypedExpr::Sequence { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
-            | TypedExpr::Assignment { .. }
-            | TypedExpr::Try { .. } => self.immediately_involked_function_expression(expression),
+            | TypedExpr::Assignment { .. } => {
+                self.immediately_involked_function_expression(expression)
+            }
             _ => self.expression(expression),
         }
     }
@@ -394,9 +380,7 @@ impl<'module> Generator<'module> {
         let mut documents = Vec::with_capacity(count * 3);
         for (i, expression) in expressions.iter().enumerate() {
             if i + 1 < count {
-                documents.push(
-                    self.not_in_tail_position(|gen| gen.top_of_sequence_expression(expression))?,
-                );
+                documents.push(self.not_in_tail_position(|gen| gen.expression(expression))?);
                 if !matches!(
                     expression,
                     TypedExpr::Assignment { .. } | TypedExpr::Case { .. }
@@ -409,79 +393,6 @@ impl<'module> Generator<'module> {
             }
         }
         Ok(documents.to_doc().force_break())
-    }
-
-    fn try_<'a>(
-        &mut self,
-        subject: &'a TypedExpr,
-        pattern: &'a TypedPattern,
-        then: &'a TypedExpr,
-    ) -> Output<'a> {
-        let mut docs = vec![];
-
-        // If the subject is not a variable then we will need to save it to a
-        // variable to prevent any side effects from rendering the same
-        // expression twice.
-        let subject_doc = if let TypedExpr::Var { name, .. } = subject {
-            self.local_var(name)
-        } else {
-            let subject = self.not_in_tail_position(|gen| gen.wrap_expression(subject))?;
-            let name = self.next_local_var(&pattern::ASSIGNMENT_VAR_SMOL_STR);
-            docs.push("let ".to_doc());
-            docs.push(name.clone());
-            docs.push(" = ".to_doc());
-            docs.push(subject);
-            docs.push(";".to_doc());
-            docs.push(line());
-            name
-        };
-
-        // We return early if the subject is an error
-        docs.push("if (!".to_doc());
-        docs.push(subject_doc.clone());
-        docs.push(r#".isOk()) return "#.to_doc());
-        docs.push(subject_doc.clone());
-        docs.push(";".to_doc());
-
-        match pattern {
-            // Assign the inner value to a variable if it used
-            TypedPattern::Var { name, .. } => {
-                docs.push(line());
-                docs.push("let ".to_doc());
-                docs.push(self.next_local_var(name));
-                docs.push(" = ".to_doc());
-                docs.push(subject_doc);
-                docs.push("[0];".to_doc());
-                docs.push(lines(2));
-            }
-
-            TypedPattern::Discard { .. } => {
-                docs.push(lines(1));
-            }
-
-            // TODO: At time of writing to support patterns in trys we will need
-            // to adapt the `assignment` method to take a Document as a value
-            // and pass the subject document into that also rather than letting
-            // the pattern generator determine what it should be.
-            pattern => {
-                let subject = subject_doc.append("[0]");
-                let mut pattern_generator = pattern::Generator::new(self);
-                pattern_generator.traverse_pattern(&subject, pattern)?;
-                let compiled = pattern_generator.take_compiled();
-                docs.push(line());
-                docs.push(self.pattern_into_assignment_doc(
-                    compiled,
-                    subject,
-                    pattern.location(),
-                )?);
-                docs.push(lines(2));
-            }
-        }
-
-        // Lastly, whatever comes next
-        docs.push(self.expression(then)?);
-
-        Ok(docs.to_doc().force_break())
     }
 
     fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
@@ -1322,17 +1233,31 @@ fn construct_record<'a>(
 
 impl TypedExpr {
     fn handles_own_return(&self) -> bool {
-        matches!(
-            self,
-            TypedExpr::Try { .. }
-                | TypedExpr::Todo { .. }
-                | TypedExpr::Call { .. }
-                | TypedExpr::Case { .. }
-                | TypedExpr::Panic { .. }
-                | TypedExpr::Sequence { .. }
-                | TypedExpr::Pipeline { .. }
-                | TypedExpr::Assignment { .. }
-        )
+        match self {
+            TypedExpr::Todo { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Assignment { .. } => true,
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::BitString { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. } => false,
+        }
     }
 }
 

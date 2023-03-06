@@ -297,43 +297,6 @@ fn function_arg_and_return_annotation() {
     assert_error!("fn(x: Int) -> Float { x }");
 }
 
-#[test]
-fn function_return_annotation_mismatch_with_try() {
-    assert_error!(
-        "fn() -> Result(Nil, Nil) {
-            let a = 1
-            try _ = Error(1)
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            // comments
-            Ok(Nil)
-        }"
-    );
-}
-
-#[test]
-fn function_return_annotation_mismatch_with_try_nested() {
-    assert_error!(
-        "fn() -> Result(Nil, Nil) {
-          try _ = {
-            try _ = {
-                try _ = Error(1)
-                Ok(Nil)
-            }
-            Ok(Nil)
-          }
-          Ok(Nil)
-        }"
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/1378
 #[test]
 fn function_return_annotation_mismatch_with_pipe() {
@@ -352,17 +315,6 @@ fn function_return_annotation_mismatch_with_pipe() {
 #[test]
 fn functions_called_outside_module() {
     assert_module_syntax_error!("const first = list.at([1], 0)");
-}
-
-#[test]
-fn variable_annotation_with_try() {
-    assert_error!(
-        "let x: Result(Nil, Nil) = {
-            let a_var = 1
-            try _ = Error(1)
-            Ok(Nil)
-        }"
-    );
 }
 
 #[test]
@@ -624,31 +576,6 @@ fn unknown_field() {
 }
 
 #[test]
-fn inconsistent_try_1() {
-    assert_error!("try x = Error(1) try y = Error(1.) Ok(x)");
-}
-
-#[test]
-fn inconsistent_try_2() {
-    assert_error!("try x = Error(1) Error(1.)");
-}
-
-#[test]
-fn inconsistent_try_3() {
-    assert_error!("try x = Error(1) 1");
-}
-
-#[test]
-fn inconsistent_try_4() {
-    assert_error!("try y = Error(1) try z = Error(1.) Ok(1)");
-}
-
-#[test]
-fn inconsistent_try_5() {
-    assert_error!(r#"try x = Error(1) Error("Not this one") Error("This one")"#);
-}
-
-#[test]
 fn field_not_in_all_variants() {
     assert_module_error!(
         "
@@ -772,7 +699,7 @@ fn module_could_not_unify6() {
 
 #[test]
 fn module_could_not_unify7() {
-    assert_module_error!("fn main() { assert 5: Int = \"\" 5 }");
+    assert_module_error!("fn main() { let assert 5: Int = \"\" 5 }");
 }
 
 #[test]

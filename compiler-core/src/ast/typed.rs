@@ -23,7 +23,7 @@ pub enum TypedExpr {
         value: SmolStr,
     },
 
-    Sequence {
+    Block {
         location: SrcSpan,
         expressions: Vec<Self>,
     },
@@ -31,7 +31,7 @@ pub enum TypedExpr {
     /// A chain of pipe expressions.
     /// By this point the type checker has expanded it into a series of
     /// assignments and function calls, but we still have a Pipeline AST node as
-    /// even though it is identical to `Sequence` we want to use different
+    /// even though it is identical to `Block` we want to use different
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
@@ -81,14 +81,6 @@ pub enum TypedExpr {
         value: Box<Self>,
         pattern: Pattern<PatternConstructor, Arc<Type>>,
         kind: AssignmentKind,
-    },
-
-    Try {
-        location: SrcSpan,
-        typ: Arc<Type>,
-        value: Box<Self>,
-        then: Box<Self>,
-        pattern: Pattern<PatternConstructor, Arc<Type>>,
     },
 
     Case {
@@ -180,7 +172,7 @@ impl TypedExpr {
             | Self::String { .. }
             | Self::ModuleSelect { .. } => Some(self),
 
-            Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => {
+            Self::Pipeline { expressions, .. } | Self::Block { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
             }
 
@@ -212,11 +204,6 @@ impl TypedExpr {
                 .or_else(|| right.find_node(byte_index)),
 
             Self::Assignment { value, .. } => value.find_node(byte_index),
-
-            Self::Try { value, then, .. } => value
-                .find_node(byte_index)
-                .or_else(|| then.find_node(byte_index))
-                .or(Some(self)),
 
             Self::Case {
                 subjects, clauses, ..
@@ -265,7 +252,6 @@ impl TypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
             Self::Fn { location, .. }
-            | Self::Try { location, .. }
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
@@ -279,7 +265,7 @@ impl TypedExpr {
             | Self::String { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. }
-            | Self::Sequence { location, .. }
+            | Self::Block { location, .. }
             | Self::Pipeline { location, .. }
             | Self::BitString { location, .. }
             | Self::Assignment { location, .. }
@@ -294,7 +280,6 @@ impl TypedExpr {
         match self {
             Self::Fn { location, .. }
             | Self::Int { location, .. }
-            | Self::Try { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
             | Self::Case { location, .. }
@@ -315,7 +300,7 @@ impl TypedExpr {
             | Self::RecordAccess { location, .. }
             | Self::RecordUpdate { location, .. } => *location,
 
-            Self::Sequence {
+            Self::Block {
                 expressions,
                 location,
                 ..
@@ -335,7 +320,6 @@ impl TypedExpr {
         match self {
             TypedExpr::Fn { .. }
             | TypedExpr::Int { .. }
-            | TypedExpr::Try { .. }
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
@@ -347,7 +331,7 @@ impl TypedExpr {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::String { .. }
-            | TypedExpr::Sequence { .. }
+            | TypedExpr::Block { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::BitString { .. }
             | TypedExpr::Assignment { .. }
@@ -378,7 +362,6 @@ impl TypedExpr {
             Self::NegateBool { .. } => bool(),
             Self::NegateInt { value, .. } => value.type_(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
-            Self::Try { then, .. } => then.type_(),
             Self::Fn { typ, .. }
             | Self::Int { typ, .. }
             | Self::Todo { typ, .. }
@@ -396,7 +379,7 @@ impl TypedExpr {
             | Self::ModuleSelect { typ, .. }
             | Self::RecordAccess { typ, .. }
             | Self::RecordUpdate { typ, .. } => typ.clone(),
-            Self::Pipeline { expressions, .. } | Self::Sequence { expressions, .. } => expressions
+            Self::Pipeline { expressions, .. } | Self::Block { expressions, .. } => expressions
                 .last()
                 .map(TypedExpr::type_)
                 .unwrap_or_else(type_::nil),

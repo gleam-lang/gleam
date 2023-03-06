@@ -1,0 +1,49 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 415
+expression: "{ 1 { 1.0 2.0 } 3 }"
+---
+Block {
+    location: SrcSpan {
+        start: 2,
+        end: 17,
+    },
+    expressions: [
+        Int {
+            location: SrcSpan {
+                start: 2,
+                end: 3,
+            },
+            value: "1",
+        },
+        Block {
+            location: SrcSpan {
+                start: 6,
+                end: 13,
+            },
+            expressions: [
+                Float {
+                    location: SrcSpan {
+                        start: 6,
+                        end: 9,
+                    },
+                    value: "1.0",
+                },
+                Float {
+                    location: SrcSpan {
+                        start: 10,
+                        end: 13,
+                    },
+                    value: "2.0",
+                },
+            ],
+        },
+        Int {
+            location: SrcSpan {
+                start: 16,
+                end: 17,
+            },
+            value: "3",
+        },
+    ],
+}

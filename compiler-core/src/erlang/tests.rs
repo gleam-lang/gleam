@@ -13,7 +13,6 @@ mod reserved;
 mod statement_if;
 mod strings;
 mod todo;
-mod try_;
 mod use_;
 mod variables;
 
@@ -472,7 +471,7 @@ fn keyword_constructors1() {
 fn discard_in_assert() {
     assert_erl!(
         "pub fn x(y) {
-  assert Ok(_) = y
+  let assert Ok(_) = y
   1
 }"
     );

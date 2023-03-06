@@ -12,9 +12,9 @@ import gleam
 pub fn main() -> Int {
   let stats =
     test.run([
-      suite("try", try_tests()),
       suite("ints", int_tests()),
       suite("pipes", pipes_tests()),
+      suite("blocks", block_tests()),
       suite("assert", assert_tests()),
       suite("floats", float_tests()),
       suite("prelude", prelude_tests()),
@@ -220,7 +220,7 @@ fn pipes_tests() -> List(Test) {
 
 fn assert_tests() -> List(Test) {
   [
-    "assert Ok(_)"
+    "let assert Ok(_)"
     |> example(fn() {
       assert_equal(
         Ok(1),
@@ -229,7 +229,7 @@ fn assert_tests() -> List(Test) {
         },
       )
     }),
-    "assert Ok(x)"
+    "let assert Ok(x)"
     |> example(fn() {
       assert_equal(
         1,
@@ -327,40 +327,6 @@ fn equality_test(name: String, left: a, right: a) {
 
 fn lazy_equality_test(name: String, left: fn() -> a, right: a) {
   example(name, fn() { assert_equal(left(), right) })
-}
-
-fn try_fn(result) {
-  use x <- try_(result)
-  Ok(x + 1)
-}
-
-fn try_tests() -> List(Test) {
-  [
-    "ok"
-    |> example(fn() { assert_equal(Ok(2), try_fn(Ok(1))) }),
-    "error"
-    |> example(fn() { assert_equal(Error("error"), try_fn(Error("error"))) }),
-    "ok in block"
-    |> example(fn() {
-      assert_equal(
-        Ok(2),
-        {
-          use x <- try_(Ok(1))
-          Ok(x + 1)
-        },
-      )
-    }),
-    "error in block"
-    |> example(fn() {
-      assert_equal(
-        Error(Nil),
-        {
-          use x <- try_(Error(Nil))
-          Ok(x + 1)
-        },
-      )
-    }),
-  ]
 }
 
 fn true() {
@@ -1668,4 +1634,15 @@ fn try_(result: Result(a, e), next: fn(a) -> Result(b, e)) -> Result(b, e) {
     Ok(x) -> next(x)
     Error(e) -> Error(e)
   }
+}
+
+
+fn block_tests() {
+  [
+    // https://github.com/gleam-lang/gleam/issues/1991
+    "let x = 1 let _ = { let x = 2 x } x"
+    |> example(fn() {
+      assert_equal({ let x = 1 let _ = { let x = 2 x } x }, 1)
+    }),
+  ]
 }

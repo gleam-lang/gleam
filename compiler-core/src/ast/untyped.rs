@@ -19,7 +19,7 @@ pub enum UntypedExpr {
         value: SmolStr,
     },
 
-    Sequence {
+    Block {
         location: SrcSpan,
         expressions: Vec<Self>,
     },
@@ -65,14 +65,6 @@ pub enum UntypedExpr {
         value: Box<Self>,
         pattern: Pattern<(), ()>,
         kind: AssignmentKind,
-        annotation: Option<TypeAst>,
-    },
-
-    Try {
-        location: SrcSpan,
-        value: Box<Self>,
-        pattern: Pattern<(), ()>,
-        then: Box<Self>,
         annotation: Option<TypeAst>,
     },
 
@@ -137,7 +129,6 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::Try { then, .. } => then.location(),
             Self::PipeLine { expressions, .. } => expressions.last().location(),
             Self::Fn { location, .. }
             | Self::Use(Use { location, .. })
@@ -159,7 +150,7 @@ impl UntypedExpr {
             | Self::RecordUpdate { location, .. }
             | Self::NegateBool { location, .. }
             | Self::NegateInt { location, .. } => *location,
-            Self::Sequence {
+            Self::Block {
                 location,
                 expressions,
                 ..
@@ -167,33 +158,9 @@ impl UntypedExpr {
         }
     }
 
-    pub fn append_in_sequence(self, next: Self) -> Self {
-        // The new location starts with the start of the first
-        // expression and ends with the end of the last one
-        let location = SrcSpan {
-            start: self.location().start,
-            end: next.location().end,
-        };
-        match self {
-            Self::Sequence {
-                mut expressions, ..
-            } => {
-                expressions.push(next);
-                Self::Sequence {
-                    location,
-                    expressions,
-                }
-            }
-            _ => Self::Sequence {
-                location,
-                expressions: vec![self, next],
-            },
-        }
-    }
-
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Sequence {
+            Self::Block {
                 expressions,
                 location,
                 ..
@@ -202,7 +169,7 @@ impl UntypedExpr {
                 .map(|e| e.start_byte_index())
                 .unwrap_or(location.start),
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
-            Self::Try { location, .. } | Self::Assignment { location, .. } => location.start,
+            Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
         }
     }

@@ -525,27 +525,3 @@ pub const make_two = one.Two
 "
     );
 }
-
-#[test]
-fn try_is_deprecated() {
-    assert_warning!(
-        "
-pub fn main(x) {
-  try y = x
-  y
-}
-"
-    );
-}
-
-#[test]
-fn bare_assert_is_deprecated() {
-    assert_warning!(
-        "
-pub fn main(x) {
-  assert Ok(y) = x
-  y
-}
-"
-    );
-}

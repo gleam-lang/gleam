@@ -617,18 +617,14 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         pattern: &'a UntypedPattern,
         value: &'a UntypedExpr,
-        then: Option<&'a UntypedExpr>,
-        kind: Option<AssignmentKind>,
+        kind: AssignmentKind,
         annotation: &'a Option<TypeAst>,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let keyword = match kind {
-            Some(AssignmentKind::Let) => "let ",
-            Some(AssignmentKind::Assert) => "let assert ",
-            Some(AssignmentKind::DeprecatedAssert) => "let assert ",
-            // TODO: remove when Try has been removed.
-            None => "try ",
+            AssignmentKind::Let => "let ",
+            AssignmentKind::Assert => "let assert ",
         };
 
         let pattern = self.pattern(pattern);
@@ -637,25 +633,11 @@ impl<'comments> Formatter<'comments> {
             .as_ref()
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
-        let doc = if then.is_some() {
-            keyword.to_doc().force_break()
-        } else {
-            keyword.to_doc()
-        }
-        .append(pattern.append(annotation).group())
-        .append(" =")
-        .append(self.assigned_value(value));
-
-        if let Some(then) = then {
-            doc.append(if self.pop_empty_lines(then.start_byte_index()) {
-                lines(2)
-            } else {
-                line()
-            })
-            .append(self.expr(then))
-        } else {
-            doc
-        }
+        keyword
+            .to_doc()
+            .append(pattern.append(annotation).group())
+            .append(" =")
+            .append(self.assigned_value(value))
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -676,7 +658,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => self.string(value),
 
-            UntypedExpr::Sequence { expressions, .. } => self.sequence(expressions),
+            UntypedExpr::Block { expressions, .. } => self.sequence(expressions),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -719,17 +701,9 @@ impl<'comments> Formatter<'comments> {
                 annotation,
                 kind,
                 ..
-            } => self.assignment(pattern, value, None, Some(*kind), annotation),
+            } => self.assignment(pattern, value, *kind, annotation),
 
             UntypedExpr::Use(use_) => self.use_(use_),
-
-            UntypedExpr::Try {
-                value,
-                pattern,
-                annotation,
-                then,
-                ..
-            } => self.assignment(pattern, value, Some(then), None, annotation),
 
             UntypedExpr::Case {
                 subjects, clauses, ..
@@ -1189,10 +1163,9 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Use(_)
-            | UntypedExpr::Sequence { .. }
-            | UntypedExpr::Assignment { .. }
-            | UntypedExpr::Try { .. } => break_block(self.expr(expr)),
+            UntypedExpr::Use(_) | UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
+                break_block(self.expr(expr))
+            }
 
             _ => self.expr(expr),
         }
@@ -1231,9 +1204,9 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Try { .. }
-            | UntypedExpr::Sequence { .. }
-            | UntypedExpr::Assignment { .. } => " ".to_doc().append(break_block(self.expr(expr))),
+            UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
+                " ".to_doc().append(break_block(self.expr(expr)))
+            }
 
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
@@ -1852,7 +1825,7 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
     matches!(
         expr,
         UntypedExpr::Fn { .. }
-            | UntypedExpr::Sequence { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Assignment { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::Case { .. }

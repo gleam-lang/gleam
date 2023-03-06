@@ -2,6 +2,7 @@ use super::*;
 use crate::ast::{UntypedExpr, UntypedModule};
 
 mod assert;
+mod assignments;
 mod errors;
 mod functions;
 mod imports;
@@ -326,7 +327,7 @@ macro_rules! assert_with_module_error {
 
         let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2.into();
-        let module = crate::analyse::infer_module(
+        let module = $crate::analyse::infer_module(
             crate::build::Target::Erlang,
             &ids,
             ast2,
@@ -755,75 +756,19 @@ fn simple_exprs() {
 }
 
 #[test]
-fn let_() {
-    assert_infer!("let x = 1 2", "Int");
-    assert_infer!("let x = 1 x", "Int");
-    assert_infer!("let x = 2.0 x", "Float");
-    assert_infer!("let x = 2 let y = x y", "Int");
-    assert_infer!(
-        "let #(#(_, _) as x, _) = #(#(0, 1.0), []) x",
-        "#(Int, Float)"
-    );
-    assert_infer!("let x: String = \"\" x", "String");
-    assert_infer!("let x: #(Int, Int) = #(5, 5) x", "#(Int, Int)",);
-    assert_infer!("let x: #(Int, Float) = #(5, 5.0) x", "#(Int, Float)",);
-    assert_infer!("let [1, 2, ..x]: List(Int) = [1,2,3] x", "List(Int)",);
-    assert_infer!(
-        "let #(5, [..x]): #(Int, List(Int)) = #(5, [1,2,3]) x",
-        "List(Int)",
-    );
-    assert_infer!(
-        "let #(5.0, [..x]): #(Float, List(Int)) = #(5.0, [1,2,3]) x",
-        "List(Int)",
-    );
-    assert_infer!("let x: List(_) = [] x", "List(a)");
-    assert_infer!("let x: List(_) = [1] x", "List(Int)");
-
-    assert_infer!("let [] = [] 1", "Int");
-    assert_infer!("let [a] = [1] a", "Int");
-    assert_infer!("let [a, 2] = [1] a", "Int");
-    assert_infer!("let [a, .. b] = [1] a", "Int");
-    assert_infer!("let [a, .. _] = [1] a", "Int");
-    assert_infer!("fn(x) { let [a] = x a }", "fn(List(a)) -> a");
-    assert_infer!("fn(x) { let [a] = x a + 1 }", "fn(List(Int)) -> Int");
-    assert_infer!("let _x = 1 2.0", "Float");
-    assert_infer!("let _ = 1 2.0", "Float");
-    assert_infer!("let #(tag, x) = #(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { let #(a, b) = x a }", "fn(#(a, b)) -> a");
-}
-
-#[test]
 fn assert() {
-    assert_infer!("assert [] = [] 1", "Int");
-    assert_infer!("assert [a] = [1] a", "Int");
-    assert_infer!("assert [a, 2] = [1] a", "Int");
-    assert_infer!("assert [a, .._] = [1] a", "Int");
-    assert_infer!("assert [a, .._,] = [1] a", "Int");
-    assert_infer!("fn(x) { assert [a] = x a }", "fn(List(a)) -> a");
-    assert_infer!("fn(x) { assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
-    assert_infer!("assert _x = 1 2.0", "Float");
-    assert_infer!("assert _ = 1 2.0", "Float");
-    assert_infer!("assert #(tag, x) = #(1.0, 1) x", "Int");
-    assert_infer!("fn(x) { assert #(a, b) = x a }", "fn(#(a, b)) -> a");
-    assert_infer!("assert 5: Int = 5 5", "Int");
-}
-
-#[test]
-fn try_() {
-    assert_infer!("try x = Ok(1) Ok(x)", "Result(Int, a)");
-    assert_infer!("try x = Ok(1) try y = Ok(1) Ok(x + y)", "Result(Int, a)");
-    assert_infer!(
-        "try x = Error(Nil) try y = Ok(1) Ok(x + 1)",
-        "Result(Int, Nil)"
-    );
-    assert_infer!(
-        "try x = Error(Nil) try y = Error(Nil) Ok(x + 1)",
-        "Result(Int, Nil)"
-    );
-    assert_infer!("try x = Error(Nil) Ok(x + 1)", "Result(Int, Nil)");
-
-    // https://github.com/gleam-lang/gleam/issues/786
-    assert_infer!("let _x0 = 1 2", "Int");
+    assert_infer!("let assert [] = [] 1", "Int");
+    assert_infer!("let assert [a] = [1] a", "Int");
+    assert_infer!("let assert [a, 2] = [1] a", "Int");
+    assert_infer!("let assert [a, .._] = [1] a", "Int");
+    assert_infer!("let assert [a, .._,] = [1] a", "Int");
+    assert_infer!("fn(x) { let assert [a] = x a }", "fn(List(a)) -> a");
+    assert_infer!("fn(x) { let assert [a] = x a + 1 }", "fn(List(Int)) -> Int");
+    assert_infer!("let assert _x = 1 2.0", "Float");
+    assert_infer!("let assert _ = 1 2.0", "Float");
+    assert_infer!("let assert #(tag, x) = #(1.0, 1) x", "Int");
+    assert_infer!("fn(x) { let assert #(a, b) = x a }", "fn(#(a, b)) -> a");
+    assert_infer!("let assert 5: Int = 5 5", "Int");
 }
 
 #[test]
@@ -1826,14 +1771,6 @@ fn let_as_expression() {
 }
 
 #[test]
-fn assert_as_expression() {
-    assert_infer!("assert x = 1", "Int");
-    assert_infer!("assert x = assert x = 1", "Int");
-    assert_infer!("assert x = { assert x = 1. }", "Float");
-    assert_infer!("assert 1 = 1", "Int");
-}
-
-#[test]
 fn string_concat_ok() {
     assert_infer!(r#" "1" <> "2" "#, "String");
 }
@@ -1857,18 +1794,6 @@ pub fn b_get_first(b: B(#(a))) {
   b.value.0
 }",
         vec![("B", "fn(a) -> B(a)"), ("b_get_first", "fn(B(#(a))) -> a")],
-    );
-}
-
-// https://github.com/gleam-lang/gleam/issues/1348
-#[test]
-fn try_overflow() {
-    assert_module_infer!(
-        "pub fn main() {
-  try #() = Error(1.9)
-  Ok(1)
-}",
-        vec![("main", "fn() -> Result(Int, Float)")],
     );
 }
 
