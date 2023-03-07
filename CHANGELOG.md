@@ -9,6 +9,7 @@
   encountered.
 - Warnings are now immediately emitted rather than being buffered until the end
   of the compilation.
+- The `--warnings-as-errors` flag is now supported by `gleam build`.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
