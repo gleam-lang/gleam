@@ -17,16 +17,12 @@ use crate::{
 };
 use askama::Template;
 use itertools::Itertools;
-use regex::Regex;
 use serde::Serialize;
 use serde_json::to_string as serde_to_string;
 use smol_str::SmolStr;
-use voca_rs::manipulate;
-use voca_rs::Voca;
 
 const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-const MAX_HTML_META_DESCRIPTION_LEN: usize = 320;
 
 pub fn generate_html(
     config: &PackageConfig,
@@ -81,24 +77,6 @@ pub fn generate_html(
         .sorted()
         .collect();
 
-    let render_as_meta_description = |content: String| -> String {
-        let content = content._strip_tags();
-        let content = manipulate::replace_all(content.as_str(), "\n", " ");
-        let content = manipulate::trim(content.as_str(), " ");
-        let multi_whitespace_regex = Regex::new(r"\s+").expect("Multi whitespace regex");
-        let content = multi_whitespace_regex.replace_all(content.as_str(), " ");
-        if content.len() <= MAX_HTML_META_DESCRIPTION_LEN {
-            return content.to_string();
-        }
-        format!(
-            "{}…",
-            manipulate::trim(
-                content.get(0..MAX_HTML_META_DESCRIPTION_LEN).unwrap_or(""),
-                " "
-            )
-        )
-    };
-
     // Generate user-supplied (or README) pages
     for page in docs_pages {
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
@@ -113,7 +91,7 @@ pub fn generate_html(
             _other => format!("{} · {} · v{}", page.title, config.name, config.version),
         };
         let page_meta_description = match page_path_without_ext {
-            "index" => render_as_meta_description(config.description.to_string().clone()),
+            "index" => config.description.to_string().clone(),
             _other => "".to_owned(),
         };
 

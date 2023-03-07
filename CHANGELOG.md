@@ -16,7 +16,6 @@
   expression within them.
 - Generated docs now export more meta data to improve the developer experience,
   accessibility and search engine discoverability.
-- Added support for unary negation of integers.
 
 ## v0.27.0 - 2023-03-01
 
