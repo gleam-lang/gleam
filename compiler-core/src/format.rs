@@ -727,7 +727,7 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::BitString { segments, .. } => bit_string(
                 segments
                     .iter()
-                    .map(|s| bit_string_segment(s, |e| self.expr(e))),
+                    .map(|s| bit_string_segment(s, |e| self.bit_string_segment_expr(e))),
                 segments.iter().all(|s| s.value.is_simple_constant()),
             ),
             UntypedExpr::RecordUpdate {
@@ -1518,6 +1518,34 @@ impl<'comments> Formatter<'comments> {
                 .chain(assignments);
             let left = concat(left).nest(INDENT).append(break_("", " ")).group();
             docvec![left, "<-", call].group()
+        }
+    }
+
+    fn bit_string_segment_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
+        match expr {
+            UntypedExpr::BinOp { .. } => wrap_block(self.expr(expr)),
+
+            UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::PipeLine { .. }
+            | UntypedExpr::Assignment { .. }
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::BitString { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. }
+            | UntypedExpr::Use(_)
+            | UntypedExpr::Block { .. } => self.wrap_expr(expr),
         }
     }
 }

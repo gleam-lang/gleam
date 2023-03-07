@@ -349,6 +349,15 @@ where
         ))
     }
 
+    fn parse_expression_unit_collapsing_single_value_blocks(
+        &mut self,
+    ) -> Result<Option<UntypedExpr>, ParseError> {
+        match self.parse_expression_unit()? {
+            Some(expression) => Ok(Some(collapse_single_value_block(expression))),
+            None => Ok(None),
+        }
+    }
+
     // examples:
     //   1
     //   "one"
@@ -474,7 +483,7 @@ where
                     &|s| {
                         Parser::parse_bit_string_segment(
                             s,
-                            &Parser::parse_expression_unit,
+                            &Parser::parse_expression_unit_collapsing_single_value_blocks,
                             &Parser::expect_expression,
                             &bit_string_expr_int,
                         )

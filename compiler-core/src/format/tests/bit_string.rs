@@ -112,3 +112,28 @@ fn concise_wrapping_of_simple_bit_strings5() {
 "#
     );
 }
+
+#[test]
+fn binop_value() {
+    assert_format!(
+        r#"pub fn main() {
+  <<{ 1 + 1 }>>
+}
+"#
+    );
+}
+
+#[test]
+fn block_value() {
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    {
+      io.println("hi")
+      1
+    },
+  >>
+}
+"#
+    );
+}
