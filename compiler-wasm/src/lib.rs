@@ -1,11 +1,13 @@
-use std::{collections::HashMap, ffi::OsStr, path::Path};
+use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
 
 use gleam_core::{
     build::{Codegen, Mode, Options, Package, ProjectCompiler, Target},
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
-    paths, Error,
+    paths,
+    warning::NullWarningEmitterIO,
+    Error,
 };
 
 use hexpm::version::Version;
@@ -107,6 +109,7 @@ fn compile_project(
         options,
         packages,
         Box::new(LogTelemetry),
+        Arc::new(NullWarningEmitterIO),
         wfs.clone(),
     );
 

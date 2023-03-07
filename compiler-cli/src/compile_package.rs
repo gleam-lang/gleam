@@ -1,6 +1,6 @@
 use crate::{
     config,
-    fs::{self, ProjectIO},
+    fs::{self, ConsoleWarningEmitter, ProjectIO},
     CompilePackage,
 };
 use gleam_core::{
@@ -8,16 +8,17 @@ use gleam_core::{
     metadata, paths,
     type_::Module,
     uid::UniqueIdGenerator,
+    warning::WarningEmitter,
     Result,
 };
 use smol_str::SmolStr;
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
-    let mut warnings = Vec::new();
+    let warnings = WarningEmitter::new(Arc::new(ConsoleWarningEmitter));
     let config = config::read(options.package_directory.join("gleam.toml"))?;
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },
@@ -41,12 +42,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;
-    let _ = compiler.compile(&mut warnings, &mut type_manifests, &mut defined_modules)?;
-
-    // Print warnings
-    for warning in warnings {
-        crate::print_warning(&warning);
-    }
+    let _ = compiler.compile(&warnings, &mut type_manifests, &mut defined_modules)?;
 
     // TODO: Support --warnings-as-errors
     // TODO: Create a Warnings struct to wrap up this functionality

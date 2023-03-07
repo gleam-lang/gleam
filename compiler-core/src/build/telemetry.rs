@@ -12,5 +12,4 @@ pub trait Telemetry: Debug {
     fn packages_downloaded(&self, start: Instant, count: usize);
     fn compiling_package(&self, name: &str);
     fn checking_package(&self, name: &str);
-    fn warning(&self, warning: &Warning);
 }

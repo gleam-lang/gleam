@@ -1,4 +1,4 @@
-use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator};
+use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator, warning::TypeWarningEmitter};
 
 use super::*;
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ pub struct Environment<'a> {
     pub accessors: HashMap<SmolStr, AccessorsMap>,
 
     /// Warnings
-    pub warnings: &'a mut Vec<Warning>,
+    pub warnings: &'a TypeWarningEmitter,
 
     /// Functions that have not yet been inferred then generalised.
     /// We use this to determine whether functions that call this one
@@ -49,27 +49,12 @@ pub struct Environment<'a> {
     pub entity_usages: Vec<HashMap<SmolStr, (EntityKind, SrcSpan, bool)>>,
 }
 
-/// For Keeping track of entity usages and knowing which error to display.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EntityKind {
-    PrivateConstant,
-    // String here is the type constructor's type name
-    PrivateTypeConstructor(SmolStr),
-    PrivateFunction,
-    ImportedConstructor,
-    ImportedType,
-    ImportedTypeAndConstructor,
-    ImportedValue,
-    PrivateType,
-    Variable,
-}
-
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_module: &'a str,
         importable_modules: &'a im::HashMap<SmolStr, Module>,
-        warnings: &'a mut Vec<Warning>,
+        warnings: &'a TypeWarningEmitter,
     ) -> Self {
         let prelude = importable_modules
             .get("gleam")
@@ -93,6 +78,21 @@ impl<'a> Environment<'a> {
             entity_usages: vec![HashMap::new()],
         }
     }
+}
+
+/// For Keeping track of entity usages and knowing which error to display.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EntityKind {
+    PrivateConstant,
+    // String here is the type constructor's type name
+    PrivateTypeConstructor(SmolStr),
+    PrivateFunction,
+    ImportedConstructor,
+    ImportedType,
+    ImportedTypeAndConstructor,
+    ImportedValue,
+    PrivateType,
+    Variable,
 }
 
 #[derive(Debug)]
@@ -474,7 +474,7 @@ impl<'a> Environment<'a> {
 
         for (name, location) in self.unused_modules.clone().into_iter() {
             self.warnings
-                .push(Warning::UnusedImportedModule { name, location });
+                .emit(Warning::UnusedImportedModule { name, location });
         }
     }
 
@@ -511,7 +511,7 @@ impl<'a> Environment<'a> {
                 EntityKind::Variable => Warning::UnusedVariable { name, location },
             };
 
-            self.warnings.push(warning);
+            self.warnings.emit(warning);
         }
     }
 

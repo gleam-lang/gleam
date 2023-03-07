@@ -3,10 +3,113 @@ use crate::{
     diagnostic::{self, Diagnostic, Location},
     type_,
 };
+use debug_ignore::DebugIgnore;
 use smol_str::SmolStr;
-use std::io::Write;
-use std::path::PathBuf;
+use std::{
+    io::Write,
+    sync::{atomic::Ordering, Arc},
+};
+use std::{path::PathBuf, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
+
+pub trait WarningEmitterIO {
+    fn emit_warning(&self, warning: Warning);
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct NullWarningEmitterIO;
+
+impl WarningEmitterIO for NullWarningEmitterIO {
+    fn emit_warning(&self, _warning: Warning) {}
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct VectorWarningEmitterIO {
+    pub warnings: Arc<std::sync::RwLock<Vec<Warning>>>,
+}
+
+impl VectorWarningEmitterIO {
+    pub fn take(&self) -> Vec<Warning> {
+        let mut warnings = self.write_lock();
+        std::mem::take(&mut *warnings)
+    }
+
+    fn write_lock(&self) -> std::sync::RwLockWriteGuard<'_, Vec<Warning>> {
+        self.warnings.write().expect("Vector lock poisoned")
+    }
+}
+
+impl WarningEmitterIO for VectorWarningEmitterIO {
+    fn emit_warning(&self, warning: Warning) {
+        let mut warnings = self.write_lock();
+        warnings.push(warning);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WarningEmitter {
+    /// The number of warnings emitted.
+    /// In the context of the project compiler this is the count for the root
+    /// package only, the count is reset back to zero after the dependencies are
+    /// compiled.
+    count: Arc<AtomicUsize>,
+    emitter: DebugIgnore<Arc<dyn WarningEmitterIO>>,
+}
+
+impl WarningEmitter {
+    pub fn new(emitter: Arc<dyn WarningEmitterIO>) -> Self {
+        Self {
+            count: Arc::new(AtomicUsize::new(0)),
+            emitter: DebugIgnore(emitter),
+        }
+    }
+
+    pub fn reset_count(&self) {
+        self.count.store(0, Ordering::Relaxed);
+    }
+
+    pub fn count(&self) -> usize {
+        self.count.load(Ordering::Relaxed)
+    }
+
+    pub fn emit(&self, warning: Warning) {
+        _ = self.count.fetch_add(1, Ordering::Relaxed);
+        self.emitter.emit_warning(warning);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TypeWarningEmitter {
+    module_path: PathBuf,
+    module_src: SmolStr,
+    emitter: WarningEmitter,
+}
+
+impl TypeWarningEmitter {
+    pub fn new(module_path: PathBuf, module_src: SmolStr, emitter: WarningEmitter) -> Self {
+        Self {
+            module_path,
+            module_src,
+            emitter,
+        }
+    }
+
+    pub fn null() -> Self {
+        Self {
+            module_path: PathBuf::new(),
+            module_src: SmolStr::new(""),
+            emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
+        }
+    }
+
+    pub fn emit(&self, warning: crate::type_::Warning) {
+        self.emitter.emit(Warning::Type {
+            path: self.module_path.clone(),
+            src: self.module_src.clone(),
+            warning,
+        });
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub enum Warning {

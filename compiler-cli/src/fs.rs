@@ -4,7 +4,8 @@ use gleam_core::{
         CommandExecutor, Content, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir,
         Stdio, WrappedReader,
     },
-    Result,
+    warning::WarningEmitterIO,
+    Result, Warning,
 };
 use lazy_static::lazy_static;
 use std::{
@@ -610,4 +611,18 @@ pub fn canonicalise(path: &Path) -> Result<PathBuf, Error> {
         path: PathBuf::from(path),
         err: Some(err.to_string()),
     })
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ConsoleWarningEmitter;
+
+impl WarningEmitterIO for ConsoleWarningEmitter {
+    fn emit_warning(&self, warning: Warning) {
+        let buffer_writer = crate::cli::stderr_buffer_writer();
+        let mut buffer = buffer_writer.buffer();
+        warning.pretty(&mut buffer);
+        buffer_writer
+            .print(&buffer)
+            .expect("Writing warning to stderr");
+    }
 }

@@ -479,11 +479,3 @@ fn initialise_logger() {
         .without_time()
         .init();
 }
-
-fn print_warning(w: &Warning) {
-    let buffer_writer = cli::stderr_buffer_writer();
-    let mut buffer = buffer_writer.buffer();
-    w.pretty(&mut buffer);
-    #[allow(clippy::unwrap_used)]
-    buffer_writer.print(&buffer).unwrap();
-}

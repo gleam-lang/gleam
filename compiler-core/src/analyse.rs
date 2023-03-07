@@ -13,7 +13,7 @@ use crate::{
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error, Warning},
+        error::{convert_unify_error, Error},
         expression::ExprTyper,
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
@@ -22,6 +22,7 @@ use crate::{
         ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
+    warning::TypeWarningEmitter,
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
@@ -38,7 +39,7 @@ pub fn infer_module(
     origin: Origin,
     package: &SmolStr,
     modules: &im::HashMap<SmolStr, Module>,
-    warnings: &mut Vec<Warning>,
+    warnings: &TypeWarningEmitter,
 ) -> Result<TypedModule, Error> {
     let name = module.name.clone();
     let documentation = std::mem::take(&mut module.documentation);

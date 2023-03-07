@@ -5,6 +5,7 @@
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
     fs::{self, ProjectIO},
     telemetry::NullTelemetry,
 };
-use gleam_core::{ast::Import, build::Mode};
+use gleam_core::{ast::Import, build::Mode, warning::VectorWarningEmitterIO};
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -449,8 +450,7 @@ impl LanguageServer {
 
     fn take_and_store_warning_diagnostics(&mut self) {
         if let Some(compiler) = self.compiler.as_mut() {
-            let warnings = compiler.project_compiler.take_warnings();
-            for warn in warnings {
+            for warn in compiler.warnings.take() {
                 let diagnostic = warn.to_diagnostic();
                 self.process_gleam_diagnostic(diagnostic);
             }
@@ -984,14 +984,17 @@ fn path_to_uri(path: PathBuf) -> Url {
 pub struct LspProjectCompiler<IO> {
     project_compiler: ProjectCompiler<IO>,
 
-    /// Whether the dependencies have been compiled previously
+    /// Whether the dependencies have been compiled previously.
     dependencies_compiled: bool,
 
-    // Information on compiled modules
+    /// Information on compiled modules.
     modules: HashMap<String, Module>,
     sources: HashMap<String, ModuleSourceInformation>,
 
-    /// A lock to ensure the LSP and the CLI don't try and use build directory
+    /// The storage for the warning emitter.
+    warnings: Arc<VectorWarningEmitterIO>,
+
+    /// A lock to ensure the LSP and the CLI don't try and use build directory.
     /// at the same time.
     build_lock: BuildLock,
 }
@@ -1006,14 +1009,21 @@ where
         let target = config.target;
         let name = config.name.clone();
         let build_lock = BuildLock::new_target(Mode::Lsp, target)?;
+        let warnings = Arc::new(VectorWarningEmitterIO::default());
 
         let options = build::Options {
             mode: build::Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
         };
-        let mut project_compiler =
-            ProjectCompiler::new(config, options, manifest.packages, Box::new(telemetry), io);
+        let mut project_compiler = ProjectCompiler::new(
+            config,
+            options,
+            manifest.packages,
+            Box::new(telemetry),
+            warnings.clone(),
+            io,
+        );
 
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
@@ -1029,6 +1039,7 @@ where
         }
 
         Ok(Self {
+            warnings,
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),

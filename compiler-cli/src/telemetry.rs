@@ -11,6 +11,5 @@ impl Telemetry for NullTelemetry {
     fn downloading_package(&self, _name: &str) {}
     fn compiling_package(&self, _name: &str) {}
     fn checking_package(&self, _name: &str) {}
-    fn warning(&self, _warning: &gleam_core::Warning) {}
     fn packages_downloaded(&self, _start: Instant, _count: usize) {}
 }

@@ -11,7 +11,8 @@ use crate::{
     metadata, paths, type_,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
-    warning, Error, Result, Warning,
+    warning::{self, WarningEmitter, WarningEmitterIO},
+    Error, Result, Warning,
 };
 use itertools::Itertools;
 use smol_str::SmolStr;
@@ -20,6 +21,7 @@ use std::{
     fmt::Write,
     io::BufReader,
     path::{Path, PathBuf},
+    sync::Arc,
     time::Instant,
 };
 
@@ -51,7 +53,7 @@ pub struct ProjectCompiler<IO> {
     packages: HashMap<String, ManifestPackage>,
     importable_modules: im::HashMap<SmolStr, type_::Module>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
-    warnings: Vec<Warning>,
+    warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
     ids: UniqueIdGenerator,
@@ -73,6 +75,7 @@ where
         options: Options,
         packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
+        warning_emitter: Arc<dyn WarningEmitterIO>,
         io: IO,
     ) -> Self {
         let packages = packages
@@ -84,7 +87,7 @@ where
             importable_modules: im::HashMap::new(),
             defined_modules: im::HashMap::new(),
             ids: UniqueIdGenerator::new(),
-            warnings: Vec::new(),
+            warnings: WarningEmitter::new(warning_emitter),
             subprocess_stdio: Stdio::Inherit,
             telemetry,
             packages,
@@ -116,10 +119,6 @@ where
         self.options.mode
     }
 
-    pub fn take_warnings(&mut self) -> Vec<Warning> {
-        std::mem::take(&mut self.warnings)
-    }
-
     pub fn target(&self) -> Target {
         self.options.target.unwrap_or(self.config.target)
     }
@@ -135,10 +134,7 @@ where
         }
         let result = self.compile_root_package();
 
-        // Print warnings
-        for warning in &self.warnings {
-            self.telemetry.warning(warning);
-        }
+        // TODO: error if there are any warnings and warnings are denied.
 
         result
     }

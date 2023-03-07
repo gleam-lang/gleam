@@ -30,7 +30,7 @@ macro_rules! assert_infer {
             ids,
             "themodule",
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         ))
         .infer(ast)
         .expect("should successfully infer");
@@ -45,7 +45,6 @@ macro_rules! assert_infer {
 macro_rules! assert_infer_with_module {
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
         let mut printer = $crate::type_::pretty::Printer::new();
-        let mut warnings = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -63,7 +62,7 @@ macro_rules! assert_infer_with_module {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -77,7 +76,7 @@ macro_rules! assert_infer_with_module {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should infer");
         let constructors: Vec<(_, _)> = ast
@@ -115,7 +114,7 @@ macro_rules! assert_module_infer {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let constructors: Vec<(_, _)> = ast
@@ -155,7 +154,7 @@ macro_rules! assert_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
@@ -177,7 +176,7 @@ macro_rules! assert_module_error {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -219,9 +218,14 @@ macro_rules! assert_error {
         // place.
         let _ = modules.insert("gleam".into(), build_prelude(&ids));
         println!("new assert_error test: {}", modules.len());
-        let result = ExprTyper::new(&mut Environment::new(ids, "somemod", &modules, &mut vec![]))
-            .infer(ast)
-            .expect_err("should infer an error");
+        let result = ExprTyper::new(&mut Environment::new(
+            ids,
+            "somemod",
+            &modules,
+            &crate::warning::TypeWarningEmitter::null(),
+        ))
+        .infer(ast)
+        .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 
@@ -240,7 +244,7 @@ macro_rules! assert_error {
             ids,
             "somemod",
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         ))
         .infer(ast)
         .expect_err("should infer an error");
@@ -257,7 +261,6 @@ macro_rules! assert_error {
 #[macro_export]
 macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let mut warnings = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -275,7 +278,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -289,7 +292,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -302,7 +305,6 @@ macro_rules! assert_with_module_error {
     };
 
     (($name:expr, $module_src:literal),($name2:expr, $module_src2:literal), $src:expr $(,)?) => {
-        let mut warnings = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -320,7 +322,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -334,7 +336,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name2.into(), module.type_info);
@@ -348,7 +350,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut vec![],
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -366,7 +368,14 @@ macro_rules! assert_warning {
     ($src:expr) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let mut warnings: Vec<$crate::type_::error::Warning> = vec![];
+        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+            std::path::PathBuf::new(),
+            smol_str::SmolStr::new(""),
+            crate::warning::WarningEmitter::new(
+                std::sync::Arc::new(warnings.clone()),
+            ),
+        );
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -381,14 +390,19 @@ macro_rules! assert_warning {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
 
         let mut nocolor = termcolor::Buffer::no_color();
-        for w in warnings {
-            let warning = w.into_warning(std::path::PathBuf::from("/src/warning/wrn.gleam"), $src.into());
-            warning.pretty(&mut nocolor)
+        for warning in warnings.take() {
+            match warning {
+                crate::warning::Warning::Type { warning, ..  } => {
+                    let path = std::path::PathBuf::from("/src/warning/wrn.gleam");
+                    let warning = warning.into_warning(path, $src.into());
+                    warning.pretty(&mut nocolor)
+                }
+            }
         }
 
         let output = String::from_utf8(nocolor.into_inner())
@@ -399,7 +413,14 @@ macro_rules! assert_warning {
     ($src:expr, $warning:expr $(,)?) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let mut warnings = vec![];
+        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+            std::path::PathBuf::new(),
+            smol_str::SmolStr::new(""),
+            crate::warning::WarningEmitter::new(
+                std::sync::Arc::new(warnings.clone()),
+            ),
+        );
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -414,15 +435,26 @@ macro_rules! assert_warning {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
 
+        let warnings = warnings.take().into_iter().map(|w| match w {
+            crate::warning::Warning::Type { warning, ..  } => warning,
+        }).collect::<Vec<_>>();
         assert!(!warnings.is_empty());
         assert_eq!($warning, warnings[0]);
     };
+
     ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
-        let mut warnings = vec![];
+        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+            std::path::PathBuf::new(),
+            smol_str::SmolStr::new(""),
+            crate::warning::WarningEmitter::new(
+                std::sync::Arc::new(warnings.clone()),
+            ),
+        );
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -441,7 +473,7 @@ macro_rules! assert_warning {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -456,10 +488,13 @@ macro_rules! assert_warning {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
 
+        let warnings = warnings.take().into_iter().map(|w| match w {
+            crate::warning::Warning::Type { warning, ..  } => warning,
+        }).collect::<Vec<_>>();
         assert!(!warnings.is_empty());
         assert_eq!($warning, warnings[0]);
     };
@@ -468,10 +503,17 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
+        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+            std::path::PathBuf::new(),
+            smol_str::SmolStr::new(""),
+            crate::warning::WarningEmitter::new(
+                std::sync::Arc::new(warnings.clone()),
+            ),
+        );
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
         let expected: Vec<Warning> = vec![];
-        let mut warnings = vec![];
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -486,15 +528,25 @@ macro_rules! assert_no_warnings {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
 
+        let warnings = warnings.take().into_iter().map(|w| match w {
+            crate::warning::Warning::Type { warning, ..  } => warning,
+        }).collect::<Vec<_>>();
         assert_eq!(expected, warnings);
     };
     ($(($name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let expected: Vec<Warning> = vec![];
-        let mut warnings = vec![];
+        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+            std::path::PathBuf::new(),
+            smol_str::SmolStr::new(""),
+            crate::warning::WarningEmitter::new(
+                std::sync::Arc::new(warnings.clone()),
+            ),
+        );
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -513,7 +565,7 @@ macro_rules! assert_no_warnings {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &warning_emitter,
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -528,10 +580,13 @@ macro_rules! assert_no_warnings {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &mut warnings,
+            &crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
 
+        let warnings = warnings.take().into_iter().map(|w| match w {
+            crate::warning::Warning::Type { warning, ..  } => warning,
+        }).collect::<Vec<_>>();
         assert_eq!(expected, warnings);
     };
 }
@@ -690,7 +745,7 @@ fn infer_module_type_retention_test() {
         Origin::Src,
         &"thepackage".into(),
         &modules,
-        &mut vec![],
+        &crate::warning::TypeWarningEmitter::null(),
     )
     .expect("Should infer OK");
 
@@ -700,7 +755,8 @@ fn infer_module_type_retention_test() {
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
-            types: HashMap::new(), // Core type constructors like String and Int are not included
+            // Core type constructors like String and Int are not included
+            types: HashMap::new(),
             types_constructors: HashMap::from([
                 ("Bool".into(), vec!["True".into(), "False".into()]),
                 ("Result".into(), vec!["Ok".into(), "Error".into()])
@@ -1324,7 +1380,8 @@ fn fn_annotation_reused() {
         ]
     );
 
-    // Type variables are shared between function annotations and let annotations within their body
+    // Type variables are shared between function annotations and let
+    // annotations within their body
     assert_module_infer!(
         "
         pub type Box(a) {

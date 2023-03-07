@@ -1,11 +1,16 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
     build::{Codegen, Options, Package, ProjectCompiler},
     Result,
 };
 
-use crate::{build_lock::BuildLock, cli, dependencies::UseManifest, fs};
+use crate::{
+    build_lock::BuildLock,
+    cli,
+    dependencies::UseManifest,
+    fs::{self, ConsoleWarningEmitter},
+};
 
 pub fn main(options: Options) -> Result<Package> {
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
@@ -20,7 +25,15 @@ pub fn main(options: Options) -> Result<Package> {
     tracing::info!("Compiling packages");
     let compiled = {
         let _guard = lock.lock(telemetry.as_ref());
-        ProjectCompiler::new(root_config, options, manifest.packages, telemetry, io).compile()?
+        ProjectCompiler::new(
+            root_config,
+            options,
+            manifest.packages,
+            telemetry,
+            Arc::new(ConsoleWarningEmitter),
+            io,
+        )
+        .compile()?
     };
 
     match perform_codegen {

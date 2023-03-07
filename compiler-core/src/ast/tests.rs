@@ -7,6 +7,7 @@ use crate::{
         RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
+    warning::TypeWarningEmitter,
 };
 
 use super::TypedModule;
@@ -28,7 +29,7 @@ fn compile_module(src: &str) -> TypedModule {
         crate::build::Origin::Src,
         &"thepackage".into(),
         &modules,
-        &mut vec![],
+        &TypeWarningEmitter::null(),
     )
     .expect("should successfully infer")
 }
@@ -43,8 +44,8 @@ fn compile_expression(src: &str) -> TypedExpr {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert("gleam".into(), type_::build_prelude(&ids));
-    let mut warnings = vec![];
-    let mut environment = Environment::new(ids, "mymod", &modules, &mut warnings);
+    let emitter = TypeWarningEmitter::null();
+    let mut environment = Environment::new(ids, "mymod", &modules, &emitter);
 
     // Insert a cat record to use in the tests
     let cat_type = Arc::new(Type::App {

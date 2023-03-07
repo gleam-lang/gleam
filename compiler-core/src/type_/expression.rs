@@ -199,7 +199,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label: Option<SmolStr>,
     ) -> TypedExpr {
         let typ = self.new_unbound_var();
-        self.environment.warnings.push(Warning::Todo {
+        self.environment.warnings.emit(Warning::Todo {
             kind,
             location,
             typ: typ.clone(),
@@ -246,14 +246,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// e.g. because it's of the `Result` type (errors should be handled)
     fn expression_discarded(&mut self, discarded: &TypedExpr) {
         if discarded.is_literal() {
-            self.environment.warnings.push(Warning::UnusedLiteral {
+            self.environment.warnings.emit(Warning::UnusedLiteral {
                 location: discarded.location(),
             });
         }
         if discarded.type_().is_result() && !discarded.is_assignment() {
             self.environment
                 .warnings
-                .push(Warning::ImplicitlyDiscardedResult {
+                .emit(Warning::ImplicitlyDiscardedResult {
                     location: discarded.location(),
                 });
         }
@@ -1451,13 +1451,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if args.is_empty() {
             self.environment
                 .warnings
-                .push(Warning::NoFieldsRecordUpdate { location });
+                .emit(Warning::NoFieldsRecordUpdate { location });
         }
 
         if args.len() == field_map.arity as usize {
             self.environment
                 .warnings
-                .push(Warning::AllFieldsRecordUpdate { location });
+                .emit(Warning::AllFieldsRecordUpdate { location });
         }
 
         Ok(TypedExpr::RecordUpdate {

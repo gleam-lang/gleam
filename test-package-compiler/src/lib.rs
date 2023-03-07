@@ -7,6 +7,7 @@ use gleam_core::{
     build::{ErlangAppCodegenConfiguration, Mode, Target, TargetCodegenConfiguration},
     config::PackageConfig,
     io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
+    warning::{VectorWarningEmitterIO, WarningEmitter},
 };
 use itertools::Itertools;
 use regex::Regex;
@@ -15,6 +16,7 @@ use std::{
     ffi::OsStr,
     fmt::Write,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 pub fn prepare(path: &str) -> String {
@@ -36,7 +38,8 @@ pub fn prepare(path: &str) -> String {
 
     let ids = gleam_core::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
-    let mut warnings = Vec::new();
+    let warnings = VectorWarningEmitterIO::default();
+    let warning_emitter = WarningEmitter::new(Arc::new(warnings.clone()));
     let filesystem = to_in_memory_filesystem(&root);
     let initial_files = filesystem.paths();
     let root = PathBuf::from("");
@@ -56,13 +59,14 @@ pub fn prepare(path: &str) -> String {
     compiler.write_metadata = true;
     compiler.compile_beam_bytecode = false;
     compiler.copy_native_files = false;
-    let result = compiler.compile(&mut warnings, &mut modules, &mut im::HashMap::new());
+    let result = compiler.compile(&warning_emitter, &mut modules, &mut im::HashMap::new());
     match result {
         Ok(_) => {
             for path in initial_files {
                 filesystem.delete_file(&path).unwrap();
             }
             let files = filesystem.into_contents();
+            let warnings = warnings.take();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
         Err(error) => normalise_diagnostic(&error.pretty_string()),
