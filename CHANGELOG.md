@@ -7,6 +7,8 @@
 - The deprecated `assert ... = ...` syntax has been removed.
 - Semicolons are no longer whitespace. An error will be emitted if one is
   encountered.
+- Warnings are now immediately emitted rather than being buffered until the end
+  of the compilation.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
