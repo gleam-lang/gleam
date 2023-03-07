@@ -1,5 +1,8 @@
 use super::*;
-use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
+use crate::{
+    build::module_loader::SourceFingerprint,
+    io::{memory::InMemoryFileSystem, FileSystemWriter},
+};
 use std::time::Duration;
 
 #[test]
@@ -29,8 +32,8 @@ fn cache_present_and_fresh() {
     let loader = make_loader(&name, &fs, src, artefact);
 
     // The mtime of the source is older than that of the cache
-    write_src(&fs, "/src/main.gleam", 0);
-    write_cache(&fs, "/artefact/main.cache_meta", 1, false);
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
         .load(Path::new("/src/main.gleam").to_path_buf())
@@ -48,14 +51,33 @@ fn cache_present_and_stale() {
     let loader = make_loader(&name, &fs, src, artefact);
 
     // The mtime of the source is newer than that of the cache
-    write_src(&fs, "/src/main.gleam", 2);
-    write_cache(&fs, "/artefact/main.cache_meta", 1, false);
+    write_src(&fs, TEST_SOURCE_2, "/src/main.gleam", 2);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
         .load(Path::new("/src/main.gleam").to_path_buf())
         .unwrap();
 
     assert!(result.is_new());
+}
+
+#[test]
+fn cache_present_and_stale_but_source_is_the_same() {
+    let name = "package".into();
+    let src = Path::new("/src");
+    let artefact = Path::new("/artefact");
+    let fs = InMemoryFileSystem::new();
+    let loader = make_loader(&name, &fs, src, artefact);
+
+    // The mtime of the source is newer than that of the cache
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 2);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
+
+    let result = loader
+        .load(Path::new("/src/main.gleam").to_path_buf())
+        .unwrap();
+
+    assert!(result.is_cached());
 }
 
 #[test]
@@ -68,8 +90,8 @@ fn cache_present_without_codegen_when_required() {
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
-    write_src(&fs, "/src/main.gleam", 0);
-    write_cache(&fs, "/artefact/main.cache_meta", 1, false);
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
         .load(Path::new("/src/main.gleam").to_path_buf())
@@ -88,8 +110,8 @@ fn cache_present_with_codegen_when_required() {
     loader.codegen = CodegenRequired::Yes;
 
     // The mtime of the cache is newer than that of the source
-    write_src(&fs, "/src/main.gleam", 0);
-    write_cache(&fs, "/artefact/main.cache_meta", 1, true);
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, true);
 
     let result = loader
         .load(Path::new("/src/main.gleam").to_path_buf())
@@ -108,8 +130,8 @@ fn cache_present_without_codegen_when_not_required() {
     loader.codegen = CodegenRequired::No;
 
     // The mtime of the cache is newer than that of the source
-    write_src(&fs, "/src/main.gleam", 0);
-    write_cache(&fs, "/artefact/main.cache_meta", 1, false);
+    write_src(&fs, TEST_SOURCE_1, "/src/main.gleam", 0);
+    write_cache(&fs, TEST_SOURCE_1, "/artefact/main.cache_meta", 1, false);
 
     let result = loader
         .load(Path::new("/src/main.gleam").to_path_buf())
@@ -118,19 +140,29 @@ fn cache_present_without_codegen_when_not_required() {
     assert!(result.is_cached());
 }
 
-fn write_cache(fs: &InMemoryFileSystem, path: &str, seconds: u64, codegen_performed: bool) {
-    let path = Path::new(path);
+const TEST_SOURCE_1: &'static str = "const x = 1";
+const TEST_SOURCE_2: &'static str = "const x = 2";
+
+fn write_cache(
+    fs: &InMemoryFileSystem,
+    source: &str,
+    path: &str,
+    seconds: u64,
+    codegen_performed: bool,
+) {
     let cache_metadata = CacheMetadata {
         mtime: SystemTime::UNIX_EPOCH + Duration::from_secs(seconds),
         codegen_performed,
         dependencies: vec![],
+        fingerprint: SourceFingerprint::new(source),
     };
+    let path = Path::new(path);
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 }
 
-fn write_src(fs: &InMemoryFileSystem, path: &str, seconds: u64) {
+fn write_src(fs: &InMemoryFileSystem, source: &str, path: &str, seconds: u64) {
     let path = Path::new(path);
-    fs.write(&path, "const x = 1").unwrap();
+    fs.write(&path, source).unwrap();
     fs.set_modification_time(&path, SystemTime::UNIX_EPOCH + Duration::from_secs(seconds));
 }
 

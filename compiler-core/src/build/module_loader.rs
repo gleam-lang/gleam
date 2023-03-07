@@ -7,6 +7,7 @@ use std::{
     time::SystemTime,
 };
 
+use serde::{Deserialize, Serialize};
 use smol_str::SmolStr;
 
 use super::{
@@ -19,6 +20,15 @@ use crate::{
     io::{CommandExecutor, FileSystemIO},
     Error, Result,
 };
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub(crate) struct SourceFingerprint(u64);
+
+impl SourceFingerprint {
+    pub(crate) fn new(source: &str) -> Self {
+        SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct ModuleLoader<'a, IO> {
@@ -49,26 +59,30 @@ where
         let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&path)?;
 
-        let read_source = |name| Ok(Input::New(self.read_source(path, name, source_mtime)?));
+        let read_source = |name| self.read_source(path, name, source_mtime);
 
         let meta = match self.read_cache_metadata(&artefact)? {
             Some(meta) => meta,
-            None => return read_source(name),
+            None => return read_source(name).map(Input::New),
         };
-
-        // If there's a timestamp and it's newer or the same than the source
-        // file modification time then we read the cached data.
-        if meta.mtime < source_mtime {
-            tracing::debug!(?name, "cache_stale");
-            return read_source(name);
-        }
 
         // The cache currently does not contain enough data to perform codegen,
         // so if codegen is required in this compiler run then we must check
         // that codegen has already been performed before using a cache.
         if self.codegen.is_required() && !meta.codegen_performed {
             tracing::debug!(?name, "codegen_required_cache_insufficient");
-            return read_source(name);
+            return read_source(name).map(Input::New);
+        }
+
+        // If the timestamp of the source is newer than the cache entry and
+        // the hash of the source differs from the one in the cache entry,
+        // then we need to recompile.
+        if meta.mtime < source_mtime {
+            let source_module = read_source(name.clone())?;
+            if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
+                tracing::debug!(?name, "cache_stale");
+                return Ok(Input::New(source_module));
+            }
         }
 
         Ok(Input::Cached(self.cached(name, meta)))

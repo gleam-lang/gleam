@@ -2258,16 +2258,16 @@ package to Hex.\n"
                         .to_string();
                 text.push_str(if *description_missing && *licence_missing {
                     r#"Add the licences and description fields to your gleam.toml file.
-                
+
 description = "A Gleam library"
 licences = ["Apache-2.0"]"#
                 } else if *description_missing {
                     r#"Add the description field to your gleam.toml file.
-                
+
 description = "A Gleam library""#
                 } else {
                     r#"Add the licences field to your gleam.toml file.
-                
+
 licences = ["Apache-2.0"]"#
                 });
                 Diagnostic {

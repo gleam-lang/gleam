@@ -2,6 +2,7 @@ use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
         dep_tree,
+        module_loader::SourceFingerprint,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader},
         Mode, Module, Origin, Package, Target,
@@ -240,6 +241,7 @@ where
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies_list(),
+                fingerprint: SourceFingerprint::new(&module.code),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
         }
@@ -586,6 +588,7 @@ pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
     pub dependencies: Vec<SmolStr>,
+    pub fingerprint: SourceFingerprint,
 }
 
 impl CacheMetadata {

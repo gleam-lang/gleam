@@ -16,6 +16,8 @@
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
+- Cache loader now checks the file hashes in addition to modification times
+  before loading cached entry.
 - Fixed a bug where blocks could parse incorrectly.
 - Blocks are now preserved by the formatter when they only have a single
   expression within them.

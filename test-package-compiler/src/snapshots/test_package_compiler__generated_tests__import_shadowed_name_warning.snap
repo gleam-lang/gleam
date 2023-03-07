@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 153
 expression: "./cases/import_shadowed_name_warning"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<21 byte binary>
+<29 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -24,7 +23,7 @@ expression: "./cases/import_shadowed_name_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<32 byte binary>
+<40 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

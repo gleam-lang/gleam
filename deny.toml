@@ -24,6 +24,7 @@ allow = [
     "CC0-1.0",
     "BSD-3-Clause",
     "Unicode-DFS-2016",
+    "BSL-1.0",
 ]
 default = "deny"
 confidence-threshold = 0.8
