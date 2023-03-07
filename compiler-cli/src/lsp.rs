@@ -1012,6 +1012,7 @@ where
         let warnings = Arc::new(VectorWarningEmitterIO::default());
 
         let options = build::Options {
+            warnings_as_errors: false,
             mode: build::Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,

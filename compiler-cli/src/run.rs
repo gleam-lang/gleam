@@ -33,6 +33,7 @@ pub fn command(
 
     // Build project so we have bytecode to run
     let _ = crate::build::main(Options {
+        warnings_as_errors: false,
         codegen: Codegen::All,
         mode: Mode::Dev,
         target,

@@ -44,6 +44,7 @@ pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
     pub codegen: Codegen,
+    pub warnings_as_errors: bool,
 }
 
 #[derive(Debug)]
@@ -127,6 +128,7 @@ where
     pub fn compile(&mut self) -> Result<Package> {
         self.check_gleam_version()?;
         self.compile_dependencies()?;
+        self.warnings.reset_count();
 
         match self.options.codegen {
             Codegen::All => self.telemetry.compiling_package(&self.config.name),
@@ -134,7 +136,12 @@ where
         }
         let result = self.compile_root_package();
 
-        // TODO: error if there are any warnings and warnings are denied.
+        // TODO: test
+        if self.options.warnings_as_errors && self.warnings.count() > 0 {
+            return Err(Error::ForbiddenWarnings {
+                count: self.warnings.count(),
+            });
+        }
 
         result
     }

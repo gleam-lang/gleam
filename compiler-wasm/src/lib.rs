@@ -95,6 +95,7 @@ fn compile_project(
         .collect();
 
     let options = Options {
+        warnings_as_errors: false,
         mode: Mode::Dev,
         target: Some(target),
         codegen: Codegen::All,

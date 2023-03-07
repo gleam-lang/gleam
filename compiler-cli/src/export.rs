@@ -28,6 +28,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     // Build project in production mode
     let package = crate::build::main(Options {
+        warnings_as_errors: false,
         codegen: Codegen::All,
         mode,
         target: Some(target),

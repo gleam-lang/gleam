@@ -44,9 +44,6 @@ pub fn command(options: CompilePackage) -> Result<()> {
     compiler.compile_beam_bytecode = !options.skip_beam_compilation;
     let _ = compiler.compile(&warnings, &mut type_manifests, &mut defined_modules)?;
 
-    // TODO: Support --warnings-as-errors
-    // TODO: Create a Warnings struct to wrap up this functionality
-
     Ok(())
 }
 

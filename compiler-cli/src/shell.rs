@@ -8,6 +8,7 @@ use std::process::Command;
 pub fn command() -> Result<(), Error> {
     // Build project
     let _ = crate::build::main(Options {
+        warnings_as_errors: false,
         codegen: Codegen::All,
         mode: Mode::Dev,
         target: Some(Target::Erlang),

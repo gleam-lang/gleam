@@ -129,6 +129,7 @@ fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
 
     // Build the project to check that it is valid
     let compile_result = build::main(Options {
+        warnings_as_errors: false,
         mode: Mode::Prod,
         target: Some(Target::Erlang),
         codegen: Codegen::All,
