@@ -1,14 +1,7 @@
 use lazy_static::__Deref;
 
 use super::*;
-use std::{
-    cell::RefCell,
-    collections::HashMap,
-    ffi::OsStr,
-    io::{Error as IoError, Read},
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::RefCell, collections::HashMap, ffi::OsStr, rc::Rc, time::Duration};
 
 // An in memory sharable collection of pretend files that can be used in place
 // of a real file system. It is a shared reference to a set of buffer than can
@@ -197,23 +190,9 @@ impl FileSystemReader for InMemoryFileSystem {
             .any(|file_path| file_path.starts_with(path))
     }
 
-    /// # Panics
-    ///
-    /// Panics if this is not the only reference to the underlying files.
-    ///
-    fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
-        let path = path.to_path_buf();
-        let files = self.files.deref().borrow();
-        let file = files.get(&path).ok_or_else(|| Error::FileIo {
-            kind: FileKind::File,
-            action: FileIoAction::Open,
-            path: path.clone(),
-            err: None,
-        })?;
-        Ok(WrappedReader::new(
-            path.clone().as_path(),
-            Box::new(file.clone()),
-        ))
+    fn reader(&self, _path: &Path) -> Result<WrappedReader, Error> {
+        // TODO
+        unreachable!("Memory reader unimplemented")
     }
 
     fn read_dir(&self, path: &Path) -> Result<ReadDir> {
@@ -274,29 +253,6 @@ impl InMemoryFile {
         match String::from_utf8(contents) {
             Ok(s) => Content::Text(s),
             Err(e) => Content::Binary(e.into_bytes()),
-        }
-    }
-}
-
-impl Read for InMemoryFile {
-    #[allow(clippy::indexing_slicing)]
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let contents = Rc::try_unwrap(self.buffer.clone())
-            .expect("InMemoryFile::read called with multiple references")
-            .into_inner();
-        // let mut i = 0;
-        if contents.len() > buf.len() {
-            Err(IoError::new(
-                io::ErrorKind::Other,
-                "Provided buffer to small",
-            ))
-        } else {
-            for (i, byte) in contents.clone().into_iter().enumerate() {
-                // for byte in contents.clone() {
-                buf[i] = byte;
-                // i += 1;
-            }
-            Ok(contents.len())
         }
     }
 }
