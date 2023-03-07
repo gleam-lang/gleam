@@ -14,19 +14,21 @@ use gleam_core::{
 
 use crate::fs::ProjectIO;
 
-// A proxy intended for `LanguageServer` to use when files are modified without saving.
+// A proxy intended for `LanguageServer` to use when files are modified without
+// saving.
 //
-// Uses `ProjectIO` for writing directly to disk, or `InMemoryFileSystem` to cache files
-// that were not yet saved. Reading files will always first try the `InMemoryFileSystem`
-// first and fallback to use the `ProjectIO` if the file was not found in the cache.
+// Uses `ProjectIO` for writing directly to disk, or `InMemoryFileSystem` to
+// cache files that were not yet saved. Reading files will always first try the
+// `InMemoryFileSystem` first and fallback to use the `ProjectIO` if the file
+// was not found in the cache.
 //
 #[derive(Debug, Clone)]
-pub struct LspFsProxy {
+pub struct FileSystemProxy {
     project_io: ProjectIO,
     cache: InMemoryFileSystem,
 }
 
-impl LspFsProxy {
+impl FileSystemProxy {
     pub fn new() -> Self {
         Self {
             project_io: ProjectIO::new(),
@@ -35,7 +37,6 @@ impl LspFsProxy {
     }
 
     pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<(), Error> {
-        // println!("Writing cache for {}", path.to_string_lossy());
         tracing::info!("Writing file to cache: {}", path.to_string_lossy());
         let write_result = self.cache.write(path, content);
         self.cache
@@ -49,10 +50,10 @@ impl LspFsProxy {
     }
 }
 
-impl FileSystemIO for LspFsProxy {}
+impl FileSystemIO for FileSystemProxy {}
 
 // All write operations goes to disk (for mem-cache use the dedicated `_mem_cache` methods)
-impl FileSystemWriter for LspFsProxy {
+impl FileSystemWriter for FileSystemProxy {
     fn mkdir(&self, path: &Path) -> Result<(), Error> {
         self.project_io.mkdir(path)
     }
@@ -90,7 +91,7 @@ impl FileSystemWriter for LspFsProxy {
     }
 }
 
-impl FileSystemReader for LspFsProxy {
+impl FileSystemReader for FileSystemProxy {
     // Read from disk since `LspFsProxy` should never produce any new files
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         self.project_io.gleam_source_files(dir)
@@ -222,7 +223,7 @@ impl FileSystemReader for LspFsProxy {
 }
 
 // Proxy to `ProjectIO` - not applicable for mem-cache
-impl CommandExecutor for LspFsProxy {
+impl CommandExecutor for FileSystemProxy {
     fn exec(
         &self,
         program: &str,

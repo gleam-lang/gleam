@@ -64,7 +64,6 @@ mod fs;
 mod hex;
 mod http;
 mod lsp;
-mod lsp_fs_proxy;
 mod new;
 mod panic;
 mod publish;
