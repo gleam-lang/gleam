@@ -147,19 +147,48 @@ impl FileSystemReader for LspFsProxy {
         }
     }
 
-    // Not implemented in `InMemoryFileSystem`
+    /// # Panics
+    ///
+    /// Panics if this is not the only reference to the underlying files.
+    ///
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
-        self.project_io.reader(path)
+        let in_mem_result = self.cache.reader(abs_path(path)?.as_path());
+        match in_mem_result {
+            Ok(_) => {
+                tracing::info!("Creating reader from cache: {}", path.to_string_lossy());
+                in_mem_result
+            }
+            Err(e) => {
+                tracing::info!(
+                    "Got {} => Creating reader from disk: {}",
+                    e,
+                    path.to_string_lossy()
+                );
+                self.project_io.reader(path)
+            }
+        }
     }
 
-    // Read from disk, all files on disk are also files in mem-cache
+    // Cache overides existence of file
     fn is_file(&self, path: &Path) -> bool {
-        self.project_io.is_file(path)
+        match abs_path(path) {
+            Ok(path_buf) => match self.cache.is_file(path_buf.as_path()) {
+                true => true,
+                false => self.project_io.is_file(path),
+            },
+            _ => self.project_io.is_file(path),
+        }
     }
 
-    // Read from disk - mem cache has no dirs
+    // Cache overides existence of directory
     fn is_directory(&self, path: &Path) -> bool {
-        self.project_io.is_directory(path)
+        match abs_path(path) {
+            Ok(path_buf) => match self.cache.is_directory(path_buf.as_path()) {
+                true => true,
+                false => self.project_io.is_directory(path),
+            },
+            _ => self.project_io.is_directory(path),
+        }
     }
 
     // Not applicable for mem-cache
