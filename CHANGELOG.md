@@ -22,6 +22,8 @@
 - Fixed a bug where blocks could parse incorrectly.
 - Blocks are now preserved by the formatter when they only have a single
   expression within them.
+- Generated docs now export more meta data to improve the developer experience,
+  accessibility and search engine discoverability.
 
 ## v0.27.0 - 2023-03-01
 

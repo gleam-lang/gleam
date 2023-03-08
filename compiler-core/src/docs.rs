@@ -80,7 +80,20 @@ pub fn generate_html(
     // Generate user-supplied (or README) pages
     for page in docs_pages {
         let content = std::fs::read_to_string(&page.source).unwrap_or_default();
+        let rendered_content = render_markdown(&content);
         let unnest = page_unnest(&page.path);
+
+        let page_path_without_ext = page.path.split('.').next().unwrap_or("");
+        let page_title = match page_path_without_ext {
+            // The index page, such as README, should not push it's page title
+            "index" => format!("{} · v{}", config.name, config.version),
+            // Other page title's should say so
+            _other => format!("{} · {} · v{}", page.title, config.name, config.version),
+        };
+        let page_meta_description = match page_path_without_ext {
+            "index" => config.description.to_string().clone(),
+            _other => "".to_owned(),
+        };
 
         let temp = PageTemplate {
             gleam_version: VERSION,
@@ -88,9 +101,10 @@ pub fn generate_html(
             pages: &pages,
             modules: &modules_links,
             project_name: &config.name,
-            page_title: &config.name,
+            page_title: &page_title,
+            page_meta_description: &page_meta_description,
             project_version: &config.version.to_string(),
-            content: render_markdown(&content),
+            content: rendered_content,
             rendering_timestamp: &rendering_timestamp,
             unnest: &unnest,
         };
@@ -116,7 +130,8 @@ pub fn generate_html(
         // Read module src & create line number lookup structure
         let source_links = SourceLinker::new(config, module);
 
-        let page_title = format!("{} - {}", name, config.name);
+        let documentation_content = module.ast.documentation.iter().join("\n");
+        let rendered_documentation = render_markdown(&documentation_content.clone());
 
         let functions: Vec<DocsFunction<'_>> = module
             .ast
@@ -202,19 +217,23 @@ pub fn generate_html(
         search_indexes.push(SearchIndex {
             doc: module.name.to_string(),
             title: module.name.to_string(),
-            content: module.ast.documentation.iter().join("\n"),
+            content: documentation_content,
             url: format!("{}.html", module.name),
         });
+
+        let page_title = format!("{} · {} · v{}", name, config.name, config.version);
+        let page_meta_description = "";
 
         let template = ModuleTemplate {
             gleam_version: VERSION,
             unnest,
             links: &links,
             pages: &pages,
-            documentation: render_markdown(&module.ast.documentation.iter().join("\n")),
+            documentation: rendered_documentation,
             modules: &modules_links,
             project_name: &config.name,
             page_title: &page_title,
+            page_meta_description,
             module_name: name,
             project_version: &config.version.to_string(),
             functions,
@@ -693,6 +712,7 @@ struct PageTemplate<'a> {
     gleam_version: &'a str,
     unnest: &'a str,
     page_title: &'a str,
+    page_meta_description: &'a str,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],
@@ -708,6 +728,7 @@ struct ModuleTemplate<'a> {
     gleam_version: &'a str,
     unnest: String,
     page_title: &'a str,
+    page_meta_description: &'a str,
     module_name: SmolStr,
     project_name: &'a str,
     project_version: &'a str,
