@@ -148,26 +148,8 @@ impl FileSystemReader for FileSystemProxy {
         }
     }
 
-    /// # Panics
-    ///
-    /// Panics if this is not the only reference to the underlying files.
-    ///
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error> {
-        let in_mem_result = self.cache.reader(abs_path(path)?.as_path());
-        match in_mem_result {
-            Ok(_) => {
-                tracing::info!("Creating reader from cache: {}", path.to_string_lossy());
-                in_mem_result
-            }
-            Err(e) => {
-                tracing::info!(
-                    "Got {} => Creating reader from disk: {}",
-                    e,
-                    path.to_string_lossy()
-                );
-                self.project_io.reader(path)
-            }
-        }
+        self.project_io.reader(path)
     }
 
     // Cache overides existence of file
