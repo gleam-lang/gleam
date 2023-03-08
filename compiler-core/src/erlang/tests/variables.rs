@@ -92,3 +92,18 @@ pub fn use_compound() { compound.1(compound.0) }
 "
     )
 }
+
+#[test]
+fn blocks_are_scopes() {
+    assert_erl!(
+        "
+pub fn main() {
+  let x = 1
+  {
+    let x = 2
+  }
+  x
+}
+"
+    )
+}

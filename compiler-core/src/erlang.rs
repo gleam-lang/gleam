@@ -720,11 +720,19 @@ where
     document
 }
 
-fn seq<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
+fn block<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
+    let vars = env.current_scope_vars.clone();
+    let document = sequence(expressions, env);
+    env.current_scope_vars = vars;
+    document
+}
+
+fn sequence<'a>(expressions: &'a [TypedExpr], env: &mut Env<'a>) -> Document<'a> {
     let count = expressions.len();
     let mut documents = Vec::with_capacity(count * 3);
     for (i, expression) in expressions.iter().enumerate() {
         documents.push(expr(expression, env).group());
+
         if i + 1 < count {
             // This isn't the final expression so add the delimeters
             documents.push(",".to_doc());
@@ -1353,18 +1361,18 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
 /// Same as expr, expect it wraps seq, let, etc in begin end
 ///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
-    if needs_wrapping_in_block(expression) {
+    if needs_begin_end_wrapping(expression) {
         begin_end(expr(expression, env))
     } else {
         expr(expression, env)
     }
 }
 
-fn needs_wrapping_in_block(expression: &TypedExpr) -> bool {
-    matches!(
-        expression,
-        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } | TypedExpr::Assignment { .. }
-    )
+fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
+    match expression {
+        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } | TypedExpr::Assignment { .. } => true,
+        _ => false,
+    }
 }
 
 fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
@@ -1433,7 +1441,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Float { value, .. } => float(value),
         TypedExpr::String { value, .. } => string(value),
         TypedExpr::Pipeline { expressions, .. } | TypedExpr::Block { expressions, .. } => {
-            seq(expressions, env)
+            block(expressions, env)
         }
 
         TypedExpr::TupleIndex { tuple, index, .. } => tuple_index(tuple, *index, env),
