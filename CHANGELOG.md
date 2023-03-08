@@ -11,6 +11,8 @@
 - Warnings are now immediately emitted rather than being buffered until the end
   of the compilation.
 - The `--warnings-as-errors` flag is now supported by `gleam build`.
+- Fixed a bug where language server diagnostics would become out-of-sync
+  when server was restarted with unsaved files.
 - Fixed a bug where the formatter would incorrectly remove `{ ... }` from bit
   string segment value expressions.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language

@@ -29,7 +29,7 @@ use gleam_core::{
     Error, Result,
 };
 use itertools::Itertools;
-use lsp::request::GotoDefinition;
+use lsp::{notification::DidOpenTextDocument, request::GotoDefinition, DidOpenTextDocumentParams};
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
@@ -86,7 +86,7 @@ fn server_capabilities() -> lsp::ServerCapabilities {
     lsp::ServerCapabilities {
         text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
             lsp::TextDocumentSyncOptions {
-                open_close: None,
+                open_close: Some(true),
                 change: Some(lsp::TextDocumentSyncKind::FULL),
                 will_save: None,
                 will_save_wait_until: None,
@@ -485,6 +485,14 @@ impl LanguageServer {
         notification: lsp_server::Notification,
     ) -> Result<()> {
         match notification.method.as_str() {
+            "textDocument/didOpen" => {
+                let params = cast_notification::<DidOpenTextDocument>(notification)
+                    .expect("case DidOpenTextDocument");
+                tracing::info!("Document opened: {:?}", params);
+                let result = self.text_document_did_open(params, connection);
+                self.publish_result_diagnostics(result, connection)
+            }
+
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification)
                     .expect("cast DidSaveTextDocument");
@@ -521,6 +529,19 @@ impl LanguageServer {
             let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone())?;
             self.compiler = Some(compiler);
         }
+        Ok(())
+    }
+
+    fn text_document_did_open(
+        &mut self,
+        params: DidOpenTextDocumentParams,
+        connection: &lsp_server::Connection,
+    ) -> Result<()> {
+        // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
+        let path = params.text_document.uri.path().to_string();
+        self.fs_proxy
+            .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
+        self.compile(connection)?;
         Ok(())
     }
 
