@@ -1,4 +1,4 @@
-import ffi
+import ffi.{Dynamic}
 
 pub opaque type Test {
   Example(name: String, proc: fn() -> Outcome)
@@ -21,7 +21,7 @@ pub opaque type Pass {
 }
 
 pub opaque type Fail {
-  Fail
+  Fail(left: Dynamic, right: Dynamic)
 }
 
 pub type Outcome =
@@ -31,16 +31,15 @@ pub fn pass() -> Outcome {
   Ok(Pass)
 }
 
-pub fn assert_equal(expected: a, got: a) -> Outcome {
-  case expected == got {
+pub fn assert_equal(right: a, left: a) -> Outcome {
+  case left == right {
     True -> pass()
-    // TODO: print diff on failure
-    _ -> Error(Fail)
+    _ -> Error(Fail(left: ffi.to_dynamic(left), right: ffi.to_dynamic(right)))
   }
 }
 
 pub fn operator_test(operator_name, operator) {
-  fn(a, b, expected) {
+  fn(a, b, left) {
     let name =
       ffi.to_string(a)
       |> ffi.append(" ")
@@ -48,8 +47,8 @@ pub fn operator_test(operator_name, operator) {
       |> ffi.append(" ")
       |> ffi.append(ffi.to_string(b))
       |> ffi.append(" == ")
-      |> ffi.append(ffi.to_string(expected))
-    Example(name, fn() { assert_equal(operator(a, b), expected) })
+      |> ffi.append(ffi.to_string(left))
+    Example(name, fn() { assert_equal(operator(a, b), left) })
   }
 }
 
@@ -106,21 +105,19 @@ fn run_test(test: Test, suite_name: String, stats) {
       ffi.print(ffi.ansi_green("."))
       Stats(..stats, passes: stats.passes + 1)
     }
-    Error(Fail) -> {
+    Error(Fail(left: left, right: right)) -> {
       ffi.print("\n")
       ffi.print("❌ ")
       ffi.print(suite_name)
       ffi.print(":")
       ffi.print(test.name)
       ffi.print(" failed!\n")
-      // print_indentation(indentation)
-      // ffi.print("expected: ")
-      // ffi.print(ffi.to_string(expected))
-      // ffi.print("\n")
-      // print_indentation(indentation)
-      // ffi.print("     got: ")
-      // ffi.print(ffi.to_string(got))
-      // ffi.print("\n")
+      ffi.print(" left: ")
+      ffi.print(ffi.to_string(left))
+      ffi.print("\n")
+      ffi.print("right: ")
+      ffi.print(ffi.to_string(right))
+      ffi.print("\n")
       Stats(..stats, failures: stats.failures + 1)
     }
   }

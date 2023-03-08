@@ -1,6 +1,9 @@
 -module(ffi_erlang).
 
--export([to_string/1, append/2, print/1, ansi_green/1, file_exists/1, halt/1]).
+-export([
+    to_string/1, append/2, print/1, ansi_green/1, file_exists/1, halt/1,
+    to_dynamic/1
+]).
 
 append(A, B) ->
     <<A/binary, B/binary>>.
@@ -21,3 +24,6 @@ file_exists(Path) ->
 
 halt(Code) ->
     erlang:halt(Code).
+
+to_dynamic(X) ->
+    X.

@@ -1629,13 +1629,6 @@ fn mixed_arg_match_tests() {
   ]
 }
 
-fn try_(result: Result(a, e), next: fn(a) -> Result(b, e)) -> Result(b, e) {
-  case result {
-    Ok(x) -> next(x)
-    Error(e) -> Error(e)
-  }
-}
-
 fn block_tests() {
   [
     // https://github.com/gleam-lang/gleam/issues/1991

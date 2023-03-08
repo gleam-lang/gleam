@@ -26,7 +26,7 @@ export function toString(a) {
   }
 }
 
-export function ansi_green(string) {
+export function ansiGreen(string) {
   return `\u001b[32m${string}\u001b[0m`;
 }
 
@@ -49,4 +49,8 @@ export function halt(code) {
   } else {
     process.exit(code);
   }
+}
+
+export function toDynamic(a) {
+  return a;
 }
