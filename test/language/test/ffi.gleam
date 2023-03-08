@@ -13,6 +13,9 @@ if javascript {
 
   pub external fn file_exists(String) -> Bool =
     "./ffi_javascript.mjs" "fileExists"
+
+  pub external fn halt(Int) -> Nil =
+    "./ffi_javascript.mjs" "halt"
 }
 
 if erlang {
@@ -30,4 +33,7 @@ if erlang {
 
   pub external fn file_exists(String) -> Bool =
     "ffi_erlang" "file_exists"
+
+  pub external fn halt(Int) -> Nil =
+    "ffi_erlang" "halt"
 }

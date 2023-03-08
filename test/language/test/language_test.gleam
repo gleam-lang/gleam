@@ -9,7 +9,7 @@ import shadowed_module.{ShadowPerson}
 import ffi.{file_exists}
 import gleam
 
-pub fn main() -> Int {
+pub fn main() {
   let stats =
     test.run([
       suite("ints", int_tests()),
@@ -49,10 +49,10 @@ pub fn main() -> Int {
       suite("custom types mixed args match", mixed_arg_match_tests()),
     ])
 
-  case stats.failures {
+  ffi.halt(case stats.failures {
     0 -> 0
     _ -> 1
-  }
+  })
 }
 
 fn int_tests() -> List(Test) {
@@ -1354,34 +1354,34 @@ fn int_negation_tests() {
     "-{-a}"
     |> example(fn() {
       let a = 3
-      let b = -{-a}
+      let b = - { -a }
       assert_equal(3, b)
     }),
     "-{-{-a}}"
     |> example(fn() {
       let a = 3
-      let b = -{-{-a}}
+      let b = - { - { -a } }
       assert_equal(-3, b)
     }),
     "a - - b"
     |> example(fn() {
       let a = 3
       let b = -a
-      let c = a - - b
+      let c = a - -b
       assert_equal(0, c)
     }),
     "a - - - - - - b"
     |> example(fn() {
       let a = 3
       let b = -a
-      let c = a - - - - - - b
+      let c = a - - { - { - { - { -b } } } }
       assert_equal(0, c)
     }),
     "- a - {- {b}}"
     |> example(fn() {
       let a = 3
       let b = -a
-      let c = - a - {- {b}}
+      let c = -a - -b
       assert_equal(-6, c)
     }),
     "-abs(-6)"
@@ -1636,13 +1636,22 @@ fn try_(result: Result(a, e), next: fn(a) -> Result(b, e)) -> Result(b, e) {
   }
 }
 
-
 fn block_tests() {
   [
     // https://github.com/gleam-lang/gleam/issues/1991
     "let x = 1 let _ = { let x = 2 x } x"
     |> example(fn() {
-      assert_equal({ let x = 1 let _ = { let x = 2 x } x }, 1)
+      assert_equal(
+        {
+          let x = 1
+          let _ = {
+            let x = 2
+            x
+          }
+          x
+        },
+        1,
+      )
     }),
   ]
 }

@@ -1,1 +1,3 @@
-
+pub fn main() {
+  Nil
+}
