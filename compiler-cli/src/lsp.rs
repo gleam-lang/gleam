@@ -2,7 +2,6 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-mod fs_proxy;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -12,11 +11,13 @@ use std::{
 use crate::{
     build_lock::BuildLock,
     dependencies::UseManifest,
-    fs::{self},
+    fs::{self, ProjectIO},
     telemetry::NullTelemetry,
 };
-use fs_proxy::FileSystemProxy;
-use gleam_core::{ast::Import, build::Mode, io::FileSystemReader, warning::VectorWarningEmitterIO};
+use gleam_core::{
+    ast::Import, build::Mode, io::FileSystemReader, language_server::FileSystemProxy,
+    warning::VectorWarningEmitterIO,
+};
 use gleam_core::{
     ast::{SrcSpan, Statement},
     build::{self, Located, Module, ProjectCompiler},
@@ -171,9 +172,9 @@ pub struct LanguageServer {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy>>,
+    compiler: Option<LspProjectCompiler<FileSystemProxy<ProjectIO>>>,
 
-    fs_proxy: FileSystemProxy,
+    fs_proxy: FileSystemProxy<ProjectIO>,
 
     config: Option<PackageConfig>,
 }
@@ -188,7 +189,7 @@ impl LanguageServer {
             published_diagnostics: HashSet::new(),
             project_root,
             compiler: None,
-            fs_proxy: FileSystemProxy::new(),
+            fs_proxy: FileSystemProxy::new(ProjectIO::new()),
             config,
         };
         language_server.create_new_compiler()?;

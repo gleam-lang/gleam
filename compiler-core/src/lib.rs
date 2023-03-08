@@ -64,6 +64,7 @@ pub mod format;
 pub mod hex;
 pub mod io;
 pub mod javascript;
+pub mod language_server;
 pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
