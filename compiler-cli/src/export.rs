@@ -34,9 +34,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
         target: Some(target),
     })?;
 
-    for entry in crate::fs::read_dir(&build)?
-        .filter_map(Result::ok)
-    {
+    for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
         let path = entry.path();
 
         // We are only interested in package directories

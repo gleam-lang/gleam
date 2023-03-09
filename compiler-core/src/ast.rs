@@ -602,15 +602,12 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-#[derive(Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
 pub enum Layer {
     #[default]
     Value,
     Type,
 }
-
-
 
 impl Layer {
     /// Returns `true` if the layer is [`Value`].
