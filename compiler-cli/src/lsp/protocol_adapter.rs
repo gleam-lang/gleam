@@ -78,20 +78,23 @@ impl LanguageServerProtocolAdapter {
         // Compile the project once so we have all the state and any initial errors
         let result = self.language_server.compile(&connection);
         self.store_result_diagnostics(result);
-        self.publish_stored_diagnostics(&connection)?;
+        self.publish_stored_diagnostics(&connection);
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
             match message {
+                lsp_server::Message::Request(request)
+                    if connection.handle_shutdown(&request).expect("LSP shutdown") =>
+                {
+                    break
+                }
+
                 lsp_server::Message::Request(request) => {
-                    if connection.handle_shutdown(&request).expect("LSP shutdown") {
-                        return Ok(());
-                    }
                     let (response, diagnostics) = self.handle_request(request);
                     for diagnostic in diagnostics {
                         self.process_gleam_diagnostic(diagnostic);
                     }
-                    self.publish_stored_diagnostics(&connection)?;
+                    self.publish_stored_diagnostics(&connection);
                     connection
                         .sender
                         .send(lsp_server::Message::Response(response))
@@ -101,10 +104,11 @@ impl LanguageServerProtocolAdapter {
                 lsp_server::Message::Response(_) => (),
 
                 lsp_server::Message::Notification(notification) => {
-                    self.handle_notification(&connection, notification)?;
+                    self.handle_notification(&connection, notification);
                 }
             }
         }
+
         Ok(())
     }
 
@@ -142,7 +146,7 @@ impl LanguageServerProtocolAdapter {
         &mut self,
         connection: &lsp_server::Connection,
         notification: lsp_server::Notification,
-    ) -> Result<()> {
+    ) {
         match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification)
@@ -151,7 +155,7 @@ impl LanguageServerProtocolAdapter {
                 let result = self
                     .language_server
                     .text_document_did_open(params, connection);
-                self.publish_result_diagnostics(result, connection)
+                self.publish_result_diagnostics(result, connection);
             }
 
             "textDocument/didSave" => {
@@ -160,13 +164,13 @@ impl LanguageServerProtocolAdapter {
                 let result = self
                     .language_server
                     .text_document_did_save(params, connection);
-                self.publish_result_diagnostics(result, connection)
+                self.publish_result_diagnostics(result, connection);
             }
 
             "textDocument/didClose" => {
                 let params = cast_notification::<DidCloseTextDocument>(notification)
                     .expect("cast DidCloseTextDocument");
-                self.language_server.text_document_did_close(params)
+                self.language_server.text_document_did_close(params);
             }
 
             "textDocument/didChange" => {
@@ -175,19 +179,18 @@ impl LanguageServerProtocolAdapter {
                 let result = self
                     .language_server
                     .text_document_did_change(params, connection);
-                self.publish_result_diagnostics(result, connection)
+                self.publish_result_diagnostics(result, connection);
             }
 
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
-                self.language_server.create_new_compiler()?;
+                self.language_server.create_new_compiler().expect("create");
                 let result = self.language_server.compile(connection);
                 self.store_result_diagnostics(result);
-                self.publish_stored_diagnostics(connection)?;
-                Ok(())
+                self.publish_stored_diagnostics(connection);
             }
 
-            _ => Ok(()),
+            _ => (),
         }
     }
 
@@ -220,8 +223,8 @@ impl LanguageServerProtocolAdapter {
     /// Publish all stored diagnostics to the client.
     /// Any previously publish diagnostics are cleared before the new set are
     /// published to the client.
-    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<()> {
-        self.clear_all_diagnostics(connection)?;
+    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) {
+        self.clear_all_diagnostics(connection);
 
         for (path, diagnostics) in self.stored_diagnostics.drain() {
             let uri = path_to_uri(path);
@@ -266,11 +269,10 @@ impl LanguageServerProtocolAdapter {
                 .send(lsp_server::Message::Notification(notification))
                 .expect("send window/showMessage");
         }
-        Ok(())
     }
 
     /// Clear all diagnostics that have been previously published to the client
-    fn clear_all_diagnostics(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+    fn clear_all_diagnostics(&mut self, connection: &lsp_server::Connection) {
         for file in self.published_diagnostics.drain() {
             let notification = lsp_server::Notification {
                 method: "textDocument/publishDiagnostics".into(),
@@ -286,17 +288,15 @@ impl LanguageServerProtocolAdapter {
                 .send(lsp_server::Message::Notification(notification))
                 .expect("send textDocument/publishDiagnostics");
         }
-        Ok(())
     }
 
     fn publish_result_diagnostics<T>(
         &mut self,
         result: Result<T>,
         connection: &lsp_server::Connection,
-    ) -> Result<()> {
+    ) {
         self.store_result_diagnostics(result);
-        self.publish_stored_diagnostics(connection)?;
-        Ok(())
+        self.publish_stored_diagnostics(connection);
     }
 
     fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
