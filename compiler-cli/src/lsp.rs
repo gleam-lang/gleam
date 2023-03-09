@@ -28,7 +28,7 @@ use gleam_core::{
     ast::SrcSpan,
     build::{self, Module, ProjectCompiler},
     config::PackageConfig,
-    diagnostic::{self, Level},
+    diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemIO, Stdio},
     line_numbers::LineNumbers,
     paths, Error, Result,
@@ -255,47 +255,43 @@ where
     Ok(params)
 }
 
-fn result_to_response(
-    result: Result<serde_json::Value>,
+fn convert_response<T>(
     id: lsp_server::RequestId,
-) -> (lsp_server::Response, Option<diagnostic::Diagnostic>) {
-    match result {
-        Ok(result) => {
-            let response = lsp_server::Response {
-                id,
-                error: None,
-                result: Some(result),
-            };
-            (response, None)
-        }
+    result: server::Response<T>,
+) -> (lsp_server::Response, Vec<Diagnostic>)
+where
+    T: serde::Serialize,
+{
+    let server::Response {
+        diagnostics,
+        payload,
+    } = result;
 
-        Err(error) => {
-            let diagnostic = error.to_diagnostic();
-            if diagnostic.location.is_some() {
-                let response = lsp_server::Response {
-                    id,
-                    error: None,
-                    result: Some(serde_json::json!(null)),
-                };
-                (response, Some(diagnostic))
-            } else {
-                let response = lsp_server::Response {
-                    id,
-                    error: Some(error_to_response_error(error)),
-                    result: None,
-                };
-                (response, None)
-            }
-        }
-    }
-}
+    let response = match payload {
+        server::Payload::Ok(t) => lsp_server::Response {
+            id,
+            error: None,
+            result: Some(serde_json::to_value(t).expect("json to_value")),
+        },
 
-fn error_to_response_error(error: Error) -> lsp_server::ResponseError {
-    lsp_server::ResponseError {
-        code: 1, // We should assign a code to each error.
-        message: error.pretty_string(),
-        data: None,
-    }
+        server::Payload::Null => lsp_server::Response {
+            id,
+            error: None,
+            result: Some(serde_json::Value::Null),
+        },
+
+        server::Payload::Err(message) => lsp_server::Response {
+            id,
+            error: Some(lsp_server::ResponseError {
+                code: 0, // TODO: Assign a code to each error.
+                message,
+                data: None,
+            }),
+            result: None,
+        },
+    };
+
+    (response, diagnostics)
 }
 
 #[allow(clippy::large_enum_variant)]
@@ -304,7 +300,7 @@ enum LspDisplayable {
     Message(LspMessage),
 }
 
-fn diagnostic_to_lsp(diagnostic: gleam_core::diagnostic::Diagnostic) -> LspDisplayable {
+fn diagnostic_to_lsp(diagnostic: Diagnostic) -> LspDisplayable {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
         Level::Warning => lsp::DiagnosticSeverity::WARNING,

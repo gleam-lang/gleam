@@ -1,11 +1,11 @@
 use super::{
-    cast_notification, cast_request, diagnostic_to_lsp, path_to_uri, result_to_response,
+    cast_notification, cast_request, convert_response, diagnostic_to_lsp, path_to_uri,
     server::LanguageServer, LspDisplayable, LspMessage, COMPILING_PROGRESS_TOKEN,
     CREATE_COMPILING_PROGRESS_TOKEN,
 };
 use gleam_core::{
     config::PackageConfig,
-    diagnostic::{self, Level},
+    diagnostic::{Diagnostic, Level},
     Error, Result,
 };
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
@@ -87,13 +87,11 @@ impl LanguageServerProtocolAdapter {
                     if connection.handle_shutdown(&request).expect("LSP shutdown") {
                         return Ok(());
                     }
-                    let id = request.id.clone();
-                    let result = self.handle_request(request);
-                    let (response, diagnostic) = result_to_response(result, id);
-                    if let Some(diagnostic) = diagnostic {
+                    let (response, diagnostics) = self.handle_request(request);
+                    for diagnostic in diagnostics {
                         self.process_gleam_diagnostic(diagnostic);
-                        self.publish_stored_diagnostics(&connection)?;
                     }
+                    self.publish_stored_diagnostics(&connection)?;
                     connection
                         .sender
                         .send(lsp_server::Message::Response(response))
@@ -110,30 +108,30 @@ impl LanguageServerProtocolAdapter {
         Ok(())
     }
 
-    fn handle_request(&self, request: lsp_server::Request) -> Result<serde_json::Value> {
+    fn handle_request(
+        &self,
+        request: lsp_server::Request,
+    ) -> (lsp_server::Response, Vec<Diagnostic>) {
+        let id = request.id.clone();
         match request.method.as_str() {
             "textDocument/formatting" => {
                 let params = cast_request::<Formatting>(request).expect("cast Formatting");
-                let text_edit = self.language_server.format(params)?;
-                Ok(serde_json::to_value(text_edit).expect("TextEdits to json"))
+                convert_response(id, self.language_server.format(params))
             }
 
             "textDocument/hover" => {
                 let params = cast_request::<HoverRequest>(request).expect("cast HoverRequest");
-                let text_edit = self.language_server.hover(params)?;
-                Ok(serde_json::to_value(text_edit).expect("Hover to json"))
+                convert_response(id, self.language_server.hover(params))
             }
 
             "textDocument/definition" => {
                 let params = cast_request::<GotoDefinition>(request).expect("cast GotoDefinition");
-                let location = self.language_server.goto_definition(params)?;
-                Ok(serde_json::to_value(location).expect("Location to json"))
+                convert_response(id, self.language_server.goto_definition(params))
             }
 
             "textDocument/completion" => {
                 let params = cast_request::<Completion>(request).expect("cast Completion");
-                let completions = self.language_server.completion(params);
-                Ok(serde_json::to_value(completions).expect("Completions to json"))
+                convert_response(id, self.language_server.completion(params))
             }
 
             _ => panic!("Unsupported LSP request"),
@@ -200,7 +198,7 @@ impl LanguageServerProtocolAdapter {
             .push(diagnostic);
     }
 
-    fn process_gleam_diagnostic(&mut self, mut diagnostic: diagnostic::Diagnostic) {
+    fn process_gleam_diagnostic(&mut self, mut diagnostic: Diagnostic) {
         let hint = diagnostic.hint.take();
         match diagnostic_to_lsp(diagnostic) {
             LspDisplayable::Diagnostic(path, lsp_diagnostic) => {

@@ -19,6 +19,61 @@ use lsp_types::{
 };
 use std::path::{Path, PathBuf};
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Payload<T> {
+    Ok(T),
+    Null,
+    Err(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Response<T> {
+    pub payload: Payload<T>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+impl<T> Response<T> {
+    pub fn ok(payload: T) -> Self {
+        Self {
+            payload: Payload::Ok(payload),
+            diagnostics: vec![],
+        }
+    }
+
+    pub fn err(message: String) -> Self {
+        Self {
+            payload: Payload::Err(message),
+            diagnostics: vec![],
+        }
+    }
+
+    pub fn null() -> Self {
+        Self {
+            payload: Payload::Null,
+            diagnostics: vec![],
+        }
+    }
+
+    pub fn append_diagnostic(mut self, diagnostic: Diagnostic) -> Self {
+        self.diagnostics.push(diagnostic);
+        self
+    }
+
+    pub fn from_result(result: Result<T>) -> Self {
+        match result {
+            Ok(result) => Self::ok(result),
+            Err(error) => {
+                let diagnostic = error.to_diagnostic();
+                if diagnostic.location.is_some() {
+                    Self::null().append_diagnostic(diagnostic)
+                } else {
+                    Self::err(diagnostic.pretty_string())
+                }
+            }
+        }
+    }
+}
+
 pub struct LanguageServer {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
@@ -186,41 +241,43 @@ impl LanguageServer {
     pub fn goto_definition(
         &self,
         params: lsp::GotoDefinitionParams,
-    ) -> Result<Option<lsp::Location>> {
-        let params = params.text_document_position_params;
-        let (line_numbers, node) = match self.node_at_position(&params) {
-            Some(location) => location,
-            None => return Ok(None),
-        };
+    ) -> Response<Option<lsp::Location>> {
+        self.respond(|this| {
+            let params = params.text_document_position_params;
+            let (line_numbers, node) = match this.node_at_position(&params) {
+                Some(location) => location,
+                None => return Ok(None),
+            };
 
-        let location = match node.definition_location() {
-            Some(location) => location,
-            None => return Ok(None),
-        };
+            let location = match node.definition_location() {
+                Some(location) => location,
+                None => return Ok(None),
+            };
 
-        let (uri, line_numbers) = match location.module {
-            None => (params.text_document.uri, &line_numbers),
-            Some(name) => {
-                let module = match self
-                    .compiler
-                    .as_ref()
-                    .and_then(|compiler| compiler.sources.get(name))
-                {
-                    Some(module) => module,
-                    // TODO: support goto definition for functions defined in
-                    // different packages. Currently it is not possible as the
-                    // required LineNumbers and source file path information is
-                    // not stored in the module metadata.
-                    None => return Ok(None),
-                };
-                let url = Url::parse(&format!("file:///{}", &module.path))
-                    .expect("goto definition URL parse");
-                (url, &module.line_numbers)
-            }
-        };
-        let range = src_span_to_lsp_range(location.span, line_numbers);
+            let (uri, line_numbers) = match location.module {
+                None => (params.text_document.uri, &line_numbers),
+                Some(name) => {
+                    let module = match this
+                        .compiler
+                        .as_ref()
+                        .and_then(|compiler| compiler.sources.get(name))
+                    {
+                        Some(module) => module,
+                        // TODO: support goto definition for functions defined in
+                        // different packages. Currently it is not possible as the
+                        // required LineNumbers and source file path information is
+                        // not stored in the module metadata.
+                        None => return Ok(None),
+                    };
+                    let url = Url::parse(&format!("file:///{}", &module.path))
+                        .expect("goto definition URL parse");
+                    (url, &module.line_numbers)
+                }
+            };
+            let range = src_span_to_lsp_range(location.span, line_numbers);
 
-        Ok(Some(lsp::Location { uri, range }))
+            Ok(Some(lsp::Location { uri, range }))
+        })
     }
 
     // TODO: function & constructor labels
@@ -230,47 +287,60 @@ impl LanguageServer {
     // TODO: imported module values
     // TODO: imported module types
     // TODO: record accessors
-    pub fn completion(&self, params: lsp::CompletionParams) -> Option<Vec<lsp::CompletionItem>> {
-        let found = self
-            .node_at_position(&params.text_document_position)
-            .map(|(_, found)| found);
+    pub fn completion(
+        &self,
+        params: lsp::CompletionParams,
+    ) -> Response<Option<Vec<lsp::CompletionItem>>> {
+        self.respond(|this| {
+            let found = this
+                .node_at_position(&params.text_document_position)
+                .map(|(_, found)| found);
 
-        match found {
-            // TODO: test
-            None | Some(Located::Statement(Statement::Import(Import { .. }))) => {
-                self.completion_for_import()
-            }
+            Ok(match found {
+                // TODO: test
+                None | Some(Located::Statement(Statement::Import(Import { .. }))) => {
+                    this.completion_for_import()
+                }
 
-            // TODO: autocompletion for other statements
-            Some(Located::Statement(_expression)) => None,
+                // TODO: autocompletion for other statements
+                Some(Located::Statement(_expression)) => None,
 
-            // TODO: autocompletion for expressions
-            Some(Located::Expression(_expression)) => None,
-        }
+                // TODO: autocompletion for expressions
+                Some(Located::Expression(_expression)) => None,
+            })
+        })
     }
 
-    pub fn format(&self, params: lsp::DocumentFormattingParams) -> Result<Vec<TextEdit>> {
-        let path = params.text_document.uri.path();
-        let mut new_text = String::new();
+    fn respond<T>(&self, handler: impl FnOnce(&Self) -> Result<T>) -> Response<T> {
+        let result = handler(self);
+        // TODO: gather diagnostics from warnings
+        Response::from_result(result)
+    }
 
-        let src = self.fs_proxy.read(Path::new(path))?.into();
-        gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
-        let line_count = src.lines().count() as u32;
+    pub fn format(&self, params: lsp::DocumentFormattingParams) -> Response<Vec<TextEdit>> {
+        self.respond(|this| {
+            let path = params.text_document.uri.path();
+            let mut new_text = String::new();
 
-        let edit = TextEdit {
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0,
+            let src = this.fs_proxy.read(Path::new(path))?.into();
+            gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
+            let line_count = src.lines().count() as u32;
+
+            let edit = TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: line_count,
+                        character: 0,
+                    },
                 },
-                end: Position {
-                    line: line_count,
-                    character: 0,
-                },
-            },
-            new_text,
-        };
-        Ok(vec![edit])
+                new_text,
+            };
+            Ok(vec![edit])
+        })
     }
 
     fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {
@@ -302,30 +372,32 @@ impl LanguageServer {
         Some(modules)
     }
 
-    pub fn hover(&self, params: lsp::HoverParams) -> Result<Option<Hover>> {
-        let params = params.text_document_position_params;
+    pub fn hover(&self, params: lsp::HoverParams) -> Response<Option<Hover>> {
+        self.respond(|this| {
+            let params = params.text_document_position_params;
 
-        let (line_numbers, found) = match self.node_at_position(&params) {
-            Some(value) => value,
-            None => return Ok(None),
-        };
+            let (line_numbers, found) = match this.node_at_position(&params) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
 
-        let expression = match found {
-            Located::Expression(expression) => expression,
-            Located::Statement(_) => return Ok(None),
-        };
+            let expression = match found {
+                Located::Expression(expression) => expression,
+                Located::Statement(_) => return Ok(None),
+            };
 
-        // Show the type of the hovered node to the user
-        let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
-        let contents = format!(
-            "```gleam
+            // Show the type of the hovered node to the user
+            let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+            let contents = format!(
+                "```gleam
 {type_}
 ```"
-        );
-        Ok(Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(contents)),
-            range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
-        }))
+            );
+            Ok(Some(Hover {
+                contents: HoverContents::Scalar(MarkedString::String(contents)),
+                range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
+            }))
+        })
     }
 
     fn node_at_position(

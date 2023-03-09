@@ -353,9 +353,7 @@ fn did_you_mean(name: &str, options: &[SmolStr]) -> Option<String> {
 
 impl Error {
     pub fn pretty_string(&self) -> String {
-        let mut nocolor = Buffer::no_color();
-        self.pretty(&mut nocolor);
-        String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
+        self.to_diagnostic().pretty_string()
     }
 
     pub fn pretty(&self, buffer: &mut Buffer) {

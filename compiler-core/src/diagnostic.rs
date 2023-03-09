@@ -13,13 +13,13 @@ pub enum Level {
     Warning,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Label {
     pub text: Option<String>,
     pub span: SrcSpan,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Location {
     pub src: SmolStr,
     pub path: PathBuf,
@@ -33,7 +33,7 @@ impl Location {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub title: String,
     pub text: String,
@@ -110,5 +110,11 @@ impl Diagnostic {
         buffer
             .set_color(&ColorSpec::new())
             .expect("write_title_reset");
+    }
+
+    pub fn pretty_string(&self) -> String {
+        let mut nocolor = Buffer::no_color();
+        self.write(&mut nocolor);
+        String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
     }
 }
