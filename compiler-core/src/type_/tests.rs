@@ -30,7 +30,7 @@ macro_rules! assert_infer {
             ids,
             "themodule",
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         ))
         .infer(ast)
         .expect("should successfully infer");
@@ -62,7 +62,7 @@ macro_rules! assert_infer_with_module {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -76,7 +76,7 @@ macro_rules! assert_infer_with_module {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should infer");
         let constructors: Vec<(_, _)> = ast
@@ -114,7 +114,7 @@ macro_rules! assert_module_infer {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let constructors: Vec<(_, _)> = ast
@@ -154,7 +154,7 @@ macro_rules! assert_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(ast)));
@@ -176,7 +176,7 @@ macro_rules! assert_module_error {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -222,7 +222,7 @@ macro_rules! assert_error {
             ids,
             "somemod",
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         ))
         .infer(ast)
         .expect_err("should infer an error");
@@ -244,7 +244,7 @@ macro_rules! assert_error {
             ids,
             "somemod",
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         ))
         .infer(ast)
         .expect_err("should infer an error");
@@ -278,7 +278,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($name.into(), module.type_info);
@@ -292,7 +292,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -368,8 +368,8 @@ macro_rules! assert_warning {
     ($src:expr) => {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
-        let warnings = crate::warning::VectorWarningEmitterIO::default();
-        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+        let warnings = $crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = $crate::warning::TypeWarningEmitter::new(
             std::path::PathBuf::new(),
             smol_str::SmolStr::new(""),
             crate::warning::WarningEmitter::new(
@@ -503,8 +503,8 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = crate::warning::VectorWarningEmitterIO::default();
-        let warning_emitter = crate::warning::TypeWarningEmitter::new(
+        let warnings = $crate::warning::VectorWarningEmitterIO::default();
+        let warning_emitter = $crate::warning::TypeWarningEmitter::new(
             std::path::PathBuf::new(),
             smol_str::SmolStr::new(""),
             crate::warning::WarningEmitter::new(

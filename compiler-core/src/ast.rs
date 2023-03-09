@@ -603,16 +603,14 @@ impl UnqualifiedImport {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Default)]
 pub enum Layer {
+    #[default]
     Value,
     Type,
 }
 
-impl Default for Layer {
-    fn default() -> Self {
-        Layer::Value
-    }
-}
+
 
 impl Layer {
     /// Returns `true` if the layer is [`Value`].

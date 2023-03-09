@@ -320,7 +320,6 @@ pub fn gleam_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = PathB
         .follow_links(true)
         .require_git(false)
         .build()
-        .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
         .map(ignore::DirEntry::into_path)
@@ -346,7 +345,6 @@ pub fn private_files_excluding_gitignore(dir: &Path) -> impl Iterator<Item = Pat
         .follow_links(true)
         .require_git(false)
         .build()
-        .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
         .map(ignore::DirEntry::into_path)
@@ -425,7 +423,6 @@ pub fn module_caches_paths(
     path: impl AsRef<Path> + Debug,
 ) -> Result<impl Iterator<Item = PathBuf>, Error> {
     Ok(read_dir(path)?
-        .into_iter()
         .filter_map(Result::ok)
         .map(|f| f.path())
         .filter(|p| p.extension().and_then(OsStr::to_str) == Some("cache")))

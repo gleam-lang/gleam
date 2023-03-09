@@ -35,7 +35,6 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     })?;
 
     for entry in crate::fs::read_dir(&build)?
-        .into_iter()
         .filter_map(Result::ok)
     {
         let path = entry.path();

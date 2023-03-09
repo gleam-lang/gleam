@@ -36,7 +36,7 @@ macro_rules! assert_erl {
             $crate::build::Origin::Src,
             &$dep_package.into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.into(), dep.type_info);
@@ -49,7 +49,7 @@ macro_rules! assert_erl {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let line_numbers = LineNumbers::new($src);
