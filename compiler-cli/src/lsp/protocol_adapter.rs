@@ -1,7 +1,7 @@
 use super::{
-    cast_notification, cast_request, convert_response, diagnostic_to_lsp, path_to_uri,
-    server::LanguageServer, LspDisplayable, LspMessage, COMPILING_PROGRESS_TOKEN,
-    CREATE_COMPILING_PROGRESS_TOKEN,
+    convert_response, diagnostic_to_lsp, path_to_uri,
+    server::{LanguageServer, Notified},
+    LspDisplayable, LspMessage, COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
 };
 use gleam_core::{
     config::PackageConfig,
@@ -41,7 +41,7 @@ use std::{
 ///
 pub struct LanguageServerProtocolAdapter {
     initialise_params: InitializeParams,
-    language_server: LanguageServer,
+    server: LanguageServer,
 
     // TODO: move to language server
     /// Diagnostics that have been emitted by the compiler but not yet published
@@ -67,7 +67,7 @@ impl LanguageServerProtocolAdapter {
             stored_diagnostics: HashMap::new(),
             published_diagnostics: HashSet::new(),
             initialise_params,
-            language_server,
+            server: language_server,
         })
     }
 
@@ -76,29 +76,44 @@ impl LanguageServerProtocolAdapter {
         self.start_watching_gleam_toml(&connection);
 
         // Compile the project once so we have all the state and any initial errors
-        let result = self.language_server.compile(&connection);
-        self.store_result_diagnostics(result);
-        self.publish_stored_diagnostics(&connection);
+        let notified = self.server.compile_please(&connection);
+        self.handle_server_notified(&connection, notified);
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
-            match message {
-                lsp_server::Message::Request(request) => {
-                    if connection.handle_shutdown(&request).expect("LSP shutdown") {
-                        break;
-                    }
-                    self.handle_request(&connection, request);
-                }
-
-                lsp_server::Message::Notification(notification) => {
-                    self.handle_notification(&connection, notification);
-                }
-
-                lsp_server::Message::Response(_) => (),
+            match self.handle_message(&connection, message) {
+                Next::Continue => (),
+                Next::Break => break,
             }
         }
 
         Ok(())
+    }
+
+    fn handle_message(
+        &mut self,
+        connection: &lsp_server::Connection,
+        message: lsp_server::Message,
+    ) -> Next {
+        match message {
+            lsp_server::Message::Request(request)
+                if connection.handle_shutdown(&request).expect("LSP shutdown") =>
+            {
+                Next::Break
+            }
+
+            lsp_server::Message::Request(request) => {
+                self.handle_request(&connection, request);
+                Next::Continue
+            }
+
+            lsp_server::Message::Notification(notification) => {
+                self.handle_notification(&connection, notification);
+                Next::Continue
+            }
+
+            lsp_server::Message::Response(_) => Next::Continue,
+        }
     }
 
     fn handle_request(
@@ -109,32 +124,34 @@ impl LanguageServerProtocolAdapter {
         let id = request.id.clone();
         let (response, diagnostics) = match request.method.as_str() {
             "textDocument/formatting" => {
-                let params = cast_request::<Formatting>(request).expect("cast Formatting");
-                convert_response(id, self.language_server.format(params))
+                let params = cast_request::<Formatting>(request);
+                convert_response(id, self.server.format(params))
             }
 
             "textDocument/hover" => {
-                let params = cast_request::<HoverRequest>(request).expect("cast HoverRequest");
-                convert_response(id, self.language_server.hover(params))
+                let params = cast_request::<HoverRequest>(request);
+                convert_response(id, self.server.hover(params))
             }
 
             "textDocument/definition" => {
-                let params = cast_request::<GotoDefinition>(request).expect("cast GotoDefinition");
-                convert_response(id, self.language_server.goto_definition(params))
+                let params = cast_request::<GotoDefinition>(request);
+                convert_response(id, self.server.goto_definition(params))
             }
 
             "textDocument/completion" => {
-                let params = cast_request::<Completion>(request).expect("cast Completion");
-                convert_response(id, self.language_server.completion(params))
+                let params = cast_request::<Completion>(request);
+                convert_response(id, self.server.completion(params))
             }
 
             _ => panic!("Unsupported LSP request"),
         };
 
+        // DUPE: send-vector-of-diagnostics
         for diagnostic in diagnostics {
             self.process_gleam_diagnostic(diagnostic);
         }
         self.publish_stored_diagnostics(&connection);
+
         connection
             .sender
             .send(lsp_server::Message::Response(response))
@@ -146,52 +163,50 @@ impl LanguageServerProtocolAdapter {
         connection: &lsp_server::Connection,
         notification: lsp_server::Notification,
     ) {
-        // TODO: the diagnostics should be returned by the server methods
-        match notification.method.as_str() {
+        let notified: Notified = match notification.method.as_str() {
             "textDocument/didOpen" => {
-                let params = cast_notification::<DidOpenTextDocument>(notification)
-                    .expect("case DidOpenTextDocument");
+                let params = cast_notification::<DidOpenTextDocument>(notification);
                 tracing::info!("Document opened: {:?}", params);
-                let result = self
-                    .language_server
-                    .text_document_did_open(params, connection);
-                self.publish_result_diagnostics(result, connection);
+                self.server.text_document_did_open(params, connection)
             }
 
             "textDocument/didSave" => {
-                let params = cast_notification::<DidSaveTextDocument>(notification)
-                    .expect("cast DidSaveTextDocument");
-                let result = self
-                    .language_server
-                    .text_document_did_save(params, connection);
-                self.publish_result_diagnostics(result, connection);
+                let params = cast_notification::<DidSaveTextDocument>(notification);
+                self.server.text_document_did_save(params, connection)
             }
 
             "textDocument/didClose" => {
-                let params = cast_notification::<DidCloseTextDocument>(notification)
-                    .expect("cast DidCloseTextDocument");
-                let result = self.language_server.text_document_did_close(params);
-                self.publish_result_diagnostics(result, connection);
+                let params = cast_notification::<DidCloseTextDocument>(notification);
+                self.server.text_document_did_close(params)
             }
 
             "textDocument/didChange" => {
-                let params = cast_notification::<DidChangeTextDocument>(notification)
-                    .expect("cast DidChangeTextDocument");
-                let result = self
-                    .language_server
-                    .text_document_did_change(params, connection);
-                self.publish_result_diagnostics(result, connection);
+                let params = cast_notification::<DidChangeTextDocument>(notification);
+                self.server.text_document_did_change(params, connection)
             }
 
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
-                self.language_server.create_new_compiler().expect("create");
-                let result = self.language_server.compile(connection);
-                self.store_result_diagnostics(result);
-                self.publish_stored_diagnostics(connection);
+                self.server.create_new_compiler().expect("create");
+                self.server.compile_please(connection)
             }
 
-            _ => (),
+            _ => return (),
+        };
+
+        self.handle_server_notified(connection, notified);
+    }
+
+    fn handle_server_notified(&mut self, connection: &lsp_server::Connection, notified: Notified) {
+        // DUPE: send-vector-of-diagnostics
+        for diagnostic in notified.diagnostics {
+            self.process_gleam_diagnostic(diagnostic);
+        }
+        self.publish_stored_diagnostics(&connection);
+
+        if let Some(error) = notified.error {
+            // TODO: Present the error to the user if it exists
+            tracing::error!("Error: {}", error);
         }
     }
 
@@ -291,15 +306,6 @@ impl LanguageServerProtocolAdapter {
         }
     }
 
-    fn publish_result_diagnostics<T>(
-        &mut self,
-        result: Result<T>,
-        connection: &lsp_server::Connection,
-    ) {
-        self.store_result_diagnostics(result);
-        self.publish_stored_diagnostics(connection);
-    }
-
     fn start_watching_gleam_toml(&mut self, connection: &lsp_server::Connection) {
         let supports_watch_files = self
             .initialise_params
@@ -358,11 +364,29 @@ impl LanguageServerProtocolAdapter {
             .send(lsp_server::Message::Request(request))
             .expect("WorkDoneProgressCreate");
     }
+}
 
-    fn store_result_diagnostics<T>(&mut self, result: Result<T>) {
-        // Store error diagnostics, if there are any
-        if let Err(error) = result {
-            self.process_gleam_diagnostic(error.to_diagnostic());
-        }
-    }
+#[derive(Debug, Clone, Copy)]
+enum Next {
+    Continue,
+    Break,
+}
+
+fn cast_request<R>(request: lsp_server::Request) -> R::Params
+where
+    R: lsp::request::Request,
+    R::Params: serde::de::DeserializeOwned,
+{
+    let (_, params) = request.extract(R::METHOD).expect("cast request");
+    params
+}
+
+fn cast_notification<N>(notification: lsp_server::Notification) -> N::Params
+where
+    N: lsp::notification::Notification,
+    N::Params: serde::de::DeserializeOwned,
+{
+    notification
+        .extract::<N::Params>(N::METHOD)
+        .expect("cast notification")
 }

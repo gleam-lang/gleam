@@ -235,26 +235,6 @@ fn uri_to_module_name_test() {
     assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
-fn cast_request<R>(request: lsp_server::Request) -> Result<R::Params, lsp_server::Request>
-where
-    R: lsp::request::Request,
-    R::Params: serde::de::DeserializeOwned,
-{
-    let (_, params) = request.extract(R::METHOD)?;
-    Ok(params)
-}
-
-fn cast_notification<N>(
-    notification: lsp_server::Notification,
-) -> Result<N::Params, lsp_server::Notification>
-where
-    N: lsp::notification::Notification,
-    N::Params: serde::de::DeserializeOwned,
-{
-    let params = notification.extract::<N::Params>(N::METHOD)?;
-    Ok(params)
-}
-
 fn convert_response<T>(
     id: lsp_server::RequestId,
     result: server::Response<T>,
@@ -268,19 +248,19 @@ where
     } = result;
 
     let response = match payload {
-        server::Payload::Ok(t) => lsp_server::Response {
+        server::ResponsePayload::Ok(t) => lsp_server::Response {
             id,
             error: None,
             result: Some(serde_json::to_value(t).expect("json to_value")),
         },
 
-        server::Payload::Null => lsp_server::Response {
+        server::ResponsePayload::Null => lsp_server::Response {
             id,
             error: None,
             result: Some(serde_json::Value::Null),
         },
 
-        server::Payload::Err(message) => lsp_server::Response {
+        server::ResponsePayload::Err(message) => lsp_server::Response {
             id,
             error: Some(lsp_server::ResponseError {
                 code: 0, // TODO: Assign a code to each error.
@@ -405,6 +385,9 @@ where
             io,
         );
 
+        // TODO: remove the LSP's ability to create subprocesses. Have the
+        // injected IO panic perhaps?
+        //
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.subprocess_stdio = Stdio::Null;

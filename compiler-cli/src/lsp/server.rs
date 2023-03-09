@@ -19,7 +19,45 @@ use lsp_types::{
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Payload<T> {
+pub struct Notified {
+    pub error: Option<String>,
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+impl Notified {
+    pub fn new(error: Option<String>, diagnostics: Vec<Diagnostic>) -> Self {
+        Self { error, diagnostics }
+    }
+
+    pub fn ok() -> Self {
+        Self {
+            error: None,
+            diagnostics: vec![],
+        }
+    }
+
+    pub fn from_diagnostic(diagnostic: Diagnostic) -> Self {
+        if diagnostic.location.is_some() {
+            Self::new(None, vec![diagnostic])
+        } else {
+            Self::new(Some(diagnostic.pretty_string()), vec![])
+        }
+    }
+    pub fn from_result(result: Result<()>) -> Self {
+        match result {
+            Ok(_) => Self::ok(),
+            Err(error) => Self::from_diagnostic(error.to_diagnostic()),
+        }
+    }
+
+    pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
+        self.diagnostics.extend(diagnostics);
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResponsePayload<T> {
     Ok(T),
     Null,
     Err(String),
@@ -27,28 +65,28 @@ pub enum Payload<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Response<T> {
-    pub payload: Payload<T>,
+    pub payload: ResponsePayload<T>,
     pub diagnostics: Vec<Diagnostic>,
 }
 
 impl<T> Response<T> {
     pub fn ok(payload: T) -> Self {
         Self {
-            payload: Payload::Ok(payload),
+            payload: ResponsePayload::Ok(payload),
             diagnostics: vec![],
         }
     }
 
     pub fn err(message: String) -> Self {
         Self {
-            payload: Payload::Err(message),
+            payload: ResponsePayload::Err(message),
             diagnostics: vec![],
         }
     }
 
     pub fn null() -> Self {
         Self {
-            payload: Payload::Null,
+            payload: ResponsePayload::Null,
             diagnostics: vec![],
         }
     }
@@ -147,8 +185,12 @@ impl LanguageServer {
             .expect("send_work_done_notification send")
     }
 
+    pub fn compile_please(&mut self, connection: &lsp_server::Connection) -> Notified {
+        self.notified(|this| this.compile(connection))
+    }
+
     /// Compile the project if we are in one. Otherwise do nothing.
-    pub fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
+    fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
         self.notify_client_of_compilation_start(connection);
         let result = match self.compiler.as_mut() {
             Some(compiler) => compiler.compile(),
@@ -178,48 +220,56 @@ impl LanguageServer {
         &mut self,
         params: DidOpenTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Result<()> {
-        // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
-        let path = params.text_document.uri.path().to_string();
-        self.fs_proxy
-            .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
-        self.compile(connection)?;
-        Ok(())
+    ) -> Notified {
+        self.notified(|this| {
+            // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
+            let path = params.text_document.uri.path().to_string();
+            this.fs_proxy
+                .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
+            this.compile(connection)?;
+            Ok(())
+        })
     }
 
     pub fn text_document_did_save(
         &mut self,
         params: DidSaveTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Result<()> {
-        // The file is in sync with the file system, discard our cache of the changes
-        self.fs_proxy
-            .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-        // The files on disc have changed, so compile the project with the new changes
-        self.compile(connection)?;
-        Ok(())
+    ) -> Notified {
+        self.notified(|this| {
+            // The file is in sync with the file system, discard our cache of the changes
+            this.fs_proxy
+                .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
+            // The files on disc have changed, so compile the project with the new changes
+            this.compile(connection)?;
+            Ok(())
+        })
     }
 
-    pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Result<()> {
-        // The file is in sync with the file system, discard our cache of the changes
-        self.fs_proxy
-            .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-        Ok(())
+    pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Notified {
+        self.notified(|this| {
+            // The file is in sync with the file system, discard our cache of the changes
+            this.fs_proxy
+                .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
+            Ok(())
+        })
     }
 
     pub fn text_document_did_change(
         &mut self,
         params: DidChangeTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Result<()> {
-        // A file has changed in the editor so store a copy of the new content in memory and compile
-        let path = params.text_document.uri.path().to_string();
-        if let Some(changes) = params.content_changes.into_iter().next() {
-            self.fs_proxy
-                .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
-            self.compile(connection)?;
-        }
-        Ok(())
+    ) -> Notified {
+        self.notified(|this| {
+            // A file has changed in the editor so store a copy of the new content in memory and compile
+            let path = params.text_document.uri.path().to_string();
+            if let Some(changes) = params.content_changes.into_iter().next() {
+                this.fs_proxy
+                    .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
+                this.compile(connection)?;
+            }
+            Ok(())
+        })
     }
 
     // TODO: test local variables
@@ -316,6 +366,13 @@ impl LanguageServer {
         let result = handler(self);
         let warnings = self.take_warnings();
         Response::from_result(result)
+            .extend_diagnostics(warnings.iter().map(Warning::to_diagnostic))
+    }
+
+    fn notified(&mut self, handler: impl FnOnce(&mut Self) -> Result<()>) -> Notified {
+        let result = handler(self);
+        let warnings = self.take_warnings();
+        Notified::from_result(result)
             .extend_diagnostics(warnings.iter().map(Warning::to_diagnostic))
     }
 
