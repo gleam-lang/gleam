@@ -11,7 +11,6 @@ use gleam_core::{
     type_::pretty::Printer,
     Error, Result,
 };
-use itertools::Itertools;
 use lsp::DidOpenTextDocumentParams;
 use lsp_types::{
     self as lsp, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
@@ -72,6 +71,11 @@ impl<T> Response<T> {
             }
         }
     }
+
+    pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
+        self.diagnostics.extend(diagnostics);
+        self
+    }
 }
 
 pub struct LanguageServer {
@@ -114,6 +118,7 @@ impl LanguageServer {
         );
     }
 
+    // TODO: move to protocol adapter
     fn notify_client_of_compilation_end(&self, connection: &lsp_server::Connection) {
         self.send_work_done_notification(
             connection,
@@ -121,6 +126,7 @@ impl LanguageServer {
         );
     }
 
+    // TODO: move to protocol adapter
     fn send_work_done_notification(
         &self,
         connection: &lsp_server::Connection,
@@ -152,14 +158,9 @@ impl LanguageServer {
         result
     }
 
-    pub fn take_warnings(&mut self) -> Vec<Diagnostic> {
+    fn take_warnings(&mut self) -> Vec<Warning> {
         if let Some(compiler) = self.compiler.as_mut() {
-            compiler
-                .warnings
-                .take()
-                .iter()
-                .map(Warning::to_diagnostic)
-                .collect_vec()
+            compiler.warnings.take()
         } else {
             vec![]
         }
@@ -239,7 +240,7 @@ impl LanguageServer {
     // level package.
     //
     pub fn goto_definition(
-        &self,
+        &mut self,
         params: lsp::GotoDefinitionParams,
     ) -> Response<Option<lsp::Location>> {
         self.respond(|this| {
@@ -288,7 +289,7 @@ impl LanguageServer {
     // TODO: imported module types
     // TODO: record accessors
     pub fn completion(
-        &self,
+        &mut self,
         params: lsp::CompletionParams,
     ) -> Response<Option<Vec<lsp::CompletionItem>>> {
         self.respond(|this| {
@@ -311,13 +312,14 @@ impl LanguageServer {
         })
     }
 
-    fn respond<T>(&self, handler: impl FnOnce(&Self) -> Result<T>) -> Response<T> {
+    fn respond<T>(&mut self, handler: impl FnOnce(&Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
-        // TODO: gather diagnostics from warnings
+        let warnings = self.take_warnings();
         Response::from_result(result)
+            .extend_diagnostics(warnings.iter().map(Warning::to_diagnostic))
     }
 
-    pub fn format(&self, params: lsp::DocumentFormattingParams) -> Response<Vec<TextEdit>> {
+    pub fn format(&mut self, params: lsp::DocumentFormattingParams) -> Response<Vec<TextEdit>> {
         self.respond(|this| {
             let path = params.text_document.uri.path();
             let mut new_text = String::new();
@@ -327,16 +329,7 @@ impl LanguageServer {
             let line_count = src.lines().count() as u32;
 
             let edit = TextEdit {
-                range: Range {
-                    start: Position {
-                        line: 0,
-                        character: 0,
-                    },
-                    end: Position {
-                        line: line_count,
-                        character: 0,
-                    },
-                },
+                range: Range::new(Position::new(0, 0), Position::new(line_count, 0)),
                 new_text,
             };
             Ok(vec![edit])
@@ -372,7 +365,7 @@ impl LanguageServer {
         Some(modules)
     }
 
-    pub fn hover(&self, params: lsp::HoverParams) -> Response<Option<Hover>> {
+    pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
 

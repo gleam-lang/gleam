@@ -6,7 +6,7 @@ use super::{
 use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
-    Error, Result,
+    Result,
 };
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
 use lsp_types::InitializeParams;
@@ -83,29 +83,18 @@ impl LanguageServerProtocolAdapter {
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
             match message {
-                lsp_server::Message::Request(request)
-                    if connection.handle_shutdown(&request).expect("LSP shutdown") =>
-                {
-                    break
-                }
-
                 lsp_server::Message::Request(request) => {
-                    let (response, diagnostics) = self.handle_request(request);
-                    for diagnostic in diagnostics {
-                        self.process_gleam_diagnostic(diagnostic);
+                    if connection.handle_shutdown(&request).expect("LSP shutdown") {
+                        break;
                     }
-                    self.publish_stored_diagnostics(&connection);
-                    connection
-                        .sender
-                        .send(lsp_server::Message::Response(response))
-                        .expect("channel send LSP response")
+                    self.handle_request(&connection, request);
                 }
-
-                lsp_server::Message::Response(_) => (),
 
                 lsp_server::Message::Notification(notification) => {
                     self.handle_notification(&connection, notification);
                 }
+
+                lsp_server::Message::Response(_) => (),
             }
         }
 
@@ -113,11 +102,12 @@ impl LanguageServerProtocolAdapter {
     }
 
     fn handle_request(
-        &self,
+        &mut self,
+        connection: &lsp_server::Connection,
         request: lsp_server::Request,
-    ) -> (lsp_server::Response, Vec<Diagnostic>) {
+    ) {
         let id = request.id.clone();
-        match request.method.as_str() {
+        let (response, diagnostics) = match request.method.as_str() {
             "textDocument/formatting" => {
                 let params = cast_request::<Formatting>(request).expect("cast Formatting");
                 convert_response(id, self.language_server.format(params))
@@ -139,7 +129,16 @@ impl LanguageServerProtocolAdapter {
             }
 
             _ => panic!("Unsupported LSP request"),
+        };
+
+        for diagnostic in diagnostics {
+            self.process_gleam_diagnostic(diagnostic);
         }
+        self.publish_stored_diagnostics(&connection);
+        connection
+            .sender
+            .send(lsp_server::Message::Response(response))
+            .expect("channel send LSP response")
     }
 
     fn handle_notification(
@@ -147,6 +146,7 @@ impl LanguageServerProtocolAdapter {
         connection: &lsp_server::Connection,
         notification: lsp_server::Notification,
     ) {
+        // TODO: the diagnostics should be returned by the server methods
         match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification)
@@ -170,7 +170,8 @@ impl LanguageServerProtocolAdapter {
             "textDocument/didClose" => {
                 let params = cast_notification::<DidCloseTextDocument>(notification)
                     .expect("cast DidCloseTextDocument");
-                self.language_server.text_document_did_close(params);
+                let result = self.language_server.text_document_did_close(params);
+                self.publish_result_diagnostics(result, connection);
             }
 
             "textDocument/didChange" => {
@@ -359,18 +360,9 @@ impl LanguageServerProtocolAdapter {
     }
 
     fn store_result_diagnostics<T>(&mut self, result: Result<T>) {
-        // Store warning diagnostics
-        self.take_and_store_warning_diagnostics();
-
         // Store error diagnostics, if there are any
         if let Err(error) = result {
             self.process_gleam_diagnostic(error.to_diagnostic());
-        }
-    }
-
-    fn take_and_store_warning_diagnostics(&mut self) {
-        for diagnostic in self.language_server.take_warnings() {
-            self.process_gleam_diagnostic(diagnostic);
         }
     }
 }

@@ -34,6 +34,11 @@ impl VectorWarningEmitterIO {
         std::mem::take(&mut *warnings)
     }
 
+    pub fn drain(&mut self) -> Vec<Warning> {
+        let mut warnings = self.write_lock();
+        std::mem::take(&mut *warnings)
+    }
+
     fn write_lock(&self) -> std::sync::RwLockWriteGuard<'_, Vec<Warning>> {
         self.warnings.write().expect("Vector lock poisoned")
     }
