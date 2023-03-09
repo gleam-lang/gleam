@@ -103,12 +103,12 @@ impl LanguageServerProtocolAdapter {
             }
 
             lsp_server::Message::Request(request) => {
-                self.handle_request(&connection, request);
+                self.handle_request(connection, request);
                 Next::Continue
             }
 
             lsp_server::Message::Notification(notification) => {
-                self.handle_notification(&connection, notification);
+                self.handle_notification(connection, notification);
                 Next::Continue
             }
 
@@ -150,7 +150,7 @@ impl LanguageServerProtocolAdapter {
         for diagnostic in diagnostics {
             self.process_gleam_diagnostic(diagnostic);
         }
-        self.publish_stored_diagnostics(&connection);
+        self.publish_stored_diagnostics(connection);
 
         connection
             .sender
@@ -191,7 +191,7 @@ impl LanguageServerProtocolAdapter {
                 self.server.compile_please(connection)
             }
 
-            _ => return (),
+            _ => return ,
         };
 
         self.handle_server_notified(connection, notified);
@@ -202,7 +202,7 @@ impl LanguageServerProtocolAdapter {
         for diagnostic in notified.diagnostics {
             self.process_gleam_diagnostic(diagnostic);
         }
-        self.publish_stored_diagnostics(&connection);
+        self.publish_stored_diagnostics(connection);
 
         if let Some(error) = notified.error {
             // TODO: Present the error to the user if it exists

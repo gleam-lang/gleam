@@ -84,7 +84,7 @@ macro_rules! assert_js {
             $crate::build::Origin::Src,
             &$dep_package.into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.into("/"), dep.type_info);
@@ -222,7 +222,7 @@ macro_rules! assert_ts_def {
             $crate::build::Origin::Src,
             &$dep_package.into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let _ = modules.insert($dep_name.into("/"), dep.type_info);
