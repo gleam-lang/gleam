@@ -191,7 +191,7 @@ impl LanguageServerProtocolAdapter {
                 self.server.compile_please(connection)
             }
 
-            _ => return ,
+            _ => return,
         };
 
         self.handle_server_notified(connection, notified);
