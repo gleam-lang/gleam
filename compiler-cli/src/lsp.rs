@@ -293,6 +293,14 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
 }
 
 fn path_to_uri(path: PathBuf) -> Url {
+    // Canonicalise the paths to avoid having `./` at the start.
+    // Really what we want to do is to always use absolute paths in the compiler
+    // and only make them relative before showing them to the user in error
+    // messages etc.
+    // TODO: make all compiler paths absolute, converting to relative paths in
+    // errors.
+    let path = path.canonicalize().unwrap_or(path);
+
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
