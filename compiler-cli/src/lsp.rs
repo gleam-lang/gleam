@@ -17,6 +17,7 @@
 // root if it does not exist. This will require the compiler to be modified so
 // that it can run on projects where the root is not the cwd.
 
+mod feedback;
 mod protocol_adapter;
 mod server;
 

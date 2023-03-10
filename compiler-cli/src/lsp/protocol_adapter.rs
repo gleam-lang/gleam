@@ -1,7 +1,7 @@
 use super::{
     convert_response, diagnostic_to_lsp, path_to_uri,
     server::{LanguageServer, Notified},
-    LspMessage, COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
+    COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
 };
 use gleam_core::{config::PackageConfig, diagnostic::Diagnostic, Result};
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
@@ -35,19 +35,12 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct LanguageServerProtocolAdapter {
     initialise_params: InitializeParams,
     server: LanguageServer,
-
-    // TODO: move to language server
-    /// Diagnostics that have been emitted by the compiler but not yet published
-    /// to the client. These are likely locationless Gleam diagnostics, as LSP
-    /// diagnostics always need a location.
-    stored_messages: Vec<LspMessage>,
 }
 
 impl LanguageServerProtocolAdapter {
     pub fn new(initialise_params: InitializeParams, config: Option<PackageConfig>) -> Result<Self> {
         let language_server = LanguageServer::new(config)?;
         Ok(Self {
-            stored_messages: Vec::new(),
             initialise_params,
             server: language_server,
         })
