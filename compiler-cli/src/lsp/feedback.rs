@@ -62,6 +62,10 @@ impl FeedbackBookKeeper {
         // longer valid so we set an empty vector of diagnostics for the files
         // to erase their diagnostics.
         for path in compiled {
+            // TODO: remove this once the compiler is using absolute paths. This
+            // function has side effects so it shouldn't be anyway.
+            let path = path.canonicalize().unwrap_or(path);
+
             let has_existing_diagnostics = self.files_with_diagnostics.remove(&path);
             if has_existing_diagnostics {
                 feedback.unset_existing_diagnostics(path);
@@ -93,6 +97,9 @@ impl FeedbackBookKeeper {
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
+                // TODO: remove this once the compiler is using absolute paths. This
+                // function has side effects so it shouldn't be anyway.
+                let path = path.canonicalize().unwrap_or(path);
                 _ = self.files_with_diagnostics.insert(path.clone());
                 feedback.append_diagnostic(path, diagnostic);
             }
@@ -108,6 +115,9 @@ impl FeedbackBookKeeper {
     fn insert_warning(&mut self, feedback: &mut Feedback, warning: Warning) {
         let diagnostic = warning.to_diagnostic();
         if let Some(path) = diagnostic.location.as_ref().map(|l| l.path.clone()) {
+            // TODO: remove this once the compiler is using absolute paths. This
+            // function has side effects so it shouldn't be anyway.
+            let path = path.canonicalize().unwrap_or(path);
             _ = self.files_with_diagnostics.insert(path.clone());
             feedback.append_diagnostic(path, diagnostic);
         }
@@ -128,7 +138,7 @@ mod tests {
         let mut book_keeper = FeedbackBookKeeper::default();
         let file1 = PathBuf::from("src/file1.gleam");
         let file2 = PathBuf::from("src/file2.gleam");
-        let file3 = PathBuf::from("src/file2.gleam");
+        let file3 = PathBuf::from("src/file3.gleam");
 
         let warning1 = Warning::Type {
             path: file1.clone(),
@@ -185,8 +195,23 @@ mod tests {
             },
             feedback
         );
+    }
 
-        // The failed method sets an additional diagnostic or messages for the error
+    #[test]
+    fn locationless_error() {
+        // The failed method sets an additional messages for errors without a
+        // location.
+
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file1 = PathBuf::from("src/file1.gleam");
+
+        let warning1 = Warning::Type {
+            path: file1.clone(),
+            src: "src".into(),
+            warning: type_::Warning::NoFieldsRecordUpdate {
+                location: SrcSpan::new(1, 2),
+            },
+        };
 
         let locationless_error = Error::Gzip("Hello!".into());
 
@@ -205,7 +230,24 @@ mod tests {
             },
             feedback
         );
+    }
 
+    #[test]
+    fn error() {
+        // The failed method sets an additional diagnostic if the error has a
+        // location.
+
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file1 = PathBuf::from("src/file1.gleam");
+        let file3 = PathBuf::from("src/file2.gleam");
+
+        let warning1 = Warning::Type {
+            path: file1.clone(),
+            src: "src".into(),
+            warning: type_::Warning::NoFieldsRecordUpdate {
+                location: SrcSpan::new(1, 2),
+            },
+        };
         let error = Error::Parse {
             path: file3.clone(),
             src: "blah".into(),
@@ -224,11 +266,23 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: vec![
-                    (file1, vec![warning1.to_diagnostic()]),
-                    (file3, vec![error.to_diagnostic()]),
+                    (file1.clone(), vec![warning1.to_diagnostic()]),
+                    (file3.clone(), vec![error.to_diagnostic()]),
                 ]
                 .into_iter()
                 .collect(),
+                messages: vec![],
+            },
+            feedback
+        );
+
+        // The error diagnostic should be removed if the file compiles later.
+
+        let feedback = book_keeper.diagnostics(vec![file3.clone()].into_iter(), vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: vec![(file3, vec![]),].into_iter().collect(),
                 messages: vec![],
             },
             feedback

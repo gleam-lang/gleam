@@ -40,7 +40,6 @@ where
     }
 
     pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<()> {
-        tracing::info!("Writing file to cache: {}", path.to_string_lossy());
         let write_result = self.edit_cache.write(path, content);
         self.edit_cache
             .try_set_modification_time(path, SystemTime::now())?;
@@ -48,7 +47,6 @@ where
     }
 
     pub fn delete_mem_cache(&self, path: &Path) -> Result<()> {
-        tracing::info!("Delete file from cache: {}", path.to_string_lossy());
         self.edit_cache.delete(path)
     }
 }
@@ -117,18 +115,8 @@ where
         // Note that files are assumed to be stored under abs-path keys
         let in_mem_result = self.edit_cache.read(abs_path(path)?.as_path());
         match in_mem_result {
-            Ok(_) => {
-                tracing::info!("Reading file from cache: {}", path.to_string_lossy());
-                in_mem_result
-            }
-            Err(e) => {
-                tracing::info!(
-                    "Got {} => Reading file from disk: {}",
-                    e,
-                    path.to_string_lossy()
-                );
-                self.io.read(path)
-            }
+            Ok(_) => in_mem_result,
+            Err(_) => self.io.read(path),
         }
     }
 
@@ -136,21 +124,8 @@ where
         // Note that files are assumed to be stored under abs-path keys
         let in_mem_result = self.edit_cache.read_bytes(abs_path(path)?.as_path());
         match in_mem_result {
-            Ok(_) => {
-                tracing::info!(
-                    "Reading (bytes) file from cache: {}",
-                    path.to_string_lossy()
-                );
-                in_mem_result
-            }
-            Err(e) => {
-                tracing::info!(
-                    "Got {} => Reading file from disk: {}",
-                    e,
-                    path.to_string_lossy()
-                );
-                self.io.read_bytes(path)
-            }
+            Ok(_) => in_mem_result,
+            Err(_) => self.io.read_bytes(path),
         }
     }
 
@@ -188,24 +163,8 @@ where
     fn modification_time(&self, path: &Path) -> Result<SystemTime> {
         let in_mem_result = self.edit_cache.modification_time(abs_path(path)?.as_path());
         match in_mem_result {
-            Ok(time) => {
-                tracing::info!(
-                    "Reading modification time {:?} from cache: {}",
-                    time,
-                    path.to_string_lossy()
-                );
-                in_mem_result
-            }
-            Err(e) => {
-                let time = self.io.modification_time(path);
-                tracing::info!(
-                    "Got {} => Reading modification time {:?} from disk: {}",
-                    e,
-                    time,
-                    path.to_string_lossy()
-                );
-                time
-            }
+            Ok(_) => in_mem_result,
+            Err(_) => self.io.modification_time(path),
         }
     }
 }
