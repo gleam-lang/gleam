@@ -1,25 +1,18 @@
 use super::{
     convert_response, diagnostic_to_lsp, path_to_uri,
     server::{LanguageServer, Notified},
-    LspDisplayable, LspMessage, COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
+    LspMessage, COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
 };
-use gleam_core::{
-    config::PackageConfig,
-    diagnostic::{Diagnostic, Level},
-    Result,
-};
+use gleam_core::{config::PackageConfig, diagnostic::Diagnostic, Result};
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
 use lsp_types::InitializeParams;
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{Completion, Formatting, HoverRequest},
-    PublishDiagnosticsParams, Url,
+    PublishDiagnosticsParams,
 };
-use std::{
-    collections::{HashMap, HashSet},
-    path::PathBuf,
-};
+use std::{collections::HashMap, path::PathBuf};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the `LanguageServer` itself.
@@ -45,15 +38,6 @@ pub struct LanguageServerProtocolAdapter {
 
     // TODO: move to language server
     /// Diagnostics that have been emitted by the compiler but not yet published
-    /// to the client
-    stored_diagnostics: HashMap<PathBuf, Vec<lsp::Diagnostic>>,
-
-    // TODO: move to language server
-    /// Files for which there are active diagnostics
-    published_diagnostics: HashSet<Url>,
-
-    // TODO: move to language server
-    /// Diagnostics that have been emitted by the compiler but not yet published
     /// to the client. These are likely locationless Gleam diagnostics, as LSP
     /// diagnostics always need a location.
     stored_messages: Vec<LspMessage>,
@@ -64,8 +48,6 @@ impl LanguageServerProtocolAdapter {
         let language_server = LanguageServer::new(config)?;
         Ok(Self {
             stored_messages: Vec::new(),
-            stored_diagnostics: HashMap::new(),
-            published_diagnostics: HashSet::new(),
             initialise_params,
             server: language_server,
         })
@@ -146,11 +128,7 @@ impl LanguageServerProtocolAdapter {
             _ => panic!("Unsupported LSP request"),
         };
 
-        // DUPE: send-vector-of-diagnostics
-        for diagnostic in diagnostics {
-            self.process_gleam_diagnostic(diagnostic);
-        }
-        self.publish_stored_diagnostics(connection);
+        self.publish_diagnostics(connection, diagnostics);
 
         connection
             .sender
@@ -198,11 +176,7 @@ impl LanguageServerProtocolAdapter {
     }
 
     fn handle_server_notified(&mut self, connection: &lsp_server::Connection, notified: Notified) {
-        // DUPE: send-vector-of-diagnostics
-        for diagnostic in notified.diagnostics {
-            self.process_gleam_diagnostic(diagnostic);
-        }
-        self.publish_stored_diagnostics(connection);
+        self.publish_diagnostics(connection, notified.diagnostics);
 
         if let Some(error) = notified.error {
             // TODO: Present the error to the user if it exists
@@ -210,44 +184,17 @@ impl LanguageServerProtocolAdapter {
         }
     }
 
-    fn push_diagnostic(&mut self, path: PathBuf, diagnostic: lsp::Diagnostic) {
-        self.stored_diagnostics
-            .entry(path)
-            .or_default()
-            .push(diagnostic);
-    }
-
-    fn process_gleam_diagnostic(&mut self, mut diagnostic: Diagnostic) {
-        let hint = diagnostic.hint.take();
-        match diagnostic_to_lsp(diagnostic) {
-            LspDisplayable::Diagnostic(path, lsp_diagnostic) => {
-                self.push_diagnostic(path.clone(), lsp_diagnostic.clone());
-
-                if let Some(hint) = hint {
-                    let lsp_hint = lsp::Diagnostic {
-                        severity: Some(lsp::DiagnosticSeverity::HINT),
-                        message: hint,
-                        ..lsp_diagnostic
-                    };
-                    self.push_diagnostic(path, lsp_hint);
-                }
-            }
-            LspDisplayable::Message(message) => self.stored_messages.push(message),
-        }
-    }
-
-    /// Publish all stored diagnostics to the client.
-    /// Any previously publish diagnostics are cleared before the new set are
-    /// published to the client.
-    fn publish_stored_diagnostics(&mut self, connection: &lsp_server::Connection) {
-        self.clear_all_diagnostics(connection);
-
-        for (path, diagnostics) in self.stored_diagnostics.drain() {
+    fn publish_diagnostics(
+        &self,
+        connection: &lsp_server::Connection,
+        diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
+    ) {
+        for (path, diagnostics) in diagnostics {
+            let diagnostics = diagnostics
+                .into_iter()
+                .flat_map(|d| diagnostic_to_lsp(d))
+                .collect::<Vec<_>>();
             let uri = path_to_uri(path);
-
-            // Record that we have published diagnostics to this file so we can
-            // clear it later when they are outdated.
-            let _ = self.published_diagnostics.insert(uri.clone());
 
             // Publish the diagnostics
             let diagnostic_params = PublishDiagnosticsParams {
@@ -259,45 +206,6 @@ impl LanguageServerProtocolAdapter {
                 method: "textDocument/publishDiagnostics".into(),
                 params: serde_json::to_value(diagnostic_params)
                     .expect("textDocument/publishDiagnostics to json"),
-            };
-            connection
-                .sender
-                .send(lsp_server::Message::Notification(notification))
-                .expect("send textDocument/publishDiagnostics");
-        }
-
-        for message in self.stored_messages.drain(..) {
-            let params = lsp::ShowMessageParams {
-                typ: match message.level {
-                    Level::Error => lsp::MessageType::ERROR,
-                    Level::Warning => lsp::MessageType::WARNING,
-                },
-                message: message.text,
-            };
-
-            let notification = lsp_server::Notification {
-                method: "window/showMessage".into(),
-                params: serde_json::to_value(params).expect("window/showMessage to json"),
-            };
-
-            connection
-                .sender
-                .send(lsp_server::Message::Notification(notification))
-                .expect("send window/showMessage");
-        }
-    }
-
-    /// Clear all diagnostics that have been previously published to the client
-    fn clear_all_diagnostics(&mut self, connection: &lsp_server::Connection) {
-        for file in self.published_diagnostics.drain() {
-            let notification = lsp_server::Notification {
-                method: "textDocument/publishDiagnostics".into(),
-                params: serde_json::to_value(PublishDiagnosticsParams {
-                    uri: file,
-                    diagnostics: vec![],
-                    version: None,
-                })
-                .expect("textDocument/publishDiagnostics to json"),
             };
             connection
                 .sender

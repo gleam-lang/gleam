@@ -16,31 +16,40 @@ use lsp_types::{
     self as lsp, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidSaveTextDocumentParams, Hover, HoverContents, MarkedString, Position, Range, TextEdit, Url,
 };
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notified {
     pub error: Option<String>,
-    pub diagnostics: Vec<Diagnostic>,
+
+    /// Diagnostic messages grouped by file.
+    /// Diagnostics for a file overwrite any previous diagnostics for that file,
+    /// so an empty vector can be used to remove any existing diagnostics for
+    /// that file.
+    pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
 }
 
 impl Notified {
-    pub fn new(error: Option<String>, diagnostics: Vec<Diagnostic>) -> Self {
-        Self { error, diagnostics }
-    }
-
     pub fn ok() -> Self {
         Self {
             error: None,
-            diagnostics: vec![],
+            diagnostics: HashMap::new(),
+        }
+    }
+
+    pub fn err(error: String) -> Self {
+        Self {
+            error: Some(error),
+            diagnostics: HashMap::new(),
         }
     }
 
     pub fn from_diagnostic(diagnostic: Diagnostic) -> Self {
         if diagnostic.location.is_some() {
-            Self::new(None, vec![diagnostic])
+            Self::ok().extend_diagnostics(std::iter::once(diagnostic))
         } else {
-            Self::new(Some(diagnostic.pretty_string()), vec![])
+            Self::err(diagnostic.pretty_string())
         }
     }
     pub fn from_result(result: Result<()>) -> Self {
@@ -51,7 +60,7 @@ impl Notified {
     }
 
     pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
-        self.diagnostics.extend(diagnostics);
+        add_diagnostics(&mut self.diagnostics, diagnostics);
         self
     }
 }
@@ -66,33 +75,38 @@ pub enum ResponsePayload<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Response<T> {
     pub payload: ResponsePayload<T>,
-    pub diagnostics: Vec<Diagnostic>,
+
+    /// Diagnostic messages grouped by file.
+    /// Diagnostics for a file overwrite any previous diagnostics for that file,
+    /// so an empty vector can be used to remove any existing diagnostics for
+    /// that file.
+    pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
 }
 
 impl<T> Response<T> {
     pub fn ok(payload: T) -> Self {
         Self {
             payload: ResponsePayload::Ok(payload),
-            diagnostics: vec![],
+            diagnostics: HashMap::new(),
         }
     }
 
     pub fn err(message: String) -> Self {
         Self {
             payload: ResponsePayload::Err(message),
-            diagnostics: vec![],
+            diagnostics: HashMap::new(),
         }
     }
 
     pub fn null() -> Self {
         Self {
             payload: ResponsePayload::Null,
-            diagnostics: vec![],
+            diagnostics: HashMap::new(),
         }
     }
 
     pub fn append_diagnostic(mut self, diagnostic: Diagnostic) -> Self {
-        self.diagnostics.push(diagnostic);
+        add_diagnostics(&mut self.diagnostics, std::iter::once(diagnostic));
         self
     }
 
@@ -111,8 +125,22 @@ impl<T> Response<T> {
     }
 
     pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
-        self.diagnostics.extend(diagnostics);
+        add_diagnostics(&mut self.diagnostics, diagnostics);
         self
+    }
+}
+
+fn add_diagnostics(
+    diagnostics: &mut HashMap<PathBuf, Vec<Diagnostic>>,
+    new_diagnostics: impl Iterator<Item = Diagnostic>,
+) {
+    for diagnostic in new_diagnostics {
+        let path = match &diagnostic.location {
+            Some(location) => location.path.clone(),
+            _ => continue,
+        };
+        let diagnostics = diagnostics.entry(path).or_default();
+        diagnostics.push(diagnostic);
     }
 }
 

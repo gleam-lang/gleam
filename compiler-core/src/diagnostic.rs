@@ -33,6 +33,7 @@ impl Location {
     }
 }
 
+// TODO: split this into locationed diagnostics and locationless diagnostics
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub title: String,

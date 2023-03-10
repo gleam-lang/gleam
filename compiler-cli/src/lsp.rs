@@ -238,7 +238,7 @@ fn uri_to_module_name_test() {
 fn convert_response<T>(
     id: lsp_server::RequestId,
     result: server::Response<T>,
-) -> (lsp_server::Response, Vec<Diagnostic>)
+) -> (lsp_server::Response, HashMap<PathBuf, Vec<Diagnostic>>)
 where
     T: serde::Serialize,
 {
@@ -274,17 +274,12 @@ where
     (response, diagnostics)
 }
 
-#[allow(clippy::large_enum_variant)]
-enum LspDisplayable {
-    Diagnostic(PathBuf, lsp::Diagnostic),
-    Message(LspMessage),
-}
-
-fn diagnostic_to_lsp(diagnostic: Diagnostic) -> LspDisplayable {
+fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
         Level::Warning => lsp::DiagnosticSeverity::WARNING,
     };
+    let hint = diagnostic.hint;
     let mut text = diagnostic.title;
 
     if let Some(label) = diagnostic
@@ -304,28 +299,35 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> LspDisplayable {
         text.push_str(&diagnostic.text);
     }
 
-    match diagnostic.location {
-        Some(location) => {
-            let line_numbers = LineNumbers::new(&location.src);
-            let diagnostic = lsp::Diagnostic {
-                range: src_span_to_lsp_range(location.label.span, &line_numbers),
-                severity: Some(severity),
-                code: None,
-                code_description: None,
-                source: None,
-                message: text,
-                related_information: None,
-                tags: None,
-                data: None,
-            };
-            let path = location.path.canonicalize().expect("canonicalize");
+    // TODO: Redesign the diagnostic type so that we can be sure there is always
+    // a location. Locationless diagnostics would be handled separately.
+    let location = diagnostic
+        .location
+        .expect("Diagnostic given to LSP without location");
+    let line_numbers = LineNumbers::new(&location.src);
 
-            LspDisplayable::Diagnostic(path, diagnostic)
+    let main = lsp::Diagnostic {
+        range: src_span_to_lsp_range(location.label.span, &line_numbers),
+        severity: Some(severity),
+        code: None,
+        code_description: None,
+        source: None,
+        message: text,
+        related_information: None,
+        tags: None,
+        data: None,
+    };
+
+    match hint {
+        Some(hint) => {
+            let hint = lsp::Diagnostic {
+                severity: Some(lsp::DiagnosticSeverity::HINT),
+                message: hint,
+                ..main.clone()
+            };
+            vec![main, hint]
         }
-        None => LspDisplayable::Message(LspMessage {
-            level: diagnostic.level,
-            text,
-        }),
+        None => vec![main],
     }
 }
 
