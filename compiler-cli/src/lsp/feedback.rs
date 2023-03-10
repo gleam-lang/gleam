@@ -176,7 +176,7 @@ mod tests {
                 diagnostics: vec![
                     // File 1 and 2 had diagnostics before so they have been unset
                     (file1.clone(), vec![]),
-                    (file2.clone(), vec![]),
+                    (file2, vec![]),
                     // File 3 had no diagnostics so does not need to to be unset
                 ]
                 .into_iter()
@@ -224,8 +224,8 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: vec![
-                    (file1.clone(), vec![warning1.to_diagnostic()]),
-                    (file3.clone(), vec![error.to_diagnostic()]),
+                    (file1, vec![warning1.to_diagnostic()]),
+                    (file3, vec![error.to_diagnostic()]),
                 ]
                 .into_iter()
                 .collect(),

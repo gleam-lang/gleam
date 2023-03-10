@@ -186,7 +186,7 @@ impl LanguageServerProtocolAdapter {
         for (path, diagnostics) in diagnostics {
             let diagnostics = diagnostics
                 .into_iter()
-                .flat_map(|d| diagnostic_to_lsp(d))
+                .flat_map(diagnostic_to_lsp)
                 .collect::<Vec<_>>();
             let uri = path_to_uri(path);
 

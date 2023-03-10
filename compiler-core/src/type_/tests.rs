@@ -330,7 +330,7 @@ macro_rules! assert_with_module_error {
         let (mut ast2, _) = $crate::parse::parse_module($module_src2).expect("syntax error");
         ast2.name = $name2.into();
         let module = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast2,
             Origin::Src,
@@ -397,7 +397,7 @@ macro_rules! assert_warning {
         let mut nocolor = termcolor::Buffer::no_color();
         for warning in warnings.take() {
             match warning {
-                crate::warning::Warning::Type { warning, ..  } => {
+                $crate::warning::Warning::Type { warning, ..  } => {
                     let path = std::path::PathBuf::from("/src/warning/wrn.gleam");
                     let warning = warning.into_warning(path, $src.into());
                     warning.pretty(&mut nocolor)
@@ -533,7 +533,7 @@ macro_rules! assert_no_warnings {
         .expect("should successfully infer");
 
         let warnings = warnings.take().into_iter().map(|w| match w {
-            crate::warning::Warning::Type { warning, ..  } => warning,
+            $crate::warning::Warning::Type { warning, ..  } => warning,
         }).collect::<Vec<_>>();
         assert_eq!(expected, warnings);
     };

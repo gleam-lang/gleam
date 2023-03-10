@@ -97,7 +97,7 @@ macro_rules! assert_js {
             $crate::build::Origin::Src,
             &CURRENT_PACKAGE.into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let mut output = String::new();
@@ -235,7 +235,7 @@ macro_rules! assert_ts_def {
             $crate::build::Origin::Src,
             &CURRENT_PACKAGE.into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let mut output = String::new();
