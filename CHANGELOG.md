@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Lsp analyzes files on edit.
+- The language server now analyzes files on edit rather than on save, providing
+  feedback faster.
 - Added support for negation of integers with the new `-` unary operator.
 - The deprecated `try` expression has been removed.
 - The deprecated `assert ... = ...` syntax has been removed.
