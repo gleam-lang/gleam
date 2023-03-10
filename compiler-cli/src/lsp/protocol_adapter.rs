@@ -23,14 +23,11 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Configuring watching of the `gleam.toml` file.
 /// - Decoding requests.
 /// - Encoding responses.
+/// - Sending diagnostics and messages to the client.
 ///
 /// TODO: move as much of this into the language server as possible while still
 /// keeping the transport and encoding/decoding separate.
 /// - Performing the initialisation handshake.
-///
-/// TODO: move this into the language server, keeping only the transport and
-/// encoding/decoding.
-/// - Managing and publishing diagnostics.
 ///
 /// TODO: move the transport out into a new class and then move this into
 /// `gleam_core`.

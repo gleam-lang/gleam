@@ -2,13 +2,6 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-// TODO: Make the language server methods return a struct that indicates what to
-// send back to the client. i.e. The response, any diagnostics to add or remove,
-// any messages. Each of these can be added in multiple PRs.
-
-// TODO: Make the language server responsible for deciding when to push what
-// diagnostics.
-
 // TODO: Remove all use of the Connection from the LanguageServer. That is the
 // job of the protocol adapter.
 

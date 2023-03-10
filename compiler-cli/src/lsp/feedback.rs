@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
 };
 
-use gleam_core::{diagnostic::Diagnostic, type_, Error, Warning};
+use gleam_core::{diagnostic::Diagnostic, Error, Warning};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
@@ -116,12 +116,12 @@ impl FeedbackBookKeeper {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use gleam_core::{
         ast::SrcSpan,
         parse::error::{ParseError, ParseErrorType},
+        type_,
     };
-
-    use super::*;
 
     #[test]
     fn feedback() {
