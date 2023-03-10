@@ -46,6 +46,8 @@ use std::{
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
 
+use self::feedback::Feedback;
+
 const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
 const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 
@@ -230,43 +232,14 @@ fn uri_to_module_name_test() {
     assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
-fn convert_response<T>(
-    id: lsp_server::RequestId,
-    result: server::Response<T>,
-) -> (lsp_server::Response, HashMap<PathBuf, Vec<Diagnostic>>)
+fn convert_response<T>(result: server::Response<T>) -> (serde_json::Value, Feedback)
 where
     T: serde::Serialize,
 {
-    let server::Response {
-        diagnostics,
-        payload,
-    } = result;
-
-    let response = match payload {
-        server::ResponsePayload::Ok(t) => lsp_server::Response {
-            id,
-            error: None,
-            result: Some(serde_json::to_value(t).expect("json to_value")),
-        },
-
-        server::ResponsePayload::Null => lsp_server::Response {
-            id,
-            error: None,
-            result: Some(serde_json::Value::Null),
-        },
-
-        server::ResponsePayload::Err(message) => lsp_server::Response {
-            id,
-            error: Some(lsp_server::ResponseError {
-                code: 0, // TODO: Assign a code to each error.
-                message,
-                data: None,
-            }),
-            result: None,
-        },
-    };
-
-    (response, diagnostics)
+    (
+        serde_json::to_value(result.payload).expect("json to_value"),
+        result.feedback,
+    )
 }
 
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
@@ -408,7 +381,7 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Result<(), Error> {
+    pub fn compile(&mut self) -> Result<Vec<PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock = self.build_lock.lock(&NullTelemetry);
 
@@ -431,18 +404,20 @@ where
 
         // Return any error
         let package = result?;
+        let mut compiled_modules = Vec::with_capacity(package.modules.len());
 
         // Store the compiled module information
         for module in package.modules {
-            let path = module.input_path.canonicalize().expect("Canonicalize");
-            let path = path.as_os_str().to_string_lossy().to_string();
+            let pathbuf = module.input_path.canonicalize().expect("Canonicalize");
+            let path = pathbuf.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
-            let _ = self.sources.insert(module.name.to_string(), source);
-            let _ = self.modules.insert(module.name.to_string(), module);
+            _ = self.sources.insert(module.name.to_string(), source);
+            _ = self.modules.insert(module.name.to_string(), module);
+            compiled_modules.push(pathbuf);
         }
 
-        Ok(())
+        Ok(compiled_modules)
     }
 }
 

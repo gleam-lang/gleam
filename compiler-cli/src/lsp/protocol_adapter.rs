@@ -1,9 +1,12 @@
 use super::{
-    convert_response, diagnostic_to_lsp, path_to_uri,
-    server::{LanguageServer, Notified},
+    convert_response, diagnostic_to_lsp, feedback::Feedback, path_to_uri, server::LanguageServer,
     COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
 };
-use gleam_core::{config::PackageConfig, diagnostic::Diagnostic, Result};
+use gleam_core::{
+    config::PackageConfig,
+    diagnostic::{Diagnostic, Level},
+    Result,
+};
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
 use lsp_types::InitializeParams;
 use lsp_types::{
@@ -51,8 +54,8 @@ impl LanguageServerProtocolAdapter {
         self.start_watching_gleam_toml(&connection);
 
         // Compile the project once so we have all the state and any initial errors
-        let notified = self.server.compile_please(&connection);
-        self.handle_server_notified(&connection, notified);
+        let feedback = self.server.compile_please(&connection);
+        self.publish_feedback(&connection, feedback);
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &connection.receiver {
@@ -97,32 +100,37 @@ impl LanguageServerProtocolAdapter {
         request: lsp_server::Request,
     ) {
         let id = request.id.clone();
-        let (response, diagnostics) = match request.method.as_str() {
+        let (payload, feedback) = match request.method.as_str() {
             "textDocument/formatting" => {
                 let params = cast_request::<Formatting>(request);
-                convert_response(id, self.server.format(params))
+                convert_response(self.server.format(params))
             }
 
             "textDocument/hover" => {
                 let params = cast_request::<HoverRequest>(request);
-                convert_response(id, self.server.hover(params))
+                convert_response(self.server.hover(params))
             }
 
             "textDocument/definition" => {
                 let params = cast_request::<GotoDefinition>(request);
-                convert_response(id, self.server.goto_definition(params))
+                convert_response(self.server.goto_definition(params))
             }
 
             "textDocument/completion" => {
                 let params = cast_request::<Completion>(request);
-                convert_response(id, self.server.completion(params))
+                convert_response(self.server.completion(params))
             }
 
             _ => panic!("Unsupported LSP request"),
         };
 
-        self.publish_diagnostics(connection, diagnostics);
+        self.publish_feedback(connection, feedback);
 
+        let response = lsp_server::Response {
+            id,
+            error: None,
+            result: Some(payload),
+        };
         connection
             .sender
             .send(lsp_server::Message::Response(response))
@@ -134,7 +142,7 @@ impl LanguageServerProtocolAdapter {
         connection: &lsp_server::Connection,
         notification: lsp_server::Notification,
     ) {
-        let notified: Notified = match notification.method.as_str() {
+        let feedback = match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification);
                 tracing::info!("Document opened: {:?}", params);
@@ -165,16 +173,12 @@ impl LanguageServerProtocolAdapter {
             _ => return,
         };
 
-        self.handle_server_notified(connection, notified);
+        self.publish_feedback(connection, feedback);
     }
 
-    fn handle_server_notified(&mut self, connection: &lsp_server::Connection, notified: Notified) {
-        self.publish_diagnostics(connection, notified.diagnostics);
-
-        if let Some(error) = notified.error {
-            // TODO: Present the error to the user if it exists
-            tracing::error!("Error: {}", error);
-        }
+    fn publish_feedback(&self, connection: &lsp_server::Connection, feedback: Feedback) {
+        self.publish_diagnostics(connection, feedback.diagnostics);
+        self.publish_notifications(connection, feedback.messages);
     }
 
     fn publish_diagnostics(
@@ -264,6 +268,30 @@ impl LanguageServerProtocolAdapter {
             .sender
             .send(lsp_server::Message::Request(request))
             .expect("WorkDoneProgressCreate");
+    }
+
+    fn publish_notifications(
+        &self,
+        connection: &lsp_server::Connection,
+        messages: Vec<Diagnostic>,
+    ) {
+        for message in messages {
+            let params = lsp::ShowMessageParams {
+                typ: match message.level {
+                    Level::Error => lsp::MessageType::ERROR,
+                    Level::Warning => lsp::MessageType::WARNING,
+                },
+                message: message.text,
+            };
+            let notification = lsp_server::Notification {
+                method: "window/showMessage".into(),
+                params: serde_json::to_value(params).expect("window/showMessage to json"),
+            };
+            connection
+                .sender
+                .send(lsp_server::Message::Notification(notification))
+                .expect("send window/showMessage");
+        }
     }
 }
 

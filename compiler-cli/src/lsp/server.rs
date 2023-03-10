@@ -1,6 +1,6 @@
+use super::feedback::{Feedback, FeedbackBookKeeper};
 use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
 use crate::{fs::ProjectIO, lsp::COMPILING_PROGRESS_TOKEN};
-use gleam_core::diagnostic::Diagnostic;
 use gleam_core::Warning;
 use gleam_core::{ast::Import, io::FileSystemReader, language_server::FileSystemProxy};
 use gleam_core::{
@@ -16,132 +16,12 @@ use lsp_types::{
     self as lsp, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
     DidSaveTextDocumentParams, Hover, HoverContents, MarkedString, Position, Range, TextEdit, Url,
 };
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Notified {
-    pub error: Option<String>,
-
-    /// Diagnostic messages grouped by file.
-    /// Diagnostics for a file overwrite any previous diagnostics for that file,
-    /// so an empty vector can be used to remove any existing diagnostics for
-    /// that file.
-    pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
-}
-
-impl Notified {
-    pub fn ok() -> Self {
-        Self {
-            error: None,
-            diagnostics: HashMap::new(),
-        }
-    }
-
-    pub fn err(error: String) -> Self {
-        Self {
-            error: Some(error),
-            diagnostics: HashMap::new(),
-        }
-    }
-
-    pub fn from_diagnostic(diagnostic: Diagnostic) -> Self {
-        if diagnostic.location.is_some() {
-            Self::ok().extend_diagnostics(std::iter::once(diagnostic))
-        } else {
-            Self::err(diagnostic.pretty_string())
-        }
-    }
-    pub fn from_result(result: Result<()>) -> Self {
-        match result {
-            Ok(_) => Self::ok(),
-            Err(error) => Self::from_diagnostic(error.to_diagnostic()),
-        }
-    }
-
-    pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
-        add_diagnostics(&mut self.diagnostics, diagnostics);
-        self
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum ResponsePayload<T> {
-    Ok(T),
-    Null,
-    Err(String),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
-    pub payload: ResponsePayload<T>,
-
-    /// Diagnostic messages grouped by file.
-    /// Diagnostics for a file overwrite any previous diagnostics for that file,
-    /// so an empty vector can be used to remove any existing diagnostics for
-    /// that file.
-    pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
-}
-
-impl<T> Response<T> {
-    pub fn ok(payload: T) -> Self {
-        Self {
-            payload: ResponsePayload::Ok(payload),
-            diagnostics: HashMap::new(),
-        }
-    }
-
-    pub fn err(message: String) -> Self {
-        Self {
-            payload: ResponsePayload::Err(message),
-            diagnostics: HashMap::new(),
-        }
-    }
-
-    pub fn null() -> Self {
-        Self {
-            payload: ResponsePayload::Null,
-            diagnostics: HashMap::new(),
-        }
-    }
-
-    pub fn append_diagnostic(mut self, diagnostic: Diagnostic) -> Self {
-        add_diagnostics(&mut self.diagnostics, std::iter::once(diagnostic));
-        self
-    }
-
-    pub fn from_result(result: Result<T>) -> Self {
-        match result {
-            Ok(result) => Self::ok(result),
-            Err(error) => {
-                let diagnostic = error.to_diagnostic();
-                if diagnostic.location.is_some() {
-                    Self::null().append_diagnostic(diagnostic)
-                } else {
-                    Self::err(diagnostic.pretty_string())
-                }
-            }
-        }
-    }
-
-    pub fn extend_diagnostics(mut self, diagnostics: impl Iterator<Item = Diagnostic>) -> Self {
-        add_diagnostics(&mut self.diagnostics, diagnostics);
-        self
-    }
-}
-
-fn add_diagnostics(
-    diagnostics: &mut HashMap<PathBuf, Vec<Diagnostic>>,
-    new_diagnostics: impl Iterator<Item = Diagnostic>,
-) {
-    for diagnostic in new_diagnostics {
-        let path = match &diagnostic.location {
-            Some(location) => location.path.clone(),
-            _ => continue,
-        };
-        let diagnostics = diagnostics.entry(path).or_default();
-        diagnostics.push(diagnostic);
-    }
+    pub payload: Option<T>,
+    pub feedback: Feedback,
 }
 
 pub struct LanguageServer {
@@ -157,12 +37,17 @@ pub struct LanguageServer {
     fs_proxy: FileSystemProxy<ProjectIO>,
 
     config: Option<PackageConfig>,
+
+    feedback: FeedbackBookKeeper,
+    modules_compiled_since_last_feedback: Vec<PathBuf>,
 }
 
 impl LanguageServer {
     pub fn new(config: Option<PackageConfig>) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
         let mut language_server = Self {
+            modules_compiled_since_last_feedback: vec![],
+            feedback: FeedbackBookKeeper::default(),
             project_root,
             compiler: None,
             fs_proxy: FileSystemProxy::new(ProjectIO::new()),
@@ -213,7 +98,7 @@ impl LanguageServer {
             .expect("send_work_done_notification send")
     }
 
-    pub fn compile_please(&mut self, connection: &lsp_server::Connection) -> Notified {
+    pub fn compile_please(&mut self, connection: &lsp_server::Connection) -> Feedback {
         self.notified(|this| this.compile(connection))
     }
 
@@ -222,10 +107,15 @@ impl LanguageServer {
         self.notify_client_of_compilation_start(connection);
         let result = match self.compiler.as_mut() {
             Some(compiler) => compiler.compile(),
-            None => Ok(()),
+            None => Ok(vec![]),
         };
         self.notify_client_of_compilation_end(connection);
-        result
+
+        let modules = result?;
+        self.modules_compiled_since_last_feedback
+            .extend(modules.into_iter());
+
+        Ok(())
     }
 
     fn take_warnings(&mut self) -> Vec<Warning> {
@@ -248,7 +138,7 @@ impl LanguageServer {
         &mut self,
         params: DidOpenTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Notified {
+    ) -> Feedback {
         self.notified(|this| {
             // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
@@ -263,7 +153,7 @@ impl LanguageServer {
         &mut self,
         params: DidSaveTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Notified {
+    ) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
             this.fs_proxy
@@ -274,7 +164,7 @@ impl LanguageServer {
         })
     }
 
-    pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Notified {
+    pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
             this.fs_proxy
@@ -287,7 +177,7 @@ impl LanguageServer {
         &mut self,
         params: DidChangeTextDocumentParams,
         connection: &lsp_server::Connection,
-    ) -> Notified {
+    ) -> Feedback {
         self.notified(|this| {
             // A file has changed in the editor so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
@@ -393,15 +283,27 @@ impl LanguageServer {
     fn respond<T>(&mut self, handler: impl FnOnce(&Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
-        Response::from_result(result)
-            .extend_diagnostics(warnings.iter().map(Warning::to_diagnostic))
+        let modules = self.modules_compiled_since_last_feedback.drain(..);
+        match result {
+            Ok(payload) => Response {
+                payload: Some(payload),
+                feedback: self.feedback.diagnostics(modules, warnings),
+            },
+            Err(e) => Response {
+                payload: None,
+                feedback: self.feedback.diagnostics_with_error(e, modules, warnings),
+            },
+        }
     }
 
-    fn notified(&mut self, handler: impl FnOnce(&mut Self) -> Result<()>) -> Notified {
+    fn notified(&mut self, handler: impl FnOnce(&mut Self) -> Result<()>) -> Feedback {
         let result = handler(self);
         let warnings = self.take_warnings();
-        Notified::from_result(result)
-            .extend_diagnostics(warnings.iter().map(Warning::to_diagnostic))
+        let modules = self.modules_compiled_since_last_feedback.drain(..);
+        match result {
+            Ok(()) => self.feedback.diagnostics(modules, warnings),
+            Err(e) => self.feedback.diagnostics_with_error(e, modules, warnings),
+        }
     }
 
     pub fn format(&mut self, params: lsp::DocumentFormattingParams) -> Response<Vec<TextEdit>> {

@@ -8,7 +8,7 @@ use gleam_core::{diagnostic::Diagnostic, type_, Error, Warning};
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
     pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
-    pub notifications: Vec<Diagnostic>,
+    pub messages: Vec<Diagnostic>,
 }
 
 impl Feedback {
@@ -25,13 +25,13 @@ impl Feedback {
             .push(diagnostic);
     }
 
-    fn append_notification(&mut self, diagnostic: Diagnostic) {
-        self.notifications.push(diagnostic);
+    fn append_message(&mut self, diagnostic: Diagnostic) {
+        self.messages.push(diagnostic);
     }
 }
 
 /// When an operation succeeds or fails we want to send diagnostics and
-/// notifications to the client for displaying to the user. This object converts
+/// messages to the client for displaying to the user. This object converts
 /// Gleam warnings, errors, etc to these feedback items.
 ///
 /// Gleam has incremental compilation so we cannot erase all previous
@@ -48,12 +48,14 @@ pub struct FeedbackBookKeeper {
 
 impl FeedbackBookKeeper {
     // TODO: test
-    /// Compilation succeeded, hooray!
-    ///
     /// Send diagnostics for any warnings and remove any diagnostics for files
     /// that have compiled without warnings.
     ///
-    pub fn succeeded(&mut self, compiled: Vec<PathBuf>, warnings: Vec<Warning>) -> Feedback {
+    pub fn diagnostics(
+        &mut self,
+        compiled: impl Iterator<Item = PathBuf>,
+        warnings: Vec<Warning>,
+    ) -> Feedback {
         let mut feedback = Feedback::default();
 
         // Any existing diagnostics for files that have been compiled are no
@@ -80,14 +82,14 @@ impl FeedbackBookKeeper {
     /// that have compiled without warnings, AND ALSO send diagnostics for the
     /// error that caused compilation to fail.
     ///
-    pub fn failed(
+    pub fn diagnostics_with_error(
         &mut self,
         error: Error,
-        compiled: Vec<PathBuf>,
+        compiled: impl Iterator<Item = PathBuf>,
         warnings: Vec<Warning>,
     ) -> Feedback {
         let diagnostic = error.to_diagnostic();
-        let mut feedback = self.succeeded(compiled, warnings);
+        let mut feedback = self.diagnostics(compiled, warnings);
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
@@ -96,7 +98,7 @@ impl FeedbackBookKeeper {
             }
 
             None => {
-                feedback.append_notification(diagnostic);
+                feedback.append_message(diagnostic);
             }
         }
 
@@ -143,8 +145,8 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.succeeded(
-            vec![file1.clone()],
+        let feedback = book_keeper.diagnostics(
+            vec![file1.clone()].into_iter(),
             vec![warning1.clone(), warning1.clone(), warning2.clone()],
         );
 
@@ -159,13 +161,15 @@ mod tests {
                 ]
                 .into_iter()
                 .collect(),
-                notifications: vec![],
+                messages: vec![],
             },
             feedback
         );
 
-        let feedback =
-            book_keeper.succeeded(vec![file1.clone(), file2.clone(), file3.clone()], vec![]);
+        let feedback = book_keeper.diagnostics(
+            vec![file1.clone(), file2.clone(), file3.clone()].into_iter(),
+            vec![],
+        );
 
         assert_eq!(
             Feedback {
@@ -177,24 +181,27 @@ mod tests {
                 ]
                 .into_iter()
                 .collect(),
-                notifications: vec![],
+                messages: vec![],
             },
             feedback
         );
 
-        // The failed method sets an additional diagnostic or notification for the error
+        // The failed method sets an additional diagnostic or messages for the error
 
         let locationless_error = Error::Gzip("Hello!".into());
 
-        let feedback =
-            book_keeper.failed(locationless_error.clone(), vec![], vec![warning1.clone()]);
+        let feedback = book_keeper.diagnostics_with_error(
+            locationless_error.clone(),
+            vec![].into_iter(),
+            vec![warning1.clone()],
+        );
 
         assert_eq!(
             Feedback {
                 diagnostics: vec![(file1.clone(), vec![warning1.to_diagnostic()])]
                     .into_iter()
                     .collect(),
-                notifications: vec![locationless_error.to_diagnostic()],
+                messages: vec![locationless_error.to_diagnostic()],
             },
             feedback
         );
@@ -208,7 +215,11 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.failed(error.clone(), vec![], vec![warning1.clone()]);
+        let feedback = book_keeper.diagnostics_with_error(
+            error.clone(),
+            vec![].into_iter(),
+            vec![warning1.clone()],
+        );
 
         assert_eq!(
             Feedback {
@@ -218,7 +229,7 @@ mod tests {
                 ]
                 .into_iter()
                 .collect(),
-                notifications: vec![],
+                messages: vec![],
             },
             feedback
         );
