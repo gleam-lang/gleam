@@ -141,12 +141,6 @@ fn server_capabilities() -> lsp::ServerCapabilities {
 }
 
 #[derive(Debug)]
-pub struct LspMessage {
-    level: Level,
-    text: String,
-}
-
-#[derive(Debug)]
 pub struct ModuleSourceInformation {
     /// The path to the source file from within the project root
     path: String,

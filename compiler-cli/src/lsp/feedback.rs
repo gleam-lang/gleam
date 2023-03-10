@@ -3,9 +3,9 @@ use std::{
     path::PathBuf,
 };
 
-use gleam_core::{diagnostic::Diagnostic, Error, Warning};
+use gleam_core::{diagnostic::Diagnostic, type_, Error, Warning};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
     pub diagnostics: HashMap<PathBuf, Vec<Diagnostic>>,
     pub notifications: Vec<Diagnostic>,
@@ -109,5 +109,118 @@ impl FeedbackBookKeeper {
             _ = self.files_with_diagnostics.insert(path.clone());
             feedback.append_diagnostic(path, diagnostic);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gleam_core::{
+        ast::SrcSpan,
+        parse::error::{ParseError, ParseErrorType},
+    };
+
+    use super::*;
+
+    #[test]
+    fn feedback() {
+        let mut book_keeper = FeedbackBookKeeper::default();
+        let file1 = PathBuf::from("src/file1.gleam");
+        let file2 = PathBuf::from("src/file2.gleam");
+        let file3 = PathBuf::from("src/file2.gleam");
+
+        let warning1 = Warning::Type {
+            path: file1.clone(),
+            src: "src".into(),
+            warning: type_::Warning::NoFieldsRecordUpdate {
+                location: SrcSpan::new(1, 2),
+            },
+        };
+        let warning2 = Warning::Type {
+            path: file2.clone(),
+            src: "src".into(),
+            warning: type_::Warning::NoFieldsRecordUpdate {
+                location: SrcSpan::new(1, 2),
+            },
+        };
+
+        let feedback = book_keeper.succeeded(
+            vec![file1.clone()],
+            vec![warning1.clone(), warning1.clone(), warning2.clone()],
+        );
+
+        assert_eq!(
+            Feedback {
+                diagnostics: vec![
+                    (
+                        file1.clone(),
+                        vec![warning1.to_diagnostic(), warning1.to_diagnostic(),]
+                    ),
+                    (file2.clone(), vec![warning2.to_diagnostic(),])
+                ]
+                .into_iter()
+                .collect(),
+                notifications: vec![],
+            },
+            feedback
+        );
+
+        let feedback =
+            book_keeper.succeeded(vec![file1.clone(), file2.clone(), file3.clone()], vec![]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: vec![
+                    // File 1 and 2 had diagnostics before so they have been unset
+                    (file1.clone(), vec![]),
+                    (file2.clone(), vec![]),
+                    // File 3 had no diagnostics so does not need to to be unset
+                ]
+                .into_iter()
+                .collect(),
+                notifications: vec![],
+            },
+            feedback
+        );
+
+        // The failed method sets an additional diagnostic or notification for the error
+
+        let locationless_error = Error::Gzip("Hello!".into());
+
+        let feedback =
+            book_keeper.failed(locationless_error.clone(), vec![], vec![warning1.clone()]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: vec![(file1.clone(), vec![warning1.to_diagnostic()])]
+                    .into_iter()
+                    .collect(),
+                notifications: vec![locationless_error.to_diagnostic()],
+            },
+            feedback
+        );
+
+        let error = Error::Parse {
+            path: file3.clone(),
+            src: "blah".into(),
+            error: ParseError {
+                error: ParseErrorType::ConcatPatternVariableLeftHandSide,
+                location: SrcSpan::new(1, 4),
+            },
+        };
+
+        let feedback = book_keeper.failed(error.clone(), vec![], vec![warning1.clone()]);
+
+        assert_eq!(
+            Feedback {
+                diagnostics: vec![
+                    (file1.clone(), vec![warning1.to_diagnostic()]),
+                    (file3.clone(), vec![error.to_diagnostic()]),
+                ]
+                .into_iter()
+                .collect(),
+                notifications: vec![],
+            },
+            feedback
+        );
     }
 }
