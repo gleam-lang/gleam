@@ -5009,3 +5009,55 @@ fn preserve_single_expression_blocks() {
 "#
     );
 }
+
+#[test]
+fn calling_pipeline0() {
+    assert_format!(
+        r#"pub fn main() {
+  {
+    one
+    |> two
+  }()
+}
+"#
+    );
+}
+
+#[test]
+fn calling_pipeline1() {
+    assert_format!(
+        r#"pub fn main() {
+  {
+    one
+    |> two
+  }(1)
+}
+"#
+    );
+}
+
+#[test]
+fn calling_pipeline2() {
+    assert_format!(
+        r#"pub fn main() {
+  {
+    one
+    |> two
+  }(1, 2)
+}
+"#
+    );
+}
+
+#[test]
+fn calling_pipeline_1_list() {
+    assert_format!(
+        r#"pub fn main() {
+  {
+    one
+    |> two
+  }([1, 2, 3])
+}
+"#
+    );
+}

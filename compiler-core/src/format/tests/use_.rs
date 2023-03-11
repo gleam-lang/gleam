@@ -268,17 +268,3 @@ fn multiple_long_patterns() {
 "#
     );
 }
-
-#[test]
-fn preserve_blocks() {
-    assert_format!(
-        r#"pub fn main() {
-  {
-     ""
-    |> Ok
-    |> result.map
-  }(fn(str) { io.print(str) })
-}
-"#
-    );
-}

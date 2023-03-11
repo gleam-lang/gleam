@@ -861,17 +861,41 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn call<'a>(&mut self, fun: &'a UntypedExpr, args: &'a [CallArg<UntypedExpr>]) -> Document<'a> {
+        let expr = match fun {
+            UntypedExpr::PipeLine { .. } => break_block(self.expr(fun)),
+
+            UntypedExpr::BinOp { .. }
+            | UntypedExpr::Int { .. }
+            | UntypedExpr::Float { .. }
+            | UntypedExpr::String { .. }
+            | UntypedExpr::Block { .. }
+            | UntypedExpr::Var { .. }
+            | UntypedExpr::Fn { .. }
+            | UntypedExpr::List { .. }
+            | UntypedExpr::Call { .. }
+            | UntypedExpr::Assignment { .. }
+            | UntypedExpr::Use(_)
+            | UntypedExpr::Case { .. }
+            | UntypedExpr::FieldAccess { .. }
+            | UntypedExpr::Tuple { .. }
+            | UntypedExpr::TupleIndex { .. }
+            | UntypedExpr::Todo { .. }
+            | UntypedExpr::Panic { .. }
+            | UntypedExpr::BitString { .. }
+            | UntypedExpr::RecordUpdate { .. }
+            | UntypedExpr::NegateBool { .. }
+            | UntypedExpr::NegateInt { .. } => self.wrap_expr(fun),
+        };
+
         match args {
-            [arg] if is_breakable_expr(&arg.value) => self
-                .expr(fun)
+            [arg] if is_breakable_expr(&arg.value) => expr
                 .append("(")
                 .append(self.call_arg(arg))
                 .append(")")
                 .group(),
 
-            _ => self
-                .expr(fun)
-                .append(wrap_args(args.iter().map(|a| self.call_arg(a))))
+            _ => expr
+                .append(wrap_args(args.iter().map(|a| self.call_arg(a))).group())
                 .group(),
         }
     }
