@@ -30,7 +30,7 @@ use gleam_core::{
 };
 use gleam_core::{build::Mode, warning::VectorWarningEmitterIO};
 use itertools::Itertools;
-use lsp_types::{self as lsp, HoverProviderCapability, InitializeParams, Position, Range, Url};
+use lsp_types::{self as lsp, HoverProviderCapability, Position, Range, Url};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -41,9 +41,6 @@ use std::{
 use urlencoding::decode;
 
 use self::feedback::Feedback;
-
-const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
-const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
@@ -63,21 +60,8 @@ pub fn main() -> Result<()> {
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
-    // TODO: Move the initialisation handshake into the protocol adapter.
-    let server_capabilities = server_capabilities();
-
-    let server_capabilities_json =
-        serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
-
-    let initialization_params: InitializeParams = serde_json::from_value(
-        connection
-            .initialize(server_capabilities_json)
-            .expect("LSP initialize"),
-    )
-    .expect("LSP InitializeParams from json");
-
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServerProtocolAdapter::new(initialization_params, &connection, config)?.run()?;
+    LanguageServerProtocolAdapter::new(&connection, config)?.run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
@@ -85,7 +69,7 @@ pub fn main() -> Result<()> {
     Ok(())
 }
 
-fn server_capabilities() -> lsp::ServerCapabilities {
+pub fn server_capabilities() -> lsp::ServerCapabilities {
     lsp::ServerCapabilities {
         text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
             lsp::TextDocumentSyncOptions {
