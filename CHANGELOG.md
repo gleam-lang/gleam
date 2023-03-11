@@ -12,19 +12,21 @@
 - Warnings are now immediately emitted rather than being buffered until the end
   of the compilation.
 - The `--warnings-as-errors` flag is now supported by `gleam build`.
+- Blocks are now preserved by the formatter when they only have a single
+  expression within them.
+- Generated docs now export more meta data to improve the developer experience,
+  accessibility and search engine discoverability.
+- Files are now only recompiled if they have changed since the last compilation,
+  detected by file hash and modification time. Previously only the modification
+  time was used.
+  before loading cached entry.
 - Fixed a bug where the formatter would incorrectly remove `{ ... }` from bit
   string segment value expressions.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language
   server which was incompatible with Helix.
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
-- Cache loader now checks the file hashes in addition to modification times
-  before loading cached entry.
 - Fixed a bug where blocks could parse incorrectly.
-- Blocks are now preserved by the formatter when they only have a single
-  expression within them.
-- Generated docs now export more meta data to improve the developer experience,
-  accessibility and search engine discoverability.
 
 ## v0.27.0 - 2023-03-01
 
