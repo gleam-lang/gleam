@@ -11,6 +11,7 @@
 // that it can run on projects where the root is not the cwd.
 
 mod feedback;
+mod progress;
 mod protocol_adapter;
 mod server;
 
