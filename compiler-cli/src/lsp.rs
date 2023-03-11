@@ -61,6 +61,8 @@ pub fn main() -> Result<()> {
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
+
+    // TODO: Move the initialisation handshake into the protocol adapter.
     let server_capabilities = server_capabilities();
 
     let server_capabilities_json =
@@ -74,7 +76,7 @@ pub fn main() -> Result<()> {
     .expect("LSP InitializeParams from json");
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServerProtocolAdapter::new(initialization_params, config)?.run(connection)?;
+    LanguageServerProtocolAdapter::new(initialization_params, &connection, config)?.run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
