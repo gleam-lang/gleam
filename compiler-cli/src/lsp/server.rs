@@ -1,6 +1,7 @@
 use super::feedback::{Feedback, FeedbackBookKeeper};
+use super::progress::ProgressReporter;
 use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
-use crate::{fs::ProjectIO, lsp::COMPILING_PROGRESS_TOKEN};
+use crate::fs::ProjectIO;
 use gleam_core::Warning;
 use gleam_core::{ast::Import, io::FileSystemReader, language_server::FileSystemProxy};
 use gleam_core::{
@@ -24,7 +25,7 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServer {
+pub struct LanguageServer<'a> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
 
@@ -40,76 +41,43 @@ pub struct LanguageServer {
 
     feedback: FeedbackBookKeeper,
     modules_compiled_since_last_feedback: Vec<PathBuf>,
+
+    // Used to publish progress notifications to the client without waiting for
+    // the usual request-response loop.
+    progress_reporter: ProgressReporter<'a>,
 }
 
-impl LanguageServer {
-    pub fn new(config: Option<PackageConfig>) -> Result<Self> {
+impl<'a> LanguageServer<'a> {
+    pub fn new(
+        config: Option<PackageConfig>,
+        progress_reporter: ProgressReporter<'a>,
+    ) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             feedback: FeedbackBookKeeper::default(),
-            project_root,
-            compiler: None,
             fs_proxy: FileSystemProxy::new(ProjectIO::new()),
+            compiler: None,
+            progress_reporter,
+            project_root,
             config,
         };
         language_server.create_new_compiler()?;
         Ok(language_server)
     }
 
-    fn notify_client_of_compilation_start(&self, connection: &lsp_server::Connection) {
-        self.send_work_done_notification(
-            connection,
-            lsp::WorkDoneProgress::Begin(lsp::WorkDoneProgressBegin {
-                title: "Compiling Gleam".into(),
-                cancellable: Some(false),
-                message: None,
-                percentage: None,
-            }),
-        );
-    }
-
-    // TODO: move to protocol adapter
-    fn notify_client_of_compilation_end(&self, connection: &lsp_server::Connection) {
-        self.send_work_done_notification(
-            connection,
-            lsp::WorkDoneProgress::End(lsp::WorkDoneProgressEnd { message: None }),
-        );
-    }
-
-    // TODO: move to protocol adapter
-    fn send_work_done_notification(
-        &self,
-        connection: &lsp_server::Connection,
-        work_done: lsp::WorkDoneProgress,
-    ) {
-        tracing::info!("sending {:?}", work_done);
-        let params = lsp::ProgressParams {
-            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.to_string()),
-            value: lsp::ProgressParamsValue::WorkDone(work_done),
-        };
-        let notification = lsp_server::Notification {
-            method: "$/progress".into(),
-            params: serde_json::to_value(&params).expect("ProgressParams json"),
-        };
-        connection
-            .sender
-            .send(lsp_server::Message::Notification(notification))
-            .expect("send_work_done_notification send")
-    }
-
-    pub fn compile_please(&mut self, connection: &lsp_server::Connection) -> Feedback {
-        self.notified(|this| this.compile(connection))
+    pub fn compile_please(&mut self) -> Feedback {
+        self.notified(Self::compile)
     }
 
     /// Compile the project if we are in one. Otherwise do nothing.
-    fn compile(&mut self, connection: &lsp_server::Connection) -> Result<(), Error> {
-        self.notify_client_of_compilation_start(connection);
+    fn compile(&mut self) -> Result<(), Error> {
+        self.progress_reporter.started();
         let result = match self.compiler.as_mut() {
             Some(compiler) => compiler.compile(),
             None => Ok(vec![]),
         };
-        self.notify_client_of_compilation_end(connection);
+        self.progress_reporter.finished();
 
         let modules = result?;
         self.modules_compiled_since_last_feedback
@@ -134,32 +102,24 @@ impl LanguageServer {
         Ok(())
     }
 
-    pub fn text_document_did_open(
-        &mut self,
-        params: DidOpenTextDocumentParams,
-        connection: &lsp_server::Connection,
-    ) -> Feedback {
+    pub fn text_document_did_open(&mut self, params: DidOpenTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
             this.fs_proxy
                 .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
-            this.compile(connection)?;
+            this.compile()?;
             Ok(())
         })
     }
 
-    pub fn text_document_did_save(
-        &mut self,
-        params: DidSaveTextDocumentParams,
-        connection: &lsp_server::Connection,
-    ) -> Feedback {
+    pub fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
             this.fs_proxy
                 .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
             // The files on disc have changed, so compile the project with the new changes
-            this.compile(connection)?;
+            this.compile()?;
             Ok(())
         })
     }
@@ -173,18 +133,14 @@ impl LanguageServer {
         })
     }
 
-    pub fn text_document_did_change(
-        &mut self,
-        params: DidChangeTextDocumentParams,
-        connection: &lsp_server::Connection,
-    ) -> Feedback {
+    pub fn text_document_did_change(&mut self, params: DidChangeTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // A file has changed in the editor so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
             if let Some(changes) = params.content_changes.into_iter().next() {
                 this.fs_proxy
                     .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
-                this.compile(connection)?;
+                this.compile()?;
             }
             Ok(())
         })

@@ -1,6 +1,6 @@
 use super::{
-    convert_response, diagnostic_to_lsp, feedback::Feedback, path_to_uri, server::LanguageServer,
-    COMPILING_PROGRESS_TOKEN, CREATE_COMPILING_PROGRESS_TOKEN,
+    convert_response, diagnostic_to_lsp, feedback::Feedback, path_to_uri,
+    progress::ProgressReporter, server::LanguageServer,
 };
 use gleam_core::{
     config::PackageConfig,
@@ -24,27 +24,22 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Decoding requests.
 /// - Encoding responses.
 /// - Sending diagnostics and messages to the client.
-///
-/// TODO: move as much of this into the language server as possible while still
-/// keeping the transport and encoding/decoding separate.
 /// - Performing the initialisation handshake.
-///
-/// TODO: move the transport out into a new class and then move this into
-/// `gleam_core`.
 ///
 pub struct LanguageServerProtocolAdapter<'a> {
     initialise_params: InitializeParams,
     connection: &'a lsp_server::Connection,
-    server: LanguageServer,
+    server: LanguageServer<'a>,
 }
 
 impl<'a> LanguageServerProtocolAdapter<'a> {
     pub fn new(
-        initialise_params: InitializeParams,
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
     ) -> Result<Self> {
-        let language_server = LanguageServer::new(config)?;
+        let initialise_params = initialisation_handshake(connection);
+        let reporter = ProgressReporter::new(connection, &initialise_params);
+        let language_server = LanguageServer::new(config, reporter)?;
         Ok(Self {
             connection,
             initialise_params,
@@ -53,11 +48,10 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
     }
 
     pub fn run(&mut self) -> Result<()> {
-        self.create_compilation_progress_token();
         self.start_watching_gleam_toml();
 
         // Compile the project once so we have all the state and any initial errors
-        let feedback = self.server.compile_please(self.connection);
+        let feedback = self.server.compile_please();
         self.publish_feedback(feedback);
 
         // Enter the message loop, handling each message that comes in from the client
@@ -138,13 +132,12 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
         let feedback = match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification);
-                tracing::info!("Document opened: {:?}", params);
-                self.server.text_document_did_open(params, self.connection)
+                self.server.text_document_did_open(params)
             }
 
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification);
-                self.server.text_document_did_save(params, self.connection)
+                self.server.text_document_did_save(params)
             }
 
             "textDocument/didClose" => {
@@ -154,14 +147,13 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
 
             "textDocument/didChange" => {
                 let params = cast_notification::<DidChangeTextDocument>(notification);
-                self.server
-                    .text_document_did_change(params, self.connection)
+                self.server.text_document_did_change(params)
             }
 
             "workspace/didChangeWatchedFiles" => {
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
                 self.server.create_new_compiler().expect("create");
-                self.server.compile_please(self.connection)
+                self.server.compile_please()
             }
 
             _ => return,
@@ -172,7 +164,7 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
 
     fn publish_feedback(&self, feedback: Feedback) {
         self.publish_diagnostics(feedback.diagnostics);
-        self.publish_notifications(feedback.messages);
+        self.publish_messages(feedback.messages);
     }
 
     fn publish_diagnostics(&self, diagnostics: HashMap<PathBuf, Vec<Diagnostic>>) {
@@ -245,22 +237,7 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
             .expect("send client/registerCapability");
     }
 
-    fn create_compilation_progress_token(&mut self) {
-        let params = lsp::WorkDoneProgressCreateParams {
-            token: lsp::NumberOrString::String(COMPILING_PROGRESS_TOKEN.into()),
-        };
-        let request = lsp_server::Request {
-            id: CREATE_COMPILING_PROGRESS_TOKEN.to_string().into(),
-            method: "window/workDoneProgress/create".into(),
-            params: serde_json::to_value(&params).expect("WorkDoneProgressCreateParams json"),
-        };
-        self.connection
-            .sender
-            .send(lsp_server::Message::Request(request))
-            .expect("WorkDoneProgressCreate");
-    }
-
-    fn publish_notifications(&self, messages: Vec<Diagnostic>) {
+    fn publish_messages(&self, messages: Vec<Diagnostic>) {
         for message in messages {
             let params = lsp::ShowMessageParams {
                 typ: match message.level {
@@ -279,6 +256,17 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
                 .expect("send window/showMessage");
         }
     }
+}
+
+fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
+    let server_capabilities_json =
+        serde_json::to_value(super::server_capabilities()).expect("server_capabilities_serde");
+    let initialise_params_json = connection
+        .initialize(server_capabilities_json)
+        .expect("LSP initialize");
+    let initialise_params: InitializeParams =
+        serde_json::from_value(initialise_params_json).expect("LSP InitializeParams from json");
+    initialise_params
 }
 
 #[derive(Debug, Clone, Copy)]
