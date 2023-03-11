@@ -1885,3 +1885,14 @@ fn permit_holes_in_fn_args_and_returns() {
         vec![("run", "fn(List(a)) -> List(b)")],
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/1831
+#[test]
+fn argument_scope() {
+    assert_error!(
+        "
+1 + let a = 5
+a
+"
+    );
+}
