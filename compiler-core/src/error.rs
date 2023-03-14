@@ -442,7 +442,7 @@ This prefix is intended for official Gleam packages only.",
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
                 title: format!("{module} does not have a main function."),
-                text: "Module does not have a main function so it can not be run.".to_owned(),
+                text: "Module does not have a public main function so it can not be run.".to_owned(),
                 level: Level::Error,
                 location: None,
                 hint: None,
