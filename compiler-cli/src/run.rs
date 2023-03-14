@@ -6,6 +6,7 @@ use gleam_core::{
     error::Error,
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
+    type_::{ValueConstructor, ValueConstructorVariant},
 };
 use smol_str::SmolStr;
 
@@ -63,10 +64,26 @@ pub fn command(
     // A module can not be run if it does not exist.
     match compiler
         .get_importable_modules()
-        .contains_key(&SmolStr::from(module.to_owned()))
+        .get(&SmolStr::from(module.to_owned()))
     {
-        true => Ok(()),
-        false => Err(Error::ModuleDoesNotExist {
+        Some(module_data) => match module_data.values.get("main") {
+            Some(ValueConstructor {
+                public: true,
+                variant:
+                    ValueConstructorVariant::ModuleFn {
+                        name: _,
+                        module: _,
+                        arity: _,
+                        field_map: _,
+                        location: _,
+                    },
+                type_: _,
+            }) => Ok(()),
+            _ => Err(Error::ModuleDoesNotHaveMainFunction {
+                module: module.to_owned(),
+            }),
+        },
+        None => Err(Error::ModuleDoesNotExist {
             module: module.to_owned(),
         }),
     }?;
