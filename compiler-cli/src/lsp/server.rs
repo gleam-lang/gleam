@@ -1,11 +1,11 @@
-use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker, LspProjectCompiler};
-use crate::{dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry};
+use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker};
+use crate::{dependencies::UseManifest, fs::ProjectIO};
 use gleam_core::{
     ast::{Import, Statement},
-    build::{Located, Module},
+    build::{Located, Module, NullTelemetry},
     config::PackageConfig,
     io::FileSystemReader,
-    language_server::{FileSystemProxy, ProgressReporter},
+    language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
     line_numbers::LineNumbers,
     type_::pretty::Printer,
     Error, Result,
@@ -90,7 +90,7 @@ impl<'a> LanguageServer<'a> {
 
     fn take_warnings(&mut self) -> Vec<Warning> {
         if let Some(compiler) = self.compiler.as_mut() {
-            compiler.warnings.take()
+            compiler.take_warnings()
         } else {
             vec![]
         }
@@ -198,7 +198,7 @@ impl<'a> LanguageServer<'a> {
                     let module = match this
                         .compiler
                         .as_ref()
-                        .and_then(|compiler| compiler.sources.get(name))
+                        .and_then(|compiler| compiler.get_source(name))
                     {
                         Some(module) => module,
                         // TODO: support goto definition for functions defined in

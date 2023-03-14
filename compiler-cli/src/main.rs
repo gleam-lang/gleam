@@ -69,7 +69,6 @@ mod panic;
 mod publish;
 mod run;
 mod shell;
-mod telemetry;
 
 use config::root_config;
 use dependencies::UseManifest;

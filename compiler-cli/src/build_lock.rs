@@ -59,48 +59,48 @@ pub(crate) struct Guard(fslock::LockFile);
 #[test]
 fn locking_global() {
     let lock = BuildLock::new_packages().expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_dev_erlang() {
     let lock = BuildLock::new_target(Mode::Dev, Target::Erlang).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_prod_erlang() {
     let lock = BuildLock::new_target(Mode::Prod, Target::Erlang).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_lsp_erlang() {
     let lock = BuildLock::new_target(Mode::Lsp, Target::Erlang).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_dev_javascript() {
     let lock = BuildLock::new_target(Mode::Dev, Target::JavaScript).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_prod_javascript() {
     let lock = BuildLock::new_target(Mode::Prod, Target::JavaScript).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
 
 #[test]
 fn locking_lsp_javascript() {
     let lock = BuildLock::new_target(Mode::Lsp, Target::JavaScript).expect("make lock");
-    let _guard1 = lock.lock(&crate::telemetry::NullTelemetry);
+    let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
 }
