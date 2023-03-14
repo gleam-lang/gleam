@@ -11,8 +11,8 @@ mod protocol_adapter;
 mod server;
 
 use crate::{
-    build_lock::BuildLock, dependencies::UseManifest, fs,
-    lsp::protocol_adapter::LanguageServerProtocolAdapter, telemetry::NullTelemetry,
+    build_lock::BuildLock, fs, lsp::protocol_adapter::LanguageServerProtocolAdapter,
+    telemetry::NullTelemetry,
 };
 use gleam_core::{
     ast::SrcSpan,
@@ -22,6 +22,7 @@ use gleam_core::{
     io::{CommandExecutor, FileSystemIO, Stdio},
     language_server::Feedback,
     line_numbers::LineNumbers,
+    manifest::Manifest,
     paths, Error, Result,
 };
 use gleam_core::{build::Mode, warning::VectorWarningEmitterIO};
@@ -337,9 +338,13 @@ where
     IO: CommandExecutor + FileSystemIO + Clone,
     LockerImpl: Locker,
 {
-    pub fn new(config: PackageConfig, io: IO, locker: LockerImpl) -> Result<Self> {
+    pub fn new(
+        manifest: Manifest,
+        config: PackageConfig,
+        io: IO,
+        locker: LockerImpl,
+    ) -> Result<Self> {
         let telemetry = NullTelemetry;
-        let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
         let target = config.target;
         let name = config.name.clone();
         let warnings = Arc::new(VectorWarningEmitterIO::default());

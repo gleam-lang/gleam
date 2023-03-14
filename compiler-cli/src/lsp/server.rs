@@ -1,5 +1,5 @@
 use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker, LspProjectCompiler};
-use crate::fs::ProjectIO;
+use crate::{dependencies::UseManifest, fs::ProjectIO, telemetry::NullTelemetry};
 use gleam_core::{
     ast::{Import, Statement},
     build::{Located, Module},
@@ -99,7 +99,17 @@ impl<'a> LanguageServer<'a> {
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
             let locker = LspLocker::new(config.target)?;
-            let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone(), locker)?;
+
+            // Download dependencies to ensure they are up-to-date for this new
+            // configuration and new instance of the compiler
+            self.progress_reporter.dependency_downloading_started();
+            // TODO: Inject this IO
+            let manifest = crate::dependencies::download(NullTelemetry, None, UseManifest::Yes);
+            self.progress_reporter.dependency_downloading_finished();
+            let manifest = manifest?;
+
+            let compiler =
+                LspProjectCompiler::new(manifest, config.clone(), self.fs_proxy.clone(), locker)?;
             self.compiler = Some(compiler);
         }
         Ok(())
