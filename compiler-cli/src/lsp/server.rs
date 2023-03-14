@@ -1,10 +1,10 @@
 use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker};
-use crate::{dependencies::UseManifest, fs::ProjectIO};
+use crate::dependencies::UseManifest;
 use gleam_core::{
     ast::{Import, Statement},
     build::{Located, Module, NullTelemetry},
     config::PackageConfig,
-    io::FileSystemReader,
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
     line_numbers::LineNumbers,
     type_::pretty::Printer,
@@ -27,7 +27,7 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServer<'a> {
+pub struct LanguageServer<'a, IO> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
 
@@ -35,9 +35,9 @@ pub struct LanguageServer<'a> {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy<ProjectIO>, LspLocker>>,
+    compiler: Option<LspProjectCompiler<FileSystemProxy<IO>, LspLocker>>,
 
-    fs_proxy: FileSystemProxy<ProjectIO>,
+    fs_proxy: FileSystemProxy<IO>,
 
     config: Option<PackageConfig>,
 
@@ -49,16 +49,22 @@ pub struct LanguageServer<'a> {
     progress_reporter: ProgressReporter<'a>,
 }
 
-impl<'a> LanguageServer<'a> {
+impl<'a, IO> LanguageServer<'a, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+{
     pub fn new(
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
+        io: IO,
     ) -> Result<Self> {
         let project_root = std::env::current_dir().expect("Project root");
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             feedback: FeedbackBookKeeper::default(),
-            fs_proxy: FileSystemProxy::new(ProjectIO::new()),
+            // TODO: move the creation of the proxy to the top level so it is
+            // shared between all server instances
+            fs_proxy: FileSystemProxy::new(io),
             compiler: None,
             progress_reporter,
             project_root,

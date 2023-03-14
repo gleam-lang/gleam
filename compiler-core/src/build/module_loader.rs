@@ -17,7 +17,7 @@ use super::{
 };
 use crate::{
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemIO},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     Error, Result,
 };
 
@@ -44,7 +44,7 @@ pub(crate) struct ModuleLoader<'a, IO> {
 
 impl<'a, IO> ModuleLoader<'a, IO>
 where
-    IO: FileSystemIO + CommandExecutor + Clone,
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
 {
     /// Load a module from the given path.
     ///
@@ -139,7 +139,7 @@ where
     }
 }
 
-pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
+pub(crate) fn read_source<IO>(
     io: IO,
     target: Target,
     origin: Origin,
@@ -147,7 +147,10 @@ pub(crate) fn read_source<IO: FileSystemIO + CommandExecutor + Clone>(
     name: SmolStr,
     package_name: SmolStr,
     mtime: SystemTime,
-) -> Result<UncompiledModule> {
+) -> Result<UncompiledModule>
+where
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+{
     let code: SmolStr = io.read(&path)?.into();
 
     let (mut ast, extra) = crate::parse::parse_module(&code).map_err(|error| Error::Parse {

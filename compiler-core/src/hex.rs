@@ -8,7 +8,7 @@ use tar::Archive;
 use crate::{
     build::Mode,
     config::PackageConfig,
-    io::{FileSystemIO, HttpClient, TarUnpacker},
+    io::{FileSystemReader, FileSystemWriter, HttpClient, TarUnpacker},
     manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths, Error, Result,
 };
@@ -143,7 +143,8 @@ pub async fn remove_api_key<Http: HttpClient>(
 
 #[derive(Debug)]
 pub struct Downloader {
-    fs: DebugIgnore<Box<dyn FileSystemIO>>,
+    fs_reader: DebugIgnore<Box<dyn FileSystemReader>>,
+    fs_writer: DebugIgnore<Box<dyn FileSystemWriter>>,
     http: DebugIgnore<Box<dyn HttpClient>>,
     untar: DebugIgnore<Box<dyn TarUnpacker>>,
     hex_config: hexpm::Config,
@@ -151,12 +152,14 @@ pub struct Downloader {
 
 impl Downloader {
     pub fn new(
-        fs: Box<dyn FileSystemIO>,
+        fs_reader: Box<dyn FileSystemReader>,
+        fs_writer: Box<dyn FileSystemWriter>,
         http: Box<dyn HttpClient>,
         untar: Box<dyn TarUnpacker>,
     ) -> Self {
         Self {
-            fs: DebugIgnore(fs),
+            fs_reader: DebugIgnore(fs_reader),
+            fs_writer: DebugIgnore(fs_writer),
             http: DebugIgnore(http),
             untar: DebugIgnore(untar),
             hex_config: hexpm::Config::new(),
@@ -169,7 +172,7 @@ impl Downloader {
     ) -> Result<bool, Error> {
         let tarball_path =
             paths::package_cache_tarball(&package.name, &package.version.to_string());
-        if self.fs.is_file(&tarball_path) {
+        if self.fs_reader.is_file(&tarball_path) {
             tracing::info!(
                 package = package.name.as_str(),
                 version = %package.version,
@@ -201,7 +204,7 @@ impl Downloader {
                     error: error.to_string(),
                 }
             })?;
-        self.fs.write_bytes(&tarball_path, &tarball)?;
+        self.fs_writer.write_bytes(&tarball_path, &tarball)?;
         Ok(true)
     }
 
@@ -219,14 +222,14 @@ impl Downloader {
         let destination = paths::build_deps_package(name);
 
         // If the directory already exists then there's nothing for us to do
-        if self.fs.is_directory(&destination) {
+        if self.fs_reader.is_directory(&destination) {
             tracing::info!(package = name, "Package already in build directory");
             return Ok(false);
         }
 
         tracing::info!(package = name, "writing_package_to_target");
         let tarball = paths::package_cache_tarball(name, &version.to_string());
-        let reader = self.fs.reader(&tarball)?;
+        let reader = self.fs_reader.reader(&tarball)?;
         let mut archive = Archive::new(reader);
 
         // Find the source code from within the outer tarball
@@ -245,7 +248,7 @@ impl Downloader {
                 return match result {
                     Ok(()) => Ok(true),
                     Err(err) => {
-                        self.fs.delete(&destination)?;
+                        self.fs_writer.delete(&destination)?;
                         Err(err)
                     }
                 };

@@ -1,7 +1,7 @@
 use crate::{
     build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
-    io::{CommandExecutor, FileSystemIO, Stdio},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
     line_numbers::LineNumbers,
     manifest::Manifest,
@@ -36,7 +36,7 @@ pub struct LspProjectCompiler<IO, LockerImpl> {
 
 impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl>
 where
-    IO: CommandExecutor + FileSystemIO + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
     LockerImpl: Locker,
 {
     pub fn new(
@@ -129,7 +129,9 @@ where
 
         Ok(compiled_modules)
     }
+}
 
+impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl> {
     pub fn take_warnings(&mut self) -> Vec<Warning> {
         self.warnings.take()
     }

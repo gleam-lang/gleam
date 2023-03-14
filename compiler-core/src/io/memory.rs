@@ -73,8 +73,6 @@ impl InMemoryFileSystem {
     }
 }
 
-impl FileSystemIO for InMemoryFileSystem {}
-
 impl FileSystemWriter for InMemoryFileSystem {
     fn delete(&self, path: &Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();

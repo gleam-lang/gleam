@@ -8,8 +8,8 @@ use debug_ignore::DebugIgnore;
 use crate::{
     error::{FileIoAction, FileKind},
     io::{
-        memory::InMemoryFileSystem, CommandExecutor, FileSystemIO, FileSystemReader,
-        FileSystemWriter, ReadDir, Stdio, WrappedReader,
+        memory::InMemoryFileSystem, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        Stdio, WrappedReader,
     },
     Error, Result,
 };
@@ -30,7 +30,7 @@ pub struct FileSystemProxy<IO> {
 
 impl<IO> FileSystemProxy<IO>
 where
-    IO: FileSystemIO + CommandExecutor,
+    IO: FileSystemWriter + FileSystemReader + CommandExecutor,
 {
     pub fn new(io: IO) -> Self {
         Self {
@@ -50,8 +50,6 @@ where
         self.edit_cache.delete(path)
     }
 }
-
-impl<IO> FileSystemIO for FileSystemProxy<IO> where IO: FileSystemIO {}
 
 // All write operations goes to disk (for mem-cache use the dedicated `_mem_cache` methods)
 impl<IO> FileSystemWriter for FileSystemProxy<IO>

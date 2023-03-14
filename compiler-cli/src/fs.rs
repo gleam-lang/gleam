@@ -1,8 +1,8 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, Content, DirEntry, FileSystemIO, FileSystemWriter, OutputFile, ReadDir,
-        Stdio, WrappedReader,
+        CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, OutputFile,
+        ReadDir, Stdio, WrappedReader,
     },
     warning::WarningEmitterIO,
     Result, Warning,
@@ -34,7 +34,7 @@ impl ProjectIO {
     }
 }
 
-impl gleam_core::io::FileSystemReader for ProjectIO {
+impl FileSystemReader for ProjectIO {
     fn gleam_source_files(&self, dir: &Path) -> Vec<PathBuf> {
         if !dir.is_dir() {
             return vec![];
@@ -186,8 +186,6 @@ impl CommandExecutor for ProjectIO {
         }
     }
 }
-
-impl FileSystemIO for ProjectIO {}
 
 pub fn delete_dir(dir: &Path) -> Result<(), Error> {
     tracing::trace!(path=?dir, "deleting_directory");
