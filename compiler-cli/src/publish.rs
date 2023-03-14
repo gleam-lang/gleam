@@ -130,18 +130,18 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, Target::Erlang))?;
 
     // Build the project to check that it is valid
-    let (_, compile_result) = build::main(Options {
+    let built = build::main(Options {
         warnings_as_errors: false,
         mode: Mode::Prod,
         target: Some(Target::Erlang),
         codegen: Codegen::All,
     })?;
 
-    let generated_files = generated_files(paths, &compile_result)?;
+    let generated_files = generated_files(paths, &built.root_package)?;
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
-    let metadata = metadata_config(&compile_result.config, &src_files, &generated_files);
+    let metadata = metadata_config(&built.root_package.config, &src_files, &generated_files);
 
     // Calculate checksum
     let mut hasher = sha2::Sha256::new();
@@ -163,7 +163,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     }
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
-        compile_result,
+        compile_result: built.root_package,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,

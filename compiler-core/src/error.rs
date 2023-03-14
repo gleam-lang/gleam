@@ -133,8 +133,11 @@ pub enum Error {
     #[error("{module} is not module")]
     ModuleDoesNotExist { module: String },
 
-    #[error("{module} is not module")]
+    #[error("{module} does not have a main function")]
     ModuleDoesNotHaveMainFunction { module: String },
+
+    #[error("{module} has the wrong arity so it can not be run.")]
+    MainFunctionHasWrongArity { module: String, arity: usize },
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -448,6 +451,14 @@ This prefix is intended for official Gleam packages only.",
                 level: Level::Error,
                 location: None,
                 hint: Some(format!("Add a function with the singature `pub fn main() {{}}` to `src/{module}.gleam`").into()),
+            },
+
+            Error::MainFunctionHasWrongArity { module, arity } => Diagnostic {
+                title: format!("Main function has wrong arity"),
+                text: format!("`{module}:main` should have an arity of 0 to be run but its arity is {arity}.").into(),
+                level: Level::Error,
+                location: None,
+                hint: Some(format!("Change the function signature of main to `pub fn main() {{}}`").into()),
             },
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {

@@ -6,7 +6,6 @@ use gleam_core::{
     error::Error,
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
-    type_::{ValueConstructor, ValueConstructorVariant},
 };
 use smol_str::SmolStr;
 
@@ -55,7 +54,7 @@ pub fn command(
     });
 
     // Build project so we have bytecode to run
-    let (compiler, _) = crate::build::main(Options {
+    let built = crate::build::main(Options {
         warnings_as_errors: false,
         codegen: Codegen::All,
         mode: Mode::Dev,
@@ -63,24 +62,19 @@ pub fn command(
     })?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    match compiler
-        .get_importable_modules()
+    match built
+        .module_interfaces
         .get(&SmolStr::from(module.to_owned()))
     {
-        Some(module_data) => match module_data.values.get("main") {
-            Some(ValueConstructor {
-                public: _,
-                variant:
-                    ValueConstructorVariant::ModuleFn {
-                        name: _,
-                        field_map: _,
-                        module: _,
-                        arity: _,
-                        location: _,
-                    },
-                type_: _,
-            }) => Ok(()),
-            _ => Err(Error::ModuleDoesNotHaveMainFunction {
+        Some(module_data) => match module_data.get_function(&SmolStr::from("main")) {
+            Some(function) => {
+                if function.arity != 0 {
+                    Ok(())
+                } else {
+                    Ok(())
+                }
+            }
+            None => Err(Error::ModuleDoesNotHaveMainFunction {
                 module: module.to_owned(),
             }),
         },

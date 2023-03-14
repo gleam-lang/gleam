@@ -409,6 +409,11 @@ impl ModuleValueConstructor {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ModuleFunction {
+    pub arity: usize,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
     pub name: SmolStr,
@@ -418,6 +423,26 @@ pub struct Module {
     pub types_constructors: HashMap<SmolStr, Vec<SmolStr>>,
     pub values: HashMap<SmolStr, ValueConstructor>,
     pub accessors: HashMap<SmolStr, AccessorsMap>,
+}
+
+impl Module {
+    pub fn get_function(&self, name: &SmolStr) -> Option<ModuleFunction> {
+        match self.values.get(name) {
+            Some(ValueConstructor {
+                public: _,
+                variant:
+                    ValueConstructorVariant::ModuleFn {
+                        name: _,
+                        field_map: _,
+                        module: _,
+                        arity,
+                        location: _,
+                    },
+                type_: _,
+            }) => Some(ModuleFunction { arity: *arity }),
+            _ => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

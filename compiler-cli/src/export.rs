@@ -28,7 +28,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     crate::fs::delete_dir(&out)?;
 
     // Build project in production mode
-    let (_, package) = crate::build::main(Options {
+    let built = crate::build::main(Options {
         warnings_as_errors: false,
         codegen: Codegen::All,
         mode,
@@ -61,11 +61,11 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     // Write entrypoint script
     let entrypoint = out.join("entrypoint.sh");
     let text = include_str!("../templates/erlang-shipment-entrypoint.sh")
-        .replace("$PACKAGE_NAME_FROM_GLEAM", &package.config.name);
+        .replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
     crate::fs::write(&entrypoint, &text)?;
     crate::fs::make_executable(&entrypoint)?;
 
-    crate::cli::print_exported(&package.config.name);
+    crate::cli::print_exported(&built.root_package.config.name);
 
     println!(
         "
