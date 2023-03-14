@@ -2,17 +2,23 @@ use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
     build::{Codegen, Options, Package, ProjectCompiler},
-    Result,
+    type_, Result,
 };
+use smol_str::SmolStr;
 
 use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter, ProjectIO},
+    fs::{self, ConsoleWarningEmitter},
 };
 
-pub fn main(options: Options) -> Result<(ProjectCompiler<ProjectIO>, Package)> {
+pub struct Built {
+    pub root_package: Package,
+    pub module_interfaces: im::HashMap<SmolStr, type_::Module>,
+}
+
+pub fn main(options: Options) -> Result<Built> {
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 
     let perform_codegen = options.codegen;
@@ -33,8 +39,11 @@ pub fn main(options: Options) -> Result<(ProjectCompiler<ProjectIO>, Package)> {
             Arc::new(ConsoleWarningEmitter),
             io,
         );
-        let compiled_package = compiler.compile()?;
-        (compiler, compiled_package)
+        let root_package = compiler.compile()?;
+        Built {
+            root_package: root_package,
+            module_interfaces: compiler.move_importable_modules(),
+        }
     };
 
     match perform_codegen {

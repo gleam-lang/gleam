@@ -52,7 +52,7 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
-    importable_modules: im::HashMap<SmolStr, type_::Module>,
+    pub importable_modules: im::HashMap<SmolStr, type_::Module>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
@@ -100,6 +100,10 @@ where
 
     pub fn get_importable_modules(&self) -> &im::HashMap<SmolStr, type_::Module> {
         &self.importable_modules
+    }
+
+    pub fn move_importable_modules(self) -> im::HashMap<SmolStr, type_::Module> {
+        self.importable_modules
     }
 
     // TODO: test

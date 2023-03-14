@@ -56,13 +56,13 @@ pub fn build() -> Result<()> {
     crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
     let out = paths::build_docs(&config.name);
-    let (_, mut compiled) = crate::build::main(Options {
+    let mut built = crate::build::main(Options {
         mode: Mode::Prod,
         target: None,
         codegen: Codegen::All,
         warnings_as_errors: false,
     })?;
-    let outputs = build_documentation(&config, &mut compiled)?;
+    let outputs = build_documentation(&config, &mut built.root_package)?;
 
     // Write
     crate::fs::delete_dir(&out)?;
@@ -110,13 +110,13 @@ impl PublishCommand {
         // Reset the build directory so we know the state of the project
         crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
-        let (_, mut compiled) = crate::build::main(Options {
+        let mut built = crate::build::main(Options {
             warnings_as_errors: false,
             codegen: Codegen::All,
             mode: Mode::Prod,
             target: None,
         })?;
-        let outputs = build_documentation(&config, &mut compiled)?;
+        let outputs = build_documentation(&config, &mut built.root_package)?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })
     }
