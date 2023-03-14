@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [ nightly-last-run ]
     if: github.repository_owner == "gleam-lang" && ${{ needs.nightly-last-run.outputs.should_run != 'false' }}
-    steps
+    steps:
       - name: Delete old release assets
         uses: mknejp/delete-release-assets@v1
         with:
