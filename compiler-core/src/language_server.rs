@@ -3,6 +3,7 @@ mod engine;
 mod feedback;
 mod files;
 mod progress;
+mod router;
 mod server;
 
 pub use server::LanguageServer;
