@@ -4,8 +4,11 @@ use lsp_types::{
     WorkDoneProgressBegin, WorkDoneProgressCreateParams, WorkDoneProgressEnd,
 };
 
-const COMPILING_PROGRESS_TOKEN: &str = "compiling-gleam";
-const CREATE_COMPILING_PROGRESS_TOKEN: &str = "create-compiling-progress-token";
+const COMPILING_TOKEN: &str = "compiling-gleam";
+const CREATE_COMPILING_TOKEN: &str = "create-compiling-gleam";
+
+const DOWNLOADING_TOKEN: &str = "downloading-dependencies";
+const CREATE_DOWNLOADING_TOKEN: &str = "create-downloading-dependencies";
 
 // Used to publish progress notifications to the client without waiting for
 // the usual request-response loop of the language server.
@@ -23,28 +26,34 @@ impl<'a> ProgressReporter<'a> {
         // would fail.
         _initialise_params: &InitializeParams,
     ) -> Self {
-        create_compilation_progress_token(connection);
+        create_token(CREATE_COMPILING_TOKEN, connection);
+        create_token(CREATE_DOWNLOADING_TOKEN, connection);
         Self {
             connection: connection.into(),
         }
     }
 
-    pub fn started(&self) {
-        self.send_notification(WorkDoneProgress::Begin(WorkDoneProgressBegin {
-            title: "Compiling Gleam".into(),
-            cancellable: Some(false),
-            message: None,
-            percentage: None,
-        }));
+    pub fn compilation_started(&self) {
+        let title = "Compiling Gleam";
+        self.send_notification(COMPILING_TOKEN, begin_message(title));
     }
 
-    pub fn finished(&self) {
-        self.send_notification(WorkDoneProgress::End(WorkDoneProgressEnd { message: None }));
+    pub fn compilation_finished(&self) {
+        self.send_notification(COMPILING_TOKEN, end_message());
     }
 
-    fn send_notification(&self, work_done: WorkDoneProgress) {
+    pub fn dependency_downloading_started(&self) {
+        let title = "Downloading Gleam dependencies";
+        self.send_notification(DOWNLOADING_TOKEN, begin_message(title));
+    }
+
+    pub fn dependency_downloading_finished(&self) {
+        self.send_notification(DOWNLOADING_TOKEN, end_message());
+    }
+
+    fn send_notification(&self, token: &str, work_done: WorkDoneProgress) {
         let params = ProgressParams {
-            token: NumberOrString::String(COMPILING_PROGRESS_TOKEN.to_string()),
+            token: NumberOrString::String(token.to_string()),
             value: ProgressParamsValue::WorkDone(work_done),
         };
         let notification = lsp_server::Notification {
@@ -58,12 +67,25 @@ impl<'a> ProgressReporter<'a> {
     }
 }
 
-fn create_compilation_progress_token(connection: &lsp_server::Connection) {
+fn end_message() -> WorkDoneProgress {
+    WorkDoneProgress::End(WorkDoneProgressEnd { message: None })
+}
+
+fn begin_message(title: &str) -> WorkDoneProgress {
+    WorkDoneProgress::Begin(WorkDoneProgressBegin {
+        title: title.into(),
+        cancellable: Some(false),
+        message: None,
+        percentage: None,
+    })
+}
+
+fn create_token(create_token: &str, connection: &lsp_server::Connection) {
     let params = WorkDoneProgressCreateParams {
-        token: NumberOrString::String(COMPILING_PROGRESS_TOKEN.into()),
+        token: NumberOrString::String(create_token.into()),
     };
     let request = lsp_server::Request {
-        id: CREATE_COMPILING_PROGRESS_TOKEN.to_string().into(),
+        id: CREATE_COMPILING_TOKEN.to_string().into(),
         method: "window/workDoneProgress/create".into(),
         params: serde_json::to_value(&params).expect("WorkDoneProgressCreateParams json"),
     };
