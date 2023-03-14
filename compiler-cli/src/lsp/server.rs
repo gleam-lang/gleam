@@ -1,4 +1,4 @@
-use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
+use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker, LspProjectCompiler};
 use crate::fs::ProjectIO;
 use gleam_core::{
     ast::{Import, Statement},
@@ -35,7 +35,7 @@ pub struct LanguageServer<'a> {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy<ProjectIO>>>,
+    compiler: Option<LspProjectCompiler<FileSystemProxy<ProjectIO>, LspLocker>>,
 
     fs_proxy: FileSystemProxy<ProjectIO>,
 
@@ -74,12 +74,12 @@ impl<'a> LanguageServer<'a> {
 
     /// Compile the project if we are in one. Otherwise do nothing.
     fn compile(&mut self) -> Result<(), Error> {
-        self.progress_reporter.started();
+        self.progress_reporter.compilation_started();
         let result = match self.compiler.as_mut() {
             Some(compiler) => compiler.compile(),
             None => Ok(vec![]),
         };
-        self.progress_reporter.finished();
+        self.progress_reporter.compilation_finished();
 
         let modules = result?;
         self.modules_compiled_since_last_feedback
@@ -98,7 +98,8 @@ impl<'a> LanguageServer<'a> {
 
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone())?;
+            let locker = LspLocker::new(config.target)?;
+            let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone(), locker)?;
             self.compiler = Some(compiler);
         }
         Ok(())

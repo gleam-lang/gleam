@@ -16,7 +16,7 @@ use crate::{
 };
 use gleam_core::{
     ast::SrcSpan,
-    build::{self, Module, ProjectCompiler},
+    build::{self, Module, ProjectCompiler, Target},
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemIO, Stdio},
@@ -28,6 +28,7 @@ use gleam_core::{build::Mode, warning::VectorWarningEmitterIO};
 use itertools::Itertools;
 use lsp_types::{self as lsp, HoverProviderCapability, Position, Range, Url};
 use std::{
+    any::Any,
     collections::HashMap,
     path::{Path, PathBuf},
     sync::Arc,
@@ -40,7 +41,6 @@ pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
     // Read the project config. If we are running in the context of a Gleam
-    // project then there will be one. If not there will not be one and we'll
     // fall back to a non-compiling mode that can only do formatting.
     let config = if paths::root_config().exists() {
         tracing::info!("gleam_project_detected");
@@ -287,12 +287,34 @@ fn path_to_uri(path: PathBuf) -> Url {
     Url::parse(&file).expect("path_to_uri URL parse")
 }
 
+pub struct LockGuard(Box<dyn Any>);
+
+pub trait Locker {
+    fn lock_for_build(&self) -> LockGuard;
+}
+
+#[derive(Debug)]
+pub struct LspLocker(BuildLock);
+
+impl LspLocker {
+    pub fn new(target: Target) -> Result<Self> {
+        let build_lock = BuildLock::new_target(Mode::Lsp, target)?;
+        Ok(Self(build_lock))
+    }
+}
+
+impl Locker for LspLocker {
+    fn lock_for_build(&self) -> LockGuard {
+        LockGuard(Box::new(self.0.lock(&NullTelemetry)))
+    }
+}
+
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
 /// compiled dependency packages.
 ///
 #[derive(Debug)]
-pub struct LspProjectCompiler<IO> {
+pub struct LspProjectCompiler<IO, LockerImpl> {
     project_compiler: ProjectCompiler<IO>,
 
     /// Whether the dependencies have been compiled previously.
@@ -305,21 +327,21 @@ pub struct LspProjectCompiler<IO> {
     /// The storage for the warning emitter.
     warnings: Arc<VectorWarningEmitterIO>,
 
-    /// A lock to ensure the LSP and the CLI don't try and use build directory.
-    /// at the same time.
-    build_lock: BuildLock,
+    /// A lock to ensure that multiple instances of the LSP don't try and use
+    /// build directory at the same time.
+    locker: LockerImpl,
 }
 
-impl<IO> LspProjectCompiler<IO>
+impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl>
 where
     IO: CommandExecutor + FileSystemIO + Clone,
+    LockerImpl: Locker,
 {
-    pub fn new(config: PackageConfig, io: IO) -> Result<Self> {
+    pub fn new(config: PackageConfig, io: IO, locker: LockerImpl) -> Result<Self> {
         let telemetry = NullTelemetry;
         let manifest = crate::dependencies::download(telemetry, None, UseManifest::Yes)?;
         let target = config.target;
         let name = config.name.clone();
-        let build_lock = BuildLock::new_target(Mode::Lsp, target)?;
         let warnings = Arc::new(VectorWarningEmitterIO::default());
 
         let options = build::Options {
@@ -349,23 +371,23 @@ where
         // package before we run for the first time.
         // TODO: remove this once the caches have contain all the information
         {
-            let _guard = build_lock.lock(&telemetry);
+            let _guard = locker.lock_for_build();
             fs::delete_dir(&paths::build_package(Mode::Lsp, target, &name))?;
         }
 
         Ok(Self {
+            locker,
             warnings,
             project_compiler,
             modules: HashMap::new(),
             sources: HashMap::new(),
-            build_lock,
             dependencies_compiled: false,
         })
     }
 
     pub fn compile(&mut self) -> Result<Vec<PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock = self.build_lock.lock(&NullTelemetry);
+        let _lock_guard = self.locker.lock_for_build();
 
         if !self.dependencies_compiled {
             // TODO: store compiled module info
