@@ -127,6 +127,12 @@ pub enum Error {
         reason: InvalidProjectNameReason,
     },
 
+    #[error("{module} is not a valid module name")]
+    InvalidModuleName { module: String },
+
+    #[error("{module} is not module")]
+    ModuleDoesNotExist { module: String },
+
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
 
@@ -414,6 +420,22 @@ This prefix is intended for official Gleam packages only.",
                     location: None,
                 }
             }
+
+            Error::InvalidModuleName { module } => Diagnostic {
+                title: format!("{module} is not a valid module name"),
+                text: "Module names can only contain lowercase letters, underscore, and forward slash.".to_owned(),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            },
+
+            Error::ModuleDoesNotExist { module } => Diagnostic {
+                title: format!("{module} is not a module."),
+                text: "Module does not exist so it can not be run.".to_owned(),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            },
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
                 title: "Project folder already exists".into(),

@@ -56,7 +56,7 @@ pub fn build() -> Result<()> {
     crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
     let out = paths::build_docs(&config.name);
-    let mut compiled = crate::build::main(Options {
+    let (_, mut compiled) = crate::build::main(Options {
         mode: Mode::Prod,
         target: None,
         codegen: Codegen::All,
@@ -110,7 +110,7 @@ impl PublishCommand {
         // Reset the build directory so we know the state of the project
         crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
 
-        let mut compiled = crate::build::main(Options {
+        let (_, mut compiled) = crate::build::main(Options {
             warnings_as_errors: false,
             codegen: Codegen::All,
             mode: Mode::Prod,

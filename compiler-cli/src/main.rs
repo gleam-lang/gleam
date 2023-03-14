@@ -168,6 +168,10 @@ enum Command {
         #[clap(long, ignore_case = true)]
         runtime: Option<Runtime>,
 
+        /// The module to run
+        #[clap(short, long, ignore_case = true)]
+        module: Option<String>,
+
         arguments: Vec<String>,
     },
 
@@ -390,13 +394,14 @@ fn main() {
             target,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, run::Which::Src),
+            module,
+        } => run::command(arguments, target, runtime, module, run::Which::Src),
 
         Command::Test {
             target,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, run::Which::Test),
+        } => run::command(arguments, target, runtime, None, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 

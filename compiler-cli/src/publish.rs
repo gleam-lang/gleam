@@ -128,7 +128,7 @@ fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
     fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
 
     // Build the project to check that it is valid
-    let compile_result = build::main(Options {
+    let (_, compile_result) = build::main(Options {
         warnings_as_errors: false,
         mode: Mode::Prod,
         target: Some(Target::Erlang),
@@ -161,7 +161,7 @@ fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
     }
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
-        compile_result,
+        compile_result: compile_result,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,

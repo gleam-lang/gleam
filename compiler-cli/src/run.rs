@@ -7,6 +7,7 @@ use gleam_core::{
     io::{CommandExecutor, Stdio},
     paths,
 };
+use smol_str::SmolStr;
 
 use crate::fs::ProjectIO;
 
@@ -21,23 +22,53 @@ pub fn command(
     arguments: Vec<String>,
     target: Option<Target>,
     runtime: Option<Runtime>,
+    module: Option<String>,
     which: Which,
 ) -> Result<(), Error> {
+    // Validate the module to make sure it is a gleam module path
+    match &module {
+        Some(module_name) => {
+            // TODO: Check if this can be replaced with a function that
+            // someone already wrote
+            if !module_name.chars().fold(true, |acc, x| {
+                acc && "abcdefghijklmnopqrstuvwxyz/_".contains(x)
+            }) {
+                Err(Error::InvalidModuleName {
+                    module: module_name.to_owned(),
+                })
+            } else {
+                Ok(())
+            }
+        }
+        None => Ok(()),
+    }?;
+
     let config = crate::config::root_config()?;
 
     // Determine which module to run
-    let module = match which {
+    let module = module.unwrap_or(match which {
         Which::Src => config.name.to_string(),
         Which::Test => format!("{}_test", &config.name),
-    };
+    });
 
     // Build project so we have bytecode to run
-    let _ = crate::build::main(Options {
+    let (compiler, _) = crate::build::main(Options {
         warnings_as_errors: false,
         codegen: Codegen::All,
         mode: Mode::Dev,
         target,
     })?;
+
+    // A module can not be run if it does not exist.
+    match compiler
+        .get_importable_modules()
+        .contains_key(&SmolStr::from(module.to_owned()))
+    {
+        true => Ok(()),
+        false => Err(Error::ModuleDoesNotExist {
+            module: module.to_owned(),
+        }),
+    }?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
@@ -72,6 +103,9 @@ fn run_erlang(package: &str, module: &str, arguments: Vec<String>) -> Result<i32
         args.push("-pa".into());
         args.push(entry.path().join("ebin").to_string_lossy().into());
     }
+
+    // gleam modules are seperated by `/`. Erlang modules are seperated by `@`.
+    let module = module.replace("/", "@");
 
     args.push("-eval".into());
     args.push(format!("{package}@@main:run({module})"));
