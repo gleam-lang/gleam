@@ -410,8 +410,9 @@ impl ModuleValueConstructor {
 }
 
 #[derive(Debug, Clone)]
-pub struct ModuleFunction {
+pub struct ModuleFunction<'a> {
     pub arity: usize,
+    pub package: &'a SmolStr,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -426,7 +427,7 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn get_function(&self, name: &SmolStr) -> Option<ModuleFunction> {
+    pub fn get_function<'a>(&'a self, name: &SmolStr) -> Option<ModuleFunction<'a>> {
         match self.values.get(name) {
             Some(ValueConstructor {
                 public: _,
@@ -439,7 +440,10 @@ impl Module {
                         location: _,
                     },
                 type_: _,
-            }) => Some(ModuleFunction { arity: *arity }),
+            }) => Some(ModuleFunction {
+                arity: *arity,
+                package: &self.package,
+            }),
             _ => None,
         }
     }
