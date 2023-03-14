@@ -425,29 +425,30 @@ This prefix is intended for official Gleam packages only.",
             }
 
             Error::InvalidModuleName { module } => Diagnostic {
-                title: format!("{module} is not a valid module name"),
-                text: "Module names can only contain lowercase letters, underscore, and forward slash.".to_owned(),
+                title: format!("Invalid module name"),
+                text: format!(
+                    "`{module}` is not a valid module name because module names can only contain lowercase letters, underscore, and forward slash."
+            ).to_owned(),
                 level: Level::Error,
                 location: None,
                 hint: None,
             },
 
             Error::ModuleDoesNotExist { module } => Diagnostic {
-                title: format!("{module} is not a module."),
-                text: "Module does not exist so it can not be run.".to_owned(),
+                title: format!("Module does not exist"),
+                text: format!("Module `{module}` was not found").into(),
                 level: Level::Error,
                 location: None,
-                hint: None,
+                hint: Some(format!("Try creating the file `src/{module}.gleam`")),
             },
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
-                title: format!("{module} does not have a main function."),
-                text: "Module does not have a public main function so it can not be run.".to_owned(),
+                title: format!("Module does not have a main function"),
+                text: format!("`{module}` does not have a main function so the module can not be run.").into(),
                 level: Level::Error,
                 location: None,
-                hint: None,
+                hint: Some(format!("Add a function with the singature `pub fn main() {{}}` to `src/{module}.gleam`").into()),
             },
-
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
                 title: "Project folder already exists".into(),
