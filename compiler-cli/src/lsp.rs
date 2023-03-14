@@ -10,7 +10,9 @@
 mod protocol_adapter;
 mod server;
 
-use crate::{build_lock::BuildLock, lsp::protocol_adapter::LanguageServerProtocolAdapter};
+use crate::{
+    build_lock::BuildLock, fs::ProjectIO, lsp::protocol_adapter::LanguageServerProtocolAdapter,
+};
 use gleam_core::{
     ast::SrcSpan,
     build::{Mode, NullTelemetry, Target},
@@ -20,7 +22,7 @@ use gleam_core::{
     paths, Result,
 };
 use itertools::Itertools;
-use lsp_types::{self as lsp, HoverProviderCapability, Position, Range, Url};
+use lsp_types::{self as lsp, Position, Range, Url};
 use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "windows")]
@@ -44,65 +46,12 @@ pub fn main() -> Result<()> {
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServerProtocolAdapter::new(&connection, config)?.run()?;
+    LanguageServerProtocolAdapter::new(&connection, config, ProjectIO::new())?.run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
     tracing::info!("language_server_stopped");
     Ok(())
-}
-
-pub fn server_capabilities() -> lsp::ServerCapabilities {
-    lsp::ServerCapabilities {
-        text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
-            lsp::TextDocumentSyncOptions {
-                open_close: Some(true),
-                change: Some(lsp::TextDocumentSyncKind::FULL),
-                will_save: None,
-                will_save_wait_until: None,
-                save: Some(lsp::TextDocumentSyncSaveOptions::SaveOptions(
-                    lsp::SaveOptions {
-                        include_text: Some(false),
-                    },
-                )),
-            },
-        )),
-        selection_range_provider: None,
-        hover_provider: Some(HoverProviderCapability::Simple(true)),
-        completion_provider: Some(lsp::CompletionOptions {
-            resolve_provider: None,
-            trigger_characters: Some(vec![".".into(), " ".into()]),
-            all_commit_characters: None,
-            work_done_progress_options: lsp::WorkDoneProgressOptions {
-                work_done_progress: None,
-            },
-        }),
-        signature_help_provider: None,
-        definition_provider: Some(lsp::OneOf::Left(true)),
-        type_definition_provider: None,
-        implementation_provider: None,
-        references_provider: None,
-        document_highlight_provider: None,
-        document_symbol_provider: None,
-        workspace_symbol_provider: None,
-        code_action_provider: None,
-        code_lens_provider: None,
-        document_formatting_provider: Some(lsp::OneOf::Left(true)),
-        document_range_formatting_provider: None,
-        document_on_type_formatting_provider: None,
-        rename_provider: None,
-        document_link_provider: None,
-        color_provider: None,
-        folding_range_provider: None,
-        declaration_provider: None,
-        execute_command_provider: None,
-        workspace: None,
-        call_hierarchy_provider: None,
-        semantic_tokens_provider: None,
-        moniker_provider: None,
-        linked_editing_range_provider: None,
-        experimental: None,
-    }
 }
 
 #[cfg(target_os = "windows")]

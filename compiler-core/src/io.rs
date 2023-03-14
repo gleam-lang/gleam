@@ -169,8 +169,6 @@ pub trait FileSystemReader {
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error>;
 }
 
-pub trait FileSystemIO: FileSystemWriter + FileSystemReader {}
-
 /// A trait used to run other programs.
 pub trait CommandExecutor {
     fn exec(

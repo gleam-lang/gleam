@@ -10,7 +10,7 @@ use crate::{
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     error,
-    io::{CommandExecutor, FileSystemIO, FileSystemReader, FileSystemWriter, Stdio},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     paths, type_,
@@ -53,7 +53,7 @@ pub struct PackageCompiler<'a, IO> {
 
 impl<'a, IO> PackageCompiler<'a, IO>
 where
-    IO: FileSystemIO + CommandExecutor + Clone,
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
 {
     pub fn new(
         config: &'a PackageConfig,
@@ -427,11 +427,14 @@ fn type_check(
     Ok(modules)
 }
 
-pub fn maybe_link_elixir_libs<IO: CommandExecutor + FileSystemIO + Clone>(
+pub fn maybe_link_elixir_libs<IO>(
     io: &IO,
     build_dir: &PathBuf,
     subprocess_stdio: Stdio,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    IO: CommandExecutor + FileSystemReader + FileSystemWriter + Clone,
+{
     // These Elixir core libs will be loaded with the current project
     // Each should be linked into build/{target}/erlang if:
     // - It isn't already

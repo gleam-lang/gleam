@@ -131,7 +131,7 @@ pub fn download<Telem: Telemetry>(
 
     let http = HttpClient::boxed();
     let fs = ProjectIO::boxed();
-    let downloader = hex::Downloader::new(fs, http, Untar::boxed());
+    let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed());
 
     // Read the project config
     let mut config = crate::config::root_config()?;

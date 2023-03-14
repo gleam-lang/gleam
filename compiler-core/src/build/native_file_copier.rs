@@ -6,7 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{io::FileSystemIO, Error, Result};
+use crate::{
+    io::{FileSystemReader, FileSystemWriter},
+    Error, Result,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CopiedNativeFiles {
@@ -25,7 +28,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
 
 impl<'a, IO> NativeFileCopier<'a, IO>
 where
-    IO: FileSystemIO + Clone,
+    IO: FileSystemReader + FileSystemWriter + Clone,
 {
     pub(crate) fn new(io: IO, root: &'a Path, out: &'a Path) -> Self {
         Self {

@@ -6,7 +6,7 @@ use crate::{
     codegen::{self, ErlangApp},
     config::PackageConfig,
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemIO, FileSystemWriter, Stdio},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::ManifestPackage,
     metadata, paths, type_,
     uid::UniqueIdGenerator,
@@ -69,7 +69,7 @@ pub struct ProjectCompiler<IO> {
 
 impl<IO> ProjectCompiler<IO>
 where
-    IO: CommandExecutor + FileSystemIO + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
 {
     pub fn new(
         config: PackageConfig,
