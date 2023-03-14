@@ -28,7 +28,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
     crate::fs::delete_dir(&out)?;
 
     // Build project in production mode
-    let package = crate::build::main(Options {
+    let (_, package) = crate::build::main(Options {
         warnings_as_errors: false,
         codegen: Codegen::All,
         mode,

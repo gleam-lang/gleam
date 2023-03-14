@@ -10,10 +10,10 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter},
+    fs::{self, ConsoleWarningEmitter, ProjectIO},
 };
 
-pub fn main(options: Options) -> Result<Package> {
+pub fn main(options: Options) -> Result<(ProjectCompiler<ProjectIO>, Package)> {
     let paths = crate::project_paths_at_current_directory();
     let manifest =
         crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
@@ -33,7 +33,7 @@ pub fn main(options: Options) -> Result<Package> {
     tracing::info!("Compiling packages");
     let compiled = {
         let _guard = lock.lock(telemetry.as_ref());
-        ProjectCompiler::new(
+        let mut compiler = ProjectCompiler::new(
             root_config,
             options,
             manifest.packages,
@@ -41,8 +41,9 @@ pub fn main(options: Options) -> Result<Package> {
             Arc::new(ConsoleWarningEmitter),
             ProjectPaths::new(current_dir),
             io,
-        )
-        .compile()?
+        );
+        let compiled_package = compiler.compile()?;
+        (compiler, compiled_package)
     };
 
     match perform_codegen {
