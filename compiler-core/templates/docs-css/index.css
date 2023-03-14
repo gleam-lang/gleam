@@ -338,7 +338,7 @@ p code {
 
 /* Version selector */
 
-#project-version {
+#gleam-docs-project-version {
   --half-small-gap: calc(var(--small-gap) / 2);
   --icon-size: 0.75em;
   flex-shrink: 0;
@@ -347,17 +347,17 @@ p code {
   margin-left: var(--half-small-gap);
 }
 
-#project-version > span {
+#gleam-docs-project-version > span {
   padding-left: var(--half-small-gap);
 }
 
-#project-version form {
+#gleam-docs-project-version form {
   align-items: center;
   display: inline-flex;
   justify-content: flex-end;
 }
 
-#project-version select {
+#gleam-docs-project-version select {
   appearance: none;
   -webkit-appearance: none;
   padding: 0.6rem calc(1.3 * var(--icon-size)) 0.6rem var(--half-small-gap);
@@ -365,11 +365,11 @@ p code {
   z-index: 1;
 }
 
-#project-version option {
+#gleam-docs-project-version option {
   background-color: var(--code-background);
 }
 
-#project-version .icon {
+#gleam-docs-project-version .icon {
   font-size: var(--icon-size);
   margin-left: calc(-1.65 * var(--icon-size));
 }
@@ -763,7 +763,7 @@ body.theme-dark .page-header .search-nav-button {
   color: var(--fg-shade-1);
 }
 
-body.theme-dark #project-version select,
+body.theme-dark #gleam-docs-project-version select,
 body.theme-dark .control {
   color: var(--fg-shade-1);
 }

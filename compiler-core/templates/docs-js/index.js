@@ -25,7 +25,7 @@ window.Gleam = (function () {
     return Array.from(arguments).reduce(
       (acc, name) =>
         `${acc}
-        <svg class="icon icon-${name}"><use xlink:href="#icon-${name}"></use></svg>`,
+        <svg class="icon icon-${name}"><use xlink:href="#gleam-docs-icon-${name}"></use></svg>`,
       ""
     );
   };
@@ -173,9 +173,9 @@ window.Gleam = (function () {
     const preview_words_before = 5;
     const previews = 3;
 
-    const searchInput = document.getElementById("search-input");
-    const searchNavButton = document.getElementById("search-nav-button");
-    const searchResults = document.getElementById("search-results");
+    const searchInput = document.getElementById("gleam-docs-search-input");
+    const searchNavButton = document.getElementById("gleam-docs-search-nav-button");
+    const searchResults = document.getElementById("gleam-docs-search-results");
     let currentInput;
     let currentSearchIndex = 0;
 
@@ -289,7 +289,7 @@ window.Gleam = (function () {
         const resultDoc = document.createElement("div");
         resultDoc.classList.add("search-result-doc");
         resultDoc.innerHTML =
-          '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#icon-svg-doc"></use></svg>';
+          '<svg viewBox="0 0 24 24" class="search-result-icon"><use xlink:href="#gleam-docs-icon-svg-doc"></use></svg>';
         resultTitle.appendChild(resultDoc);
         const resultDocTitle = document.createElement("div");
         resultDocTitle.classList.add("search-result-doc-title");
