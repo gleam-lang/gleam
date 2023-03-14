@@ -1,11 +1,16 @@
-use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    ffi::OsStr,
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use gleam_core::{
     build::{Codegen, Mode, Options, Package, ProjectCompiler, Target},
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
-    paths,
+    paths::{self, ProjectPaths},
     warning::NullWarningEmitterIO,
     Error,
 };
@@ -111,6 +116,7 @@ fn compile_project(
         packages,
         Box::new(LogTelemetry),
         Arc::new(NullWarningEmitterIO),
+        ProjectPaths::at_filesystem_root(),
         wfs.clone(),
     );
 

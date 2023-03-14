@@ -5,7 +5,7 @@ use crate::{
     language_server::Locker,
     line_numbers::LineNumbers,
     manifest::Manifest,
-    paths,
+    paths::{self, ProjectPaths},
     warning::VectorWarningEmitterIO,
     Error, Result, Warning,
 };
@@ -42,6 +42,7 @@ where
     pub fn new(
         manifest: Manifest,
         config: PackageConfig,
+        paths: ProjectPaths,
         io: IO,
         locker: LockerImpl,
     ) -> Result<Self> {
@@ -62,6 +63,7 @@ where
             manifest.packages,
             Box::new(telemetry),
             warnings.clone(),
+            paths,
             io.clone(),
         );
 

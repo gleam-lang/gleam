@@ -5,7 +5,7 @@ use gleam_core::{
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
-    paths,
+    paths::{self, ProjectPaths},
 };
 
 use crate::fs::ProjectIO;
@@ -23,7 +23,8 @@ pub fn command(
     runtime: Option<Runtime>,
     which: Which,
 ) -> Result<(), Error> {
-    let config = crate::config::root_config()?;
+    let paths = ProjectPaths::at_current_directory();
+    let config = crate::config::root_config(&paths)?;
 
     // Determine which module to run
     let module = match which {

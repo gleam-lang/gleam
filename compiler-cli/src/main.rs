@@ -80,6 +80,7 @@ pub use gleam_core::{
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
+    paths::ProjectPaths,
 };
 use hex::ApiKeyCommand as _;
 
@@ -461,7 +462,8 @@ fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(),
 }
 
 fn print_config() -> Result<()> {
-    let config = root_config()?;
+    let paths = ProjectPaths::at_current_directory();
+    let config = root_config(&paths)?;
     println!("{config:#?}");
     Ok(())
 }

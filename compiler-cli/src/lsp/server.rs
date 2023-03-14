@@ -7,6 +7,7 @@ use gleam_core::{
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
     line_numbers::LineNumbers,
+    paths::ProjectPaths,
     type_::pretty::Printer,
     Error, Result,
 };
@@ -30,6 +31,7 @@ pub struct Response<T> {
 pub struct LanguageServer<'a, IO> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
+    paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
@@ -58,7 +60,9 @@ where
         progress_reporter: ProgressReporter<'a>,
         io: IO,
     ) -> Result<Self> {
+        // TODO: inject this IO
         let project_root = std::env::current_dir().expect("Project root");
+        let paths = ProjectPaths::at(project_root.clone());
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             feedback: FeedbackBookKeeper::default(),
@@ -69,6 +73,7 @@ where
             progress_reporter,
             project_root,
             config,
+            paths,
         };
         language_server.create_new_compiler()?;
         Ok(language_server)
@@ -114,8 +119,13 @@ where
             self.progress_reporter.dependency_downloading_finished();
             let manifest = manifest?;
 
-            let compiler =
-                LspProjectCompiler::new(manifest, config.clone(), self.fs_proxy.clone(), locker)?;
+            let compiler = LspProjectCompiler::new(
+                manifest,
+                config.clone(),
+                self.paths.clone(),
+                self.fs_proxy.clone(),
+                locker,
+            )?;
             self.compiler = Some(compiler);
         }
         Ok(())

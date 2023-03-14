@@ -4,12 +4,33 @@ use crate::build::{Mode, Target};
 
 pub const ARTEFACT_DIRECTORY_NAME: &str = "_gleam_artefacts";
 
-pub fn root_config() -> PathBuf {
-    PathBuf::from("gleam.toml")
+#[derive(Debug, Clone)]
+pub struct ProjectPaths {
+    root: PathBuf,
 }
 
-pub fn root() -> PathBuf {
-    PathBuf::from("./")
+impl ProjectPaths {
+    pub fn at(root: PathBuf) -> Self {
+        Self { root }
+    }
+
+    pub fn at_current_directory() -> Self {
+        // TODO: remove this IO
+        let current_dir = std::env::current_dir().expect("Could not get current directory");
+        Self::at(current_dir)
+    }
+
+    pub fn at_filesystem_root() -> Self {
+        Self::at(PathBuf::from("/"))
+    }
+
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    pub fn root_config(&self) -> &Path {
+        &self.root
+    }
 }
 
 pub fn readme() -> PathBuf {

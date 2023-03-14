@@ -8,7 +8,9 @@ use crate::{
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::ManifestPackage,
-    metadata, paths, type_,
+    metadata,
+    paths::{self, ProjectPaths},
+    type_,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::{self, WarningEmitter, WarningEmitterIO},
@@ -57,6 +59,7 @@ pub struct ProjectCompiler<IO> {
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
     options: Options,
+    paths: ProjectPaths,
     ids: UniqueIdGenerator,
     io: IO,
     /// We may want to silence subprocess stdout if we are running in LSP mode.
@@ -77,6 +80,7 @@ where
         packages: Vec<ManifestPackage>,
         telemetry: Box<dyn Telemetry>,
         warning_emitter: Arc<dyn WarningEmitterIO>,
+        paths: ProjectPaths,
         io: IO,
     ) -> Self {
         let packages = packages
@@ -94,6 +98,7 @@ where
             packages,
             options,
             config,
+            paths,
             io,
         }
     }
@@ -148,7 +153,7 @@ where
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {
         let config = self.config.clone();
-        let modules = self.compile_gleam_package(&config, true, paths::root())?;
+        let modules = self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())?;
 
         Ok(Package { config, modules })
     }

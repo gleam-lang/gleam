@@ -1,6 +1,7 @@
 use gleam_core::{
     build::{Codegen, Mode, Options, Target},
-    paths, Result,
+    paths::{self, ProjectPaths},
+    Result,
 };
 
 // TODO: start in embedded mode
@@ -83,7 +84,8 @@ the entrypoint.sh script.
 }
 
 pub fn hex_tarball() -> Result<()> {
-    let config = crate::config::root_config()?;
+    let paths = ProjectPaths::at_current_directory();
+    let config = crate::config::root_config(&paths)?;
     let data: Vec<u8> = crate::publish::build_hex_tarball(&config)?;
 
     let path = paths::build_tarball(&config.name, &config.version.to_string());
