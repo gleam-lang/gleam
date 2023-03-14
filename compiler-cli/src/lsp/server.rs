@@ -1,16 +1,20 @@
-use super::feedback::{Feedback, FeedbackBookKeeper};
-use super::progress::ProgressReporter;
-use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
+use super::{
+    progress::ProgressReporter, src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler,
+};
 use crate::fs::ProjectIO;
-use gleam_core::Warning;
-use gleam_core::{ast::Import, io::FileSystemReader, language_server::FileSystemProxy};
 use gleam_core::{
-    ast::Statement,
+    ast::{Import, Statement},
     build::{Located, Module},
     config::PackageConfig,
+    io::FileSystemReader,
+    language_server::FileSystemProxy,
     line_numbers::LineNumbers,
     type_::pretty::Printer,
     Error, Result,
+};
+use gleam_core::{
+    language_server::{Feedback, FeedbackBookKeeper},
+    Warning,
 };
 use lsp::DidOpenTextDocumentParams;
 use lsp_types::{

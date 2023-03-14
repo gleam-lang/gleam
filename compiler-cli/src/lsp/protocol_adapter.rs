@@ -1,10 +1,11 @@
 use super::{
-    convert_response, diagnostic_to_lsp, feedback::Feedback, path_to_uri,
-    progress::ProgressReporter, server::LanguageServer,
+    convert_response, diagnostic_to_lsp, path_to_uri, progress::ProgressReporter,
+    server::LanguageServer,
 };
 use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
+    language_server::Feedback,
     Result,
 };
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};

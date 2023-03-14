@@ -2,15 +2,11 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-// TODO: Remove all use of the Connection from the LanguageServer. That is the
-// job of the protocol adapter.
-
 // TODO: Make a new router class which finds the root of the project a message
 // is for and dispatches to the correct language server, making one for that
 // root if it does not exist. This will require the compiler to be modified so
 // that it can run on projects where the root is not the cwd.
 
-mod feedback;
 mod progress;
 mod protocol_adapter;
 mod server;
@@ -25,6 +21,7 @@ use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemIO, Stdio},
+    language_server::Feedback,
     line_numbers::LineNumbers,
     paths, Error, Result,
 };
@@ -39,8 +36,6 @@ use std::{
 
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
-
-use self::feedback::Feedback;
 
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
