@@ -754,6 +754,8 @@ dependencies = [
  "insta",
  "itertools",
  "lazy_static",
+ "lsp-server",
+ "lsp-types",
  "petgraph",
  "pretty_assertions",
  "pulldown-cmark",

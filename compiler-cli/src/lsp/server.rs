@@ -1,13 +1,11 @@
-use super::{
-    progress::ProgressReporter, src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler,
-};
+use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
 use crate::fs::ProjectIO;
 use gleam_core::{
     ast::{Import, Statement},
     build::{Located, Module},
     config::PackageConfig,
     io::FileSystemReader,
-    language_server::FileSystemProxy,
+    language_server::{FileSystemProxy, ProgressReporter},
     line_numbers::LineNumbers,
     type_::pretty::Printer,
     Error, Result,

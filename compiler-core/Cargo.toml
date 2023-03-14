@@ -74,6 +74,9 @@ globset = { version = "0.4.9", features = ["serde1"] }
 smol_str = { version = "0.1", features = ["serde"] }
 # Checksums
 xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
+# Language server protocol server plumbing
+lsp-server = "0.5"
+lsp-types = "0.92"
 
 [build-dependencies]
 # Data (de)serialisation
