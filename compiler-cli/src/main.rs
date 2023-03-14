@@ -169,7 +169,7 @@ enum Command {
         runtime: Option<Runtime>,
 
         /// The module to run
-        #[clap(short, long, ignore_case = true)]
+        #[clap(short, long)]
         module: Option<String>,
 
         arguments: Vec<String>,
