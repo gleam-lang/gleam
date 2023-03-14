@@ -109,13 +109,14 @@ where
 
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let locker = LspLocker::new(config.target)?;
+            let locker = LspLocker::new(&self.paths, config.target)?;
 
             // Download dependencies to ensure they are up-to-date for this new
             // configuration and new instance of the compiler
             self.progress_reporter.dependency_downloading_started();
             // TODO: Inject this IO
-            let manifest = crate::dependencies::download(NullTelemetry, None, UseManifest::Yes);
+            let manifest =
+                crate::dependencies::download(&self.paths, NullTelemetry, None, UseManifest::Yes);
             self.progress_reporter.dependency_downloading_finished();
             let manifest = manifest?;
 

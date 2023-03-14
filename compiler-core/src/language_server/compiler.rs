@@ -5,7 +5,7 @@ use crate::{
     language_server::Locker,
     line_numbers::LineNumbers,
     manifest::Manifest,
-    paths::{self, ProjectPaths},
+    paths::ProjectPaths,
     warning::VectorWarningEmitterIO,
     Error, Result, Warning,
 };
@@ -51,6 +51,16 @@ where
         let name = config.name.clone();
         let warnings = Arc::new(VectorWarningEmitterIO::default());
 
+        // The build caches do not contain all the information we need in the
+        // LSP (e.g. the typed AST) so delete the caches for the top level
+        // package before we run for the first time.
+        // TODO: remove this once the caches have contain all the information
+        {
+            let _guard = locker.lock_for_build();
+            let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
+            io.delete(&path)?;
+        }
+
         let options = build::Options {
             warnings_as_errors: false,
             mode: build::Mode::Lsp,
@@ -73,15 +83,6 @@ where
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.subprocess_stdio = Stdio::Null;
-
-        // The build caches do not contain all the information we need in the
-        // LSP (e.g. the typed AST) so delete the caches for the top level
-        // package before we run for the first time.
-        // TODO: remove this once the caches have contain all the information
-        {
-            let _guard = locker.lock_for_build();
-            io.delete(&paths::build_package(Mode::Lsp, target, &name))?;
-        }
 
         Ok(Self {
             locker,

@@ -10,7 +10,8 @@ use crate::{
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter, HttpClient, TarUnpacker},
     manifest::{Manifest, ManifestPackage, ManifestPackageSource},
-    paths, Error, Result,
+    paths::{self, ProjectPaths},
+    Error, Result,
 };
 
 pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----
@@ -148,6 +149,7 @@ pub struct Downloader {
     http: DebugIgnore<Box<dyn HttpClient>>,
     untar: DebugIgnore<Box<dyn TarUnpacker>>,
     hex_config: hexpm::Config,
+    paths: ProjectPaths,
 }
 
 impl Downloader {
@@ -156,6 +158,7 @@ impl Downloader {
         fs_writer: Box<dyn FileSystemWriter>,
         http: Box<dyn HttpClient>,
         untar: Box<dyn TarUnpacker>,
+        paths: ProjectPaths,
     ) -> Self {
         Self {
             fs_reader: DebugIgnore(fs_reader),
@@ -163,6 +166,7 @@ impl Downloader {
             http: DebugIgnore(http),
             untar: DebugIgnore(untar),
             hex_config: hexpm::Config::new(),
+            paths,
         }
     }
 
@@ -170,8 +174,10 @@ impl Downloader {
         &self,
         package: &ManifestPackage,
     ) -> Result<bool, Error> {
-        let tarball_path =
-            paths::package_cache_tarball(&package.name, &package.version.to_string());
+        let tarball_path = paths::global_package_cache_package_tarball(
+            &package.name,
+            &package.version.to_string(),
+        );
         if self.fs_reader.is_file(&tarball_path) {
             tracing::info!(
                 package = package.name.as_str(),
@@ -219,7 +225,7 @@ impl Downloader {
     // It would be really nice if this was async but the library is sync
     pub fn extract_package_from_cache(&self, name: &str, version: &Version) -> Result<bool> {
         let contents_path = Path::new("contents.tar.gz");
-        let destination = paths::build_deps_package(name);
+        let destination = self.paths.build_packages_package(name);
 
         // If the directory already exists then there's nothing for us to do
         if self.fs_reader.is_directory(&destination) {
@@ -228,7 +234,7 @@ impl Downloader {
         }
 
         tracing::info!(package = name, "writing_package_to_target");
-        let tarball = paths::package_cache_tarball(name, &version.to_string());
+        let tarball = paths::global_package_cache_package_tarball(name, &version.to_string());
         let reader = self.fs_reader.reader(&tarball)?;
         let mut archive = Archive::new(reader);
 

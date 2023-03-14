@@ -5,7 +5,7 @@ use gleam_core::{
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
-    paths,
+    paths::ProjectPaths,
 };
 
 use crate::fs::ProjectIO;
@@ -23,6 +23,7 @@ pub fn command(
     runtime: Option<Runtime>,
     which: Which,
 ) -> Result<(), Error> {
+    let paths = crate::project_paths_at_current_directory();
     let config = crate::config::root_config()?;
 
     // Determine which module to run
@@ -51,22 +52,27 @@ pub fn command(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang(&config.name, &module, arguments),
+            _ => run_erlang(&paths, &config.name, &module, arguments),
         },
         Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
-            Runtime::Deno => run_javascript_deno(&config, &module, arguments),
-            Runtime::NodeJs => run_javascript_node(&config, &module, arguments),
+            Runtime::Deno => run_javascript_deno(&paths, &config, &module, arguments),
+            Runtime::NodeJs => run_javascript_node(&paths, &config, &module, arguments),
         },
     }?;
 
     std::process::exit(status);
 }
 
-fn run_erlang(package: &str, module: &str, arguments: Vec<String>) -> Result<i32, Error> {
+fn run_erlang(
+    paths: &ProjectPaths,
+    package: &str,
+    module: &str,
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
     let mut args = vec![];
 
-    // Specify locations of .beam files
-    let packages = paths::build_packages(Mode::Dev, Target::Erlang);
+    // Specify locations of Erlang applications
+    let packages = paths.build_directory_for_target(Mode::Dev, Target::Erlang);
 
     for entry in crate::fs::read_dir(packages)?.filter_map(Result::ok) {
         args.push("-pa".into());
@@ -89,12 +95,13 @@ fn run_erlang(package: &str, module: &str, arguments: Vec<String>) -> Result<i32
 }
 
 fn run_javascript_node(
+    paths: &ProjectPaths,
     config: &PackageConfig,
     module: &str,
     arguments: Vec<String>,
 ) -> Result<i32, Error> {
     let mut args = vec![];
-    let entry = write_javascript_entrypoint(&config.name, module)?;
+    let entry = write_javascript_entrypoint(paths, &config.name, module)?;
 
     args.push(entry);
 
@@ -105,8 +112,12 @@ fn run_javascript_node(
     ProjectIO::new().exec("node", &args, &[], None, Stdio::Inherit)
 }
 
-fn write_javascript_entrypoint(package: &str, module: &str) -> Result<String, Error> {
-    let entry = paths::build_package(Mode::Dev, Target::JavaScript, package);
+fn write_javascript_entrypoint(
+    paths: &ProjectPaths,
+    package: &str,
+    module: &str,
+) -> Result<String, Error> {
+    let entry = paths.build_directory_for_package(Mode::Dev, Target::JavaScript, package);
     let entrypoint = format!("./{}/gleam.main.mjs", entry.to_string_lossy());
     let module = format!(
         r#"import {{ main }} from "./{module}.mjs";
@@ -118,6 +129,7 @@ main();
 }
 
 fn run_javascript_deno(
+    paths: &ProjectPaths,
     config: &PackageConfig,
     module: &str,
     arguments: Vec<String>,
@@ -171,7 +183,7 @@ fn run_javascript_deno(
         );
     }
 
-    let entrypoint = write_javascript_entrypoint(&config.name, module)?;
+    let entrypoint = write_javascript_entrypoint(paths, &config.name, module)?;
     args.push(entrypoint);
 
     for argument in arguments.into_iter() {

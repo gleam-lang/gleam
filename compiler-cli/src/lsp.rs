@@ -19,6 +19,7 @@ use gleam_core::{
     diagnostic::{Diagnostic, Level},
     language_server::{Feedback, LockGuard, Locker},
     line_numbers::LineNumbers,
+    paths::ProjectPaths,
     Result,
 };
 use itertools::Itertools;
@@ -220,8 +221,8 @@ fn path_to_uri(path: PathBuf) -> Url {
 pub struct LspLocker(BuildLock);
 
 impl LspLocker {
-    pub fn new(target: Target) -> Result<Self> {
-        let build_lock = BuildLock::new_target(Mode::Lsp, target)?;
+    pub fn new(paths: &ProjectPaths, target: Target) -> Result<Self> {
+        let build_lock = BuildLock::new_target(paths, Mode::Lsp, target)?;
         Ok(Self(build_lock))
     }
 }

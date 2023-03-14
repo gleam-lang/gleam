@@ -1,18 +1,19 @@
+use flate2::{write::GzEncoder, Compression};
+use gleam_core::{
+    build::{Codegen, Mode, Options, Package, Target},
+    config::{PackageConfig, SpdxLicense},
+    hex, paths,
+    paths::ProjectPaths,
+    Error, Result,
+};
+use hexpm::version::{Range, Version};
+use itertools::Itertools;
+use sha2::Digest;
 use std::{
     io::Write,
     path::{Path, PathBuf},
     time::Instant,
 };
-
-use flate2::{write::GzEncoder, Compression};
-use gleam_core::{
-    build::{Codegen, Mode, Options, Package, Target},
-    config::{PackageConfig, SpdxLicense},
-    hex, paths, Error, Result,
-};
-use hexpm::version::{Range, Version};
-use itertools::Itertools;
-use sha2::Digest;
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
@@ -29,13 +30,14 @@ pub struct PublishCommand {
 
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
+        let paths = crate::project_paths_at_current_directory();
         let config = crate::config::root_config()?;
         let Tarball {
             mut compile_result,
             data: package_tarball,
             src_files_added,
             generated_files_added,
-        } = do_build_hex_tarball(&config)?;
+        } = do_build_hex_tarball(&paths, &config)?;
 
         // Build HTML documentation
         let docs_tarball =
@@ -116,16 +118,16 @@ struct Tarball {
     generated_files_added: Vec<(PathBuf, String)>,
 }
 
-pub fn build_hex_tarball(config: &PackageConfig) -> Result<Vec<u8>> {
-    let Tarball { data, .. } = do_build_hex_tarball(config)?;
+pub fn build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Vec<u8>> {
+    let Tarball { data, .. } = do_build_hex_tarball(paths, config)?;
     Ok(data)
 }
 
-fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
+fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Tarball> {
     check_config_for_publishing(config)?;
 
     // Reset the build directory so we know the state of the project
-    fs::delete_dir(&paths::build_packages(Mode::Prod, Target::Erlang))?;
+    fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, Target::Erlang))?;
 
     // Build the project to check that it is valid
     let compile_result = build::main(Options {
@@ -135,7 +137,7 @@ fn do_build_hex_tarball(config: &PackageConfig) -> Result<Tarball> {
         codegen: Codegen::All,
     })?;
 
-    let generated_files = generated_files(&compile_result)?;
+    let generated_files = generated_files(&paths, &compile_result)?;
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
@@ -262,10 +264,10 @@ fn project_files() -> Result<Vec<PathBuf>> {
 }
 
 // TODO: test
-fn generated_files(package: &Package) -> Result<Vec<(PathBuf, String)>> {
+fn generated_files(paths: &ProjectPaths, package: &Package) -> Result<Vec<(PathBuf, String)>> {
     let mut files = vec![];
 
-    let dir = paths::build_package(Mode::Prod, Target::Erlang, &package.config.name);
+    let dir = paths.build_directory_for_package(Mode::Prod, Target::Erlang, &package.config.name);
     let ebin = dir.join("ebin");
     let build = dir.join(paths::ARTEFACT_DIRECTORY_NAME);
     let include = dir.join("include");

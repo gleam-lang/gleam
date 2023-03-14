@@ -12,7 +12,8 @@ use gleam_core::{
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
-    paths, Error, Result,
+    paths::ProjectPaths,
+    Error, Result,
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -29,8 +30,10 @@ use crate::{
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
+    let paths = ProjectPaths::at_filesystem_root();
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
+        &paths,
         runtime.handle().clone(),
         Mode::Dev,
         &config,
@@ -106,10 +109,13 @@ pub enum UseManifest {
 }
 
 pub fn update() -> Result<()> {
-    download(cli::Reporter::new(), None, UseManifest::No).map(|_| ())
+    let paths = crate::project_paths_at_current_directory();
+    _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
+    Ok(())
 }
 
 pub fn download<Telem: Telemetry>(
+    paths: &ProjectPaths,
     telemetry: Telem,
     new_package: Option<(Vec<String>, bool)>,
     // If true we read the manifest from disc. If not set then we ignore any
@@ -124,15 +130,14 @@ pub fn download<Telem: Telemetry>(
 
     // We do this before acquiring the build lock so that we don't create the
     // build directory if there is no gleam.toml
-    let paths = crate::project_paths_at_current_directory();
     crate::config::ensure_config_exists(&paths)?;
 
-    let lock = BuildLock::new_packages()?;
+    let lock = BuildLock::new_packages(paths)?;
     let _guard = lock.lock(&telemetry);
 
     let http = HttpClient::boxed();
     let fs = ProjectIO::boxed();
-    let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed());
+    let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
 
     // Read the project config
     let mut config = crate::config::root_config()?;
@@ -155,16 +160,17 @@ pub fn download<Telem: Telemetry>(
 
     // Determine what versions we need
     let (manifest_updated, manifest) = get_manifest(
+        paths,
         runtime.handle().clone(),
         mode,
         &config,
         &telemetry,
         use_manifest,
     )?;
-    let local = LocalPackages::read_from_disc()?;
+    let local = LocalPackages::read_from_disc(paths)?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
-    remove_extra_packages(&local, &manifest)?;
+    remove_extra_packages(&paths, &local, &manifest)?;
 
     // Download them from Hex to the local cache
     runtime.block_on(download_missing_packages(
@@ -179,18 +185,18 @@ pub fn download<Telem: Telemetry>(
         // If the manifest has changed then we need to blow away the build
         // caches as they may now be outdated.
         // TODO: test
-        let _guard = BuildLock::lock_all_build(&telemetry)?;
+        let _guard = BuildLock::lock_all_build(&paths, &telemetry)?;
         tracing::info!("deleting_build_caches");
         for mode in Mode::iter() {
-            fs::delete_dir(&paths::build_for_mode(mode))?;
+            fs::delete_dir(&paths.build_directory_for_mode(mode))?;
         }
 
         // Record new state of the packages directory
         // TODO: test
         tracing::info!("writing_manifest_toml");
-        write_manifest_to_disc(&manifest)?;
+        write_manifest_to_disc(&paths, &manifest)?;
     }
-    LocalPackages::from_manifest(&manifest).write_to_disc()?;
+    LocalPackages::from_manifest(&manifest).write_to_disc(&paths)?;
 
     Ok(manifest)
 }
@@ -222,9 +228,13 @@ async fn download_missing_packages<Telem: Telemetry>(
     Ok(())
 }
 
-fn remove_extra_packages(local: &LocalPackages, manifest: &Manifest) -> Result<()> {
+fn remove_extra_packages(
+    paths: &ProjectPaths,
+    local: &LocalPackages,
+    manifest: &Manifest,
+) -> Result<()> {
     for (package, version) in local.extra_local_packages(manifest) {
-        let path = paths::build_deps_package(&package);
+        let path = paths.build_packages_package(&package);
         if path.exists() {
             tracing::info!(package=%package, version=%version, "removing_unneeded_package");
             fs::delete_dir(&path)?;
@@ -233,9 +243,9 @@ fn remove_extra_packages(local: &LocalPackages, manifest: &Manifest) -> Result<(
     Ok(())
 }
 
-fn read_manifest_from_disc() -> Result<Manifest> {
+fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::info!("Reading manifest.toml");
-    let manifest_path = paths::manifest();
+    let manifest_path = paths.manifest();
     let toml = crate::fs::read(&manifest_path)?;
     let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
@@ -246,8 +256,8 @@ fn read_manifest_from_disc() -> Result<Manifest> {
     Ok(manifest)
 }
 
-fn write_manifest_to_disc(manifest: &Manifest) -> Result<()> {
-    let path = paths::manifest();
+fn write_manifest_to_disc(paths: &ProjectPaths, manifest: &Manifest) -> Result<()> {
+    let path = paths.manifest();
     fs::write(&path, &manifest.to_toml())
 }
 
@@ -282,8 +292,8 @@ impl LocalPackages {
             .collect()
     }
 
-    pub fn read_from_disc() -> Result<Self> {
-        let path = paths::packages_toml();
+    pub fn read_from_disc(paths: &ProjectPaths) -> Result<Self> {
+        let path = paths.build_packages_toml();
         if !path.exists() {
             return Ok(Self {
                 packages: HashMap::new(),
@@ -298,8 +308,8 @@ impl LocalPackages {
         })
     }
 
-    pub fn write_to_disc(&self) -> Result<()> {
-        let path = paths::packages_toml();
+    pub fn write_to_disc(&self, paths: &ProjectPaths) -> Result<()> {
+        let path = paths.build_packages_toml();
         let toml = toml::to_string(&self).expect("packages.toml serialization");
         fs::write(&path, &toml)
     }
@@ -434,6 +444,7 @@ fn extra_local_packages() {
 }
 
 fn get_manifest<Telem: Telemetry>(
+    paths: &ProjectPaths,
     runtime: tokio::runtime::Handle,
     mode: Mode,
     config: &PackageConfig,
@@ -443,7 +454,7 @@ fn get_manifest<Telem: Telemetry>(
     // If there's no manifest (or we have been asked not to use it) then resolve
     // the versions anew
     let should_resolve = match use_manifest {
-        _ if !paths::manifest().exists() => {
+        _ if !paths.manifest().exists() => {
             tracing::info!("manifest_not_present");
             true
         }
@@ -459,7 +470,7 @@ fn get_manifest<Telem: Telemetry>(
         return Ok((true, manifest));
     }
 
-    let manifest = read_manifest_from_disc()?;
+    let manifest = read_manifest_from_disc(paths)?;
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.

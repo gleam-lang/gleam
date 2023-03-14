@@ -7,7 +7,7 @@ use gleam_core::{
     error::Error,
     hex,
     io::HttpClient as _,
-    paths, Result,
+    Result,
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {
@@ -50,12 +50,13 @@ impl ApiKeyCommand for RemoveCommand {
 }
 
 pub fn build() -> Result<()> {
+    let paths = crate::project_paths_at_current_directory();
     let config = crate::config::root_config()?;
 
     // Reset the build directory so we know the state of the project
-    crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
+    crate::fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
-    let out = paths::build_docs(&config.name);
+    let out = paths.build_documentation_directory(&config.name);
     let mut compiled = crate::build::main(Options {
         mode: Mode::Prod,
         target: None,
@@ -84,13 +85,15 @@ pub(crate) fn build_documentation(
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
+    let paths = crate::project_paths_at_current_directory();
     let mut pages = vec![DocsPage {
         title: "README".into(),
         path: "index.html".into(),
-        source: paths::readme(), // TODO: support non markdown READMEs. Or a default if there is none.
+        source: paths.readme(), // TODO: support non markdown READMEs. Or a default if there is none.
     }];
     pages.extend(config.documentation.pages.iter().cloned());
-    let outputs = gleam_core::docs::generate_html(config, compiled.modules.as_slice(), &pages);
+    let outputs =
+        gleam_core::docs::generate_html(&paths, config, compiled.modules.as_slice(), &pages);
     Ok(outputs)
 }
 
@@ -105,10 +108,11 @@ pub fn publish() -> Result<()> {
 
 impl PublishCommand {
     pub fn new() -> Result<Self> {
+        let paths = crate::project_paths_at_current_directory();
         let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project
-        crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
+        crate::fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
         let mut compiled = crate::build::main(Options {
             warnings_as_errors: false,

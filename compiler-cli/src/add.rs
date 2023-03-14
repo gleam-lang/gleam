@@ -8,9 +8,12 @@ use gleam_core::{
 use crate::{cli, dependencies::UseManifest, fs};
 
 pub fn command(packages: Vec<String>, dev: bool) -> Result<()> {
+    let paths = crate::project_paths_at_current_directory();
+
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
     let manifest = crate::dependencies::download(
+        &paths,
         cli::Reporter::new(),
         Some((packages.to_vec(), dev)),
         UseManifest::Yes,
