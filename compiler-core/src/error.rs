@@ -133,6 +133,9 @@ pub enum Error {
     #[error("{module} is not module")]
     ModuleDoesNotExist { module: String },
 
+    #[error("{module} is not module")]
+    ModuleDoesNotHaveMainFunction { module: String },
+
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
 
@@ -436,6 +439,15 @@ This prefix is intended for official Gleam packages only.",
                 location: None,
                 hint: None,
             },
+
+            Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
+                title: format!("{module} does not have a main function."),
+                text: "Module does not have a main function so it can not be run.".to_owned(),
+                level: Level::Error,
+                location: None,
+                hint: None,
+            },
+
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
                 title: "Project folder already exists".into(),
