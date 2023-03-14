@@ -117,7 +117,11 @@ fn write_javascript_entrypoint(
     package: &str,
     module: &str,
 ) -> Result<String, Error> {
-    let entry = paths.build_directory_for_package(Mode::Dev, Target::JavaScript, package);
+    let entry = paths
+        .build_directory_for_package(Mode::Dev, Target::JavaScript, package)
+        .strip_prefix(paths.root())
+        .expect("Failed to strip prefix from path")
+        .to_path_buf();
     let entrypoint = format!("./{}/gleam.main.mjs", entry.to_string_lossy());
     let module = format!(
         r#"import {{ main }} from "./{module}.mjs";

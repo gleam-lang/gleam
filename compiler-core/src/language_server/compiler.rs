@@ -74,7 +74,7 @@ where
             Box::new(telemetry),
             warnings.clone(),
             paths,
-            io.clone(),
+            io,
         );
 
         // TODO: remove the LSP's ability to create subprocesses. Have the

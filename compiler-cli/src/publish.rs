@@ -137,7 +137,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         codegen: Codegen::All,
     })?;
 
-    let generated_files = generated_files(&paths, &compile_result)?;
+    let generated_files = generated_files(paths, &compile_result)?;
     let src_files = project_files()?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";

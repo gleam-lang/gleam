@@ -28,7 +28,7 @@ pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
         return Err(Error::FileIo {
             action: FileIoAction::Read,
             kind: FileKind::File,
-            path: path.to_path_buf(),
+            path,
             err: Some("File not found".into()),
         });
     }

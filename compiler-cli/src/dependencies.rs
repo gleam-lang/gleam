@@ -130,7 +130,7 @@ pub fn download<Telem: Telemetry>(
 
     // We do this before acquiring the build lock so that we don't create the
     // build directory if there is no gleam.toml
-    crate::config::ensure_config_exists(&paths)?;
+    crate::config::ensure_config_exists(paths)?;
 
     let lock = BuildLock::new_packages(paths)?;
     let _guard = lock.lock(&telemetry);
@@ -170,7 +170,7 @@ pub fn download<Telem: Telemetry>(
     let local = LocalPackages::read_from_disc(paths)?;
 
     // Remove any packages that are no longer required due to gleam.toml changes
-    remove_extra_packages(&paths, &local, &manifest)?;
+    remove_extra_packages(paths, &local, &manifest)?;
 
     // Download them from Hex to the local cache
     runtime.block_on(download_missing_packages(
@@ -185,7 +185,7 @@ pub fn download<Telem: Telemetry>(
         // If the manifest has changed then we need to blow away the build
         // caches as they may now be outdated.
         // TODO: test
-        let _guard = BuildLock::lock_all_build(&paths, &telemetry)?;
+        let _guard = BuildLock::lock_all_build(paths, &telemetry)?;
         tracing::info!("deleting_build_caches");
         for mode in Mode::iter() {
             fs::delete_dir(&paths.build_directory_for_mode(mode))?;
@@ -194,9 +194,9 @@ pub fn download<Telem: Telemetry>(
         // Record new state of the packages directory
         // TODO: test
         tracing::info!("writing_manifest_toml");
-        write_manifest_to_disc(&paths, &manifest)?;
+        write_manifest_to_disc(paths, &manifest)?;
     }
-    LocalPackages::from_manifest(&manifest).write_to_disc(&paths)?;
+    LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
     Ok(manifest)
 }
