@@ -68,7 +68,6 @@ pub fn command(
         .get(&SmolStr::from(module.to_owned()))
     {
         Some(module_data) => {
-            println!("{:?}", module_data);
             match module_data.values.get("main") {
                 Some(ValueConstructor {
                     public: _,
