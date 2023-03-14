@@ -1,9 +1,8 @@
+use crate::{diagnostic::Diagnostic, Error, Warning};
 use std::{
     collections::{HashMap, HashSet},
     path::PathBuf,
 };
-
-use gleam_core::{diagnostic::Diagnostic, Error, Warning};
 
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct Feedback {
@@ -127,7 +126,7 @@ impl FeedbackBookKeeper {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use gleam_core::{
+    use crate::{
         ast::SrcSpan,
         parse::error::{ParseError, ParseErrorType},
         type_,
