@@ -17,9 +17,7 @@ pub fn main(options: Options) -> Result<Package> {
     let manifest = crate::dependencies::download(cli::Reporter::new(), None, UseManifest::Yes)?;
 
     let perform_codegen = options.codegen;
-    let paths = ProjectPaths::at_current_directory();
-    let root_config = crate::config::root_config(&paths)?;
-    let paths = ProjectPaths::at_current_directory();
+    let root_config = crate::config::root_config()?;
     let telemetry = Box::new(cli::Reporter::new());
     let io = fs::ProjectIO::new();
     let start = Instant::now();
@@ -35,7 +33,7 @@ pub fn main(options: Options) -> Result<Package> {
             manifest.packages,
             telemetry,
             Arc::new(ConsoleWarningEmitter),
-            ProjectPaths::at(current_dir),
+            ProjectPaths::new(current_dir),
             io,
         )
         .compile()?

@@ -12,8 +12,7 @@ use gleam_core::{
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
-    paths::{self, ProjectPaths},
-    Error, Result,
+    paths, Error, Result,
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -30,8 +29,7 @@ use crate::{
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
-    let paths = ProjectPaths::at_current_directory();
-    let config = crate::config::root_config(&paths)?;
+    let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         runtime.handle().clone(),
         Mode::Dev,
@@ -126,7 +124,7 @@ pub fn download<Telem: Telemetry>(
 
     // We do this before acquiring the build lock so that we don't create the
     // build directory if there is no gleam.toml
-    let paths = ProjectPaths::at_current_directory();
+    let paths = crate::project_paths_at_current_directory();
     crate::config::ensure_config_exists(&paths)?;
 
     let lock = BuildLock::new_packages()?;
@@ -137,7 +135,7 @@ pub fn download<Telem: Telemetry>(
     let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed());
 
     // Read the project config
-    let mut config = crate::config::root_config(&paths)?;
+    let mut config = crate::config::root_config()?;
     let project_name = config.name.clone();
 
     // Insert the new packages to add, if it exists

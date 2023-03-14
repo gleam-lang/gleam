@@ -462,8 +462,7 @@ fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<(),
 }
 
 fn print_config() -> Result<()> {
-    let paths = ProjectPaths::at_current_directory();
-    let config = root_config(&paths)?;
+    let config = root_config()?;
     println!("{config:#?}");
     Ok(())
 }
@@ -481,4 +480,9 @@ fn initialise_logger() {
         .with_ansi(enable_colours)
         .without_time()
         .init();
+}
+
+fn project_paths_at_current_directory() -> ProjectPaths {
+    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    ProjectPaths::new(current_dir)
 }

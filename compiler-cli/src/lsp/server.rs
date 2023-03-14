@@ -62,7 +62,7 @@ where
     ) -> Result<Self> {
         // TODO: inject this IO
         let project_root = std::env::current_dir().expect("Project root");
-        let paths = ProjectPaths::at(project_root.clone());
+        let paths = ProjectPaths::new(project_root.clone());
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             feedback: FeedbackBookKeeper::default(),

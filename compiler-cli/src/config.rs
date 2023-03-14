@@ -6,7 +6,9 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-pub fn root_config(paths: &ProjectPaths) -> Result<PackageConfig, Error> {
+pub fn root_config() -> Result<PackageConfig, Error> {
+    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    let paths = ProjectPaths::new(current_dir);
     read(paths.root_config())
 }
 

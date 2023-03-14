@@ -8,9 +8,7 @@ use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     build::{Codegen, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
-    hex,
-    paths::{self, ProjectPaths},
-    Error, Result,
+    hex, paths, Error, Result,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
@@ -31,8 +29,7 @@ pub struct PublishCommand {
 
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
-        let paths = ProjectPaths::at_current_directory();
-        let config = crate::config::root_config(&paths)?;
+        let config = crate::config::root_config()?;
         let Tarball {
             mut compile_result,
             data: package_tarball,

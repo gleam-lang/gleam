@@ -1,9 +1,4 @@
-use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
 
 use gleam_core::{
     build::{Codegen, Mode, Options, Package, ProjectCompiler, Target},

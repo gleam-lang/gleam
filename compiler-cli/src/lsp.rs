@@ -19,7 +19,6 @@ use gleam_core::{
     diagnostic::{Diagnostic, Level},
     language_server::{Feedback, LockGuard, Locker},
     line_numbers::LineNumbers,
-    paths::ProjectPaths,
     Result,
 };
 use itertools::Itertools;
@@ -34,10 +33,10 @@ pub fn main() -> Result<()> {
 
     // Read the project config. If we are running in the context of a Gleam
     // fall back to a non-compiling mode that can only do formatting.
-    let paths = ProjectPaths::at_current_directory();
+    let paths = crate::project_paths_at_current_directory();
     let config = if paths.root_config().exists() {
         tracing::info!("gleam_project_detected");
-        Some(crate::config::root_config(&paths)?)
+        Some(crate::config::root_config()?)
     } else {
         tracing::info!("gleam_project_not_found");
         None

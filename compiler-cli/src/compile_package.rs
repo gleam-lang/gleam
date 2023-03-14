@@ -20,7 +20,7 @@ pub fn command(options: CompilePackage) -> Result<()> {
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
     let warnings = WarningEmitter::new(Arc::new(ConsoleWarningEmitter));
-    let paths = ProjectPaths::at(options.package_directory.clone());
+    let paths = ProjectPaths::new(options.package_directory.clone());
     let config = config::read(paths.root_config())?;
     let target = match options.target {
         Target::Erlang => TargetCodegenConfiguration::Erlang { app_file: None },

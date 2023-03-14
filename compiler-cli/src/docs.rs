@@ -7,8 +7,7 @@ use gleam_core::{
     error::Error,
     hex,
     io::HttpClient as _,
-    paths::{self, ProjectPaths},
-    Result,
+    paths, Result,
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {
@@ -51,8 +50,7 @@ impl ApiKeyCommand for RemoveCommand {
 }
 
 pub fn build() -> Result<()> {
-    let paths = ProjectPaths::at_current_directory();
-    let config = crate::config::root_config(&paths)?;
+    let config = crate::config::root_config()?;
 
     // Reset the build directory so we know the state of the project
     crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;
@@ -107,8 +105,7 @@ pub fn publish() -> Result<()> {
 
 impl PublishCommand {
     pub fn new() -> Result<Self> {
-        let paths = ProjectPaths::at_current_directory();
-        let config = crate::config::root_config(&paths)?;
+        let config = crate::config::root_config()?;
 
         // Reset the build directory so we know the state of the project
         crate::fs::delete_dir(&paths::build_packages(Mode::Prod, config.target))?;

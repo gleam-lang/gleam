@@ -10,18 +10,12 @@ pub struct ProjectPaths {
 }
 
 impl ProjectPaths {
-    pub fn at(root: PathBuf) -> Self {
+    pub fn new(root: PathBuf) -> Self {
         Self { root }
     }
 
-    pub fn at_current_directory() -> Self {
-        // TODO: remove this IO
-        let current_dir = std::env::current_dir().expect("Could not get current directory");
-        Self::at(current_dir)
-    }
-
     pub fn at_filesystem_root() -> Self {
-        Self::at(PathBuf::from("/"))
+        Self::new(PathBuf::from("/"))
     }
 
     pub fn root(&self) -> &Path {
