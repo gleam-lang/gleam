@@ -62,16 +62,19 @@ pub fn command(
     })?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    match built
+    let main_function = match built
         .module_interfaces
         .get(&SmolStr::from(module.to_owned()))
     {
         Some(module_data) => match module_data.get_function(&SmolStr::from("main")) {
             Some(function) => {
-                if function.arity != 0 {
-                    Ok(())
+                if function.arity == 0 {
+                    Ok(function)
                 } else {
-                    Ok(())
+                    Err(Error::MainFunctionHasWrongArity {
+                        module: module.to_owned(),
+                        arity: function.arity,
+                    })
                 }
             }
             None => Err(Error::ModuleDoesNotHaveMainFunction {
@@ -98,8 +101,12 @@ pub fn command(
             _ => run_erlang(&paths, &config.name, &module, arguments),
         },
         Target::JavaScript => match runtime.unwrap_or(config.javascript.runtime) {
-            Runtime::Deno => run_javascript_deno(&paths, &config, &module, arguments),
-            Runtime::NodeJs => run_javascript_node(&paths, &config, &module, arguments),
+            Runtime::Deno => {
+                run_javascript_deno(&paths, &config, &main_function.package, &module, arguments)
+            }
+            Runtime::NodeJs => {
+                run_javascript_node(&paths, &main_function.package, &module, arguments)
+            }
         },
     }?;
 
@@ -142,12 +149,12 @@ fn run_erlang(
 
 fn run_javascript_node(
     paths: &ProjectPaths,
-    config: &PackageConfig,
+    package: &str,
     module: &str,
     arguments: Vec<String>,
 ) -> Result<i32, Error> {
     let mut args = vec![];
-    let entry = write_javascript_entrypoint(paths, &config.name, module)?;
+    let entry = write_javascript_entrypoint(paths, &package, module)?;
 
     args.push(entry);
 
@@ -181,6 +188,7 @@ main();
 fn run_javascript_deno(
     paths: &ProjectPaths,
     config: &PackageConfig,
+    package: &str,
     module: &str,
     arguments: Vec<String>,
 ) -> Result<i32, Error> {
@@ -233,7 +241,7 @@ fn run_javascript_deno(
         );
     }
 
-    let entrypoint = write_javascript_entrypoint(paths, &config.name, module)?;
+    let entrypoint = write_javascript_entrypoint(paths, &package, module)?;
     args.push(entrypoint);
 
     for argument in arguments.into_iter() {
