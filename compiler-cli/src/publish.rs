@@ -163,7 +163,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     }
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
-        compile_result: compile_result,
+        compile_result,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,

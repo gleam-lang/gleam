@@ -32,9 +32,10 @@ pub fn command(
         Some(module_name) => {
             // TODO: Check if this can be replaced with a function that
             // someone already wrote
-            if !module_name.chars().fold(true, |acc, x| {
-                acc && "abcdefghijklmnopqrstuvwxyz/_".contains(x)
-            }) {
+            if !module_name
+                .chars()
+                .all(|x| "abcdefghijklmnopqrstuvwxyz/_".contains(x))
+            {
                 Err(Error::InvalidModuleName {
                     module: module_name.to_owned(),
                 })
@@ -61,7 +62,7 @@ pub fn command(
         target,
     })?;
 
-    // A module can not be run if it does not exist.
+    // A module can not be run if it does not exist or does not have a public main function.
     match compiler
         .get_importable_modules()
         .get(&SmolStr::from(module.to_owned()))
@@ -124,7 +125,7 @@ fn run_erlang(
     }
 
     // gleam modules are seperated by `/`. Erlang modules are seperated by `@`.
-    let module = module.replace("/", "@");
+    let module = module.replace('/', "@");
 
     args.push("-eval".into());
     args.push(format!("{package}@@main:run({module})"));
