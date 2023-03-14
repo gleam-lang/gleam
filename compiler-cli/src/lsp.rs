@@ -10,30 +10,18 @@
 mod protocol_adapter;
 mod server;
 
-use crate::{
-    build_lock::BuildLock, fs, lsp::protocol_adapter::LanguageServerProtocolAdapter,
-    telemetry::NullTelemetry,
-};
+use crate::{build_lock::BuildLock, lsp::protocol_adapter::LanguageServerProtocolAdapter};
 use gleam_core::{
     ast::SrcSpan,
-    build::{self, Module, ProjectCompiler, Target},
-    config::PackageConfig,
+    build::{Mode, NullTelemetry, Target},
     diagnostic::{Diagnostic, Level},
-    io::{CommandExecutor, FileSystemIO, Stdio},
-    language_server::Feedback,
+    language_server::{Feedback, LockGuard, Locker},
     line_numbers::LineNumbers,
-    manifest::Manifest,
-    paths, Error, Result,
+    paths, Result,
 };
-use gleam_core::{build::Mode, warning::VectorWarningEmitterIO};
 use itertools::Itertools;
 use lsp_types::{self as lsp, HoverProviderCapability, Position, Range, Url};
-use std::{
-    any::Any,
-    collections::HashMap,
-    path::{Path, PathBuf},
-    sync::Arc,
-};
+use std::path::{Path, PathBuf};
 
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
@@ -115,16 +103,6 @@ pub fn server_capabilities() -> lsp::ServerCapabilities {
         linked_editing_range_provider: None,
         experimental: None,
     }
-}
-
-#[derive(Debug)]
-pub struct ModuleSourceInformation {
-    /// The path to the source file from within the project root
-    path: String,
-
-    /// Useful for converting from Gleam's byte index offsets to the LSP line
-    /// and column number positions.
-    line_numbers: LineNumbers,
 }
 
 #[cfg(target_os = "windows")]
@@ -288,12 +266,6 @@ fn path_to_uri(path: PathBuf) -> Url {
     Url::parse(&file).expect("path_to_uri URL parse")
 }
 
-pub struct LockGuard(Box<dyn Any>);
-
-pub trait Locker {
-    fn lock_for_build(&self) -> LockGuard;
-}
-
 #[derive(Debug)]
 pub struct LspLocker(BuildLock);
 
@@ -307,126 +279,6 @@ impl LspLocker {
 impl Locker for LspLocker {
     fn lock_for_build(&self) -> LockGuard {
         LockGuard(Box::new(self.0.lock(&NullTelemetry)))
-    }
-}
-
-/// A wrapper around the project compiler which makes it possible to repeatedly
-/// recompile the top level package, reusing the information about the already
-/// compiled dependency packages.
-///
-#[derive(Debug)]
-pub struct LspProjectCompiler<IO, LockerImpl> {
-    project_compiler: ProjectCompiler<IO>,
-
-    /// Whether the dependencies have been compiled previously.
-    dependencies_compiled: bool,
-
-    /// Information on compiled modules.
-    modules: HashMap<String, Module>,
-    sources: HashMap<String, ModuleSourceInformation>,
-
-    /// The storage for the warning emitter.
-    warnings: Arc<VectorWarningEmitterIO>,
-
-    /// A lock to ensure that multiple instances of the LSP don't try and use
-    /// build directory at the same time.
-    locker: LockerImpl,
-}
-
-impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl>
-where
-    IO: CommandExecutor + FileSystemIO + Clone,
-    LockerImpl: Locker,
-{
-    pub fn new(
-        manifest: Manifest,
-        config: PackageConfig,
-        io: IO,
-        locker: LockerImpl,
-    ) -> Result<Self> {
-        let telemetry = NullTelemetry;
-        let target = config.target;
-        let name = config.name.clone();
-        let warnings = Arc::new(VectorWarningEmitterIO::default());
-
-        let options = build::Options {
-            warnings_as_errors: false,
-            mode: build::Mode::Lsp,
-            target: None,
-            codegen: build::Codegen::None,
-        };
-        let mut project_compiler = ProjectCompiler::new(
-            config,
-            options,
-            manifest.packages,
-            Box::new(telemetry),
-            warnings.clone(),
-            io,
-        );
-
-        // TODO: remove the LSP's ability to create subprocesses. Have the
-        // injected IO panic perhaps?
-        //
-        // To avoid the Erlang compiler printing to stdout (and thus
-        // violating LSP which is currently using stdout) we silence it.
-        project_compiler.subprocess_stdio = Stdio::Null;
-
-        // The build caches do not contain all the information we need in the
-        // LSP (e.g. the typed AST) so delete the caches for the top level
-        // package before we run for the first time.
-        // TODO: remove this once the caches have contain all the information
-        {
-            let _guard = locker.lock_for_build();
-            fs::delete_dir(&paths::build_package(Mode::Lsp, target, &name))?;
-        }
-
-        Ok(Self {
-            locker,
-            warnings,
-            project_compiler,
-            modules: HashMap::new(),
-            sources: HashMap::new(),
-            dependencies_compiled: false,
-        })
-    }
-
-    pub fn compile(&mut self) -> Result<Vec<PathBuf>, Error> {
-        // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock_guard = self.locker.lock_for_build();
-
-        if !self.dependencies_compiled {
-            // TODO: store compiled module info
-            self.project_compiler.compile_dependencies()?;
-            self.dependencies_compiled = true;
-        }
-
-        // Save the state prior to compilation of the root package
-        let checkpoint = self.project_compiler.checkpoint();
-
-        // Do that there compilation. We don't use `?` to return early in the
-        // event of an error because we _always_ want to do the restoration of
-        // state afterwards.
-        let result = self.project_compiler.compile_root_package();
-
-        // Restore the state so that later we can compile the root again
-        self.project_compiler.restore(checkpoint);
-
-        // Return any error
-        let package = result?;
-        let mut compiled_modules = Vec::with_capacity(package.modules.len());
-
-        // Store the compiled module information
-        for module in package.modules {
-            let pathbuf = module.input_path.canonicalize().expect("Canonicalize");
-            let path = pathbuf.as_os_str().to_string_lossy().to_string();
-            let line_numbers = LineNumbers::new(&module.code);
-            let source = ModuleSourceInformation { path, line_numbers };
-            _ = self.sources.insert(module.name.to_string(), source);
-            _ = self.modules.insert(module.name.to_string(), module);
-            compiled_modules.push(pathbuf);
-        }
-
-        Ok(compiled_modules)
     }
 }
 
