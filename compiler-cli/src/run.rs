@@ -6,7 +6,7 @@ use gleam_core::{
     error::Error,
     io::{CommandExecutor, Stdio},
     paths,
-    type_::{ValueConstructor, ValueConstructorVariant},
+    type_::ValueConstructor,
 };
 use smol_str::SmolStr;
 
@@ -66,17 +66,11 @@ pub fn command(
         .get(&SmolStr::from(module.to_owned()))
     {
         Some(module_data) => {
+            println!("{:?}", module_data);
             match module_data.values.get("main") {
                 Some(ValueConstructor {
-                    public: true,
-                    variant:
-                        ValueConstructorVariant::ModuleFn {
-                            name: _,
-                            module: _,
-                            arity: _,
-                            field_map: _,
-                            location: _,
-                        },
+                    public: _,
+                    variant: _,
                     type_: _,
                 }) => Ok(()),
                 _ => Err(Error::ModuleDoesNotHaveMainFunction {
