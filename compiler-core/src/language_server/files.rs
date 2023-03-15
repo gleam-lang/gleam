@@ -162,20 +162,19 @@ where
     }
 }
 
-// Proxy to `ProjectIO` - not applicable for mem-cache
 impl<IO> CommandExecutor for FileSystemProxy<IO>
 where
     IO: CommandExecutor,
 {
     fn exec(
         &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Path>,
-        stdio: Stdio,
+        _program: &str,
+        _args: &[String],
+        _env: &[(&str, String)],
+        _cwd: Option<&Path>,
+        _stdio: Stdio,
     ) -> Result<i32> {
-        self.io.exec(program, args, env, cwd, stdio)
+        panic!("Command execution is not supported in LSP")
     }
 }
 
