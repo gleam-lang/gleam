@@ -28,16 +28,12 @@ pub fn command(
 ) -> Result<(), Error> {
     // Validate the module to make sure it is a gleam module path
     match &module {
-        Some(module_name) => {
-            if !is_gleam_module(&module_name) {
-                Err(Error::InvalidModuleName {
-                    module: module_name.to_owned(),
-                })
-            } else {
-                Ok(())
-            }
+        Some(module_name) if !is_gleam_module(&module_name) => {
+            Err(Error::InvalidModuleName {
+                module: module_name.to_owned(),
+            })
         }
-        None => Ok(()),
+        _ => Ok(()),
     }?;
 
     let paths = crate::project_paths_at_current_directory();
