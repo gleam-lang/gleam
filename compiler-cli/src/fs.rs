@@ -93,15 +93,6 @@ impl FileSystemReader for ProjectIO {
         })
     }
 
-    fn current_dir(&self) -> Result<PathBuf, Error> {
-        std::env::current_dir().map_err(|e| Error::FileIo {
-            action: FileIoAction::Read,
-            kind: FileKind::Directory,
-            path: PathBuf::from("."),
-            err: Some(e.to_string()),
-        })
-    }
-
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
         path.metadata()
             .map(|m| m.modified().unwrap_or_else(|_| SystemTime::now()))

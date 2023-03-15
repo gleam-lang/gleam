@@ -310,12 +310,6 @@ where
         let build_dir = self.paths.build_directory_for_target(mode, target);
         let project_dir = self.paths.build_packages_package(name);
         let mix_build_dir = project_dir.join("_build").join(mix_target);
-        // Absolute build path is needed for mix to make accurate symlinks
-        let mix_build_path = self
-            .io
-            .current_dir()
-            .expect("Project root")
-            .join(&mix_build_dir);
         let mix_build_lib_dir = mix_build_dir.join("lib");
         let up = paths::unnest(&project_dir);
         let mix_path = |path: &Path| up.join(path).to_str().unwrap_or_default().to_string();
@@ -341,7 +335,7 @@ where
         }
 
         let env = [
-            ("MIX_BUILD_PATH", mix_path(&mix_build_path)),
+            ("MIX_BUILD_PATH", mix_path(&mix_build_dir)),
             ("MIX_ENV", mix_target.into()),
             ("MIX_QUIET", "1".into()),
             ("TERM", "dumb".into()),

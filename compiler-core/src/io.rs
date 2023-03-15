@@ -165,7 +165,6 @@ pub trait FileSystemReader {
     fn reader(&self, path: &Path) -> Result<WrappedReader, Error>;
     fn is_file(&self, path: &Path) -> bool;
     fn is_directory(&self, path: &Path) -> bool;
-    fn current_dir(&self) -> Result<PathBuf, Error>;
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error>;
 }
 
