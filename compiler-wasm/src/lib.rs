@@ -182,7 +182,7 @@ mod test {
 
     fn source(source: &str) -> HashMap<String, String> {
         let mut source_files = HashMap::new();
-        source_files.insert("./src/main.gleam".into(), source.to_string());
+        source_files.insert("/src/main.gleam".into(), source.to_string());
         source_files
     }
 
@@ -206,7 +206,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/src/some_library.gleam".into(),
+            "/build/packages/some_library/src/some_library.gleam".into(),
             r#"
             pub fn function(string: String) -> Nil {
                 Nil
@@ -216,7 +216,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/gleam.toml".into(),
+            "/build/packages/some_library/gleam.toml".into(),
             "name = \"some_library\"".into(),
         );
 
@@ -228,7 +228,7 @@ mod test {
         .unwrap();
 
         assert_eq!(
-            result.get("build/dev/javascript/gleam-wasm/main.mjs"),
+            result.get("/build/dev/javascript/gleam-wasm/main.mjs"),
             Some(&String::from("import * as $some_library from \"../some_library/some_library.mjs\";\n\nexport function main() {\n  return $some_library.function$(\"Hello, world!\");\n}\n"))
         );
     }
@@ -246,7 +246,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/src/some_library.gleam".into(),
+            "/build/packages/some_library/src/some_library.gleam".into(),
             r#"
             pub fn function(string: String) -> Nil {
                 Nil
@@ -256,7 +256,7 @@ mod test {
         );
 
         source_files.insert(
-            "build/packages/some_library/gleam.toml".into(),
+            "/build/packages/some_library/gleam.toml".into(),
             "name = \"some_library\"".into(),
         );
 
@@ -269,7 +269,7 @@ mod test {
         .unwrap();
 
         assert_eq!(
-            result.get("build/dev/erlang/gleam-wasm/_gleam_artefacts/main.erl"),
+            result.get("/build/dev/erlang/gleam-wasm/_gleam_artefacts/main.erl"),
             Some(&String::from("-module(main).\n-compile([no_auto_import, nowarn_unused_vars]).\n\n-export([main/0]).\n\n-spec main() -> nil.\nmain() ->\n    some_library:function(<<\"Hello, world!\"/utf8>>).\n"))
         );
     }
