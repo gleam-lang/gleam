@@ -7,6 +7,7 @@ use gleam_core::{
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
 };
+use lazy_static::lazy_static;
 use smol_str::SmolStr;
 
 use crate::fs::ProjectIO;
@@ -31,10 +32,7 @@ pub fn command(
         Some(module_name) => {
             // TODO: Check if this can be replaced with a function that
             // someone already wrote
-            if !module_name
-                .chars()
-                .all(|x| "abcdefghijklmnopqrstuvwxyz/_".contains(x))
-            {
+            if !is_gleam_module(&module_name) {
                 Err(Error::InvalidModuleName {
                     module: module_name.to_owned(),
                 })
@@ -111,6 +109,20 @@ pub fn command(
     }?;
 
     std::process::exit(status);
+}
+
+fn is_gleam_module(module: &str) -> bool {
+    use regex::Regex;
+    lazy_static! {
+        static ref RE: Regex = Regex::new(&format!(
+            "^({module}{slash})*{module}$",
+            module = "[a-z][_a-z0-9]*",
+            slash = "/",
+        ))
+        .expect("is_gleam_module() RE regex");
+    }
+
+    RE.is_match(module)
 }
 
 fn run_erlang(
