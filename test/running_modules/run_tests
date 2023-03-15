@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+from __future__ import annotations
+
+import subprocess
+
+
+targets = [
+    ["--target", "erlang"],
+    ["--target", "javascript", "--runtime", "node"],
+    ["--target", "javascript", "--runtime", "deno"],
+]
+
+
+def main():
+    any_failed = not all([
+        test_command_output(
+            ["cargo", "run", "--", "run", "-m", "running_modules"],
+            expected="top level module",
+        ),
+        test_command_output(
+            ["cargo", "run", "--", "run", "-m", "running_modules/sub_module"],
+            expected="sub module",
+        ),
+    ])
+    raise SystemExit(any_failed)
+
+
+def test_command_output(args: list[str], *, expected: str) -> bool:
+    for target in targets:
+        args_copy = args.copy()
+        args_copy.extend(target)
+        print("Testing command ", args_copy, "...", sep="")
+        output = subprocess.run(args_copy, capture_output=True)
+
+        if expected not in output.stdout.decode("utf-8"):
+            print("Failed when running command", args)
+            print("with stdout:", output.stdout.decode("utf-8"))
+            return False
+
+        print("Passed")
+    return True
+
+
+if __name__ == "__main__":
+    main()
