@@ -3,15 +3,18 @@ mod engine;
 mod feedback;
 mod files;
 mod progress;
+mod protocol_adapter;
 
+use lsp_types::{Position, Range};
 use std::any::Any;
 
+// TODO: remove all these re-exports
 pub use compiler::LspProjectCompiler;
 pub use engine::{LanguageServerEngine, Response};
 pub use feedback::{Feedback, FeedbackBookKeeper};
 pub use files::FileSystemProxy;
-use lsp_types::{Position, Range};
 pub use progress::ProgressReporter;
+pub use protocol_adapter::LanguageServerProtocolAdapter;
 
 use crate::{ast::SrcSpan, line_numbers::LineNumbers};
 

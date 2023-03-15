@@ -1,4 +1,4 @@
-use gleam_core::{
+use crate::{
     build::Target,
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
@@ -12,6 +12,7 @@ use gleam_core::{
     paths::ProjectPaths,
     Result,
 };
+use debug_ignore::DebugIgnore;
 use lsp::{
     notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Url,
 };
@@ -33,9 +34,10 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Sending diagnostics and messages to the client.
 /// - Performing the initialisation handshake.
 ///
+#[derive(Debug)]
 pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader, LockerMaker> {
     initialise_params: InitializeParams,
-    connection: &'a lsp_server::Connection,
+    connection: DebugIgnore<&'a lsp_server::Connection>,
     server: LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>,
 }
 
@@ -61,7 +63,7 @@ where
         let language_server =
             LanguageServerEngine::new(config, reporter, deps, io, make_locker, paths)?;
         Ok(Self {
-            connection,
+            connection: connection.into(),
             initialise_params,
             server: language_server,
         })

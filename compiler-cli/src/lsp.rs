@@ -7,15 +7,10 @@
 // root if it does not exist. This will require the compiler to be modified so
 // that it can run on projects where the root is not the cwd.
 
-mod protocol_adapter;
-
-use crate::{
-    build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO,
-    lsp::protocol_adapter::LanguageServerProtocolAdapter,
-};
+use crate::{build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO};
 use gleam_core::{
     build::{Mode, NullTelemetry, Target},
-    language_server::{LockGuard, Locker},
+    language_server::{LanguageServerProtocolAdapter, LockGuard, Locker},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
