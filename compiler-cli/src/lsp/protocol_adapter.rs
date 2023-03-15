@@ -3,7 +3,7 @@ use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{Feedback, ProgressReporter},
+    language_server::{Feedback, FileSystemProxy, ProgressReporter},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -46,6 +46,8 @@ where
     ) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
+        // TODO: move this wrapping to the top level once that is in core.
+        let io = FileSystemProxy::new(io);
         let language_server = LanguageServer::new(config, reporter, deps, io)?;
         Ok(Self {
             connection,
