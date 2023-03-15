@@ -65,7 +65,7 @@ where
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
         dependencies_downloader: DepsDownloader,
-        io: IO,
+        fs_proxy: FileSystemProxy<IO>,
     ) -> Result<Self> {
         // TODO: inject this IO
         let project_root = std::env::current_dir().expect("Project root");
@@ -74,9 +74,7 @@ where
             modules_compiled_since_last_feedback: vec![],
             dependencies_downloader,
             feedback: FeedbackBookKeeper::default(),
-            // TODO: move the creation of the proxy to the top level so it is
-            // shared between all server instances
-            fs_proxy: FileSystemProxy::new(io),
+            fs_proxy,
             compiler: None,
             progress_reporter,
             project_root,
