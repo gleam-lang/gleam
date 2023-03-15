@@ -50,32 +50,27 @@ pub struct Options {
 }
 
 #[derive(Debug)]
-pub struct Built<IO> {
+pub struct Built {
     pub root_package: Package,
-    compiler: ProjectCompiler<IO>,
+    module_interfaces: im::HashMap<SmolStr, type_::Module>,
 }
 
-pub enum ModuleFunctionResult<'a> {
-    Found(ModuleFunction<'a>),
-    ModuleNotFound,
-    FunctionNotFound,
-}
-
-impl<IO> Built<IO>
-where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
-{
+impl Built {
     pub fn get_module_function(
         &self,
         module: &SmolStr,
         function: &SmolStr,
-    ) -> ModuleFunctionResult {
-        match self.compiler.get_importable_modules().get(module) {
-            Some(module) => match module.get_function(function) {
-                Some(module_function) => ModuleFunctionResult::Found(module_function),
-                None => ModuleFunctionResult::FunctionNotFound,
+    ) -> Result<ModuleFunction, Error> {
+        match self.module_interfaces.get(module) {
+            Some(module_data) => match module_data.get_function(function) {
+                Some(module_function) => Ok(module_function),
+                None => Err(Error::ModuleDoesNotHaveMainFunction {
+                    module: module.to_string(),
+                }),
             },
-            None => ModuleFunctionResult::ModuleNotFound,
+            None => Err(Error::ModuleDoesNotExist {
+                module: module.to_string(),
+            }),
         }
     }
 }
@@ -161,7 +156,7 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(mut self) -> Result<Built<IO>> {
+    pub fn compile(mut self) -> Result<Built> {
         self.check_gleam_version()?;
         self.compile_dependencies()?;
         self.warnings.reset_count();
@@ -181,7 +176,7 @@ where
 
         Ok(Built {
             root_package,
-            compiler: self,
+            module_interfaces: self.importable_modules,
         })
     }
 

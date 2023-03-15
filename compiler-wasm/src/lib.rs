@@ -88,7 +88,7 @@ fn compile_project(
     wfs: &mut WasmFileSystem,
     target: Target,
     compile_options: &CompileOptions,
-) -> Result<Built<WasmFileSystem>, Error> {
+) -> Result<Built, Error> {
     let packages: Vec<ManifestPackage> = compile_options
         .dependencies
         .iter()

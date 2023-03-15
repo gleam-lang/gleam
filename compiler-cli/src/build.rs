@@ -10,10 +10,10 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter, ProjectIO},
+    fs::{self, ConsoleWarningEmitter},
 };
 
-pub fn main(options: Options) -> Result<Built<ProjectIO>> {
+pub fn main(options: Options) -> Result<Built> {
     let paths = crate::project_paths_at_current_directory();
     let manifest =
         crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
