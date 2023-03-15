@@ -462,7 +462,7 @@ Module names can only contain lowercase letters, underscore, and forward slash a
                 text: format!("`{module}:main` should have an arity of 0 to be run but its arity is {arity}.").into(),
                 level: Level::Error,
                 location: None,
-                hint: Some(format!("Change the function signature of main to `pub fn main() {{}}`").into()),
+                hint: Some("Change the function signature of main to `pub fn main() {}`".into()),
             },
 
             Error::ProjectRootAlreadyExist { path } => Diagnostic {
