@@ -392,6 +392,7 @@ where
     }
 }
 
+// TODO: Fix this rubbish.
 #[cfg(target_os = "windows")]
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
     use itertools::Itertools;
