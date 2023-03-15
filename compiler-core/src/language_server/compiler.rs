@@ -77,9 +77,6 @@ where
             io,
         );
 
-        // TODO: remove the LSP's ability to create subprocesses. Have the
-        // injected IO panic perhaps?
-        //
         // To avoid the Erlang compiler printing to stdout (and thus
         // violating LSP which is currently using stdout) we silence it.
         project_compiler.subprocess_stdio = Stdio::Null;
