@@ -1,11 +1,12 @@
 use gleam_core::{
     build::{Codegen, Mode, Options, Target},
     error::Error,
-    paths,
 };
 use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
+    let paths = crate::project_paths_at_current_directory();
+
     // Build project
     let _ = crate::build::main(Options {
         warnings_as_errors: false,
@@ -24,7 +25,7 @@ pub fn command() -> Result<(), Error> {
     let _ = command.arg("-stdlib").arg("shell_strings").arg("false");
 
     // Specify locations of .beam files
-    let packages = paths::build_packages(Mode::Dev, Target::Erlang);
+    let packages = paths.build_directory_for_target(Mode::Dev, Target::Erlang);
     for entry in crate::fs::read_dir(packages)?.filter_map(Result::ok) {
         let _ = command.arg("-pa").arg(entry.path().join("ebin"));
     }

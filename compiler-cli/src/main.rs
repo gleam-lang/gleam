@@ -69,7 +69,6 @@ mod panic;
 mod publish;
 mod run;
 mod shell;
-mod telemetry;
 
 use config::root_config;
 use dependencies::UseManifest;
@@ -81,6 +80,7 @@ pub use gleam_core::{
 use gleam_core::{
     build::{Codegen, Mode, Options, Runtime, Target},
     hex::RetirementReason,
+    paths::ProjectPaths,
 };
 use hex::ApiKeyCommand as _;
 
@@ -380,9 +380,7 @@ fn main() {
 
         Command::Deps(Dependencies::List) => dependencies::list(),
 
-        Command::Deps(Dependencies::Download) => {
-            dependencies::download(cli::Reporter::new(), None, UseManifest::Yes).map(|_| ())
-        }
+        Command::Deps(Dependencies::Download) => download_dependencies(),
 
         Command::Deps(Dependencies::Update) => dependencies::update(),
 
@@ -473,7 +471,8 @@ fn print_config() -> Result<()> {
 }
 
 fn clean() -> Result<()> {
-    fs::delete_dir(&gleam_core::paths::build())
+    let paths = project_paths_at_current_directory();
+    fs::delete_dir(&paths.build_directory())
 }
 
 fn initialise_logger() {
@@ -485,4 +484,15 @@ fn initialise_logger() {
         .with_ansi(enable_colours)
         .without_time()
         .init();
+}
+
+fn project_paths_at_current_directory() -> ProjectPaths {
+    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    ProjectPaths::new(current_dir)
+}
+
+fn download_dependencies() -> Result<(), Error> {
+    let paths = project_paths_at_current_directory();
+    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
+    Ok(())
 }

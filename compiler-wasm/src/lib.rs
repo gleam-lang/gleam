@@ -5,7 +5,7 @@ use gleam_core::{
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
-    paths,
+    paths::ProjectPaths,
     warning::NullWarningEmitterIO,
     Error,
 };
@@ -47,6 +47,7 @@ impl Default for CompileOptions {
 /// Compile a set of `source_files` into a different set of source files for the
 /// `target` language.
 pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, String> {
+    let paths = ProjectPaths::at_filesystem_root();
     let mut wfs = WasmFileSystem::new();
 
     for (path, source) in options.source_files.iter() {
@@ -56,7 +57,7 @@ pub fn compile_(options: CompileOptions) -> Result<HashMap<String, String>, Stri
     let _package =
         compile_project(&mut wfs, options.target, &options).map_err(|e| e.pretty_string())?;
 
-    Ok(gather_compiled_files(&wfs, options.target).unwrap())
+    Ok(gather_compiled_files(&paths, &wfs, options.target).unwrap())
 }
 
 fn write_source_file<P: AsRef<Path>>(source: &str, path: P, wfs: &mut WasmFileSystem) {
@@ -111,6 +112,7 @@ fn compile_project(
         packages,
         Box::new(LogTelemetry),
         Arc::new(NullWarningEmitterIO),
+        ProjectPaths::at_filesystem_root(),
         wfs.clone(),
     );
 
@@ -118,6 +120,7 @@ fn compile_project(
 }
 
 fn gather_compiled_files(
+    paths: &ProjectPaths,
     wfs: &WasmFileSystem,
     target: Target,
 ) -> Result<HashMap<String, String>, ()> {
@@ -128,7 +131,7 @@ fn gather_compiled_files(
         Target::JavaScript => OsStr::new("mjs"),
     };
 
-    wfs.read_dir(&paths::build())
+    wfs.read_dir(&paths.build_directory())
         .expect("expect the build directory to exist")
         .into_iter()
         .filter_map(|result| result.ok())

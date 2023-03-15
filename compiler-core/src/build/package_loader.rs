@@ -16,7 +16,7 @@ use crate::{
     build::{dep_tree, module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
     config::PackageConfig,
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemIO},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     metadata, type_,
     uid::UniqueIdGenerator,
     Error, Result,
@@ -59,7 +59,7 @@ pub struct PackageLoader<'a, IO> {
 
 impl<'a, IO> PackageLoader<'a, IO>
 where
-    IO: FileSystemIO + CommandExecutor + Clone,
+    IO: FileSystemWriter + FileSystemReader + CommandExecutor + Clone,
 {
     pub(crate) fn new(
         io: IO,

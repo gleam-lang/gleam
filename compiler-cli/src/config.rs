@@ -3,11 +3,13 @@ use std::path::PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
-    paths,
+    paths::ProjectPaths,
 };
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    read(paths::root_config())
+    let current_dir = std::env::current_dir().expect("Could not get current directory");
+    let paths = ProjectPaths::new(current_dir);
+    read(paths.root_config())
 }
 
 pub fn read(config_path: PathBuf) -> Result<PackageConfig, Error> {
@@ -20,8 +22,8 @@ pub fn read(config_path: PathBuf) -> Result<PackageConfig, Error> {
     })
 }
 
-pub fn ensure_config_exists() -> Result<(), Error> {
-    let path = paths::root_config();
+pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
+    let path = paths.root_config();
     if !path.is_file() {
         return Err(Error::FileIo {
             action: FileIoAction::Read,

@@ -13,6 +13,7 @@ use crate::{
     format,
     io::Content,
     io::OutputFile,
+    paths::ProjectPaths,
     pretty,
 };
 use askama::Template;
@@ -25,6 +26,7 @@ const MAX_COLUMNS: isize = 65;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn generate_html(
+    paths: &ProjectPaths,
     config: &PackageConfig,
     analysed: &[Module],
     docs_pages: &[DocsPage],
@@ -128,7 +130,7 @@ pub fn generate_html(
         let unnest = page_unnest(&module.name);
 
         // Read module src & create line number lookup structure
-        let source_links = SourceLinker::new(config, module);
+        let source_links = SourceLinker::new(paths, config, module);
 
         let documentation_content = module.ast.documentation.iter().join("\n");
         let rendered_documentation = render_markdown(&documentation_content.clone());

@@ -1,13 +1,12 @@
-use super::{
-    convert_response, diagnostic_to_lsp, feedback::Feedback, path_to_uri,
-    progress::ProgressReporter, server::LanguageServer,
-};
+use super::{convert_response, diagnostic_to_lsp, path_to_uri, server::LanguageServer};
 use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    language_server::{Feedback, ProgressReporter},
     Result,
 };
-use lsp::{notification::DidOpenTextDocument, request::GotoDefinition};
+use lsp::{notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability};
 use lsp_types::InitializeParams;
 use lsp_types::{
     self as lsp,
@@ -26,20 +25,24 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Sending diagnostics and messages to the client.
 /// - Performing the initialisation handshake.
 ///
-pub struct LanguageServerProtocolAdapter<'a> {
+pub struct LanguageServerProtocolAdapter<'a, IO> {
     initialise_params: InitializeParams,
     connection: &'a lsp_server::Connection,
-    server: LanguageServer<'a>,
+    server: LanguageServer<'a, IO>,
 }
 
-impl<'a> LanguageServerProtocolAdapter<'a> {
+impl<'a, IO> LanguageServerProtocolAdapter<'a, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+{
     pub fn new(
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
+        io: IO,
     ) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
-        let language_server = LanguageServer::new(config, reporter)?;
+        let language_server = LanguageServer::new(config, reporter, io)?;
         Ok(Self {
             connection,
             initialise_params,
@@ -259,8 +262,58 @@ impl<'a> LanguageServerProtocolAdapter<'a> {
 }
 
 fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializeParams {
+    let server_capabilities = lsp::ServerCapabilities {
+        text_document_sync: Some(lsp::TextDocumentSyncCapability::Options(
+            lsp::TextDocumentSyncOptions {
+                open_close: Some(true),
+                change: Some(lsp::TextDocumentSyncKind::FULL),
+                will_save: None,
+                will_save_wait_until: None,
+                save: Some(lsp::TextDocumentSyncSaveOptions::SaveOptions(
+                    lsp::SaveOptions {
+                        include_text: Some(false),
+                    },
+                )),
+            },
+        )),
+        selection_range_provider: None,
+        hover_provider: Some(HoverProviderCapability::Simple(true)),
+        completion_provider: Some(lsp::CompletionOptions {
+            resolve_provider: None,
+            trigger_characters: Some(vec![".".into(), " ".into()]),
+            all_commit_characters: None,
+            work_done_progress_options: lsp::WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        }),
+        signature_help_provider: None,
+        definition_provider: Some(lsp::OneOf::Left(true)),
+        type_definition_provider: None,
+        implementation_provider: None,
+        references_provider: None,
+        document_highlight_provider: None,
+        document_symbol_provider: None,
+        workspace_symbol_provider: None,
+        code_action_provider: None,
+        code_lens_provider: None,
+        document_formatting_provider: Some(lsp::OneOf::Left(true)),
+        document_range_formatting_provider: None,
+        document_on_type_formatting_provider: None,
+        rename_provider: None,
+        document_link_provider: None,
+        color_provider: None,
+        folding_range_provider: None,
+        declaration_provider: None,
+        execute_command_provider: None,
+        workspace: None,
+        call_hierarchy_provider: None,
+        semantic_tokens_provider: None,
+        moniker_provider: None,
+        linked_editing_range_provider: None,
+        experimental: None,
+    };
     let server_capabilities_json =
-        serde_json::to_value(super::server_capabilities()).expect("server_capabilities_serde");
+        serde_json::to_value(server_capabilities).expect("server_capabilities_serde");
     let initialise_params_json = connection
         .initialize(server_capabilities_json)
         .expect("LSP initialize");

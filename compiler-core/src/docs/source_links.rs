@@ -3,7 +3,7 @@ use crate::{
     build,
     config::{PackageConfig, Repository},
     line_numbers::LineNumbers,
-    paths,
+    paths::ProjectPaths,
 };
 use std::path::{Component, Path};
 
@@ -13,8 +13,14 @@ pub struct SourceLinker {
 }
 
 impl SourceLinker {
-    pub fn new(project_config: &PackageConfig, module: &build::Module) -> Self {
-        let path_in_repo = get_path_in_repo(&module.name);
+    pub fn new(
+        paths: &ProjectPaths,
+        project_config: &PackageConfig,
+        module: &build::Module,
+    ) -> Self {
+        let mut path = paths.src_directory().join(module.name.as_str());
+        let _ = path.set_extension("gleam");
+        let path_in_repo = to_url_path(&path).unwrap_or_default();
 
         let url_pattern = match &project_config.repository {
             Repository::GitHub { user, repo } => Some((
@@ -57,12 +63,6 @@ impl SourceLinker {
             None => "".into(),
         }
     }
-}
-
-fn get_path_in_repo(name: &str) -> String {
-    let mut path = paths::src().join(name);
-    let _ = path.set_extension("gleam");
-    to_url_path(&path).unwrap_or_default()
 }
 
 fn to_url_path(path: &Path) -> Option<String> {

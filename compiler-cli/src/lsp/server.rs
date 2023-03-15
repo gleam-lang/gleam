@@ -1,16 +1,19 @@
-use super::feedback::{Feedback, FeedbackBookKeeper};
-use super::progress::ProgressReporter;
-use super::{src_span_to_lsp_range, uri_to_module_name, LspProjectCompiler};
-use crate::fs::ProjectIO;
-use gleam_core::Warning;
-use gleam_core::{ast::Import, io::FileSystemReader, language_server::FileSystemProxy};
+use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker};
+use crate::dependencies::UseManifest;
 use gleam_core::{
-    ast::Statement,
-    build::{Located, Module},
+    ast::{Import, Statement},
+    build::{Located, Module, NullTelemetry},
     config::PackageConfig,
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
     line_numbers::LineNumbers,
+    paths::ProjectPaths,
     type_::pretty::Printer,
     Error, Result,
+};
+use gleam_core::{
+    language_server::{Feedback, FeedbackBookKeeper},
+    Warning,
 };
 use lsp::DidOpenTextDocumentParams;
 use lsp_types::{
@@ -25,17 +28,18 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServer<'a> {
+pub struct LanguageServer<'a, IO> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
+    paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy<ProjectIO>>>,
+    compiler: Option<LspProjectCompiler<FileSystemProxy<IO>, LspLocker>>,
 
-    fs_proxy: FileSystemProxy<ProjectIO>,
+    fs_proxy: FileSystemProxy<IO>,
 
     config: Option<PackageConfig>,
 
@@ -47,20 +51,29 @@ pub struct LanguageServer<'a> {
     progress_reporter: ProgressReporter<'a>,
 }
 
-impl<'a> LanguageServer<'a> {
+impl<'a, IO> LanguageServer<'a, IO>
+where
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+{
     pub fn new(
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
+        io: IO,
     ) -> Result<Self> {
+        // TODO: inject this IO
         let project_root = std::env::current_dir().expect("Project root");
+        let paths = ProjectPaths::new(project_root.clone());
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             feedback: FeedbackBookKeeper::default(),
-            fs_proxy: FileSystemProxy::new(ProjectIO::new()),
+            // TODO: move the creation of the proxy to the top level so it is
+            // shared between all server instances
+            fs_proxy: FileSystemProxy::new(io),
             compiler: None,
             progress_reporter,
             project_root,
             config,
+            paths,
         };
         language_server.create_new_compiler()?;
         Ok(language_server)
@@ -72,12 +85,12 @@ impl<'a> LanguageServer<'a> {
 
     /// Compile the project if we are in one. Otherwise do nothing.
     fn compile(&mut self) -> Result<(), Error> {
-        self.progress_reporter.started();
+        self.progress_reporter.compilation_started();
         let result = match self.compiler.as_mut() {
             Some(compiler) => compiler.compile(),
             None => Ok(vec![]),
         };
-        self.progress_reporter.finished();
+        self.progress_reporter.compilation_finished();
 
         let modules = result?;
         self.modules_compiled_since_last_feedback
@@ -88,7 +101,7 @@ impl<'a> LanguageServer<'a> {
 
     fn take_warnings(&mut self) -> Vec<Warning> {
         if let Some(compiler) = self.compiler.as_mut() {
-            compiler.warnings.take()
+            compiler.take_warnings()
         } else {
             vec![]
         }
@@ -96,7 +109,24 @@ impl<'a> LanguageServer<'a> {
 
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let compiler = LspProjectCompiler::new(config.clone(), self.fs_proxy.clone())?;
+            let locker = LspLocker::new(&self.paths, config.target)?;
+
+            // Download dependencies to ensure they are up-to-date for this new
+            // configuration and new instance of the compiler
+            self.progress_reporter.dependency_downloading_started();
+            // TODO: Inject this IO
+            let manifest =
+                crate::dependencies::download(&self.paths, NullTelemetry, None, UseManifest::Yes);
+            self.progress_reporter.dependency_downloading_finished();
+            let manifest = manifest?;
+
+            let compiler = LspProjectCompiler::new(
+                manifest,
+                config.clone(),
+                self.paths.clone(),
+                self.fs_proxy.clone(),
+                locker,
+            )?;
             self.compiler = Some(compiler);
         }
         Ok(())
@@ -185,7 +215,7 @@ impl<'a> LanguageServer<'a> {
                     let module = match this
                         .compiler
                         .as_ref()
-                        .and_then(|compiler| compiler.sources.get(name))
+                        .and_then(|compiler| compiler.get_source(name))
                     {
                         Some(module) => module,
                         // TODO: support goto definition for functions defined in
