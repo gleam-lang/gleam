@@ -26,8 +26,6 @@ pub struct Response<T> {
 }
 
 pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
-    /// A cached copy of the absolute path of the project root
-    project_root: PathBuf,
     paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
@@ -67,15 +65,12 @@ where
         dependencies_downloader: DepsDownloader,
         fs_proxy: FileSystemProxy<IO>,
         make_locker: LockerMaker,
+        paths: ProjectPaths,
     ) -> Result<Self> {
-        // TODO: inject this IO
-        let project_root = std::env::current_dir().expect("Project root");
-        let paths = ProjectPaths::new(project_root.clone());
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             dependencies_downloader,
             progress_reporter,
-            project_root,
             make_locker,
             fs_proxy,
             feedback: FeedbackBookKeeper::default(),
@@ -389,7 +384,7 @@ where
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
         self.compiler.as_ref().and_then(|compiler| {
             let module_name =
-                uri_to_module_name(uri, &self.project_root).expect("uri to module name");
+                uri_to_module_name(uri, &self.paths.root()).expect("uri to module name");
             compiler.modules.get(&module_name)
         })
     }

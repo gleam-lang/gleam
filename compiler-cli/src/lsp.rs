@@ -53,6 +53,7 @@ pub fn main() -> Result<()> {
         &connection,
         config,
         dependencies_downloader,
+        paths,
         io,
         make_locker,
     )?
