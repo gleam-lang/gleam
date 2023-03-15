@@ -28,7 +28,7 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServer<'a, IO, DepsDownloader> {
+pub struct LanguageServerEngine<'a, IO, DepsDownloader> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
     paths: ProjectPaths,
@@ -56,7 +56,7 @@ pub struct LanguageServer<'a, IO, DepsDownloader> {
     dependencies_downloader: DepsDownloader,
 }
 
-impl<'a, IO, DepsDownloader> LanguageServer<'a, IO, DepsDownloader>
+impl<'a, IO, DepsDownloader> LanguageServerEngine<'a, IO, DepsDownloader>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
     DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,

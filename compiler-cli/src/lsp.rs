@@ -7,8 +7,8 @@
 // root if it does not exist. This will require the compiler to be modified so
 // that it can run on projects where the root is not the cwd.
 
+mod engine;
 mod protocol_adapter;
-mod server;
 
 use crate::{
     build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO,
@@ -143,7 +143,7 @@ fn uri_to_module_name_test() {
     assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
-fn convert_response<T>(result: server::Response<T>) -> (serde_json::Value, Feedback)
+fn convert_response<T>(result: engine::Response<T>) -> (serde_json::Value, Feedback)
 where
     T: serde::Serialize,
 {
