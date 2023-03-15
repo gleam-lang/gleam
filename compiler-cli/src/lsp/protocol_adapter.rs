@@ -1,4 +1,4 @@
-use super::{convert_response, diagnostic_to_lsp, path_to_uri, server::LanguageServer};
+use super::{convert_response, diagnostic_to_lsp, engine::LanguageServerEngine, path_to_uri};
 use gleam_core::{
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
@@ -30,7 +30,7 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader> {
     initialise_params: InitializeParams,
     connection: &'a lsp_server::Connection,
-    server: LanguageServer<'a, IO, DepsDownloader>,
+    server: LanguageServerEngine<'a, IO, DepsDownloader>,
 }
 
 impl<'a, IO, DepsDownloader> LanguageServerProtocolAdapter<'a, IO, DepsDownloader>
@@ -48,7 +48,7 @@ where
         let reporter = ProgressReporter::new(connection, &initialise_params);
         // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let language_server = LanguageServer::new(config, reporter, deps, io)?;
+        let language_server = LanguageServerEngine::new(config, reporter, deps, io)?;
         Ok(Self {
             connection,
             initialise_params,
