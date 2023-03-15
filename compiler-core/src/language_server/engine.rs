@@ -394,6 +394,7 @@ where
 
 #[cfg(target_os = "windows")]
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    use itertools::Itertools;
     use urlencoding::decode;
 
     let mut uri_path = decode(&*uri.path().replace('/', "\\"))

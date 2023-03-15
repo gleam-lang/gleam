@@ -726,7 +726,6 @@ dependencies = [
  "toml_edit",
  "tracing",
  "tracing-subscriber",
- "urlencoding",
  "walkdir",
 ]
 
@@ -774,6 +773,7 @@ dependencies = [
  "thiserror",
  "toml",
  "tracing",
+ "urlencoding",
  "vec1",
  "xxhash-rust",
 ]
