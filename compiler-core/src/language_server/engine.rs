@@ -1,5 +1,5 @@
-use gleam_core::{
-    ast::{Import, SrcSpan, Statement},
+use crate::{
+    ast::{Import, Statement},
     build::{Located, Module, Target},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -19,12 +19,15 @@ use lsp_types::{
 };
 use std::path::{Path, PathBuf};
 
+use super::src_span_to_lsp_range;
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
     pub payload: Option<T>,
     pub feedback: Feedback,
 }
 
+#[derive(Debug)]
 pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
     paths: ProjectPaths,
 
@@ -117,7 +120,6 @@ where
             // Download dependencies to ensure they are up-to-date for this new
             // configuration and new instance of the compiler
             self.progress_reporter.dependency_downloading_started();
-            // TODO: Inject this IO
             let manifest = (self.dependencies_downloader)(&self.paths);
             self.progress_reporter.dependency_downloading_finished();
             let manifest = manifest?;
@@ -300,7 +302,7 @@ where
             let mut new_text = String::new();
 
             let src = this.fs_proxy.read(Path::new(path))?.into();
-            gleam_core::format::pretty(&mut new_text, &src, Path::new(path))?;
+            crate::format::pretty(&mut new_text, &src, Path::new(path))?;
             let line_count = src.lines().count() as u32;
 
             let edit = TextEdit {
@@ -392,6 +394,8 @@ where
 
 #[cfg(target_os = "windows")]
 fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    use urlencoding::decode;
+
     let mut uri_path = decode(&*uri.path().replace('/', "\\"))
         .expect("Invalid formatting")
         .to_string();
@@ -470,20 +474,4 @@ fn uri_to_module_name_test() {
     let root = PathBuf::from("/projects/app");
     let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
     assert_eq!(uri_to_module_name(&uri, &root), None);
-}
-
-pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
-    let start = line_numbers.line_and_column_number(location.start);
-    let end = line_numbers.line_and_column_number(location.end);
-
-    Range {
-        start: Position {
-            line: start.line - 1,
-            character: start.column - 1,
-        },
-        end: Position {
-            line: end.line - 1,
-            character: end.column - 1,
-        },
-    }
 }

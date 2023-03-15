@@ -1,15 +1,20 @@
-use super::{convert_response, diagnostic_to_lsp, engine::LanguageServerEngine, path_to_uri};
 use gleam_core::{
     build::Target,
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{Feedback, FileSystemProxy, Locker, ProgressReporter},
+    language_server::{
+        src_span_to_lsp_range, Feedback, FileSystemProxy, LanguageServerEngine, Locker,
+        ProgressReporter, Response,
+    },
+    line_numbers::LineNumbers,
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
 };
-use lsp::{notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability};
+use lsp::{
+    notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Url,
+};
 use lsp_types::InitializeParams;
 use lsp_types::{
     self as lsp,
@@ -357,4 +362,77 @@ where
     notification
         .extract::<N::Params>(N::METHOD)
         .expect("cast notification")
+}
+
+fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
+    let severity = match diagnostic.level {
+        Level::Error => lsp::DiagnosticSeverity::ERROR,
+        Level::Warning => lsp::DiagnosticSeverity::WARNING,
+    };
+    let hint = diagnostic.hint;
+    let mut text = diagnostic.title;
+
+    if let Some(label) = diagnostic
+        .location
+        .as_ref()
+        .and_then(|location| location.label.text.as_deref())
+    {
+        text.push_str("\n\n");
+        text.push_str(label);
+        if !label.ends_with(['.', '?']) {
+            text.push('.');
+        }
+    }
+
+    if !diagnostic.text.is_empty() {
+        text.push_str("\n\n");
+        text.push_str(&diagnostic.text);
+    }
+
+    // TODO: Redesign the diagnostic type so that we can be sure there is always
+    // a location. Locationless diagnostics would be handled separately.
+    let location = diagnostic
+        .location
+        .expect("Diagnostic given to LSP without location");
+    let line_numbers = LineNumbers::new(&location.src);
+
+    let main = lsp::Diagnostic {
+        range: src_span_to_lsp_range(location.label.span, &line_numbers),
+        severity: Some(severity),
+        code: None,
+        code_description: None,
+        source: None,
+        message: text,
+        related_information: None,
+        tags: None,
+        data: None,
+    };
+
+    match hint {
+        Some(hint) => {
+            let hint = lsp::Diagnostic {
+                severity: Some(lsp::DiagnosticSeverity::HINT),
+                message: hint,
+                ..main.clone()
+            };
+            vec![main, hint]
+        }
+        None => vec![main],
+    }
+}
+
+fn convert_response<T>(result: Response<T>) -> (serde_json::Value, Feedback)
+where
+    T: serde::Serialize,
+{
+    (
+        serde_json::to_value(result.payload).expect("json to_value"),
+        result.feedback,
+    )
+}
+
+fn path_to_uri(path: PathBuf) -> Url {
+    let mut file: String = "file://".into();
+    file.push_str(&path.as_os_str().to_string_lossy());
+    Url::parse(&file).expect("path_to_uri URL parse")
 }
