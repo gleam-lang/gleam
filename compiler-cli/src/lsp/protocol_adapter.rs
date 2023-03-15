@@ -1,9 +1,10 @@
 use super::{convert_response, diagnostic_to_lsp, engine::LanguageServerEngine, path_to_uri};
 use gleam_core::{
+    build::Target,
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{Feedback, FileSystemProxy, ProgressReporter},
+    language_server::{Feedback, FileSystemProxy, Locker, ProgressReporter},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -27,28 +28,31 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Sending diagnostics and messages to the client.
 /// - Performing the initialisation handshake.
 ///
-pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader> {
+pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader, LockerMaker> {
     initialise_params: InitializeParams,
     connection: &'a lsp_server::Connection,
-    server: LanguageServerEngine<'a, IO, DepsDownloader>,
+    server: LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>,
 }
 
-impl<'a, IO, DepsDownloader> LanguageServerProtocolAdapter<'a, IO, DepsDownloader>
+impl<'a, IO, DepsDownloader, LockerMaker>
+    LanguageServerProtocolAdapter<'a, IO, DepsDownloader, LockerMaker>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
     DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
+    LockerMaker: Fn(&ProjectPaths, Target) -> Result<Box<dyn Locker>>,
 {
     pub fn new(
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
         deps: DepsDownloader,
         io: IO,
+        make_locker: LockerMaker,
     ) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
         // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let language_server = LanguageServerEngine::new(config, reporter, deps, io)?;
+        let language_server = LanguageServerEngine::new(config, reporter, deps, io, make_locker)?;
         Ok(Self {
             connection,
             initialise_params,
