@@ -4,6 +4,8 @@ use gleam_core::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{Feedback, ProgressReporter},
+    manifest::Manifest,
+    paths::ProjectPaths,
     Result,
 };
 use lsp::{notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability};
@@ -25,24 +27,26 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Sending diagnostics and messages to the client.
 /// - Performing the initialisation handshake.
 ///
-pub struct LanguageServerProtocolAdapter<'a, IO> {
+pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader> {
     initialise_params: InitializeParams,
     connection: &'a lsp_server::Connection,
-    server: LanguageServer<'a, IO>,
+    server: LanguageServer<'a, IO, DepsDownloader>,
 }
 
-impl<'a, IO> LanguageServerProtocolAdapter<'a, IO>
+impl<'a, IO, DepsDownloader> LanguageServerProtocolAdapter<'a, IO, DepsDownloader>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+    DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
 {
     pub fn new(
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
+        deps: DepsDownloader,
         io: IO,
     ) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
-        let language_server = LanguageServer::new(config, reporter, io)?;
+        let language_server = LanguageServer::new(config, reporter, deps, io)?;
         Ok(Self {
             connection,
             initialise_params,
