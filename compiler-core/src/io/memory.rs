@@ -208,10 +208,6 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(read_dir)
     }
 
-    fn current_dir(&self) -> Result<PathBuf, Error> {
-        Ok(PathBuf::from("/"))
-    }
-
     fn modification_time(&self, path: &Path) -> Result<SystemTime, Error> {
         let files = self.files.deref().borrow();
         let file = files.get(path).ok_or_else(|| Error::FileIo {

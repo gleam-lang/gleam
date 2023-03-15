@@ -153,11 +153,6 @@ where
         }
     }
 
-    // Not applicable for mem-cache
-    fn current_dir(&self) -> Result<PathBuf> {
-        self.io.current_dir()
-    }
-
     fn modification_time(&self, path: &Path) -> Result<SystemTime> {
         let in_mem_result = self.edit_cache.modification_time(abs_path(path)?.as_path());
         match in_mem_result {
