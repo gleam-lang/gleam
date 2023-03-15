@@ -386,7 +386,7 @@ where
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
         self.compiler.as_ref().and_then(|compiler| {
             let module_name =
-                uri_to_module_name(uri, &self.paths.root()).expect("uri to module name");
+                uri_to_module_name(uri, self.paths.root()).expect("uri to module name");
             compiler.modules.get(&module_name)
         })
     }
