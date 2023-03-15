@@ -11,7 +11,8 @@ mod protocol_adapter;
 mod server;
 
 use crate::{
-    build_lock::BuildLock, fs::ProjectIO, lsp::protocol_adapter::LanguageServerProtocolAdapter,
+    build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO,
+    lsp::protocol_adapter::LanguageServerProtocolAdapter,
 };
 use gleam_core::{
     ast::SrcSpan,
@@ -19,6 +20,7 @@ use gleam_core::{
     diagnostic::{Diagnostic, Level},
     language_server::{Feedback, LockGuard, Locker},
     line_numbers::LineNumbers,
+    manifest::Manifest,
     paths::ProjectPaths,
     Result,
 };
@@ -48,12 +50,17 @@ pub fn main() -> Result<()> {
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    LanguageServerProtocolAdapter::new(&connection, config, ProjectIO::new())?.run()?;
+    let io = ProjectIO::new();
+    LanguageServerProtocolAdapter::new(&connection, config, dependencies_downloader, io)?.run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
     tracing::info!("language_server_stopped");
     Ok(())
+}
+
+fn dependencies_downloader(paths: &ProjectPaths) -> Result<Manifest> {
+    crate::dependencies::download(paths, NullTelemetry, None, UseManifest::Yes)
 }
 
 #[cfg(target_os = "windows")]

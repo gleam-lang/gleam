@@ -1,12 +1,12 @@
 use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker};
-use crate::dependencies::UseManifest;
 use gleam_core::{
     ast::{Import, Statement},
-    build::{Located, Module, NullTelemetry},
+    build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
     line_numbers::LineNumbers,
+    manifest::Manifest,
     paths::ProjectPaths,
     type_::pretty::Printer,
     Error, Result,
@@ -28,7 +28,7 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServer<'a, IO> {
+pub struct LanguageServer<'a, IO, DepsDownloader> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
     paths: ProjectPaths,
@@ -49,15 +49,22 @@ pub struct LanguageServer<'a, IO> {
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
     progress_reporter: ProgressReporter<'a>,
+
+    // A function which downloads the dependencies of the project.
+    // Used to ensure that the project is up to date when we are asked to create
+    // a new compiler.
+    dependencies_downloader: DepsDownloader,
 }
 
-impl<'a, IO> LanguageServer<'a, IO>
+impl<'a, IO, DepsDownloader> LanguageServer<'a, IO, DepsDownloader>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+    DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
 {
     pub fn new(
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
+        dependencies_downloader: DepsDownloader,
         io: IO,
     ) -> Result<Self> {
         // TODO: inject this IO
@@ -65,6 +72,7 @@ where
         let paths = ProjectPaths::new(project_root.clone());
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
+            dependencies_downloader,
             feedback: FeedbackBookKeeper::default(),
             // TODO: move the creation of the proxy to the top level so it is
             // shared between all server instances
@@ -115,8 +123,7 @@ where
             // configuration and new instance of the compiler
             self.progress_reporter.dependency_downloading_started();
             // TODO: Inject this IO
-            let manifest =
-                crate::dependencies::download(&self.paths, NullTelemetry, None, UseManifest::Yes);
+            let manifest = (self.dependencies_downloader)(&self.paths);
             self.progress_reporter.dependency_downloading_finished();
             let manifest = manifest?;
 
