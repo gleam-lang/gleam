@@ -1,19 +1,16 @@
-use super::{src_span_to_lsp_range, uri_to_module_name, LspLocker};
 use gleam_core::{
-    ast::{Import, Statement},
-    build::{Located, Module},
+    ast::{Import, SrcSpan, Statement},
+    build::{Located, Module, Target},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    language_server::{FileSystemProxy, LspProjectCompiler, ProgressReporter},
+    language_server::{
+        Feedback, FeedbackBookKeeper, FileSystemProxy, Locker, LspProjectCompiler, ProgressReporter,
+    },
     line_numbers::LineNumbers,
     manifest::Manifest,
     paths::ProjectPaths,
     type_::pretty::Printer,
-    Error, Result,
-};
-use gleam_core::{
-    language_server::{Feedback, FeedbackBookKeeper},
-    Warning,
+    Error, Result, Warning,
 };
 use lsp::DidOpenTextDocumentParams;
 use lsp_types::{
@@ -28,7 +25,7 @@ pub struct Response<T> {
     pub feedback: Feedback,
 }
 
-pub struct LanguageServerEngine<'a, IO, DepsDownloader> {
+pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
     /// A cached copy of the absolute path of the project root
     project_root: PathBuf,
     paths: ProjectPaths,
@@ -37,7 +34,7 @@ pub struct LanguageServerEngine<'a, IO, DepsDownloader> {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy<IO>, LspLocker>>,
+    compiler: Option<LspProjectCompiler<FileSystemProxy<IO>>>,
 
     fs_proxy: FileSystemProxy<IO>,
 
@@ -54,18 +51,22 @@ pub struct LanguageServerEngine<'a, IO, DepsDownloader> {
     // Used to ensure that the project is up to date when we are asked to create
     // a new compiler.
     dependencies_downloader: DepsDownloader,
+
+    make_locker: LockerMaker,
 }
 
-impl<'a, IO, DepsDownloader> LanguageServerEngine<'a, IO, DepsDownloader>
+impl<'a, IO, DepsDownloader, LockerMaker> LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
     DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
+    LockerMaker: Fn(&ProjectPaths, Target) -> Result<Box<dyn Locker>>,
 {
     pub fn new(
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
         dependencies_downloader: DepsDownloader,
         fs_proxy: FileSystemProxy<IO>,
+        make_locker: LockerMaker,
     ) -> Result<Self> {
         // TODO: inject this IO
         let project_root = std::env::current_dir().expect("Project root");
@@ -73,11 +74,12 @@ where
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
             dependencies_downloader,
-            feedback: FeedbackBookKeeper::default(),
-            fs_proxy,
-            compiler: None,
             progress_reporter,
             project_root,
+            make_locker,
+            fs_proxy,
+            feedback: FeedbackBookKeeper::default(),
+            compiler: None,
             config,
             paths,
         };
@@ -115,7 +117,7 @@ where
 
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let locker = LspLocker::new(&self.paths, config.target)?;
+            let locker = (self.make_locker)(&self.paths, config.target)?;
 
             // Download dependencies to ensure they are up-to-date for this new
             // configuration and new instance of the compiler
@@ -390,5 +392,103 @@ where
                 uri_to_module_name(uri, &self.project_root).expect("uri to module name");
             compiler.modules.get(&module_name)
         })
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    let mut uri_path = decode(&*uri.path().replace('/', "\\"))
+        .expect("Invalid formatting")
+        .to_string();
+    if uri_path.starts_with("\\") {
+        uri_path = uri_path
+            .strip_prefix("\\")
+            .expect("Failed to remove \"\\\" prefix")
+            .to_string();
+    }
+    let path = PathBuf::from(uri_path);
+    let components = path
+        .strip_prefix(&root)
+        .ok()?
+        .components()
+        .skip(1)
+        .map(|c| c.as_os_str().to_string_lossy());
+    let module_name = Itertools::intersperse(components, "/".into())
+        .collect::<String>()
+        .strip_suffix(".gleam")?
+        .to_string();
+    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
+    Some(module_name)
+}
+
+#[test]
+#[cfg(target_os = "windows")]
+fn uri_to_module_name_test() {
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+}
+
+#[cfg(not(target_os = "windows"))]
+fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
+    use itertools::Itertools;
+
+    let path = PathBuf::from(uri.path());
+    let components = path
+        .strip_prefix(root)
+        .ok()?
+        .components()
+        .skip(1)
+        .map(|c| c.as_os_str().to_string_lossy());
+    let module_name = Itertools::intersperse(components, "/".into())
+        .collect::<String>()
+        .strip_suffix(".gleam")?
+        .to_string();
+    Some(module_name)
+}
+
+#[test]
+#[cfg(not(target_os = "windows"))]
+fn uri_to_module_name_test() {
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
+    assert_eq!(
+        uri_to_module_name(&uri, &root),
+        Some("one/two/three".into())
+    );
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/test/one/two/three.gleam").unwrap();
+    assert_eq!(
+        uri_to_module_name(&uri, &root),
+        Some("one/two/three".into())
+    );
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///somewhere/else/src/one/two/three.gleam").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+
+    let root = PathBuf::from("/projects/app");
+    let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
+    assert_eq!(uri_to_module_name(&uri, &root), None);
+}
+
+pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
+    let start = line_numbers.line_and_column_number(location.start);
+    let end = line_numbers.line_and_column_number(location.end);
+
+    Range {
+        start: Position {
+            line: start.line - 1,
+            character: start.column - 1,
+        },
+        end: Position {
+            line: end.line - 1,
+            character: end.column - 1,
+        },
     }
 }

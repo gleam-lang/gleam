@@ -15,7 +15,6 @@ use crate::{
     lsp::protocol_adapter::LanguageServerProtocolAdapter,
 };
 use gleam_core::{
-    ast::SrcSpan,
     build::{Mode, NullTelemetry, Target},
     diagnostic::{Diagnostic, Level},
     language_server::{Feedback, LockGuard, Locker},
@@ -24,9 +23,8 @@ use gleam_core::{
     paths::ProjectPaths,
     Result,
 };
-use itertools::Itertools;
-use lsp_types::{self as lsp, Position, Range, Url};
-use std::path::{Path, PathBuf};
+use lsp_types::{self as lsp, Url};
+use std::path::PathBuf;
 
 #[cfg(target_os = "windows")]
 use urlencoding::decode;
@@ -51,7 +49,14 @@ pub fn main() -> Result<()> {
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let io = ProjectIO::new();
-    LanguageServerProtocolAdapter::new(&connection, config, dependencies_downloader, io)?.run()?;
+    LanguageServerProtocolAdapter::new(
+        &connection,
+        config,
+        dependencies_downloader,
+        io,
+        make_locker,
+    )?
+    .run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
@@ -59,88 +64,13 @@ pub fn main() -> Result<()> {
     Ok(())
 }
 
+fn make_locker(paths: &ProjectPaths, target: Target) -> Result<Box<dyn Locker>> {
+    let locker = LspLocker::new(paths, target)?;
+    Ok(Box::new(locker))
+}
+
 fn dependencies_downloader(paths: &ProjectPaths) -> Result<Manifest> {
     crate::dependencies::download(paths, NullTelemetry, None, UseManifest::Yes)
-}
-
-#[cfg(target_os = "windows")]
-fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let mut uri_path = decode(&*uri.path().replace('/', "\\"))
-        .expect("Invalid formatting")
-        .to_string();
-    if uri_path.starts_with("\\") {
-        uri_path = uri_path
-            .strip_prefix("\\")
-            .expect("Failed to remove \"\\\" prefix")
-            .to_string();
-    }
-    let path = PathBuf::from(uri_path);
-    let components = path
-        .strip_prefix(&root)
-        .ok()?
-        .components()
-        .skip(1)
-        .map(|c| c.as_os_str().to_string_lossy());
-    let module_name = Itertools::intersperse(components, "/".into())
-        .collect::<String>()
-        .strip_suffix(".gleam")?
-        .to_string();
-    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
-    Some(module_name)
-}
-
-#[test]
-#[cfg(target_os = "windows")]
-fn uri_to_module_name_test() {
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-}
-
-#[cfg(not(target_os = "windows"))]
-fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    let path = PathBuf::from(uri.path());
-    let components = path
-        .strip_prefix(root)
-        .ok()?
-        .components()
-        .skip(1)
-        .map(|c| c.as_os_str().to_string_lossy());
-    let module_name = Itertools::intersperse(components, "/".into())
-        .collect::<String>()
-        .strip_suffix(".gleam")?
-        .to_string();
-    Some(module_name)
-}
-
-#[test]
-#[cfg(not(target_os = "windows"))]
-fn uri_to_module_name_test() {
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
-    assert_eq!(
-        uri_to_module_name(&uri, &root),
-        Some("one/two/three".into())
-    );
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/test/one/two/three.gleam").unwrap();
-    assert_eq!(
-        uri_to_module_name(&uri, &root),
-        Some("one/two/three".into())
-    );
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///somewhere/else/src/one/two/three.gleam").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
 }
 
 fn convert_response<T>(result: engine::Response<T>) -> (serde_json::Value, Feedback)
@@ -186,7 +116,7 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let line_numbers = LineNumbers::new(&location.src);
 
     let main = lsp::Diagnostic {
-        range: src_span_to_lsp_range(location.label.span, &line_numbers),
+        range: engine::src_span_to_lsp_range(location.label.span, &line_numbers),
         severity: Some(severity),
         code: None,
         code_description: None,
@@ -237,21 +167,5 @@ impl LspLocker {
 impl Locker for LspLocker {
     fn lock_for_build(&self) -> LockGuard {
         LockGuard(Box::new(self.0.lock(&NullTelemetry)))
-    }
-}
-
-fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
-    let start = line_numbers.line_and_column_number(location.start);
-    let end = line_numbers.line_and_column_number(location.end);
-
-    Range {
-        start: Position {
-            line: start.line - 1,
-            character: start.column - 1,
-        },
-        end: Position {
-            line: end.line - 1,
-            character: end.column - 1,
-        },
     }
 }

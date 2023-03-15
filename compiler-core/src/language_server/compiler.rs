@@ -1,3 +1,5 @@
+use debug_ignore::DebugIgnore;
+
 use crate::{
     build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
     config::PackageConfig,
@@ -16,7 +18,7 @@ use std::{collections::HashMap, path::PathBuf, sync::Arc};
 /// compiled dependency packages.
 ///
 #[derive(Debug)]
-pub struct LspProjectCompiler<IO, LockerImpl> {
+pub struct LspProjectCompiler<IO> {
     pub project_compiler: ProjectCompiler<IO>,
 
     /// Whether the dependencies have been compiled previously.
@@ -31,20 +33,19 @@ pub struct LspProjectCompiler<IO, LockerImpl> {
 
     /// A lock to ensure that multiple instances of the LSP don't try and use
     /// build directory at the same time.
-    pub locker: LockerImpl,
+    pub locker: DebugIgnore<Box<dyn Locker>>,
 }
 
-impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl>
+impl<IO> LspProjectCompiler<IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
-    LockerImpl: Locker,
 {
     pub fn new(
         manifest: Manifest,
         config: PackageConfig,
         paths: ProjectPaths,
         io: IO,
-        locker: LockerImpl,
+        locker: Box<dyn Locker>,
     ) -> Result<Self> {
         let telemetry = NullTelemetry;
         let target = config.target;
@@ -82,7 +83,7 @@ where
         project_compiler.subprocess_stdio = Stdio::Null;
 
         Ok(Self {
-            locker,
+            locker: locker.into(),
             warnings,
             project_compiler,
             modules: HashMap::new(),
@@ -131,7 +132,7 @@ where
     }
 }
 
-impl<IO, LockerImpl> LspProjectCompiler<IO, LockerImpl> {
+impl<IO> LspProjectCompiler<IO> {
     pub fn take_warnings(&mut self) -> Vec<Warning> {
         self.warnings.take()
     }
