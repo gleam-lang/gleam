@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use gleam_core::{
-    build::{Codegen, Mode, ModuleFunctionResult, Options, Runtime, Target},
+    build::{Codegen, Mode, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -52,26 +52,15 @@ pub fn command(
     })?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    let main_function = match built
-        .get_module_function(&SmolStr::from(module.to_owned()), &SmolStr::from("main"))
-    {
-        ModuleFunctionResult::Found(function) => {
-            if function.arity == 0 {
-                Ok(function)
-            } else {
-                Err(Error::MainFunctionHasWrongArity {
-                    module: module.to_owned(),
-                    arity: function.arity,
-                })
-            }
-        }
-        ModuleFunctionResult::ModuleNotFound => Err(Error::ModuleDoesNotExist {
+    let main_function =
+        built.get_module_function(&SmolStr::from(module.to_owned()), &SmolStr::from("main"))?;
+
+    if main_function.arity != 0 {
+        return Err(Error::MainFunctionHasWrongArity {
             module: module.to_owned(),
-        }),
-        ModuleFunctionResult::FunctionNotFound => Err(Error::ModuleDoesNotHaveMainFunction {
-            module: module.to_owned(),
-        }),
-    }?;
+            arity: main_function.arity,
+        });
+    };
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
