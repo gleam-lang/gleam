@@ -1,25 +1,19 @@
 use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
-    build::{Codegen, Options, Package, ProjectCompiler},
+    build::{Built, Codegen, Options, ProjectCompiler},
     paths::ProjectPaths,
-    Result, type_,
+    Result,
 };
-use smol_str::SmolStr;
 
 use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, ConsoleWarningEmitter},
+    fs::{self, ConsoleWarningEmitter, ProjectIO},
 };
 
-pub struct Built {
-    pub root_package: Package,
-    pub module_interfaces: im::HashMap<SmolStr, type_::Module>,
-}
-
-pub fn main(options: Options) -> Result<Built> {
+pub fn main(options: Options) -> Result<Built<ProjectIO>> {
     let paths = crate::project_paths_at_current_directory();
     let manifest =
         crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
@@ -39,7 +33,7 @@ pub fn main(options: Options) -> Result<Built> {
     tracing::info!("Compiling packages");
     let compiled = {
         let _guard = lock.lock(telemetry.as_ref());
-        let mut compiler = ProjectCompiler::new(
+        let compiler = ProjectCompiler::new(
             root_config,
             options,
             manifest.packages,
@@ -48,11 +42,7 @@ pub fn main(options: Options) -> Result<Built> {
             ProjectPaths::new(current_dir),
             io,
         );
-        let root_package = compiler.compile()?;
-        Built {
-            root_package: root_package,
-            module_interfaces: compiler.move_importable_modules(),
-        }
+        compiler.compile()?
     };
 
     match perform_codegen {

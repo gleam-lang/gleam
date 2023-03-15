@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use gleam_core::{
-    build::{Codegen, Mode, Options, Runtime, Target},
+    build::{Codegen, Mode, ModuleFunctionResult, Options, Runtime, Target},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -28,11 +28,9 @@ pub fn command(
 ) -> Result<(), Error> {
     // Validate the module to make sure it is a gleam module path
     match &module {
-        Some(module_name) if !is_gleam_module(&module_name) => {
-            Err(Error::InvalidModuleName {
-                module: module_name.to_owned(),
-            })
-        }
+        Some(module_name) if !is_gleam_module(&module_name) => Err(Error::InvalidModuleName {
+            module: module_name.to_owned(),
+        }),
         _ => Ok(()),
     }?;
 
@@ -55,25 +53,22 @@ pub fn command(
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = match built
-        .module_interfaces
-        .get(&SmolStr::from(module.to_owned()))
+        .get_module_function(&SmolStr::from(module.to_owned()), &SmolStr::from("main"))
     {
-        Some(module_data) => match module_data.get_function(&SmolStr::from("main")) {
-            Some(function) => {
-                if function.arity == 0 {
-                    Ok(function)
-                } else {
-                    Err(Error::MainFunctionHasWrongArity {
-                        module: module.to_owned(),
-                        arity: function.arity,
-                    })
-                }
+        ModuleFunctionResult::Found(function) => {
+            if function.arity == 0 {
+                Ok(function)
+            } else {
+                Err(Error::MainFunctionHasWrongArity {
+                    module: module.to_owned(),
+                    arity: function.arity,
+                })
             }
-            None => Err(Error::ModuleDoesNotHaveMainFunction {
-                module: module.to_owned(),
-            }),
-        },
-        None => Err(Error::ModuleDoesNotExist {
+        }
+        ModuleFunctionResult::ModuleNotFound => Err(Error::ModuleDoesNotExist {
+            module: module.to_owned(),
+        }),
+        ModuleFunctionResult::FunctionNotFound => Err(Error::ModuleDoesNotHaveMainFunction {
             module: module.to_owned(),
         }),
     }?;
