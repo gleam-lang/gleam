@@ -10,7 +10,7 @@ use crate::{
     manifest::ManifestPackage,
     metadata,
     paths::{self, ProjectPaths},
-    type_,
+    type_::{self, ModuleFunction},
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::{self, WarningEmitter, WarningEmitterIO},
@@ -47,6 +47,37 @@ pub struct Options {
     pub target: Option<Target>,
     pub codegen: Codegen,
     pub warnings_as_errors: bool,
+}
+
+#[derive(Debug)]
+pub struct Built<IO> {
+    pub root_package: Package,
+    compiler: ProjectCompiler<IO>,
+}
+
+pub enum ModuleFunctionResult<'a> {
+    Found(ModuleFunction<'a>),
+    ModuleNotFound,
+    FunctionNotFound,
+}
+
+impl<IO> Built<IO>
+where
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
+{
+    pub fn get_module_function(
+        &self,
+        module: &SmolStr,
+        function: &SmolStr,
+    ) -> ModuleFunctionResult {
+        match self.compiler.get_importable_modules().get(module) {
+            Some(module) => match module.get_function(function) {
+                Some(module_function) => ModuleFunctionResult::Found(module_function),
+                None => ModuleFunctionResult::FunctionNotFound,
+            },
+            None => ModuleFunctionResult::ModuleNotFound,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -107,10 +138,6 @@ where
         &self.importable_modules
     }
 
-    pub fn move_importable_modules(self) -> im::HashMap<SmolStr, type_::Module> {
-        self.importable_modules
-    }
-
     // TODO: test
     pub fn checkpoint(&self) -> CheckpointState {
         CheckpointState {
@@ -134,7 +161,7 @@ where
     }
 
     /// Returns the compiled information from the root package
-    pub fn compile(&mut self) -> Result<Package> {
+    pub fn compile(mut self) -> Result<Built<IO>> {
         self.check_gleam_version()?;
         self.compile_dependencies()?;
         self.warnings.reset_count();
@@ -143,7 +170,7 @@ where
             Codegen::All => self.telemetry.compiling_package(&self.config.name),
             Codegen::DepsOnly | Codegen::None => self.telemetry.checking_package(&self.config.name),
         }
-        let result = self.compile_root_package();
+        let root_package = self.compile_root_package()?;
 
         // TODO: test
         if self.options.warnings_as_errors && self.warnings.count() > 0 {
@@ -152,7 +179,10 @@ where
             });
         }
 
-        result
+        Ok(Built {
+            root_package,
+            compiler: self,
+        })
     }
 
     pub fn compile_root_package(&mut self) -> Result<Package, Error> {

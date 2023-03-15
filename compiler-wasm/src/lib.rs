@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
 
 use gleam_core::{
-    build::{Codegen, Mode, Options, Package, ProjectCompiler, Target},
+    build::{Built, Codegen, Mode, Options, ProjectCompiler, Target},
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
     manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
@@ -88,7 +88,7 @@ fn compile_project(
     wfs: &mut WasmFileSystem,
     target: Target,
     compile_options: &CompileOptions,
-) -> Result<Package, Error> {
+) -> Result<Built<WasmFileSystem>, Error> {
     let packages: Vec<ManifestPackage> = compile_options
         .dependencies
         .iter()
@@ -102,7 +102,7 @@ fn compile_project(
         codegen: Codegen::All,
     };
 
-    let mut pcompiler = ProjectCompiler::new(
+    let pcompiler = ProjectCompiler::new(
         PackageConfig {
             target,
             name: PROJECT_NAME.into(),
