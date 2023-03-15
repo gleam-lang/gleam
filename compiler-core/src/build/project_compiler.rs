@@ -54,7 +54,7 @@ pub struct ProjectCompiler<IO> {
     // The gleam.toml config for the root package of the project
     config: PackageConfig,
     packages: HashMap<String, ManifestPackage>,
-    pub importable_modules: im::HashMap<SmolStr, type_::Module>,
+    importable_modules: im::HashMap<SmolStr, type_::Module>,
     defined_modules: im::HashMap<SmolStr, PathBuf>,
     warnings: WarningEmitter,
     telemetry: Box<dyn Telemetry>,
