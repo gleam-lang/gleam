@@ -443,7 +443,10 @@ Module names can only contain lowercase letters, underscore, and forward slash a
                 text: format!("Module `{module}` was not found").into(),
                 level: Level::Error,
                 location: None,
-                hint: Some(format!("Try creating the file `src/{module}.gleam`")),
+                hint: Some(
+                    format!("Try creating the file `{}`.", format!("src/{}.gleam",
+                    Path::new(module).to_str().expect("pretty error print Path to_str")))
+                ),
             },
 
             Error::ModuleDoesNotHaveMainFunction { module } => Diagnostic {
