@@ -29,8 +29,6 @@ pub fn command(
     // Validate the module to make sure it is a gleam module path
     match &module {
         Some(module_name) => {
-            // TODO: Check if this can be replaced with a function that
-            // someone already wrote
             if !is_gleam_module(&module_name) {
                 Err(Error::InvalidModuleName {
                     module: module_name.to_owned(),
