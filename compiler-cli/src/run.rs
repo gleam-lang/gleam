@@ -29,7 +29,7 @@ pub fn command(
     let paths = crate::project_paths_at_current_directory();
     // Validate the module to make sure it is a gleam module path
     match &module {
-        Some(module_name) if !is_gleam_module(&module_name) => Err(Error::InvalidModuleName {
+        Some(module_name) if !is_gleam_module(module_name) => Err(Error::InvalidModuleName {
             module: module_name.to_owned(),
         }),
         _ => Ok(()),
@@ -56,7 +56,7 @@ pub fn command(
 
     if main_function.arity != 0 {
         return Err(Error::MainFunctionHasWrongArity {
-            module: module.to_owned(),
+            module,
             arity: main_function.arity,
         });
     };
@@ -143,7 +143,7 @@ fn run_javascript_node(
     arguments: Vec<String>,
 ) -> Result<i32, Error> {
     let mut args = vec![];
-    let entry = write_javascript_entrypoint(paths, &package, module)?;
+    let entry = write_javascript_entrypoint(paths, package, module)?;
 
     args.push(entry);
 
@@ -230,7 +230,7 @@ fn run_javascript_deno(
         );
     }
 
-    let entrypoint = write_javascript_entrypoint(paths, &package, module)?;
+    let entrypoint = write_javascript_entrypoint(paths, package, module)?;
     args.push(entrypoint);
 
     for argument in arguments.into_iter() {
