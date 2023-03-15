@@ -23,6 +23,7 @@ test: ## Run the compiler unit tests
 	cd test/project_erlang && cargo run clean && cargo run check && cargo run test
 	cd test/project_javascript && cargo run clean && cargo run check && cargo run test
 	cd test/hextarball && make test
+	cd test/running_modules && make test
 
 .PHONY: language-test
 language-test: ## Run the language integration tests for all targets

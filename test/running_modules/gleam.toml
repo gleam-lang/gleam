@@ -1,0 +1,6 @@
+name = "running_modules"
+version = "0.1.0"
+description = "A Gleam project"
+
+[dependencies]
+gleam_stdlib = "~> 0.27"
