@@ -427,8 +427,8 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn get_function(&self, name: &SmolStr) -> Option<ModuleFunction> {
-        match self.values.get(name) {
+    pub fn get_main_function(&self) -> Option<ModuleFunction> {
+        match self.values.get(&SmolStr::from("main")) {
             Some(ValueConstructor {
                 public: _,
                 variant:

@@ -52,8 +52,7 @@ pub fn command(
     })?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    let main_function =
-        built.get_module_function(&SmolStr::from(module.to_owned()), &SmolStr::from("main"))?;
+    let main_function = built.get_main_function(&SmolStr::from(module.to_owned()))?;
 
     if main_function.arity != 0 {
         return Err(Error::MainFunctionHasWrongArity {

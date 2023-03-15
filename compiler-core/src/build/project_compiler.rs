@@ -56,13 +56,9 @@ pub struct Built {
 }
 
 impl Built {
-    pub fn get_module_function(
-        &self,
-        module: &SmolStr,
-        function: &SmolStr,
-    ) -> Result<ModuleFunction, Error> {
+    pub fn get_main_function(&self, module: &SmolStr) -> Result<ModuleFunction, Error> {
         match self.module_interfaces.get(module) {
-            Some(module_data) => match module_data.get_function(function) {
+            Some(module_data) => match module_data.get_main_function() {
                 Some(module_function) => Ok(module_function),
                 None => Err(Error::ModuleDoesNotHaveMainFunction {
                     module: module.to_string(),
