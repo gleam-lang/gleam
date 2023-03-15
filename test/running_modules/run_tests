@@ -1,46 +1,48 @@
-#!/usr/bin/env python
+#/usr/bin/env sh
 
-from __future__ import annotations
+should_succeed() {
+    echo Running: "$@"
+    eval "$@"
+    if [ $? -ne 0 ]
+    then
+        echo ERROR: Command should have succeeded
+        exit 1
+    else
+        echo Test Passed
+    fi
+}
+should_fail() {
+    echo Running: "$@"
+    eval "$@"
+    if [ $? -eq 0 ]
+    then
+        echo ERROR: Command should have failed
+        exit 1
+    else
+        echo Test Passed
+    fi
+}
 
-import subprocess
+# No module
+should_succeed cargo run -- run --target erlang
+should_succeed cargo run -- run --target javascript --runtime nodejs
+should_succeed cargo run -- run --target javascript --runtime deno
 
+# Module from same package
+should_succeed cargo run -- run --module module --target erlang
+should_succeed cargo run -- run --module module --target javascript --runtime nodejs
+should_succeed cargo run -- run --module module --target javascript --runtime deno
 
-targets = [
-    ["--target", "erlang"],
-    ["--target", "javascript", "--runtime", "node"],
-    ["--target", "javascript", "--runtime", "deno"],
-]
+# Nested module from same package
+should_succeed cargo run -- run --module module/sub_module --target erlang
+should_succeed cargo run -- run --module module/sub_module --target javascript --runtime nodejs
+should_succeed cargo run -- run --module module/sub_module --target javascript --runtime deno
 
+# Unknown module
+should_fail cargo run -- run --module doesnt_exist
 
-def main():
-    any_failed = not all([
-        test_command_output(
-            ["cargo", "run", "--", "run", "-m", "running_modules"],
-            expected="top level module",
-        ),
-        test_command_output(
-            ["cargo", "run", "--", "run", "-m", "running_modules/sub_module"],
-            expected="sub module",
-        ),
-    ])
-    raise SystemExit(any_failed)
+# No main function
+should_fail cargo run -- run --module module/no_main_function
 
-
-def test_command_output(args: list[str], *, expected: str) -> bool:
-    for target in targets:
-        args_copy = args.copy()
-        args_copy.extend(target)
-        print("Testing command ", args_copy, "...", sep="")
-        output = subprocess.run(args_copy, capture_output=True)
-
-        if expected not in output.stdout.decode("utf-8"):
-            print("Failed when running command", args)
-            print("with stdout:", output.stdout.decode("utf-8"))
-            return False
-
-        print("Passed")
-    return True
-
-
-if __name__ == "__main__":
-    main()
+# Main function with wrong arity
+should_fail cargo run -- run --module module/wrong_arity

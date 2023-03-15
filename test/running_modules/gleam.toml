@@ -1,4 +1,4 @@
-name = "running_modules"
+name = "module"
 version = "0.1.0"
 description = "A Gleam project"
 
