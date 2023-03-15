@@ -431,7 +431,8 @@ This prefix is intended for official Gleam packages only.",
                 title: format!("Invalid module name"),
                 text: format!(
                     "`{module}` is not a valid module name.
-Module names can only contain lowercase letters, underscore, and forward slash and must not end with a slash."
+Module names can only contain lowercase letters, underscore, and
+forward slash and must not end with a slash."
             ).to_owned(),
                 level: Level::Error,
                 location: None,
