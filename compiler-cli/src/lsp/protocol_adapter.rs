@@ -45,6 +45,7 @@ where
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
         deps: DepsDownloader,
+        paths: ProjectPaths,
         io: IO,
         make_locker: LockerMaker,
     ) -> Result<Self> {
@@ -52,7 +53,8 @@ where
         let reporter = ProgressReporter::new(connection, &initialise_params);
         // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let language_server = LanguageServerEngine::new(config, reporter, deps, io, make_locker)?;
+        let language_server =
+            LanguageServerEngine::new(config, reporter, deps, io, make_locker, paths)?;
         Ok(Self {
             connection,
             initialise_params,
