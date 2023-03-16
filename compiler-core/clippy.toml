@@ -1,0 +1,14 @@
+# The core package is not permitted to perform IO
+disallowed-methods = [
+  "std::env::current_dir",
+  "std::path::Path::canonicalize",
+  "std::path::Path::exists",
+  "std::path::Path::is_dir",
+  "std::path::Path::is_file",
+  "std::path::Path::is_relative",
+  "std::path::Path::is_symlink",
+  "std::path::Path::read_dir",
+  "std::path::Path::read_link",
+  "std::path::Path::symlink_metadata",
+  "std::path::Path::try_exists",
+]
