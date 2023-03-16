@@ -130,31 +130,11 @@ where
         Ok(())
     }
 
-    pub fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Feedback {
-        self.notified(|this| {
-            // The file is in sync with the file system, discard our cache of the changes
-            this.io
-                .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-            // The files on disc have changed, so compile the project with the new changes
-            this.compile()?;
-            Ok(())
-        })
-    }
-
-    pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Feedback {
-        self.notified(|this| {
-            // The file is in sync with the file system, discard our cache of the changes
-            this.io
-                .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
-            Ok(())
-        })
-    }
-
     pub fn text_document_did_change(&mut self, params: DidChangeTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // A file has changed in the editor so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
-            if let Some(changes) = params.content_changes.into_iter().next() {
+            if let Some(changes) = params.content_changes.into_iter().last() {
                 this.io
                     .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
                 this.compile()?;

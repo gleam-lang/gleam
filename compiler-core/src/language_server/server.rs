@@ -375,11 +375,26 @@ where
     }
 
     fn text_document_did_save(&mut self, params: lsp::DidSaveTextDocumentParams) -> Feedback {
-        todo!()
+        let path = path(&params.text_document.uri);
+
+        // The file is in sync with the file system, discard our cache of the changes
+        if let Err(e) = self.io.delete_mem_cache(&path) {
+            todo!()
+        }
+
+        // The files on disc have changed, so compile the project with the new changes
+        self.notified_with_engine(path, |engine| engine.compile_please())
     }
 
     fn text_document_did_close(&mut self, params: lsp::DidCloseTextDocumentParams) -> Feedback {
-        todo!()
+        let path = path(&params.text_document.uri);
+
+        // The file is in sync with the file system, discard our cache of the changes
+        if let Err(e) = self.io.delete_mem_cache(&path) {
+            todo!()
+        }
+
+        Feedback::default()
     }
 
     fn text_document_did_change(&mut self, params: lsp::DidChangeTextDocumentParams) -> Feedback {
