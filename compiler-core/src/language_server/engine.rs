@@ -130,19 +130,6 @@ where
         Ok(())
     }
 
-    pub fn text_document_did_change(&mut self, params: DidChangeTextDocumentParams) -> Feedback {
-        self.notified(|this| {
-            // A file has changed in the editor so store a copy of the new content in memory and compile
-            let path = params.text_document.uri.path().to_string();
-            if let Some(changes) = params.content_changes.into_iter().last() {
-                this.io
-                    .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
-                this.compile()?;
-            }
-            Ok(())
-        })
-    }
-
     // TODO: test local variables
     // TODO: test same module constants
     // TODO: test imported module constants
