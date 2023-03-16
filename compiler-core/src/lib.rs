@@ -34,6 +34,7 @@
 )]
 #![deny(
     clippy::await_holding_lock,
+    clippy::disallowed_methods,
     clippy::if_let_mutex,
     clippy::indexing_slicing,
     clippy::mem_forget,
