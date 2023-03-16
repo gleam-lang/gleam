@@ -60,10 +60,6 @@ impl FeedbackBookKeeper {
         // longer valid so we set an empty vector of diagnostics for the files
         // to erase their diagnostics.
         for path in compiled {
-            // TODO: remove this once the compiler is using absolute paths. This
-            // function has side effects so it shouldn't be anyway.
-            let path = path.canonicalize().unwrap_or(path);
-
             let has_existing_diagnostics = self.files_with_diagnostics.remove(&path);
             if has_existing_diagnostics {
                 feedback.unset_existing_diagnostics(path);
@@ -94,9 +90,6 @@ impl FeedbackBookKeeper {
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
-                // TODO: remove this once the compiler is using absolute paths. This
-                // function has side effects so it shouldn't be anyway.
-                let path = path.canonicalize().unwrap_or(path);
                 _ = self.files_with_diagnostics.insert(path.clone());
                 feedback.append_diagnostic(path, diagnostic);
             }
@@ -112,9 +105,6 @@ impl FeedbackBookKeeper {
     fn insert_warning(&mut self, feedback: &mut Feedback, warning: Warning) {
         let diagnostic = warning.to_diagnostic();
         if let Some(path) = diagnostic.location.as_ref().map(|l| l.path.clone()) {
-            // TODO: remove this once the compiler is using absolute paths. This
-            // function has side effects so it shouldn't be anyway.
-            let path = path.canonicalize().unwrap_or(path);
             _ = self.files_with_diagnostics.insert(path.clone());
             feedback.append_diagnostic(path, diagnostic);
         }
