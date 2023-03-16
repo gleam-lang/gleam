@@ -38,6 +38,11 @@ should_succeed cargo run -- run --module module/sub_module --target erlang
 should_succeed cargo run -- run --module module/sub_module --target javascript --runtime nodejs
 should_succeed cargo run -- run --module module/sub_module --target javascript --runtime deno
 
+# Dependency package
+should_succeed cargo run -- run --module gleeunit --target erlang
+should_succeed cargo run -- run --module gleeunit --target javascript --runtime nodejs
+should_succeed cargo run -- run --module gleeunit --target javascript --runtime deno
+
 # Unknown module
 should_fail cargo run -- run --module doesnt_exist
 
