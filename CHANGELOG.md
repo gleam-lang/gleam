@@ -26,6 +26,7 @@
 - Fixed a bug where string concatenation patterns on strings with escape
   characters would generate javascript code with wrong slice index.
 - Fixed a bug where blocks could parse incorrectly.
+- Allow modules to be run with the `gleam run --module` command.
 
 ## v0.27.0 - 2023-03-01
 
