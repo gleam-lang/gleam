@@ -131,13 +131,13 @@ pub enum Error {
     InvalidModuleName { module: String },
 
     #[error("{module} is not module")]
-    ModuleDoesNotExist { module: String },
+    ModuleDoesNotExist { module: SmolStr },
 
     #[error("{module} does not have a main function")]
-    ModuleDoesNotHaveMainFunction { module: String },
+    ModuleDoesNotHaveMainFunction { module: SmolStr },
 
     #[error("{module} has the wrong arity so it can not be run.")]
-    MainFunctionHasWrongArity { module: String, arity: usize },
+    MainFunctionHasWrongArity { module: SmolStr, arity: usize },
 
     #[error("{input} is not a valid version. {error}")]
     InvalidVersionFormat { input: String, error: String },
@@ -446,7 +446,7 @@ forward slash and must not end with a slash."
                 location: None,
                 hint: Some(
                     format!("Try creating the file `src/{}.gleam`.",
-                    Path::new(module).to_str().expect("pretty error print Path to_str"))
+                    module)
                 ),
             },
 
