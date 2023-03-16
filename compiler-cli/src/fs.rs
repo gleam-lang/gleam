@@ -1,9 +1,13 @@
 use gleam_core::{
+    build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind},
     io::{
         CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, OutputFile,
         ReadDir, Stdio, WrappedReader,
     },
+    language_server::{DownloadDependencies, Locker, MakeLocker},
+    manifest::Manifest,
+    paths::ProjectPaths,
     warning::WarningEmitterIO,
     Result, Warning,
 };
@@ -16,6 +20,8 @@ use std::{
     path::{Path, PathBuf},
     time::SystemTime,
 };
+
+use crate::{dependencies::UseManifest, lsp::LspLocker};
 
 #[cfg(test)]
 mod tests;
@@ -175,6 +181,19 @@ impl CommandExecutor for ProjectIO {
                 },
             }),
         }
+    }
+}
+
+impl MakeLocker for ProjectIO {
+    fn make_locker(&self, paths: &ProjectPaths, target: Target) -> Result<Box<dyn Locker>> {
+        let locker = LspLocker::new(paths, target)?;
+        Ok(Box::new(locker))
+    }
+}
+
+impl DownloadDependencies for ProjectIO {
+    fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest> {
+        crate::dependencies::download(paths, NullTelemetry, None, UseManifest::Yes)
     }
 }
 

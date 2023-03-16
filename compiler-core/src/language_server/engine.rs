@@ -1,6 +1,6 @@
 use crate::{
     ast::{Import, Statement},
-    build::{Located, Module, Target},
+    build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -8,10 +8,8 @@ use crate::{
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
         progress::ProgressReporter,
-        Locker,
     },
     line_numbers::LineNumbers,
-    manifest::Manifest,
     paths::ProjectPaths,
     type_::pretty::Printer,
     Error, Result, Warning,
@@ -23,7 +21,7 @@ use lsp_types::{
 };
 use std::path::{Path, PathBuf};
 
-use super::src_span_to_lsp_range;
+use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
@@ -32,7 +30,7 @@ pub struct Response<T> {
 }
 
 #[derive(Debug)]
-pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
+pub struct LanguageServerEngine<'a, IO> {
     paths: ProjectPaths,
 
     /// A compiler for the project that supports repeat compilation of the root
@@ -41,7 +39,7 @@ pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
     /// discarded and reloaded to handle any changes to dependencies.
     compiler: Option<LspProjectCompiler<FileSystemProxy<IO>>>,
 
-    fs_proxy: FileSystemProxy<IO>,
+    io: FileSystemProxy<IO>,
 
     config: Option<PackageConfig>,
 
@@ -51,39 +49,31 @@ pub struct LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker> {
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
     progress_reporter: ProgressReporter<'a>,
-
-    // A function which downloads the dependencies of the project.
-    // Used to ensure that the project is up to date when we are asked to create
-    // a new compiler.
-    dependencies_downloader: DepsDownloader,
-
-    make_locker: LockerMaker,
 }
 
-impl<'a, IO, DepsDownloader, LockerMaker> LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>
+impl<'a, IO> LanguageServerEngine<'a, IO>
 where
-    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
-    DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
-    LockerMaker: Fn(&ProjectPaths, Target) -> Result<Box<dyn Locker>>,
+    IO: FileSystemReader
+        + FileSystemWriter
+        + CommandExecutor
+        + DownloadDependencies
+        + MakeLocker
+        + Clone,
 {
     pub fn new(
         config: Option<PackageConfig>,
         progress_reporter: ProgressReporter<'a>,
-        dependencies_downloader: DepsDownloader,
-        fs_proxy: FileSystemProxy<IO>,
-        make_locker: LockerMaker,
+        io: FileSystemProxy<IO>,
         paths: ProjectPaths,
     ) -> Result<Self> {
         let mut language_server = Self {
             modules_compiled_since_last_feedback: vec![],
-            dependencies_downloader,
             progress_reporter,
-            make_locker,
-            fs_proxy,
             feedback: FeedbackBookKeeper::default(),
             compiler: None,
             config,
             paths,
+            io,
         };
         language_server.create_new_compiler()?;
         Ok(language_server)
@@ -119,12 +109,12 @@ where
 
     pub fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
-            let locker = (self.make_locker)(&self.paths, config.target)?;
+            let locker = self.io.inner().make_locker(&self.paths, config.target)?;
 
             // Download dependencies to ensure they are up-to-date for this new
             // configuration and new instance of the compiler
             self.progress_reporter.dependency_downloading_started();
-            let manifest = (self.dependencies_downloader)(&self.paths);
+            let manifest = self.io.inner().download_dependencies(&self.paths);
             self.progress_reporter.dependency_downloading_finished();
             let manifest = manifest?;
 
@@ -132,7 +122,7 @@ where
                 manifest,
                 config.clone(),
                 self.paths.clone(),
-                self.fs_proxy.clone(),
+                self.io.clone(),
                 locker,
             )?;
             self.compiler = Some(compiler);
@@ -144,7 +134,7 @@ where
         self.notified(|this| {
             // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
-            this.fs_proxy
+            this.io
                 .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
             this.compile()?;
             Ok(())
@@ -154,7 +144,7 @@ where
     pub fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
-            this.fs_proxy
+            this.io
                 .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
             // The files on disc have changed, so compile the project with the new changes
             this.compile()?;
@@ -165,7 +155,7 @@ where
     pub fn text_document_did_close(&mut self, params: DidCloseTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
-            this.fs_proxy
+            this.io
                 .delete_mem_cache(Path::new(params.text_document.uri.path()))?;
             Ok(())
         })
@@ -176,7 +166,7 @@ where
             // A file has changed in the editor so store a copy of the new content in memory and compile
             let path = params.text_document.uri.path().to_string();
             if let Some(changes) = params.content_changes.into_iter().next() {
-                this.fs_proxy
+                this.io
                     .write_mem_cache(Path::new(path.as_str()), changes.text.as_str())?;
                 this.compile()?;
             }
@@ -305,7 +295,7 @@ where
             let path = params.text_document.uri.path();
             let mut new_text = String::new();
 
-            let src = this.fs_proxy.read(Path::new(path))?.into();
+            let src = this.io.read(Path::new(path))?.into();
             crate::format::pretty(&mut new_text, &src, Path::new(path))?;
             let line_count = src.lines().count() as u32;
 

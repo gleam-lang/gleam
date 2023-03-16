@@ -1,5 +1,4 @@
 use crate::{
-    build::Target,
     config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -8,10 +7,9 @@ use crate::{
         feedback::Feedback,
         files::FileSystemProxy,
         progress::ProgressReporter,
-        src_span_to_lsp_range, Locker,
+        src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
-    manifest::Manifest,
     paths::ProjectPaths,
     Result,
 };
@@ -19,12 +17,11 @@ use debug_ignore::DebugIgnore;
 use lsp::{
     notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Url,
 };
-use lsp_types::InitializeParams;
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{Completion, Formatting, HoverRequest},
-    PublishDiagnosticsParams,
+    InitializeParams, PublishDiagnosticsParams,
 };
 use std::{collections::HashMap, path::PathBuf};
 
@@ -38,32 +35,32 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Performing the initialisation handshake.
 ///
 #[derive(Debug)]
-pub struct LanguageServer<'a, IO, DepsDownloader, LockerMaker> {
+pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
-    server: LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>,
+    server: LanguageServerEngine<'a, IO>,
 }
 
-impl<'a, IO, DepsDownloader, LockerMaker> LanguageServer<'a, IO, DepsDownloader, LockerMaker>
+impl<'a, IO> LanguageServer<'a, IO>
 where
-    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
-    DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,
-    LockerMaker: Fn(&ProjectPaths, Target) -> Result<Box<dyn Locker>>,
+    IO: FileSystemReader
+        + FileSystemWriter
+        + CommandExecutor
+        + DownloadDependencies
+        + MakeLocker
+        + Clone,
 {
     pub fn new(
         connection: &'a lsp_server::Connection,
         config: Option<PackageConfig>,
-        deps: DepsDownloader,
         paths: ProjectPaths,
         io: IO,
-        make_locker: LockerMaker,
     ) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
         // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let language_server =
-            LanguageServerEngine::new(config, reporter, deps, io, make_locker, paths)?;
+        let language_server = LanguageServerEngine::new(config, reporter, io, paths)?;
         Ok(Self {
             connection: connection.into(),
             initialise_params,

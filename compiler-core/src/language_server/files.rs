@@ -38,6 +38,10 @@ where
         }
     }
 
+    pub fn inner(&self) -> &IO {
+        &*self.io
+    }
+
     pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<()> {
         let write_result = self.edit_cache.write(path, content);
         self.edit_cache

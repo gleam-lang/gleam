@@ -5,6 +5,12 @@ mod files;
 mod progress;
 mod server;
 
+pub use server::LanguageServer;
+
+use crate::{
+    ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
+    paths::ProjectPaths, Result,
+};
 use lsp_types::{Position, Range};
 use std::any::Any;
 
@@ -13,16 +19,19 @@ use std::any::Any;
 // root if it does not exist. This will require the compiler to be modified so
 // that it can run on projects where the root is not the cwd.
 
-// TODO: remove all these re-exports
-pub use server::LanguageServer;
-
-use crate::{ast::SrcSpan, line_numbers::LineNumbers};
-
 #[derive(Debug)]
 pub struct LockGuard(pub Box<dyn Any>);
 
 pub trait Locker {
     fn lock_for_build(&self) -> LockGuard;
+}
+
+pub trait MakeLocker {
+    fn make_locker(&self, paths: &ProjectPaths, target: Target) -> Result<Box<dyn Locker>>;
+}
+
+pub trait DownloadDependencies {
+    fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest>;
 }
 
 pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {

@@ -2,11 +2,10 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-use crate::{build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO};
+use crate::{build_lock::BuildLock, fs::ProjectIO};
 use gleam_core::{
     build::{Mode, NullTelemetry, Target},
     language_server::{LanguageServer, LockGuard, Locker},
-    manifest::Manifest,
     paths::ProjectPaths,
     Result,
 };
@@ -31,29 +30,12 @@ pub fn main() -> Result<()> {
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let io = ProjectIO::new();
-    LanguageServer::new(
-        &connection,
-        config,
-        dependencies_downloader,
-        paths,
-        io,
-        make_locker,
-    )?
-    .run()?;
+    LanguageServer::new(&connection, config, paths, io)?.run()?;
     io_threads.join().expect("joining_lsp_threads");
 
     // Shut down gracefully.
     tracing::info!("language_server_stopped");
     Ok(())
-}
-
-fn make_locker(paths: &ProjectPaths, target: Target) -> Result<Box<dyn Locker>> {
-    let locker = LspLocker::new(paths, target)?;
-    Ok(Box::new(locker))
-}
-
-fn dependencies_downloader(paths: &ProjectPaths) -> Result<Manifest> {
-    crate::dependencies::download(paths, NullTelemetry, None, UseManifest::Yes)
 }
 
 #[derive(Debug)]
