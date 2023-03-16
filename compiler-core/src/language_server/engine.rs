@@ -130,17 +130,6 @@ where
         Ok(())
     }
 
-    pub fn text_document_did_open(&mut self, params: DidOpenTextDocumentParams) -> Feedback {
-        self.notified(|this| {
-            // A file opened in the editor which might be unsaved so store a copy of the new content in memory and compile
-            let path = params.text_document.uri.path().to_string();
-            this.io
-                .write_mem_cache(Path::new(path.as_str()), &params.text_document.text)?;
-            this.compile()?;
-            Ok(())
-        })
-    }
-
     pub fn text_document_did_save(&mut self, params: DidSaveTextDocumentParams) -> Feedback {
         self.notified(|this| {
             // The file is in sync with the file system, discard our cache of the changes
@@ -288,23 +277,6 @@ where
             Ok(()) => self.feedback.diagnostics(modules, warnings),
             Err(e) => self.feedback.diagnostics_with_error(e, modules, warnings),
         }
-    }
-
-    pub fn format(&mut self, params: lsp::DocumentFormattingParams) -> Response<Vec<TextEdit>> {
-        self.respond(|this| {
-            let path = params.text_document.uri.path();
-            let mut new_text = String::new();
-
-            let src = this.io.read(Path::new(path))?.into();
-            crate::format::pretty(&mut new_text, &src, Path::new(path))?;
-            let line_count = src.lines().count() as u32;
-
-            let edit = TextEdit {
-                range: Range::new(Position::new(0, 0), Position::new(line_count, 0)),
-                new_text,
-            };
-            Ok(vec![edit])
-        })
     }
 
     fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {

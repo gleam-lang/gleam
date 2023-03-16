@@ -272,7 +272,7 @@ where
         }
     }
 
-    fn with_engine<T>(
+    fn respond_with_engine<T>(
         &mut self,
         path: PathBuf,
         handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> (T, Feedback),
@@ -282,12 +282,35 @@ where
     {
         match self.router.engine_for_path(&path) {
             Ok(Some(engine)) => {
+                // TODO: we're gunna have to move the feedback book keeper out
+                // of the engine and into this server.
                 let (result, feedback) = handler(engine);
                 let value = serde_json::to_value(result).expect("to JSON value");
                 (value, feedback)
             }
 
             Ok(None) => (serde_json::Value::Null, Feedback::default()),
+
+            Err(_error) => {
+                // TODO: handle error case
+                todo!();
+            }
+        }
+    }
+
+    fn notified_with_engine(
+        &mut self,
+        path: PathBuf,
+        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> Feedback,
+    ) -> Feedback {
+        match self.router.engine_for_path(&path) {
+            Ok(Some(engine)) => {
+                // TODO: we're gunna have to move the feedback book keeper out
+                // of the engine and into this server.
+                handler(engine)
+            }
+
+            Ok(None) => Feedback::default(),
 
             Err(_error) => {
                 // TODO: handle error case
@@ -322,7 +345,7 @@ where
 
     fn hover(&mut self, params: lsp::HoverParams) -> (serde_json::Value, Feedback) {
         let path = path(&params.text_document_position_params.text_document.uri);
-        self.with_engine(path, |engine| convert_response(engine.hover(params)))
+        self.respond_with_engine(path, |engine| convert_response(engine.hover(params)))
     }
 
     fn goto_definition(
@@ -330,18 +353,25 @@ where
         params: lsp::GotoDefinitionParams,
     ) -> (serde_json::Value, Feedback) {
         let path = path(&params.text_document_position_params.text_document.uri);
-        self.with_engine(path, |engine| {
+        self.respond_with_engine(path, |engine| {
             convert_response(engine.goto_definition(params))
         })
     }
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (serde_json::Value, Feedback) {
         let path = path(&params.text_document_position.text_document.uri);
-        self.with_engine(path, |engine| convert_response(engine.completion(params)))
+        self.respond_with_engine(path, |engine| convert_response(engine.completion(params)))
     }
 
+    // A file opened in the editor may be unsaved, so store a copy of the
+    // new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
-        todo!()
+        let path = path(&params.text_document.uri);
+        if let Err(e) = self.io.write_mem_cache(&path, &params.text_document.text) {
+            todo!()
+        }
+
+        self.notified_with_engine(path, |engine| engine.compile_please())
     }
 
     fn text_document_did_save(&mut self, params: lsp::DidSaveTextDocumentParams) -> Feedback {
