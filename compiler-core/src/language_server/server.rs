@@ -363,8 +363,8 @@ where
         self.respond_with_engine(path, |engine| convert_response(engine.completion(params)))
     }
 
-    // A file opened in the editor may be unsaved, so store a copy of the
-    // new content in memory and compile.
+    /// A file opened in the editor may be unsaved, so store a copy of the
+    /// new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
         let path = path(&params.text_document.uri);
         if let Err(e) = self.io.write_mem_cache(&path, &params.text_document.text) {
@@ -397,8 +397,22 @@ where
         Feedback::default()
     }
 
+    /// A file has changed in the editor, so store a copy of the new content in
+    /// memory and compile.
     fn text_document_did_change(&mut self, params: lsp::DidChangeTextDocumentParams) -> Feedback {
-        todo!()
+        let path = path(&params.text_document.uri);
+
+        let changes = match params.content_changes.into_iter().last() {
+            Some(changes) => changes,
+            None => return Feedback::default(),
+        };
+
+        if let Err(e) = self.io.write_mem_cache(&path, changes.text.as_str()) {
+            todo!()
+        }
+
+        // The files on disc have changed, so compile the project with the new changes
+        self.notified_with_engine(path, |engine| engine.compile_please())
     }
 }
 
