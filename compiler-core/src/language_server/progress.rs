@@ -12,7 +12,7 @@ const CREATE_DOWNLOADING_TOKEN: &str = "create-downloading-dependencies";
 
 // Used to publish progress notifications to the client without waiting for
 // the usual request-response loop of the language server.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ProgressReporter<'a> {
     connection: DebugIgnore<&'a lsp_server::Connection>,
 }

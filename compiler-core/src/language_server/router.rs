@@ -1,10 +1,77 @@
-use std::path::{Path, PathBuf};
+use crate::{
+    config::PackageConfig,
+    error::{FileIoAction, FileKind},
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    language_server::{
+        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
+        DownloadDependencies, MakeLocker,
+    },
+    paths::ProjectPaths,
+    Error, Result,
+};
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    path::{Path, PathBuf},
+};
 
-use crate::io::FileSystemReader;
+pub struct Router<'a, IO> {
+    io: FileSystemProxy<IO>,
+    engines: HashMap<PathBuf, LanguageServerEngine<'a, IO>>,
+    progress_reporter: ProgressReporter<'a>,
+}
+
+impl<'a, IO> Router<'a, IO>
+where
+    IO: FileSystemReader
+        + FileSystemWriter
+        + CommandExecutor
+        + DownloadDependencies
+        + MakeLocker
+        + Clone,
+{
+    pub fn new(progress_reporter: ProgressReporter<'a>, io: FileSystemProxy<IO>) -> Self {
+        Self {
+            io,
+            engines: HashMap::new(),
+            progress_reporter,
+        }
+    }
+
+    pub fn engine_for_path(
+        &mut self,
+        path: &Path,
+    ) -> Result<Option<&mut LanguageServerEngine<'a, IO>>> {
+        let path = match find_gleam_project_parent(&self.io, path) {
+            Some(x) => x,
+            None => return Ok(None),
+        };
+
+        let entry = match self.engines.entry(path.to_path_buf()) {
+            Entry::Occupied(entry) => return Ok(Some(entry.into_mut())),
+            Entry::Vacant(entry) => entry,
+        };
+
+        let paths = ProjectPaths::new(path.to_path_buf());
+        let toml = self.io.read(&path)?;
+        let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
+            action: FileIoAction::Parse,
+            kind: FileKind::File,
+            path: path.to_path_buf(),
+            err: Some(e.to_string()),
+        })?;
+        let engine = LanguageServerEngine::new(
+            Some(config),
+            self.progress_reporter.clone(),
+            self.io.clone(),
+            paths,
+        )?;
+        Ok(Some(entry.insert(engine)))
+    }
+}
 
 /// Given a path, find the nearest parent directory containing a `gleam.toml`
 /// file.
-pub fn find_gleam_project_parent<IO>(io: &IO, path: &Path) -> Option<PathBuf>
+fn find_gleam_project_parent<IO>(io: &IO, path: &Path) -> Option<PathBuf>
 where
     IO: FileSystemReader,
 {
