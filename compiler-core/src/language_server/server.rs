@@ -12,7 +12,8 @@ use crate::{
 };
 use debug_ignore::DebugIgnore;
 use lsp::{
-    notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Url,
+    notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Position,
+    Range, TextEdit, Url,
 };
 use lsp_types::{
     self as lsp,
@@ -20,10 +21,7 @@ use lsp_types::{
     request::{Completion, Formatting, HoverRequest},
     InitializeParams, PublishDiagnosticsParams,
 };
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, path::PathBuf};
 
 use super::{engine::LanguageServerEngine, router::Router};
 
@@ -41,6 +39,7 @@ pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
     router: Router<'a, IO>,
+    io: FileSystemProxy<IO>,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -52,21 +51,16 @@ where
         + MakeLocker
         + Clone,
 {
-    pub fn new(
-        connection: &'a lsp_server::Connection,
-        config: Option<PackageConfig>,
-        paths: ProjectPaths,
-        io: IO,
-    ) -> Result<Self> {
+    pub fn new(connection: &'a lsp_server::Connection, io: IO) -> Result<Self> {
         let initialise_params = initialisation_handshake(connection);
         let reporter = ProgressReporter::new(connection, &initialise_params);
-        // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let router = Router::new(reporter, io);
+        let router = Router::new(reporter, io.clone());
         Ok(Self {
             connection: connection.into(),
             initialise_params,
             router,
+            io,
         })
     }
 
@@ -280,15 +274,13 @@ where
 
     fn with_engine<T>(
         &mut self,
-        path: String,
+        path: PathBuf,
         handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> (T, Feedback),
     ) -> (serde_json::Value, Feedback)
     where
         T: serde::Serialize,
     {
-        let path = urlencoding::decode(&path).expect("Invalid url encoding");
-        let path = Path::new(path.as_ref());
-        match self.router.engine_for_path(path) {
+        match self.router.engine_for_path(&path) {
             Ok(Some(engine)) => {
                 let (result, feedback) = handler(engine);
                 let value = serde_json::to_value(result).expect("to JSON value");
@@ -305,31 +297,47 @@ where
     }
 
     fn format(&self, params: lsp::DocumentFormattingParams) -> (serde_json::Value, Feedback) {
-        todo!()
+        let path = path(&params.text_document.uri);
+        let mut new_text = String::new();
+
+        let src = match self.io.read(&path) {
+            Ok(src) => src.into(),
+            Err(error) => todo!(),
+        };
+
+        if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
+            todo!();
+        }
+
+        let line_count = src.lines().count() as u32;
+
+        let edit = TextEdit {
+            range: Range::new(Position::new(0, 0), Position::new(line_count, 0)),
+            new_text,
+        };
+        let json = serde_json::to_value(vec![edit]).expect("to JSON value");
+
+        (json, Feedback::default())
     }
 
     fn hover(&mut self, params: lsp::HoverParams) -> (serde_json::Value, Feedback) {
-        let uri = &params.text_document_position_params.text_document.uri;
-        self.with_engine(uri.path().into(), |engine| {
-            convert_response(engine.hover(params))
-        })
+        let path = path(&params.text_document_position_params.text_document.uri);
+        self.with_engine(path, |engine| convert_response(engine.hover(params)))
     }
 
     fn goto_definition(
         &mut self,
         params: lsp::GotoDefinitionParams,
     ) -> (serde_json::Value, Feedback) {
-        let uri = &params.text_document_position_params.text_document.uri;
-        self.with_engine(uri.path().into(), |engine| {
+        let path = path(&params.text_document_position_params.text_document.uri);
+        self.with_engine(path, |engine| {
             convert_response(engine.goto_definition(params))
         })
     }
 
     fn completion(&mut self, params: lsp::CompletionParams) -> (serde_json::Value, Feedback) {
-        let uri = &params.text_document_position.text_document.uri;
-        self.with_engine(uri.path().into(), |engine| {
-            convert_response(engine.completion(params))
-        })
+        let path = path(&params.text_document_position.text_document.uri);
+        self.with_engine(path, |engine| convert_response(engine.completion(params)))
     }
 
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
@@ -506,4 +514,8 @@ fn path_to_uri(path: PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
+}
+
+fn path(uri: &Url) -> PathBuf {
+    uri.to_file_path().expect("Path URL decoding")
 }
