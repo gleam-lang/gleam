@@ -24,6 +24,7 @@ pub struct LspProjectCompiler<IO> {
     /// Whether the dependencies have been compiled previously.
     pub dependencies_compiled: bool,
 
+    // TODO: use smolstr
     /// Information on compiled modules.
     pub modules: HashMap<String, Module>,
     pub sources: HashMap<String, ModuleSourceInformation>,
@@ -119,13 +120,12 @@ where
 
         // Store the compiled module information
         for module in package.modules {
-            let pathbuf = module.input_path.canonicalize().expect("Canonicalize");
-            let path = pathbuf.as_os_str().to_string_lossy().to_string();
+            let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
+            compiled_modules.push(module.input_path.clone());
             _ = self.sources.insert(module.name.to_string(), source);
             _ = self.modules.insert(module.name.to_string(), module);
-            compiled_modules.push(pathbuf);
         }
 
         Ok(compiled_modules)

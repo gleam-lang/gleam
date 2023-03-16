@@ -6,12 +6,11 @@ use std::{
 use debug_ignore::DebugIgnore;
 
 use crate::{
-    error::{FileIoAction, FileKind},
     io::{
         memory::InMemoryFileSystem, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
         Stdio, WrappedReader,
     },
-    Error, Result,
+    Result,
 };
 
 // A proxy intended for `LanguageServer` to use when files are modified in
@@ -110,19 +109,15 @@ where
     }
 
     fn read(&self, path: &Path) -> Result<String> {
-        // Note that files are assumed to be stored under abs-path keys
-        let in_mem_result = self.edit_cache.read(abs_path(path)?.as_path());
-        match in_mem_result {
-            Ok(_) => in_mem_result,
+        match self.edit_cache.read(path) {
+            result @ Ok(_) => result,
             Err(_) => self.io.read(path),
         }
     }
 
     fn read_bytes(&self, path: &Path) -> Result<Vec<u8>> {
-        // Note that files are assumed to be stored under abs-path keys
-        let in_mem_result = self.edit_cache.read_bytes(abs_path(path)?.as_path());
-        match in_mem_result {
-            Ok(_) => in_mem_result,
+        match self.edit_cache.read_bytes(path) {
+            result @ Ok(_) => result,
             Err(_) => self.io.read_bytes(path),
         }
     }
@@ -133,30 +128,17 @@ where
 
     // Cache overides existence of file
     fn is_file(&self, path: &Path) -> bool {
-        match abs_path(path) {
-            Ok(path_buf) => match self.edit_cache.is_file(path_buf.as_path()) {
-                true => true,
-                false => self.io.is_file(path),
-            },
-            _ => self.io.is_file(path),
-        }
+        self.edit_cache.is_file(path) || self.io.is_file(path)
     }
 
     // Cache overides existence of directory
     fn is_directory(&self, path: &Path) -> bool {
-        match abs_path(path) {
-            Ok(path_buf) => match self.edit_cache.is_directory(path_buf.as_path()) {
-                true => true,
-                false => self.io.is_directory(path),
-            },
-            _ => self.io.is_directory(path),
-        }
+        self.edit_cache.is_directory(path) || self.io.is_directory(path)
     }
 
     fn modification_time(&self, path: &Path) -> Result<SystemTime> {
-        let in_mem_result = self.edit_cache.modification_time(abs_path(path)?.as_path());
-        match in_mem_result {
-            Ok(_) => in_mem_result,
+        match self.edit_cache.modification_time(path) {
+            result @ Ok(_) => result,
             Err(_) => self.io.modification_time(path),
         }
     }
@@ -176,15 +158,4 @@ where
     ) -> Result<i32> {
         panic!("Command execution is not supported in LSP")
     }
-}
-
-// Helper method for getting abs-path
-fn abs_path(path: &Path) -> Result<PathBuf> {
-    let abs_path = path.canonicalize().or(Err(Error::FileIo {
-        kind: FileKind::File,
-        action: FileIoAction::Canonicalise,
-        path: path.to_path_buf(),
-        err: None,
-    }))?;
-    Ok(abs_path)
 }

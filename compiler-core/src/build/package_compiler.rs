@@ -150,7 +150,7 @@ where
             .out
             .join(paths::ARTEFACT_DIRECTORY_NAME)
             .join("gleam@@compile.erl");
-        if !escript_path.exists() {
+        if !self.io.is_file(&escript_path) {
             let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
             self.io.write(&escript_path, escript_source)?;
         }
