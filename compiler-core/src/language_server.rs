@@ -3,18 +3,18 @@ mod engine;
 mod feedback;
 mod files;
 mod progress;
-mod protocol_adapter;
+mod server;
 
 use lsp_types::{Position, Range};
 use std::any::Any;
 
+// TODO: Make a new router class which finds the root of the project a message
+// is for and dispatches to the correct language server, making one for that
+// root if it does not exist. This will require the compiler to be modified so
+// that it can run on projects where the root is not the cwd.
+
 // TODO: remove all these re-exports
-pub use compiler::LspProjectCompiler;
-pub use engine::{LanguageServerEngine, Response};
-pub use feedback::{Feedback, FeedbackBookKeeper};
-pub use files::FileSystemProxy;
-pub use progress::ProgressReporter;
-pub use protocol_adapter::LanguageServerProtocolAdapter;
+pub use server::LanguageServer;
 
 use crate::{ast::SrcSpan, line_numbers::LineNumbers};
 

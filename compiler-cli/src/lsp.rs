@@ -2,15 +2,10 @@
 // resolve them all, inject all the IO, wrap a bunch of tests around it, and
 // move it into the `gleam_core` package.
 
-// TODO: Make a new router class which finds the root of the project a message
-// is for and dispatches to the correct language server, making one for that
-// root if it does not exist. This will require the compiler to be modified so
-// that it can run on projects where the root is not the cwd.
-
 use crate::{build_lock::BuildLock, dependencies::UseManifest, fs::ProjectIO};
 use gleam_core::{
     build::{Mode, NullTelemetry, Target},
-    language_server::{LanguageServerProtocolAdapter, LockGuard, Locker},
+    language_server::{LanguageServer, LockGuard, Locker},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -36,7 +31,7 @@ pub fn main() -> Result<()> {
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
     let io = ProjectIO::new();
-    LanguageServerProtocolAdapter::new(
+    LanguageServer::new(
         &connection,
         config,
         dependencies_downloader,

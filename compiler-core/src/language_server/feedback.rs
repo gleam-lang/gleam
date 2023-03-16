@@ -46,7 +46,6 @@ pub struct FeedbackBookKeeper {
 }
 
 impl FeedbackBookKeeper {
-    // TODO: test
     /// Send diagnostics for any warnings and remove any diagnostics for files
     /// that have compiled without warnings.
     ///
@@ -78,7 +77,6 @@ impl FeedbackBookKeeper {
         feedback
     }
 
-    // TODO: test
     /// Compilation failed, boo!
     ///
     /// Send diagnostics for any warnings and remove any diagnostics for files

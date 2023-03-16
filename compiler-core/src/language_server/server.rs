@@ -4,8 +4,11 @@ use crate::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        src_span_to_lsp_range, Feedback, FileSystemProxy, LanguageServerEngine, Locker,
-        ProgressReporter, Response,
+        engine::{LanguageServerEngine, Response},
+        feedback::Feedback,
+        files::FileSystemProxy,
+        progress::ProgressReporter,
+        src_span_to_lsp_range, Locker,
     },
     line_numbers::LineNumbers,
     manifest::Manifest,
@@ -26,7 +29,7 @@ use lsp_types::{
 use std::{collections::HashMap, path::PathBuf};
 
 /// This class is responsible for handling the language server protocol and
-/// delegating the work to the `LanguageServer` itself.
+/// delegating the work to the engine.
 ///
 /// - Configuring watching of the `gleam.toml` file.
 /// - Decoding requests.
@@ -35,14 +38,13 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Performing the initialisation handshake.
 ///
 #[derive(Debug)]
-pub struct LanguageServerProtocolAdapter<'a, IO, DepsDownloader, LockerMaker> {
+pub struct LanguageServer<'a, IO, DepsDownloader, LockerMaker> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
     server: LanguageServerEngine<'a, IO, DepsDownloader, LockerMaker>,
 }
 
-impl<'a, IO, DepsDownloader, LockerMaker>
-    LanguageServerProtocolAdapter<'a, IO, DepsDownloader, LockerMaker>
+impl<'a, IO, DepsDownloader, LockerMaker> LanguageServer<'a, IO, DepsDownloader, LockerMaker>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
     DepsDownloader: Fn(&ProjectPaths) -> Result<Manifest>,

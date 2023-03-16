@@ -4,7 +4,11 @@ use crate::{
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        Feedback, FeedbackBookKeeper, FileSystemProxy, Locker, LspProjectCompiler, ProgressReporter,
+        compiler::LspProjectCompiler,
+        feedback::{Feedback, FeedbackBookKeeper},
+        files::FileSystemProxy,
+        progress::ProgressReporter,
+        Locker,
     },
     line_numbers::LineNumbers,
     manifest::Manifest,
