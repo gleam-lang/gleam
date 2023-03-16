@@ -3,10 +3,7 @@ use crate::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        engine::{LanguageServerEngine, Response},
-        feedback::Feedback,
-        files::FileSystemProxy,
-        progress::ProgressReporter,
+        engine::Response, feedback::Feedback, files::FileSystemProxy, progress::ProgressReporter,
         src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
@@ -23,7 +20,12 @@ use lsp_types::{
     request::{Completion, Formatting, HoverRequest},
     InitializeParams, PublishDiagnosticsParams,
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+
+use super::{engine::LanguageServerEngine, router::Router};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -38,7 +40,7 @@ use std::{collections::HashMap, path::PathBuf};
 pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
-    server: LanguageServerEngine<'a, IO>,
+    router: Router<'a, IO>,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -60,20 +62,16 @@ where
         let reporter = ProgressReporter::new(connection, &initialise_params);
         // TODO: move this wrapping to the top level once that is in core.
         let io = FileSystemProxy::new(io);
-        let language_server = LanguageServerEngine::new(config, reporter, io, paths)?;
+        let router = Router::new(reporter, io);
         Ok(Self {
             connection: connection.into(),
             initialise_params,
-            server: language_server,
+            router,
         })
     }
 
     pub fn run(&mut self) -> Result<()> {
         self.start_watching_gleam_toml();
-
-        // Compile the project once so we have all the state and any initial errors
-        let feedback = self.server.compile_please();
-        self.publish_feedback(feedback);
 
         // Enter the message loop, handling each message that comes in from the client
         for message in &self.connection.receiver {
@@ -115,22 +113,22 @@ where
         let (payload, feedback) = match request.method.as_str() {
             "textDocument/formatting" => {
                 let params = cast_request::<Formatting>(request);
-                convert_response(self.server.format(params))
+                self.format(params)
             }
 
             "textDocument/hover" => {
                 let params = cast_request::<HoverRequest>(request);
-                convert_response(self.server.hover(params))
+                self.hover(params)
             }
 
             "textDocument/definition" => {
                 let params = cast_request::<GotoDefinition>(request);
-                convert_response(self.server.goto_definition(params))
+                self.goto_definition(params)
             }
 
             "textDocument/completion" => {
                 let params = cast_request::<Completion>(request);
-                convert_response(self.server.completion(params))
+                self.completion(params)
             }
 
             _ => panic!("Unsupported LSP request"),
@@ -153,28 +151,30 @@ where
         let feedback = match notification.method.as_str() {
             "textDocument/didOpen" => {
                 let params = cast_notification::<DidOpenTextDocument>(notification);
-                self.server.text_document_did_open(params)
+                self.text_document_did_open(params)
             }
 
             "textDocument/didSave" => {
                 let params = cast_notification::<DidSaveTextDocument>(notification);
-                self.server.text_document_did_save(params)
+                self.text_document_did_save(params)
             }
 
             "textDocument/didClose" => {
                 let params = cast_notification::<DidCloseTextDocument>(notification);
-                self.server.text_document_did_close(params)
+                self.text_document_did_close(params)
             }
 
             "textDocument/didChange" => {
                 let params = cast_notification::<DidChangeTextDocument>(notification);
-                self.server.text_document_did_change(params)
+                self.text_document_did_change(params)
             }
 
             "workspace/didChangeWatchedFiles" => {
+                // TODO: recreate compiler
                 tracing::info!("gleam_toml_changed_so_recompiling_full_project");
-                self.server.create_new_compiler().expect("create");
-                self.server.compile_please()
+                todo!();
+                // self.create_new_compiler().expect("create");
+                // self.compile_please()
             }
 
             _ => return,
@@ -237,7 +237,7 @@ where
             register_options: Some(
                 serde_json::value::to_value(lsp::DidChangeWatchedFilesRegistrationOptions {
                     watchers: vec![lsp::FileSystemWatcher {
-                        glob_pattern: "gleam.toml".into(),
+                        glob_pattern: "**/gleam.toml".into(),
                         kind: Some(lsp::WatchKind::Change),
                     }],
                 })
@@ -276,6 +276,76 @@ where
                 .send(lsp_server::Message::Notification(notification))
                 .expect("send window/showMessage");
         }
+    }
+
+    fn with_engine<T>(
+        &mut self,
+        path: String,
+        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> (T, Feedback),
+    ) -> (serde_json::Value, Feedback)
+    where
+        T: serde::Serialize,
+    {
+        let path = urlencoding::decode(&path).expect("Invalid url encoding");
+        let path = Path::new(path.as_ref());
+        match self.router.engine_for_path(path) {
+            Ok(Some(engine)) => {
+                let (result, feedback) = handler(engine);
+                let value = serde_json::to_value(result).expect("to JSON value");
+                (value, feedback)
+            }
+
+            Ok(None) => (serde_json::Value::Null, Feedback::default()),
+
+            Err(_error) => {
+                // TODO: handle error case
+                todo!();
+            }
+        }
+    }
+
+    fn format(&self, params: lsp::DocumentFormattingParams) -> (serde_json::Value, Feedback) {
+        todo!()
+    }
+
+    fn hover(&mut self, params: lsp::HoverParams) -> (serde_json::Value, Feedback) {
+        let uri = &params.text_document_position_params.text_document.uri;
+        self.with_engine(uri.path().into(), |engine| {
+            convert_response(engine.hover(params))
+        })
+    }
+
+    fn goto_definition(
+        &mut self,
+        params: lsp::GotoDefinitionParams,
+    ) -> (serde_json::Value, Feedback) {
+        let uri = &params.text_document_position_params.text_document.uri;
+        self.with_engine(uri.path().into(), |engine| {
+            convert_response(engine.goto_definition(params))
+        })
+    }
+
+    fn completion(&mut self, params: lsp::CompletionParams) -> (serde_json::Value, Feedback) {
+        let uri = &params.text_document_position.text_document.uri;
+        self.with_engine(uri.path().into(), |engine| {
+            convert_response(engine.completion(params))
+        })
+    }
+
+    fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
+        todo!()
+    }
+
+    fn text_document_did_save(&mut self, params: lsp::DidSaveTextDocumentParams) -> Feedback {
+        todo!()
+    }
+
+    fn text_document_did_close(&mut self, params: lsp::DidCloseTextDocumentParams) -> Feedback {
+        todo!()
+    }
+
+    fn text_document_did_change(&mut self, params: lsp::DidChangeTextDocumentParams) -> Feedback {
+        todo!()
     }
 }
 
