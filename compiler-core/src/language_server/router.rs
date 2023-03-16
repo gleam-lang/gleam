@@ -1,5 +1,4 @@
 use crate::{
-    config::PackageConfig,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
