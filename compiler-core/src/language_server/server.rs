@@ -1,5 +1,4 @@
 use crate::{
-    config::PackageConfig,
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -7,7 +6,6 @@ use crate::{
         src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
-    paths::ProjectPaths,
     Result,
 };
 use debug_ignore::DebugIgnore;

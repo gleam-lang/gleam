@@ -14,11 +14,7 @@ use crate::{
     type_::pretty::Printer,
     Error, Result, Warning,
 };
-use lsp::DidOpenTextDocumentParams;
-use lsp_types::{
-    self as lsp, DidChangeTextDocumentParams, DidCloseTextDocumentParams,
-    DidSaveTextDocumentParams, Hover, HoverContents, MarkedString, Position, Range, TextEdit, Url,
-};
+use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use std::path::{Path, PathBuf};
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
