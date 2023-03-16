@@ -13,27 +13,17 @@ use gleam_core::{
 pub fn main() -> Result<()> {
     tracing::info!("language_server_starting");
 
-    // Read the project config. If we are running in the context of a Gleam
-    // fall back to a non-compiling mode that can only do formatting.
-    let paths = crate::project_paths_at_current_directory();
-    let config = if paths.root_config().exists() {
-        tracing::info!("gleam_project_detected");
-        Some(crate::config::root_config()?)
-    } else {
-        tracing::info!("gleam_project_not_found");
-        None
-    };
-
     // Create the transport. Includes the stdio (stdin and stdout) versions but this could
     // also be implemented to use sockets or HTTP.
     let (connection, io_threads) = lsp_server::Connection::stdio();
 
-    // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let io = ProjectIO::new();
-    LanguageServer::new(&connection, config, paths, io)?.run()?;
-    io_threads.join().expect("joining_lsp_threads");
+    // Run the server and wait for the two threads to end, typically by trigger
+    // LSP Exit event.
+    LanguageServer::new(&connection, ProjectIO::new())?.run()?;
 
     // Shut down gracefully.
+    io_threads.join().expect("joining_lsp_threads");
+
     tracing::info!("language_server_stopped");
     Ok(())
 }

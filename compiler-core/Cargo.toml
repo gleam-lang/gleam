@@ -77,8 +77,6 @@ xxhash-rust = { version = "0.8.6", features = ["xxh3"] }
 # Language server protocol server plumbing
 lsp-server = "0.5"
 lsp-types = "0.92"
-# URL decoding
-urlencoding = "2.1.0"
 
 [build-dependencies]
 # Data (de)serialisation
