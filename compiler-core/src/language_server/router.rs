@@ -14,6 +14,14 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// The language server instance serves a langauge client, typically a text
+/// editor. The editor could have multiple Gleam projects open at once, so run
+/// an instance of the language server engine for each project.
+///
+/// This router is responsible for finding or creating an engine for a given
+/// file using the nearest parent `gleam.toml` file.
+///
+#[derive(Debug)]
 pub struct Router<'a, IO> {
     io: FileSystemProxy<IO>,
     engines: HashMap<PathBuf, LanguageServerEngine<'a, IO>>,
