@@ -164,7 +164,7 @@ mod tests {
         );
 
         let feedback = book_keeper.diagnostics(
-            vec![file1.clone(), file2.clone(), file3.clone()].into_iter(),
+            vec![file1.clone(), file2.clone(), file3].into_iter(),
             vec![],
         );
 
@@ -172,7 +172,7 @@ mod tests {
             Feedback {
                 diagnostics: vec![
                     // File 1 and 2 had diagnostics before so they have been unset
-                    (file1.clone(), vec![]),
+                    (file1, vec![]),
                     (file2, vec![]),
                     // File 3 had no diagnostics so does not need to to be unset
                 ]
@@ -210,7 +210,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: vec![(file1.clone(), vec![warning1.to_diagnostic()])]
+                diagnostics: vec![(file1, vec![warning1.to_diagnostic()])]
                     .into_iter()
                     .collect(),
                 messages: vec![locationless_error.to_diagnostic()],
@@ -253,7 +253,7 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: vec![
-                    (file1.clone(), vec![warning1.to_diagnostic()]),
+                    (file1, vec![warning1.to_diagnostic()]),
                     (file3.clone(), vec![error.to_diagnostic()]),
                 ]
                 .into_iter()

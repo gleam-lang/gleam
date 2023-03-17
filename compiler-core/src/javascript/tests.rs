@@ -126,7 +126,7 @@ macro_rules! assert_js {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let line_numbers = LineNumbers::new($src);
@@ -263,7 +263,7 @@ macro_rules! assert_ts_def {
             $crate::build::Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
         let output = ts_declaration(&ast, Path::new(""), &"".into()).unwrap();

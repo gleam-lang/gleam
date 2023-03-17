@@ -39,7 +39,7 @@ where
     }
 
     pub fn inner(&self) -> &IO {
-        &*self.io
+        &self.io
     }
 
     pub fn write_mem_cache(&mut self, path: &Path, content: &str) -> Result<()> {
