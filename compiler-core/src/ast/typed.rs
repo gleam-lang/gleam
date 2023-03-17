@@ -405,6 +405,34 @@ impl TypedExpr {
     pub fn is_var(&self) -> bool {
         matches!(self, Self::Var { .. })
     }
+
+    pub(crate) fn get_documentation(&self) -> Option<&str> {
+        match self {
+            TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
+
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Assignment { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::BitString { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. } => None,
+        }
+    }
 }
 
 impl HasLocation for TypedExpr {

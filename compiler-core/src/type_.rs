@@ -568,6 +568,32 @@ impl ValueConstructor {
             },
         }
     }
+
+    pub(crate) fn get_documentation(&self) -> Option<&str> {
+        match &self.variant {
+            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable"),
+            ValueConstructorVariant::ModuleConstant {
+                location,
+                module,
+                literal,
+            } => todo!(),
+            ValueConstructorVariant::ModuleFn {
+                name,
+                field_map,
+                module,
+                arity,
+                location,
+            } => todo!(),
+            ValueConstructorVariant::Record {
+                name,
+                arity,
+                field_map,
+                location,
+                module,
+                constructors_count,
+            } => todo!(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
