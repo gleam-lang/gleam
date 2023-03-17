@@ -1,5 +1,4 @@
 use crate::{
-    ast::{Import, Statement},
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -160,6 +159,7 @@ where
     // TODO: imported module values
     // TODO: imported module types
     // TODO: record accessors
+    // TODO: module imports
     pub fn completion(
         &mut self,
         params: lsp::CompletionParams,
@@ -170,15 +170,8 @@ where
                 .map(|(_, found)| found);
 
             Ok(match found {
-                // TODO: test
-                None | Some(Located::Statement(Statement::Import(Import { .. }))) => {
-                    Some(this.completion_for_import())
-                }
-
-                // TODO: autocompletion for other statements
+                None => None,
                 Some(Located::Statement(_expression)) => None,
-
-                // TODO: autocompletion for expressions
                 Some(Located::Expression(_expression)) => None,
             })
         })
@@ -195,34 +188,34 @@ where
         }
     }
 
-    fn completion_for_import(&self) -> Vec<lsp::CompletionItem> {
-        // TODO: Test
-        let dependencies_modules = self
-            .compiler
-            .project_compiler
-            .get_importable_modules()
-            .keys()
-            .map(|name| name.to_string());
-        // TODO: Test
-        let project_modules = self
-            .compiler
-            .modules
-            .iter()
-            // TODO: We should autocomplete test modules if we are in the test dir
-            // TODO: Test
-            .filter(|(_name, module)| module.origin.is_src())
-            .map(|(name, _module)| name)
-            .cloned();
-        dependencies_modules
-            .chain(project_modules)
-            .map(|label| lsp::CompletionItem {
-                label,
-                kind: None,
-                documentation: None,
-                ..Default::default()
-            })
-            .collect()
-    }
+    // fn completion_for_import(&self) -> Vec<lsp::CompletionItem> {
+    //     // TODO: Test
+    //     let dependencies_modules = self
+    //         .compiler
+    //         .project_compiler
+    //         .get_importable_modules()
+    //         .keys()
+    //         .map(|name| name.to_string());
+    //     // TODO: Test
+    //     let project_modules = self
+    //         .compiler
+    //         .modules
+    //         .iter()
+    //         // TODO: We should autocomplete test modules if we are in the test dir
+    //         // TODO: Test
+    //         .filter(|(_name, module)| module.origin.is_src())
+    //         .map(|(name, _module)| name)
+    //         .cloned();
+    //     dependencies_modules
+    //         .chain(project_modules)
+    //         .map(|label| lsp::CompletionItem {
+    //             label,
+    //             kind: None,
+    //             documentation: None,
+    //             ..Default::default()
+    //         })
+    //         .collect()
+    // }
 
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
         self.respond(|this| {

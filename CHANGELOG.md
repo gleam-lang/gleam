@@ -22,6 +22,7 @@
 - Files are now only recompiled if they have changed since the last compilation,
   detected by file hash and modification time. Previously only the modification
   time was used.
+- Autocompletion of module imports was removed due to a buggy implementation.
 - Fixed a bug where the formatter would incorrectly remove `{ ... }` from bit
   string segment value expressions.
 - Fixed a bug where the compiler used VSCode specific behaviour in the language
