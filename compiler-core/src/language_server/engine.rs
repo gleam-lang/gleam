@@ -272,7 +272,7 @@ where
         let path = uri.to_file_path().expect("URL file");
 
         #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
-        let path = uri.path().into();
+        let path: PathBuf = uri.path().into();
 
         let components = path
             .strip_prefix(self.paths.root())
