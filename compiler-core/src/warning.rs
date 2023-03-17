@@ -116,7 +116,7 @@ impl TypeWarningEmitter {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Warning {
     Type {
         path: PathBuf,

@@ -4,10 +4,7 @@ use crate::{
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        compiler::LspProjectCompiler,
-        feedback::{Feedback, FeedbackBookKeeper},
-        files::FileSystemProxy,
-        progress::ProgressReporter,
+        compiler::LspProjectCompiler, files::FileSystemProxy, progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
@@ -21,8 +18,9 @@ use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Response<T> {
-    pub payload: Option<T>,
-    pub feedback: Feedback,
+    pub result: Result<T, Error>,
+    pub warnings: Vec<Warning>,
+    pub compiled_modules: Vec<PathBuf>,
 }
 
 #[derive(Debug)]
@@ -33,13 +31,8 @@ pub struct LanguageServerEngine<'a, IO> {
     /// package.
     /// In the event the the project config changes this will need to be
     /// discarded and reloaded to handle any changes to dependencies.
-    compiler: Option<LspProjectCompiler<FileSystemProxy<IO>>>,
+    compiler: LspProjectCompiler<FileSystemProxy<IO>>,
 
-    io: FileSystemProxy<IO>,
-
-    config: Option<PackageConfig>,
-
-    feedback: FeedbackBookKeeper,
     modules_compiled_since_last_feedback: Vec<PathBuf>,
 
     // Used to publish progress notifications to the client without waiting for
@@ -57,35 +50,39 @@ where
         + Clone,
 {
     pub fn new(
-        config: Option<PackageConfig>,
+        config: PackageConfig,
         progress_reporter: ProgressReporter<'a>,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
     ) -> Result<Self> {
-        let mut language_server = Self {
+        let locker = io.inner().make_locker(&paths, config.target)?;
+
+        // Download dependencies to ensure they are up-to-date for this new
+        // configuration and new instance of the compiler
+        progress_reporter.dependency_downloading_started();
+        let manifest = io.inner().download_dependencies(&paths);
+        progress_reporter.dependency_downloading_finished();
+        let manifest = manifest?;
+
+        let compiler =
+            LspProjectCompiler::new(manifest, config.clone(), paths.clone(), io.clone(), locker)?;
+
+        Ok(Self {
             modules_compiled_since_last_feedback: vec![],
             progress_reporter,
-            feedback: FeedbackBookKeeper::default(),
-            compiler: None,
-            config,
+            compiler,
             paths,
-            io,
-        };
-        language_server.create_new_compiler()?;
-        Ok(language_server)
+        })
     }
 
-    pub fn compile_please(&mut self) -> Feedback {
-        self.notified(Self::compile)
+    pub fn compile_please(&mut self) -> Response<()> {
+        self.respond(Self::compile)
     }
 
     /// Compile the project if we are in one. Otherwise do nothing.
     fn compile(&mut self) -> Result<(), Error> {
         self.progress_reporter.compilation_started();
-        let result = match self.compiler.as_mut() {
-            Some(compiler) => compiler.compile(),
-            None => Ok(vec![]),
-        };
+        let result = self.compiler.compile();
         self.progress_reporter.compilation_finished();
 
         let modules = result?;
@@ -96,38 +93,7 @@ where
     }
 
     fn take_warnings(&mut self) -> Vec<Warning> {
-        if let Some(compiler) = self.compiler.as_mut() {
-            compiler.take_warnings()
-        } else {
-            vec![]
-        }
-    }
-
-    pub fn recreate_compiler(&mut self) -> Feedback {
-        self.notified(Self::create_new_compiler)
-    }
-
-    fn create_new_compiler(&mut self) -> Result<(), Error> {
-        if let Some(config) = self.config.as_ref() {
-            let locker = self.io.inner().make_locker(&self.paths, config.target)?;
-
-            // Download dependencies to ensure they are up-to-date for this new
-            // configuration and new instance of the compiler
-            self.progress_reporter.dependency_downloading_started();
-            let manifest = self.io.inner().download_dependencies(&self.paths);
-            self.progress_reporter.dependency_downloading_finished();
-            let manifest = manifest?;
-
-            let compiler = LspProjectCompiler::new(
-                manifest,
-                config.clone(),
-                self.paths.clone(),
-                self.io.clone(),
-                locker,
-            )?;
-            self.compiler = Some(compiler);
-        }
-        Ok(())
+        self.compiler.take_warnings()
     }
 
     // TODO: test local variables
@@ -166,11 +132,7 @@ where
             let (uri, line_numbers) = match location.module {
                 None => (params.text_document.uri, &line_numbers),
                 Some(name) => {
-                    let module = match this
-                        .compiler
-                        .as_ref()
-                        .and_then(|compiler| compiler.get_source(name))
-                    {
+                    let module = match this.compiler.get_source(name) {
                         Some(module) => module,
                         // TODO: support goto definition for functions defined in
                         // different packages. Currently it is not possible as the
@@ -208,7 +170,7 @@ where
             Ok(match found {
                 // TODO: test
                 None | Some(Located::Statement(Statement::Import(Import { .. }))) => {
-                    this.completion_for_import()
+                    Some(this.completion_for_import())
                 }
 
                 // TODO: autocompletion for other statements
@@ -220,42 +182,28 @@ where
         })
     }
 
-    fn respond<T>(&mut self, handler: impl FnOnce(&Self) -> Result<T>) -> Response<T> {
+    fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
-        let modules = self.modules_compiled_since_last_feedback.drain(..);
-        match result {
-            Ok(payload) => Response {
-                payload: Some(payload),
-                feedback: self.feedback.diagnostics(modules, warnings),
-            },
-            Err(e) => Response {
-                payload: None,
-                feedback: self.feedback.diagnostics_with_error(e, modules, warnings),
-            },
+        let modules = std::mem::take(&mut self.modules_compiled_since_last_feedback);
+        Response {
+            result,
+            warnings,
+            compiled_modules: modules,
         }
     }
 
-    fn notified(&mut self, handler: impl FnOnce(&mut Self) -> Result<()>) -> Feedback {
-        let result = handler(self);
-        let warnings = self.take_warnings();
-        let modules = self.modules_compiled_since_last_feedback.drain(..);
-        match result {
-            Ok(()) => self.feedback.diagnostics(modules, warnings),
-            Err(e) => self.feedback.diagnostics_with_error(e, modules, warnings),
-        }
-    }
-
-    fn completion_for_import(&self) -> Option<Vec<lsp::CompletionItem>> {
-        let compiler = self.compiler.as_ref()?;
+    fn completion_for_import(&self) -> Vec<lsp::CompletionItem> {
         // TODO: Test
-        let dependencies_modules = compiler
+        let dependencies_modules = self
+            .compiler
             .project_compiler
             .get_importable_modules()
             .keys()
             .map(|name| name.to_string());
         // TODO: Test
-        let project_modules = compiler
+        let project_modules = self
+            .compiler
             .modules
             .iter()
             // TODO: We should autocomplete test modules if we are in the test dir
@@ -263,7 +211,7 @@ where
             .filter(|(_name, module)| module.origin.is_src())
             .map(|(name, _module)| name)
             .cloned();
-        let modules = dependencies_modules
+        dependencies_modules
             .chain(project_modules)
             .map(|label| lsp::CompletionItem {
                 label,
@@ -271,8 +219,7 @@ where
                 documentation: None,
                 ..Default::default()
             })
-            .collect();
-        Some(modules)
+            .collect()
     }
 
     pub fn hover(&mut self, params: lsp::HoverParams) -> Response<Option<Hover>> {
@@ -307,8 +254,7 @@ where
         &self,
         params: &lsp::TextDocumentPositionParams,
     ) -> Option<(LineNumbers, Located<'_>)> {
-        let module = self.module_for_uri(&params.text_document.uri);
-        let module = module?;
+        let module = self.module_for_uri(&params.text_document.uri)?;
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
         let node = module.find_node(byte_index);
@@ -317,11 +263,8 @@ where
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        self.compiler.as_ref().and_then(|compiler| {
-            let module_name =
-                uri_to_module_name(uri, self.paths.root()).expect("uri to module name");
-            compiler.modules.get(&module_name)
-        })
+        let module_name = uri_to_module_name(uri, self.paths.root()).expect("uri to module name");
+        self.compiler.modules.get(&module_name)
     }
 }
 

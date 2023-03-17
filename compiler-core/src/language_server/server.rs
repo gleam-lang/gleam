@@ -2,7 +2,11 @@ use crate::{
     diagnostic::{Diagnostic, Level},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        engine::Response, feedback::Feedback, files::FileSystemProxy, progress::ProgressReporter,
+        engine::{self, LanguageServerEngine},
+        feedback::{Feedback, FeedbackBookKeeper},
+        files::FileSystemProxy,
+        progress::ProgressReporter,
+        router::Router,
         src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
@@ -20,9 +24,8 @@ use lsp_types::{
     request::{Completion, Formatting, HoverRequest},
     InitializeParams, PublishDiagnosticsParams,
 };
+use serde_json::Value as Json;
 use std::{collections::HashMap, path::PathBuf};
-
-use super::{engine::LanguageServerEngine, router::Router};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -37,6 +40,7 @@ use super::{engine::LanguageServerEngine, router::Router};
 pub struct LanguageServer<'a, IO> {
     initialise_params: InitializeParams,
     connection: DebugIgnore<&'a lsp_server::Connection>,
+    feedback: FeedbackBookKeeper,
     router: Router<'a, IO>,
     io: FileSystemProxy<IO>,
 }
@@ -58,6 +62,7 @@ where
         Ok(Self {
             connection: connection.into(),
             initialise_params,
+            feedback: FeedbackBookKeeper::default(),
             router,
             io,
         })
@@ -271,61 +276,57 @@ where
     fn respond_with_engine<T>(
         &mut self,
         path: PathBuf,
-        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> (T, Feedback),
-    ) -> (serde_json::Value, Feedback)
+        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> engine::Response<T>,
+    ) -> (Json, Feedback)
     where
         T: serde::Serialize,
     {
         match self.router.engine_for_path(&path) {
             Ok(Some(engine)) => {
-                // TODO: we're gunna have to move the feedback book keeper out
-                // of the engine and into this server.
-                let (result, feedback) = handler(engine);
-                let value = serde_json::to_value(result).expect("to JSON value");
-                (value, feedback)
+                let engine::Response {
+                    result,
+                    warnings,
+                    compiled_modules,
+                } = handler(engine);
+                let modules = compiled_modules.into_iter();
+                match result {
+                    Ok(value) => {
+                        let feedback = self.feedback.compiled(modules, warnings);
+                        let json = serde_json::to_value(value).expect("response to json");
+                        (json, feedback)
+                    }
+                    Err(e) => {
+                        let feedback = self.feedback.build_with_error(e, modules, warnings);
+                        (Json::Null, feedback)
+                    }
+                }
             }
 
-            Ok(None) => (serde_json::Value::Null, Feedback::default()),
+            Ok(None) => (Json::Null, Feedback::default()),
 
-            Err(_error) => {
-                // TODO: handle error case
-                todo!();
-            }
+            Err(error) => (Json::Null, self.feedback.error(error)),
         }
     }
 
     fn notified_with_engine(
         &mut self,
         path: PathBuf,
-        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> Feedback,
+        handler: impl FnOnce(&mut LanguageServerEngine<'a, IO>) -> engine::Response<()>,
     ) -> Feedback {
-        match self.router.engine_for_path(&path) {
-            Ok(Some(engine)) => {
-                // TODO: we're gunna have to move the feedback book keeper out
-                // of the engine and into this server.
-                handler(engine)
-            }
-
-            Ok(None) => Feedback::default(),
-
-            Err(_error) => {
-                // TODO: handle error case
-                todo!();
-            }
-        }
+        self.respond_with_engine(path, handler).1
     }
 
-    fn format(&self, params: lsp::DocumentFormattingParams) -> (serde_json::Value, Feedback) {
+    fn format(&mut self, params: lsp::DocumentFormattingParams) -> (Json, Feedback) {
         let path = path(&params.text_document.uri);
         let mut new_text = String::new();
 
         let src = match self.io.read(&path) {
             Ok(src) => src.into(),
-            Err(error) => todo!(),
+            Err(error) => return (Json::Null, self.feedback.error(error)),
         };
 
         if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
-            todo!();
+            return (Json::Null, self.feedback.error(error));
         }
 
         let line_count = src.lines().count() as u32;
@@ -339,32 +340,27 @@ where
         (json, Feedback::default())
     }
 
-    fn hover(&mut self, params: lsp::HoverParams) -> (serde_json::Value, Feedback) {
+    fn hover(&mut self, params: lsp::HoverParams) -> (Json, Feedback) {
         let path = path(&params.text_document_position_params.text_document.uri);
-        self.respond_with_engine(path, |engine| convert_response(engine.hover(params)))
+        self.respond_with_engine(path, |engine| engine.hover(params))
     }
 
-    fn goto_definition(
-        &mut self,
-        params: lsp::GotoDefinitionParams,
-    ) -> (serde_json::Value, Feedback) {
+    fn goto_definition(&mut self, params: lsp::GotoDefinitionParams) -> (Json, Feedback) {
         let path = path(&params.text_document_position_params.text_document.uri);
-        self.respond_with_engine(path, |engine| {
-            convert_response(engine.goto_definition(params))
-        })
+        self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
 
-    fn completion(&mut self, params: lsp::CompletionParams) -> (serde_json::Value, Feedback) {
+    fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
         let path = path(&params.text_document_position.text_document.uri);
-        self.respond_with_engine(path, |engine| convert_response(engine.completion(params)))
+        self.respond_with_engine(path, |engine| engine.completion(params))
     }
 
     /// A file opened in the editor may be unsaved, so store a copy of the
     /// new content in memory and compile.
     fn text_document_did_open(&mut self, params: lsp::DidOpenTextDocumentParams) -> Feedback {
         let path = path(&params.text_document.uri);
-        if let Err(e) = self.io.write_mem_cache(&path, &params.text_document.text) {
-            todo!()
+        if let Err(error) = self.io.write_mem_cache(&path, &params.text_document.text) {
+            return self.feedback.error(error);
         }
 
         self.notified_with_engine(path, |engine| engine.compile_please())
@@ -374,8 +370,8 @@ where
         let path = path(&params.text_document.uri);
 
         // The file is in sync with the file system, discard our cache of the changes
-        if let Err(e) = self.io.delete_mem_cache(&path) {
-            todo!()
+        if let Err(error) = self.io.delete_mem_cache(&path) {
+            return self.feedback.error(error);
         }
 
         // The files on disc have changed, so compile the project with the new changes
@@ -386,8 +382,8 @@ where
         let path = path(&params.text_document.uri);
 
         // The file is in sync with the file system, discard our cache of the changes
-        if let Err(e) = self.io.delete_mem_cache(&path) {
-            todo!()
+        if let Err(error) = self.io.delete_mem_cache(&path) {
+            return self.feedback.error(error);
         }
 
         Feedback::default()
@@ -403,8 +399,8 @@ where
             None => return Feedback::default(),
         };
 
-        if let Err(e) = self.io.write_mem_cache(&path, changes.text.as_str()) {
-            todo!()
+        if let Err(error) = self.io.write_mem_cache(&path, changes.text.as_str()) {
+            return self.feedback.error(error);
         }
 
         // The files on disc have changed, so compile the project with the new changes
@@ -418,8 +414,8 @@ where
         };
 
         let path = path(&changes.uri);
-
-        self.notified_with_engine(path, |engine| engine.recreate_compiler())
+        self.router.delete_engine_for_path(&path);
+        self.notified_with_engine(path, LanguageServerEngine::compile_please)
     }
 }
 
@@ -564,16 +560,6 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         }
         None => vec![main],
     }
-}
-
-fn convert_response<T>(result: Response<T>) -> (serde_json::Value, Feedback)
-where
-    T: serde::Serialize,
-{
-    (
-        serde_json::to_value(result.payload).expect("json to_value"),
-        result.feedback,
-    )
 }
 
 fn path_to_uri(path: PathBuf) -> Url {

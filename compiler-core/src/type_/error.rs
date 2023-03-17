@@ -11,7 +11,7 @@ use smol_str::SmolStr;
 
 use super::FieldAccessUsage;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Error {
     SrcImportingTest {
         location: SrcSpan,
@@ -262,7 +262,7 @@ pub enum PatternMatchKind {
     Assignment,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum Warning {
     Todo {
         kind: TodoKind,

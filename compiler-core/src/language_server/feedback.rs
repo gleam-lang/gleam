@@ -49,7 +49,7 @@ impl FeedbackBookKeeper {
     /// Send diagnostics for any warnings and remove any diagnostics for files
     /// that have compiled without warnings.
     ///
-    pub fn diagnostics(
+    pub fn compiled(
         &mut self,
         compiled: impl Iterator<Item = PathBuf>,
         warnings: Vec<Warning>,
@@ -79,14 +79,14 @@ impl FeedbackBookKeeper {
     /// that have compiled without warnings, AND ALSO send diagnostics for the
     /// error that caused compilation to fail.
     ///
-    pub fn diagnostics_with_error(
+    pub fn build_with_error(
         &mut self,
         error: Error,
         compiled: impl Iterator<Item = PathBuf>,
         warnings: Vec<Warning>,
     ) -> Feedback {
         let diagnostic = error.to_diagnostic();
-        let mut feedback = self.diagnostics(compiled, warnings);
+        let mut feedback = self.compiled(compiled, warnings);
 
         match diagnostic.location.as_ref().map(|l| l.path.clone()) {
             Some(path) => {
@@ -100,6 +100,10 @@ impl FeedbackBookKeeper {
         }
 
         feedback
+    }
+
+    pub fn error(&mut self, error: Error) -> Feedback {
+        self.build_with_error(error, vec![].into_iter(), vec![])
     }
 
     fn insert_warning(&mut self, feedback: &mut Feedback, warning: Warning) {
@@ -142,7 +146,7 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.diagnostics(
+        let feedback = book_keeper.compiled(
             vec![file1.clone()].into_iter(),
             vec![warning1.clone(), warning1.clone(), warning2.clone()],
         );
@@ -163,7 +167,7 @@ mod tests {
             feedback
         );
 
-        let feedback = book_keeper.diagnostics(
+        let feedback = book_keeper.compiled(
             vec![file1.clone(), file2.clone(), file3].into_iter(),
             vec![],
         );
@@ -202,7 +206,7 @@ mod tests {
 
         let locationless_error = Error::Gzip("Hello!".into());
 
-        let feedback = book_keeper.diagnostics_with_error(
+        let feedback = book_keeper.build_with_error(
             locationless_error.clone(),
             vec![].into_iter(),
             vec![warning1.clone()],
@@ -244,11 +248,8 @@ mod tests {
             },
         };
 
-        let feedback = book_keeper.diagnostics_with_error(
-            error.clone(),
-            vec![].into_iter(),
-            vec![warning1.clone()],
-        );
+        let feedback =
+            book_keeper.build_with_error(error.clone(), vec![].into_iter(), vec![warning1.clone()]);
 
         assert_eq!(
             Feedback {
@@ -265,7 +266,7 @@ mod tests {
 
         // The error diagnostic should be removed if the file compiles later.
 
-        let feedback = book_keeper.diagnostics(vec![file3.clone()].into_iter(), vec![]);
+        let feedback = book_keeper.compiled(vec![file3.clone()].into_iter(), vec![]);
 
         assert_eq!(
             Feedback {
