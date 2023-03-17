@@ -103,7 +103,11 @@ where
         }
     }
 
-    pub fn create_new_compiler(&mut self) -> Result<(), Error> {
+    pub fn recreate_compiler(&mut self) -> Feedback {
+        self.notified(Self::create_new_compiler)
+    }
+
+    fn create_new_compiler(&mut self) -> Result<(), Error> {
         if let Some(config) = self.config.as_ref() {
             let locker = self.io.inner().make_locker(&self.paths, config.target)?;
 
