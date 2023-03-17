@@ -8,7 +8,7 @@ use strum::IntoEnumIterator;
 
 #[derive(Debug)]
 pub(crate) struct BuildLock {
-    path: PathBuf,
+    directory: PathBuf,
 }
 
 impl BuildLock {
@@ -16,9 +16,7 @@ impl BuildLock {
     pub fn new_target(paths: &ProjectPaths, mode: Mode, target: Target) -> Result<Self> {
         let build = paths.build_directory_for_target(mode, target);
         crate::fs::mkdir(&build)?;
-        Ok(Self {
-            path: build.join("build.lock"),
-        })
+        Ok(Self { directory: build })
     }
 
     /// Lock the packages directory.
@@ -26,14 +24,20 @@ impl BuildLock {
         let packages = paths.build_packages_directory();
         crate::fs::mkdir(&packages)?;
         Ok(Self {
-            path: packages.join("build.lock"),
+            directory: packages,
         })
     }
 
     /// Lock the specified directory
     pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
-        tracing::info!(path=?self.path, "locking_build_directory");
-        let mut file = fslock::LockFile::open(&self.path).expect("LockFile creation");
+        tracing::debug!(path=?self.directory, "locking_build_directory");
+
+        // TODO: return error rather than panicking
+        crate::fs::mkdir(&self.directory).expect("Could not create lock directory");
+
+        let lock_path = self.directory.join("gleam.lock");
+        let mut file = fslock::LockFile::open(&lock_path).expect("LockFile creation");
+
         if !file.try_lock_with_pid().expect("Trying build locking") {
             telemetry.waiting_for_build_directory_lock();
             file.lock_with_pid().expect("Build locking")
