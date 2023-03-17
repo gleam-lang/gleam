@@ -231,6 +231,8 @@ where
                 Located::Statement(_) => return Ok(None),
             };
 
+            let documentation = expression.get_documentation();
+
             // Show the type of the hovered node to the user
             let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
             let contents = format!(
