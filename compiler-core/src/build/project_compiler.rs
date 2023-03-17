@@ -58,21 +58,7 @@ pub struct Built {
 impl Built {
     pub fn get_main_function(&self, module: &SmolStr) -> Result<ModuleFunction, Error> {
         match self.module_interfaces.get(module) {
-            Some(module_data) => match module_data.get_main_function() {
-                Some(module_function) => {
-                    if module_function.arity == 0 {
-                        Ok(module_function)
-                    } else {
-                        Err(Error::MainFunctionHasWrongArity {
-                            module: module.clone(),
-                            arity: module_function.arity,
-                        })
-                    }
-                }
-                None => Err(Error::ModuleDoesNotHaveMainFunction {
-                    module: module.clone(),
-                }),
-            },
+            Some(module_data) => module_data.get_main_function(),
             None => Err(Error::ModuleDoesNotExist {
                 module: module.clone(),
             }),

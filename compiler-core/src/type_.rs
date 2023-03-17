@@ -411,7 +411,6 @@ impl ModuleValueConstructor {
 
 #[derive(Debug, Clone)]
 pub struct ModuleFunction {
-    pub arity: usize,
     pub package: SmolStr,
 }
 
@@ -427,24 +426,24 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn get_main_function(&self) -> Option<ModuleFunction> {
+    pub fn get_main_function(&self) -> Result<ModuleFunction, crate::Error> {
         match self.values.get(&SmolStr::from("main")) {
             Some(ValueConstructor {
-                public: _,
-                variant:
-                    ValueConstructorVariant::ModuleFn {
-                        name: _,
-                        field_map: _,
-                        module: _,
-                        arity,
-                        location: _,
-                    },
-                type_: _,
-            }) => Some(ModuleFunction {
-                arity: *arity,
+                variant: ValueConstructorVariant::ModuleFn { arity: 0, .. },
+                ..
+            }) => Ok(ModuleFunction {
                 package: self.package.clone(),
             }),
-            _ => None,
+            Some(ValueConstructor {
+                variant: ValueConstructorVariant::ModuleFn { arity, .. },
+                ..
+            }) => Err(crate::Error::MainFunctionHasWrongArity {
+                module: self.name.clone(),
+                arity: *arity,
+            }),
+            _ => Err(crate::Error::ModuleDoesNotHaveMainFunction {
+                module: self.name.clone(),
+            }),
         }
     }
 }
