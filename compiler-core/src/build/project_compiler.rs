@@ -262,6 +262,7 @@ where
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
             tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+            return Ok(());
         }
 
         // TODO: test
@@ -319,6 +320,7 @@ where
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
             tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+            return Ok(());
         }
 
         // TODO: test
