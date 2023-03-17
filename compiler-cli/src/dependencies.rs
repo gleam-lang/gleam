@@ -140,7 +140,7 @@ pub fn download<Telem: Telemetry>(
     let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
 
     // Read the project config
-    let mut config = crate::config::root_config()?;
+    let mut config = crate::config::read(paths.root_config())?;
     let project_name = config.name.clone();
 
     // Insert the new packages to add, if it exists
