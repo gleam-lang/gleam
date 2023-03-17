@@ -58,12 +58,15 @@ where
             Entry::Vacant(entry) => entry,
         };
 
+        tracing::info!(?path, "creating_new_language_server_engine");
+
         let paths = ProjectPaths::new(path.to_path_buf());
-        let toml = self.io.read(&path)?;
+        let config_path = paths.root_config();
+        let toml = self.io.read(&config_path)?;
         let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
-            path: path.to_path_buf(),
+            path: config_path,
             err: Some(e.to_string()),
         })?;
         let engine = LanguageServerEngine::new(

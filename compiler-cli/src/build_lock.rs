@@ -32,7 +32,7 @@ impl BuildLock {
 
     /// Lock the specified directory
     pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
-        tracing::info!("locking_build_directory");
+        tracing::info!(path=?self.path, "locking_build_directory");
         let mut file = fslock::LockFile::open(&self.path).expect("LockFile creation");
         if !file.try_lock_with_pid().expect("Trying build locking") {
             telemetry.waiting_for_build_directory_lock();

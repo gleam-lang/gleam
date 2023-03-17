@@ -143,9 +143,8 @@ where
     }
 
     fn read_source_files(&self) -> Result<HashMap<SmolStr, Input>> {
-        let span = tracing::info_span!("load", package = %self.package_name);
+        let span = tracing::info_span!("load");
         let _enter = span.enter();
-        tracing::info!("Reading source files");
 
         let mut inputs = Inputs::new(self.already_defined_modules);
 

@@ -154,12 +154,12 @@ where
 {
     fn exec(
         &self,
-        _program: &str,
-        _args: &[String],
-        _env: &[(&str, String)],
-        _cwd: Option<&Path>,
-        _stdio: Stdio,
+        program: &str,
+        args: &[String],
+        env: &[(&str, String)],
+        cwd: Option<&Path>,
+        stdio: Stdio,
     ) -> Result<i32> {
-        panic!("Command execution is not supported in LSP")
+        self.io.exec(program, args, env, cwd, stdio)
     }
 }

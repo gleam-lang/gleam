@@ -62,6 +62,8 @@ where
         progress_reporter.dependency_downloading_started();
         let manifest = io.inner().download_dependencies(&paths);
         progress_reporter.dependency_downloading_finished();
+
+        // NOTE: This must come after the progress reporter has finished!
         let manifest = manifest?;
 
         let compiler =
