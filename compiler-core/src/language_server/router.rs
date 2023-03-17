@@ -53,14 +53,14 @@ where
             None => return Ok(None),
         };
 
-        let entry = match self.engines.entry(path.to_path_buf()) {
+        let entry = match self.engines.entry(path.clone()) {
             Entry::Occupied(entry) => return Ok(Some(entry.into_mut())),
             Entry::Vacant(entry) => entry,
         };
 
         tracing::info!(?path, "creating_new_language_server_engine");
 
-        let paths = ProjectPaths::new(path.to_path_buf());
+        let paths = ProjectPaths::new(path);
         let config_path = paths.root_config();
         let toml = self.io.read(&config_path)?;
         let config = toml::from_str(&toml).map_err(|e| Error::FileIo {
@@ -78,7 +78,7 @@ where
         Ok(Some(entry.insert(engine)))
     }
 
-    pub fn delete_engine_for_path(&mut self, path: &PathBuf) {
+    pub fn delete_engine_for_path(&mut self, path: &Path) {
         if let Some(path) = find_gleam_project_parent(&self.io, path) {
             _ = self.engines.remove(&path);
         }
