@@ -570,5 +570,10 @@ fn path_to_uri(path: PathBuf) -> Url {
 }
 
 fn path(uri: &Url) -> PathBuf {
-    uri.to_file_path().expect("Path URL decoding")
+    // The to_file_path method is available on these platforms
+    #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
+    return uri.to_file_path().expect("URL file");
+
+    #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
+    return uri.path().into();
 }
