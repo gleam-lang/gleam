@@ -4,6 +4,9 @@
 
 - The language server now analyzes files on edit rather than on save, providing
   feedback faster.
+- The language server now supports editor sessions that span multiple projects.
+  This is useful for mono-repos and projects with both a frontend and backend in
+  Gleam.
 - Added support for negation of integers with the new `-` unary operator.
 - The deprecated `try` expression has been removed.
 - The deprecated `assert ... = ...` syntax has been removed.
