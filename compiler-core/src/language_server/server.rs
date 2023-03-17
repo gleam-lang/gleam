@@ -34,6 +34,7 @@ use std::{collections::HashMap, path::PathBuf};
 /// - Decoding requests.
 /// - Encoding responses.
 /// - Sending diagnostics and messages to the client.
+/// - Tracking the state of diagnostics and messages.
 /// - Performing the initialisation handshake.
 ///
 #[derive(Debug)]
