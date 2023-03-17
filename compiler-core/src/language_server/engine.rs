@@ -67,7 +67,7 @@ where
         let manifest = manifest?;
 
         let compiler =
-            LspProjectCompiler::new(manifest, config.clone(), paths.clone(), io.clone(), locker)?;
+            LspProjectCompiler::new(manifest, config, paths.clone(), io.clone(), locker)?;
 
         Ok(Self {
             modules_compiled_since_last_feedback: vec![],
