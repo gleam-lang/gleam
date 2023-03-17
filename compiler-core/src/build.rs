@@ -79,7 +79,7 @@ impl Codegen {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq,
+    Debug, Serialize, Deserialize, Display, EnumString, EnumVariantNames, Clone, Copy, PartialEq, Eq,
 )]
 pub enum Runtime {
     #[strum(serialize = "nodejs", serialize = "node")]

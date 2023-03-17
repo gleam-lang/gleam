@@ -67,12 +67,18 @@ where
             err: Some(e.to_string()),
         })?;
         let engine = LanguageServerEngine::new(
-            Some(config),
+            config,
             self.progress_reporter.clone(),
             self.io.clone(),
             paths,
         )?;
         Ok(Some(entry.insert(engine)))
+    }
+
+    pub fn delete_engine_for_path(&mut self, path: &PathBuf) {
+        if let Some(path) = find_gleam_project_parent(&self.io, path) {
+            _ = self.engines.remove(&path);
+        }
     }
 }
 

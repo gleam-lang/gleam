@@ -29,7 +29,7 @@ macro_rules! wrap_format {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct UnknownImportDetails {
     pub module: Name,
     pub location: crate::ast::SrcSpan,
@@ -38,7 +38,7 @@ pub struct UnknownImportDetails {
     pub modules: Vec<SmolStr>,
 }
 
-#[derive(Debug, PartialEq, Error, Clone)]
+#[derive(Debug, Eq, PartialEq, Error, Clone)]
 pub enum Error {
     #[error("failed to parse Gleam source code")]
     Parse {
