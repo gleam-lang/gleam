@@ -1,5 +1,4 @@
-.phony: test
-test:
+.phony: test-all
+test-all:
 	@echo test/running_modules
-	@chmod +x run_tests
-	@./run_tests
+	@./run_tests.sh
