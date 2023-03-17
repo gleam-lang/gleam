@@ -229,7 +229,7 @@ where
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &package.name);
         if self.io.is_directory(&build_path) {
-            tracing::info!(package=%package.name, "loading_precompiled_package");
+            tracing::debug!(package=%package.name, "loading_precompiled_package");
             return self.load_cached_package(build_path, package);
         }
 
@@ -261,13 +261,13 @@ where
 
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
-            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+            tracing::debug!(%name, "skipping_mix_build_as_codegen_disabled");
             return Ok(());
         }
 
         // TODO: test
         if target != Target::Erlang {
-            tracing::info!(%name, "skipping_rebar3_build_for_non_erlang_target");
+            tracing::debug!(%name, "skipping_rebar3_build_for_non_erlang_target");
             return Ok(());
         }
 
@@ -319,13 +319,13 @@ where
 
         // TODO: test
         if !self.options.codegen.should_codegen(false) {
-            tracing::info!(%name, "skipping_mix_build_as_codegen_disabled");
+            tracing::debug!(%name, "skipping_mix_build_as_codegen_disabled");
             return Ok(());
         }
 
         // TODO: test
         if target != Target::Erlang {
-            tracing::info!(%name, "skipping_mix_build_for_non_erlang_target");
+            tracing::debug!(%name, "skipping_mix_build_for_non_erlang_target");
             return Ok(());
         }
 

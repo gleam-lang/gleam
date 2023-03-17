@@ -186,14 +186,14 @@ pub fn download<Telem: Telemetry>(
         // caches as they may now be outdated.
         // TODO: test
         let _guard = BuildLock::lock_all_build(paths, &telemetry)?;
-        tracing::info!("deleting_build_caches");
+        tracing::debug!("deleting_build_caches");
         for mode in Mode::iter() {
             fs::delete_dir(&paths.build_directory_for_mode(mode))?;
         }
 
         // Record new state of the packages directory
         // TODO: test
-        tracing::info!("writing_manifest_toml");
+        tracing::debug!("writing_manifest_toml");
         write_manifest_to_disc(paths, &manifest)?;
     }
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
@@ -236,7 +236,7 @@ fn remove_extra_packages(
     for (package, version) in local.extra_local_packages(manifest) {
         let path = paths.build_packages_package(&package);
         if path.exists() {
-            tracing::info!(package=%package, version=%version, "removing_unneeded_package");
+            tracing::debug!(package=%package, version=%version, "removing_unneeded_package");
             fs::delete_dir(&path)?;
         }
     }
@@ -244,7 +244,7 @@ fn remove_extra_packages(
 }
 
 fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
-    tracing::info!("Reading manifest.toml");
+    tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
     let toml = crate::fs::read(&manifest_path)?;
     let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
@@ -455,11 +455,11 @@ fn get_manifest<Telem: Telemetry>(
     // the versions anew
     let should_resolve = match use_manifest {
         _ if !paths.manifest().exists() => {
-            tracing::info!("manifest_not_present");
+            tracing::debug!("manifest_not_present");
             true
         }
         UseManifest::No => {
-            tracing::info!("ignoring_manifest");
+            tracing::debug!("ignoring_manifest");
             true
         }
         UseManifest::Yes => false,
@@ -475,10 +475,10 @@ fn get_manifest<Telem: Telemetry>(
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
     if manifest.requirements == config.all_dependencies()? {
-        tracing::info!("manifest_up_to_date");
+        tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
-        tracing::info!("manifest_outdated");
+        tracing::debug!("manifest_outdated");
         let manifest = resolve_versions(runtime, mode, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
@@ -571,7 +571,7 @@ impl hexpm::version::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
-        tracing::info!(package = package, "looking_up_hex_package");
+        tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
         let response = self

@@ -121,8 +121,8 @@ where
         }
 
         // Type check the modules that are new or have changed
-        tracing::info!(count=%loaded.to_compile.len(), "type_checking_modules");
-        let modules = type_check(
+        tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
+        let modules = analyse(
             &self.config.name,
             self.target.target(),
             &self.ids,
@@ -131,7 +131,7 @@ where
             warnings,
         )?;
 
-        tracing::info!("performing_code_generation");
+        tracing::debug!("performing_code_generation");
         self.perform_codegen(&modules)?;
         self.encode_and_write_metadata(&modules)?;
 
@@ -140,11 +140,11 @@ where
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<PathBuf>) -> Result<(), Error> {
         if modules.is_empty() {
-            tracing::info!("no_erlang_to_compile");
+            tracing::debug!("no_erlang_to_compile");
             return Ok(());
         }
 
-        tracing::info!("compiling_erlang");
+        tracing::debug!("compiling_erlang");
 
         let escript_path = self
             .out
@@ -189,7 +189,7 @@ where
         destination_dir: &Path,
         to_compile_modules: &mut HashSet<PathBuf>,
     ) -> Result<(), Error> {
-        tracing::info!("copying_native_source_files");
+        tracing::debug!("copying_native_source_files");
 
         // TODO: unit test
         let priv_source = self.root.join("priv");
@@ -215,7 +215,7 @@ where
 
     fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
         if !self.write_metadata {
-            tracing::info!("package_metadata_writing_disabled");
+            tracing::debug!("package_metadata_writing_disabled");
             return Ok(());
         }
         if modules.is_empty() {
@@ -224,7 +224,7 @@ where
 
         let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
 
-        tracing::info!("writing_module_caches");
+        tracing::debug!("writing_module_caches");
         for module in modules {
             let module_name = module.name.replace('/', "@");
 
@@ -250,7 +250,7 @@ where
 
     fn perform_codegen(&mut self, modules: &[Module]) -> Result<()> {
         if !self.perform_codegen {
-            tracing::info!("skipping_codegen");
+            tracing::debug!("skipping_codegen");
             return Ok(());
         }
 
@@ -279,7 +279,7 @@ where
         if self.copy_native_files {
             self.copy_project_native_files(&build_dir, &mut written)?;
         } else {
-            tracing::info!("skipping_native_file_copying");
+            tracing::debug!("skipping_native_file_copying");
         }
 
         if let Some(config) = app_file {
@@ -293,7 +293,7 @@ where
         if self.compile_beam_bytecode && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
-            tracing::info!("skipping_entrypoint_generation");
+            tracing::debug!("skipping_entrypoint_generation");
         }
 
         // NOTE: This must come after `copy_project_native_files` to ensure that
@@ -306,7 +306,7 @@ where
             written.extend(modules.iter().map(Module::compiled_erlang_path));
             self.compile_erlang_to_beam(&written)?;
         } else {
-            tracing::info!("skipping_erlang_bytecode_compilation");
+            tracing::debug!("skipping_erlang_bytecode_compilation");
         }
         Ok(())
     }
@@ -328,7 +328,7 @@ where
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
         } else {
-            tracing::info!("skipping_native_file_copying");
+            tracing::debug!("skipping_native_file_copying");
         }
 
         Ok(())
@@ -360,7 +360,7 @@ where
     }
 }
 
-fn type_check(
+fn analyse(
     package_name: &SmolStr,
     target: Target,
     ids: &UniqueIdGenerator,
