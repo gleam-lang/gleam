@@ -10,8 +10,9 @@ use crate::{
 };
 use debug_ignore::DebugIgnore;
 use lsp::{
-    notification::DidOpenTextDocument, request::GotoDefinition, HoverProviderCapability, Position,
-    Range, TextEdit, Url,
+    notification::{DidChangeWatchedFiles, DidOpenTextDocument},
+    request::GotoDefinition,
+    HoverProviderCapability, Position, Range, TextEdit, Url,
 };
 use lsp_types::{
     self as lsp,
@@ -162,11 +163,8 @@ where
             }
 
             "workspace/didChangeWatchedFiles" => {
-                // TODO: recreate compiler
-                tracing::info!("gleam_toml_changed_so_recompiling_full_project");
-                todo!();
-                // self.create_new_compiler().expect("create");
-                // self.compile_please()
+                let params = cast_notification::<DidChangeWatchedFiles>(notification);
+                self.watched_files_changed(params)
             }
 
             _ => return,
@@ -411,6 +409,17 @@ where
 
         // The files on disc have changed, so compile the project with the new changes
         self.notified_with_engine(path, |engine| engine.compile_please())
+    }
+
+    fn watched_files_changed(&mut self, params: lsp::DidChangeWatchedFilesParams) -> Feedback {
+        let changes = match params.changes.into_iter().last() {
+            Some(changes) => changes,
+            None => return Feedback::default(),
+        };
+
+        let path = path(&changes.uri);
+
+        self.notified_with_engine(path, |engine| engine.recreate_compiler())
     }
 }
 
