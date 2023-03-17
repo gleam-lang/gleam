@@ -12,7 +12,7 @@ use crate::{
     Error, Result, Warning,
 };
 use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use super::{src_span_to_lsp_range, DownloadDependencies, MakeLocker};
 
@@ -265,93 +265,19 @@ where
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        let module_name = uri_to_module_name(uri, self.paths.root()).expect("uri to module name");
+        use itertools::Itertools;
+
+        let path = uri.to_file_path().expect("URL file");
+        let components = path
+            .strip_prefix(self.paths.root())
+            .ok()?
+            .components()
+            .skip(1)
+            .map(|c| c.as_os_str().to_string_lossy());
+        let module_name = Itertools::intersperse(components, "/".into())
+            .collect::<String>()
+            .strip_suffix(".gleam")?
+            .to_string();
         self.compiler.modules.get(&module_name)
     }
-}
-
-// TODO: Fix this rubbish.
-#[cfg(target_os = "windows")]
-fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    use itertools::Itertools;
-    use urlencoding::decode;
-
-    let mut uri_path = decode(&*uri.path().replace('/', "\\"))
-        .expect("Invalid formatting")
-        .to_string();
-    if uri_path.starts_with("\\") {
-        uri_path = uri_path
-            .strip_prefix("\\")
-            .expect("Failed to remove \"\\\" prefix")
-            .to_string();
-    }
-    let path = PathBuf::from(uri_path);
-    let components = path
-        .strip_prefix(&root)
-        .ok()?
-        .components()
-        .skip(1)
-        .map(|c| c.as_os_str().to_string_lossy());
-    let module_name = Itertools::intersperse(components, "/".into())
-        .collect::<String>()
-        .strip_suffix(".gleam")?
-        .to_string();
-    tracing::info!("(uri_to_module_name) module_name: {}", module_name);
-    Some(module_name)
-}
-
-#[test]
-#[cfg(target_os = "windows")]
-fn uri_to_module_name_test() {
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///b%3A/projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///c%3A/projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-}
-
-#[cfg(not(target_os = "windows"))]
-fn uri_to_module_name(uri: &Url, root: &Path) -> Option<String> {
-    use itertools::Itertools;
-
-    let path = PathBuf::from(uri.path());
-    let components = path
-        .strip_prefix(root)
-        .ok()?
-        .components()
-        .skip(1)
-        .map(|c| c.as_os_str().to_string_lossy());
-    let module_name = Itertools::intersperse(components, "/".into())
-        .collect::<String>()
-        .strip_suffix(".gleam")?
-        .to_string();
-    Some(module_name)
-}
-
-#[test]
-#[cfg(not(target_os = "windows"))]
-fn uri_to_module_name_test() {
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/src/one/two/three.gleam").unwrap();
-    assert_eq!(
-        uri_to_module_name(&uri, &root),
-        Some("one/two/three".into())
-    );
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/test/one/two/three.gleam").unwrap();
-    assert_eq!(
-        uri_to_module_name(&uri, &root),
-        Some("one/two/three".into())
-    );
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///somewhere/else/src/one/two/three.gleam").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
-
-    let root = PathBuf::from("/projects/app");
-    let uri = Url::parse("file:///projects/app/src/one/two/three.rs").unwrap();
-    assert_eq!(uri_to_module_name(&uri, &root), None);
 }
