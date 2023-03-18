@@ -66,10 +66,10 @@ use crate::ast::{
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
-use itertools::Itertools;
 use lexer::{LexResult, Spanned};
 use smol_str::SmolStr;
 use std::cmp::Ordering;
+use std::collections::VecDeque;
 use std::str::FromStr;
 use token::Token;
 use vec1::vec1;
@@ -112,7 +112,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
-    doc_comments: Vec<String>,
+    doc_comments: VecDeque<(u32, String)>,
 }
 impl<T> Parser<T>
 where
@@ -125,7 +125,7 @@ where
             tok0: None,
             tok1: None,
             extra: ModuleExtra::new(),
-            doc_comments: vec![],
+            doc_comments: VecDeque::new(),
         };
         let _ = parser.next_tok();
         let _ = parser.next_tok();
@@ -1366,7 +1366,7 @@ where
         let documentation = if is_anon {
             None
         } else {
-            self.take_documentation()
+            self.take_documentation(start)
         };
         let mut name = SmolStr::new("");
         if !is_anon {
@@ -1419,7 +1419,7 @@ where
         start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
-        let documentation = self.take_documentation();
+        let documentation = self.take_documentation(start);
         let (_, name, _) = self.expect_name()?;
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Token::Comma))?;
@@ -1647,7 +1647,7 @@ where
         start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
-        let documentation = self.take_documentation();
+        let documentation = self.take_documentation(start);
         let (_, name, args, end) = self.expect_type_name()?;
         Ok(Some(Statement::ExternalType(ExternalType {
             location: SrcSpan { start, end },
@@ -1673,7 +1673,7 @@ where
         public: bool,
         opaque: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
-        let documentation = self.take_documentation();
+        let documentation = self.take_documentation(start);
         let (_, name, parameters, end) = self.expect_type_name()?;
         if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
@@ -1681,7 +1681,7 @@ where
                 self,
                 &|p| {
                     if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
-                        let documentation = p.take_documentation();
+                        let documentation = p.take_documentation(c_s);
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
@@ -1974,7 +1974,6 @@ where
     //   import a/b.{c}
     //   import a/b.{c as d} as e
     fn parse_import(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
-        let documentation = self.take_documentation();
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -2005,6 +2004,8 @@ where
                 break;
             }
         }
+
+        let documentation = self.take_documentation(start);
 
         // Gather imports
         let mut unqualified = vec![];
@@ -2094,8 +2095,8 @@ where
     //   const a:Int = 1
     //   pub const a:Int = 1
     fn parse_module_const(&mut self, public: bool) -> Result<Option<UntypedStatement>, ParseError> {
-        let documentation = self.take_documentation();
         let (start, name, end) = self.expect_name()?;
+        let documentation = self.take_documentation(start);
 
         let annotation = self.parse_type_annotation(&Token::Colon, true)?;
 
@@ -2704,7 +2705,7 @@ where
                 }
                 Some(Ok((start, Token::CommentDoc { content }, end))) => {
                     self.extra.doc_comments.push(SrcSpan::new(start, end));
-                    self.doc_comments.push(content);
+                    self.doc_comments.push_back((start, content));
                 }
                 Some(Ok((start, Token::CommentModule, end))) => {
                     self.extra.module_comments.push(SrcSpan { start, end });
@@ -2732,8 +2733,16 @@ where
         t
     }
 
-    fn take_documentation(&mut self) -> Option<SmolStr> {
-        let content = self.doc_comments.drain(..).join("\n");
+    fn take_documentation(&mut self, until: u32) -> Option<SmolStr> {
+        let mut content = String::new();
+        while let Some((start, line)) = self.doc_comments.front() {
+            if *start >= until {
+                break;
+            }
+            content.push_str(line);
+            content.push('\n');
+            _ = self.doc_comments.pop_front();
+        }
         if content.is_empty() {
             None
         } else {
