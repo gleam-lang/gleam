@@ -477,12 +477,19 @@ pub enum PatternConstructor {
         name: SmolStr,
         field_map: Option<FieldMap>,
         documentation: Option<SmolStr>,
+        module: Option<SmolStr>,
+        location: SrcSpan,
     },
 }
 impl PatternConstructor {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
-            PatternConstructor::Record { .. } => todo!(),
+            PatternConstructor::Record {
+                module, location, ..
+            } => Some(DefinitionLocation {
+                module: Some(module.as_deref()?),
+                span: *location,
+            }),
         }
     }
 
