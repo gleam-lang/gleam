@@ -344,7 +344,7 @@ macro_rules! assert_with_module_error {
         let (mut ast, _) = $crate::parse::parse_module($src).expect("syntax error");
         ast.name = "my_module".into();
         let error = $crate::analyse::infer_module(
-            crate::build::Target::Erlang,
+            $crate::build::Target::Erlang,
             &ids,
             ast,
             Origin::Src,
@@ -417,7 +417,7 @@ macro_rules! assert_warning {
         let warning_emitter = $crate::warning::TypeWarningEmitter::new(
             std::path::PathBuf::new(),
             smol_str::SmolStr::new(""),
-            crate::warning::WarningEmitter::new(
+            $crate::warning::WarningEmitter::new(
                 std::sync::Arc::new(warnings.clone()),
             ),
         );
@@ -543,7 +543,7 @@ macro_rules! assert_no_warnings {
         let warning_emitter = $crate::warning::TypeWarningEmitter::new(
             std::path::PathBuf::new(),
             smol_str::SmolStr::new(""),
-            crate::warning::WarningEmitter::new(
+            $crate::warning::WarningEmitter::new(
                 std::sync::Arc::new(warnings.clone()),
             ),
         );
