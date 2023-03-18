@@ -7,7 +7,8 @@
 - The language server now supports editor sessions that span multiple projects.
   This is useful for mono-repos and projects with both a frontend and backend in
   Gleam.
-- The language server now shows documentation on hover for expressions.
+- The language server now also shows documentation on hover for expressions.
+- The language server now shows types and documentation on hover for patterns.
 - Added support for negation of integers with the new `-` unary operator.
 - The deprecated `try` expression has been removed.
 - The deprecated `assert ... = ...` syntax has been removed.
