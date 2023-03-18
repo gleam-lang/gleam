@@ -455,17 +455,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
 
                 let constructor_typ = cons.type_.clone();
-                let constructor = match cons.variant {
-                    ValueConstructorVariant::Record { ref name, .. } => {
-                        PatternConstructor::Record {
-                            name: name.clone(),
-                            field_map: cons.field_map().cloned(),
-                        }
-                    }
+                let constructor = match &cons.variant {
+                    ValueConstructorVariant::Record {
+                        name,
+                        documentation,
+                        ..
+                    } => PatternConstructor::Record {
+                        documentation: documentation.clone(),
+                        name: name.clone(),
+                        field_map: cons.field_map().cloned(),
+                    },
                     ValueConstructorVariant::LocalVariable { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
                     | ValueConstructorVariant::ModuleFn { .. } => {
-                        panic!("Unexpected value constructor type for a constructor pattern.",)
+                        panic!("Unexpected value constructor type for a constructor pattern.")
                     }
                 };
 

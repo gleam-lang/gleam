@@ -1150,10 +1150,6 @@ impl<A, B> Pattern<A, B> {
     pub fn type_(&self) -> Arc<Type> {
         todo!()
     }
-
-    pub fn get_documentation(&self) -> Option<&str> {
-        todo!()
-    }
 }
 
 impl TypedPattern {
@@ -1172,6 +1168,24 @@ impl TypedPattern {
             | Pattern::Concatenate { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
+        }
+    }
+
+    pub fn get_documentation(&self) -> Option<&str> {
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Var { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitString { .. }
+            | Pattern::Concatenate { .. } => None,
+
+            Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
         }
     }
 }
