@@ -409,6 +409,7 @@ impl TypedExpr {
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match self {
             TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
+            TypedExpr::ModuleSelect { constructor, .. } => constructor.get_documentation(),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -421,7 +422,6 @@ impl TypedExpr {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Assignment { .. }
             | TypedExpr::Case { .. }
-            | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }

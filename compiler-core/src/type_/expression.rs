@@ -1678,6 +1678,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             arity: args.len() as u16,
                             type_: Arc::clone(&typ),
                             location: constructor.variant.definition_location(),
+                            documentation: None,
                         };
 
                         TypedExpr::ModuleSelect {

@@ -289,6 +289,7 @@ fn find_node_module_select() {
             module: "module".into(),
             name: "function".into(),
             location: SrcSpan { start: 1, end: 55 },
+            documentation: None,
         },
     };
 
