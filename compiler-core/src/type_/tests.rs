@@ -350,7 +350,7 @@ macro_rules! assert_with_module_error {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -440,7 +440,7 @@ macro_rules! assert_warning {
         .expect("should successfully infer");
 
         let warnings = warnings.take().into_iter().map(|w| match w {
-            crate::warning::Warning::Type { warning, ..  } => warning,
+            $crate::warning::Warning::Type { warning, ..  } => warning,
         }).collect::<Vec<_>>();
         assert!(!warnings.is_empty());
         assert_eq!($warning, warnings[0]);
@@ -580,7 +580,7 @@ macro_rules! assert_no_warnings {
             Origin::Src,
             &"thepackage".into(),
             &modules,
-            &crate::warning::TypeWarningEmitter::null(),
+            &$crate::warning::TypeWarningEmitter::null(),
         )
         .expect("should successfully infer");
 

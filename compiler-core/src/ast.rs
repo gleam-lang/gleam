@@ -1244,7 +1244,7 @@ impl TypedPattern {
 
             Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
         }
-        .or_else(|| Some(Located::Pattern(self)))
+        .or(Some(Located::Pattern(self)))
     }
 }
 impl<A, B> HasLocation for Pattern<A, B> {
