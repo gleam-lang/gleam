@@ -471,11 +471,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     ValueConstructorVariant::Record {
                         name,
                         documentation,
+                        module,
+                        location,
                         ..
                     } => PatternConstructor::Record {
                         documentation: documentation.clone(),
                         name: name.clone(),
                         field_map: cons.field_map().cloned(),
+                        module: Some(module.clone()),
+                        location: *location,
                     },
                     ValueConstructorVariant::LocalVariable { .. }
                     | ValueConstructorVariant::ModuleConstant { .. }
