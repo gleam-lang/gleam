@@ -15,7 +15,7 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
-use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedStatement};
+use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedPattern, TypedStatement};
 use crate::{
     ast::{SrcSpan, Statement, TypedModule},
     config::{self, PackageConfig},
@@ -263,11 +263,13 @@ impl Module {
 pub enum Located<'a> {
     Expression(&'a TypedExpr),
     Statement(&'a TypedStatement),
+    Pattern(&'a TypedPattern),
 }
 
 impl<'a> Located<'a> {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
+            Self::Pattern(pattern) => pattern.definition_location(),
             Self::Expression(expression) => expression.definition_location(),
             Self::Statement(statement) => Some(DefinitionLocation {
                 module: None,

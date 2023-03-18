@@ -478,6 +478,13 @@ pub enum PatternConstructor {
         field_map: Option<FieldMap>,
     },
 }
+impl PatternConstructor {
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        match self {
+            PatternConstructor::Record { .. } => todo!(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeVar {

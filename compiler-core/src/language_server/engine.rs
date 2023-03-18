@@ -1,4 +1,5 @@
 use crate::{
+    ast::{TypedExpr, TypedPattern},
     build::{Located, Module},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -171,7 +172,8 @@ where
 
             Ok(match found {
                 None => None,
-                Some(Located::Statement(_expression)) => None,
+                Some(Located::Pattern(_pattern)) => None,
+                Some(Located::Statement(_statement)) => None,
                 Some(Located::Expression(_expression)) => None,
             })
         })
@@ -221,30 +223,16 @@ where
         self.respond(|this| {
             let params = params.text_document_position_params;
 
-            let (line_numbers, found) = match this.node_at_position(&params) {
+            let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
             };
 
-            let expression = match found {
-                Located::Expression(expression) => expression,
-                Located::Statement(_) => return Ok(None),
-            };
-
-            let documentation = expression.get_documentation().unwrap_or_default();
-
-            // Show the type of the hovered node to the user
-            let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
-            let contents = format!(
-                "```gleam
-{type_}
-```
-{documentation}"
-            );
-            Ok(Some(Hover {
-                contents: HoverContents::Scalar(MarkedString::String(contents)),
-                range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
-            }))
+            Ok(match found {
+                Located::Statement(_) => None,
+                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
+                Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
+            })
         })
     }
 
@@ -281,5 +269,39 @@ where
             .strip_suffix(".gleam")?
             .to_string();
         self.compiler.modules.get(&module_name)
+    }
+}
+
+fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
+    let documentation = pattern.get_documentation().unwrap_or_default();
+
+    // Show the type of the hovered node to the user
+    let type_ = Printer::new().pretty_print(pattern.type_().as_ref(), 0);
+    let contents = format!(
+        "```gleam
+{type_}
+```
+{documentation}"
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
+    }
+}
+
+fn hover_for_expression(expression: &TypedExpr, line_numbers: LineNumbers) -> Hover {
+    let documentation = expression.get_documentation().unwrap_or_default();
+
+    // Show the type of the hovered node to the user
+    let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+    let contents = format!(
+        "```gleam
+{type_}
+```
+{documentation}"
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(expression.location(), &line_numbers)),
     }
 }
