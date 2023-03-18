@@ -408,10 +408,7 @@ impl TypedExpr {
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match self {
-            TypedExpr::Var { constructor, .. } => {
-                dbg!(&self);
-                constructor.get_documentation()
-            }
+            TypedExpr::Var { constructor, .. } => constructor.get_documentation(),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }

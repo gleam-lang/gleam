@@ -699,24 +699,39 @@ where
     // 4 slash, module
     // this function is entered after 2 slashes
     fn lex_comment(&mut self) -> Spanned {
+        enum Kind {
+            Comment,
+            Doc,
+            ModuleDoc,
+        }
         let kind = match (self.chr0, self.chr1) {
             (Some('/'), Some('/')) => {
                 let _ = self.next_char();
                 let _ = self.next_char();
-                Token::CommentModule
+                Kind::ModuleDoc
             }
             (Some('/'), _) => {
                 let _ = self.next_char();
-                Token::CommentDoc
+                Kind::Doc
             }
-            _ => Token::CommentNormal,
+            _ => Kind::Comment,
         };
+        let mut content = String::new();
         let start_pos = self.get_pos();
-        while Some('\n') != self.chr0 && self.chr0.is_some() {
+        while Some('\n') != self.chr0 {
+            match self.chr0 {
+                Some(c) => content.push(c),
+                None => break,
+            }
             let _ = self.next_char();
         }
         let end_pos = self.get_pos();
-        (start_pos, kind, end_pos)
+        let token = match kind {
+            Kind::Comment => Token::CommentNormal,
+            Kind::Doc => Token::CommentDoc { content },
+            Kind::ModuleDoc => Token::CommentModule,
+        };
+        (start_pos, token, end_pos)
     }
 
     fn lex_string(&mut self) -> LexResult {
