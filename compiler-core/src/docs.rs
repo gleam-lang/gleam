@@ -639,7 +639,7 @@ fn constant<'a>(
     match statement {
         Statement::ModuleConstant(ModuleConstant {
             public: true,
-            doc,
+            documentation: doc,
             name,
             value,
             location,

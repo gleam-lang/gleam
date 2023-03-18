@@ -231,14 +231,15 @@ where
                 Located::Statement(_) => return Ok(None),
             };
 
-            let documentation = expression.get_documentation();
+            let documentation = expression.get_documentation().unwrap_or_default();
 
             // Show the type of the hovered node to the user
             let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
             let contents = format!(
                 "```gleam
 {type_}
-```"
+```
+{documentation}"
             );
             Ok(Some(Hover {
                 contents: HoverContents::Scalar(MarkedString::String(contents)),

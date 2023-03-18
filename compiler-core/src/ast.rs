@@ -447,7 +447,7 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// pub const end_year = 2111
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub public: bool,
     pub name: SmolStr,
@@ -577,7 +577,9 @@ impl<A, B, C, E> Statement<A, B, C, E> {
             | Statement::CustomType(CustomType { doc, .. })
             | Statement::ExternalFunction(ExternalFunction { doc, .. })
             | Statement::ExternalType(ExternalType { doc, .. })
-            | Statement::ModuleConstant(ModuleConstant { doc, .. }) => {
+            | Statement::ModuleConstant(ModuleConstant {
+                documentation: doc, ..
+            }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
             }
         }

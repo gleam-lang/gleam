@@ -2083,7 +2083,7 @@ where
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Statement::ModuleConstant(ModuleConstant {
-                doc: None,
+                documentation: None,
                 location: SrcSpan { start, end },
                 public,
                 name,

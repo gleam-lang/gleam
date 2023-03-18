@@ -82,6 +82,7 @@ struct ValueConstructorVariant {
       literal @0 :Constant;
       location @1 :SrcSpan;
       module @2 :Text;
+      documentation @14 :Text;
     }
 
     moduleFn :group {
