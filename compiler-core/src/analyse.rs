@@ -985,7 +985,7 @@ fn infer_module_constant(
     module_name: &SmolStr,
 ) -> Result<TypedStatement, Error> {
     let ModuleConstant {
-        doc,
+        documentation: doc,
         location,
         name,
         annotation,
@@ -998,6 +998,7 @@ fn infer_module_constant(
     let variant = ValueConstructor {
         public,
         variant: ValueConstructorVariant::ModuleConstant {
+            documentation: doc.clone(),
             location,
             literal: typed_expr.clone(),
             module: module_name.clone(),
@@ -1013,7 +1014,7 @@ fn infer_module_constant(
     }
 
     Ok(Statement::ModuleConstant(ModuleConstant {
-        doc,
+        documentation: doc,
         location,
         name,
         annotation,

@@ -214,7 +214,8 @@ impl Module {
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
 
-        // Order statements to avoid dissociating doc comments from them
+        // Order statements to avoid missociating doc comments after the order
+        // has changed during compilation.
         let mut statements: Vec<_> = self.ast.statements.iter_mut().collect();
         statements.sort_by(|a, b| a.location().start.cmp(&b.location().start));
 

@@ -173,8 +173,10 @@ impl<'a> ModuleEncoder<'a> {
                 literal,
                 location,
                 module,
+                documentation: doc,
             } => {
                 let mut builder = builder.init_module_constant();
+                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);

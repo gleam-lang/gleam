@@ -268,6 +268,7 @@ pub enum ValueConstructorVariant {
 
     /// A module constant
     ModuleConstant {
+        documentation: Option<SmolStr>,
         location: SrcSpan,
         module: SmolStr,
         literal: Constant<Arc<Type>, SmolStr>,
@@ -571,19 +572,21 @@ impl ValueConstructor {
 
     pub(crate) fn get_documentation(&self) -> Option<&str> {
         match &self.variant {
-            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable"),
-            ValueConstructorVariant::ModuleConstant {
-                location,
-                module,
-                literal,
-            } => todo!(),
+            ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
+
+            // TODO: it!
+            ValueConstructorVariant::ModuleConstant { documentation, .. } => {
+                Some(documentation.as_ref()?.as_str())
+            }
+
             ValueConstructorVariant::ModuleFn {
                 name,
                 field_map,
                 module,
                 arity,
                 location,
-            } => todo!(),
+            } => None,
+
             ValueConstructorVariant::Record {
                 name,
                 arity,
@@ -591,7 +594,7 @@ impl ValueConstructor {
                 location,
                 module,
                 constructors_count,
-            } => todo!(),
+            } => None,
         }
     }
 }

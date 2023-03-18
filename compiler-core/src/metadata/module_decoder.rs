@@ -284,13 +284,13 @@ impl ModuleDecoder {
             Which::Binary(_) => BitStringSegmentOption::Binary {
                 location: Default::default(),
             },
-            Which::Int(_) => BitStringSegmentOption::Int {
+            Which::Integer(_) => BitStringSegmentOption::Int {
                 location: Default::default(),
             },
             Which::Float(_) => BitStringSegmentOption::Float {
                 location: Default::default(),
             },
-            Which::BitString(_) => BitStringSegmentOption::BitString {
+            Which::Bitstring(_) => BitStringSegmentOption::BitString {
                 location: Default::default(),
             },
             Which::Utf8(_) => BitStringSegmentOption::Utf8 {
@@ -355,10 +355,19 @@ impl ModuleDecoder {
         reader: &value_constructor_variant::module_constant::Reader<'_>,
     ) -> Result<ValueConstructorVariant> {
         Ok(ValueConstructorVariant::ModuleConstant {
+            documentation: self.optional_string(reader.get_documentation()?),
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: reader.get_module()?.into(),
         })
+    }
+
+    fn optional_string(&self, str: &str) -> Option<SmolStr> {
+        if str.is_empty() {
+            None
+        } else {
+            Some(str.into())
+        }
     }
 
     fn src_span(&self, reader: &src_span::Reader<'_>) -> Result<SrcSpan> {
