@@ -390,7 +390,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ..
             } => {
                 match module {
-                    _ if type_.is_result_constructor() => {
+                    _ if type_.is_result() => {
                         self.push_result_check(subject.clone(), record_name == "Ok")
                     }
                     Some(m) => self.push_variant_check(subject.clone(), docvec!["$", m, ".", name]),

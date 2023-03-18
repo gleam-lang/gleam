@@ -522,7 +522,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 arguments: pattern_args,
                                 constructor,
                                 with_spread,
-                                type_: instantiated_constructor_type,
+                                type_: retrn.clone(),
                             })
                         } else {
                             Err(Error::IncorrectArity {
@@ -557,7 +557,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    _ => panic!("Unexpected constructor type for a constructor pattern.",),
+                    _ => panic!("Unexpected constructor type for a constructor pattern."),
                 }
             }
         }
