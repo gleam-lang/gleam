@@ -751,6 +751,12 @@ impl CallArg<TypedExpr> {
     }
 }
 
+impl CallArg<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
+    }
+}
+
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
@@ -1226,20 +1232,19 @@ impl TypedPattern {
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. }
-            | Pattern::Constructor { .. } => Some(Located::Pattern(self)),
+            | Pattern::Concatenate { .. } => Some(Located::Pattern(self)),
 
+            Pattern::Constructor { arguments, .. } => {
+                arguments.iter().find_map(|arg| arg.find_node(byte_index))
+            }
             Pattern::List { elements, tail, .. } => elements
                 .iter()
                 .find_map(|p| p.find_node(byte_index))
-                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index)))
-                .or_else(|| Some(Located::Pattern(self))),
+                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
 
-            Pattern::Tuple { elems, .. } => elems
-                .iter()
-                .find_map(|p| p.find_node(byte_index))
-                .or_else(|| Some(Located::Pattern(self))),
+            Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
         }
+        .or_else(|| Some(Located::Pattern(self)))
     }
 }
 impl<A, B> HasLocation for Pattern<A, B> {
