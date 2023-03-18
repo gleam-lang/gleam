@@ -169,11 +169,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location,
             typ: expression.type_(),
             kind: AssignmentKind::Let,
-            value: Box::new(expression),
             pattern: Pattern::Var {
                 location,
                 name: PIPE_VARIABLE.into(),
+                type_: expression.type_(),
             },
+            value: Box::new(expression),
         };
         self.expressions.push(assignment);
     }

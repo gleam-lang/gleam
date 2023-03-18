@@ -2136,16 +2136,18 @@ impl UseAssignments {
         for (index, pattern) in patterns.into_iter().enumerate() {
             match pattern {
                 // For discards we add a discard function arguments.
-                Pattern::Discard { name, location } => assignments.function_arguments.push(Arg {
-                    location,
-                    names: ArgNames::Discard { name },
-                    annotation: None,
-                    type_: (),
-                }),
+                Pattern::Discard { name, location, .. } => {
+                    assignments.function_arguments.push(Arg {
+                        location,
+                        names: ArgNames::Discard { name },
+                        annotation: None,
+                        type_: (),
+                    })
+                }
 
                 // For simple patterns of a single variable we add a regular
                 // function argument.
-                Pattern::Var { location, name } => assignments.function_arguments.push(Arg {
+                Pattern::Var { location, name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     names: ArgNames::Named { name },
                     annotation: None,

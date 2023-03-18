@@ -208,16 +208,24 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         type_: Arc<Type>,
     ) -> Result<TypedPattern, Error> {
         match pattern {
-            Pattern::Discard { name, location } => Ok(Pattern::Discard { name, location }),
+            Pattern::Discard { name, location, .. } => Ok(Pattern::Discard {
+                type_,
+                name,
+                location,
+            }),
 
             Pattern::Var { name, location, .. } => {
-                self.insert_variable(&name, type_, location)
+                self.insert_variable(&name, type_.clone(), location)
                     .map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Var { name, location })
+                Ok(Pattern::Var {
+                    type_,
+                    name,
+                    location,
+                })
             }
 
             Pattern::VarUsage { name, location, .. } => {
-                let ValueConstructor { type_: typ, .. } = self
+                let ValueConstructor { type_, .. } = self
                     .environment
                     .get_variable(&name)
                     .cloned()
@@ -229,7 +237,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.environment.increment_usage(&name);
                 let typ = self
                     .environment
-                    .instantiate(typ, &mut hashmap![], self.hydrator);
+                    .instantiate(type_, &mut hashmap![], self.hydrator);
                 unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::VarUsage {
@@ -298,19 +306,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
                 elements,
                 tail,
+                ..
             } => match type_.get_app_args(true, "", "List", 1, self.environment) {
                 Some(args) => {
-                    let typ = args
+                    let type_ = args
                         .get(0)
                         .expect("Failed to get type argument of List")
                         .clone();
                     let elements = elements
                         .into_iter()
-                        .map(|element| self.unify(element, typ.clone()))
+                        .map(|element| self.unify(element, type_.clone()))
                         .try_collect()?;
+                    let type_ = list(type_);
 
                     let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, list(typ))?)),
+                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone())?)),
                         None => None,
                     };
 
@@ -318,6 +328,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         location,
                         elements,
                         tail,
+                        type_,
                     })
                 }
 
@@ -437,6 +448,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     value: Pattern::Discard {
                                         name: "_".into(),
                                         location: spread_location,
+                                        type_: (),
                                     },
                                     location: spread_location,
                                     label: None,

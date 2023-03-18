@@ -1030,6 +1030,7 @@ pub enum Pattern<Constructor, Type> {
     Var {
         location: SrcSpan,
         name: SmolStr,
+        type_: Type,
     },
 
     /// A reference to a variable in a bit string. This is always a variable
@@ -1054,12 +1055,14 @@ pub enum Pattern<Constructor, Type> {
     Discard {
         name: SmolStr,
         location: SrcSpan,
+        type_: Type,
     },
 
     List {
         location: SrcSpan,
         elements: Vec<Self>,
         tail: Option<Box<Self>>,
+        type_: Type,
     },
 
     /// The constructor for a custom type. Starts with an uppercase letter.
@@ -1146,10 +1149,6 @@ impl<A, B> Pattern<A, B> {
     pub fn is_discard(&self) -> bool {
         matches!(self, Self::Discard { .. })
     }
-
-    pub fn type_(&self) -> Arc<Type> {
-        todo!()
-    }
 }
 
 impl TypedPattern {
@@ -1186,6 +1185,27 @@ impl TypedPattern {
             | Pattern::Concatenate { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
+        }
+    }
+
+    pub fn type_(&self) -> Arc<Type> {
+        match self {
+            Pattern::Int { .. } => type_::int(),
+            Pattern::Float { .. } => type_::float(),
+            Pattern::String { .. } => type_::string(),
+            Pattern::BitString { .. } => type_::bit_string(),
+            Pattern::Concatenate { .. } => type_::string(),
+
+            Pattern::Var { type_, .. }
+            | Pattern::List { type_, .. }
+            | Pattern::VarUsage { type_, .. }
+            | Pattern::Constructor { type_, .. } => type_.clone(),
+
+            Pattern::Assign { pattern, .. } => pattern.type_(),
+
+            Pattern::Discard { type_, .. } => type_.clone(),
+
+            Pattern::Tuple { elems, .. } => type_::tuple(elems.iter().map(|p| p.type_()).collect()),
         }
     }
 }
