@@ -10,6 +10,7 @@ pub enum Token {
     Int { value: SmolStr },
     Float { value: SmolStr },
     String { value: SmolStr },
+    CommentDoc { content: String },
     // Groupings
     LeftParen,   // (
     RightParen,  // )
@@ -59,7 +60,6 @@ pub enum Token {
     EndOfFile,
     // Extra
     CommentNormal,
-    CommentDoc,
     CommentModule,
     EmptyLine,
     // Keywords (alphabetically):
@@ -154,7 +154,7 @@ impl fmt::Display for Token {
             Token::DotDot => "..",
             Token::EndOfFile => "EOF",
             Token::CommentNormal => "//",
-            Token::CommentDoc => "///",
+            Token::CommentDoc { .. } => "///",
             Token::CommentModule => "////",
             Token::EmptyLine => "EMPTYLINE",
             Token::As => "as",

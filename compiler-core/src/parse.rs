@@ -66,6 +66,7 @@ use crate::ast::{
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
 use error::{LexicalError, ParseError, ParseErrorType};
+use itertools::Itertools;
 use lexer::{LexResult, Spanned};
 use smol_str::SmolStr;
 use std::cmp::Ordering;
@@ -111,6 +112,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
+    doc_comments: Vec<String>,
 }
 impl<T> Parser<T>
 where
@@ -123,6 +125,7 @@ where
             tok0: None,
             tok1: None,
             extra: ModuleExtra::new(),
+            doc_comments: vec![],
         };
         let _ = parser.next_tok();
         let _ = parser.next_tok();
@@ -2076,6 +2079,7 @@ where
     //   const a:Int = 1
     //   pub const a:Int = 1
     fn parse_module_const(&mut self, public: bool) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = self.take_documentation();
         let (start, name, end) = self.expect_name()?;
 
         let annotation = self.parse_type_annotation(&Token::Colon, true)?;
@@ -2083,7 +2087,7 @@ where
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Statement::ModuleConstant(ModuleConstant {
-                documentation: None,
+                documentation,
                 location: SrcSpan { start, end },
                 public,
                 name,
@@ -2683,8 +2687,9 @@ where
                 Some(Ok((start, Token::CommentNormal, end))) => {
                     self.extra.comments.push(SrcSpan { start, end });
                 }
-                Some(Ok((start, Token::CommentDoc, end))) => {
-                    self.extra.doc_comments.push(SrcSpan { start, end });
+                Some(Ok((start, Token::CommentDoc { content }, end))) => {
+                    self.extra.doc_comments.push(SrcSpan::new(start, end));
+                    self.doc_comments.push(content);
                 }
                 Some(Ok((start, Token::CommentModule, end))) => {
                     self.extra.module_comments.push(SrcSpan { start, end });
@@ -2710,6 +2715,15 @@ where
         self.tok0 = self.tok1.take();
         self.tok1 = nxt.take();
         t
+    }
+
+    fn take_documentation(&mut self) -> Option<SmolStr> {
+        let content = self.doc_comments.drain(..).join("\n");
+        if content.is_empty() {
+            None
+        } else {
+            Some(content.into())
+        }
     }
 }
 
