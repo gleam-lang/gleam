@@ -885,6 +885,7 @@ where
                         _ => Pattern::Var {
                             location: SrcSpan { start, end },
                             name,
+                            type_: (),
                         },
                     }
                 }
@@ -906,6 +907,7 @@ where
                 Pattern::Discard {
                     location: SrcSpan { start, end },
                     name,
+                    type_: (),
                 }
             }
 
@@ -1016,6 +1018,7 @@ where
                             end: rsqb_e,
                         },
                         name: "_".into(),
+                        type_: (),
                     }),
                     // No tail specified
                     None => None,
@@ -1025,6 +1028,7 @@ where
                     location: SrcSpan { start, end },
                     elements,
                     tail: tail.map(Box::new),
+                    type_: (),
                 }
             }
 
