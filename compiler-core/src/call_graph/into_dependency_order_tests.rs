@@ -28,7 +28,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
                 public: true,
                 end_position: src.len() as u32,
                 return_type: (),
-                doc: None,
+                documentation: None,
             }),
             Input::External(name) => ModuleFunction::External(ExternalFunction {
                 name: name.into(),
@@ -42,7 +42,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
                     name: "_".into(),
                 },
                 return_type: (),
-                doc: None,
+                documentation: None,
             }),
         })
         .collect_vec();

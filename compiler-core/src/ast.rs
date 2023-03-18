@@ -381,7 +381,7 @@ pub struct ExternalFunction<T> {
     pub return_type: T,
     pub module: SmolStr,
     pub fun: SmolStr,
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -404,7 +404,7 @@ pub struct Function<T, Expr> {
     pub public: bool,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -419,6 +419,7 @@ pub struct Function<T, Expr> {
 /// import animal/cat as kitty
 /// ```
 pub struct Import<PackageName> {
+    pub documentation: Option<SmolStr>,
     pub location: SrcSpan,
     pub module: SmolStr,
     pub as_name: Option<SmolStr>,
@@ -478,7 +479,7 @@ pub struct CustomType<T> {
     pub parameters: Vec<SmolStr>,
     pub public: bool,
     pub constructors: Vec<RecordConstructor<T>>,
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
     pub opaque: bool,
     pub typed_parameters: Vec<T>,
 }
@@ -498,7 +499,7 @@ pub struct ExternalType {
     pub public: bool,
     pub name: SmolStr,
     pub arguments: Vec<SmolStr>,
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -517,7 +518,7 @@ pub struct TypeAlias<T> {
     pub type_ast: TypeAst,
     pub type_: T,
     pub public: bool,
-    pub doc: Option<SmolStr>,
+    pub documentation: Option<SmolStr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -572,11 +573,21 @@ impl<A, B, C, E> Statement<A, B, C, E> {
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
             Statement::Import(Import { .. }) => (),
-            Statement::Function(Function { doc, .. })
-            | Statement::TypeAlias(TypeAlias { doc, .. })
-            | Statement::CustomType(CustomType { doc, .. })
-            | Statement::ExternalFunction(ExternalFunction { doc, .. })
-            | Statement::ExternalType(ExternalType { doc, .. })
+            Statement::Function(Function {
+                documentation: doc, ..
+            })
+            | Statement::TypeAlias(TypeAlias {
+                documentation: doc, ..
+            })
+            | Statement::CustomType(CustomType {
+                documentation: doc, ..
+            })
+            | Statement::ExternalFunction(ExternalFunction {
+                documentation: doc, ..
+            })
+            | Statement::ExternalType(ExternalType {
+                documentation: doc, ..
+            })
             | Statement::ModuleConstant(ModuleConstant {
                 documentation: doc, ..
             }) => {

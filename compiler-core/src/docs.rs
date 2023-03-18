@@ -482,7 +482,7 @@ fn function<'a>(
         Statement::ExternalFunction(ExternalFunction {
             public: true,
             name,
-            doc,
+            documentation: doc,
             return_: retrn,
             arguments: args,
             location,
@@ -498,7 +498,7 @@ fn function<'a>(
         Statement::Function(Function {
             public: true,
             name,
-            doc,
+            documentation: doc,
             arguments: args,
             return_type: ret,
             location,
@@ -543,7 +543,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
         Statement::ExternalType(ExternalType {
             public: true,
             name,
-            doc,
+            documentation: doc,
             arguments: args,
             location,
         }) => Some(Type {
@@ -560,7 +560,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             opaque: false,
             name,
             parameters,
-            doc,
+            documentation: doc,
             constructors: cs,
             location,
             ..
@@ -598,7 +598,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             opaque: true,
             name,
             parameters,
-            doc,
+            documentation: doc,
             location,
             ..
         }) => Some(Type {
@@ -614,7 +614,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedStatement) -> Opti
             public: true,
             alias: name,
             type_ast: typ,
-            doc,
+            documentation: doc,
             parameters: args,
             location,
             ..

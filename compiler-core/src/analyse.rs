@@ -686,7 +686,7 @@ fn infer_function(
     module_name: &SmolStr,
 ) -> Result<TypedStatement, Error> {
     let Function {
-        doc,
+        documentation: doc,
         location,
         name,
         public,
@@ -748,7 +748,7 @@ fn infer_function(
     };
 
     Ok(Statement::Function(Function {
-        doc,
+        documentation: doc,
         location,
         name,
         public,
@@ -767,7 +767,7 @@ fn infer_external_function(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     let ExternalFunction {
-        doc,
+        documentation: doc,
         location,
         name,
         public,
@@ -791,7 +791,7 @@ fn infer_external_function(
         .collect();
     Ok(Statement::ExternalFunction(ExternalFunction {
         return_type,
-        doc,
+        documentation: doc,
         location,
         name,
         public,
@@ -807,7 +807,7 @@ fn insert_type_alias(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     let TypeAlias {
-        doc,
+        documentation: doc,
         location,
         public,
         alias,
@@ -821,7 +821,7 @@ fn insert_type_alias(
         .typ
         .clone();
     Ok(Statement::TypeAlias(TypeAlias {
-        doc,
+        documentation: doc,
         location,
         public,
         alias,
@@ -836,7 +836,7 @@ fn infer_custom_type(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     let CustomType {
-        doc,
+        documentation: doc,
         location,
         public,
         opaque,
@@ -902,7 +902,7 @@ fn infer_custom_type(
         .clone();
 
     Ok(Statement::CustomType(CustomType {
-        doc,
+        documentation: doc,
         location,
         public,
         opaque,
@@ -918,7 +918,7 @@ fn hydrate_external_type(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     let ExternalType {
-        doc,
+        documentation: doc,
         location,
         public,
         name,
@@ -934,7 +934,7 @@ fn hydrate_external_type(
         let _ = hydrator.type_from_ast(&var, environment)?;
     }
     Ok(Statement::ExternalType(ExternalType {
-        doc,
+        documentation: doc,
         location,
         public,
         name,
@@ -947,6 +947,7 @@ fn record_imported_items_for_use_detection(
     environment: &mut Environment<'_>,
 ) -> Result<TypedStatement, Error> {
     let Import {
+        documentation,
         location,
         module,
         as_name,
@@ -971,6 +972,7 @@ fn record_imported_items_for_use_detection(
         }
     }
     Ok(Statement::Import(Import {
+        documentation,
         location,
         module,
         as_name,
@@ -1115,7 +1117,7 @@ fn generalise_function(
     module_name: &SmolStr,
 ) -> TypedStatement {
     let Function {
-        doc,
+        documentation: doc,
         location,
         name,
         public,
@@ -1157,7 +1159,7 @@ fn generalise_function(
     );
 
     Statement::Function(Function {
-        doc,
+        documentation: doc,
         location,
         name,
         public,
