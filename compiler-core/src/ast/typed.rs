@@ -158,7 +158,7 @@ pub enum TypedExpr {
 impl TypedExpr {
     // This could be optimised in places to exit early if the first of a series
     // of expressions is after the byte index.
-    pub fn find_node(&self, byte_index: u32) -> Option<&Self> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if !self.location().contains(byte_index) {
             return None;
         }
@@ -170,7 +170,7 @@ impl TypedExpr {
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::ModuleSelect { .. } => Some(self),
+            | Self::ModuleSelect { .. } => Some(self.into()),
 
             Self::Pipeline { expressions, .. } | Self::Block { expressions, .. } => {
                 expressions.iter().find_map(|e| e.find_node(byte_index))
@@ -185,25 +185,27 @@ impl TypedExpr {
             } => expressions
                 .iter()
                 .find_map(|e| e.find_node(byte_index))
-                .or(Some(self)),
+                .or(Some(self.into())),
 
-            Self::NegateBool { value, .. } => value.find_node(byte_index).or(Some(self)),
+            Self::NegateBool { value, .. } => value.find_node(byte_index).or(Some(self.into())),
 
-            Self::NegateInt { value, .. } => value.find_node(byte_index).or(Some(self)),
+            Self::NegateInt { value, .. } => value.find_node(byte_index).or(Some(self.into())),
 
-            Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self)),
+            Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self.into())),
 
             Self::Call { fun, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| fun.find_node(byte_index))
-                .or(Some(self)),
+                .or(Some(self.into())),
 
             Self::BinOp { left, right, .. } => left
                 .find_node(byte_index)
                 .or_else(|| right.find_node(byte_index)),
 
-            Self::Assignment { value, .. } => value.find_node(byte_index),
+            Self::Assignment { pattern, value, .. } => pattern
+                .find_node(byte_index)
+                .or_else(|| value.find_node(byte_index)),
 
             Self::Case {
                 subjects, clauses, ..
@@ -215,25 +217,25 @@ impl TypedExpr {
                         .iter()
                         .find_map(|clause| clause.find_node(byte_index))
                 })
-                .or(Some(self)),
+                .or(Some(self.into())),
 
             Self::RecordAccess {
                 record: expression, ..
             }
             | Self::TupleIndex {
                 tuple: expression, ..
-            } => expression.find_node(byte_index).or(Some(self)),
+            } => expression.find_node(byte_index).or(Some(self.into())),
 
             Self::BitString { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or(Some(self)),
+                .or(Some(self.into())),
 
             Self::RecordUpdate { spread, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| spread.find_node(byte_index))
-                .or(Some(self)),
+                .or(Some(self.into())),
         }
     }
 
@@ -432,6 +434,12 @@ impl TypedExpr {
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. } => None,
         }
+    }
+}
+
+impl<'a> From<&'a TypedExpr> for Located<'a> {
+    fn from(value: &'a TypedExpr) -> Self {
+        Located::Expression(value)
     }
 }
 

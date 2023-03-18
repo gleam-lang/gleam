@@ -543,8 +543,8 @@ impl TypedStatement {
         // TODO: test. Note that the fn src-span covers the function head, not
         // the entire statement.
         if let Statement::Function(Function { body, .. }) = self {
-            if let Some(expression) = body.find_node(byte_index) {
-                return Some(Located::Expression(expression));
+            if let found @ Some(_) = body.find_node(byte_index) {
+                return found;
             }
         }
 
@@ -746,7 +746,7 @@ pub struct CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: u32) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
@@ -782,7 +782,7 @@ pub struct TypedRecordUpdateArg {
 }
 
 impl TypedRecordUpdateArg {
-    pub fn find_node(&self, byte_index: u32) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
@@ -817,8 +817,11 @@ impl TypedClause {
         }
     }
 
-    pub fn find_node(&self, byte_index: u32) -> Option<&TypedExpr> {
-        self.then.find_node(byte_index)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.pattern
+            .iter()
+            .find_map(|p| p.find_node(byte_index))
+            .or_else(|| self.then.find_node(byte_index))
     }
 }
 
@@ -1208,6 +1211,36 @@ impl TypedPattern {
             Pattern::Tuple { elems, .. } => type_::tuple(elems.iter().map(|p| p.type_()).collect()),
         }
     }
+
+    fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Var { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::BitString { .. }
+            | Pattern::Concatenate { .. }
+            | Pattern::Constructor { .. } => Some(Located::Pattern(self)),
+
+            Pattern::List { elements, tail, .. } => elements
+                .iter()
+                .find_map(|p| p.find_node(byte_index))
+                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index)))
+                .or_else(|| Some(Located::Pattern(self))),
+
+            Pattern::Tuple { elems, .. } => elems
+                .iter()
+                .find_map(|p| p.find_node(byte_index))
+                .or_else(|| Some(Located::Pattern(self))),
+        }
+    }
 }
 impl<A, B> HasLocation for Pattern<A, B> {
     fn location(&self) -> SrcSpan {
@@ -1252,7 +1285,7 @@ pub struct BitStringSegment<Value, Type> {
 }
 
 impl TypedExprBitStringSegment {
-    pub fn find_node(&self, byte_index: u32) -> Option<&TypedExpr> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
