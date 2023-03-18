@@ -1089,8 +1089,7 @@ pub enum Pattern<Constructor, Type> {
         left_location: SrcSpan,
         right_location: SrcSpan,
         left_side_string: SmolStr,
-        /// The variable on the right hand side of the `<>`. It is `None` if the
-        /// variable stars with `_` (it is a discard and assigns no variable).
+        /// The variable on the right hand side of the `<>`.
         right_side_assignment: AssignName,
     },
 }
@@ -1146,6 +1145,34 @@ impl<A, B> Pattern<A, B> {
     /// [`Discard`]: Pattern::Discard
     pub fn is_discard(&self) -> bool {
         matches!(self, Self::Discard { .. })
+    }
+
+    pub fn type_(&self) -> Arc<Type> {
+        todo!()
+    }
+
+    pub fn get_documentation(&self) -> Option<&str> {
+        todo!()
+    }
+}
+
+impl TypedPattern {
+    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+        match self {
+            Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Var { .. }
+            | Pattern::VarUsage { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Discard { .. }
+            | Pattern::List { .. }
+            | Pattern::Tuple { .. }
+            | Pattern::BitString { .. }
+            | Pattern::Concatenate { .. } => None,
+
+            Pattern::Constructor { constructor, .. } => constructor.definition_location(),
+        }
     }
 }
 impl<A, B> HasLocation for Pattern<A, B> {
