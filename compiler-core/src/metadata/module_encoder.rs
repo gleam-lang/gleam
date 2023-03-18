@@ -189,11 +189,13 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 constructors_count,
+                documentation: doc,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity);
+                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
                 builder.set_constructors_count(*constructors_count);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
@@ -205,11 +207,13 @@ impl<'a> ModuleEncoder<'a> {
                 module,
                 name,
                 location,
+                documentation: doc,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
+                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }

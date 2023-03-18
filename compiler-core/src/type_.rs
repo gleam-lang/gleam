@@ -281,6 +281,7 @@ pub enum ValueConstructorVariant {
         module: SmolStr,
         arity: usize,
         location: SrcSpan,
+        documentation: Option<SmolStr>,
     },
 
     /// A constructor for a custom type
@@ -291,6 +292,7 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         module: SmolStr,
         constructors_count: u16,
+        documentation: Option<SmolStr>,
     },
 }
 
@@ -574,27 +576,11 @@ impl ValueConstructor {
         match &self.variant {
             ValueConstructorVariant::LocalVariable { .. } => Some("A locally defined variable."),
 
-            // TODO: it!
-            ValueConstructorVariant::ModuleConstant { documentation, .. } => {
+            ValueConstructorVariant::ModuleFn { documentation, .. }
+            | ValueConstructorVariant::Record { documentation, .. }
+            | ValueConstructorVariant::ModuleConstant { documentation, .. } => {
                 Some(documentation.as_ref()?.as_str())
             }
-
-            ValueConstructorVariant::ModuleFn {
-                name,
-                field_map,
-                module,
-                arity,
-                location,
-            } => None,
-
-            ValueConstructorVariant::Record {
-                name,
-                arity,
-                field_map,
-                location,
-                module,
-                constructors_count,
-            } => None,
         }
     }
 }

@@ -537,6 +537,7 @@ fn register_values_from_custom_type(
             _ => fn_(args_types, typ.clone()),
         };
         let constructor_info = ValueConstructorVariant::Record {
+            documentation: constructor.documentation.clone(),
             constructors_count: constructors.len() as u16,
             name: constructor.name.clone(),
             arity: constructor.arguments.len() as u16,
@@ -582,6 +583,7 @@ fn register_external_function(
         return_: retrn,
         module,
         fun,
+        documentation,
         ..
     } = f;
     assert_unique_value_name(names, name, *location)?;
@@ -604,6 +606,7 @@ fn register_external_function(
             public: *public,
             type_: typ.clone(),
             variant: ValueConstructorVariant::ModuleFn {
+                documentation: documentation.clone(),
                 name: fun.clone(),
                 field_map: field_map.clone(),
                 module: module.clone(),
@@ -615,6 +618,7 @@ fn register_external_function(
     environment.insert_variable(
         name.clone(),
         ValueConstructorVariant::ModuleFn {
+            documentation: documentation.clone(),
             name: fun.clone(),
             module: module.clone(),
             arity: args.len(),
@@ -643,6 +647,7 @@ fn register_value_from_function(
         location,
         return_annotation,
         public,
+        documentation,
         ..
     } = f;
     assert_unique_value_name(names, name, *location)?;
@@ -664,6 +669,7 @@ fn register_value_from_function(
     environment.insert_variable(
         name.clone(),
         ValueConstructorVariant::ModuleFn {
+            documentation: documentation.clone(),
             name: name.clone(),
             field_map,
             module: module_name.clone(),
@@ -733,6 +739,7 @@ fn infer_function(
         environment.insert_variable(
             name.clone(),
             ValueConstructorVariant::ModuleFn {
+                documentation: doc.clone(),
                 name: name.clone(),
                 field_map,
                 module: module_name.clone(),
@@ -1149,6 +1156,7 @@ fn generalise_function(
             public,
             type_: typ,
             variant: ValueConstructorVariant::ModuleFn {
+                documentation: doc.clone(),
                 name: name.clone(),
                 field_map,
                 module: module_name.clone(),
