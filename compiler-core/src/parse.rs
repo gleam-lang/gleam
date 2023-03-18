@@ -1359,6 +1359,11 @@ where
         public: bool,
         is_anon: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = if is_anon {
+            None
+        } else {
+            self.take_documentation()
+        };
         let mut name = SmolStr::new("");
         if !is_anon {
             let (_, n, _) = self.expect_name()?;
@@ -1388,7 +1393,7 @@ where
             Some((body, _)) => body,
         };
         Ok(Some(Statement::Function(Function {
-            doc: None,
+            documentation,
             location: SrcSpan { start, end },
             end_position: rbr_e - 1,
             public,
@@ -1410,6 +1415,7 @@ where
         start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = self.take_documentation();
         let (_, name, _) = self.expect_name()?;
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(self, &Parser::parse_external_fn_param, Some(&Token::Comma))?;
@@ -1422,7 +1428,7 @@ where
 
         if let Some(retrn) = return_annotation {
             Ok(Some(Statement::ExternalFunction(ExternalFunction {
-                doc: None,
+                documentation,
                 location: SrcSpan { start, end },
                 public,
                 name,
@@ -1637,13 +1643,14 @@ where
         start: u32,
         public: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = self.take_documentation();
         let (_, name, args, end) = self.expect_type_name()?;
         Ok(Some(Statement::ExternalType(ExternalType {
             location: SrcSpan { start, end },
             public,
             name,
             arguments: args,
-            doc: None,
+            documentation,
         })))
     }
 
@@ -1662,6 +1669,7 @@ where
         public: bool,
         opaque: bool,
     ) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = self.take_documentation();
         let (_, name, parameters, end) = self.expect_type_name()?;
         if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
@@ -1669,13 +1677,14 @@ where
                 self,
                 &|p| {
                     if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
+                        let documentation = p.take_documentation();
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
                             name: c_n,
                             arguments: args,
-                            documentation: None,
+                            documentation,
                         }))
                     } else {
                         Ok(None)
@@ -1689,7 +1698,7 @@ where
                 parse_error(ParseErrorType::NoConstructors, SrcSpan { start, end })
             } else {
                 Ok(Some(Statement::CustomType(CustomType {
-                    doc: None,
+                    documentation,
                     location: SrcSpan { start, end },
                     public,
                     opaque,
@@ -1705,7 +1714,7 @@ where
                 if let Some(t) = self.parse_type(false)? {
                     let type_end = t.location().end;
                     Ok(Some(Statement::TypeAlias(TypeAlias {
-                        doc: None,
+                        documentation,
                         location: SrcSpan {
                             start,
                             end: type_end,
@@ -1961,6 +1970,7 @@ where
     //   import a/b.{c}
     //   import a/b.{c as d} as e
     fn parse_import(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
+        let documentation = self.take_documentation();
         let mut start = 0;
         let mut end;
         let mut module = String::new();
@@ -2010,6 +2020,7 @@ where
         }
 
         Ok(Some(Statement::Import(Import {
+            documentation,
             location: SrcSpan { start, end },
             unqualified,
             module: module.into(),
