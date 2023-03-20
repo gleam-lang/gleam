@@ -716,7 +716,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::Tuple { elems, .. } => "#"
                 .to_doc()
-                .append(wrap_args(elems.iter().map(|e| self.wrap_expr(e))))
+                .append(wrap_args(elems.iter().map(|e| self.expr(e))))
                 .group(),
 
             UntypedExpr::BitString { segments, .. } => bit_string(
@@ -877,7 +877,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::BitString { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
-            | UntypedExpr::NegateInt { .. } => self.wrap_expr(fun),
+            | UntypedExpr::NegateInt { .. } => self.expr(fun),
         };
 
         match args {
@@ -900,7 +900,7 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let subjects_doc = break_("case", "case ")
             .append(join(
-                subjects.iter().map(|s| self.wrap_expr(s)),
+                subjects.iter().map(|s| self.expr(s)),
                 break_(",", ", "),
             ))
             .nest(INDENT)
@@ -965,7 +965,7 @@ impl<'comments> Formatter<'comments> {
         let mut docs = Vec::with_capacity(expressions.len() * 3);
         let first = expressions.first();
         let first_precedence = first.binop_precedence();
-        let first = self.wrap_expr(first);
+        let first = self.expr(first);
         docs.push(self.operator_side(first, 5, first_precedence));
 
         for expr in expressions.iter().skip(1) {
@@ -985,7 +985,7 @@ impl<'comments> Formatter<'comments> {
                     self.pipe_capture_right_hand_side(body)
                 }
 
-                _ => self.wrap_expr(expr),
+                _ => self.expr(expr),
             };
             docs.push(line());
             docs.push(commented("|> ".to_doc(), comments));
@@ -1191,14 +1191,6 @@ impl<'comments> Formatter<'comments> {
         wrap_args(args.iter().map(|e| self.external_fn_arg(e)))
     }
 
-    fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
-        match expr {
-            UntypedExpr::Block { .. } => break_block(self.expr(expr)),
-
-            _ => self.expr(expr),
-        }
-    }
-
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>) -> Document<'a> {
         match &arg.label {
             Some(s) => commented(
@@ -1207,7 +1199,7 @@ impl<'comments> Formatter<'comments> {
             ),
             None => nil(),
         }
-        .append(self.wrap_expr(&arg.value))
+        .append(self.expr(&arg.value))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
@@ -1217,7 +1209,7 @@ impl<'comments> Formatter<'comments> {
             .as_str()
             .to_doc()
             .append(": ")
-            .append(self.wrap_expr(&arg.value));
+            .append(self.expr(&arg.value));
         commented(doc, comments)
     }
 
@@ -1313,7 +1305,7 @@ impl<'comments> Formatter<'comments> {
         } else {
             break_(",", ", ")
         };
-        let elements = join(elements.iter().map(|e| self.wrap_expr(e)), comma);
+        let elements = join(elements.iter().map(|e| self.expr(e)), comma);
 
         let doc = break_("[", "[").append(elements);
 
@@ -1509,7 +1501,7 @@ impl<'comments> Formatter<'comments> {
     fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
             UntypedExpr::BinOp { .. } => "!".to_doc().append(wrap_block(self.expr(expr))),
-            _ => docvec!["!", self.wrap_expr(expr)],
+            _ => docvec!["!", self.expr(expr)],
         }
     }
 
@@ -1521,7 +1513,7 @@ impl<'comments> Formatter<'comments> {
                 "- ".to_doc().append(wrap_block(self.expr(expr)))
             }
 
-            _ => docvec!["-", self.wrap_expr(expr)],
+            _ => docvec!["-", self.expr(expr)],
         }
     }
 
@@ -1568,7 +1560,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. }
-            | UntypedExpr::Block { .. } => self.wrap_expr(expr),
+            | UntypedExpr::Block { .. } => self.expr(expr),
         }
     }
 
