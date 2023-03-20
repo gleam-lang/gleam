@@ -9,11 +9,6 @@ function pair(x, f) {
 }
 
 export function main() {
-  return pair(
-    1.0,
-    () => {
-      return 123;
-    },
-  );
+  return pair(1.0, () => { return 123; });
 }
 

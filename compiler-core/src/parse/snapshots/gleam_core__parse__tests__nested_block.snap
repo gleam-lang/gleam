@@ -3,47 +3,53 @@ source: compiler-core/src/parse/tests.rs
 assertion_line: 415
 expression: "{ 1 { 1.0 2.0 } 3 }"
 ---
-Block {
-    location: SrcSpan {
-        start: 2,
-        end: 17,
-    },
-    expressions: [
-        Int {
-            location: SrcSpan {
-                start: 2,
-                end: 3,
-            },
-            value: "1",
-        },
+[
+    Expression(
         Block {
-            location: SrcSpan {
-                start: 6,
-                end: 13,
-            },
-            expressions: [
-                Float {
-                    location: SrcSpan {
-                        start: 6,
-                        end: 9,
+            statements: [
+                Expression(
+                    Int {
+                        location: SrcSpan {
+                            start: 2,
+                            end: 3,
+                        },
+                        value: "1",
                     },
-                    value: "1.0",
-                },
-                Float {
-                    location: SrcSpan {
-                        start: 10,
-                        end: 13,
+                ),
+                Expression(
+                    Block {
+                        statements: [
+                            Expression(
+                                Float {
+                                    location: SrcSpan {
+                                        start: 6,
+                                        end: 9,
+                                    },
+                                    value: "1.0",
+                                },
+                            ),
+                            Expression(
+                                Float {
+                                    location: SrcSpan {
+                                        start: 10,
+                                        end: 13,
+                                    },
+                                    value: "2.0",
+                                },
+                            ),
+                        ],
                     },
-                    value: "2.0",
-                },
+                ),
+                Expression(
+                    Int {
+                        location: SrcSpan {
+                            start: 16,
+                            end: 17,
+                        },
+                        value: "3",
+                    },
+                ),
             ],
         },
-        Int {
-            location: SrcSpan {
-                start: 16,
-                end: 17,
-            },
-            value: "3",
-        },
-    ],
-}
+    ),
+]

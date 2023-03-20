@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 377
-expression: "\n        import foo.{println}\n        pub fn main() {\n          let println =\n            \"bugger\"\n            |> println\n          println\n        }"
+assertion_line: 369
+expression: "\n        import foo.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
 ---
 import * as $foo from "../foo.mjs";
 import { println } from "../foo.mjs";
 
 export function main() {
   let println$1 = (() => {
-    let _pipe = "bugger";
+    let _pipe = "oh dear";
     return println(_pipe);
   })();
   return println$1;

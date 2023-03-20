@@ -3,25 +3,29 @@ source: compiler-core/src/parse/tests.rs
 assertion_line: 409
 expression: "{ 1 2 }"
 ---
-Block {
-    location: SrcSpan {
-        start: 2,
-        end: 5,
-    },
-    expressions: [
-        Int {
-            location: SrcSpan {
-                start: 2,
-                end: 3,
-            },
-            value: "1",
+[
+    Expression(
+        Block {
+            statements: [
+                Expression(
+                    Int {
+                        location: SrcSpan {
+                            start: 2,
+                            end: 3,
+                        },
+                        value: "1",
+                    },
+                ),
+                Expression(
+                    Int {
+                        location: SrcSpan {
+                            start: 4,
+                            end: 5,
+                        },
+                        value: "2",
+                    },
+                ),
+            ],
         },
-        Int {
-            location: SrcSpan {
-                start: 4,
-                end: 5,
-            },
-            value: "2",
-        },
-    ],
-}
+    ),
+]
