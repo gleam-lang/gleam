@@ -450,7 +450,7 @@ macro_rules! assert_warning {
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
-        let warnings = crate::warning::VectorWarningEmitterIO::default();
+        let warnings = $crate::warning::VectorWarningEmitterIO::default();
         let warning_emitter = crate::warning::TypeWarningEmitter::new(
             std::path::PathBuf::new(),
             smol_str::SmolStr::new(""),
@@ -588,7 +588,7 @@ macro_rules! assert_no_warnings {
         .expect("should successfully infer");
 
         let warnings = warnings.take().into_iter().map(|w| match w {
-            crate::warning::Warning::Type { warning, ..  } => warning,
+            $crate::warning::Warning::Type { warning, ..  } => warning,
         }).collect::<Vec<_>>();
         assert_eq!(expected, warnings);
     };

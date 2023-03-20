@@ -221,7 +221,7 @@ impl<'comments> Formatter<'comments> {
                 return_annotation,
                 end_position,
                 ..
-            }) => self.statement_fn(public, name, args, return_annotation, &body, *end_position),
+            }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
 
             ModuleStatement::TypeAlias(TypeAlias {
                 alias,
