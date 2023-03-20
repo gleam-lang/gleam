@@ -1223,14 +1223,23 @@ impl<'comments> Formatter<'comments> {
         match expr {
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
-            | UntypedExpr::Block { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
+            | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)),
 
-            UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT).group(),
+            UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
-            _ => break_("", " ").append(self.expr(expr)).nest(INDENT).group(),
+            UntypedExpr::Block { statements } => {
+                docvec![
+                    " {",
+                    docvec![line(), self.statements(statements)].nest(INDENT),
+                    line(),
+                    "}"
+                ]
+            }
+
+            _ => break_("", " ").append(self.expr(expr)).nest(INDENT),
         }
+        .group()
     }
 
     fn assigned_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
