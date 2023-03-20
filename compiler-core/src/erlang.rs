@@ -88,7 +88,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .statements
         .iter()
         .filter_map(|s| match s {
-            Statement::CustomType(CustomType {
+            ModuleStatement::CustomType(CustomType {
                 public: true,
                 constructors,
                 ..
@@ -232,28 +232,28 @@ fn module_document<'a>(
 }
 
 fn register_imports(
-    s: &TypedStatement,
+    s: &TypedModuleStatement,
     exports: &mut Vec<Document<'_>>,
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
 ) {
     match s {
-        Statement::Function(Function {
+        ModuleStatement::Function(Function {
             public: true,
             name,
             arguments: args,
             ..
         }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-        Statement::ExternalFunction(ExternalFunction {
+        ModuleStatement::ExternalFunction(ExternalFunction {
             public: true,
             name,
             arguments: args,
             ..
         }) => exports.push(atom(name.to_string()).append("/").append(args.len())),
 
-        Statement::ExternalType(ExternalType {
+        ModuleStatement::ExternalType(ExternalType {
             name,
             arguments: args,
             ..
@@ -291,7 +291,7 @@ fn register_imports(
             type_defs.push(doc);
         }
 
-        Statement::CustomType(CustomType {
+        ModuleStatement::CustomType(CustomType {
             name,
             constructors,
             typed_parameters,
@@ -366,29 +366,29 @@ fn register_imports(
             type_defs.push(doc);
         }
 
-        Statement::Function(Function { .. })
-        | Statement::Import(Import { .. })
-        | Statement::TypeAlias(TypeAlias { .. })
-        | Statement::ExternalFunction(ExternalFunction { .. })
-        | Statement::ModuleConstant(ModuleConstant { .. }) => (),
+        ModuleStatement::Function(Function { .. })
+        | ModuleStatement::Import(Import { .. })
+        | ModuleStatement::TypeAlias(TypeAlias { .. })
+        | ModuleStatement::ExternalFunction(ExternalFunction { .. })
+        | ModuleStatement::ModuleConstant(ModuleConstant { .. }) => (),
     }
 }
 
 fn statement<'a>(
     current_module: &'a str,
-    statement: &'a TypedStatement,
+    statement: &'a TypedModuleStatement,
     module: &'a str,
     line_numbers: &'a LineNumbers,
 ) -> Vec<Document<'a>> {
     match statement {
-        Statement::TypeAlias(TypeAlias { .. })
-        | Statement::CustomType(CustomType { .. })
-        | Statement::Import(Import { .. })
-        | Statement::ExternalType(ExternalType { .. })
-        | Statement::ModuleConstant(ModuleConstant { .. })
-        | Statement::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
+        ModuleStatement::TypeAlias(TypeAlias { .. })
+        | ModuleStatement::CustomType(CustomType { .. })
+        | ModuleStatement::Import(Import { .. })
+        | ModuleStatement::ExternalType(ExternalType { .. })
+        | ModuleStatement::ModuleConstant(ModuleConstant { .. })
+        | ModuleStatement::ExternalFunction(ExternalFunction { public: false, .. }) => vec![],
 
-        Statement::Function(Function {
+        ModuleStatement::Function(Function {
             arguments: args,
             name,
             body,
@@ -396,7 +396,7 @@ fn statement<'a>(
             ..
         }) => vec![mod_fun(name, args, body, module, return_type, line_numbers)],
 
-        Statement::ExternalFunction(ExternalFunction {
+        ModuleStatement::ExternalFunction(ExternalFunction {
             fun,
             module,
             arguments: args,

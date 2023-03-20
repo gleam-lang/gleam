@@ -638,7 +638,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<BitStringSegment<TypedValue, Arc<Type>>, Error>
     where
         InferFn: FnMut(&mut Self, UntypedValue) -> Result<TypedValue, Error>,
-        TypedValue: HasType + HasLocation + Clone + bit_string::GetLitValue,
+        TypedValue: HasType + HasLocation + Clone + bit_string::GetLiteralValue,
     {
         let value = infer(self, value)?;
 
@@ -2041,7 +2041,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         subjects_count: usize,
         subjects: &[Arc<Type>],
-        typed_clauses: &[Clause<TypedExpr, PatternConstructor, Arc<Type>, SmolStr>],
+        typed_clauses: &[Clause<TypedExpr, Arc<Type>, SmolStr>],
     ) -> Result<(), Vec<SmolStr>> {
         // Because exhaustiveness checking in presence of multiple subjects is similar
         // to full exhaustiveness checking of tuples or other nested record patterns,

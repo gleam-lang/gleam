@@ -10,6 +10,7 @@ pub use self::untyped::{UntypedExpr, Use};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
+use crate::analyse::Inferred;
 use crate::build::{Located, Target};
 use crate::type_::{self, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor};
 use std::sync::Arc;
@@ -29,7 +30,7 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::Module, TypedStatement>;
+pub type TypedModule = Module<type_::Module, TypedModuleStatement>;
 
 pub type UntypedModule = Module<(), TargetGroup>;
 
@@ -63,8 +64,8 @@ impl TypedModule {
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TargetGroup {
-    Any(Vec<UntypedStatement>),
-    Only(Target, Vec<UntypedStatement>),
+    Any(Vec<UntypedModuleStatement>),
+    Only(Target, Vec<UntypedModuleStatement>),
 }
 
 impl TargetGroup {
@@ -75,14 +76,14 @@ impl TargetGroup {
         }
     }
 
-    pub fn statements(self) -> Vec<UntypedStatement> {
+    pub fn statements(self) -> Vec<UntypedModuleStatement> {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
         }
     }
 
-    pub fn statements_ref(&self) -> &[UntypedStatement] {
+    pub fn statements_ref(&self) -> &[UntypedModuleStatement] {
         match self {
             Self::Any(s) => s,
             Self::Only(_, s) => s,
@@ -102,7 +103,7 @@ impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
-                Statement::Import(Import {
+                ModuleStatement::Import(Import {
                     module, location, ..
                 }) => Some((module.clone(), *location)),
                 _ => None,
@@ -110,14 +111,17 @@ impl UntypedModule {
             .collect()
     }
 
-    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedStatement> {
+    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedModuleStatement> {
         self.statements
             .iter()
             .filter(move |group| group.is_for(target))
             .flat_map(|group| group.statements_ref())
     }
 
-    pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedStatement> {
+    pub fn into_iter_statements(
+        self,
+        target: Target,
+    ) -> impl Iterator<Item = UntypedModuleStatement> {
         self.statements
             .into_iter()
             .filter(move |group| group.is_for(target))
@@ -358,9 +362,6 @@ impl TypeAst {
     }
 }
 
-pub type TypedStatement = Statement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
-pub type UntypedStatement = Statement<(), UntypedExpr, (), ()>;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Import a function defined outside of Gleam code.
 /// When compiling to Erlang the function could be implemented in Erlang
@@ -521,8 +522,11 @@ pub struct TypeAlias<T> {
     pub documentation: Option<SmolStr>,
 }
 
+pub type TypedModuleStatement = ModuleStatement<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
+pub type UntypedModuleStatement = ModuleStatement<(), UntypedExpr, (), ()>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
+pub enum ModuleStatement<T, Expr, ConstantRecordTag, PackageName> {
     Function(Function<T, Expr>),
 
     TypeAlias(TypeAlias<T>),
@@ -538,11 +542,11 @@ pub enum Statement<T, Expr, ConstantRecordTag, PackageName> {
     ModuleConstant(ModuleConstant<T, ConstantRecordTag>),
 }
 
-impl TypedStatement {
+impl TypedModuleStatement {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         // TODO: test. Note that the fn src-span covers the function head, not
         // the entire statement.
-        if let Statement::Function(Function { body, .. }) = self {
+        if let ModuleStatement::Function(Function { body, .. }) = self {
             if let found @ Some(_) = body.find_node(byte_index) {
                 return found;
             }
@@ -557,38 +561,38 @@ impl TypedStatement {
     }
 }
 
-impl<A, B, C, E> Statement<A, B, C, E> {
+impl<A, B, C, E> ModuleStatement<A, B, C, E> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Statement::Function(Function { location, .. })
-            | Statement::Import(Import { location, .. })
-            | Statement::TypeAlias(TypeAlias { location, .. })
-            | Statement::CustomType(CustomType { location, .. })
-            | Statement::ExternalFunction(ExternalFunction { location, .. })
-            | Statement::ExternalType(ExternalType { location, .. })
-            | Statement::ModuleConstant(ModuleConstant { location, .. }) => *location,
+            ModuleStatement::Function(Function { location, .. })
+            | ModuleStatement::Import(Import { location, .. })
+            | ModuleStatement::TypeAlias(TypeAlias { location, .. })
+            | ModuleStatement::CustomType(CustomType { location, .. })
+            | ModuleStatement::ExternalFunction(ExternalFunction { location, .. })
+            | ModuleStatement::ExternalType(ExternalType { location, .. })
+            | ModuleStatement::ModuleConstant(ModuleConstant { location, .. }) => *location,
         }
     }
 
     pub fn put_doc(&mut self, new_doc: SmolStr) {
         match self {
-            Statement::Import(Import { .. }) => (),
-            Statement::Function(Function {
+            ModuleStatement::Import(Import { .. }) => (),
+            ModuleStatement::Function(Function {
                 documentation: doc, ..
             })
-            | Statement::TypeAlias(TypeAlias {
+            | ModuleStatement::TypeAlias(TypeAlias {
                 documentation: doc, ..
             })
-            | Statement::CustomType(CustomType {
+            | ModuleStatement::CustomType(CustomType {
                 documentation: doc, ..
             })
-            | Statement::ExternalFunction(ExternalFunction {
+            | ModuleStatement::ExternalFunction(ExternalFunction {
                 documentation: doc, ..
             })
-            | Statement::ExternalType(ExternalType {
+            | ModuleStatement::ExternalType(ExternalType {
                 documentation: doc, ..
             })
-            | Statement::ModuleConstant(ModuleConstant {
+            | ModuleStatement::ModuleConstant(ModuleConstant {
                 documentation: doc, ..
             }) => {
                 let _ = std::mem::replace(doc, Some(new_doc));
@@ -793,20 +797,20 @@ impl TypedRecordUpdateArg {
     }
 }
 
-pub type MultiPattern<PatternConstructor, Type> = Vec<Pattern<PatternConstructor, Type>>;
+pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 
-pub type UntypedMultiPattern = MultiPattern<(), ()>;
-pub type TypedMultiPattern = MultiPattern<PatternConstructor, Arc<Type>>;
+pub type UntypedMultiPattern = MultiPattern<()>;
+pub type TypedMultiPattern = MultiPattern<Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, PatternConstructor, Arc<Type>, SmolStr>;
+pub type TypedClause = Clause<TypedExpr, Arc<Type>, SmolStr>;
 
-pub type UntypedClause = Clause<UntypedExpr, (), (), ()>;
+pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Clause<Expr, PatternConstructor, Type, RecordTag> {
+pub struct Clause<Expr, Type, RecordTag> {
     pub location: SrcSpan,
-    pub pattern: MultiPattern<PatternConstructor, Type>,
-    pub alternative_patterns: Vec<MultiPattern<PatternConstructor, Type>>,
+    pub pattern: MultiPattern<Type>,
+    pub alternative_patterns: Vec<MultiPattern<Type>>,
     pub guard: Option<ClauseGuard<Type, RecordTag>>,
     pub then: Expr,
 }
@@ -1014,11 +1018,11 @@ pub struct DefinitionLocation<'module> {
     pub span: SrcSpan,
 }
 
-pub type UntypedPattern = Pattern<(), ()>;
-pub type TypedPattern = Pattern<PatternConstructor, Arc<Type>>;
+pub type UntypedPattern = Pattern<()>;
+pub type TypedPattern = Pattern<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Pattern<Constructor, Type> {
+pub enum Pattern<Type> {
     Int {
         location: SrcSpan,
         value: SmolStr,
@@ -1080,7 +1084,7 @@ pub enum Pattern<Constructor, Type> {
         name: SmolStr,
         arguments: Vec<CallArg<Self>>,
         module: Option<SmolStr>,
-        constructor: Constructor,
+        constructor: Inferred<PatternConstructor>,
         with_spread: bool,
         type_: Type,
     },
@@ -1104,6 +1108,12 @@ pub enum Pattern<Constructor, Type> {
         /// The variable on the right hand side of the `<>`.
         right_side_assignment: AssignName,
     },
+}
+
+impl Default for Inferred<()> {
+    fn default() -> Self {
+        Self::Unknown
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1134,7 +1144,7 @@ impl AssignName {
     }
 }
 
-impl<A, B> Pattern<A, B> {
+impl<A> Pattern<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
             Pattern::Assign { pattern, .. } => pattern.location(),
@@ -1247,7 +1257,7 @@ impl TypedPattern {
         .or(Some(Located::Pattern(self)))
     }
 }
-impl<A, B> HasLocation for Pattern<A, B> {
+impl<A> HasLocation for Pattern<A> {
     fn location(&self) -> SrcSpan {
         self.location()
     }
@@ -1443,7 +1453,7 @@ pub struct GroupedStatements {
 }
 
 impl GroupedStatements {
-    pub fn new(statements: impl IntoIterator<Item = UntypedStatement>) -> Self {
+    pub fn new(statements: impl IntoIterator<Item = UntypedModuleStatement>) -> Self {
         let mut this = Self::default();
 
         for statement in statements {
@@ -1476,15 +1486,15 @@ impl GroupedStatements {
             + external_functions.len()
     }
 
-    fn add(&mut self, statement: UntypedStatement) {
+    fn add(&mut self, statement: UntypedModuleStatement) {
         match statement {
-            Statement::Import(i) => self.imports.push(i),
-            Statement::Function(f) => self.functions.push(f),
-            Statement::TypeAlias(t) => self.type_aliases.push(t),
-            Statement::CustomType(c) => self.custom_types.push(c),
-            Statement::ExternalType(t) => self.external_types.push(t),
-            Statement::ModuleConstant(c) => self.constants.push(c),
-            Statement::ExternalFunction(f) => self.external_functions.push(f),
+            ModuleStatement::Import(i) => self.imports.push(i),
+            ModuleStatement::Function(f) => self.functions.push(f),
+            ModuleStatement::TypeAlias(t) => self.type_aliases.push(t),
+            ModuleStatement::CustomType(c) => self.custom_types.push(c),
+            ModuleStatement::ExternalType(t) => self.external_types.push(t),
+            ModuleStatement::ModuleConstant(c) => self.constants.push(c),
+            ModuleStatement::ExternalFunction(f) => self.external_functions.push(f),
         }
     }
 }
@@ -1510,3 +1520,21 @@ impl ModuleFunction {
         }
     }
 }
+
+// /// A statement with in a function body.
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub enum Statement<Type, Expression, PatternConstructor> {
+//     /// A bare expression that is not assigned to any variable.
+//     Expression(Expression),
+//     /// The definition of a variable.
+//     Assignment(Assignment<Type, Expression, PatternConstructor>),
+// }
+
+// #[derive(Debug, Clone, PartialEq, Eq)]
+// pub struct Assignment<T, Expression, Constructor> {
+//     location: SrcSpan,
+//     value: Box<Expression>,
+//     pattern: Pattern<Constructor, T>,
+//     kind: AssignmentKind,
+//     annotation: Option<TypeAst>,
+// }

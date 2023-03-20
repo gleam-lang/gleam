@@ -15,9 +15,9 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
-use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedPattern, TypedStatement};
+use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedModuleStatement, TypedPattern};
 use crate::{
-    ast::{SrcSpan, Statement, TypedModule},
+    ast::{ModuleStatement, SrcSpan, TypedModule},
     config::{self, PackageConfig},
     erlang,
     error::{Error, FileIoAction, FileKind},
@@ -229,7 +229,7 @@ impl Module {
                 statement.put_doc(doc);
             }
 
-            if let Statement::CustomType(CustomType { constructors, .. }) = statement {
+            if let ModuleStatement::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
                     let docs: Vec<&str> =
                         comments_before(&mut doc_comments, constructor.location.start, &self.code);
@@ -262,7 +262,7 @@ impl Module {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
     Expression(&'a TypedExpr),
-    Statement(&'a TypedStatement),
+    Statement(&'a TypedModuleStatement),
     Pattern(&'a TypedPattern),
 }
 

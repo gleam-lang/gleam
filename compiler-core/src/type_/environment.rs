@@ -1,4 +1,6 @@
-use crate::{ast::PIPE_VARIABLE, uid::UniqueIdGenerator, warning::TypeWarningEmitter};
+use crate::{
+    analyse::Inferred, ast::PIPE_VARIABLE, uid::UniqueIdGenerator, warning::TypeWarningEmitter,
+};
 
 use super::*;
 use std::collections::HashMap;
@@ -528,7 +530,7 @@ impl<'a> Environment<'a> {
     /// only at the top level (without recursing into constructor arguments).
     pub fn check_exhaustiveness(
         &mut self,
-        patterns: Vec<Pattern<PatternConstructor, Arc<Type>>>,
+        patterns: Vec<Pattern<Arc<Type>>>,
         value_typ: Arc<Type>,
     ) -> Result<(), Vec<SmolStr>> {
         match &*value_typ {
@@ -562,13 +564,16 @@ impl<'a> Environment<'a> {
                             // If the pattern is a Discard or Var, all constructors are covered by it
                             Pattern::Discard { .. } => return Ok(()),
                             Pattern::Var { .. } => return Ok(()),
+
                             // If the pattern is a constructor, remove it from unmatched patterns
                             Pattern::Constructor {
-                                constructor: PatternConstructor::Record { name, .. },
+                                constructor:
+                                    Inferred::Known(PatternConstructor::Record { name, .. }),
                                 ..
                             } => {
                                 let _ = unmatched_constructors.remove(name);
                             }
+
                             _ => return Ok(()),
                         }
                     }

@@ -132,7 +132,7 @@ impl<'comments> Formatter<'comments> {
         for statement in target_group.statements_ref() {
             let start = statement.location().start;
             match statement {
-                Statement::Import(Import { .. }) => {
+                ModuleStatement::Import(Import { .. }) => {
                     has_imports = true;
                     let comments = self.pop_comments(start);
                     let statement = self.statement(statement);
@@ -211,9 +211,9 @@ impl<'comments> Formatter<'comments> {
         join(non_empty, line()).append(line())
     }
 
-    fn statement<'a>(&mut self, statement: &'a UntypedStatement) -> Document<'a> {
+    fn statement<'a>(&mut self, statement: &'a UntypedModuleStatement) -> Document<'a> {
         match statement {
-            Statement::Function(Function {
+            ModuleStatement::Function(Function {
                 name,
                 arguments: args,
                 body,
@@ -223,7 +223,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
 
-            Statement::TypeAlias(TypeAlias {
+            ModuleStatement::TypeAlias(TypeAlias {
                 alias,
                 parameters: args,
                 type_ast: resolved_type,
@@ -231,7 +231,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.type_alias(*public, alias, args, resolved_type),
 
-            Statement::CustomType(CustomType {
+            ModuleStatement::CustomType(CustomType {
                 name,
                 parameters,
                 public,
@@ -241,7 +241,7 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) => self.custom_type(*public, *opaque, name, parameters, constructors, location),
 
-            Statement::ExternalFunction(ExternalFunction {
+            ModuleStatement::ExternalFunction(ExternalFunction {
                 public,
                 arguments: args,
                 name,
@@ -259,14 +259,14 @@ impl<'comments> Formatter<'comments> {
                 .append(fun.as_str())
                 .append("\""),
 
-            Statement::ExternalType(ExternalType {
+            ModuleStatement::ExternalType(ExternalType {
                 public,
                 name,
                 arguments: args,
                 ..
             }) => self.external_type(*public, name, args),
 
-            Statement::Import(Import {
+            ModuleStatement::Import(Import {
                 module,
                 as_name,
                 unqualified,
@@ -297,7 +297,7 @@ impl<'comments> Formatter<'comments> {
                     nil()
                 }),
 
-            Statement::ModuleConstant(ModuleConstant {
+            ModuleStatement::ModuleConstant(ModuleConstant {
                 public,
                 name,
                 annotation,
@@ -421,7 +421,7 @@ impl<'comments> Formatter<'comments> {
             .append(self.const_expr(value))
     }
 
-    fn documented_statement<'a>(&mut self, s: &'a UntypedStatement) -> Document<'a> {
+    fn documented_statement<'a>(&mut self, s: &'a UntypedModuleStatement) -> Document<'a> {
         let comments = self.doc_comments(s.location().start);
         comments.append(self.statement(s).group()).group()
     }
@@ -1390,8 +1390,8 @@ impl<'comments> Formatter<'comments> {
 
     fn list_pattern<'a>(
         &mut self,
-        elements: &'a [Pattern<(), ()>],
-        tail: &'a Option<Box<Pattern<(), ()>>>,
+        elements: &'a [Pattern<()>],
+        tail: &'a Option<Box<Pattern<()>>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
