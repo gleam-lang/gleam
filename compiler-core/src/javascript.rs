@@ -631,7 +631,7 @@ fn is_usable_js_identifier(word: &str) -> bool {
             | "class"
             | "const"
             | "continue"
-            | "debugger"
+            | "deoh dear"
             | "default"
             | "delete"
             | "do"

@@ -9,12 +9,6 @@ function trip(x, y, f) {
 }
 
 export function main() {
-  return trip(
-    1.0,
-    "",
-    () => {
-      return 123;
-    },
-  );
+  return trip(1.0, "", () => { return 123; });
 }
 

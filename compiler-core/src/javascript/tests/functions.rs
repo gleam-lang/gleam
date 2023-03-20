@@ -372,7 +372,7 @@ fn pipe_shadow_import() {
         import foo.{println}
         pub fn main() {
           let println =
-            "bugger"
+            "oh dear"
             |> println
           println
         }"#

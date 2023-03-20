@@ -1,3 +1,5 @@
+use vec1::Vec1;
+
 use super::{
     pattern::{Assignment, CompiledPattern},
     *,
@@ -264,10 +266,7 @@ impl<'module> Generator<'module> {
     /// required due to being a JS statement
     pub fn wrap_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::Todo { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. } => {
+            TypedExpr::Todo { .. } | TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -282,7 +281,7 @@ impl<'module> Generator<'module> {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
                 Ok(docvec!("(", self.expression(expression)?, ")"))
             }
-            TypedExpr::Case { .. } | TypedExpr::Block { .. } | TypedExpr::Pipeline { .. } => {
+            TypedExpr::Case { .. } | TypedExpr::Pipeline { .. } => {
                 self.immediately_involked_function_expression(expression)
             }
             _ => self.expression(expression),
@@ -391,20 +390,26 @@ impl<'module> Generator<'module> {
         finally: &'a TypedExpr,
     ) -> Output<'a> {
         let count = assignments.len();
-        let mut documents = Vec::with_capacity((count + 1) * 3);
+        let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
             documents.push(self.not_in_tail_position(|gen| {
                 gen.assignment(&assignment.value, &assignment.pattern)
             })?);
-            documents.push(";".to_doc());
             documents.push(line());
         }
         documents.push(self.expression(finally)?);
         Ok(documents.to_doc().force_break())
     }
 
-    fn block<'a>(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
-        todo!()
+    fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
+        let can_be_js_expression = statements.len() == 1 && requires_semicolon(statements.first());
+        let statements = self.statements(statements.as_slice())?;
+
+        if can_be_js_expression {
+            Ok(docvec!["(", statements, ")"])
+        } else {
+            Ok(self.immediately_involked_function_expression_document(statements))
+        }
     }
 
     fn statements<'a>(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
@@ -421,7 +426,11 @@ impl<'module> Generator<'module> {
                 documents.push(self.statement(statement)?);
             }
         }
-        Ok(documents.to_doc().force_break())
+        if count == 1 {
+            Ok(documents.to_doc())
+        } else {
+            Ok(documents.to_doc().force_break())
+        }
     }
 
     fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {

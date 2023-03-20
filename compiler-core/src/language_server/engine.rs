@@ -230,9 +230,9 @@ where
             };
 
             Ok(match found {
+                Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(_) => None,
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
-                Located::Statement(statement) => None, // TODO: hover for statement
                 Located::Expression(expression) => Some(hover_for_expression(expression, lines)),
             })
         })
