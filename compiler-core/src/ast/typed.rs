@@ -49,7 +49,7 @@ pub enum TypedExpr {
         typ: Arc<Type>,
         is_capture: bool,
         args: Vec<Arg<Arc<Type>>>,
-        body: Box<Self>,
+        body: Vec1<Statement<Arc<Type>, Self>>,
         return_annotation: Option<TypeAst>,
     },
 
@@ -191,7 +191,10 @@ impl TypedExpr {
 
             Self::NegateInt { value, .. } => value.find_node(byte_index).or(Some(self.into())),
 
-            Self::Fn { body, .. } => body.find_node(byte_index).or(Some(self.into())),
+            Self::Fn { body, .. } => body
+                .iter()
+                .find_map(|statement| statement.find_node(byte_index))
+                .or(Some(self.into())),
 
             Self::Call { fun, args, .. } => args
                 .iter()

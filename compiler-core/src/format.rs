@@ -135,7 +135,7 @@ impl<'comments> Formatter<'comments> {
                 ModuleStatement::Import(Import { .. }) => {
                     has_imports = true;
                     let comments = self.pop_comments(start);
-                    let statement = self.statement(statement);
+                    let statement = self.module_statement(statement);
                     imports.push(commented(statement, comments))
                 }
 
@@ -211,7 +211,7 @@ impl<'comments> Formatter<'comments> {
         join(non_empty, line()).append(line())
     }
 
-    fn statement<'a>(&mut self, statement: &'a UntypedModuleStatement) -> Document<'a> {
+    fn module_statement<'a>(&mut self, statement: &'a UntypedModuleStatement) -> Document<'a> {
         match statement {
             ModuleStatement::Function(Function {
                 name,
@@ -221,7 +221,14 @@ impl<'comments> Formatter<'comments> {
                 return_annotation,
                 end_position,
                 ..
-            }) => self.statement_fn(public, name, args, return_annotation, body, *end_position),
+            }) => self.statement_fn(
+                public,
+                name,
+                args,
+                return_annotation,
+                body.as_slice(),
+                *end_position,
+            ),
 
             ModuleStatement::TypeAlias(TypeAlias {
                 alias,
@@ -423,7 +430,7 @@ impl<'comments> Formatter<'comments> {
 
     fn documented_statement<'a>(&mut self, s: &'a UntypedModuleStatement) -> Document<'a> {
         let comments = self.doc_comments(s.location().start);
-        comments.append(self.statement(s).group()).group()
+        comments.append(self.module_statement(s).group()).group()
     }
 
     fn doc_comments<'a>(&mut self, limit: u32) -> Document<'a> {
@@ -528,7 +535,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [UntypedArg],
         return_annotation: &'a Option<TypeAst>,
-        body: &'a UntypedExpr,
+        body: &'a [UntypedStatement],
         end_location: u32,
     ) -> Document<'a> {
         // Fn name and args
@@ -545,7 +552,7 @@ impl<'comments> Formatter<'comments> {
         .group();
 
         // Format body
-        let body = self.expr(body);
+        let body = self.statements(body);
 
         // Add any trailing comments
         let body = match printed_comments(self.pop_comments(end_location), false) {
@@ -598,17 +605,17 @@ impl<'comments> Formatter<'comments> {
         header.append(" ").append(wrap_block(body)).group()
     }
 
-    fn sequence<'a>(&mut self, expressions: &'a [UntypedExpr]) -> Document<'a> {
-        let count = expressions.len();
+    fn statements<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
+        let count = statements.len();
         let mut documents = Vec::with_capacity(count * 2);
-        for (i, expression) in expressions.iter().enumerate() {
-            let preceeding_newline = self.pop_empty_lines(expression.start_byte_index());
+        for (i, statement) in statements.iter().enumerate() {
+            let preceeding_newline = self.pop_empty_lines(statement.start_byte_index());
             if i != 0 && preceeding_newline {
                 documents.push(lines(2));
             } else if i != 0 {
                 documents.push(lines(1));
             }
-            documents.push(self.expr(expression).group());
+            documents.push(self.statement(statement).group());
         }
         documents.to_doc().force_break()
     }
@@ -658,7 +665,10 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => self.string(value),
 
-            UntypedExpr::Block { expressions, .. } => self.sequence(expressions),
+            UntypedExpr::Block {
+                statements: expressions,
+                ..
+            } => self.sequence(expressions),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -1571,6 +1581,11 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Use(_)
             | UntypedExpr::Block { .. } => self.wrap_expr(expr),
         }
+    }
+
+    fn statement<'a>(&self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
+        // TODO: it
+        todo!()
     }
 }
 

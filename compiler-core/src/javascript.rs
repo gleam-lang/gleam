@@ -422,7 +422,7 @@ impl<'a> Generator<'a> {
         public: bool,
         name: &'a SmolStr,
         args: &'a [TypedArg],
-        body: &'a TypedExpr,
+        body: &'a [TypedStatement],
     ) -> Output<'a> {
         let argument_names = args
             .iter()

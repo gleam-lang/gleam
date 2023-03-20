@@ -7,7 +7,7 @@ mod into_dependency_order_tests;
 use crate::{
     ast::{
         AssignName, BitStringSegmentOption, ClauseGuard, Constant, ModuleFunction, Pattern,
-        SrcSpan, UntypedExpr, UntypedPattern,
+        SrcSpan, Statement, UntypedExpr, UntypedPattern, UntypedStatement,
     },
     type_::Error,
     Result,
@@ -63,7 +63,7 @@ impl<'a> CallGraphBuilder<'a> {
                 for name in f.arguments.iter().flat_map(|a| a.get_variable_name()) {
                     self.define(name);
                 }
-                self.expression(&f.body);
+                self.statements(&f.body);
                 self.names = names;
             }
             ModuleFunction::External(_) => {}
@@ -83,10 +83,24 @@ impl<'a> CallGraphBuilder<'a> {
         _ = self.graph.add_edge(self.current_function, *target, ());
     }
 
-    fn scoped_expression(&mut self, expression: &'a UntypedExpr) {
+    fn statements(&mut self, statements: &'a [UntypedStatement]) {
         let names = self.names.clone();
-        self.expression(expression);
+        for statement in statements {
+            self.statement(statement);
+        }
         self.names = names;
+    }
+
+    fn statement(&mut self, statement: &'a UntypedStatement) {
+        match statement {
+            Statement::Expression(expression) => {
+                self.expression(expression);
+            }
+            Statement::Assignment(assignment) => {
+                self.pattern(&assignment.pattern);
+                self.expression(&assignment.value);
+            }
+        };
     }
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
@@ -105,7 +119,7 @@ impl<'a> CallGraphBuilder<'a> {
             UntypedExpr::Call { fun, arguments, .. } => {
                 self.expression(fun);
                 for argument in arguments {
-                    self.scoped_expression(&argument.value);
+                    self.expression(&argument.value);
                 }
             }
 
@@ -117,29 +131,27 @@ impl<'a> CallGraphBuilder<'a> {
 
             UntypedExpr::Tuple { elems, .. } => {
                 for expression in elems {
-                    self.scoped_expression(expression);
+                    self.expression(expression);
                 }
             }
 
-            UntypedExpr::Block { expressions, .. } => {
+            UntypedExpr::Block { statements, .. } => {
                 let names = self.names.clone();
-                for expression in expressions {
-                    self.expression(expression);
-                }
+                self.statements(statements);
                 self.names = names;
             }
 
             UntypedExpr::BinOp { left, right, .. } => {
-                self.scoped_expression(left);
-                self.scoped_expression(right);
+                self.expression(left);
+                self.expression(right);
             }
 
             UntypedExpr::List { elements, tail, .. } => {
                 for element in elements {
-                    self.scoped_expression(element);
+                    self.expression(element);
                 }
                 if let Some(tail) = tail {
-                    self.scoped_expression(tail);
+                    self.expression(tail);
                 }
             }
 
@@ -156,21 +168,21 @@ impl<'a> CallGraphBuilder<'a> {
                 container: expression,
                 ..
             } => {
-                self.scoped_expression(expression);
+                self.expression(expression);
             }
 
             UntypedExpr::BitString { segments, .. } => {
                 for segment in segments {
-                    self.scoped_expression(&segment.value);
+                    self.expression(&segment.value);
                 }
             }
 
             UntypedExpr::RecordUpdate {
                 spread, arguments, ..
             } => {
-                self.scoped_expression(&spread.base);
+                self.expression(&spread.base);
                 for argument in arguments {
-                    self.scoped_expression(&argument.value);
+                    self.expression(&argument.value);
                 }
             }
 
@@ -190,7 +202,7 @@ impl<'a> CallGraphBuilder<'a> {
                         self.define(name)
                     }
                 }
-                self.scoped_expression(body);
+                self.statements(body);
                 self.names = names;
             }
 

@@ -66,9 +66,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.new_unbound_var()
     }
 
-    /// Crawl the AST, annotating each node with the inferred type or
-    /// returning an error.
-    ///
     pub fn infer_statements(
         &mut self,
         statements: Vec1<UntypedStatement>,
@@ -77,7 +74,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         todo!("infer_statements")
     }
 
-    fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
+    pub fn infer_statement(
+        &mut self,
+        statement: UntypedStatement,
+    ) -> Result<TypedStatement, Error> {
+        // TODO: it
+        todo!("infer_statement")
+    }
+
+    pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
             UntypedExpr::Todo {
                 location,
@@ -95,9 +100,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => Ok(self.infer_int(value, location)),
 
             UntypedExpr::Block {
-                expressions,
+                statements: expressions,
                 location,
-            } => self.infer_seq(location, expressions),
+            } => self.infer_block(location, expressions),
 
             UntypedExpr::Tuple {
                 location, elems, ..
@@ -252,7 +257,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// Emit a warning if the given expressions should not be discarded.
     /// e.g. because it's a literal (why was it made in the first place?)
     /// e.g. because it's of the `Result` type (errors should be handled)
-    fn expression_discarded(&mut self, discarded: &TypedExpr) {
+    fn statement_discarded(&mut self, discarded: &TypedStatement) {
+        let discarded = match discarded {
+            Statement::Expression(expression) => expression,
+            Statement::Assignment(_) => return,
+        };
+
         if discarded.is_literal() {
             self.environment.warnings.emit(Warning::UnusedLiteral {
                 location: discarded.location(),
@@ -270,21 +280,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_seq(
         &mut self,
         location: SrcSpan,
-        untyped: Vec<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+        untyped: Vec1<UntypedStatement>,
+    ) -> Result<Vec1<TypedStatement>, Error> {
         let count = untyped.len();
         let untyped = untyped.into_iter();
         self.infer_iter_seq(location, count, untyped)
     }
 
-    fn infer_iter_seq<Exprs: Iterator<Item = UntypedExpr>>(
+    fn infer_iter_seq<StatementsIter: Iterator<Item = UntypedStatement>>(
         &mut self,
         location: SrcSpan,
         count: usize,
-        mut untyped: Exprs,
-    ) -> Result<TypedExpr, Error> {
+        mut untyped: StatementsIter,
+    ) -> Result<Vec1<TypedStatement>, Error> {
         let mut i = 0;
-        let mut expressions = Vec::with_capacity(count);
+        let mut statements: Vec<TypedStatement> = Vec::with_capacity(count);
 
         while let Some(expression) = untyped.next() {
             i += 1;
@@ -294,52 +304,48 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // implicit anonymous function.
             if let UntypedExpr::Use(use_) = expression {
                 let expression = self.infer_use(use_, location, untyped.collect())?;
-                expressions.push(expression);
+                statements.push(expression);
                 break; // Inferring the use has consumed the rest of the exprs
             }
 
-            let expression = self.infer(expression)?;
+            let statement = self.infer_statement(expression)?;
             // This isn't the final expression in the sequence, so call the
             // `expression_discarded` function to see if anything is being
             // discarded that we think shouldn't be.
             if i < count {
-                self.expression_discarded(&expression);
+                self.statement_discarded(&statement);
             }
-            expressions.push(expression);
+            statements.push(statement);
         }
 
-        Ok(TypedExpr::Block {
-            location,
-            expressions,
-        })
+        Ok(Vec1::try_from_vec(statements).expect("empty sequence"))
     }
 
     fn infer_use(
         &mut self,
         use_: Use,
         sequence_location: SrcSpan,
-        mut following_expressions: Vec<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+        mut following_expressions: Vec<UntypedStatement>,
+    ) -> Result<TypedStatement, Error> {
         let mut call = get_use_expression_call(*use_.call)?;
         let assignments = UseAssignments::from_use_expression(use_.assignments);
 
-        let mut expressions = assignments.body_assignments;
+        let mut statements = assignments.body_assignments;
 
         if following_expressions.is_empty() {
-            let todo = UntypedExpr::Todo {
+            let todo = Statement::Expression(UntypedExpr::Todo {
                 location: use_.location,
                 label: None,
                 kind: TodoKind::IncompleteUse,
-            };
-            expressions.push(todo);
+            });
+            statements.push(todo);
         } else {
-            expressions.append(&mut following_expressions);
+            statements.append(&mut following_expressions);
         }
 
-        let first = expressions
-            .get(0)
-            .expect("This is safe, a default todo was set above")
-            .location();
+        let statements = Vec1::try_from_vec(statements).expect("safe: todo added above");
+
+        let first = statements.first().location();
 
         // Collect the following expressions into a function to be passed as a
         // callback to the use's call function.
@@ -348,7 +354,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location: SrcSpan::new(first.start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
-            body: expressions,
+            body: statements,
         };
 
         // Add this new callback function to the arguments to function call
@@ -409,13 +415,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<TypedExpr, Error> {
         let (args, body) = self.do_infer_fn(args, expected_args, body, &return_annotation)?;
         let args_types = args.iter().map(|a| a.type_.clone()).collect();
-        let typ = fn_(args_types, body.type_());
+        let typ = fn_(args_types, body.last().type_());
         Ok(TypedExpr::Fn {
             location,
             typ,
             is_capture,
             args,
-            body: Box::new(body),
+            body,
             return_annotation,
         })
     }
@@ -1969,7 +1975,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         expected_args: &[Arc<Type>],
         body: Vec1<UntypedStatement>,
         return_annotation: &Option<TypeAst>,
-    ) -> Result<(Vec<TypedArg>, Vec1<TypedExpr>), Error> {
+    ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
         // Construct an initial type for each argument of the function- either an unbound
         // type variable or a type provided by an annotation.
         let args: Vec<_> = args
@@ -2082,6 +2088,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
         self.environment.check_exhaustiveness(patterns, value_typ)
+    }
+
+    fn infer_block(
+        &self,
+        location: SrcSpan,
+        expressions: Vec1<UntypedStatement>,
+    ) -> Result<TypedExpr, Error> {
+        // TODO: it
+        todo!()
     }
 }
 
