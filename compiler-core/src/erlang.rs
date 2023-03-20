@@ -25,6 +25,7 @@ use lazy_static::lazy_static;
 use pattern::pattern;
 use smol_str::SmolStr;
 use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
+use vec1::Vec1;
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
@@ -735,11 +736,16 @@ where
     document
 }
 
-fn block<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
+fn block<'a>(statements: &'a Vec1<TypedStatement>, env: &mut Env<'a>) -> Document<'a> {
+    if statements.len() == 1 && statements.first().is_expression() {
+        return docvec!['(', statement(statements.first(), env), ')'];
+    }
+
     let vars = env.current_scope_vars.clone();
     let document = statement_sequence(statements, env);
     env.current_scope_vars = vars;
-    document
+
+    begin_end(document)
 }
 
 fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -> Document<'a> {
@@ -806,6 +812,7 @@ fn bin_op<'a>(
     let div = |left: Document<'a>, right: Document<'a>| {
         left.append(break_("", " "))
             .append(op)
+            .group()
             .append(" ")
             .append(right)
     };
@@ -1340,11 +1347,6 @@ fn docs_args_call<'a>(
             expr(fun, env).surround("(", ")").append(args)
         }
 
-        TypedExpr::Pipeline { .. } => {
-            let args = wrap_args(args);
-            begin_end(expr(fun, env)).append(args)
-        }
-
         other => {
             let args = wrap_args(args);
             expr(other, env).append(args)
@@ -1377,8 +1379,6 @@ fn begin_end(document: Document<'_>) -> Document<'_> {
     docvec!["begin", line().append(document).nest(INDENT), line(), "end"].force_break()
 }
 
-/// Same as expr, expect it wraps seq, let, etc in begin end
-///
 fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
     if needs_begin_end_wrapping(expression) {
         begin_end(expr(expression, env))
@@ -1389,7 +1389,8 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
-        TypedExpr::Pipeline { .. } | TypedExpr::Block { .. } => true,
+        TypedExpr::Pipeline { .. } => true,
+
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::String { .. }
@@ -1400,6 +1401,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::BinOp { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::RecordAccess { .. }
+        | TypedExpr::Block { .. }
         | TypedExpr::ModuleSelect { .. }
         | TypedExpr::Tuple { .. }
         | TypedExpr::TupleIndex { .. }
