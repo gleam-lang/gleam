@@ -1232,10 +1232,9 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Block { .. } => " ".to_doc().append(break_block(self.expr(expr))),
-
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
+            | UntypedExpr::Block { .. }
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::BitString { .. } => " ".to_doc().append(self.expr(expr)).group(),
 
@@ -1584,8 +1583,7 @@ impl<'comments> Formatter<'comments> {
     fn block<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
         docvec![
             "{",
-            break_("", " "),
-            self.statements(statements),
+            docvec![break_("", " "), self.statements(statements)].nest(INDENT),
             break_("", " "),
             "}"
         ]

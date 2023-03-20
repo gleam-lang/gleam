@@ -1537,6 +1537,16 @@ pub enum Statement<TypeT, ExpressionT> {
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
 pub type UntypedStatement = Statement<(), UntypedExpr>;
 
+impl<T, E> Statement<T, E> {
+    /// Returns `true` if the statement is [`Expression`].
+    ///
+    /// [`Expression`]: Statement::Expression
+    #[must_use]
+    pub fn is_expression(&self) -> bool {
+        matches!(self, Self::Expression(..))
+    }
+}
+
 impl UntypedStatement {
     pub fn location(&self) -> SrcSpan {
         match self {
