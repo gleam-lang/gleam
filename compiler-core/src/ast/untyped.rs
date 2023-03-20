@@ -29,6 +29,7 @@ pub enum UntypedExpr {
         name: SmolStr,
     },
 
+    // TODO: create new variant for captures specifically
     Fn {
         location: SrcSpan,
         is_capture: bool,
@@ -67,8 +68,6 @@ pub enum UntypedExpr {
         kind: AssignmentKind,
         annotation: Option<TypeAst>,
     },
-
-    Use(Use),
 
     Case {
         location: SrcSpan,
@@ -132,7 +131,6 @@ impl UntypedExpr {
             Self::PipeLine { expressions, .. } => expressions.last().location(),
 
             Self::Fn { location, .. }
-            | Self::Use(Use { location, .. })
             | Self::Var { location, .. }
             | Self::Int { location, .. }
             | Self::Todo { location, .. }

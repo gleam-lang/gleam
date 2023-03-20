@@ -193,11 +193,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
             UntypedExpr::NegateInt { location, value } => self.infer_negate_int(location, *value),
-
-            UntypedExpr::Use(use_) => {
-                let location = use_.location;
-                self.infer_use(use_, location, vec![])
-            }
         }
     }
 
@@ -260,7 +255,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn statement_discarded(&mut self, discarded: &TypedStatement) {
         let discarded = match discarded {
             Statement::Expression(expression) => expression,
-            Statement::Assignment(_) => return,
+            Statement::Assignment(_) | Statement::Use(_) => return,
         };
 
         if discarded.is_literal() {
@@ -302,7 +297,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Special case for `use` expressions, which need the remaining
             // expressions in the sequence to be passed to them during as an
             // implicit anonymous function.
-            if let UntypedExpr::Use(use_) = expression {
+            if let Statement::Use(use_) = expression {
                 let expression = self.infer_use(use_, location, untyped.collect())?;
                 statements.push(expression);
                 break; // Inferring the use has consumed the rest of the exprs
@@ -367,11 +362,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implicit: true,
         });
 
-        self.infer(UntypedExpr::Call {
+        let call = self.infer(UntypedExpr::Call {
             location: SrcSpan::new(use_.location.start, sequence_location.end),
             fun: call.function,
             arguments: call.arguments,
-        })
+        })?;
+
+        Ok(Statement::Expression(call))
     }
 
     fn infer_negate_bool(

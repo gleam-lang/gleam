@@ -587,14 +587,10 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         args: &'a [UntypedArg],
         return_annotation: Option<&'a TypeAst>,
-        body: &'a UntypedExpr,
+        body: &'a [UntypedStatement],
     ) -> Document<'a> {
         let args = wrap_args(args.iter().map(|e| self.fn_arg(e))).group();
-        let body = match body {
-            UntypedExpr::Case { .. } => self.expr(body).force_break(),
-            _ => self.expr(body),
-        };
-
+        let body = self.statements(body);
         let header = "fn".to_doc().append(args);
 
         let header = match return_annotation {
@@ -665,10 +661,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::String { value, .. } => self.string(value),
 
-            UntypedExpr::Block {
-                statements: expressions,
-                ..
-            } => self.sequence(expressions),
+            UntypedExpr::Block { statements, .. } => self.block(statements),
 
             UntypedExpr::Var { name, .. } if name == CAPTURE_VARIABLE => "_".to_doc(),
 
@@ -712,8 +705,6 @@ impl<'comments> Formatter<'comments> {
                 kind,
                 ..
             } => self.assignment(pattern, value, *kind, annotation),
-
-            UntypedExpr::Use(use_) => self.use_(use_),
 
             UntypedExpr::Case {
                 subjects, clauses, ..
@@ -884,7 +875,6 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::Assignment { .. }
-            | UntypedExpr::Use(_)
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -992,7 +982,15 @@ impl<'comments> Formatter<'comments> {
                     is_capture: true,
                     body,
                     ..
-                } => self.pipe_capture_right_hand_side(body),
+                } => {
+                    let body = match body.first() {
+                        Statement::Expression(expression) => expression,
+                        Statement::Assignment(_) | Statement::Use(_) => {
+                            unreachable!("Non expression capture body")
+                        }
+                    };
+                    self.pipe_capture_right_hand_side(body)
+                }
 
                 _ => self.wrap_expr(expr),
             };
@@ -1036,13 +1034,18 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn fn_capture<'a>(&mut self, call: &'a UntypedExpr) -> Document<'a> {
-        match call {
-            UntypedExpr::Call {
+    fn fn_capture<'a>(&mut self, call: &'a [UntypedStatement]) -> Document<'a> {
+        // The body of a capture being multiple statements shouldn't be possible...
+        if call.len() != 1 {
+            panic!("Function capture found not to have a single statement call");
+        }
+
+        match call.first() {
+            Some(Statement::Expression(UntypedExpr::Call {
                 fun,
                 arguments: args,
                 ..
-            } => match args.as_slice() {
+            })) => match args.as_slice() {
                 [first, second] if is_breakable_expr(&second.value) && first.is_capture_hole() => {
                     self.expr(fun)
                         .append("(_, ")
@@ -1057,7 +1060,7 @@ impl<'comments> Formatter<'comments> {
             },
 
             // The body of a capture being not a fn shouldn't be possible...
-            _ => panic!("Function capture body found not to be a call in the formatter",),
+            _ => panic!("Function capture body found not to be a call in the formatter"),
         }
     }
 
@@ -1197,7 +1200,7 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Use(_) | UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
+            UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
                 break_block(self.expr(expr))
             }
 
@@ -1578,14 +1581,24 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
             | UntypedExpr::NegateInt { .. }
-            | UntypedExpr::Use(_)
             | UntypedExpr::Block { .. } => self.wrap_expr(expr),
         }
     }
 
     fn statement<'a>(&self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
+        // UntypedExpr::Use(use_) => self.use_(use_),
         // TODO: it
         todo!()
+    }
+
+    fn block<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
+        docvec![
+            "{",
+            break_("", " "),
+            self.statements(statements),
+            break_("", " "),
+            "}"
+        ]
     }
 }
 

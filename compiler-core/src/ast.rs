@@ -1528,8 +1528,10 @@ impl ModuleFunction {
 pub enum Statement<TypeT, ExpressionT> {
     /// A bare expression that is not assigned to any variable.
     Expression(ExpressionT),
-    /// The definition of a variable.
+    /// Assigning an expression to variables using a pattern.
     Assignment(Assignment<TypeT, ExpressionT>),
+    /// A `use` expression.
+    Use(Use),
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
@@ -1540,6 +1542,7 @@ impl UntypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
+            Statement::Use(use_) => use_.location,
         }
     }
 
@@ -1547,6 +1550,7 @@ impl UntypedStatement {
         match self {
             Statement::Expression(expression) => expression.start_byte_index(),
             Statement::Assignment(assignment) => assignment.location.start,
+            Statement::Use(use_) => use_.location.start,
         }
     }
 }
@@ -1556,6 +1560,7 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.location(),
             Statement::Assignment(assignment) => assignment.location,
+            Statement::Use(use_) => use_.location,
         }
     }
 
@@ -1563,18 +1568,21 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
+            Statement::Use(use_) => unreachable!("Use must not exist for typed code"),
         }
     }
 
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
             Statement::Expression(expression) => expression.definition_location(),
-            Statement::Assignment(assignment) => None,
+            Statement::Assignment(_) => None,
+            Statement::Use(_) => None,
         }
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
+            Statement::Use(_) => None,
             Statement::Expression(expression) => expression.find_node(byte_index),
             Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
                 if assignment.location.contains(byte_index) {
@@ -1590,6 +1598,7 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_defining_location(),
             Statement::Assignment(assignment) => assignment.location,
+            Statement::Use(use_) => use_.location,
         }
     }
 }
