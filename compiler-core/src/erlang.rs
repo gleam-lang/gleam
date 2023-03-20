@@ -1306,11 +1306,11 @@ fn docs_args_call<'a>(
             body,
             ..
         } => {
-            if let TypedExpr::Call {
+            if let Statement::Expression(TypedExpr::Call {
                 fun,
                 args: inner_args,
                 ..
-            } = body.as_ref()
+            }) = body.first()
             {
                 let mut merged_args = Vec::with_capacity(inner_args.len());
                 for arg in inner_args {

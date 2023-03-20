@@ -100,6 +100,12 @@ impl<'a> CallGraphBuilder<'a> {
                 self.pattern(&assignment.pattern);
                 self.expression(&assignment.value);
             }
+            Statement::Use(use_) => {
+                for pattern in &use_.assignments {
+                    self.pattern(pattern);
+                }
+                self.expression(&use_.call);
+            }
         };
     }
 
@@ -184,13 +190,6 @@ impl<'a> CallGraphBuilder<'a> {
                 for argument in arguments {
                     self.expression(&argument.value);
                 }
-            }
-
-            UntypedExpr::Use(use_) => {
-                for pattern in &use_.assignments {
-                    self.pattern(pattern);
-                }
-                self.expression(&use_.call);
             }
 
             UntypedExpr::Fn {

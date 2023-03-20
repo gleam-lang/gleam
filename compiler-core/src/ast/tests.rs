@@ -38,13 +38,13 @@ fn compile_module(src: &str) -> TypedModule {
 fn get_bare_expression(statement: &TypedStatement) -> &TypedExpr {
     match statement {
         Statement::Expression(expression) => expression,
-        Statement::Assignment(statement) => {
-            panic!("Expected expression, got assignment: {:?}", statement)
+        Statement::Use(_) | Statement::Assignment(_) => {
+            panic!("Expected expression, got {:?}", statement)
         }
     }
 }
 
-fn compile_expression(src: &str) -> &TypedStatement {
+fn compile_expression(src: &str) -> TypedStatement {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
 
     let mut modules = im::HashMap::new();
@@ -113,12 +113,13 @@ fn compile_expression(src: &str) -> &TypedStatement {
         .infer_statements(ast)
         .expect("should successfully infer")
         .first()
+        .clone()
 }
 
 #[test]
 fn find_node_todo() {
     let statement = compile_expression(r#" todo "#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
@@ -128,7 +129,7 @@ fn find_node_todo() {
 #[test]
 fn find_node_todo_with_string() {
     let statement = compile_expression(r#" todo("ok") "#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(10), Some(Located::Expression(&expr)));
@@ -138,7 +139,7 @@ fn find_node_todo_with_string() {
 #[test]
 fn find_node_string() {
     let statement = compile_expression(r#" "ok" "#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
@@ -148,7 +149,7 @@ fn find_node_string() {
 #[test]
 fn find_node_float() {
     let statement = compile_expression(r#" 1.02 "#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
@@ -158,7 +159,7 @@ fn find_node_float() {
 #[test]
 fn find_node_int() {
     let statement = compile_expression(r#" 1302 "#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(&expr)));
@@ -171,7 +172,7 @@ fn find_node_var() {
         r#"let wibble = 1
 wibble"#,
     );
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
 
     let var = TypedExpr::Var {
         location: SrcSpan { start: 15, end: 21 },
@@ -205,7 +206,7 @@ fn find_node_sequence() {
 #[test]
 fn find_node_list() {
     let statement = compile_expression(r#"[1, 2, 3]"#);
-    let list = get_bare_expression(statement);
+    let list = get_bare_expression(&statement);
 
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 1, end: 2 },
@@ -238,7 +239,7 @@ fn find_node_list() {
 #[test]
 fn find_node_tuple() {
     let statement = compile_expression(r#"#(1, 2, 3)"#);
-    let tuple = get_bare_expression(statement);
+    let tuple = get_bare_expression(&statement);
 
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 2, end: 3 },
@@ -272,7 +273,7 @@ fn find_node_tuple() {
 #[test]
 fn find_node_binop() {
     let statement = compile_expression(r#"1 + 2"#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
     assert!(expr.find_node(0).is_some());
     assert!(expr.find_node(1).is_none());
     assert!(expr.find_node(2).is_none());
@@ -284,7 +285,7 @@ fn find_node_binop() {
 #[test]
 fn find_node_tuple_index() {
     let statement = compile_expression(r#"#(1).0"#);
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
 
     let int = TypedExpr::Int {
         location: SrcSpan { start: 2, end: 3 },
@@ -323,7 +324,7 @@ fn find_node_module_select() {
 #[test]
 fn find_node_fn() {
     let statement = compile_expression("fn() { 1 }");
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
 
     let int = TypedExpr::Int {
         location: SrcSpan { start: 7, end: 8 },
@@ -342,7 +343,7 @@ fn find_node_fn() {
 #[test]
 fn find_node_call() {
     let statement = compile_expression("fn(_, _) { 1 }(1, 2)");
-    let expr = get_bare_expression(statement);
+    let expr = get_bare_expression(&statement);
 
     let retrn = TypedExpr::Int {
         location: SrcSpan { start: 11, end: 12 },
@@ -373,7 +374,7 @@ fn find_node_call() {
 #[test]
 fn find_node_record_access() {
     let statement = compile_expression(r#"Cat("Nubi", 3).name"#);
-    let access = get_bare_expression(statement);
+    let access = get_bare_expression(&statement);
 
     let string = TypedExpr::String {
         location: SrcSpan { start: 4, end: 10 },
@@ -398,7 +399,7 @@ fn find_node_record_access() {
 #[test]
 fn find_node_record_update() {
     let statement = compile_expression(r#"Cat(..Cat("Nubi", 3), age: 4)"#);
-    let update = get_bare_expression(statement);
+    let update = get_bare_expression(&statement);
 
     let int = TypedExpr::Int {
         location: SrcSpan { start: 27, end: 28 },
@@ -422,7 +423,7 @@ case 1, 2 {
 }
 "#,
     );
-    let case = get_bare_expression(statement);
+    let case = get_bare_expression(&statement);
 
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 6, end: 7 },
@@ -453,7 +454,7 @@ case 1, 2 {
 #[test]
 fn find_node_bool() {
     let statement = compile_expression(r#"!True"#);
-    let negate = get_bare_expression(statement);
+    let negate = get_bare_expression(&statement);
 
     let bool = TypedExpr::Var {
         location: SrcSpan { start: 1, end: 5 },

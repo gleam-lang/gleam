@@ -566,11 +566,6 @@ where
                 self.parse_assignment(start, kind)?
             }
 
-            Some((start, Token::Use, _)) => {
-                let _ = self.next_tok();
-                self.parse_use(start)?
-            }
-
             // helpful error on possibly trying to group with ""
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
@@ -739,7 +734,7 @@ where
     // use <- module.function(a, b)
     // use a, b, c <- function(a, b)
     // use a, b, c, <- function(a, b)
-    fn parse_use(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
+    fn parse_use(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
         let assignments = if let Some((_, Token::LArrow, _)) = self.tok0 {
             vec![]
         } else {
@@ -749,7 +744,7 @@ where
         _ = self.expect_one(&Token::LArrow)?;
         let call = self.expect_expression()?;
 
-        Ok(UntypedExpr::Use(Use {
+        Ok(Statement::Use(Use {
             location: SrcSpan::new(start, call.location().end),
             assignments,
             call: Box::new(call),
@@ -823,6 +818,11 @@ where
     }
 
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
+        // Some((start, Token::Use, _)) => {
+        //     let _ = self.next_tok();
+        //     self.parse_use(start)?
+        // }
+
         // TODO: it
         todo!("parse_statement")
     }
