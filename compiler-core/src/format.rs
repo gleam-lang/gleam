@@ -613,7 +613,11 @@ impl<'comments> Formatter<'comments> {
             }
             documents.push(self.statement(statement).group());
         }
-        documents.to_doc().force_break()
+        if count > 1 {
+            documents.to_doc().force_break()
+        } else {
+            documents.to_doc()
+        }
     }
 
     fn assignment<'a>(&mut self, assignment: &'a UntypedAssignment) -> Document<'a> {
@@ -1579,6 +1583,7 @@ impl<'comments> Formatter<'comments> {
             break_("", " "),
             "}"
         ]
+        .group()
     }
 }
 

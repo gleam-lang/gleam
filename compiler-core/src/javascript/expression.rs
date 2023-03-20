@@ -409,9 +409,7 @@ impl<'module> Generator<'module> {
 
     fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
         if statements.len() == 1 {
-            let tail = self.tail_position;
-            self.tail_position = false;
-            let doc = match statements.first() {
+            match statements.first() {
                 Statement::Expression(expression) => {
                     Ok(docvec!['(', self.expression(expression)?, ')'])
                 }
@@ -425,9 +423,7 @@ impl<'module> Generator<'module> {
                 Statement::Use(_) => {
                     unreachable!("use statements must not be present for JavaScript generation")
                 }
-            };
-            self.tail_position = tail;
-            doc
+            }
         } else {
             self.immediately_involked_function_expression(statements, |gen, statements| {
                 gen.statements(statements)
