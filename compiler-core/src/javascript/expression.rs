@@ -154,7 +154,7 @@ impl<'module> Generator<'module> {
                 ..
             } => self.pipeline(assignments.as_slice(), finally),
 
-            TypedExpr::Block { statements, .. } => self.statements(statements),
+            TypedExpr::Block { statements, .. } => self.block(statements),
 
             TypedExpr::BinOp {
                 name, left, right, ..
@@ -401,6 +401,10 @@ impl<'module> Generator<'module> {
         }
         documents.push(self.expression(finally)?);
         Ok(documents.to_doc().force_break())
+    }
+
+    fn block<'a>(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
+        todo!()
     }
 
     fn statements<'a>(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {

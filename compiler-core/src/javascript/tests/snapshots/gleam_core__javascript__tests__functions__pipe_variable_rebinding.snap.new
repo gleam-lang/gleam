@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+assertion_line: 354
+expression: "\npub fn main() {\n  let version = 1 |> version()\n  version\n}\n\npub fn version(n) {\n  Ok(1)\n}"
+---
+import { Ok } from "../gleam.mjs";
+
+export function main() {
+  let version$1 = (() => {
+    let _pipe = 1;;
+    return version(_pipe);
+  })();
+  return version$1;
+}
+
+export function version(n) {
+  return new Ok(1);
+}
+
