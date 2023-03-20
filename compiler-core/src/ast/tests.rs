@@ -169,38 +169,40 @@ fn find_node_int() {
 #[test]
 fn find_node_var() {
     let statement = compile_expression(
-        r#"let wibble = 1
-wibble"#,
+        r#"{let wibble = 1
+wibble}"#,
     );
     let expr = get_bare_expression(&statement);
 
     let var = TypedExpr::Var {
-        location: SrcSpan { start: 15, end: 21 },
+        location: SrcSpan { start: 16, end: 22 },
         constructor: ValueConstructor {
             public: false,
             variant: ValueConstructorVariant::LocalVariable {
-                location: SrcSpan { start: 4, end: 10 },
+                location: SrcSpan { start: 5, end: 11 },
             },
             type_: type_::int(),
         },
         name: "wibble".into(),
     };
 
-    assert_eq!(expr.find_node(14), None);
-    assert_eq!(expr.find_node(15), Some(Located::Expression(&var)));
-    assert_eq!(expr.find_node(20), Some(Located::Expression(&var)));
-    assert_eq!(expr.find_node(21), None);
+    assert_eq!(expr.find_node(15), None);
+    assert_eq!(expr.find_node(16), Some(Located::Expression(&var)));
+    assert_eq!(expr.find_node(21), Some(Located::Expression(&var)));
+    assert_eq!(expr.find_node(22), None);
 }
 
 #[test]
 fn find_node_sequence() {
-    let sequence = compile_expression(r#"1 2 3"#);
-    assert!(sequence.find_node(0).is_some());
-    assert!(sequence.find_node(1).is_none());
-    assert!(sequence.find_node(2).is_some());
-    assert!(sequence.find_node(3).is_none());
-    assert!(sequence.find_node(4).is_some());
-    assert!(sequence.find_node(5).is_none());
+    let block = compile_expression(r#"{ 1 2 3 }"#);
+    assert!(block.find_node(0).is_none());
+    assert!(block.find_node(1).is_none());
+    assert!(block.find_node(2).is_some());
+    assert!(block.find_node(3).is_none());
+    assert!(block.find_node(4).is_some());
+    assert!(block.find_node(5).is_none());
+    assert!(block.find_node(6).is_some());
+    assert!(block.find_node(7).is_none());
 }
 
 #[test]
