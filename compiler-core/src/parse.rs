@@ -56,13 +56,14 @@ mod token;
 
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction,
-    ExternalType, Function, HasLocation, Import, Module, ModuleConstant, ModuleStatement, Pattern,
-    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
-    TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedModuleStatement,
-    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
+    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitStringSegment,
+    BitStringSegmentOption, CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg,
+    ExternalFunction, ExternalType, Function, HasLocation, Import, Module, ModuleConstant,
+    ModuleStatement, Pattern, RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan,
+    Statement, TargetGroup, TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg,
+    UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedExpr, UntypedExternalFnArg,
+    UntypedModule, UntypedModuleStatement, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -555,17 +556,6 @@ where
                 }
             }
 
-            Some((start, Token::Let, _)) => {
-                let _ = self.next_tok();
-                let kind = if let Some((_, Token::Assert, _)) = self.tok0 {
-                    _ = self.next_tok();
-                    AssignmentKind::Assert
-                } else {
-                    AssignmentKind::Let
-                };
-                self.parse_assignment(start, kind)?
-            }
-
             // helpful error on possibly trying to group with ""
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
@@ -751,12 +741,14 @@ where
         }))
     }
 
-    // An assignment, with `Let` or `Assert` already consumed
-    fn parse_assignment(
-        &mut self,
-        start: u32,
-        kind: AssignmentKind,
-    ) -> Result<UntypedExpr, ParseError> {
+    // An assignment, with `Let` already consumed
+    fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
+        let kind = if let Some((_, Token::Assert, _)) = self.tok0 {
+            _ = self.next_tok();
+            AssignmentKind::Assert
+        } else {
+            AssignmentKind::Let
+        };
         let pattern = if let Some(p) = self.parse_pattern()? {
             p
         } else {
@@ -778,7 +770,7 @@ where
                 end: eq_e,
             },
         })?;
-        Ok(UntypedExpr::Assignment {
+        Ok(Statement::Assignment(Assignment {
             location: SrcSpan {
                 start,
                 end: value.location().end,
@@ -787,7 +779,7 @@ where
             pattern,
             annotation,
             kind,
-        })
+        }))
     }
 
     // examples:
@@ -818,13 +810,23 @@ where
     }
 
     fn parse_statement(&mut self) -> Result<Option<UntypedStatement>, ParseError> {
-        // Some((start, Token::Use, _)) => {
-        //     let _ = self.next_tok();
-        //     self.parse_use(start)?
-        // }
+        match self.tok0.take() {
+            Some((start, Token::Use, _)) => {
+                let _ = self.next_tok();
+                Ok(Some(self.parse_use(start)?))
+            }
 
-        // TODO: it
-        todo!("parse_statement")
+            Some((start, Token::Let, _)) => {
+                let _ = self.next_tok();
+                Ok(Some(self.parse_assignment(start)?))
+            }
+
+            token => {
+                self.tok0 = token;
+                let expression = self.parse_expression()?.map(Statement::Expression);
+                Ok(expression)
+            }
+        }
     }
 
     fn parse_expression_or_block(&mut self) -> Result<Option<UntypedExpr>, ParseError> {

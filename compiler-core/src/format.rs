@@ -698,14 +698,6 @@ impl<'comments> Formatter<'comments> {
                 name, left, right, ..
             } => self.bin_op(name, left, right),
 
-            UntypedExpr::Assignment {
-                value,
-                pattern,
-                annotation,
-                kind,
-                ..
-            } => self.assignment(pattern, value, *kind, annotation),
-
             UntypedExpr::Case {
                 subjects, clauses, ..
             } => self.case(subjects, clauses),
@@ -874,7 +866,6 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
-            | UntypedExpr::Assignment { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -1200,9 +1191,7 @@ impl<'comments> Formatter<'comments> {
 
     fn wrap_expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
-                break_block(self.expr(expr))
-            }
+            UntypedExpr::Block { .. } => break_block(self.expr(expr)),
 
             _ => self.expr(expr),
         }
@@ -1241,9 +1230,7 @@ impl<'comments> Formatter<'comments> {
 
     fn case_clause_value<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
         match expr {
-            UntypedExpr::Block { .. } | UntypedExpr::Assignment { .. } => {
-                " ".to_doc().append(break_block(self.expr(expr)))
-            }
+            UntypedExpr::Block { .. } => " ".to_doc().append(break_block(self.expr(expr))),
 
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
@@ -1570,7 +1557,6 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::List { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::PipeLine { .. }
-            | UntypedExpr::Assignment { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::FieldAccess { .. }
             | UntypedExpr::Tuple { .. }
@@ -1585,10 +1571,12 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn statement<'a>(&self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
-        // UntypedExpr::Use(use_) => self.use_(use_),
-        // TODO: it
-        todo!()
+    fn statement<'a>(&mut self, statement: &'a Statement<(), UntypedExpr>) -> Document<'a> {
+        match statement {
+            Statement::Expression(expression) => self.expr(expression),
+            Statement::Assignment(assignment) => todo!(),
+            Statement::Use(use_) => todo!(),
+        }
     }
 
     fn block<'a>(&mut self, statements: &'a [UntypedStatement]) -> Document<'a> {
@@ -1906,7 +1894,6 @@ fn is_breakable_expr(expr: &UntypedExpr) -> bool {
         expr,
         UntypedExpr::Fn { .. }
             | UntypedExpr::Block { .. }
-            | UntypedExpr::Assignment { .. }
             | UntypedExpr::Call { .. }
             | UntypedExpr::Case { .. }
             | UntypedExpr::List { .. }

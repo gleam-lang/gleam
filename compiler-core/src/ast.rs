@@ -1613,6 +1613,7 @@ pub struct Assignment<TypeT, ExpressionT> {
 }
 
 pub type TypedAssignment = Assignment<Arc<Type>, TypedExpr>;
+pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {

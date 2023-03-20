@@ -61,14 +61,6 @@ pub enum UntypedExpr {
         expressions: Vec1<Self>,
     },
 
-    Assignment {
-        location: SrcSpan,
-        value: Box<Self>,
-        pattern: Pattern<()>,
-        kind: AssignmentKind,
-        annotation: Option<TypeAst>,
-    },
-
     Case {
         location: SrcSpan,
         subjects: Vec<Self>,
@@ -143,7 +135,6 @@ impl UntypedExpr {
             | Self::Panic { location, .. }
             | Self::String { location, .. }
             | Self::BitString { location, .. }
-            | Self::Assignment { location, .. }
             | Self::TupleIndex { location, .. }
             | Self::FieldAccess { location, .. }
             | Self::RecordUpdate { location, .. }
@@ -158,7 +149,6 @@ impl UntypedExpr {
         match self {
             Self::Block { statements, .. } => statements.first().start_byte_index(),
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
-            Self::Assignment { location, .. } => location.start,
             _ => self.location().start,
         }
     }

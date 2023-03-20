@@ -7,10 +7,11 @@ use crate::{
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
         Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement,
-        TodoKind, TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
-        TypedMultiPattern, TypedStatement, UntypedArg, UntypedClause, UntypedClauseGuard,
-        UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
-        UntypedMultiPattern, UntypedPattern, UntypedStatement, Use, USE_ASSIGNMENT_VARIABLE,
+        TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
+        TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
+        UntypedClauseGuard, UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr,
+        UntypedExprBitStringSegment, UntypedMultiPattern, UntypedPattern, UntypedStatement, Use,
+        USE_ASSIGNMENT_VARIABLE,
     },
 };
 
@@ -66,22 +67,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.new_unbound_var()
     }
 
-    pub fn infer_statements(
-        &mut self,
-        statements: Vec1<UntypedStatement>,
-    ) -> Result<Vec1<TypedStatement>, Error> {
-        // TODO: it
-        todo!("infer_statements")
-    }
-
-    pub fn infer_statement(
-        &mut self,
-        statement: UntypedStatement,
-    ) -> Result<TypedStatement, Error> {
-        // TODO: it
-        todo!("infer_statement")
-    }
-
     pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
             UntypedExpr::Todo {
@@ -126,15 +111,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return_annotation,
                 ..
             } => self.infer_fn(args, &[], body, is_capture, return_annotation, location),
-
-            UntypedExpr::Assignment {
-                location,
-                pattern,
-                value,
-                kind,
-                annotation,
-                ..
-            } => self.infer_assignment(pattern, *value, kind, &annotation, location),
 
             UntypedExpr::Case {
                 location,
@@ -252,12 +228,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// Emit a warning if the given expressions should not be discarded.
     /// e.g. because it's a literal (why was it made in the first place?)
     /// e.g. because it's of the `Result` type (errors should be handled)
-    fn statement_discarded(&mut self, discarded: &TypedStatement) {
-        let discarded = match discarded {
-            Statement::Expression(expression) => expression,
-            Statement::Assignment(_) | Statement::Use(_) => return,
-        };
-
+    fn expression_discarded(&mut self, discarded: &TypedExpr) {
         if discarded.is_literal() {
             self.environment.warnings.emit(Warning::UnusedLiteral {
                 location: discarded.location(),
@@ -272,17 +243,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_seq(
+    pub(crate) fn infer_statements(
         &mut self,
-        location: SrcSpan,
         untyped: Vec1<UntypedStatement>,
     ) -> Result<Vec1<TypedStatement>, Error> {
         let count = untyped.len();
-        let untyped = untyped.into_iter();
-        self.infer_iter_seq(location, count, untyped)
+        let location = SrcSpan::new(
+            untyped.first().location().start,
+            untyped.last().location().end,
+        );
+        self.infer_iter_statements(location, count, untyped.into_iter())
     }
 
-    fn infer_iter_seq<StatementsIter: Iterator<Item = UntypedStatement>>(
+    fn infer_iter_statements<StatementsIter: Iterator<Item = UntypedStatement>>(
         &mut self,
         location: SrcSpan,
         count: usize,
@@ -291,26 +264,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut i = 0;
         let mut statements: Vec<TypedStatement> = Vec::with_capacity(count);
 
-        while let Some(expression) = untyped.next() {
+        while let Some(statement) = untyped.next() {
             i += 1;
 
-            // Special case for `use` expressions, which need the remaining
-            // expressions in the sequence to be passed to them during as an
-            // implicit anonymous function.
-            if let Statement::Use(use_) = expression {
-                let expression = self.infer_use(use_, location, untyped.collect())?;
-                statements.push(expression);
-                break; // Inferring the use has consumed the rest of the exprs
-            }
+            match statement {
+                Statement::Use(use_) => {
+                    let expression = self.infer_use(use_, location, untyped.collect())?;
+                    statements.push(expression);
+                    break; // Inferring the use has consumed the rest of the exprs
+                }
 
-            let statement = self.infer_statement(expression)?;
-            // This isn't the final expression in the sequence, so call the
-            // `expression_discarded` function to see if anything is being
-            // discarded that we think shouldn't be.
-            if i < count {
-                self.statement_discarded(&statement);
+                Statement::Expression(expression) => {
+                    let expression = self.infer(expression)?;
+
+                    // This isn't the final expression in the sequence, so call the
+                    // `expression_discarded` function to see if anything is being
+                    // discarded that we think shouldn't be.
+                    if i < count {
+                        self.expression_discarded(&expression);
+                    }
+
+                    statements.push(Statement::Expression(expression));
+                }
+
+                Statement::Assignment(assignment) => {
+                    let assignment = self.infer_assignment(assignment)?;
+                    statements.push(Statement::Assignment(assignment));
+                }
             }
-            statements.push(statement);
         }
 
         Ok(Vec1::try_from_vec(statements).expect("empty sequence"))
@@ -744,13 +725,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_assignment(
         &mut self,
-        pattern: UntypedPattern,
-        value: UntypedExpr,
-        kind: AssignmentKind,
-        annotation: &Option<TypeAst>,
-        location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
-        let value = self.in_new_scope(|value_typer| value_typer.infer(value))?;
+        assignment: UntypedAssignment,
+    ) -> Result<TypedAssignment, Error> {
+        let Assignment {
+            pattern,
+            value,
+            kind,
+            annotation,
+            location,
+        } = assignment;
+        let value = self.in_new_scope(|value_typer| value_typer.infer(*value))?;
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
@@ -758,9 +742,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .unify(pattern, value_typ.clone())?;
 
         // Check that any type annotation is accurate.
-        if let Some(ann) = annotation {
+        if let Some(annotation) = &annotation {
             let ann_typ = self
-                .type_from_ast(ann)
+                .type_from_ast(annotation)
                 .map(|t| self.instantiate(t, &mut hashmap![]))?;
             unify(ann_typ, value_typ.clone())
                 .map_err(|e| convert_unify_error(e, value.type_defining_location()))?;
@@ -782,9 +766,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
-        Ok(TypedExpr::Assignment {
+        Ok(Assignment {
             location,
-            typ: value_typ,
+            annotation,
             kind,
             pattern,
             value: Box::new(value),

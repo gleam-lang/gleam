@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 397
+expression: "1"
+---
+[
+    Expression(
+        Int {
+            location: SrcSpan {
+                start: 0,
+                end: 1,
+            },
+            value: "1",
+        },
+    ),
+]
