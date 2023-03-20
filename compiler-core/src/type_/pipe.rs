@@ -92,7 +92,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 call => self.infer_apply_pipe(call)?,
             };
             if i + 2 == self.size {
-                let finally = Some(call);
+                finally = Some(call);
             } else {
                 self.push_assignment(call);
             }
