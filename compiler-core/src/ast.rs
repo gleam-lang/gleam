@@ -18,6 +18,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use smol_str::SmolStr;
+use vec1::Vec1;
 
 pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
@@ -401,7 +402,7 @@ pub struct Function<T, Expr> {
     pub end_position: u32,
     pub name: SmolStr,
     pub arguments: Vec<Arg<T>>,
-    pub body: Expr,
+    pub body: Vec1<Statement<T, Expr>>,
     pub public: bool,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
@@ -547,14 +548,15 @@ impl TypedModuleStatement {
         // TODO: test. Note that the fn src-span covers the function head, not
         // the entire statement.
         if let ModuleStatement::Function(Function { body, .. }) = self {
-            if let found @ Some(_) = body.find_node(byte_index) {
+            let found = body.iter().find_map(|s| s.find_node(byte_index));
+            if found.is_some() {
                 return found;
             }
         }
 
         // TODO: test
         if self.location().contains(byte_index) {
-            Some(Located::Statement(self))
+            Some(Located::ModuleStatement(self))
         } else {
             None
         }
@@ -1521,20 +1523,66 @@ impl ModuleFunction {
     }
 }
 
-// /// A statement with in a function body.
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub enum Statement<Type, Expression, PatternConstructor> {
-//     /// A bare expression that is not assigned to any variable.
-//     Expression(Expression),
-//     /// The definition of a variable.
-//     Assignment(Assignment<Type, Expression, PatternConstructor>),
-// }
+/// A statement with in a function body.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Statement<TypeT, ExpressionT> {
+    /// A bare expression that is not assigned to any variable.
+    Expression(ExpressionT),
+    /// The definition of a variable.
+    Assignment(Assignment<TypeT, ExpressionT>),
+}
 
-// #[derive(Debug, Clone, PartialEq, Eq)]
-// pub struct Assignment<T, Expression, Constructor> {
-//     location: SrcSpan,
-//     value: Box<Expression>,
-//     pattern: Pattern<Constructor, T>,
-//     kind: AssignmentKind,
-//     annotation: Option<TypeAst>,
-// }
+pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
+pub type UntypedStatement = Statement<(), UntypedExpr>;
+
+impl TypedStatement {
+    pub fn type_(&self) -> Arc<Type> {
+        match self {
+            Statement::Expression(expression) => expression.type_(),
+            Statement::Assignment(assignment) => assignment.type_(),
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            Statement::Expression(expression) => expression.find_node(byte_index),
+            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
+                if assignment.location.contains(byte_index) {
+                    Some(Located::Statement(self))
+                } else {
+                    None
+                }
+            }),
+        }
+    }
+
+    pub fn type_defining_location(&self) -> SrcSpan {
+        match self {
+            Statement::Expression(expression) => expression.type_defining_location(),
+            Statement::Assignment(assignment) => assignment.location,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Assignment<TypeT, ExpressionT> {
+    location: SrcSpan,
+    value: Box<ExpressionT>,
+    pattern: Pattern<TypeT>,
+    kind: AssignmentKind,
+    annotation: Option<TypeAst>,
+}
+
+pub type TypedAssignment = Assignment<Arc<Type>, TypedExpr>;
+
+impl TypedAssignment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.pattern
+            .find_node(byte_index)
+            .or_else(|| self.value.find_node(byte_index))
+    }
+
+    pub fn type_(&self) -> Arc<Type> {
+        self.value.type_()
+    }
+}

@@ -22,7 +22,7 @@ fn parse_and_order(functions: &[Input]) -> Result<Vec<Vec<SmolStr>>, Error> {
                         type_: (),
                     })
                     .collect_vec(),
-                body: crate::parse::parse_expression_sequence(src).expect("syntax error"),
+                body: crate::parse::parse_statement_sequence(src).expect("syntax error"),
                 location: Default::default(),
                 return_annotation: None,
                 public: true,

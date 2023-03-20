@@ -5,12 +5,12 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::infer_bit_string_segment_option,
     ast::{
-        Arg, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg, Clause,
-        ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, TodoKind, TypeAst,
-        TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern,
-        UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
-        UntypedMultiPattern, UntypedPattern, Use, USE_ASSIGNMENT_VARIABLE,
+        Arg, Assignment, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption, CallArg,
+        Clause, ClauseGuard, Constant, HasLocation, RecordUpdateSpread, SrcSpan, Statement,
+        TodoKind, TypeAst, TypedArg, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
+        TypedMultiPattern, TypedStatement, UntypedArg, UntypedClause, UntypedClauseGuard,
+        UntypedConstant, UntypedConstantBitStringSegment, UntypedExpr, UntypedExprBitStringSegment,
+        UntypedMultiPattern, UntypedPattern, UntypedStatement, Use, USE_ASSIGNMENT_VARIABLE,
     },
 };
 
@@ -69,7 +69,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// Crawl the AST, annotating each node with the inferred type or
     /// returning an error.
     ///
-    pub fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
+    pub fn infer_statements(
+        &mut self,
+        statements: Vec1<UntypedStatement>,
+    ) -> Result<Vec1<TypedStatement>, Error> {
+        // TODO: it
+        todo!("infer_statements")
+    }
+
+    fn infer(&mut self, expr: UntypedExpr) -> Result<TypedExpr, Error> {
         match expr {
             UntypedExpr::Todo {
                 location,
@@ -112,7 +120,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } => self.infer_fn(args, &[], *body, is_capture, return_annotation, location),
+            } => self.infer_fn(args, &[], body, is_capture, return_annotation, location),
 
             UntypedExpr::Assignment {
                 location,
@@ -340,10 +348,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location: SrcSpan::new(first.start, sequence_location.end),
             return_annotation: None,
             is_capture: false,
-            body: Box::new(UntypedExpr::Block {
-                location: sequence_location,
-                expressions,
-            }),
+            body: expressions,
         };
 
         // Add this new callback function to the arguments to function call
@@ -397,7 +402,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         args: Vec<UntypedArg>,
         expected_args: &[Arc<Type>],
-        body: UntypedExpr,
+        body: Vec1<UntypedStatement>,
         is_capture: bool,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
@@ -1944,7 +1949,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             ) if expected_arguments.len() == arguments.len() => self.infer_fn(
                 arguments,
                 expected_arguments,
-                *body,
+                body,
                 false,
                 return_annotation,
                 location,
@@ -1962,9 +1967,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         args: Vec<UntypedArg>,
         expected_args: &[Arc<Type>],
-        body: UntypedExpr,
+        body: Vec1<UntypedStatement>,
         return_annotation: &Option<TypeAst>,
-    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+    ) -> Result<(Vec<TypedArg>, Vec1<TypedExpr>), Error> {
         // Construct an initial type for each argument of the function- either an unbound
         // type variable or a type provided by an annotation.
         let args: Vec<_> = args
@@ -1984,9 +1989,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn infer_fn_with_known_types(
         &mut self,
         args: Vec<TypedArg>,
-        body: UntypedExpr,
+        body: Vec1<UntypedStatement>,
         return_type: Option<Arc<Type>>,
-    ) -> Result<(Vec<TypedArg>, TypedExpr), Error> {
+    ) -> Result<(Vec<TypedArg>, Vec1<TypedStatement>), Error> {
         let (body_rigid_names, body_infer) = self.in_new_scope(|body_typer| {
             // Used to track if any argument names are used more than once
             let mut argument_names = HashSet::with_capacity(args.len());
@@ -2020,16 +2025,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            Ok((body_typer.hydrator.rigid_names(), body_typer.infer(body)))
+            let body = body_typer.infer_statements(body);
+            Ok((body_typer.hydrator.rigid_names(), body))
         })?;
 
         let body = body_infer.map_err(|e| e.with_unify_error_rigid_names(&body_rigid_names))?;
 
         // Check that any return type is accurate.
         if let Some(return_type) = return_type {
-            unify(return_type, body.type_()).map_err(|e| {
+            unify(return_type, body.last().type_()).map_err(|e| {
                 e.return_annotation_mismatch()
-                    .into_error(body.type_defining_location())
+                    .into_error(body.last().type_defining_location())
                     .with_unify_error_rigid_names(&body_rigid_names)
             })?;
         }
@@ -2126,7 +2132,7 @@ struct UseAssignments {
     /// fn(_use1) { let Box(x) = _use1 }
     /// //          ^^^^^^^^^^^^^^^^^^ The body assignments
     /// ```
-    body_assignments: Vec<UntypedExpr>,
+    body_assignments: Vec<UntypedStatement>,
 }
 
 impl UseAssignments {
@@ -2174,13 +2180,16 @@ impl UseAssignments {
                         annotation: None,
                         type_: (),
                     });
-                    assignments.body_assignments.push(UntypedExpr::Assignment {
+                    let assignment = Assignment {
                         location,
                         pattern,
                         kind: AssignmentKind::Let,
                         annotation: None,
                         value: Box::new(UntypedExpr::Var { location, name }),
-                    })
+                    };
+                    assignments
+                        .body_assignments
+                        .push(Statement::Assignment(assignment))
                 }
             }
         }

@@ -59,10 +59,10 @@ use crate::ast::{
     Arg, ArgNames, AssignName, AssignmentKind, BinOp, BitStringSegment, BitStringSegmentOption,
     CallArg, Clause, ClauseGuard, Constant, CustomType, ExternalFnArg, ExternalFunction,
     ExternalType, Function, HasLocation, Import, Module, ModuleConstant, ModuleStatement, Pattern,
-    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, TargetGroup, TodoKind,
-    TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
+    RecordConstructor, RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetGroup,
+    TodoKind, TypeAlias, TypeAst, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
     UntypedConstant, UntypedExpr, UntypedExternalFnArg, UntypedModule, UntypedModuleStatement,
-    UntypedPattern, UntypedRecordUpdateArg, Use, CAPTURE_VARIABLE,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -73,7 +73,8 @@ use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::str::FromStr;
 use token::Token;
-use vec1::vec1;
+use vec1::{vec1, Vec1};
+
 #[cfg(test)]
 mod tests;
 
@@ -91,10 +92,10 @@ pub fn parse_module(src: &str) -> Result<(UntypedModule, ModuleExtra), ParseErro
 // Test Interface
 //
 #[cfg(test)]
-pub fn parse_expression_sequence(src: &str) -> Result<UntypedExpr, ParseError> {
+pub fn parse_statement_sequence(src: &str) -> Result<Vec1<UntypedStatement>, ParseError> {
     let lex = lexer::make_tokenizer(src);
     let mut parser = Parser::new(lex);
-    let expr = parser.parse_expression_seq();
+    let expr = parser.parse_statement_seq();
     let expr = parser.ensure_no_errors_or_remaining_input(expr)?;
     if let Some((e, _)) = expr {
         Ok(e)
@@ -513,7 +514,7 @@ where
                         location,
                         is_capture: false,
                         arguments: args,
-                        body: Box::new(body),
+                        body,
                         return_annotation,
                     },
 
@@ -792,6 +793,11 @@ where
             annotation,
             kind,
         })
+    }
+
+    fn parse_statement_seq(&mut self) -> Result<Option<(Vec1<UntypedStatement>, u32)>, ParseError> {
+        // TODO: it
+        todo!("parse_statement_seq")
     }
 
     // examples:
@@ -1383,18 +1389,18 @@ where
         let (_, rpar_e) = self.expect_one(&Token::RightParen)?;
         let return_annotation = self.parse_type_annotation(&Token::RArrow, false)?;
         let _ = self.expect_one(&Token::LeftBrace)?;
-        let some_body = self.parse_expression_seq()?;
+        let some_body = self.parse_statement_seq()?;
         let (_, rbr_e) = self.expect_one(&Token::RightBrace)?;
         let end = return_annotation
             .as_ref()
             .map(|l| l.location().end)
             .unwrap_or_else(|| if is_anon { rbr_e } else { rpar_e });
         let body = match some_body {
-            None => UntypedExpr::Todo {
+            None => vec1![Statement::Expression(UntypedExpr::Todo {
                 kind: TodoKind::EmptyFunction,
                 location: SrcSpan { start, end },
                 label: None,
-            },
+            })],
             Some((body, _)) => body,
         };
         Ok(Some(ModuleStatement::Function(Function {
@@ -3133,7 +3139,7 @@ pub fn make_call(
                 },
                 type_: (),
             }],
-            body: Box::new(call),
+            body: vec1![Statement::Expression(call)],
             return_annotation: None,
         }),
 

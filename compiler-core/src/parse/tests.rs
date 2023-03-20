@@ -6,11 +6,11 @@ use pretty_assertions::assert_eq;
 
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");
+        let result = crate::parse::parse_statement_sequence($src).expect_err("should not parse");
         assert_eq!(($src, $error), ($src, result),);
     };
     ($src:expr) => {
-        let result = crate::parse::parse_expression_sequence($src).expect_err("should not parse");
+        let result = crate::parse::parse_statement_sequence($src).expect_err("should not parse");
         let error = crate::error::Error::Parse {
             src: $src.into(),
             path: PathBuf::from("/src/parse/error.gleam"),
@@ -23,7 +23,7 @@ macro_rules! assert_error {
 
 macro_rules! assert_parse {
     ($src:expr) => {
-        let result = crate::parse::parse_expression_sequence($src).expect("should parse");
+        let result = crate::parse::parse_statement_sequence($src).expect("should parse");
         insta::assert_snapshot!(insta::internals::AutoName, &format!("{:#?}", result), $src);
     };
 }

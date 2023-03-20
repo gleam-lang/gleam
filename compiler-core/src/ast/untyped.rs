@@ -33,7 +33,7 @@ pub enum UntypedExpr {
         location: SrcSpan,
         is_capture: bool,
         arguments: Vec<Arg<()>>,
-        body: Box<Self>,
+        body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
     },
 

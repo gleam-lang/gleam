@@ -15,7 +15,9 @@ pub use self::package_compiler::PackageCompiler;
 pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
-use crate::ast::{CustomType, DefinitionLocation, TypedExpr, TypedModuleStatement, TypedPattern};
+use crate::ast::{
+    CustomType, DefinitionLocation, TypedExpr, TypedModuleStatement, TypedPattern, TypedStatement,
+};
 use crate::{
     ast::{ModuleStatement, SrcSpan, TypedModule},
     config::{self, PackageConfig},
@@ -261,17 +263,19 @@ impl Module {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Located<'a> {
-    Expression(&'a TypedExpr),
-    Statement(&'a TypedModuleStatement),
     Pattern(&'a TypedPattern),
+    Statement(&'a TypedStatement),
+    Expression(&'a TypedExpr),
+    ModuleStatement(&'a TypedModuleStatement),
 }
 
 impl<'a> Located<'a> {
     pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
         match self {
             Self::Pattern(pattern) => pattern.definition_location(),
+            Self::Statement(statement) => statement.definition_location(),
             Self::Expression(expression) => expression.definition_location(),
-            Self::Statement(statement) => Some(DefinitionLocation {
+            Self::ModuleStatement(statement) => Some(DefinitionLocation {
                 module: None,
                 span: statement.location(),
             }),

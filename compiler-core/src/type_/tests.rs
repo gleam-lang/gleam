@@ -17,7 +17,7 @@ use std::path::PathBuf;
 macro_rules! assert_infer {
     ($src:expr, $typ:expr $(,)?) => {
         let mut printer = $crate::type_::pretty::Printer::new();
-        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_statement_sequence($src).expect("syntax error");
 
         let mut modules = im::HashMap::new();
         let ids = $crate::uid::UniqueIdGenerator::new();
@@ -32,10 +32,13 @@ macro_rules! assert_infer {
             &modules,
             &$crate::warning::TypeWarningEmitter::null(),
         ))
-        .infer(ast)
+        .infer_statements(ast)
         .expect("should successfully infer");
         assert_eq!(
-            ($src, printer.pretty_print(result.type_().as_ref(), 0),),
+            (
+                $src,
+                printer.pretty_print(result.last().type_().as_ref(), 0),
+            ),
             ($src, $typ.to_string()),
         );
     };
@@ -209,7 +212,7 @@ macro_rules! assert_module_syntax_error {
 #[macro_export]
 macro_rules! assert_error {
     ($src:expr, $error:expr $(,)?) => {
-        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_statement_sequence($src).expect("syntax error");
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -224,14 +227,14 @@ macro_rules! assert_error {
             &modules,
             &$crate::warning::TypeWarningEmitter::null(),
         ))
-        .infer(ast)
+        .infer_statements(ast)
         .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 
     ($src:expr) => {
         use std::path::PathBuf;
-        let ast = $crate::parse::parse_expression_sequence($src).expect("syntax error");
+        let ast = $crate::parse::parse_statement_sequence($src).expect("syntax error");
         let ids = $crate::uid::UniqueIdGenerator::new();
         let mut modules = im::HashMap::new();
         // DUPE: preludeinsertion
@@ -246,7 +249,7 @@ macro_rules! assert_error {
             &modules,
             &$crate::warning::TypeWarningEmitter::null(),
         ))
-        .infer(ast)
+        .infer_statements(ast)
         .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
             src: $src.into(),
